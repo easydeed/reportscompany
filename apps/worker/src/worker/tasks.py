@@ -51,10 +51,12 @@ def _deliver_webhooks(account_id: str, event: str, payload: dict):
         elapsed = int((time.perf_counter()-started)*1000)
         with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
             with conn.cursor() as cur:
+                # Convert dict to JSON string for JSONB column
+                payload_json = json.dumps(json.loads(body.decode()))
                 cur.execute("""
                   INSERT INTO webhook_deliveries (account_id, webhook_id, event, payload, response_status, response_ms, error)
-                  VALUES (%s,%s,%s,%s,%s,%s,%s)
-                """, (account_id, hook_id, event, json.loads(body.decode()), status_code, elapsed, error))
+                  VALUES (%s,%s,%s,%s::jsonb,%s,%s,%s)
+                """, (account_id, hook_id, event, payload_json, status_code, elapsed, error))
 
 @celery.task(name="generate_report")
 def generate_report(run_id: str, account_id: str):
