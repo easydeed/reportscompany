@@ -1,28 +1,45 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
-import os, stripe, psycopg
+import stripe, psycopg
 from ..settings import settings
 from ..db import db_conn, set_rls, fetchone_dict
 from .reports import require_account_id  # temp auth shim
 
 router = APIRouter(prefix="/v1")
 
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-APP_BASE = os.getenv("APP_BASE", "http://localhost:3000")
+# Note: stripe.api_key will be set in each function to ensure settings are loaded
+APP_BASE = settings.APP_BASE
 
-PRICE_MAP = {
-  "starter": os.getenv("STARTER_PRICE_ID"),
-  "professional": os.getenv("PRO_PRICE_ID"),
-  "enterprise": os.getenv("ENTERPRISE_PRICE_ID"),
-}
+def get_price_map():
+    """Get price map from settings (evaluated at runtime)"""
+    return {
+        "starter": settings.STARTER_PRICE_ID,
+        "professional": settings.PRO_PRICE_ID,
+        "enterprise": settings.ENTERPRISE_PRICE_ID,
+    }
 
 class CheckoutBody(BaseModel):
   plan: str  # starter|professional|enterprise
 
+@router.get("/billing/debug")
+def debug_config():
+    """Debug endpoint to check Stripe config"""
+    return {
+        "stripe_key_set": bool(settings.STRIPE_SECRET_KEY),
+        "starter_price": settings.STARTER_PRICE_ID,
+        "pro_price": settings.PRO_PRICE_ID,
+        "enterprise_price": settings.ENTERPRISE_PRICE_ID,
+        "price_map": get_price_map()
+    }
+
 @router.post("/billing/checkout", status_code=status.HTTP_200_OK)
 def create_checkout(body: CheckoutBody, request: Request, account_id: str = Depends(require_account_id)):
+    # Set Stripe API key at runtime to ensure settings are loaded
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    
     plan = body.plan.lower()
-    price = PRICE_MAP.get(plan)
+    price_map = get_price_map()
+    price = price_map.get(plan)
     if not price:
         raise HTTPException(status_code=400, detail="Unknown plan")
 
@@ -61,6 +78,9 @@ def create_checkout(body: CheckoutBody, request: Request, account_id: str = Depe
 
 @router.get("/billing/portal")
 def billing_portal(request: Request, account_id: str = Depends(require_account_id)):
+    # Set Stripe API key at runtime
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    
     # find customer
     with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
         with conn.cursor() as cur:
