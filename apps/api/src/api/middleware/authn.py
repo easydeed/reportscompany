@@ -21,7 +21,7 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
         
         # Skip auth for public endpoints
         path = request.url.path
-        if path.startswith("/health") or path.startswith("/docs") or path.startswith("/redoc") or path.startswith("/openapi") or path.startswith("/v1/auth/"):
+        if path.startswith("/health") or path.startswith("/docs") or path.startswith("/redoc") or path.startswith("/openapi") or path.startswith("/v1/auth/") or path.startswith("/dev-files/"):
             return await call_next(request)
 
         acct: Optional[str] = None
