@@ -1,5 +1,6 @@
 from .app import celery
 import os, time, json, psycopg, redis
+from psycopg import sql
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 QUEUE_KEY = os.getenv("MR_REPORT_ENQUEUE_KEY", "mr:enqueue:reports")
@@ -16,8 +17,10 @@ def generate_report(run_id: str, account_id: str):
     try:
         with psycopg.connect(DATABASE_URL, autocommit=False) as conn:
             with conn.cursor() as cur:
-                # Set RLS context
-                cur.execute("SET LOCAL app.current_account_id = %s::uuid", (account_id,))
+                # Set RLS context (SET LOCAL doesn't support parameter binding)
+                cur.execute(
+                    sql.SQL("SET LOCAL app.current_account_id = {}").format(sql.Literal(account_id))
+                )
                 # mark processing
                 cur.execute("UPDATE report_generations SET status='processing' WHERE id = %s", (run_id,))
                 # pretend work

@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 const apiBase = process.env.NEXT_PUBLIC_API_BASE!;
 
 async function getHealth() {
@@ -25,8 +27,12 @@ export default async function Home() {
             Turn live housing data into stunning branded market reports in seconds.
           </p>
           <div className="mt-6 flex gap-3">
-            <a href="/signup" className="rounded-md bg-blue-600 px-5 py-3 text-white">Start Free Trial</a>
-            <a href="/samples" className="rounded-md border px-5 py-3">View Sample Reports</a>
+            <Link href="/reports" className="rounded-md bg-blue-600 px-5 py-3 text-white font-medium hover:bg-blue-700 transition">
+              View Reports
+            </Link>
+            <Link href="/reports/new" className="rounded-md border px-5 py-3 font-medium hover:bg-slate-50 transition">
+              + New Report
+            </Link>
           </div>
 
           <p className="mt-8 text-sm text-slate-500">
