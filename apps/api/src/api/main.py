@@ -11,6 +11,7 @@ from .routes.usage import router as usage_router
 from .routes.auth import router as auth_router
 from .routes.apikeys import router as apikeys_router
 from .routes.webhooks import router as webhooks_router
+from .routes.devfiles import router as devfiles_router
 
 app = FastAPI(
     title="Market Reports API",
@@ -41,6 +42,7 @@ app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(apikeys_router)
 app.include_router(webhooks_router)
+app.include_router(devfiles_router)
 app.include_router(reports_router)
 app.include_router(account_router)
 app.include_router(usage_router)

@@ -1,10 +1,14 @@
 from .app import celery
 import os, time, json, psycopg, redis, hmac, hashlib, httpx
 from psycopg import sql
+from playwright.sync_api import sync_playwright
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 QUEUE_KEY = os.getenv("MR_REPORT_ENQUEUE_KEY", "mr:enqueue:reports")
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/market_reports")
+PDF_DIR = "/tmp/mr_reports"
+os.makedirs(PDF_DIR, exist_ok=True)
+DEV_BASE = os.getenv("PRINT_BASE", "http://localhost:3000")
 
 @celery.task(name="ping")
 def ping():
@@ -60,51 +64,55 @@ def _deliver_webhooks(account_id: str, event: str, payload: dict):
 
 @celery.task(name="generate_report")
 def generate_report(run_id: str, account_id: str):
-    # Simulate processing; in the future this will render /print/:runId with Playwright and upload to R2/S3
     started = time.perf_counter()
     try:
         with psycopg.connect(DATABASE_URL, autocommit=False) as conn:
             with conn.cursor() as cur:
-                # Set RLS context (SET LOCAL doesn't support parameter binding)
-                cur.execute(
-                    sql.SQL("SET LOCAL app.current_account_id = {}").format(sql.Literal(account_id))
-                )
-                # mark processing
+                cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
                 cur.execute("UPDATE report_generations SET status='processing' WHERE id = %s", (run_id,))
-                # pretend work
-                time.sleep(0.5)
-                # final urls (placeholders)
-                html_url = f"https://example.com/reports/{run_id}.html"
-                json_url = f"https://example.com/reports/{run_id}.json"
+
+                # Render /print/:runId and save PDF
+                url = f"{DEV_BASE}/print/{run_id}"
+                pdf_path = os.path.join(PDF_DIR, f"{run_id}.pdf")
+                with sync_playwright() as p:
+                    browser = p.chromium.launch()
+                    page = browser.new_page(device_scale_factor=2)
+                    page.goto(url, wait_until="networkidle")
+                    page.pdf(
+                        path=pdf_path, 
+                        format="Letter", 
+                        print_background=True,
+                        margin={"top":"0.5in","right":"0.5in","bottom":"0.5in","left":"0.5in"}
+                    )
+                    browser.close()
+
+                html_url = url
+                json_url = f"https://example.com/reports/{run_id}.json"  # placeholder
+                pdf_url = f"http://localhost:10000/dev-files/reports/{run_id}.pdf"
                 processing_time = int((time.perf_counter()-started)*1000)
-                cur.execute(
-                    """
-                    UPDATE report_generations
-                    SET status='completed', html_url=%s, json_url=%s, processing_time_ms=%s
-                    WHERE id = %s
-                    """,
-                    (html_url, json_url, processing_time, run_id)
-                )
-                # usage event
-                cur.execute(
-                    """
-                    INSERT INTO usage_tracking (account_id, event_type, report_id, billable_units, cost_cents)
-                    VALUES (%s, 'report_generated', %s, 1, 0)
-                    """,
-                    (account_id, run_id)
-                )
+
+                cur.execute("""
+                  UPDATE report_generations
+                  SET status='completed', html_url=%s, json_url=%s, pdf_url=%s, processing_time_ms=%s
+                  WHERE id = %s
+                """, (html_url, json_url, pdf_url, processing_time, run_id))
+
+                cur.execute("""
+                  INSERT INTO usage_tracking (account_id, event_type, report_id, billable_units, cost_cents)
+                  VALUES (%s, 'report_generated', %s, 1, 0)
+                """, (account_id, run_id))
+
             conn.commit()
-        
-        # Deliver webhooks after successful commit
+
+        # Deliver webhook after commit
         payload = {
             "report_id": run_id, 
             "status": "completed", 
             "html_url": html_url, 
-            "json_url": json_url,
+            "pdf_url": pdf_url,
             "processing_time_ms": processing_time
         }
         _deliver_webhooks(account_id, "report.completed", payload)
-        
         return {"ok": True, "run_id": run_id}
     except Exception as e:
         return {"ok": False, "error": str(e)}
