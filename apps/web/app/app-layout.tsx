@@ -7,6 +7,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <nav className="flex gap-4 text-sm text-slate-600">
             <a href="/app/reports">Reports</a>
             <a href="/app/reports/new" className="text-blue-600">New Report</a>
+            <a href="/app/branding">Branding</a>
           </nav>
         </div>
       </header>

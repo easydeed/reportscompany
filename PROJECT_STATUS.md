@@ -1,7 +1,7 @@
 # Market Reports Monorepo - Project Status
 
 **Last Updated:** October 30, 2025  
-**Current Phase:** Section 6 Complete - Reports API + Worker Integration
+**Current Phase:** Section 7 Complete - Full-Stack Reports Feature with Polling UI
 
 ---
 
@@ -264,6 +264,82 @@ Test Terminal:
 {'pong': True}
 ```
 ✅ Task queued, executed, and result retrieved successfully in 0.03 seconds!
+
+### Section 7: Web UI - Reports with Polling ✅ COMPLETE
+
+#### Web Application Routes
+**`/app/reports`** - Reports List (Server Component)
+- ✅ Server-side rendering with live data
+- ✅ Table view with columns: Created, Type, Status, Files
+- ✅ Clickable HTML/JSON links for completed reports
+- ✅ "New Report" button in header
+
+**`/app/reports/new`** - Report Creation Wizard (Client Component)
+- ✅ Form with Report Type, Cities, Lookback Days
+- ✅ "Generate" button creates report via API
+- ✅ Real-time polling (800ms intervals)
+- ✅ Live status updates: pending → processing → completed
+- ✅ Displays Run ID and links when completed
+- ✅ Graceful timeout after 60 attempts
+
+**`/app`** - App Shell
+- ✅ Redirect to `/app/reports`
+- ✅ Shared layout with header navigation
+
+#### API Helper (`apps/web/lib/api.ts`)
+- ✅ **`apiFetch()`** - Universal fetch wrapper
+- ✅ Automatic demo account header injection
+- ✅ JSON content-type handling
+- ✅ Cache disabled for real-time data
+- ✅ Error handling with detailed messages
+
+#### App Layout (`apps/web/app/app-layout.tsx`)
+- ✅ Persistent header with navigation
+- ✅ Brand logo linking to home
+- ✅ "Reports" and "New Report" nav links
+- ✅ Consistent max-width container
+
+#### Environment Configuration
+```bash
+NEXT_PUBLIC_API_BASE=http://localhost:10000
+NEXT_PUBLIC_DEMO_ACCOUNT_ID=912014c3-6deb-4b40-a28d-489ef3923a3a
+```
+
+#### User Flow (End-to-End)
+1. User visits `/app/reports/new`
+2. Fills form: Type, Cities, Lookback Days
+3. Clicks "Generate"
+4. Status box appears with Run ID
+5. Status updates automatically via polling
+6. After ~0.5s, status → `completed` (green)
+7. HTML & JSON links appear
+8. User clicks "Reports" → sees new report in table
+9. All reports display with status and download links
+
+#### Files Created (5 files)
+1. **`apps/web/lib/api.ts`** (NEW) - API helper
+2. **`apps/web/app/app-layout.tsx`** (NEW) - Shared layout
+3. **`apps/web/app/app/page.tsx`** (NEW) - Redirect to reports
+4. **`apps/web/app/app/reports/page.tsx`** (NEW) - Reports list
+5. **`apps/web/app/app/reports/new/page.tsx`** (NEW) - Report creation wizard
+
+#### Testing Results
+**Browser Test:**
+- ✅ `/app/reports/new` loads form correctly
+- ✅ Click "Generate" creates report (Run ID: `36d28be3-ca0d-4774-81ae-15d854d82d88`)
+- ✅ Status updates from `pending` to `completed` in ~0.5 seconds
+- ✅ HTML and JSON links appear
+- ✅ Navigate to `/app/reports` shows new report in list
+- ✅ All 6 reports display with correct data
+
+**Full-Stack Integration:**
+```
+Browser → Next.js (SSR/Client) → FastAPI (/v1/reports) → PostgreSQL (RLS)
+                                      ↓
+                                 Redis Queue → Celery Worker → PostgreSQL (update)
+                                      ↑
+                           Browser polls ← FastAPI (GET /v1/reports/{id})
+```
 
 ### Section 6: Reports API + Worker Integration ✅ COMPLETE
 
@@ -694,13 +770,21 @@ NEXT_PUBLIC_API_BASE=http://localhost:10000
    - Test data insertion verified
    - 1 migration file created
 
-6. **Pending commit** - "feat(api+worker): Reports API with RLS + worker integration"
+6. ✅ **Committed** - "feat(api+worker): Reports API with RLS + worker integration"
    - POST/GET /v1/reports endpoints
    - Database helper with RLS enforcement
    - Worker client (Redis queue)
    - generate_report Celery task
    - Redis consumer for API→Worker bridge
    - 5 files created/updated
+
+7. ✅ **Committed** - "feat(web): Reports UI with polling wizard"
+   - Reports list with server-side rendering
+   - Report creation wizard with client-side polling
+   - Shared app layout with navigation
+   - API helper with demo account injection
+   - Real-time status updates
+   - 5 files created
 
 ### Repository
 - **Remote:** https://github.com/easydeed/reportscompany.git
@@ -812,6 +896,9 @@ NEXT_PUBLIC_API_BASE=http://localhost:10000
 20. ✅ **Reports API:** Full CRUD endpoints with RLS enforcement
 21. ✅ **API→Worker Integration:** Decoupled architecture via Redis queue
 22. ✅ **Async Processing:** Background report generation with status tracking
+23. ✅ **Web UI:** Beautiful reports interface with real-time updates
+24. ✅ **Client-Side Polling:** Automatic status updates every 800ms
+25. ✅ **Full-Stack Feature:** End-to-end reports creation in <1 second
 
 ---
 
@@ -894,5 +981,5 @@ git remote -v
 
 ---
 
-**Status:** 🟢 All services operational. Full Reports API with worker integration complete. Ready for Section 7! 🚀
+**Status:** 🟢 All services operational. Full-stack Reports feature complete with real-time polling UI! Ready for Section 8! 🚀
 
