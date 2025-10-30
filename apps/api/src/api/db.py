@@ -17,10 +17,10 @@ def db_conn():
 
 def set_rls(cur, account_id: str):
     # Enforce RLS using Postgres session variable (matches our RLS policy)
-    # Note: SET LOCAL doesn't support parameter binding, so we use sql.Literal
-    cur.execute(
-        sql.SQL("SET LOCAL app.current_account_id = {}").format(sql.Literal(account_id))
-    )
+    # SET LOCAL expects a plain string value, so we manually quote it
+    # (sql.Literal adds unwanted type casts like ::uuid)
+    cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
+
 
 
 def fetchone_dict(cur) -> Optional[Dict[str, Any]]:

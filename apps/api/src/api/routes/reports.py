@@ -28,12 +28,13 @@ class ReportRow(BaseModel):
 
 # ====== Helpers ======
 def require_account_id(request: Request) -> str:
-    # TEMP auth: header X-Demo-Account (we'll replace with JWT later)
-    if request.url.path.endswith("/health"):
-        return "00000000-0000-0000-0000-000000000000"
-    account_id = request.headers.get("X-Demo-Account")
+    """
+    Returns the account_id set by AuthContextMiddleware.
+    The middleware has already validated authentication, so we just retrieve it.
+    """
+    account_id = getattr(request.state, "account_id", None)
     if not account_id:
-        raise HTTPException(status_code=401, detail="Missing X-Demo-Account header (temporary auth).")
+        raise HTTPException(status_code=401, detail="Unauthorized")
     return account_id
 
 
