@@ -6,6 +6,7 @@ from .middleware.rls import RLSContextMiddleware
 from .routes.health import router as health_router
 from .routes.reports import router as reports_router
 from .routes.account import router as account_router
+from .routes.usage import router as usage_router
 
 app = FastAPI(
     title="Market Reports API",
@@ -31,6 +32,7 @@ app.add_middleware(RLSContextMiddleware)
 app.include_router(health_router)
 app.include_router(reports_router)
 app.include_router(account_router)
+app.include_router(usage_router)
 
 # Root
 @app.get("/")
