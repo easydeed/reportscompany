@@ -1,0 +1,19 @@
+{
+  "name": "market-reports-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "pnpm --filter web dev",
+    "dev:api": "echo \"API dev server will be added in Section 3\"",
+    "dev:worker": "echo \"Worker dev server will be added in Section 4\"",
+    "dev": "bash scripts/dev.sh",
+    "codegen:client": "openapi-typescript http://localhost:10000/openapi.json -o packages/api-client/src/index.ts || true"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.0.0"
+  }
+}
+

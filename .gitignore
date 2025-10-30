@@ -1,0 +1,25 @@
+# Node
+node_modules/
+pnpm-lock.yaml
+.next/
+dist/
+.DS_Store
+
+# Python
+__pycache__/
+.venv/
+.poetry/
+*.pyc
+
+# Env & local
+.env
+.env.*
+!.env.example
+
+# VSCode/JetBrains
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+
