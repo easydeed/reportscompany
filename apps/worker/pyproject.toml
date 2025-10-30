@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "market-reports-worker"
+version = "0.1.0"
+description = "Background worker for Market Reports"
+authors = ["You <you@example.com>"]
+readme = "README.md"
+packages = [{ include = "worker", from = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+celery = "^5.4.0"
+redis = "^5.0.8"
+playwright = "^1.48.0"
+httpx = "^0.27.2"
+boto3 = "^1.35.20"
+sentry-sdk = "^2.13.0"
+psycopg = {version = "^3.2.1", extras = ["binary"]}
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.6.9"
+
+[tool.ruff]
+line-length = 100
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
