@@ -12,6 +12,8 @@ from .routes.auth import router as auth_router
 from .routes.apikeys import router as apikeys_router
 from .routes.webhooks import router as webhooks_router
 from .routes.devfiles import router as devfiles_router
+from .routes.billing import router as billing_router
+from .routes.stripe_webhook import router as stripe_webhook_router
 
 app = FastAPI(
     title="Market Reports API",
@@ -43,6 +45,8 @@ app.include_router(auth_router)
 app.include_router(apikeys_router)
 app.include_router(webhooks_router)
 app.include_router(devfiles_router)
+app.include_router(billing_router)
+app.include_router(stripe_webhook_router)
 app.include_router(reports_router)
 app.include_router(account_router)
 app.include_router(usage_router)

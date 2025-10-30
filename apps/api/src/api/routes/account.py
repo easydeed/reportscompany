@@ -16,6 +16,9 @@ class AccountOut(BaseModel):
     subscription_status: Optional[str] = None
     monthly_report_limit: Optional[int] = None
     api_rate_limit: Optional[int] = None
+    plan_slug: Optional[str] = None
+    billing_status: Optional[str] = None
+    stripe_customer_id: Optional[str] = None
 
 class BrandingPatch(BaseModel):
     logo_url: Optional[str] = Field(None, description="Public URL to a logo")
@@ -29,7 +32,8 @@ def get_account(request: Request, account_id: str = Depends(require_account_id))
         set_rls(cur, account_id)
         cur.execute("""
             SELECT id::text, name, slug, logo_url, primary_color, secondary_color,
-                   subscription_status, monthly_report_limit, api_rate_limit
+                   subscription_status, monthly_report_limit, api_rate_limit,
+                   plan_slug, billing_status, stripe_customer_id
             FROM accounts
             WHERE id = %s
         """, (account_id,))
@@ -62,7 +66,8 @@ def patch_branding(payload: BrandingPatch, request: Request, account_id: str = D
 
         cur.execute("""
             SELECT id::text, name, slug, logo_url, primary_color, secondary_color,
-                   subscription_status, monthly_report_limit, api_rate_limit
+                   subscription_status, monthly_report_limit, api_rate_limit,
+                   plan_slug, billing_status, stripe_customer_id
             FROM accounts WHERE id = %s
         """, (account_id,))
         row = fetchone_dict(cur)

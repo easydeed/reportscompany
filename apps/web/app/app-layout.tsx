@@ -9,6 +9,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <a href="/app/reports">Reports</a>
             <a href="/app/reports/new" className="text-blue-600">New Report</a>
             <a href="/app/branding">Branding</a>
+            <a href="/app/billing">Billing</a>
           </nav>
         </div>
       </header>
