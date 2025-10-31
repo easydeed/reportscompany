@@ -2,11 +2,12 @@ from .app import celery
 import os, time, json, psycopg, redis, hmac, hashlib, httpx
 from psycopg import sql
 from playwright.sync_api import sync_playwright
-from .vendors.simplyrets import fetch_properties, build_market_snapshot_params
+from .vendors.simplyrets import fetch_properties
 from .compute.extract import PropertyDataExtractor
 from .compute.validate import filter_valid
 from .compute.calc import snapshot_metrics
 from .cache import get as cache_get, set as cache_set
+from .query_builders import build_params
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 QUEUE_KEY = os.getenv("MR_REPORT_ENQUEUE_KEY", "mr:enqueue:reports")
@@ -83,13 +84,14 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
                 """, (json.dumps(params or {}), run_id))
             conn.commit()
 
-        # 2) Compute results (cache by city/lookback/type)
-        city = (params or {}).get("city") or "Houston"
+        # 2) Compute results (cache by report_type + params hash)
+        city = (params or {}).get("city") or (params or {}).get("zips", [])[0] if (params or {}).get("zips") else "Houston"
         lookback = int((params or {}).get("lookback_days") or 30)
-        cache_payload = {"type": report_type, "city": city, "lookback": lookback}
+        cache_payload = {"type": report_type, "params": params}
         result = cache_get("report", cache_payload)
         if not result:
-            q = build_market_snapshot_params(city, lookback)
+            # Build SimplyRETS query using query_builders
+            q = build_params(report_type, params or {})
             raw = fetch_properties(q, limit=800)
             extracted = PropertyDataExtractor(raw).run()
             clean = filter_valid(extracted)
