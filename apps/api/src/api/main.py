@@ -6,6 +6,7 @@ from .middleware.rls import RLSContextMiddleware
 from .middleware.authn import AuthContextMiddleware, RateLimitMiddleware
 from .routes.health import router as health_router
 from .routes.reports import router as reports_router
+from .routes.report_data import router as report_data_router
 from .routes.account import router as account_router
 from .routes.usage import router as usage_router
 from .routes.auth import router as auth_router
@@ -48,6 +49,7 @@ app.include_router(devfiles_router)
 app.include_router(billing_router)
 app.include_router(stripe_webhook_router)
 app.include_router(reports_router)
+app.include_router(report_data_router)
 app.include_router(account_router)
 app.include_router(usage_router)
 

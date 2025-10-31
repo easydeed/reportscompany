@@ -2,13 +2,18 @@ from .app import celery
 import os, time, json, psycopg, redis, hmac, hashlib, httpx
 from psycopg import sql
 from playwright.sync_api import sync_playwright
+from .vendors.simplyrets import fetch_properties, build_market_snapshot_params
+from .compute.extract import PropertyDataExtractor
+from .compute.validate import filter_valid
+from .compute.calc import snapshot_metrics
+from .cache import get as cache_get, set as cache_set
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 QUEUE_KEY = os.getenv("MR_REPORT_ENQUEUE_KEY", "mr:enqueue:reports")
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/market_reports")
+DEV_BASE = os.getenv("PRINT_BASE", "http://localhost:3000")
 PDF_DIR = "/tmp/mr_reports"
 os.makedirs(PDF_DIR, exist_ok=True)
-DEV_BASE = os.getenv("PRINT_BASE", "http://localhost:3000")
 
 @celery.task(name="ping")
 def ping():
@@ -63,58 +68,86 @@ def _deliver_webhooks(account_id: str, event: str, payload: dict):
                 """, (account_id, hook_id, event, payload_json, status_code, elapsed, error))
 
 @celery.task(name="generate_report")
-def generate_report(run_id: str, account_id: str):
+def generate_report(run_id: str, account_id: str, report_type: str, params: dict):
     started = time.perf_counter()
+    pdf_url = html_url = None
     try:
+        # 1) Persist 'processing' + input
         with psycopg.connect(DATABASE_URL, autocommit=False) as conn:
             with conn.cursor() as cur:
-                cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
-                cur.execute("UPDATE report_generations SET status='processing' WHERE id = %s", (run_id,))
-
-                # Render /print/:runId and save PDF
-                url = f"{DEV_BASE}/print/{run_id}"
-                pdf_path = os.path.join(PDF_DIR, f"{run_id}.pdf")
-                with sync_playwright() as p:
-                    browser = p.chromium.launch()
-                    page = browser.new_page(device_scale_factor=2)
-                    page.goto(url, wait_until="networkidle")
-                    page.pdf(
-                        path=pdf_path, 
-                        format="Letter", 
-                        print_background=True,
-                        margin={"top":"0.5in","right":"0.5in","bottom":"0.5in","left":"0.5in"}
-                    )
-                    browser.close()
-
-                html_url = url
-                json_url = f"https://example.com/reports/{run_id}.json"  # placeholder
-                pdf_url = f"http://localhost:10000/dev-files/reports/{run_id}.pdf"
-                processing_time = int((time.perf_counter()-started)*1000)
-
+                cur.execute("SET LOCAL app.current_account_id = %s::uuid", (account_id,))
                 cur.execute("""
-                  UPDATE report_generations
-                  SET status='completed', html_url=%s, json_url=%s, pdf_url=%s, processing_time_ms=%s
-                  WHERE id = %s
-                """, (html_url, json_url, pdf_url, processing_time, run_id))
-
-                cur.execute("""
-                  INSERT INTO usage_tracking (account_id, event_type, report_id, billable_units, cost_cents)
-                  VALUES (%s, 'report_generated', %s, 1, 0)
-                """, (account_id, run_id))
-
+                    UPDATE report_generations
+                    SET status='processing', input_params=%s, source_vendor='simplyrets'
+                    WHERE id=%s
+                """, (json.dumps(params or {}), run_id))
             conn.commit()
 
-        # Deliver webhook after commit
-        payload = {
-            "report_id": run_id, 
-            "status": "completed", 
-            "html_url": html_url, 
-            "pdf_url": pdf_url,
-            "processing_time_ms": processing_time
-        }
+        # 2) Compute results (cache by city/lookback/type)
+        city = (params or {}).get("city") or "Houston"
+        lookback = int((params or {}).get("lookback_days") or 30)
+        cache_payload = {"type": report_type, "city": city, "lookback": lookback}
+        result = cache_get("report", cache_payload)
+        if not result:
+            q = build_market_snapshot_params(city, lookback)
+            raw = fetch_properties(q, limit=800)
+            extracted = PropertyDataExtractor(raw).run()
+            clean = filter_valid(extracted)
+            metrics = snapshot_metrics(clean)
+            result = {
+                "report_type": report_type,
+                "city": city,
+                "lookback_days": lookback,
+                "generated_at": int(time.time()),
+                "counts": {
+                    "Active": metrics["total_active"],
+                    "Pending": metrics["total_pending"],
+                    "Closed": metrics["total_closed"],
+                },
+                "metrics": metrics,
+                "listings_sample": clean[:20]
+            }
+            cache_set("report", cache_payload, result, ttl_s=3600)
+
+        # 3) Save result_json
+        with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SET LOCAL app.current_account_id = %s::uuid", (account_id,))
+                cur.execute("UPDATE report_generations SET result_json=%s WHERE id=%s", (json.dumps(result), run_id))
+
+        # 4) Generate PDF (Playwright) and final links
+        url = f"{DEV_BASE}/print/{run_id}"
+        pdf_path = os.path.join(PDF_DIR, f"{run_id}.pdf")
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(device_scale_factor=2)
+            page.goto(url, wait_until="networkidle")
+            page.pdf(path=pdf_path, format="Letter", print_background=True,
+                     margin={"top":"0.5in","right":"0.5in","bottom":"0.5in","left":"0.5in"})
+            browser.close()
+        html_url = url
+        json_url = f"https://example.com/reports/{run_id}.json"
+        pdf_url  = f"http://localhost:10000/dev-files/reports/{run_id}.pdf"
+
+        with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SET LOCAL app.current_account_id = %s::uuid", (account_id,))
+                cur.execute("""
+                    UPDATE report_generations
+                    SET status='completed', html_url=%s, json_url=%s, pdf_url=%s, processing_time_ms=%s
+                    WHERE id = %s
+                """, (html_url, json_url, pdf_url, int((time.perf_counter()-started)*1000), run_id))
+
+        # 5) Webhook
+        payload = {"report_id": run_id, "status": "completed", "html_url": html_url, "pdf_url": pdf_url}
         _deliver_webhooks(account_id, "report.completed", payload)
         return {"ok": True, "run_id": run_id}
+
     except Exception as e:
+        with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SET LOCAL app.current_account_id = %s::uuid", (account_id,))
+                cur.execute("UPDATE report_generations SET status='failed', error=%s WHERE id=%s", (str(e), run_id))
         return {"ok": False, "error": str(e)}
 
 
@@ -126,7 +159,7 @@ def run_redis_consumer_forever():
             continue
         _, payload = item
         data = json.loads(payload)
-        generate_report.delay(data["run_id"], data["account_id"])
+        generate_report.delay(data["run_id"], data["account_id"], data["report_type"], data.get("params") or {})
 
 # NOTE: To start the consumer alongside the worker, we will run a second process
 # in dev (e.g., `poetry run python -c "from worker.tasks import run_redis_consumer_forever as c;c()"`)

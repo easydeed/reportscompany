@@ -1,17 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Query, status
 from pydantic import BaseModel, Field, constr
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from ..db import db_conn, set_rls, fetchone_dict, fetchall_dicts
 
 router = APIRouter(prefix="/v1")
 
 # ====== Schemas ======
 class ReportCreate(BaseModel):
-    type: constr(strip_whitespace=True, min_length=2) = Field(..., alias="report_type")
-    cities: Optional[List[str]] = None
-    zipCodes: Optional[List[str]] = None
+    report_type: constr(strip_whitespace=True, min_length=2)
+    city: Optional[str] = None
+    zips: Optional[List[str]] = None
+    polygon: Optional[str] = None
     lookback_days: int = 30
-    property_type: Optional[str] = None
+    filters: Optional[Dict[str, Any]] = None
     additional_params: Optional[dict] = None
 
 
@@ -41,32 +42,33 @@ def require_account_id(request: Request) -> str:
 # ====== Routes ======
 @router.post("/reports", status_code=status.HTTP_202_ACCEPTED)
 def create_report(payload: ReportCreate, request: Request, account_id: str = Depends(require_account_id)):
-    # normalize inputs
-    cities = payload.cities or []
-    if payload.zipCodes and not cities:
-        # allow zip codes to be passed but store as cities[] for now
-        cities = payload.zipCodes
+    params = {
+        "city": payload.city,
+        "zips": payload.zips,
+        "polygon": payload.polygon,
+        "lookback_days": payload.lookback_days,
+        "filters": payload.filters or {},
+        "additional_params": payload.additional_params or {}
+    }
 
     with db_conn() as (conn, cur):
         set_rls(cur, account_id)
         cur.execute(
             """
             INSERT INTO report_generations
-              (account_id, report_type, cities, lookback_days, property_type, additional_params, status)
-            VALUES (%s, %s, %s, %s, %s, %s, 'pending')
+              (account_id, report_type, input_params, status)
+            VALUES (%s, %s, %s, 'pending')
             RETURNING id::text, status
             """,
-            (account_id, payload.type, cities or None, payload.lookback_days, payload.property_type, payload.additional_params),
+            (account_id, payload.report_type, params),
         )
         row = fetchone_dict(cur)
 
-    # enqueue Celery job
-    # NOTE: we import lazily to avoid importing Celery at app import time
+    # enqueue job
     try:
         from ..worker_client import enqueue_generate_report
-        enqueue_generate_report(row["id"], account_id)
-    except Exception as e:
-        # If enqueue fails, we still return 202; worker can be retried later
+        enqueue_generate_report(row["id"], account_id, payload.report_type, params)
+    except Exception:
         pass
 
     return {"report_id": row["id"], "status": row["status"]}

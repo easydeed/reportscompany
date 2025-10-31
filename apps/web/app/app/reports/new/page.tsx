@@ -17,7 +17,11 @@ export default function NewReportPage() {
     const res = await fetch(`${API_BASE}/v1/reports`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Demo-Account": DEMO_ACC },
-      body: JSON.stringify({ report_type: type, cities: cities.split(",").map(s=>s.trim()), lookback_days: lookback }),
+      body: JSON.stringify({
+        report_type: type,
+        city: cities.split(",").map(s=>s.trim())[0] || "Houston",
+        lookback_days: lookback
+      }),
     });
     const json = await res.json();
     const id = json.report_id;
