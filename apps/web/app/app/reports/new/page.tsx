@@ -1,80 +1,143 @@
 "use client";
 
-import AppLayout from "../../../app-layout";
-import { API_BASE, DEMO_ACC } from "@/lib/api";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Wizard from "@/components/Wizard";
+import AppLayout from "@/app/app-layout";
+import { API_BASE, DEMO_ACC } from "@/lib/api";
 
 export default function NewReportPage() {
-  const [cities, setCities] = useState("Los Angeles");
-  const [type, setType] = useState("market_snapshot");
-  const [lookback, setLookback] = useState(30);
+  const router = useRouter();
   const [runId, setRunId] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
-  const [links, setLinks] = useState<{html_url?: string; json_url?: string}>({});
+  const [links, setLinks] = useState<{html_url?: string; pdf_url?: string; json_url?: string}>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function create() {
-    setRunId(null); setStatus("pending"); setLinks({});
-    const res = await fetch(`${API_BASE}/v1/reports`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Demo-Account": DEMO_ACC },
-      body: JSON.stringify({
-        report_type: type,
-        city: cities.split(",").map(s=>s.trim())[0] || "Houston",
-        lookback_days: lookback
-      }),
-    });
-    const json = await res.json();
-    const id = json.report_id;
-    setRunId(id);
-    // poll
-    let tries = 0;
-    const poll = async () => {
-      tries++;
-      const r = await fetch(`${API_BASE}/v1/reports/${id}`, { headers: { "X-Demo-Account": DEMO_ACC }});
-      const j = await r.json();
-      setStatus(j.status);
-      if (j.status === "completed" || tries > 60) {
-        setLinks({ html_url: j.html_url, json_url: j.json_url });
-      } else {
-        setTimeout(poll, 800);
+  const handleSubmit = async (payload: any) => {
+    setIsSubmitting(true);
+    setRunId(null);
+    setStatus("pending");
+    setLinks({});
+
+    try {
+      const res = await fetch(`${API_BASE}/v1/reports`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Demo-Account": DEMO_ACC },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status}`);
       }
-    };
-    poll();
+
+      const json = await res.json();
+      const id = json.report_id;
+      setRunId(id);
+
+      // Poll for completion
+      let tries = 0;
+      const poll = async () => {
+        tries++;
+        const r = await fetch(`${API_BASE}/v1/reports/${id}`, {
+          headers: { "X-Demo-Account": DEMO_ACC },
+        });
+        const j = await r.json();
+        setStatus(j.status);
+        
+        if (j.status === "completed") {
+          setLinks({ html_url: j.html_url, pdf_url: j.pdf_url, json_url: j.json_url });
+          setIsSubmitting(false);
+        } else if (j.status === "failed" || tries > 60) {
+          setIsSubmitting(false);
+        } else {
+          setTimeout(poll, 1000);
+        }
+      };
+      poll();
+    } catch (error) {
+      console.error("Error creating report:", error);
+      setStatus("failed");
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCancel = () => {
+    router.push("/app/reports");
+  };
+
+  // Show wizard if no report is being generated
+  if (!runId) {
+    return (
+      <AppLayout>
+        <Wizard onSubmit={handleSubmit} onCancel={handleCancel} />
+      </AppLayout>
+    );
   }
 
+  // Show status/result
   return (
     <AppLayout>
-      <h1 className="text-2xl font-semibold">New Report</h1>
-      <div className="mt-6 grid gap-4 max-w-xl">
-        <label className="block">
-          <span className="text-sm text-slate-600">Report Type</span>
-          <select value={type} onChange={e=>setType(e.target.value)} className="mt-1 w-full rounded border px-3 py-2">
-            <option value="market_snapshot">Market Snapshot</option>
-            <option value="inventory_zip">Inventory by ZIP</option>
-            <option value="closings">Closings</option>
-          </select>
-        </label>
-        <label className="block">
-          <span className="text-sm text-slate-600">Cities (comma-separated)</span>
-          <input value={cities} onChange={e=>setCities(e.target.value)} className="mt-1 w-full rounded border px-3 py-2" />
-        </label>
-        <label className="block">
-          <span className="text-sm text-slate-600">Lookback (days)</span>
-          <input type="number" value={lookback} onChange={e=>setLookback(parseInt(e.target.value||"0",10))} className="mt-1 w-full rounded border px-3 py-2" />
-        </label>
-        <button onClick={create} className="mt-2 w-fit rounded bg-blue-600 px-5 py-2 text-white">Generate</button>
-        {runId && (
-          <div className="mt-4 rounded border bg-white p-4">
-            <div className="text-sm">Run ID: <code>{runId}</code></div>
-            <div className="mt-1 text-sm">Status: <span className={status==="completed"?"text-green-600":"text-amber-600"}>{status}</span></div>
-            <div className="mt-2 flex gap-4">
-              {links.html_url && <a className="text-blue-600 underline" href={links.html_url} target="_blank">Open HTML</a>}
-              {links.json_url && <a className="text-blue-600 underline" href={links.json_url} target="_blank">Open JSON</a>}
+      <div className="max-w-3xl mx-auto">
+        <h1 className="text-2xl font-semibold mb-6">Report Generation</h1>
+        
+        <div className="bg-white rounded-lg border p-6 space-y-4">
+          <div>
+            <div className="text-sm text-slate-600">Run ID</div>
+            <code className="text-sm font-mono">{runId}</code>
+          </div>
+
+          <div>
+            <div className="text-sm text-slate-600">Status</div>
+            <div className="mt-1">
+              {status === "pending" && <span className="text-amber-600">⏳ Pending...</span>}
+              {status === "processing" && <span className="text-blue-600">🔄 Processing...</span>}
+              {status === "completed" && <span className="text-green-600">✅ Completed!</span>}
+              {status === "failed" && <span className="text-red-600">❌ Failed</span>}
             </div>
           </div>
-        )}
+
+          {status === "completed" && links.html_url && (
+            <div className="pt-4 border-t space-y-3">
+              <div className="text-sm font-medium">Report Links:</div>
+              <div className="flex gap-3">
+                {links.pdf_url && (
+                  <a
+                    href={links.pdf_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    📄 Open PDF
+                  </a>
+                )}
+                {links.html_url && (
+                  <a
+                    href={links.html_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                  >
+                    🌐 Open HTML
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="pt-4 border-t">
+            <button
+              onClick={() => {
+                setRunId(null);
+                setStatus(null);
+                setLinks({});
+              }}
+              className="text-blue-600 hover:underline text-sm"
+            >
+              ← Create Another Report
+            </button>
+          </div>
+        </div>
       </div>
     </AppLayout>
   );
 }
-
