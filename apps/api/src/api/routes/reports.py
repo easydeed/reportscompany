@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Query, status
 from pydantic import BaseModel, Field, constr
 from typing import List, Optional, Dict, Any
+import json
 from ..db import db_conn, set_rls, fetchone_dict, fetchall_dicts
 
 router = APIRouter(prefix="/v1")
@@ -57,10 +58,10 @@ def create_report(payload: ReportCreate, request: Request, account_id: str = Dep
             """
             INSERT INTO report_generations
               (account_id, report_type, input_params, status)
-            VALUES (%s, %s, %s, 'pending')
+            VALUES (%s, %s, %s::jsonb, 'pending')
             RETURNING id::text, status
             """,
-            (account_id, payload.report_type, params),
+            (account_id, payload.report_type, json.dumps(params)),
         )
         row = fetchone_dict(cur)
 
