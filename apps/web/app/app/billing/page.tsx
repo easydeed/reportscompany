@@ -1,71 +1,150 @@
-"use client";
-import AppLayout from "../app-layout";
-import { API_BASE, DEMO_ACC } from "@/lib/api";
-import { useEffect, useState } from "react";
+"use client"
 
-type BillingState = { plan_slug?: string; billing_status?: string; stripe_customer_id?: string | null; };
+import { useEffect, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { API_BASE, DEMO_ACC } from "@/lib/api"
+import { CreditCard, Check } from "lucide-react"
+
+type BillingState = { plan_slug?: string; billing_status?: string; stripe_customer_id?: string | null }
+
 async function fetchAccount(): Promise<BillingState> {
-  const r = await fetch(`${API_BASE}/v1/account`, { headers: { "X-Demo-Account": DEMO_ACC }});
-  return r.ok ? r.json() : {};
+  const r = await fetch(`${API_BASE}/v1/account`, { headers: { "X-Demo-Account": DEMO_ACC } })
+  return r.ok ? r.json() : {}
 }
 
-export default function BillingPage(){
-  const [acct, setAcct] = useState<BillingState>({});
-  const [loading, setLoading] = useState(false);
+const plans = [
+  {
+    name: "Starter",
+    slug: "starter",
+    price: "$29",
+    period: "/month",
+    description: "Perfect for individual agents",
+    features: ["100 reports / month", "6 report types", "PDF export", "Email support"],
+  },
+  {
+    name: "Professional",
+    slug: "professional",
+    price: "$99",
+    period: "/month",
+    description: "For growing teams",
+    features: ["500 reports / month", "All report types", "API access", "Custom branding", "Priority support"],
+    popular: true,
+  },
+  {
+    name: "Enterprise",
+    slug: "enterprise",
+    price: "$299",
+    period: "/month",
+    description: "For large organizations",
+    features: ["Unlimited reports", "White-label", "Dedicated support", "Custom integrations", "SLA guarantee"],
+  },
+]
 
-  useEffect(()=>{ fetchAccount().then(setAcct); }, []);
+export default function BillingPage() {
+  const [acct, setAcct] = useState<BillingState>({})
+  const [loading, setLoading] = useState(false)
 
-  async function checkout(plan: "starter"|"professional"|"enterprise"){
-    setLoading(true);
+  useEffect(() => {
+    fetchAccount().then(setAcct)
+  }, [])
+
+  async function checkout(plan: "starter" | "professional" | "enterprise") {
+    setLoading(true)
     const r = await fetch(`${API_BASE}/v1/billing/checkout`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Demo-Account": DEMO_ACC },
-      body: JSON.stringify({ plan })
-    });
-    const j = await r.json(); setLoading(false);
-    if (j.url) window.location.href = j.url;
+      body: JSON.stringify({ plan }),
+    })
+    const j = await r.json()
+    setLoading(false)
+    if (j.url) window.location.href = j.url
   }
 
-  async function portal(){
-    const r = await fetch(`${API_BASE}/v1/billing/portal`, { headers: { "X-Demo-Account": DEMO_ACC }});
-    const j = await r.json();
-    if (j.url) window.location.href = j.url;
+  async function portal() {
+    const r = await fetch(`${API_BASE}/v1/billing/portal`, { headers: { "X-Demo-Account": DEMO_ACC } })
+    const j = await r.json()
+    if (j.url) window.location.href = j.url
   }
 
   return (
-    <AppLayout>
-      <h1 className="text-2xl font-semibold">Billing</h1>
-      <div className="mt-2 text-sm text-slate-600">
-        Plan: <b>{acct.plan_slug || "—"}</b> · Status: <b>{acct.billing_status || "—"}</b>
+    <div className="space-y-6">
+      <div>
+        <h1 className="font-bold text-3xl mb-2">Billing</h1>
+        <p className="text-muted-foreground">Manage your subscription and billing details</p>
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
-        <div className="rounded border bg-white p-4">
-          <h3 className="font-medium">Starter</h3>
-          <p className="text-sm text-slate-600">100 reports / mo</p>
-          <button onClick={()=>checkout("starter")} disabled={loading} className="mt-3 rounded bg-blue-600 px-4 py-2 text-white">Choose Starter</button>
-        </div>
-        <div className="rounded border bg-white p-4">
-          <h3 className="font-medium">Professional</h3>
-          <p className="text-sm text-slate-600">500 reports / mo • API • Branding</p>
-          <button onClick={()=>checkout("professional")} disabled={loading} className="mt-3 rounded bg-blue-600 px-4 py-2 text-white">Choose Professional</button>
-        </div>
-        <div className="rounded border bg-white p-4">
-          <h3 className="font-medium">Enterprise</h3>
-          <p className="text-sm text-slate-600">Unlimited • White-label</p>
-          <button onClick={()=>checkout("enterprise")} disabled={loading} className="mt-3 rounded bg-blue-600 px-4 py-2 text-white">Choose Enterprise</button>
-        </div>
-      </div>
+      {acct.plan_slug && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5" />
+              Current Plan
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground">Plan</p>
+                <p className="text-lg font-semibold capitalize">{acct.plan_slug || "—"}</p>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground">Status</p>
+                <Badge variant={acct.billing_status === "active" ? "default" : "outline"}>
+                  {acct.billing_status || "—"}
+                </Badge>
+              </div>
+            </div>
+            <Button onClick={portal} variant="outline">
+              Open Billing Portal
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
-      <div className="mt-6">
-        <button onClick={portal} className="rounded border px-4 py-2">Open Billing Portal</button>
+      <div>
+        <h2 className="text-2xl font-semibold mb-4">Plans</h2>
+        <div className="grid gap-6 md:grid-cols-3">
+          {plans.map((plan) => (
+            <Card key={plan.slug} className={plan.popular ? "border-primary shadow-lg" : ""}>
+              <CardHeader>
+                {plan.popular && (
+                  <Badge className="w-fit mb-2" variant="default">
+                    Most Popular
+                  </Badge>
+                )}
+                <CardTitle>{plan.name}</CardTitle>
+                <CardDescription>{plan.description}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <span className="text-4xl font-bold">{plan.price}</span>
+                  <span className="text-muted-foreground">{plan.period}</span>
+                </div>
+
+                <ul className="space-y-3">
+                  {plan.features.map((feature, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <Check className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                      <span className="text-sm">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Button
+                  onClick={() => checkout(plan.slug as any)}
+                  disabled={loading}
+                  className="w-full"
+                  variant={plan.popular ? "default" : "outline"}
+                >
+                  {acct.plan_slug === plan.slug ? "Current Plan" : "Choose " + plan.name}
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
-    </AppLayout>
-  );
+    </div>
+  )
 }
-
-
-
-
-
-
