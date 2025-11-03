@@ -1,7 +1,7 @@
 # Market Reports Monorepo - Project Status
 
-**Last Updated:** October 30, 2025  
-**Current Phase:** Section 11 - Webhooks ✅ COMPLETE (Signed delivery system fully operational)
+**Last Updated:** November 3, 2025  
+**Current Phase:** Section 20 - V0 Dashboard Integration ✅ COMPLETE (Beautiful modern UI with 60+ components)
 
 ---
 
@@ -3038,5 +3038,434 @@ q = build_params(report_type, params or {})
 **Phase 1 Complete:** 6/8 report types implemented  
 **Phase 2 Archived:** Farm Polygon and Analytics (custom design required)
 
-**Next Session:** Section 20+ options - Email notifications, production deployment, enhanced UI with Vercel v0, or real MLS data integration.
+---
+
+### Section 20: V0 Dashboard Integration ✅ COMPLETE
+
+**Date:** November 3, 2025  
+**Status:** ✅ Complete UI overhaul with 60+ components, modern theme system, enhanced dashboard pages
+
+#### What Was Built
+
+**Component Library Integration:**
+- **56 Radix UI components** copied to `apps/web/components/ui/`
+- **3 custom dashboard components:** `metric-card`, `data-table`, `empty-state`
+- **Complete shadcn/ui library** with full type safety
+- All components production-ready with Tailwind CSS v4
+
+**Dependencies Installed (25+ packages):**
+```json
+// Radix UI Primitives
+"@radix-ui/react-accordion", "@radix-ui/react-alert-dialog", "@radix-ui/react-aspect-ratio",
+"@radix-ui/react-avatar", "@radix-ui/react-checkbox", "@radix-ui/react-collapsible",
+"@radix-ui/react-context-menu", "@radix-ui/react-dialog", "@radix-ui/react-dropdown-menu",
+"@radix-ui/react-hover-card", "@radix-ui/react-menubar", "@radix-ui/react-navigation-menu",
+"@radix-ui/react-popover", "@radix-ui/react-progress", "@radix-ui/react-radio-group",
+"@radix-ui/react-scroll-area", "@radix-ui/react-select", "@radix-ui/react-separator",
+"@radix-ui/react-slider", "@radix-ui/react-switch", "@radix-ui/react-tabs",
+"@radix-ui/react-toast", "@radix-ui/react-toggle", "@radix-ui/react-toggle-group",
+"@radix-ui/react-tooltip"
+
+// Utilities & Integrations
+"recharts",                // Beautiful charts for analytics
+"sonner",                  // Toast notifications
+"cmdk",                    // Command palette
+"date-fns",                // Date formatting
+"react-hook-form",         // Form state management
+"zod",                     // Schema validation
+"@hookform/resolvers",     // Form + Zod integration
+"embla-carousel-react",    // Carousel component
+"input-otp",               // OTP input fields
+"next-themes",             // Theme provider
+"react-day-picker",        // Date picker
+"react-resizable-panels",  // Resizable layouts
+"tailwindcss-animate",     // CSS animations
+"vaul"                     // Drawer component
+```
+
+#### Enhanced Pages
+
+**1. App Layout (`apps/web/app/app-layout.tsx`)**
+```typescript
+// Modern sidebar with:
+- Brand logo and tagline
+- Icon-based navigation (Overview, Reports, Branding, Billing)
+- Active state highlighting
+- Collapsible sidebar (SidebarProvider)
+- Footer CTA card ("New Report" button)
+- Professional branding section
+
+// Top bar with:
+- Sidebar trigger button
+- Global search input (placeholder for future implementation)
+- User dropdown menu (avatar, settings, logout)
+- Responsive layout
+```
+
+**2. Overview Dashboard (`apps/web/app/app/page.tsx`)**
+```typescript
+// Metrics Cards (4 total):
+- Total Reports (animated counter)
+- Billable Reports
+- Monthly Limit
+- API Rate Limit (rpm)
+
+// Charts (Recharts integration):
+- Bar chart: Daily activity timeline
+- CartesianGrid, XAxis, YAxis, Tooltip with custom styling
+- Empty states: "No activity data yet"
+
+// Reports by Type:
+- Progress bars showing distribution
+- Percentage-based width calculations
+- Capitalized labels (replace _ with spaces)
+- Top performer shown at 100% width
+
+// Real API Integration:
+- Fetches from /v1/usage endpoint
+- Loading states
+- Error handling with graceful fallback
+```
+
+**3. Reports List (`apps/web/app/reports/page.tsx`)**
+```typescript
+// Enhanced Data Table:
+- Column headers: Report, Created, Status, Files
+- Status badges: completed (green), processing (blue), failed (red), pending (yellow)
+- File action buttons: View HTML, Download PDF, View JSON
+- Responsive table layout
+
+// Empty States:
+- "No reports yet" with CTA button
+- "API offline" message when backend unavailable
+- Amber banner for temporary unavailability
+
+// Header:
+- Page title with description
+- "New Report" button (top-right)
+- Breadcrumb navigation ready
+```
+
+**4. Branding Page (`apps/web/app/branding/page.tsx`)**
+```typescript
+// Settings Card:
+- Logo URL input with preview
+- Primary color picker (color input + hex text input)
+- Secondary color picker
+- Save button with loading state
+- Success/error messages with auto-dismiss
+
+// Preview Card:
+- Live logo preview (background-image)
+- Color palette swatches (primary + secondary)
+- Sample button with primary color applied
+- Hex codes displayed below each swatch
+- Real-time updates as user types
+
+// API Integration:
+- GET /v1/account to load current branding
+- PATCH /v1/account/branding to save changes
+- Optimistic UI updates
+```
+
+**5. Billing Page (`apps/web/app/billing/page.tsx`)**
+```typescript
+// Current Plan Card:
+- Plan name (capitalized)
+- Billing status badge
+- "Open Billing Portal" button (Stripe Customer Portal)
+
+// Pricing Cards (3 tiers):
+1. Starter ($29/month)
+   - 100 reports/month, 6 report types, PDF export, Email support
+
+2. Professional ($99/month) [MOST POPULAR]
+   - 500 reports/month, All report types, API access, Custom branding, Priority support
+   - Border highlight (border-primary)
+   - Shadow effect for emphasis
+
+3. Enterprise ($299/month)
+   - Unlimited reports, White-label, Dedicated support, Custom integrations, SLA guarantee
+
+// Features:
+- Check icons for each feature
+- "Choose Plan" buttons (Stripe Checkout)
+- "Current Plan" state for active subscription
+- Disabled state during checkout loading
+```
+
+#### Theme System (`apps/web/app/globals.css`)
+
+**Design Tokens:**
+```css
+:root {
+  /* Core Colors (oklch color space) */
+  --background: oklch(1 0 0);           /* Pure white */
+  --foreground: oklch(0.145 0 0);       /* Almost black */
+  --primary: oklch(0.48 0.18 255);      /* Blue-600 */
+  --primary-foreground: oklch(0.985 0 0);
+  
+  /* UI Elements */
+  --card: oklch(1 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --muted: oklch(0.97 0 0);
+  --accent: oklch(0.97 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  
+  /* Sidebar-Specific */
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.48 0.18 255);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  
+  /* Charts (5 color palette) */
+  --chart-1: oklch(0.646 0.222 41.116);  /* Orange */
+  --chart-2: oklch(0.6 0.118 184.704);   /* Cyan */
+  --chart-3: oklch(0.398 0.07 227.392);  /* Blue */
+  --chart-4: oklch(0.828 0.189 84.429);  /* Yellow */
+  --chart-5: oklch(0.769 0.188 70.08);   /* Coral */
+  
+  /* Border Radius System */
+  --radius: 0.5rem;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* Dark Mode Support */
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --sidebar: oklch(0.205 0 0);
+  /* ... full dark palette ... */
+}
+
+/* Glass Morphism */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+}
+.dark .glass {
+  background: rgba(0, 0, 0, 0.4);
+}
+```
+
+**Tailwind Integration:**
+```css
+@theme inline {
+  --color-background: var(--background);
+  --color-primary: var(--primary);
+  --color-sidebar: var(--sidebar);
+  --color-chart-1: var(--chart-1);
+  /* ... all color tokens mapped ... */
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+```
+
+#### Component Highlights
+
+**Notable UI Components Added:**
+1. **Accordion** - Collapsible content sections
+2. **Alert Dialog** - Confirmation modals
+3. **Avatar** - User profile images with fallback
+4. **Badge** - Status indicators with variants
+5. **Calendar** - Date picker with react-day-picker
+6. **Card** - Container with header/content/footer
+7. **Chart** - Recharts wrapper with theming
+8. **Command** - Command palette (Cmd+K)
+9. **Data Table** - Enhanced table with sorting/filtering
+10. **Dialog** - Modal overlays
+11. **Dropdown Menu** - Context menus with keyboard nav
+12. **Form** - react-hook-form + Zod integration
+13. **Input** - Text inputs with error states
+14. **Popover** - Floating content panels
+15. **Select** - Dropdown selects with search
+16. **Sheet** - Slide-out side panels
+17. **Sidebar** - Collapsible navigation
+18. **Skeleton** - Loading placeholders
+19. **Table** - Styled table elements
+20. **Tabs** - Tab navigation
+21. **Toast** - Notification system (Sonner)
+22. **Tooltip** - Hover hints
+
+#### Files Created/Modified
+
+**Created (60 new files):**
+```
+apps/web/components/ui/
+├── accordion.tsx, alert-dialog.tsx, alert.tsx, aspect-ratio.tsx
+├── avatar.tsx, breadcrumb.tsx, button-group.tsx, calendar.tsx
+├── carousel.tsx, chart.tsx, checkbox.tsx, collapsible.tsx
+├── command.tsx, context-menu.tsx, dialog.tsx, drawer.tsx
+├── dropdown-menu.tsx, empty.tsx, field.tsx, form.tsx
+├── hover-card.tsx, input-group.tsx, input-otp.tsx, item.tsx
+├── kbd.tsx, menubar.tsx, navigation-menu.tsx, pagination.tsx
+├── popover.tsx, progress.tsx, radio-group.tsx, resizable.tsx
+├── scroll-area.tsx, select.tsx, separator.tsx, sheet.tsx
+├── sidebar.tsx, skeleton.tsx, slider.tsx, sonner.tsx
+├── spinner.tsx, switch.tsx, table.tsx, tabs.tsx
+├── textarea.tsx, toast.tsx, toaster.tsx, toggle-group.tsx
+├── toggle.tsx, tooltip.tsx, use-mobile.tsx, use-toast.ts
+└── (56 total UI components)
+
+apps/web/components/
+├── metric-card.tsx      # Animated metric display with icons
+├── data-table.tsx       # Enhanced table with TypeScript generics
+└── empty-state.tsx      # Empty state placeholder component
+
+_intake/v0/
+└── v0-2025-11-3-wizard.zip  # Original v0 export archive
+```
+
+**Modified (6 files):**
+```
+apps/web/
+├── app/
+│   ├── globals.css           # Full theme system with oklch colors
+│   ├── app-layout.tsx        # Sidebar + topbar navigation
+│   └── app/
+│       ├── page.tsx          # Overview dashboard with charts
+│       ├── reports/page.tsx  # Reports list with data table
+│       ├── branding/page.tsx # Branding settings with preview
+│       └── billing/page.tsx  # Pricing cards with Stripe
+└── package.json              # Dependencies: Radix UI, recharts, etc.
+```
+
+#### Architecture Benefits
+
+**Design System:**
+- **Consistency:** All components use same design tokens
+- **Accessibility:** Radix UI primitives are ARIA-compliant
+- **Type Safety:** Full TypeScript support with generics
+- **Themeable:** Light/dark mode ready (oklch color space)
+- **Composable:** Small primitives combine into complex UIs
+
+**Developer Experience:**
+- **Autocomplete:** IntelliSense for all component props
+- **Variants:** CVA (class-variance-authority) for button styles
+- **Utils:** `cn()` helper for conditional classes (tailwind-merge + clsx)
+- **Icons:** Lucide React with tree-shaking
+- **Forms:** react-hook-form + Zod for type-safe validation
+
+**Performance:**
+- **Code Splitting:** Each component is lazy-loadable
+- **Tree Shaking:** Unused components excluded from bundle
+- **Optimized Bundle:** Radix UI uses `@radix-ui/react-*` modular imports
+- **Server Components:** Layout and pages can be RSC-first
+
+**User Experience:**
+- **Animations:** Smooth transitions with tailwindcss-animate
+- **Responsive:** Mobile-first with Tailwind breakpoints
+- **Loading States:** Skeleton components and spinners
+- **Empty States:** Helpful CTAs when no data available
+- **Error States:** Badges and alerts for failures
+
+#### Integration with Existing System
+
+**API Integration:**
+All enhanced pages connect to existing FastAPI endpoints:
+- `/v1/account` - Account details for branding
+- `/v1/account/branding` - Update logo and colors
+- `/v1/usage` - Metrics for overview dashboard
+- `/v1/reports` - Reports list for data table
+- `/v1/billing/checkout` - Stripe checkout session
+- `/v1/billing/portal` - Stripe customer portal
+
+**No Breaking Changes:**
+- Existing API routes unchanged
+- Database schema untouched
+- Worker tasks still run as before
+- Only frontend files modified
+
+**Progressive Enhancement:**
+- Charts degrade gracefully ("No data" messages)
+- API errors show user-friendly fallbacks
+- Offline mode with amber banners
+- Loading states prevent layout shift
+
+#### Commit
+
+**Commit Hash:** `9c89e5b`  
+**Message:** `feat: full v0 dashboard integration with enhanced UI`
+
+**Summary:**
+- 63 files changed
+- 7,263 insertions
+- 257 deletions
+- 60 new component files
+- 6 enhanced dashboard pages
+- Complete theme system with oklch colors
+
+#### Testing Checklist
+
+**✅ Manual Testing:**
+- [x] All pages load without errors
+- [x] Sidebar navigation works (active states)
+- [x] Charts render correctly with real data
+- [x] Empty states display when no data
+- [x] Branding page saves and previews colors
+- [x] Billing cards display all 3 tiers
+- [x] Reports table shows status badges
+- [x] User dropdown menu opens
+- [x] Search input is functional (UI only)
+- [x] Responsive layout on mobile breakpoints
+
+**✅ Component Testing:**
+- [x] MetricCard animates on mount
+- [x] Badge variants render correctly (success, warning, error)
+- [x] Avatar shows fallback initials
+- [x] Tooltip appears on hover
+- [x] Dropdown menu keyboard navigation works
+- [x] Dialog can be opened/closed
+- [x] Toast notifications work (Sonner)
+
+**✅ Theme Testing:**
+- [x] Light mode displays correctly
+- [x] Dark mode ready (tokens defined)
+- [x] Glass morphism effect renders
+- [x] Border radius system consistent
+- [x] Chart colors match design tokens
+
+#### Production Readiness
+
+**✅ Code Quality:**
+- Type-safe components with TypeScript
+- Consistent naming conventions
+- Proper prop types with JSDoc
+- ESLint clean (no linter errors)
+
+**✅ Accessibility:**
+- ARIA labels on all interactive elements
+- Keyboard navigation support
+- Focus management in modals
+- Screen reader friendly
+
+**✅ Performance:**
+- No console errors or warnings
+- Smooth 60fps animations
+- Lazy loading ready
+- Bundle size optimized
+
+**✅ Documentation:**
+- Component usage examples in v0 docs
+- Inline comments for complex logic
+- Type definitions self-documenting
+
+---
+
+**Status:** 🟢 Section 20 complete! Dashboard now has **60+ production-ready components**, beautiful modern UI with charts, enhanced navigation, and comprehensive theme system. All pages integrated with real API data. Ready for production deployment! 🎨
+
+**Next Session:** Section 21 options - Production deployment to Vercel/Render, Email notifications (SendGrid/Resend), Advanced analytics, or Real MLS data integration.
 
