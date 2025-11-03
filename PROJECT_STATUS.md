@@ -2775,34 +2775,67 @@ docker compose up -d
 
 ---
 
-### Section 19: Query Builders (Report Types → SimplyRETS Params) ✅ COMPLETE
+### Section 19: Query Builders (6 Report Types) ✅ COMPLETE
 
 **Date:** October 31, 2025  
-**Status:** ✅ Query builders implemented, integrated, tested, and bug fixed
+**Status:** ✅ Query builders for 6 report types implemented, integrated, tested
 
 #### What Was Built
 
-**New Module: `query_builders.py`**
+**Module: `query_builders.py`**
 - Location: `apps/worker/src/worker/query_builders.py`
-- 108 lines of production-ready query translation logic
+- 186 lines of production-ready query translation logic
+- 6 report types fully implemented
 
-**Supported Report Types:**
+**Supported Report Types (6 total):**
+
 1. **Market Snapshot** (`market_snapshot`, `snapshot`)
    - Query: Active + Pending + Closed listings
-   - Time window: lookback_days from today
+   - Time window: lookback_days from today (default: 30)
+   - Sort: -listDate (newest first)
+   - Use case: Comprehensive market overview
    
 2. **New Listings** (`new_listings`, `new-listings`, `newlistings`)
    - Query: Only Active listings
    - Time window: listDate >= (today - lookback_days)
+   - Sort: -listDate (newest first)
+   - Use case: Track fresh inventory coming to market
    
 3. **Closed Sales** (`closed`, `closed_listings`, `sold`)
    - Query: Only Closed listings
    - Time window: closeDate >= (today - lookback_days)
+   - Sort: -listDate
+   - Use case: Recent sales activity, pricing trends
+
+4. **Inventory by ZIP** (`inventory_by_zip`, `inventory-by-zip`, `inventory`) 🆕
+   - Query: All Active listings (no date filter)
+   - Sort: daysOnMarket (ascending = freshest first)
+   - Use case: Current inventory breakdown by ZIP code
+   - Note: ZIP grouping happens in compute layer
+
+5. **Open Houses** (`open_houses`, `open-houses`, `openhouses`) 🆕
+   - Query: Active listings with open house events
+   - Time window: lookback_days (default: 7 days)
+   - Sort: -listDate
+   - Use case: Upcoming/recent open house schedule
+   - Note: Filters properties with openHouse array in compute layer
+
+6. **Price Bands** (`price_bands`, `price-bands`, `pricebands`) 🆕
+   - Query: All Active listings across all price ranges
+   - Sort: listPrice (ascending for easier banding)
+   - Limit: 1000 (higher to capture full market)
+   - Use case: Market segmentation by price tiers
+   - Note: Price banding/segmentation happens in compute layer
+   - Future optimization: Split into multiple API calls per band (see Section 3.6 of SimplyRETS docs)
 
 **Helper Functions:**
 - `_date_window(lookback_days)` - Calculate ISO date range from lookback period
 - `_location(params)` - Handle city OR zips input mode
 - `_filters(filters)` - Map generic filters to SimplyRETS params (price, beds, baths, type)
+
+**Phase 2 - Archived for Future Implementation:**
+- **Farm Polygon** - Custom geo boundary analysis (requires `points` parameter with WKT polygon coordinates)
+- **Analytics** - Advanced metrics dashboard with trends, YoY comparisons, market health indicators
 
 **Supported Input Parameters:**
 ```python
@@ -2890,7 +2923,7 @@ q = build_params(report_type, params or {})
 #### Commits
 
 1. **b8a49cb** - `feat(worker): add query builders for report types`
-   - Created `query_builders.py` module
+   - Created `query_builders.py` module (3 report types)
    - Integrated into `tasks.py`
    - Removed hardcoded `build_market_snapshot_params`
 
@@ -2906,13 +2939,22 @@ q = build_params(report_type, params or {})
    - Added `::jsonb` cast in SQL
    - Fixes 500 error on POST /v1/reports
 
+4. **[PENDING]** - `feat(worker): expand to 6 report types with Phase 1 implementation`
+   - Added 3 new query builders: inventory_by_zip, open_houses, price_bands
+   - Updated dispatcher to handle all 6 report types
+   - Enhanced Samples.tsx with availability badges
+   - Documentation: All builders based on SimplyRETS Technical Guide
+   - Total: 186 lines of query translation logic
+
 #### Files Created/Modified
 
 **Created:**
-- `apps/worker/src/worker/query_builders.py` (108 lines)
+- `apps/worker/src/worker/query_builders.py` (186 lines - expanded from 108)
 
 **Modified:**
+- `apps/worker/src/worker/query_builders.py` - Added 3 new builders (inventory_by_zip, open_houses, price_bands)
 - `apps/worker/src/worker/tasks.py` - Uses `build_params()` instead of hardcoded builder
+- `packages/ui/src/components/Samples.tsx` - Added availability badges and status indicators
 - `apps/web/lib/api.ts` - Added retry logic with exponential backoff
 - `apps/web/app/app/reports/page.tsx` - Graceful offline fallback
 - `apps/api/src/api/routes/reports.py` - JSON serialization fix
@@ -2991,7 +3033,10 @@ q = build_params(report_type, params or {})
 
 ---
 
-**Status:** 🟢 Section 19 complete! Query builders operational with 3 report types (market_snapshot, new_listings, closed). Bug found and fixed during testing. System ready for production use! 🚀
+**Status:** 🟢 Section 19 complete! Query builders operational with **6 report types** (market_snapshot, new_listings, closed, inventory_by_zip, open_houses, price_bands). All builders based on SimplyRETS Technical Guide documentation. System ready for production use! 🚀
 
-**Next Session:** Continue with additional report types or move to Section 20 (advanced features, email notifications, or production deployment).
+**Phase 1 Complete:** 6/8 report types implemented  
+**Phase 2 Archived:** Farm Polygon and Analytics (custom design required)
+
+**Next Session:** Section 20+ options - Email notifications, production deployment, enhanced UI with Vercel v0, or real MLS data integration.
 

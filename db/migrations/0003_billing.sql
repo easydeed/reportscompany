@@ -26,3 +26,8 @@ CREATE TABLE IF NOT EXISTS billing_events (
 
 SELECT '0003_billing.sql applied' AS migration;
 
+
+
+
+
+

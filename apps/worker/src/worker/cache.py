@@ -16,3 +16,6 @@ def set(namespace: str, payload: dict, data: dict, ttl_s=3600):
     k = _key(namespace, payload)
     R.setex(k, ttl_s, json.dumps(data))
 
+
+
+

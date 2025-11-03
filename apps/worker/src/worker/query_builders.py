@@ -92,16 +92,94 @@ def build_closed(params: dict) -> Dict:
     q |= _filters(params.get("filters"))
     return q
 
+def build_inventory_by_zip(params: dict) -> Dict:
+    """
+    All currently active listings (no date window).
+    Sorted by Days on Market (lowest first = newest inventory).
+    Typically grouped by ZIP code in the compute layer.
+    """
+    q = {
+        "status": "Active",
+        "sort": "daysOnMarket",  # Ascending: freshest inventory first
+        "limit": 500,
+    }
+    q |= _location(params)
+    q |= _filters(params.get("filters"))
+    return q
+
+def build_open_houses(params: dict) -> Dict:
+    """
+    Active listings with upcoming/recent open houses.
+    Uses date window to capture current week's open houses.
+    Note: SimplyRETS filters listings with openHouse data; we'll need to
+    check for openHouse array in the response during compute phase.
+    """
+    start, end = _date_window(params.get("lookback_days") or 7)  # Default 7 days for open houses
+    q = {
+        "status": "Active",
+        "mindate": start,
+        "maxdate": end,
+        "sort": "-listDate",
+        "limit": 500,
+    }
+    q |= _location(params)
+    q |= _filters(params.get("filters"))
+    # Note: SimplyRETS doesn't have a direct "hasOpenHouse" filter in all APIs.
+    # We'll filter for properties with openHouse data in the compute layer.
+    return q
+
+def build_price_bands(params: dict) -> Dict:
+    """
+    Active listings across all price ranges.
+    Price banding (segmentation) happens in the compute layer.
+    
+    Note: For optimal performance, this could be split into multiple
+    API calls with minprice/maxprice filters (see Section 3.6 of docs).
+    Current implementation fetches all Active listings and bands them
+    in the compute phase.
+    """
+    q = {
+        "status": "Active",
+        "sort": "listPrice",  # Sort by price for easier banding
+        "limit": 1000,  # Higher limit since we're analyzing the full market
+    }
+    q |= _location(params)
+    q |= _filters(params.get("filters"))
+    # Optional: If user provides specific bands via filters, we could use minprice/maxprice
+    return q
+
 # Dispatcher
 
 def build_params(report_type: str, params: dict) -> Dict:
-    rt = (report_type or "market_snapshot").lower()
-    if rt in ("market_snapshot", "snapshot"):
+    """
+    Route report type to appropriate query builder.
+    
+    Supported report types:
+    - market_snapshot, snapshot: Active + Pending + Closed overview
+    - new_listings, new-listings, newlistings: Recent Active listings
+    - closed, closed_listings, sold: Recent closings
+    - inventory_by_zip, inventory-by-zip, inventory: Active inventory by ZIP
+    - open_houses, open-houses, openhouses: Upcoming/recent open houses
+    - price_bands, price-bands, pricebands: Market segmented by price ranges
+    """
+    rt = (report_type or "market_snapshot").lower().replace("_", "-").replace(" ", "-")
+    
+    if rt in ("market-snapshot", "snapshot"):
         return build_market_snapshot(params)
-    if rt in ("new_listings", "new-listings", "newlistings"):
+    if rt in ("new-listings", "newlistings"):
         return build_new_listings(params)
-    if rt in ("closed", "closed_listings", "sold"):
+    if rt in ("closed", "closed-listings", "sold"):
         return build_closed(params)
+    if rt in ("inventory-by-zip", "inventory"):
+        return build_inventory_by_zip(params)
+    if rt in ("open-houses", "openhouses"):
+        return build_open_houses(params)
+    if rt in ("price-bands", "pricebands"):
+        return build_price_bands(params)
+    
     # default fallback
     return build_market_snapshot(params)
+
+
+
 

@@ -44,3 +44,8 @@ def delete_webhook(webhook_id: str, request: Request, account_id: str = Depends(
     cur.execute("UPDATE webhooks SET is_active=FALSE WHERE id=%s", (webhook_id,))
   return
 
+
+
+
+
+

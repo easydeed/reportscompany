@@ -35,3 +35,8 @@ def hash_api_key(full_key: str) -> str:
     return hashlib.sha256(full_key.encode()).hexdigest()
 
 
+
+
+
+
+
