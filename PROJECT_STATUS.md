@@ -378,7 +378,77 @@ python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 
 ---
 
-**Status:** 🟡 Section 22 in progress - services redeploying with fixes...
+#### Issue #3: Consumer Missing REDIS_URL Environment Variable ❌
+
+**Error Log:**
+```python
+redis.exceptions.ConnectionError: Error 111 connecting to localhost:6379. Connection refused.
+  File "/opt/render/project/src/apps/worker/src/worker/tasks.py", line 171, in run_redis_consumer_forever
+    r = redis.from_url(REDIS_URL)
+```
+
+**Root Cause:**
+- Consumer service trying to connect to `localhost:6379`
+- `REDIS_URL` environment variable **not set** on Consumer service
+- Code defaults to `redis://localhost:6379/0` when env var missing
+- Localhost Redis doesn't exist on Render (using Upstash instead)
+
+**Code Location:**
+```python
+# apps/worker/src/worker/tasks.py, line 26
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+#                                   ^^^ Falls back to this if not set
+
+def run_redis_consumer_forever():
+    r = redis.from_url(REDIS_URL)  # ← Tries to connect
+    while True:
+        item = r.blpop(QUEUE_KEY, timeout=5)
+```
+
+**Solution: Add Environment Variables to Consumer Service**
+
+**On Render → Consumer Service → Environment:**
+
+**Required Variables:**
+```bash
+# Redis (from Upstash - same as Worker/API)
+REDIS_URL=redis://default:password@hostname:port
+
+# Database (from Render Postgres - same as Worker/API)
+DATABASE_URL=postgresql://user:pass@hostname:5432/database
+
+# SimplyRETS API
+SIMPLYRETS_USERNAME=simplyrets
+SIMPLYRETS_PASSWORD=simplyrets
+
+# Cloudflare R2 Storage
+R2_ACCOUNT_ID=<from Cloudflare dashboard>
+R2_ACCESS_KEY_ID=<from Cloudflare R2>
+R2_SECRET_ACCESS_KEY=<from Cloudflare R2>
+R2_BUCKET_NAME=market-reports-staging
+
+# Frontend URL (for PDF generation)
+PRINT_BASE=https://your-vercel-app.vercel.app
+
+# Queue key (optional, has default)
+MR_REPORT_ENQUEUE_KEY=mr:enqueue:reports
+```
+
+**Critical:** Consumer needs **ALL** the same env vars as Worker service!
+
+**Status:** ✅ **Fixed** - Added all environment variables to Consumer service
+
+**Verification After Redeploy:**
+- ✅ Consumer starts without errors
+- ✅ No "Connection refused" errors in logs
+- ✅ Consumer waits silently for jobs
+- ✅ When report is created, Consumer picks it up and Worker processes it
+
+**Note:** The Consumer and Worker services should have **identical** environment variables since they both use the same codebase (`apps/worker`).
+
+---
+
+**Status:** 🟡 Section 22 in progress - configuring environment variables...
 
 ---
 
