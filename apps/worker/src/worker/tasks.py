@@ -1,5 +1,6 @@
 from .app import celery
 import os, time, json, psycopg, redis, hmac, hashlib, httpx
+from datetime import datetime, date
 from psycopg import sql
 from playwright.sync_api import sync_playwright
 from .vendors.simplyrets import fetch_properties
@@ -8,6 +9,19 @@ from .compute.validate import filter_valid
 from .compute.calc import snapshot_metrics
 from .cache import get as cache_get, set as cache_set
 from .query_builders import build_params
+
+def safe_json_dumps(obj):
+    """
+    JSON serialization with datetime handling.
+    Recursively converts datetime/date objects to ISO format strings.
+    This ensures we never have JSON serialization errors.
+    """
+    def default_handler(o):
+        if isinstance(o, (datetime, date)):
+            return o.isoformat()
+        raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+    
+    return json.dumps(obj, default=default_handler)
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 QUEUE_KEY = os.getenv("MR_REPORT_ENQUEUE_KEY", "mr:enqueue:reports")
@@ -35,7 +49,7 @@ def _deliver_webhooks(account_id: str, event: str, payload: dict):
     if not hooks:
         return
 
-    body = json.dumps({"event": event, "timestamp": int(time.time()), "data": payload}).encode()
+    body = safe_json_dumps({"event": event, "timestamp": int(time.time()), "data": payload}).encode()
     for hook_id, url, secret in hooks:
         ts = str(int(time.time()))
         sig = _sign(secret, body, ts)
@@ -62,7 +76,7 @@ def _deliver_webhooks(account_id: str, event: str, payload: dict):
         with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
             with conn.cursor() as cur:
                 # Convert dict to JSON string for JSONB column
-                payload_json = json.dumps(json.loads(body.decode()))
+                payload_json = body.decode()  # Already JSON from safe_json_dumps
                 cur.execute("""
                   INSERT INTO webhook_deliveries (account_id, webhook_id, event, payload, response_status, response_ms, error)
                   VALUES (%s,%s,%s,%s::jsonb,%s,%s,%s)
@@ -76,12 +90,12 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
         # 1) Persist 'processing' + input
         with psycopg.connect(DATABASE_URL, autocommit=False) as conn:
             with conn.cursor() as cur:
-                cur.execute("SET LOCAL app.current_account_id = %s::uuid", (account_id,))
+                cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
                 cur.execute("""
                     UPDATE report_generations
                     SET status='processing', input_params=%s, source_vendor='simplyrets'
                     WHERE id=%s
-                """, (json.dumps(params or {}), run_id))
+                """, (safe_json_dumps(params or {}), run_id))
             conn.commit()
 
         # 2) Compute results (cache by report_type + params hash)
@@ -114,8 +128,8 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
         # 3) Save result_json
         with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
             with conn.cursor() as cur:
-                cur.execute("SET LOCAL app.current_account_id = %s::uuid", (account_id,))
-                cur.execute("UPDATE report_generations SET result_json=%s WHERE id=%s", (json.dumps(result), run_id))
+                cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
+                cur.execute("UPDATE report_generations SET result_json=%s WHERE id=%s", (safe_json_dumps(result), run_id))
 
         # 4) Generate PDF (Playwright) and final links
         url = f"{DEV_BASE}/print/{run_id}"
@@ -133,7 +147,7 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
 
         with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
             with conn.cursor() as cur:
-                cur.execute("SET LOCAL app.current_account_id = %s::uuid", (account_id,))
+                cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
                 cur.execute("""
                     UPDATE report_generations
                     SET status='completed', html_url=%s, json_url=%s, pdf_url=%s, processing_time_ms=%s
@@ -148,7 +162,7 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
     except Exception as e:
         with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
             with conn.cursor() as cur:
-                cur.execute("SET LOCAL app.current_account_id = %s::uuid", (account_id,))
+                cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
                 cur.execute("UPDATE report_generations SET status='failed', error=%s WHERE id=%s", (str(e), run_id))
         return {"ok": False, "error": str(e)}
 
