@@ -9,3 +9,4 @@ SELECT '0004_report_payloads.sql applied' AS migration;
 
 
 
+
