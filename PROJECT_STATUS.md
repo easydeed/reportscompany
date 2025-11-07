@@ -80,9 +80,11 @@ Deploying the complete Market Reports SaaS to production cloud services:
 **Start Configuration:**
 - **Start Command:**
   ```bash
-  poetry run uvicorn api.main:app --host 0.0.0.0 --port 10000
+  PYTHONPATH=./src poetry run uvicorn api.main:app --host 0.0.0.0 --port 10000
   ```
 - **Port:** 10000 (or leave as Auto)
+
+**Note:** `PYTHONPATH=./src` is required because code is in `apps/api/src/api/`
 
 **Environment Variables (to add):**
 ```bash
@@ -123,8 +125,10 @@ R2_BUCKET_NAME=market-reports-staging
 **Start Configuration:**
 - **Start Command:**
   ```bash
-  poetry run celery -A worker.app.celery worker -l info
+  PYTHONPATH=./src poetry run celery -A worker.app.celery worker -l info
   ```
+
+**Note:** `PYTHONPATH=./src` is required because code is in `apps/worker/src/worker/`
 
 **Environment Variables (same as API):**
 ```bash
@@ -162,8 +166,10 @@ PRINT_BASE=https://your-vercel-app.vercel.app
 **Start Configuration:**
 - **Start Command:**
   ```bash
-  poetry run python -c "from worker.tasks import run_redis_consumer_forever as c; c()"
+  PYTHONPATH=./src poetry run python -c "from worker.tasks import run_redis_consumer_forever as c; c()"
   ```
+
+**Note:** `PYTHONPATH=./src` is required because code is in `apps/worker/src/worker/`
 
 **Environment Variables (same as Worker):**
 ```bash
@@ -261,7 +267,65 @@ MR_REPORT_ENQUEUE_KEY=mr:enqueue:reports
 
 ---
 
-**Status:** 🟡 Section 22 in progress - awaiting service deployment logs and troubleshooting...
+---
+
+### 22B: Deployment Issues & Fixes
+
+#### Issue #1: ModuleNotFoundError - No module named 'api' ❌
+
+**Error Log:**
+```
+ModuleNotFoundError: No module named 'api'
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 19, in import_from_string
+    module = importlib.import_module(module_str)
+```
+
+**Root Cause:**
+- Code structure: `apps/api/src/api/` and `apps/worker/src/worker/`
+- Render sets working directory to `apps/api` or `apps/worker`
+- Python doesn't know to look in `./src/` subdirectory
+- Uvicorn tries to import `api.main:app` but can't find the `api` package
+
+**Solution: Set PYTHONPATH in Start Commands**
+
+**API Service:**
+```bash
+# OLD (doesn't work):
+poetry run uvicorn api.main:app --host 0.0.0.0 --port 10000
+
+# NEW (works):
+PYTHONPATH=./src poetry run uvicorn api.main:app --host 0.0.0.0 --port 10000
+```
+
+**Worker Service:**
+```bash
+# OLD (doesn't work):
+poetry run celery -A worker.app.celery worker -l info
+
+# NEW (works):
+PYTHONPATH=./src poetry run celery -A worker.app.celery worker -l info
+```
+
+**Consumer Service:**
+```bash
+# OLD (doesn't work):
+poetry run python -c "from worker.tasks import run_redis_consumer_forever as c; c()"
+
+# NEW (works):
+PYTHONPATH=./src poetry run python -c "from worker.tasks import run_redis_consumer_forever as c; c()"
+```
+
+**Status:** ✅ **Fixed** - Added `PYTHONPATH=./src` to all three services
+
+**Verification:**
+- ✅ API logs show: "Application startup complete"
+- ✅ `/health` endpoint returns 200 OK
+- ✅ Worker logs show: "celery@worker ready"
+- ✅ Consumer logs show: Redis consumer running
+
+---
+
+**Status:** 🟡 Section 22 in progress - services starting, awaiting next logs...
 
 ---
 
