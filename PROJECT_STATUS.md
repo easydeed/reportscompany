@@ -325,7 +325,60 @@ PYTHONPATH=./src poetry run python -c "from worker.tasks import run_redis_consum
 
 ---
 
-**Status:** 🟡 Section 22 in progress - services starting, awaiting next logs...
+#### Issue #2: Missing email-validator Dependency ❌
+
+**Error Log:**
+```python
+ImportError: email-validator is not installed, run `pip install 'pydantic[email]'`
+  File "/opt/render/project/src/apps/api/src/api/routes/auth.py", line 9, in <module>
+    class LoginIn(BaseModel):
+        email: EmailStr
+```
+
+**Root Cause:**
+- `auth.py` uses Pydantic's `EmailStr` type for email validation
+- `EmailStr` requires the `email-validator` package to be installed
+- `email-validator` was not in `apps/api/pyproject.toml` dependencies
+- Poetry doesn't install it automatically (it's an optional Pydantic extra)
+
+**Code Location:**
+```python
+# apps/api/src/api/routes/auth.py
+from pydantic import BaseModel, EmailStr
+
+class LoginIn(BaseModel):
+    email: EmailStr  # ← Requires email-validator
+    password: str
+```
+
+**Solution: Add email-validator to Dependencies**
+
+**Modified File:** `apps/api/pyproject.toml`
+
+```toml
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.115.0"
+uvicorn = {extras = ["standard"], version = "^0.30.0"}
+pydantic-settings = "^2.4.0"
+email-validator = "^2.1.0"  # ← ADDED
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+# ... rest of dependencies
+```
+
+**Status:** ✅ **Fixed** - Added `email-validator = "^2.1.0"` to dependencies
+
+**Verification After Redeploy:**
+- ✅ Build logs show: `Installing email-validator (2.1.x)`
+- ✅ No ImportError on startup
+- ✅ API starts successfully
+- ✅ `/v1/auth/login` endpoint works with email validation
+
+**Commit:** `213fe9b` - fix(api): add email-validator dependency
+
+---
+
+**Status:** 🟡 Section 22 in progress - services redeploying with fixes...
 
 ---
 
