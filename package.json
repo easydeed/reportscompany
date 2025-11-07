@@ -1,11 +1,14 @@
 {
   "name": "market-reports-monorepo",
   "private": true,
-  "packageManager": "pnpm@10.20.0",
+  "packageManager": "pnpm@9.12.3",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "dev:web": "pnpm --filter web dev",
     "dev:api": "echo \"API dev server will be added in Section 3\"",
