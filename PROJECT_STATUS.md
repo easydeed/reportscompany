@@ -1,7 +1,267 @@
 # Market Reports Monorepo - Project Status
 
 **Last Updated:** November 7, 2025  
-**Current Phase:** Section 21 - End-to-End Report Generation ✅ COMPLETE (Full debugging & fixes)
+**Current Phase:** Section 22 - Staging Deployment (Vercel + Render + Stripe + R2) 🚀
+
+---
+
+## 🚀 Section 22: Staging Deployment to Production Services (November 7, 2025)
+
+### Overview
+
+Deploying the complete Market Reports SaaS to production cloud services:
+- **Frontend:** Vercel (Next.js)
+- **API:** Render Web Service (FastAPI)
+- **Worker:** Render Background Worker (Celery)
+- **Consumer:** Render Background Worker (Redis Consumer)
+- **Database:** Render PostgreSQL (Managed)
+- **Cache/Queue:** Upstash Redis (Serverless)
+- **Storage:** Cloudflare R2 (Object Storage)
+- **Payments:** Stripe (Subscriptions)
+
+---
+
+### 22A: Create Cloud Services (Staging)
+
+#### Step 1: Render PostgreSQL Database
+
+**Service:** Render → New → PostgreSQL
+
+**Configuration:**
+- **Name:** `mr-staging-db`
+- **Region:** Oregon (US West) or closest to your API service
+- **Plan:** Standard (Free tier to start)
+- **PostgreSQL Version:** 15 or 16
+
+**Important Credentials:**
+- ✅ Copy **Internal Connection String** 
+  - Format: `postgresql://user:pass@hostname:5432/database`
+  - Use this for API and Worker services (same network, no egress)
+
+**Status:** ⏳ Creating...
+
+---
+
+#### Step 2: Upstash Redis (Serverless)
+
+**Service:** Upstash → Create Redis
+
+**Configuration:**
+- **Name:** `mr-staging-redis`
+- **Type:** Regional (not Global, for lower latency)
+- **Region:** Choose region close to Render (e.g., AWS us-west-2)
+- **Plan:** Free tier (10k commands/day)
+
+**Important Credentials:**
+- ✅ Copy **Redis URL** (not REST URL)
+  - Format: `redis://default:password@hostname:port`
+  - Or: `rediss://default:password@hostname:port` (with TLS)
+
+**Status:** ⏳ Creating...
+
+---
+
+#### Step 3: Render API Service (FastAPI)
+
+**Service:** Render → New → Web Service
+
+**Repository Settings:**
+- **Connect:** Your GitHub repository
+- **Root Directory:** `apps/api`
+- **Branch:** `main`
+
+**Build Configuration:**
+- **Runtime:** Python 3
+- **Build Command:**
+  ```bash
+  pip install poetry && poetry install --no-root
+  ```
+
+**Start Configuration:**
+- **Start Command:**
+  ```bash
+  poetry run uvicorn api.main:app --host 0.0.0.0 --port 10000
+  ```
+- **Port:** 10000 (or leave as Auto)
+
+**Environment Variables (to add):**
+```bash
+DATABASE_URL=<paste Internal Connection String from Render Postgres>
+REDIS_URL=<paste Redis URL from Upstash>
+JWT_SECRET=<generate secure random string>
+ALLOWED_ORIGINS=["https://your-vercel-app.vercel.app","http://localhost:3000"]
+SIMPLYRETS_USERNAME=simplyrets
+SIMPLYRETS_PASSWORD=simplyrets
+STRIPE_SECRET_KEY=<from Stripe dashboard>
+STRIPE_WEBHOOK_SECRET=<from Stripe CLI or dashboard>
+R2_ACCOUNT_ID=<from Cloudflare R2>
+R2_ACCESS_KEY_ID=<from Cloudflare R2>
+R2_SECRET_ACCESS_KEY=<from Cloudflare R2>
+R2_BUCKET_NAME=market-reports-staging
+```
+
+**Status:** ⏳ Creating...
+
+---
+
+#### Step 4: Render Worker Service (Celery)
+
+**Service:** Render → New → Background Worker
+
+**Repository Settings:**
+- **Connect:** Same GitHub repository
+- **Root Directory:** `apps/worker`
+- **Branch:** `main`
+
+**Build Configuration:**
+- **Runtime:** Python 3
+- **Build Command:**
+  ```bash
+  pip install poetry && poetry install --no-root && python -m playwright install chromium
+  ```
+
+**Start Configuration:**
+- **Start Command:**
+  ```bash
+  poetry run celery -A worker.app.celery worker -l info
+  ```
+
+**Environment Variables (same as API):**
+```bash
+DATABASE_URL=<same as API>
+REDIS_URL=<same as API>
+SIMPLYRETS_USERNAME=simplyrets
+SIMPLYRETS_PASSWORD=simplyrets
+R2_ACCOUNT_ID=<from Cloudflare R2>
+R2_ACCESS_KEY_ID=<from Cloudflare R2>
+R2_SECRET_ACCESS_KEY=<from Cloudflare R2>
+R2_BUCKET_NAME=market-reports-staging
+PRINT_BASE=https://your-vercel-app.vercel.app
+```
+
+**Status:** ⏳ Creating...
+
+---
+
+#### Step 5: Render Consumer Service (Redis → Celery Bridge)
+
+**Service:** Render → New → Background Worker
+
+**Repository Settings:**
+- **Connect:** Same GitHub repository
+- **Root Directory:** `apps/worker`
+- **Branch:** `main`
+
+**Build Configuration:**
+- **Runtime:** Python 3
+- **Build Command:**
+  ```bash
+  pip install poetry && poetry install --no-root && python -m playwright install chromium
+  ```
+
+**Start Configuration:**
+- **Start Command:**
+  ```bash
+  poetry run python -c "from worker.tasks import run_redis_consumer_forever as c; c()"
+  ```
+
+**Environment Variables (same as Worker):**
+```bash
+DATABASE_URL=<same as API>
+REDIS_URL=<same as API>
+MR_REPORT_ENQUEUE_KEY=mr:enqueue:reports
+# ... all other env vars from Worker
+```
+
+**Status:** ⏳ Creating...
+
+---
+
+### Deployment Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Vercel (Frontend)                    │
+│                 Next.js App Router                      │
+│              https://your-app.vercel.app                │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     │ HTTPS
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│              Render Web Service (API)                   │
+│                  FastAPI + Uvicorn                      │
+│          https://mr-staging-api.onrender.com            │
+└────────┬──────────────────────────────┬─────────────────┘
+         │                              │
+         │                              │ Enqueues jobs
+         ▼                              ▼
+┌────────────────────┐       ┌──────────────────────────┐
+│  Render Postgres   │       │   Upstash Redis          │
+│   (Database)       │       │   (Queue/Cache)          │
+└────────────────────┘       └───────────┬──────────────┘
+         ▲                               │
+         │                               │ Polls queue
+         │                   ┌───────────┴──────────────┐
+         │                   │                          │
+         │                   ▼                          ▼
+         │        ┌──────────────────┐    ┌──────────────────────┐
+         │        │  Render Worker   │    │ Render Consumer      │
+         │        │   (Celery)       │    │ (Redis → Celery)     │
+         │        │                  │    │                      │
+         └────────┤  Generates PDFs  │◄───┤ Processes jobs       │
+                  │  via Playwright  │    │                      │
+                  └──────────┬───────┘    └──────────────────────┘
+                             │
+                             │ Uploads PDFs
+                             ▼
+                  ┌────────────────────┐
+                  │   Cloudflare R2    │
+                  │  (Object Storage)  │
+                  └────────────────────┘
+```
+
+---
+
+### Troubleshooting Checklist
+
+**Common Issues:**
+
+1. **Build Failures:**
+   - ❌ Poetry not found → Add `pip install poetry` to build command
+   - ❌ Module not found → Check `pyproject.toml` dependencies
+   - ❌ Python version mismatch → Render uses Python 3.10+ by default
+
+2. **Runtime Failures:**
+   - ❌ Database connection → Verify `DATABASE_URL` is Internal Connection String
+   - ❌ Redis connection → Check Upstash Redis URL format (with/without TLS)
+   - ❌ Port binding → Ensure `--host 0.0.0.0` for public access
+
+3. **Worker Issues:**
+   - ❌ Playwright fails → Add `python -m playwright install chromium` to build
+   - ❌ Celery not connecting → Verify `REDIS_URL` matches API
+   - ❌ No jobs processed → Check Consumer service is running
+
+4. **Environment Variables:**
+   - ❌ Missing variables → Cross-check all services have same DATABASE_URL, REDIS_URL
+   - ❌ CORS errors → Add Vercel URL to `ALLOWED_ORIGINS`
+   - ❌ 500 errors → Check logs for missing env vars
+
+---
+
+### Next Steps
+
+**Once all services are deployed:**
+
+1. ✅ Run database migrations
+2. ✅ Test API health endpoint
+3. ✅ Deploy Vercel frontend
+4. ✅ Configure Stripe webhooks
+5. ✅ Test end-to-end report generation
+
+---
+
+**Status:** 🟡 Section 22 in progress - awaiting service deployment logs and troubleshooting...
 
 ---
 
