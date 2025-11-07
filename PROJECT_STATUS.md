@@ -448,7 +448,93 @@ MR_REPORT_ENQUEUE_KEY=mr:enqueue:reports
 
 ---
 
-**Status:** 🟡 Section 22 in progress - configuring environment variables...
+#### Issue #4: Quotes in Environment Variable Values ❌
+
+**Error Log:**
+```python
+ValueError: Redis URL must specify one of the following schemes (redis://, rediss://, unix://)
+  File "/opt/render/project/src/.venv/lib/python3.13/site-packages/redis/connection.py", line 1216, in parse_url
+    raise ValueError(...)
+```
+
+**Root Cause:**
+- User entered environment variable with quotes in Render UI:
+  ```
+  REDIS_URL="rediss://default:AYcy...@massive-caiman-34610.upstash.io:6379"
+  ```
+- Render treats this **literally**, storing:
+  ```
+  "rediss://default:AYcy...@massive-caiman-34610.upstash.io:6379"
+  ```
+- Python's `redis.from_url()` tries to parse `"rediss://...` (starting with quote character)
+- URL validation fails because it starts with `"` instead of a valid scheme
+
+**Solution: Remove Quotes from Environment Variables**
+
+**In Render UI, enter values WITHOUT quotes:**
+
+```bash
+# ❌ WRONG (with quotes):
+REDIS_URL="rediss://default:password@hostname:6379"
+
+# ✅ CORRECT (no quotes):
+REDIS_URL=rediss://default:password@hostname:6379
+```
+
+**Applies to ALL environment variables:**
+- `REDIS_URL`
+- `DATABASE_URL`
+- `SIMPLYRETS_USERNAME`
+- `SIMPLYRETS_PASSWORD`
+- `R2_ACCOUNT_ID`
+- All other variables
+
+**Status:** ✅ **Fixed** - Removed quotes from all Consumer environment variables
+
+**Verification After Redeploy:**
+- ✅ No ValueError on Redis connection
+- ✅ Consumer connects to Upstash Redis successfully
+- ✅ Service starts with "Your service is live 🎉"
+
+---
+
+### 22C: Successful Deployment ✅
+
+**Deployment Date:** November 7, 2025
+
+**All Services Deployed Successfully:**
+
+| Service | Status | URL/Details | Verification |
+|---------|--------|-------------|--------------|
+| ✅ **Database** | Running | Render PostgreSQL (Internal) | Connection string working |
+| ✅ **Redis** | Running | Upstash Redis (rediss://massive-caiman-34610...) | All services connected |
+| ✅ **API** | **LIVE** | `https://reportscompany.onrender.com` | `/health` returns 200 |
+| ✅ **Worker** | Running | Celery worker with Playwright | Ready to process jobs |
+| ✅ **Consumer** | Running | Redis bridge (Listens on `report_enqueue`) | Forwarding to Celery |
+
+**Issues Resolved:**
+1. ✅ ModuleNotFoundError → Fixed with `PYTHONPATH=./src`
+2. ✅ Missing `email-validator` → Added to `pyproject.toml`
+3. ✅ Consumer Redis connection → Added all environment variables
+4. ✅ Quotes in env vars → Removed quotes from Render UI
+
+**Backend Stack Ready:**
+- PostgreSQL database with RLS enabled
+- Redis queue/cache operational
+- FastAPI API accepting requests (401 on protected endpoints = working auth)
+- Celery worker ready to generate PDFs
+- Redis consumer bridge operational
+
+**Next Steps:**
+1. 🔄 Deploy frontend to Vercel
+2. 🔄 Configure Vercel environment variables (`NEXT_PUBLIC_API_URL`)
+3. 🔄 Test end-to-end report generation (staging → R2)
+4. 🔄 Configure Stripe webhooks (point to Render API URL)
+5. 🔄 Run database migrations if needed
+
+---
+
+**Status:** ✅ Section 22A-B COMPLETE - All backend services deployed!
 
 ---
 
