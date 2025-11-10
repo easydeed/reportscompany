@@ -133,12 +133,16 @@ def render_pdf_pdfshift(run_id: str, account_id: str, html_content: Optional[str
         print(f"☁️  Rendering PDF with PDFShift: {print_url}")
     
     # Make API request
+    # PDFShift uses API key as the username in HTTP Basic Auth
+    print(f"🔑 Using API key: {PDFSHIFT_API_KEY[:10]}...{PDFSHIFT_API_KEY[-4:]}")
     response = httpx.post(
         PDFSHIFT_API_URL,
         json=payload,
-        auth=(PDFSHIFT_API_KEY, ""),  # Basic auth with API key as username
+        auth=(PDFSHIFT_API_KEY, ""),  # Basic auth with API key as username, empty password
         timeout=30.0
     )
+    
+    print(f"📊 PDFShift response: {response.status_code}")
     
     response.raise_for_status()
     
