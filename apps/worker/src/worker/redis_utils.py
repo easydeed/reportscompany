@@ -36,7 +36,7 @@ def create_redis_connection(redis_url):
         # Map string values to ssl module constants
         ssl_cert_reqs_map = {
             "CERT_REQUIRED": ssl.CERT_REQUIRED,
-            "CERT_OPTIONAL": ssl.OPTIONAL,
+            "CERT_OPTIONAL": ssl.CERT_OPTIONAL,
             "CERT_NONE": ssl.CERT_NONE
         }
         
