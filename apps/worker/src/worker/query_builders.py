@@ -43,14 +43,14 @@ def _filters(filters: Optional[dict]) -> Dict:
 
 def build_market_snapshot(params: dict) -> Dict:
     """
-    Active + Pending + Closed in date window, sort by latest listDate.
+    Active + Pending + Closed in date window.
+    NOTE: sort parameter removed - not supported by all MLS vendors when using city search.
     """
     start, end = _date_window(params.get("lookback_days") or 30)
     q = {
         "status": "Active,Pending,Closed",
         "mindate": start,
         "maxdate": end,
-        "sort": "-listDate",
         "limit": 500,
     }
     q |= _location(params)
@@ -59,14 +59,14 @@ def build_market_snapshot(params: dict) -> Dict:
 
 def build_new_listings(params: dict) -> Dict:
     """
-    Fresh actives in date window, sorted by newest listDate.
+    Fresh actives in date window.
+    NOTE: sort parameter removed - not supported by all MLS vendors when using city search.
     """
     start, end = _date_window(params.get("lookback_days") or 30)
     q = {
         "status": "Active",
         "mindate": start,
         "maxdate": end,
-        "sort": "-listDate",
         "limit": 500,
     }
     q |= _location(params)
@@ -78,13 +78,13 @@ def build_closed(params: dict) -> Dict:
     Recently closed within date window.
     NOTE: For a first pass we use mindate/maxdate window with status=Closed.
     (If needed later, we can switch to close-date-specific params.)
+    Sort parameter removed - not supported by all MLS vendors when using city search.
     """
     start, end = _date_window(params.get("lookback_days") or 30)
     q = {
         "status": "Closed",
         "mindate": start,
         "maxdate": end,
-        "sort": "-listDate",
         "limit": 500,
     }
     q |= _location(params)
@@ -94,12 +94,11 @@ def build_closed(params: dict) -> Dict:
 def build_inventory_by_zip(params: dict) -> Dict:
     """
     All currently active listings (no date window).
-    Sorted by Days on Market (lowest first = newest inventory).
     Typically grouped by ZIP code in the compute layer.
+    NOTE: sort parameter removed - not supported by all MLS vendors when using city search.
     """
     q = {
         "status": "Active",
-        "sort": "daysOnMarket",
         "limit": 500,
     }
     q |= _location(params)
@@ -112,13 +111,13 @@ def build_open_houses(params: dict) -> Dict:
     Uses date window to capture current week's open houses.
     Note: SimplyRETS filters listings with openHouse data; we'll need to
     check for openHouse array in the response during compute phase.
+    Sort parameter removed - not supported by all MLS vendors when using city search.
     """
     start, end = _date_window(params.get("lookback_days") or 7)  # Default 7 days for open houses
     q = {
         "status": "Active",
         "mindate": start,
         "maxdate": end,
-        "sort": "-listDate",
         "limit": 500,
     }
     q |= _location(params)
@@ -136,10 +135,10 @@ def build_price_bands(params: dict) -> Dict:
     API calls with minprice/maxprice filters (see Section 3.6 of docs).
     Current implementation fetches all Active listings and bands them
     in the compute phase.
+    Sort parameter removed - not supported by all MLS vendors when using city search.
     """
     q = {
         "status": "Active",
-        "sort": "listPrice",
         "limit": 1000,  # Higher limit since we're analyzing the full market
     }
     q |= _location(params)
