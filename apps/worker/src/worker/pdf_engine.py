@@ -128,7 +128,7 @@ def render_pdf_pdfshift(run_id: str, account_id: str, html_content: Optional[str
             "use_print": True,
             "format": "Letter",
             "margin": "0.5in",
-            "wait": 2000  # Wait 2s for dynamic content
+            "delay": 2000  # Wait 2s for dynamic content (PDFShift uses 'delay', not 'wait')
         }
         print(f"☁️  Rendering PDF with PDFShift: {print_url}")
     
