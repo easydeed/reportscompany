@@ -1,7 +1,7 @@
 # Market Reports Monorepo - Project Status
 
-**Last Updated:** November 10, 2025 (Afternoon Session)  
-**Current Phase:** Section 22F - Playwright Docker Containerization 🐳
+**Last Updated:** November 10, 2025 (Evening - 9:15 PM)  
+**Current Phase:** ✅ Section 22G Complete - PDFShift Integration Deployed & Verified 🎉
 
 ---
 
@@ -5333,4 +5333,446 @@ All enhanced pages connect to existing FastAPI endpoints:
 **Status:** 🟢 Section 20 complete! Dashboard now has **60+ production-ready components**, beautiful modern UI with charts, enhanced navigation, and comprehensive theme system. All pages integrated with real API data. Ready for production deployment! 🎨
 
 **Next Session:** Section 21 options - Production deployment to Vercel/Render, Email notifications (SendGrid/Resend), Advanced analytics, or Real MLS data integration.
+
+---
+
+## 🔥 Section 22G: PDFShift Hotfix - External API Solution (November 10, 2025 - Evening)
+
+**Last Updated:** November 10, 2025, 9:00 PM  
+**Status:** ✅ **DEPLOYED & WORKING**
+
+### Context
+
+After Docker containerization attempts failed to deploy on Render (Blueprint deployment issues), we pivoted to **Track 1: PDFShift External API** to unblock staging immediately. This provides a production-ready solution without requiring Playwright or browser dependencies on the worker.
+
+---
+
+### Implementation Summary
+
+#### **1. Pluggable PDF Engine Architecture**
+
+Created `apps/worker/src/worker/pdf_engine.py` with a flexible architecture:
+
+**Features:**
+- Environment-variable driven (`PDF_ENGINE=playwright|pdfshift`)
+- Supports both local (Playwright) and cloud (PDFShift) rendering
+- Clean abstraction: `render_pdf(run_id, account_id, html_content, print_base) -> (pdf_path, html_url)`
+- Easy to extend with additional engines (e.g., WeasyPrint, wkhtmltopdf)
+
+**Code Structure:**
+```python
+PDF_ENGINE = os.getenv("PDF_ENGINE", "playwright")
+
+def render_pdf(run_id, account_id, html_content=None, print_base="..."):
+    if PDF_ENGINE == "pdfshift":
+        return _render_pdf_with_pdfshift(...)
+    else:
+        return _render_pdf_with_playwright(...)
+```
+
+#### **2. PDFShift Integration**
+
+**API Configuration:**
+- Endpoint: `https://api.pdfshift.io/v3/convert/pdf`
+- Authentication: `X-API-Key` header
+- API Key: `sk_f2f467da01a44b1c2edffe2a08c37e235feab15f`
+
+**Payload (Final Working Version):**
+```json
+{
+  "source": "https://reportscompany-web.vercel.app/print/{run_id}",
+  "sandbox": false,
+  "use_print": true,
+  "format": "Letter",
+  "margin": "0.5in",
+  "delay": 2000
+}
+```
+
+**Key Details:**
+- Uses `delay` parameter (NOT `wait` - this was critical)
+- Navigates to `/print/{run_id}` route on frontend
+- Renders with print stylesheet (`use_print: true`)
+- Returns raw PDF bytes (107KB+ typical size)
+
+#### **3. Updated Worker Flow**
+
+**Modified `apps/worker/src/worker/tasks.py`:**
+
+```python
+# Step 4: Generate PDF using configured engine
+pdf_path, html_url = render_pdf(
+    run_id=run_id,
+    account_id=account_id,
+    html_content=None,  # Will navigate to /print/{run_id}
+    print_base=PRINT_BASE
+)
+
+# Step 5: Upload PDF to Cloudflare R2
+s3_key = f"reports/{account_id}/{run_id}.pdf"
+pdf_url = upload_to_r2(pdf_path, s3_key)
+
+# Step 6: Update report status to 'completed'
+with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
+    with conn.cursor() as cur:
+        cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
+        cur.execute("""
+            UPDATE report_generations
+            SET status='completed', html_url=%s, json_url=%s, pdf_url=%s, processing_time_ms=%s
+            WHERE id = %s
+        """, (html_url, json_url, pdf_url, processing_time_ms, run_id))
+```
+
+#### **4. Environment Variables (Render)**
+
+**Worker Service:**
+```bash
+PDF_ENGINE=pdfshift
+PDFSHIFT_API_URL=https://api.pdfshift.io/v3/convert/pdf
+PDFSHIFT_API_KEY=sk_f2f467da01a44b1c2edffe2a08c37e235feab15f
+PRINT_BASE=https://reportscompany-web.vercel.app
+```
+
+**Consumer Service:**
+```bash
+# Same as Worker (shares codebase)
+PDF_ENGINE=pdfshift
+PDFSHIFT_API_URL=https://api.pdfshift.io/v3/convert/pdf
+PDFSHIFT_API_KEY=sk_f2f467da01a44b1c2edffe2a08c37e235feab15f
+PRINT_BASE=https://reportscompany-web.vercel.app
+```
+
+---
+
+### Debugging Journey & Lessons Learned
+
+#### **Critical Lesson: Local Testing First! 🧪**
+
+**Problem:**
+We wasted significant time (multiple Render redeploys @ 2-3 minutes each) debugging PDFShift API errors that could have been caught locally in seconds.
+
+**What We Did Wrong:**
+1. ❌ Changed code → commit → push → wait for Render
+2. ❌ Check logs → find error → fix → commit → push → wait again
+3. ❌ Repeated this cycle 5+ times for simple API parameter issues
+
+**What We Should Have Done:**
+1. ✅ Created `test_pdfshift.py` local test script
+2. ✅ Tested API calls locally (30 seconds)
+3. ✅ Iterated rapidly until working locally
+4. ✅ Only then deploy to Render
+
+**Local Testing Script Created:**
+```python
+# test_pdfshift.py - Tests PDFShift API locally
+import httpx
+
+PDFSHIFT_API_KEY = "sk_f2f467da..."
+PDFSHIFT_API_URL = "https://api.pdfshift.io/v3/convert/pdf"
+
+payload = {
+    "source": "https://reportscompany-web.vercel.app",
+    "sandbox": True,  # Free testing mode
+    "use_print": True,
+    "format": "Letter",
+    "margin": "0.5in",
+    "delay": 2000
+}
+
+headers = {"X-API-Key": PDFSHIFT_API_KEY}
+response = httpx.post(PDFSHIFT_API_URL, json=payload, headers=headers)
+
+print(f"Status: {response.status_code}")
+if response.status_code == 200:
+    with open("test_output.pdf", "wb") as f:
+        f.write(response.content)
+    print(f"SUCCESS! PDF saved: {len(response.content)} bytes")
+else:
+    print(f"ERROR: {response.json()}")
+```
+
+**Time Comparison:**
+- **Local testing:** 30 seconds per iteration
+- **Render redeploy:** 2-3 minutes per iteration
+- **Savings:** 10x faster local development!
+
+---
+
+### Errors Encountered & Fixes
+
+#### **Error 1: 401 Unauthorized**
+
+**Symptom:**
+```
+HTTP/1.1 401 Unauthorized
+```
+
+**Cause:**
+Using HTTP Basic Auth instead of `X-API-Key` header.
+
+**Fix:**
+```python
+# WRONG ❌
+auth=(PDFSHIFT_API_KEY, "")
+
+# CORRECT ✅
+headers = {"X-API-Key": PDFSHIFT_API_KEY}
+```
+
+**Commit:** `bc32e4e` - "Fix PDFShift authentication: use X-API-Key header instead of Basic Auth"
+
+---
+
+#### **Error 2: 400 Bad Request - "Rogue field"**
+
+**Symptom:**
+```json
+{
+  "success": false,
+  "errors": {"wait": "Rogue field"},
+  "code": 400
+}
+```
+
+**Cause:**
+Used `"wait": 2000` parameter, but PDFShift API uses `"delay"` instead.
+
+**Fix:**
+```python
+# WRONG ❌
+"wait": 2000
+
+# CORRECT ✅
+"delay": 2000
+```
+
+**Documentation Reference:**
+Per [PDFShift docs](https://docs.pdfshift.io/):
+> **delay** (Number): In milliseconds. Will wait for this duration before capturing the document. Up to 10 seconds max.
+
+**Commit:** `782da91` - "Fix PDFShift parameter: use 'delay' instead of 'wait'"
+
+---
+
+### Testing & Verification
+
+#### **Local Test Results:**
+
+```bash
+$ cd apps/worker
+$ poetry run python ../../test_pdfshift.py
+
+Testing PDFShift API...
+Payload: {'source': '...', 'sandbox': True, 'format': 'Letter', 'delay': 2000}
+API Key: sk_f2f467d...b15f
+Response Status: 200
+SUCCESS! PDF generated (107727 bytes)
+Saved to: test_output.pdf
+```
+
+✅ **Local test passed!** Confirmed fix works before deploying to Render.
+
+---
+
+### Deployment Status
+
+**Services Deployed:**
+- ✅ `reportscompany-api` - Render Web Service
+- ✅ `reportscompany-worker` - Render Background Worker (with PDFShift)
+- ✅ `reportscompany-consumer` - Render Background Worker (Redis bridge)
+- ✅ `reportscompany-web` - Vercel (Next.js frontend)
+
+**Database:**
+- ✅ `mr-staging-db` - Render Managed PostgreSQL
+
+**External Services:**
+- ✅ Upstash Redis - Serverless Redis (SSL configured)
+- ✅ Cloudflare R2 - Object storage for PDFs
+- ✅ PDFShift - HTML to PDF conversion API
+- ✅ SimplyRETS - MLS demo data API
+
+**Current Status (as of November 10, 2025, 9:15 PM):**
+- 🟢 All services deployed and running
+- 🟢 Worker logs show Celery connected and ready
+- 🟢 PDFShift API tested locally and working
+- 🟢 **END-TO-END PRODUCTION TEST: SUCCESSFUL! ✅**
+
+**Test Results (Run ID: `299e4cd9-ff01-4f12-8037-e54f3a43b9cc`):**
+- ✅ Report generation request accepted (202 Accepted)
+- ✅ SimplyRETS API calls successful (property data fetched)
+- ✅ PDFShift API call successful (200 OK, PDF generated)
+- ✅ Cloudflare R2 upload successful
+- ✅ Presigned URL generated (valid for 7 days)
+- ✅ PDF renders beautifully in browser
+- ✅ Processing time: ~3-4 seconds total
+- ✅ Database updated with status=completed
+
+**PDF Quality:**
+- Professional formatting preserved
+- Market Snapshot layout rendered correctly
+- Metrics displayed: Active, Pending, Closed, Median Price, Avg DOM, MOI
+- Letter size format with 0.5" margins
+- Single-page report (as expected for demo data)
+
+---
+
+### Production Testing Strategy
+
+**Established Testing Workflow:**
+
+1. **Local API Testing (30 seconds)**
+   ```bash
+   cd apps/worker
+   poetry run python ../../test_pdfshift.py
+   ```
+
+2. **Local Worker Testing (2-3 minutes)**
+   ```bash
+   # Terminal A: Start local worker
+   cd apps/worker
+   poetry run celery -A worker.app.celery worker -l info
+   
+   # Terminal B: Start consumer
+   poetry run python -c "from worker.tasks import run_redis_consumer_forever as c; c()"
+   
+   # Terminal C: Start API
+   cd apps/api
+   poetry run uvicorn api.main:app --reload --port 10000
+   
+   # Terminal D: Start web
+   pnpm --filter web dev
+   ```
+
+3. **Staging Deployment (after local success)**
+   - Commit and push to GitHub
+   - Render auto-deploys in 2-3 minutes
+   - Vercel auto-deploys in 1-2 minutes
+
+4. **Production Testing (end-to-end)**
+   - Generate report via UI
+   - Verify PDF generation
+   - Verify R2 upload
+   - Verify presigned URLs work
+
+---
+
+### Files Modified
+
+**New Files:**
+- `apps/worker/src/worker/pdf_engine.py` - Pluggable PDF engine with PDFShift support
+- `test_pdfshift.py` - Local testing script for PDFShift API
+
+**Modified Files:**
+- `apps/worker/src/worker/tasks.py` - Integrated `render_pdf()` and `upload_to_r2()`
+
+**Git Commits:**
+```
+782da91 - Fix PDFShift parameter: use 'delay' instead of 'wait'
+5e10a50 - Add detailed PDFShift error logging and payload inspection
+bc32e4e - Fix PDFShift authentication: use X-API-Key header instead of Basic Auth
+fbd86f8 - Add debugging for PDFShift API key and response status
+e4210cf - Add Track 1 deployment guide for PDFShift unblock
+edffeb7 - HOTFIX: Add pluggable PDF engine with PDFShift support
+```
+
+---
+
+### Next Steps
+
+**Immediate (Current Session):**
+1. ✅ PDFShift hotfix deployed and tested locally
+2. ✅ **COMPLETED:** End-to-end production test
+3. ✅ Verified report generation, PDF creation, R2 upload
+
+**Future Enhancements (Track 2 - Optional):**
+- Docker containerization with Playwright (if Render Blueprint issues resolved)
+- Deploy to Fly.io as alternative platform
+- Switch back to `PDF_ENGINE=playwright` for cost savings
+
+**Long-term:**
+- Monitor PDFShift API usage/costs
+- Implement caching for repeated report generation
+- Add PDF optimization (compression, fonts, etc.)
+
+---
+
+**Status:** ✅ **DEPLOYMENT SUCCESSFUL!** PDFShift integration working perfectly in production. End-to-end report generation with PDF creation, R2 upload, and presigned URLs all verified and operational. Staging environment fully functional! 🎉🚀
+
+---
+
+## 📊 Production Deployment Summary
+
+### **What Works (November 10, 2025, 9:15 PM)**
+
+**Frontend (Vercel):**
+- ✅ Next.js app deployed and serving
+- ✅ Report wizard UI functioning
+- ✅ Real-time status polling working
+- ✅ PDF/HTML links displaying correctly
+- ✅ `/print/{run_id}` route for PDF generation
+
+**Backend Services (Render):**
+- ✅ FastAPI API service (CORS configured, JWT auth working)
+- ✅ Celery Worker with PDFShift integration
+- ✅ Redis Consumer bridge (polling and dispatching)
+- ✅ PostgreSQL database with RLS policies
+- ✅ Upstash Redis (SSL configured)
+
+**External Services:**
+- ✅ PDFShift API (HTML → PDF conversion)
+- ✅ Cloudflare R2 (PDF storage with presigned URLs)
+- ✅ SimplyRETS API (MLS demo data)
+
+**Complete Flow Verified:**
+1. User submits report request via web UI → 202 Accepted
+2. API enqueues job to Redis
+3. Consumer polls Redis and dispatches to Celery
+4. Worker fetches property data from SimplyRETS
+5. Worker calls PDFShift API to generate PDF
+6. Worker uploads PDF to Cloudflare R2
+7. Worker generates presigned URL (7-day expiry)
+8. Worker updates database with status=completed
+9. Frontend displays success with PDF/HTML links
+10. User clicks PDF link → opens in new tab from R2
+
+**Processing Time:** 3-4 seconds end-to-end
+
+---
+
+### **Key Learnings**
+
+1. **Local Testing First:** Always test external APIs locally before deploying. Saved 10x time vs. debugging on Render.
+2. **Detailed Error Logging:** Adding payload and error response logging caught the `delay` vs `wait` parameter issue immediately.
+3. **Pluggable Architecture:** Creating `pdf_engine.py` abstraction allows easy swapping between Playwright (local) and PDFShift (cloud).
+4. **Environment-Driven Config:** Using `PDF_ENGINE` env var makes it trivial to switch PDF backends without code changes.
+5. **Presigned URLs:** R2's presigned URLs work perfectly for temporary PDF access (7 days), no need for public bucket.
+
+---
+
+### **Production Readiness Checklist**
+
+- ✅ All services deployed and healthy
+- ✅ Environment variables configured correctly
+- ✅ SSL connections working (Redis, PostgreSQL, R2)
+- ✅ Authentication middleware functioning
+- ✅ CORS configured for frontend
+- ✅ End-to-end flow tested successfully
+- ✅ Error handling and logging in place
+- ✅ Database migrations applied
+- ✅ Demo account seeded
+- ⏳ Monitoring/alerting (future enhancement)
+- ⏳ Rate limiting (future enhancement)
+- ⏳ Cost tracking for PDFShift usage (future)
+
+---
+
+**Next Session Recommendations:**
+- Add monitoring (Sentry, LogRocket, or Render metrics)
+- Implement email notifications for completed reports
+- Add webhook support for automated report generation
+- Consider Playwright Docker deployment (Track 2) for cost savings
+- Add report caching to avoid regenerating identical reports
+- Integrate real MLS data provider (beyond SimplyRETS demo)
+
+---
 
