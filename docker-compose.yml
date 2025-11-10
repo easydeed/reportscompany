@@ -1,37 +1,96 @@
-version: "3.8"
+# Market Reports - Local Development Environment
+# Mirrors production stack for consistent testing
+# Run: docker-compose up -d
+
+version: '3.8'
+
 services:
-  db:
+  # PostgreSQL Database
+  postgres:
     image: postgres:15
-    container_name: mr_postgres
+    container_name: mr-postgres
     environment:
-      POSTGRES_DB: market_reports
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: market_reports
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/migrations:/migrations
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d market_reports"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # Redis (Cache & Queue)
   redis:
     image: redis:7-alpine
-    container_name: mr_redis
-    command: ["redis-server", "--appendonly", "yes"]
+    container_name: mr-redis
     ports:
       - "6379:6379"
-    volumes:
-      - redisdata:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Celery Worker (with Playwright)
+  worker:
+    build:
+      context: ./apps/worker
+      dockerfile: Dockerfile
+    container_name: mr-worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/market_reports
+      - REDIS_URL=redis://redis:6379/0
+      - SIMPLYRETS_USERNAME=${SIMPLYRETS_USERNAME}
+      - SIMPLYRETS_PASSWORD=${SIMPLYRETS_PASSWORD}
+      - R2_ACCOUNT_ID=${R2_ACCOUNT_ID}
+      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
+      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}
+      - R2_BUCKET_NAME=${R2_BUCKET_NAME}
+      - PRINT_BASE=http://localhost:3000
+    volumes:
+      - ./apps/worker/src:/app/src:ro  # Mount source for hot reload (read-only)
+    restart: unless-stopped
+
+  # Redis Consumer Bridge
+  consumer:
+    build:
+      context: ./apps/worker
+      dockerfile: Dockerfile
+    container_name: mr-consumer
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/market_reports
+      - REDIS_URL=redis://redis:6379/0
+      - SIMPLYRETS_USERNAME=${SIMPLYRETS_USERNAME}
+      - SIMPLYRETS_PASSWORD=${SIMPLYRETS_PASSWORD}
+      - R2_ACCOUNT_ID=${R2_ACCOUNT_ID}
+      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
+      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}
+      - R2_BUCKET_NAME=${R2_BUCKET_NAME}
+      - PRINT_BASE=http://localhost:3000
+    command: poetry run python -c "from worker.tasks import run_redis_consumer_forever as c; c()"
+    volumes:
+      - ./apps/worker/src:/app/src:ro
+    restart: unless-stopped
 
 volumes:
-  pgdata:
-  redisdata:
+  postgres_data:
+    driver: local
 
+networks:
+  default:
+    name: market-reports-network
