@@ -9,6 +9,7 @@ from .compute.validate import filter_valid
 from .compute.calc import snapshot_metrics
 from .cache import get as cache_get, set as cache_set
 from .query_builders import build_params
+from .redis_utils import create_redis_connection
 
 def safe_json_dumps(obj):
     """
@@ -168,13 +169,19 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
 
 
 def run_redis_consumer_forever():
-    r = redis.from_url(REDIS_URL)
+    """
+    Redis consumer bridge - polls Redis queue and dispatches to Celery worker.
+    Uses proper SSL configuration for secure Redis connections (Upstash).
+    """
+    r = create_redis_connection(REDIS_URL)
+    print(f"🔄 Redis consumer started, polling queue: {QUEUE_KEY}")
     while True:
         item = r.blpop(QUEUE_KEY, timeout=5)
         if not item:
             continue
         _, payload = item
         data = json.loads(payload)
+        print(f"📥 Received job: run_id={data['run_id']}, type={data['report_type']}")
         generate_report.delay(data["run_id"], data["account_id"], data["report_type"], data.get("params") or {})
 
 # NOTE: To start the consumer alongside the worker, we will run a second process
