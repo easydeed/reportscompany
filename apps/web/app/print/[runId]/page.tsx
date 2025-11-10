@@ -2,9 +2,7 @@ type Props = { params: { runId: string } };
 
 async function fetchData(runId: string) {
   const base = process.env.NEXT_PUBLIC_API_BASE!;
-  const acc  = process.env.NEXT_PUBLIC_DEMO_ACCOUNT_ID!;
   const res = await fetch(`${base}/v1/reports/${runId}/data`, {
-    headers: { "X-Demo-Account": acc },
     cache: "no-store"
   });
   if (!res.ok) return null;
