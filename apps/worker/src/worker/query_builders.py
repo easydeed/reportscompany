@@ -15,20 +15,13 @@ def _location(params: dict) -> Dict:
     Location can be provided as a single city string or a list of ZIPs.
     - If zips present and non-empty: use postalCodes=comma-separated list
     - Else: use q=<city>
-    
-    NOTE: SimplyRETS demo account (simplyrets/simplyrets) does not support
-    the 'q' parameter and returns 400. Demo account only has Houston data.
-    For demo usage, pass empty params to skip location filtering.
     """
     zips = params.get("zips") or []
     city = (params.get("city") or "").strip()
     if zips:
         return {"postalCodes": ",".join(z.strip() for z in zips if z.strip())}
-    # Only add 'q' for production accounts with real credentials
-    # Demo account will return 400 if 'q' is present
-    # if city:
-    #     return {"q": city}
-    # Return empty dict for demo account compatibility
+    if city:
+        return {"q": city}
     return {}
 
 def _filters(filters: Optional[dict]) -> Dict:
@@ -57,7 +50,7 @@ def build_market_snapshot(params: dict) -> Dict:
         "status": "Active,Pending,Closed",
         "mindate": start,
         "maxdate": end,
-        # "sort": "-listDate",  # Demo account doesn't support sort
+        "sort": "-listDate",
         "limit": 500,
     }
     q |= _location(params)
@@ -73,7 +66,7 @@ def build_new_listings(params: dict) -> Dict:
         "status": "Active",
         "mindate": start,
         "maxdate": end,
-        # "sort": "-listDate",  # Demo account doesn't support sort
+        "sort": "-listDate",
         "limit": 500,
     }
     q |= _location(params)
@@ -91,7 +84,7 @@ def build_closed(params: dict) -> Dict:
         "status": "Closed",
         "mindate": start,
         "maxdate": end,
-        # "sort": "-listDate",  # Demo account doesn't support sort
+        "sort": "-listDate",
         "limit": 500,
     }
     q |= _location(params)
@@ -106,7 +99,7 @@ def build_inventory_by_zip(params: dict) -> Dict:
     """
     q = {
         "status": "Active",
-        # "sort": "daysOnMarket",  # Demo account doesn't support sort
+        "sort": "daysOnMarket",
         "limit": 500,
     }
     q |= _location(params)
@@ -125,7 +118,7 @@ def build_open_houses(params: dict) -> Dict:
         "status": "Active",
         "mindate": start,
         "maxdate": end,
-        # "sort": "-listDate",  # Demo account doesn't support sort
+        "sort": "-listDate",
         "limit": 500,
     }
     q |= _location(params)
@@ -146,7 +139,7 @@ def build_price_bands(params: dict) -> Dict:
     """
     q = {
         "status": "Active",
-        # "sort": "listPrice",  # Demo account doesn't support sort
+        "sort": "listPrice",
         "limit": 1000,  # Higher limit since we're analyzing the full market
     }
     q |= _location(params)
