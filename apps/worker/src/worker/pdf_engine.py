@@ -140,6 +140,8 @@ def render_pdf_pdfshift(run_id: str, account_id: str, html_content: Optional[str
     }
     
     print(f"🔑 Using API key: {PDFSHIFT_API_KEY[:10]}...{PDFSHIFT_API_KEY[-4:]}")
+    print(f"📦 Payload: {payload}")
+    
     response = httpx.post(
         PDFSHIFT_API_URL,
         json=payload,
@@ -148,6 +150,14 @@ def render_pdf_pdfshift(run_id: str, account_id: str, html_content: Optional[str
     )
     
     print(f"📊 PDFShift response: {response.status_code}")
+    
+    # If not successful, print the error details before raising
+    if response.status_code >= 400:
+        try:
+            error_body = response.json()
+            print(f"❌ PDFShift error: {error_body}")
+        except:
+            print(f"❌ PDFShift error (raw): {response.text}")
     
     response.raise_for_status()
     
