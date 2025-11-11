@@ -6825,25 +6825,49 @@ UNSUBSCRIBE_SECRET=<random-32-char-string>  # NEW - for HMAC tokens
 
 ---
 
-### Phase 24C: Ticker Process (Next)
+### Phase 24C: Ticker Process ✅ COMPLETE
 
-**Status:** Pending
+**Date:** November 10, 2025
 
 **Goal:** Background worker that finds due schedules and enqueues reports
 
-**Implementation Plan:**
-1. Create `apps/worker/src/worker/schedules_tick.py`
-2. Every 60 seconds:
-   - Query schedules where `next_run_at IS NULL OR next_run_at <= NOW()`
-   - Compute next run time based on cadence
-   - Enqueue report generation task to Redis
-   - Insert `schedule_runs` audit record
-   - Update `schedules.last_run_at` and `next_run_at`
-3. Deploy as separate Render Background Worker service
+**Implementation:**
+- ✅ Created `apps/worker/src/worker/schedules_tick.py` (312 lines)
+- ✅ Every 60 seconds (configurable via `TICK_INTERVAL` env var):
+  - Query schedules where `next_run_at IS NULL OR next_run_at <= NOW()`
+  - Compute next run time based on cadence
+  - Enqueue report generation task to Celery
+  - Insert `schedule_runs` audit record (status: 'queued')
+  - Update `schedules.last_run_at` and `next_run_at`
+- ✅ Error handling: Individual schedule failures don't stop ticker
+- ✅ Comprehensive logging (INFO/DEBUG/ERROR levels)
+- ✅ No linting errors
 
 **Next Run Computation:**
-- **Weekly:** Find next occurrence of `weekly_dow` at `send_hour:send_minute`
-- **Monthly:** Find next month's `monthly_dom` (capped at 28) at `send_hour:send_minute`
+- **Weekly:** Finds next occurrence of `weekly_dow` (0=Sun, 6=Sat) at `send_hour:send_minute`
+  - Example: Monday (dow=1) at 9:00 AM → Next Monday 9:00 AM
+- **Monthly:** Finds next month's `monthly_dom` (capped at 28) at `send_hour:send_minute`
+  - Example: 15th at 9:00 AM → 15th of next month (or current if future)
+
+**Celery Integration:**
+- Sends task to existing `generate_report` Celery task
+- Uses same payload format as API-triggered reports
+- Includes `schedule_id` in params for audit trail linking
+
+**Environment Variables:**
+```bash
+# Required
+DATABASE_URL=postgresql://...
+REDIS_URL=rediss://...
+CELERY_RESULT_URL=rediss://...
+
+# Optional
+TICK_INTERVAL=60  # Seconds between checks (default: 60)
+```
+
+**Documentation:** See `PHASE_24C_SUMMARY.md` for deployment guide, testing strategy, and error handling
+
+**Status:** ✅ Code Complete, Ready to Deploy to Render
 
 ---
 
