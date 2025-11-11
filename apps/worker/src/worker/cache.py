@@ -1,8 +1,8 @@
 import json, hashlib, os
 from datetime import datetime, date
-from .redis_utils import create_redis_connection
+import redis
 
-R = create_redis_connection(os.getenv("REDIS_URL","redis://localhost:6379/0"))
+R = redis.from_url(os.getenv("REDIS_URL","redis://localhost:6379/0"))
 
 def safe_json_dumps(obj):
     """

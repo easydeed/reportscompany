@@ -124,7 +124,3 @@ def build_market_snapshot_params(city: str, lookback_days: int = 30) -> Dict:
 
 
 
-
-
-
-
