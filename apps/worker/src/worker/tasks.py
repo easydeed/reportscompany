@@ -8,7 +8,10 @@ from .compute.validate import filter_valid
 from .compute.calc import snapshot_metrics
 from .cache import get as cache_get, set as cache_set
 from .query_builders import build_params
-from .pdf_adapter import generate_pdf
+from .redis_utils import create_redis_connection
+from .pdf_engine import render_pdf
+import boto3
+from botocore.client import Config
 
 def safe_json_dumps(obj):
     """
@@ -29,6 +32,62 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localho
 DEV_BASE = os.getenv("PRINT_BASE", "http://localhost:3000")
 PDF_DIR = "/tmp/mr_reports"
 os.makedirs(PDF_DIR, exist_ok=True)
+
+# Cloudflare R2 Configuration
+R2_ACCOUNT_ID = os.getenv("R2_ACCOUNT_ID", "")
+R2_ACCESS_KEY_ID = os.getenv("R2_ACCESS_KEY_ID", "")
+R2_SECRET_ACCESS_KEY = os.getenv("R2_SECRET_ACCESS_KEY", "")
+R2_BUCKET_NAME = os.getenv("R2_BUCKET_NAME", "market-reports")
+R2_ENDPOINT = f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com" if R2_ACCOUNT_ID else ""
+
+def upload_to_r2(local_path: str, s3_key: str) -> str:
+    """
+    Upload file to Cloudflare R2 and return presigned URL.
+    
+    Args:
+        local_path: Local file path to upload
+        s3_key: S3 key (e.g., "reports/account-id/run-id.pdf")
+    
+    Returns:
+        Presigned URL valid for 7 days
+    """
+    if not all([R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY]):
+        # Fallback for local dev: return local file URL
+        print("⚠️  R2 credentials not set, skipping upload")
+        return f"http://localhost:10000/dev-files/{s3_key}"
+    
+    # Create R2 client (S3-compatible)
+    s3_client = boto3.client(
+        's3',
+        endpoint_url=R2_ENDPOINT,
+        aws_access_key_id=R2_ACCESS_KEY_ID,
+        aws_secret_access_key=R2_SECRET_ACCESS_KEY,
+        region_name='auto',  # R2 uses 'auto' region
+        config=Config(signature_version='s3v4')
+    )
+    
+    # Upload file
+    print(f"☁️  Uploading to R2: {s3_key}")
+    with open(local_path, 'rb') as f:
+        s3_client.upload_fileobj(
+            f,
+            R2_BUCKET_NAME,
+            s3_key,
+            ExtraArgs={'ContentType': 'application/pdf'}
+        )
+    
+    # Generate presigned URL (7 days)
+    presigned_url = s3_client.generate_presigned_url(
+        'get_object',
+        Params={
+            'Bucket': R2_BUCKET_NAME,
+            'Key': s3_key
+        },
+        ExpiresIn=604800  # 7 days in seconds
+    )
+    
+    print(f"✅ Uploaded to R2: {presigned_url[:100]}...")
+    return presigned_url
 
 @celery.task(name="ping")
 def ping():
@@ -131,16 +190,20 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
                 cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
                 cur.execute("UPDATE report_generations SET result_json=%s WHERE id=%s", (safe_json_dumps(result), run_id))
 
-        # 4) Generate PDF (via adapter: Playwright local, API on Render) and final links
-        url = f"{DEV_BASE}/print/{run_id}"
-        pdf_path = os.path.join(PDF_DIR, f"{run_id}.pdf")
+        # 4) Generate PDF (via configured engine: playwright or pdfshift)
+        pdf_path, html_url = render_pdf(
+            run_id=run_id,
+            account_id=account_id,
+            html_content=None,  # Will navigate to /print/{run_id}
+            print_base=DEV_BASE
+        )
         
-        # PDF adapter handles engine selection (playwright vs api)
-        generate_pdf(url, pdf_path, wait_for_network=True)
+        # 5) Upload PDF to Cloudflare R2
+        s3_key = f"reports/{account_id}/{run_id}.pdf"
+        pdf_url = upload_to_r2(pdf_path, s3_key)
         
-        html_url = url
-        json_url = f"https://example.com/reports/{run_id}.json"
-        pdf_url  = f"http://localhost:10000/dev-files/reports/{run_id}.pdf"
+        # JSON URL (future: could upload result_json to R2 too)
+        json_url = f"{DEV_BASE}/api/reports/{run_id}/data"
 
         with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
             with conn.cursor() as cur:
@@ -151,8 +214,8 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
                     WHERE id = %s
                 """, (html_url, json_url, pdf_url, int((time.perf_counter()-started)*1000), run_id))
 
-        # 5) Webhook
-        payload = {"report_id": run_id, "status": "completed", "html_url": html_url, "pdf_url": pdf_url}
+        # 6) Webhook
+        payload = {"report_id": run_id, "status": "completed", "html_url": html_url, "pdf_url": pdf_url, "json_url": json_url}
         _deliver_webhooks(account_id, "report.completed", payload)
         return {"ok": True, "run_id": run_id}
 
@@ -165,13 +228,19 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
 
 
 def run_redis_consumer_forever():
-    r = redis.from_url(REDIS_URL)
+    """
+    Redis consumer bridge - polls Redis queue and dispatches to Celery worker.
+    Uses proper SSL configuration for secure Redis connections (Upstash).
+    """
+    r = create_redis_connection(REDIS_URL)
+    print(f"🔄 Redis consumer started, polling queue: {QUEUE_KEY}")
     while True:
         item = r.blpop(QUEUE_KEY, timeout=5)
         if not item:
             continue
         _, payload = item
         data = json.loads(payload)
+        print(f"📥 Received job: run_id={data['run_id']}, type={data['report_type']}")
         generate_report.delay(data["run_id"], data["account_id"], data["report_type"], data.get("params") or {})
 
 # NOTE: To start the consumer alongside the worker, we will run a second process
