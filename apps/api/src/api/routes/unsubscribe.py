@@ -8,7 +8,8 @@ from ..db import db_conn
 router = APIRouter(prefix="/v1")
 
 # Secret for HMAC token generation/validation
-UNSUBSCRIBE_SECRET = os.getenv("UNSUBSCRIBE_SECRET", "dev-unsubscribe-secret-change-in-prod")
+# MUST match EMAIL_UNSUB_SECRET in Worker
+EMAIL_UNSUB_SECRET = os.getenv("EMAIL_UNSUB_SECRET", "dev-unsubscribe-secret-change-in-prod")
 
 
 # ====== Schemas ======
@@ -19,24 +20,25 @@ class UnsubscribeRequest(BaseModel):
 
 
 # ====== Helpers ======
-def generate_unsubscribe_token(email: str, account_id: str) -> str:
+def generate_unsubscribe_token(account_id: str, email: str) -> str:
     """
     Generate HMAC token for unsubscribe links.
-    Format: HMAC-SHA256(email:account_id, secret)
+    Format: HMAC-SHA256(account_id:email, secret)
+    MUST match the format in worker/email/send.py
     """
-    message = f"{email}:{account_id}"
+    message = f"{account_id}:{email}"
     return hmac.new(
-        UNSUBSCRIBE_SECRET.encode(),
+        EMAIL_UNSUB_SECRET.encode(),
         message.encode(),
         hashlib.sha256
     ).hexdigest()
 
 
-def verify_unsubscribe_token(email: str, account_id: str, token: str) -> bool:
+def verify_unsubscribe_token(account_id: str, email: str, token: str) -> bool:
     """
-    Verify HMAC token matches email:account_id.
+    Verify HMAC token matches account_id:email.
     """
-    expected_token = generate_unsubscribe_token(email, account_id)
+    expected_token = generate_unsubscribe_token(account_id, email)
     return hmac.compare_digest(expected_token, token)
 
 
@@ -71,7 +73,7 @@ def unsubscribe_email(payload: UnsubscribeRequest):
         account_id = row[0]
         
         # Verify token
-        if not verify_unsubscribe_token(payload.email, account_id, payload.token):
+        if not verify_unsubscribe_token(account_id, payload.email, payload.token):
             raise HTTPException(
                 status_code=400,
                 detail="Invalid unsubscribe token"
@@ -100,7 +102,7 @@ def get_unsubscribe_token(email: str, account_id: str):
     if os.getenv("ENVIRONMENT", "dev") == "production":
         raise HTTPException(status_code=404, detail="Not found")
     
-    token = generate_unsubscribe_token(email, account_id)
+    token = generate_unsubscribe_token(account_id, email)
     
     return {
         "email": email,
