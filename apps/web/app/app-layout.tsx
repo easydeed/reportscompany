@@ -20,6 +20,8 @@ import {
   CreditCard,
   Search,
   ChevronDown,
+  Shield,
+  Calendar,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -35,15 +37,21 @@ import {
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-const navigation = [
+const baseNavigation = [
   { name: "Overview", href: "/app", icon: LayoutDashboard },
   { name: "Reports", href: "/app/reports", icon: FileText },
+  { name: "Schedules", href: "/app/schedules", icon: Calendar },
   { name: "Branding", href: "/app/branding", icon: Palette },
   { name: "Billing", href: "/app/billing", icon: CreditCard },
 ]
 
-function DashboardSidebar() {
+function DashboardSidebar({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname()
+  
+  // Add Admin link if user is admin
+  const navigation = isAdmin
+    ? [...baseNavigation, { name: "Admin", href: "/app/admin", icon: Shield }]
+    : baseNavigation
 
   return (
     <Sidebar>
@@ -133,12 +141,18 @@ function DashboardTopbar() {
   )
 }
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default function AppLayoutClient({
+  children,
+  isAdmin,
+}: {
+  children: React.ReactNode
+  isAdmin: boolean
+}) {
   return (
     <SidebarProvider>
       <Suspense fallback={<div>Loading...</div>}>
         <div className="flex min-h-screen w-full">
-          <DashboardSidebar />
+          <DashboardSidebar isAdmin={isAdmin} />
           <SidebarInset className="flex flex-col">
             <DashboardTopbar />
             <main className="flex-1 p-6">{children}</main>

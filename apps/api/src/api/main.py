@@ -18,6 +18,7 @@ from .routes.stripe_webhook import router as stripe_webhook_router
 from .routes.schedules import router as schedules_router
 from .routes.unsubscribe import router as unsubscribe_router
 from .routes.admin import router as admin_router
+from .routes.me import router as me_router
 
 app = FastAPI(
     title="Market Reports API",
@@ -58,6 +59,7 @@ app.include_router(usage_router)
 app.include_router(schedules_router)
 app.include_router(unsubscribe_router)
 app.include_router(admin_router)
+app.include_router(me_router)
 
 # Root
 @app.get("/")
