@@ -3,13 +3,14 @@ import ssl
 from celery import Celery
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+CELERY_RESULT_URL = os.getenv("CELERY_RESULT_URL", REDIS_URL)
 
 # For Celery, we need to strip the ssl_cert_reqs from the URL
 # and configure it via broker_use_ssl and redis_backend_use_ssl parameters
 if "ssl_cert_reqs=" in REDIS_URL:
-    # Remove the parameter for Celery
+    # Remove the parameter for Celery (both broker and backend)
     BROKER = REDIS_URL.split("?")[0]
-    BACKEND = os.getenv("CELERY_RESULT_URL", BROKER)
+    BACKEND = CELERY_RESULT_URL.split("?")[0] if "ssl_cert_reqs=" in CELERY_RESULT_URL else CELERY_RESULT_URL
     
     # Celery requires SSL config as a dictionary
     SSL_CONFIG = {
@@ -20,7 +21,7 @@ if "ssl_cert_reqs=" in REDIS_URL:
     }
 else:
     BROKER = REDIS_URL
-    BACKEND = os.getenv("CELERY_RESULT_URL", BROKER)
+    BACKEND = CELERY_RESULT_URL
     SSL_CONFIG = None
 
 celery = Celery(
