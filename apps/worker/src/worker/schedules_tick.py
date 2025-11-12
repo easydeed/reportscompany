@@ -14,7 +14,44 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 import psycopg
-from .app import celery
+import ssl
+from celery import Celery
+
+# Create a separate Celery instance for ticker (no result backend needed)
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+# Strip SSL parameters for Celery
+if "ssl_cert_reqs=" in REDIS_URL:
+    BROKER = REDIS_URL.split("?")[0]
+    SSL_CONFIG = {
+        'ssl_cert_reqs': ssl.CERT_REQUIRED,
+        'ssl_ca_certs': None,
+        'ssl_certfile': None,
+        'ssl_keyfile': None
+    }
+else:
+    BROKER = REDIS_URL
+    SSL_CONFIG = None
+
+celery = Celery(
+    "market_reports_ticker",
+    broker=BROKER,
+    backend=None,  # No result backend needed for ticker
+)
+
+config_updates = {
+    "task_serializer": "json",
+    "accept_content": ["json"],
+    "result_serializer": "json",
+    "timezone": "UTC",
+    "enable_utc": True,
+    "task_ignore_result": True,  # Don't track results
+}
+
+if SSL_CONFIG:
+    config_updates["broker_use_ssl"] = SSL_CONFIG
+
+celery.conf.update(**config_updates)
 
 # Configure logging
 logging.basicConfig(
