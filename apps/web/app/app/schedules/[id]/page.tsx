@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { ScheduleDetail, type Schedule, type ScheduleRun } from "@/components/schedules"
 import { apiFetch } from "@/lib/api"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 
 export default function ScheduleDetailPage() {
   const router = useRouter()

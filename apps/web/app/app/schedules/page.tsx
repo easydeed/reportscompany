@@ -12,7 +12,7 @@ import {
   wizardStateToApiPayload 
 } from "@/components/schedules"
 import { apiFetch } from "@/lib/api"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 
 export default function SchedulesPage() {
   const router = useRouter()
