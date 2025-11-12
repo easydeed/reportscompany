@@ -57,6 +57,29 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
             raise HTTPException(status_code=401, detail="Unauthorized")
 
         request.state.account_id = acct
+        
+        # Fetch user information including role (for admin endpoints)
+        # If JWT, get user_id from claims; if API key, fetch first admin user for account
+        user_info = {"account_id": acct, "role": "USER"}  # default
+        
+        if claims and claims.get("user_id"):
+            # JWT authentication - fetch user's role
+            with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT id, email, role FROM users
+                        WHERE id=%s::uuid AND account_id=%s::uuid
+                    """, (claims["user_id"], acct))
+                    user_row = cur.fetchone()
+                    if user_row:
+                        user_info = {
+                            "id": str(user_row[0]),
+                            "email": user_row[1],
+                            "role": (user_row[2] or "USER").upper(),  # Normalize to uppercase
+                            "account_id": acct
+                        }
+        
+        request.state.user = user_info
         return await call_next(request)
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
