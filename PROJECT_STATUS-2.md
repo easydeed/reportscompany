@@ -632,9 +632,9 @@ Once this works, everything else (admin console polish, fancy templates, plan li
 #### Manual Tasks (Your Checklist)
 
 **1. Email Provider Setup:**
-- [ ] Create Resend account (or confirm SendGrid)
+- [x] SendGrid account confirmed
 - [ ] Add sending domain (e.g., `mail.trendyreports.com`)
-- [ ] Get API key
+- [ ] Get SendGrid API key
 - [ ] Test domain verification
 
 **2. Environment Variables:**
@@ -642,15 +642,20 @@ Once this works, everything else (admin console polish, fancy templates, plan li
 Add to `apps/api` and `apps/worker` (Render services):
 
 ```bash
-EMAIL_PROVIDER=resend
-RESEND_API_KEY=sk_live_...
-DEFAULT_FROM_NAME=TrendyReports
-DEFAULT_FROM_EMAIL=reports@trendyreports.com
+# Email provider
+EMAIL_PROVIDER=sendgrid
+
+# SendGrid
+SENDGRID_API_KEY=SG_xxx
+SENDGRID_FROM_EMAIL=reports@yourdomain.com
+SENDGRID_FROM_NAME="TrendyReports"
+
+# Unsubscribe + links
+UNSUBSCRIBE_SECRET=<long-random-string>
 WEB_BASE=https://reportscompany.vercel.app
-EMAIL_UNSUB_SECRET=<long-random-string>
 ```
 
-- [ ] Add to Render environment variables
+- [ ] Add to Render environment variables (apps/api and apps/worker)
 - [ ] Update `.env.example` files
 - [ ] Commit env examples (not actual keys)
 
@@ -670,44 +675,35 @@ After implementation:
 
 #### Implementation Tasks (For Cursor)
 
-**File 1: Email Provider Adapter**
+**Note:** The email sender is already implemented in `apps/worker/src/worker/email.py` using SendGrid. The tasks below ensure SendGrid alignment.
 
-`apps/worker/src/email/providers/resend.py`:
+**Task 1: Verify SendGrid Implementation**
+
+Open `apps/worker/src/worker/email.py` and verify it:
+
+- Imports `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME` from `os.environ`
+- Uses SendGrid's HTTP API or SDK to send HTML emails
+- Exposes a function like:
 
 ```python
-import os
-from typing import List
-import httpx
-
-class EmailSendError(Exception):
-    pass
-
-async def send_schedule_email(
-    to_emails: List[str],
+def send_schedule_email_sendgrid(
+    to_emails: list[str],
     subject: str,
     html_body: str,
     from_name: str,
     from_email: str,
 ) -> None:
-    """Send email via Resend API"""
-    api_key = os.environ["RESEND_API_KEY"]
-    if not to_emails:
-        return
-
-    async with httpx.AsyncClient(base_url="https://api.resend.com") as client:
-        resp = await client.post(
-            "/emails",
-            headers={"Authorization": f"Bearer {api_key}"},
-            json={
-                "from": f"{from_name} <{from_email}>",
-                "to": to_emails,
-                "subject": subject,
-                "html": html_body,
-            },
-        )
-    if resp.status_code >= 300:
-        raise EmailSendError(f"Resend error {resp.status_code}: {resp.text}")
+    """Send email via SendGrid API"""
+    # Implementation should use SendGrid, not Resend
+    ...
 ```
+
+**Task 2: Search for Resend References**
+
+Search entire repo for the string "resend":
+- If any real code (not docs) sets `provider='resend'` in `EmailLog`, change to `provider='sendgrid'`
+- If any email send helper is named or implemented for Resend, convert to SendGrid or delete
+- Remove any unused `resend.py` files or imports
 
 **File 2: Email Template Builder**
 
@@ -795,14 +791,14 @@ def generate_report(report_id: str, schedule_id: str | None = None):
         account_name=account.name
     )
     
-    # Send email
+    # Send email via SendGrid
     try:
-        await send_schedule_email(
+        send_schedule_email_sendgrid(
             to_emails=recipients,
             subject=subject,
             html_body=html_body,
-            from_name=os.environ.get("DEFAULT_FROM_NAME", "TrendyReports"),
-            from_email=os.environ.get("DEFAULT_FROM_EMAIL")
+            from_name=os.environ.get("SENDGRID_FROM_NAME", "TrendyReports"),
+            from_email=os.environ.get("SENDGRID_FROM_EMAIL")
         )
         
         # Log success
@@ -810,7 +806,7 @@ def generate_report(report_id: str, schedule_id: str | None = None):
             account_id=account.id,
             schedule_id=schedule_id,
             report_generation_id=report_id,
-            provider='resend',
+            provider='sendgrid',
             to_emails=recipients,
             subject=subject,
             status='sent'
@@ -829,7 +825,7 @@ def generate_report(report_id: str, schedule_id: str | None = None):
             account_id=account.id,
             schedule_id=schedule_id,
             report_generation_id=report_id,
-            provider='resend',
+            provider='sendgrid',
             to_emails=recipients,
             subject=subject,
             status='failed',
@@ -843,11 +839,82 @@ def generate_report(report_id: str, schedule_id: str | None = None):
     db.commit()
 ```
 
+**Task 3: Wire into Celery Task**
+
+Open the Celery task that runs after scheduled reports (typically `apps/worker/src/worker/tasks.py`):
+
+After report + PDF generation succeeds, ensure it:
+- Calls the SendGrid helper from `email.py`
+- Uses `SENDGRID_FROM_NAME` and `SENDGRID_FROM_EMAIL` env vars
+- Logs to `EmailLog` with `provider='sendgrid'`
+- Updates `ScheduleRun` status to `completed` or `failed_email`
+
 **Error Handling Rules:**
 - Email send failure does NOT crash the task
 - Report generation failure marks run as `failed`
 - Email failure marks run as `failed_email`
 - All failures logged in `email_log` table
+
+---
+
+### Phase 27A: End-to-End Certification Test
+
+**Objective:** Certify that scheduled reports auto-generate and email via SendGrid
+
+#### Step 1: Create Test Schedule in UI
+
+In deployed web app at `/app/schedules`:
+
+1. Click **"New Schedule"**
+2. Set fields:
+   - **Report type:** Market Snapshot
+   - **Area:** Small city/zip that works with demo SimplyRETS
+   - **Cadence:** Weekly
+   - **Time:** A few minutes ahead (or let ticker handle `next_run_at`)
+   - **Recipients:** Your email only
+3. **Save** and confirm schedule appears in list
+
+#### Step 2: Observe Ticker + Worker Execution
+
+Monitor via DB queries or admin console (`/app/admin`):
+
+**Expected `schedule_runs` behavior:**
+- New row created for this schedule
+- Status progression: `queued` → `processing` → `completed` (or `failed_email`)
+
+**Expected `report_generations` row:**
+- `pdf_url` populated (R2 link)
+- `result_json` contains metrics
+
+**Expected `email_log` row:**
+- `provider='sendgrid'`
+- `to_emails` contains your address
+- `status='sent'` (or `'failed'` if SendGrid rejects)
+
+#### Step 3: Verify Email Delivery
+
+**Check inbox:**
+- ✅ **From:** `TrendyReports <reports@yourdomain.com>`
+- ✅ **Subject:** `[TrendyReports] {city} Market Snapshot`
+- ✅ **Body:** KPIs in grid + "View Full PDF" button
+- ✅ **Button:** Opens actual PDF from R2
+
+**Test unsubscribe flow:**
+1. Click **unsubscribe link** in email
+2. Confirm your email appears in `email_suppressions` table for that account
+3. Wait for schedule to fire again (or manually trigger next run)
+4. Verify:
+   - New `schedule_runs` entry created
+   - New `email_log` entry with `status='all_suppressed'` (or similar)
+   - **No email** arrives in inbox
+
+**✅ Phase 27A Complete when:**
+- Schedule triggers automatically via ticker
+- Report generates with PDF uploaded to R2
+- Email sends successfully via SendGrid
+- Email arrives in inbox with correct content
+- Unsubscribe link works and prevents future emails
+- All data logged correctly in DB tables
 
 ---
 
