@@ -1,5 +1,5 @@
 import { apiFetch } from "@/lib/api"
-import { SchedulesList } from "@repo/ui"
+import { ScheduleTable } from "@repo/ui"
 
 export default async function SchedulesPage() {
   let items: any[] = []
@@ -21,7 +21,7 @@ export default async function SchedulesPage() {
           New Schedule
         </a>
       </div>
-      <SchedulesList items={items || []} />
+      <ScheduleTable schedules={items || []} />
     </div>
   )
 }

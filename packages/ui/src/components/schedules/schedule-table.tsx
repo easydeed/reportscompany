@@ -1,12 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { Badge } from "./ui/badge"
-import { Button } from "./ui/button"
-import { Switch } from "./ui/switch"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
+import { Badge } from "../ui/badge"
+import { Button } from "../ui/button"
+import { Switch } from "../ui/switch"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table"
+import { Card } from "../ui/card"
 import { MoreHorizontal, Eye, Edit, Trash2, Calendar } from "lucide-react"
 import { type Schedule, reportTypeLabels } from "./types"
+import { cn } from "../../lib/utils"
 
 export interface ScheduleTableProps {
   schedules: Schedule[]

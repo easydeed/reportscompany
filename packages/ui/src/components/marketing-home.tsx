@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "./ui/button"
-import { Navbar } from "./navbar"
+import Navbar from "./Navbar"
 import { CodeTabs } from "./code-tabs"
 import { motion } from "framer-motion"
 import { TrendingUp, FileText, Zap, BarChart3, Sparkles, Code, ArrowRight, Check } from "lucide-react"

@@ -1,10 +1,10 @@
 "use client"
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
-import { Card } from "./ui/card"
-import { Button } from "./ui/button"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table"
+import { Card } from "../ui/card"
+import { Button } from "../ui/button"
 import { RotateCcw, ExternalLink, MoreVertical } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu"
 import type { RecentReport } from "./types"
 
 interface AdminReportsTableProps {

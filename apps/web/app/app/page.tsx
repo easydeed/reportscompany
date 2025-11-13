@@ -1,6 +1,8 @@
 import { apiFetch } from "@/lib/api"
 import { DashboardOverview } from "@repo/ui"
 
+export const dynamic = 'force-dynamic'
+
 export default async function Overview() {
   let data: any = null
   try {

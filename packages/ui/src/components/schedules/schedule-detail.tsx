@@ -1,9 +1,10 @@
 "use client"
 
-import { Button } from "./ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
-import { Badge } from "./ui/badge"
-import { Switch } from "./ui/switch"
+import { Button } from "../ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
+import { Badge } from "../ui/badge"
+import { Switch } from "../ui/switch"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table"
 import {
   ArrowLeft,
   Play,
@@ -19,6 +20,7 @@ import {
   Loader2,
 } from "lucide-react"
 import { type Schedule, type ScheduleRun, reportTypeLabels } from "./types"
+import { cn } from "../../lib/utils"
 
 export interface ScheduleDetailProps {
   schedule: Schedule

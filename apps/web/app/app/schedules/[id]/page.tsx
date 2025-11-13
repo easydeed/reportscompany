@@ -29,7 +29,7 @@ export default async function ScheduleDetailPage({ params }: { params: { id: str
 
   return (
     <div>
-      <ScheduleDetail item={item} runs={runs || []} />
+      <ScheduleDetail schedule={item} runs={runs || []} />
     </div>
   )
 }

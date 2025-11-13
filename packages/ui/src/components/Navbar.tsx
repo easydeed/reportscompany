@@ -19,7 +19,7 @@ const navLinks = [
   { label: "Status", href: "#status" },
 ]
 
-export function Navbar() {
+export default function Navbar() {
   const [isScrolled, setIsScrolled] = React.useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false)
   const { theme, setTheme } = useTheme()

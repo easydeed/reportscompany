@@ -1,12 +1,19 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "./ui/button"
-import { Card, CardContent } from "./ui/card"
-import { Input } from "./ui/input"
-import { Label } from "./ui/label"
-import { Badge } from "./ui/badge"
-import { Stepper } from "./stepper"
+import { Button } from "../ui/button"
+import { Card, CardContent } from "../ui/card"
+import { Input } from "../ui/input"
+import { Label } from "../ui/label"
+import { Badge } from "../ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
+import { Checkbox } from "../ui/checkbox"
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group"
+import { ScrollArea } from "../ui/scroll-area"
+import { Stepper } from "../stepper"
+import { TagInput } from "../tag-input"
+import { TimePicker } from "../time-picker"
+import { CadencePicker } from "../cadence-picker"
 import {
   FileText,
   TrendingUp,
@@ -23,6 +30,7 @@ import {
   Mail,
 } from "lucide-react"
 import { type ScheduleWizardState, type ReportType, type Weekday, weekdayLabels } from "./types"
+import { cn } from "../../lib/utils"
 
 const steps = [
   { title: "Basics", description: "Name and report type" },
@@ -60,7 +68,7 @@ function validateEmail(email: string): boolean {
 function validateEmailDomain(email: string): boolean {
   const domain = email.split("@")[1]
   // Basic domain validation - ensure it has at least one dot
-  return domain && domain.includes(".")
+  return !!(domain && domain.includes("."))
 }
 
 // Step 1: Basics

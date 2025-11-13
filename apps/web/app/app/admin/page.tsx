@@ -1,6 +1,8 @@
 import { apiFetch } from "@/lib/api"
 import { AdminOverview } from "@repo/ui"
 
+export const dynamic = 'force-dynamic'
+
 async function getAdminData() {
   try {
     const [kpisRes, reportsChartRes, emailsChartRes, reportsRes, schedulesRes, emailLogsRes] = await Promise.all([

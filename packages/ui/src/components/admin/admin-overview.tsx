@@ -1,10 +1,10 @@
 "use client"
 
-import { Card } from "./ui/card"
+import { Card } from "../ui/card"
 import { BarChart3, Calendar, Mail, Zap, AlertTriangle, Server } from "lucide-react"
 import { Line, LineChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Area, AreaChart } from "recharts"
 import type { AdminKPIData, ChartDataPoint, QueueStatus } from "./types"
-import { cn } from "../lib/utils"
+import { cn } from "../../lib/utils"
 
 interface AdminOverviewProps {
   kpis: AdminKPIData

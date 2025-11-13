@@ -1,17 +1,5 @@
-import { Navbar, Hero, FeatureGrid, HowItWorks, Samples, CodeTabs, Footer } from "@ui";
+import { MarketingHome } from "@ui";
 
 export default function Home() {
-  return (
-    <>
-      <Navbar />
-      <main>
-        <Hero />
-        <FeatureGrid />
-        <HowItWorks />
-        <Samples />
-        <CodeTabs />
-      </main>
-      <Footer />
-    </>
-  );
+  return <MarketingHome />;
 }
