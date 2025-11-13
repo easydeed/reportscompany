@@ -4,7 +4,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const token = request.cookies.get('mr_token')?.value;
   
@@ -12,8 +12,10 @@ export async function GET(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   
+  const { id } = await params;
+  
   try {
-    const response = await fetch(`${API_BASE}/v1/schedules/${params.id}`, {
+    const response = await fetch(`${API_BASE}/v1/schedules/${id}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
@@ -33,7 +35,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const token = request.cookies.get('mr_token')?.value;
   
@@ -41,10 +43,12 @@ export async function PATCH(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   
+  const { id } = await params;
+  
   try {
     const body = await request.json();
     
-    const response = await fetch(`${API_BASE}/v1/schedules/${params.id}`, {
+    const response = await fetch(`${API_BASE}/v1/schedules/${id}`, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -66,7 +70,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const token = request.cookies.get('mr_token')?.value;
   
@@ -74,8 +78,10 @@ export async function DELETE(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   
+  const { id } = await params;
+  
   try {
-    const response = await fetch(`${API_BASE}/v1/schedules/${params.id}`, {
+    const response = await fetch(`${API_BASE}/v1/schedules/${id}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,
