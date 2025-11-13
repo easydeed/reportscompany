@@ -1,6 +1,12 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { buildMarketSnapshotHtml } from '@/lib/templates';
+import { 
+  buildMarketSnapshotHtml,
+  buildNewListingsHtml,
+  buildInventoryHtml,
+  buildClosedHtml,
+  buildPriceBandsHtml
+} from '@/lib/templates';
 
 type Props = { params: { runId: string } };
 
@@ -97,11 +103,21 @@ export default async function PrintReport({ params }: Props) {
   const reportType = data.report_type || "market_snapshot";
   const reportTitle = REPORT_TITLES[reportType] || "Market Report";
 
-  // Use TrendyReports template for market_snapshot
-  if (reportType === "market_snapshot") {
+  // Use TrendyReports templates based on report type
+  const templateMap: Record<string, { filename: string; builder: (t: string, d: any) => string }> = {
+    "market_snapshot": { filename: 'trendy-market-snapshot.html', builder: buildMarketSnapshotHtml },
+    "new_listings": { filename: 'trendy-new-listings.html', builder: buildNewListingsHtml },
+    "inventory": { filename: 'trendy-inventory.html', builder: buildInventoryHtml },
+    "closed": { filename: 'trendy-closed.html', builder: buildClosedHtml },
+    "price_bands": { filename: 'trendy-price-bands.html', builder: buildPriceBandsHtml },
+  };
+
+  const templateConfig = templateMap[reportType];
+  
+  if (templateConfig) {
     try {
-      const template = await loadTemplate('trendy-market-snapshot.html');
-      const html = buildMarketSnapshotHtml(template, data);
+      const template = await loadTemplate(templateConfig.filename);
+      const html = templateConfig.builder(template, data);
       
       return (
         <html lang="en">
@@ -112,7 +128,7 @@ export default async function PrintReport({ params }: Props) {
         </html>
       );
     } catch (error) {
-      console.error('[Print Page] Template error, falling back to simple view:', error);
+      console.error(`[Print Page] Template error for ${reportType}, falling back to simple view:`, error);
       // Fall through to simple view below
     }
   }

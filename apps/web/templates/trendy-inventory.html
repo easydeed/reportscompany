@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>TrendyReports • Listing Inventory</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  /* ====== Print Setup ====== */
+  @page {
+    size: letter;
+    margin: 0.2in;
+  }
+  @media print {
+    html, body { 
+      background: #fff !important; 
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    .page { 
+      box-shadow: none !important; 
+      width: 100% !important;
+      min-height: auto !important;
+      margin: 0 !important;
+      padding: 0.15in !important;
+    }
+    table thead {
+      display: table-header-group;
+    }
+    table tr {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    a { color: inherit; text-decoration: none; }
+    .no-print { display: none !important; }
+    .avoid-break { break-inside: avoid; page-break-inside: avoid; }
+    * { 
+      -webkit-print-color-adjust: exact; 
+      print-color-adjust: exact; 
+    }
+  }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: #f3f4f6;
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #111827;
+  }
+
+  :root{
+    --pct-blue: #7C3AED; /* TrendyReports violet */
+    --pct-accent: #F26B2B; /* TrendyReports coral */
+    --pct-gray: rgb(247,249,252);
+    --ink: #0f172a;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --success: #16a34a;
+    --danger: #dc2626;
+  }
+
+  .page{
+    width: 8.5in;
+    min-height: 11in;
+    box-sizing: border-box;
+    margin: 0 auto;
+    background: white;
+    box-shadow: 0 2px 24px rgba(0,0,0,.06);
+    padding: 0.5in;
+  }
+
+  .header{
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand img{ height: 44px; width: auto; display:block; }
+  .title-block h1{
+    font-size: 22px; line-height:1.2; margin:0; color: var(--ink);
+    letter-spacing: .2px;
+  }
+  .title-block .sub{ margin-top: 2px; font-size: 12px; color: var(--muted); }
+  .badge{
+    background: var(--pct-blue); color: #fff; 
+    padding: 8px 12px; border-radius: 999px; font-weight: 600; font-size: 12px;
+  }
+
+  .ribbon{
+    background: linear-gradient(90deg, var(--pct-blue), var(--pct-accent));
+    color: #fff; border-radius: 14px;
+    padding: 14px 18px; margin: 6px 0 16px;
+    display:grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center;
+  }
+  .ribbon .kpi{ display:flex; gap: 24px; flex-wrap: nowrap; }
+  .ribbon .kpi .item{ min-width: 120px; }
+  .ribbon .kpi .lbl{ font-size: 11px; opacity:.9; letter-spacing:.3px; }
+  .ribbon .kpi .val{ font-size: 20px; font-weight: 700; line-height:1.1; }
+
+  .card{
+    background: #fff; border: 1px solid var(--border);
+    border-radius: 14px; padding: 12px 14px;
+  }
+  .card h3{
+    margin: 0 0 8px; font-size: 13px; letter-spacing:.2px; color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  table{ width:100%; border-collapse: collapse; font-size: 12px; }
+  th, td{ padding: 8px 8px; border-bottom: 1px solid var(--border); }
+  th{ text-align:left; color: #374151; font-weight: 700; font-size: 11.5px; }
+  tbody tr:last-child td{ border-bottom: none; }
+  .t-right{ text-align:right; }
+  .chip{ font-size: 10px; padding: 2px 6px; border-radius: 999px; background: #eef2ff; color: #1f3aa8; font-weight: 700; }
+
+  .footer{ margin-top: 12px; display:grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+  .foot-notes{ font-size: 10.5px; color: #6b7280; }
+  .brandbar{ display:flex; gap: 10px; align-items:center; }
+  .brandbar .dot{ width:10px; height:10px; border-radius:999px; background: var(--pct-blue); }
+  .brandbar .dot.acc{ background: var(--pct-accent); }
+  .brandbar .tag{ font-weight: 800; letter-spacing: .4px; color: #111827; font-size: 11px; }
+</style>
+</head>
+<body>
+  <div class="page">
+    <header class="header avoid-break">
+      <div class="brand">
+        <svg width="44" height="44" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" rx="20" fill="#7C3AED"/>
+          <text x="50" y="65" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">T</text>
+        </svg>
+        <div class="title-block">
+          <h1>Listing Inventory — {{market_name}}</h1>
+          <div class="sub">Period: {{period_label}} • Source: Live MLS Data • Report Date: {{report_date}}</div>
+        </div>
+      </div>
+      <div class="badge">TrendyReports Insights</div>
+    </header>
+
+    <section class="ribbon avoid-break">
+      <div class="kpi">
+        <div class="item"><div class="lbl">Total Active Listings</div><div class="val">{{total_active}}</div></div>
+        <div class="item"><div class="lbl">New This Month</div><div class="val">{{new_this_month}}</div></div>
+        <div class="item"><div class="lbl">Median DOM</div><div class="val">{{median_dom}}</div></div>
+        <div class="item"><div class="lbl">Months of Inventory</div><div class="val">{{moi}}</div></div>
+      </div>
+      <div class="chip">Current Snapshot</div>
+    </section>
+
+    <section class="stack data-section">
+      <div class="card">
+        <h3>Active Listings — Sorted by Days on Market</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>City</th>
+              <th>Address</th>
+              <th class="t-right">List Price</th>
+              <th class="t-right">Beds</th>
+              <th class="t-right">Baths</th>
+              <th class="t-right">SqFt</th>
+              <th class="t-right">DOM</th>
+              <th class="t-right">Status</th>
+            </tr>
+          </thead>
+          <tbody id="rows"><!-- LISTINGS_TABLE_ROWS --></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="footer avoid-break">
+      <div class="foot-notes">
+        Notes: Residential resale only unless otherwise stated. Data reflect {{period_label}} activity and may be revised by MLS.<br/>
+        Contact your real estate professional for custom insights and detailed market analysis.
+      </div>
+      <div class="brandbar">
+        <span class="dot"></span><span class="dot acc"></span>
+        <span class="tag">TrendyReports • Market Intelligence Powered by Live MLS Data</span>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>
+

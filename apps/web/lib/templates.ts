@@ -137,8 +137,54 @@ export function buildNewListingsHtml(
   templateHtml: string,
   data: any
 ): string {
-  // TODO: Implement in Phase 26B.1
-  return templateHtml;
+  const r = data.result_json || data;
+  const metrics = r.metrics || {};
+  const counts = r.counts || {};
+  const lookback = r.lookback_days || 30;
+  
+  // Build header and ribbon replacements
+  const replacements: Record<string, string> = {
+    "{{market_name}}": r.city || "Market",
+    "{{period_label}}": r.period_label || `Last ${lookback} days`,
+    "{{report_date}}": r.report_date || new Date().toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    }),
+    "{{lookback_days}}": String(lookback),
+    "{{total_new}}": formatNumber(counts.Active || 0),
+    "{{median_price}}": formatCurrency(metrics.median_list_price),
+    "{{avg_dom}}": formatDecimal(metrics.avg_dom),
+    "{{avg_ppsf}}": formatDecimal(metrics.avg_ppsf || 0),
+  };
+  
+  let html = templateHtml;
+  for (const [key, value] of Object.entries(replacements)) {
+    html = html.replaceAll(key, value);
+  }
+  
+  // Build table rows
+  const listings = r.listings_sample || [];
+  const sortedListings = listings.slice().sort((a: any, b: any) => 
+    (b.list_date || "").localeCompare(a.list_date || "")
+  );
+  
+  const rows = sortedListings.map((listing: any) => `
+    <tr>
+      <td>${listing.city || r.city || "—"}</td>
+      <td>${listing.address || "—"}</td>
+      <td class="t-right">${formatCurrency(listing.list_price)}</td>
+      <td class="t-right">${formatNumber(listing.beds)}</td>
+      <td class="t-right">${formatDecimal(listing.baths, 1)}</td>
+      <td class="t-right">${formatNumber(listing.sqft)}</td>
+      <td class="t-right">${formatNumber(listing.days_on_market)}</td>
+      <td class="t-right">${listing.list_date ? new Date(listing.list_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "—"}</td>
+    </tr>
+  `).join('');
+  
+  html = html.replace('<!-- LISTINGS_TABLE_ROWS -->', rows);
+  
+  return html;
 }
 
 /**
@@ -148,8 +194,57 @@ export function buildInventoryHtml(
   templateHtml: string,
   data: any
 ): string {
-  // TODO: Implement in Phase 26B.2
-  return templateHtml;
+  const r = data.result_json || data;
+  const metrics = r.metrics || {};
+  const counts = r.counts || {};
+  const lookback = r.lookback_days || 30;
+  
+  const activeCount = counts.Active ?? 0;
+  const closedCount = counts.Closed ?? 0;
+  const moi = closedCount > 0 ? (activeCount / closedCount) * (lookback / 30) : 0;
+  
+  const replacements: Record<string, string> = {
+    "{{market_name}}": r.city || "Market",
+    "{{period_label}}": r.period_label || `Last ${lookback} days`,
+    "{{report_date}}": r.report_date || new Date().toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    }),
+    "{{lookback_days}}": String(lookback),
+    "{{total_active}}": formatNumber(activeCount),
+    "{{new_this_month}}": formatNumber(activeCount), // Approximation
+    "{{median_dom}}": formatDecimal(metrics.avg_dom),
+    "{{moi}}": formatDecimal(moi),
+  };
+  
+  let html = templateHtml;
+  for (const [key, value] of Object.entries(replacements)) {
+    html = html.replaceAll(key, value);
+  }
+  
+  // Build table rows
+  const listings = r.listings_sample || [];
+  const sortedListings = listings
+    .filter((l: any) => l.status === "Active")
+    .sort((a: any, b: any) => (b.days_on_market || 0) - (a.days_on_market || 0));
+  
+  const rows = sortedListings.map((listing: any) => `
+    <tr>
+      <td>${listing.city || r.city || "—"}</td>
+      <td>${listing.address || "—"}</td>
+      <td class="t-right">${formatCurrency(listing.list_price)}</td>
+      <td class="t-right">${formatNumber(listing.beds)}</td>
+      <td class="t-right">${formatDecimal(listing.baths, 1)}</td>
+      <td class="t-right">${formatNumber(listing.sqft)}</td>
+      <td class="t-right">${formatNumber(listing.days_on_market)}</td>
+      <td class="t-right">${listing.status || "Active"}</td>
+    </tr>
+  `).join('');
+  
+  html = html.replace('<!-- LISTINGS_TABLE_ROWS -->', rows);
+  
+  return html;
 }
 
 /**
@@ -159,8 +254,57 @@ export function buildClosedHtml(
   templateHtml: string,
   data: any
 ): string {
-  // TODO: Implement in Phase 26B.3
-  return templateHtml;
+  const r = data.result_json || data;
+  const metrics = r.metrics || {};
+  const counts = r.counts || {};
+  const lookback = r.lookback_days || 30;
+  
+  const closeToListRatio = (metrics.median_close_price && metrics.median_list_price)
+    ? (metrics.median_close_price / metrics.median_list_price) * 100
+    : 0;
+  
+  const replacements: Record<string, string> = {
+    "{{market_name}}": r.city || "Market",
+    "{{period_label}}": r.period_label || `Last ${lookback} days`,
+    "{{report_date}}": r.report_date || new Date().toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    }),
+    "{{lookback_days}}": String(lookback),
+    "{{total_closed}}": formatNumber(counts.Closed || 0),
+    "{{median_price}}": formatCurrency(metrics.median_close_price),
+    "{{avg_dom}}": formatDecimal(metrics.avg_dom),
+    "{{ctl}}": formatDecimal(closeToListRatio, 1),
+  };
+  
+  let html = templateHtml;
+  for (const [key, value] of Object.entries(replacements)) {
+    html = html.replaceAll(key, value);
+  }
+  
+  // Build table rows
+  const listings = r.listings_sample || [];
+  const sortedListings = listings
+    .filter((l: any) => l.status === "Closed")
+    .sort((a: any, b: any) => (b.close_date || "").localeCompare(a.close_date || ""));
+  
+  const rows = sortedListings.map((listing: any) => `
+    <tr>
+      <td>${listing.city || r.city || "—"}</td>
+      <td>${listing.address || "—"}</td>
+      <td class="t-right">${formatCurrency(listing.close_price || listing.list_price)}</td>
+      <td class="t-right">${formatNumber(listing.beds)}</td>
+      <td class="t-right">${formatDecimal(listing.baths, 1)}</td>
+      <td class="t-right">${formatNumber(listing.sqft)}</td>
+      <td class="t-right">${formatNumber(listing.days_on_market)}</td>
+      <td class="t-right">${listing.close_date ? new Date(listing.close_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "—"}</td>
+    </tr>
+  `).join('');
+  
+  html = html.replace('<!-- LISTINGS_TABLE_ROWS -->', rows);
+  
+  return html;
 }
 
 /**
@@ -170,7 +314,81 @@ export function buildPriceBandsHtml(
   templateHtml: string,
   data: any
 ): string {
-  // TODO: Implement in Phase 26B.4
-  return templateHtml;
+  const r = data.result_json || data;
+  const metrics = r.metrics || {};
+  const lookback = r.lookback_days || 30;
+  const bands = r.price_bands || [];
+  
+  // Calculate totals
+  const totalListings = bands.reduce((sum: number, b: any) => sum + (b.count || 0), 0);
+  const prices = bands.flatMap((b: any) => b.listings || []).map((l: any) => l.list_price || 0).filter(p => p > 0);
+  const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+  const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+  
+  // Find hottest and slowest bands
+  const sortedByDom = bands.slice().sort((a: any, b: any) => (a.avg_dom || 999) - (b.avg_dom || 999));
+  const hottest = sortedByDom[0] || {};
+  const slowest = sortedByDom[sortedByDom.length - 1] || {};
+  
+  const replacements: Record<string, string> = {
+    "{{market_name}}": r.city || "Market",
+    "{{period_label}}": r.period_label || `Last ${lookback} days`,
+    "{{report_date}}": r.report_date || new Date().toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    }),
+    "{{lookback_days}}": String(lookback),
+    "{{total_listings}}": formatNumber(totalListings),
+    "{{median_price}}": formatCurrency(metrics.median_list_price),
+    "{{avg_dom}}": formatDecimal(metrics.avg_dom),
+    "{{price_range}}": `${formatCurrency(minPrice)} - ${formatCurrency(maxPrice)}`,
+    "{{hottest_band}}": hottest.label || "—",
+    "{{hottest_count}}": formatNumber(hottest.count || 0),
+    "{{hottest_dom}}": formatNumber(hottest.avg_dom || 0),
+    "{{slowest_band}}": slowest.label || "—",
+    "{{slowest_count}}": formatNumber(slowest.count || 0),
+    "{{slowest_dom}}": formatNumber(slowest.avg_dom || 0),
+  };
+  
+  let html = templateHtml;
+  for (const [key, value] of Object.entries(replacements)) {
+    html = html.replaceAll(key, value);
+  }
+  
+  // Build price bands
+  const bandsHtml = bands.map((band: any) => {
+    const percentage = totalListings > 0 ? ((band.count || 0) / totalListings) * 100 : 0;
+    
+    return `
+      <div class="price-band">
+        <div class="band-title">${band.label || "—"}</div>
+        <div class="band-count">${formatNumber(band.count || 0)} listings (${percentage.toFixed(1)}% of market)</div>
+        <div class="bar-container">
+          <div class="bar-fill" style="width: ${percentage}%;">
+            ${percentage.toFixed(1)}%
+          </div>
+        </div>
+        <div class="band-metrics">
+          <div class="metric">
+            <div class="metric-label">Median Price</div>
+            <div class="metric-value">${formatCurrency(band.median_price || 0)}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Avg DOM</div>
+            <div class="metric-value">${formatNumber(band.avg_dom || 0)}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Price/SqFt</div>
+            <div class="metric-value">${formatCurrency(band.avg_ppsf || 0)}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  html = html.replace('<!-- PRICE_BANDS_CONTENT -->', bandsHtml);
+  
+  return html;
 }
 
