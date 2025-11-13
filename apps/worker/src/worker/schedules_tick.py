@@ -148,16 +148,15 @@ def enqueue_report(
     zip_codes: Optional[list],
     lookback_days: int,
     filters: Optional[Dict[str, Any]] = None
-) -> str:
+) -> tuple[str, str]:
     """
     Enqueue a report generation task to Celery.
     
     Returns:
-        Celery task ID
+        Tuple of (report_generation_id, celery_task_id)
     """
     # Build params dict matching the format expected by generate_report task
     params = {
-        "report_type": report_type,
         "city": city,
         "zips": zip_codes,
         "lookback_days": lookback_days,
@@ -165,15 +164,27 @@ def enqueue_report(
         "schedule_id": schedule_id  # Link back to schedule for audit
     }
     
-    # Send task to Celery (same queue as API-triggered reports)
+    # Create report_generation record first (worker expects run_id)
+    with psycopg.connect(DATABASE_URL) as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
+            cur.execute("""
+                INSERT INTO report_generations (account_id, status)
+                VALUES (%s::uuid, 'queued')
+                RETURNING id::text
+            """, (account_id,))
+            run_id = cur.fetchone()[0]
+        conn.commit()
+    
+    # Send task to Celery with all 4 required arguments
     task = celery.send_task(
         "generate_report",
-        args=[account_id, params],
+        args=[run_id, account_id, report_type, params],
         queue="celery"
     )
     
-    logger.info(f"Enqueued report for schedule {schedule_id}, task_id: {task.id}")
-    return task.id
+    logger.info(f"Enqueued report for schedule {schedule_id}, run_id={run_id}, task_id={task.id}")
+    return run_id, task.id
 
 
 def process_due_schedules():
@@ -232,20 +243,20 @@ def process_due_schedules():
                             send_hour, send_minute
                         )
                         
-                        # Enqueue report generation
-                        task_id = enqueue_report(
+                        # Enqueue report generation (creates report_generations record + Celery task)
+                        report_gen_id, task_id = enqueue_report(
                             schedule_id, account_id, report_type,
                             city, zip_codes, lookback_days
                         )
                         
-                        # Create schedule_runs audit record
+                        # Create schedule_runs audit record linked to report_generation
                         cur.execute("""
-                            INSERT INTO schedule_runs (schedule_id, status, created_at)
-                            VALUES (%s::uuid, 'queued', NOW())
+                            INSERT INTO schedule_runs (schedule_id, report_run_id, status, created_at)
+                            VALUES (%s::uuid, %s::uuid, 'queued', NOW())
                             RETURNING id::text
-                        """, (schedule_id,))
+                        """, (schedule_id, report_gen_id))
                         
-                        run_id = cur.fetchone()[0]
+                        schedule_run_id = cur.fetchone()[0]
                         
                         # Update schedule with last_run_at and next_run_at
                         cur.execute("""
@@ -259,7 +270,8 @@ def process_due_schedules():
                         
                         logger.info(
                             f"Processed schedule '{name}' (ID: {schedule_id}): "
-                            f"run_id={run_id}, task_id={task_id}, next_run_at={next_run_at.isoformat()}"
+                            f"schedule_run_id={schedule_run_id}, report_gen_id={report_gen_id}, "
+                            f"task_id={task_id}, next_run_at={next_run_at.isoformat()}"
                         )
                     
                     except Exception as e:
