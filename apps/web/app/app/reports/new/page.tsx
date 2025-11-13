@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Wizard from "@/components/Wizard";
-import AppLayout from "@/app/app-layout";
 import { API_BASE, DEMO_ACC } from "@/lib/api";
 
 export default function NewReportPage() {
@@ -67,17 +66,12 @@ export default function NewReportPage() {
 
   // Show wizard if no report is being generated
   if (!runId) {
-    return (
-      <AppLayout>
-        <Wizard onSubmit={handleSubmit} onCancel={handleCancel} />
-      </AppLayout>
-    );
+    return <Wizard onSubmit={handleSubmit} onCancel={handleCancel} />;
   }
 
   // Show status/result
   return (
-    <AppLayout>
-      <div className="max-w-3xl mx-auto">
+    <div className="max-w-3xl mx-auto">
         <h1 className="text-2xl font-semibold mb-6">Report Generation</h1>
         
         <div className="bg-white rounded-lg border p-6 space-y-4">
@@ -138,6 +132,5 @@ export default function NewReportPage() {
           </div>
         </div>
       </div>
-    </AppLayout>
   );
 }
