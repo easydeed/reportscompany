@@ -1,3 +1,7 @@
+import fs from 'fs/promises';
+import path from 'path';
+import { buildMarketSnapshotHtml } from '@/lib/templates';
+
 type Props = { params: { runId: string } };
 
 async function fetchData(runId: string) {
@@ -32,6 +36,18 @@ async function fetchData(runId: string) {
   } catch (error) {
     console.error(`[Print Page] Failed to fetch report data:`, error);
     return null;
+  }
+}
+
+async function loadTemplate(templateName: string): Promise<string> {
+  const templatePath = path.join(process.cwd(), 'templates', templateName);
+  try {
+    const template = await fs.readFile(templatePath, 'utf-8');
+    console.log(`[Print Page] Loaded template: ${templateName}`);
+    return template;
+  } catch (error) {
+    console.error(`[Print Page] Failed to load template ${templateName}:`, error);
+    throw new Error(`Template not found: ${templateName}`);
   }
 }
 
@@ -81,6 +97,27 @@ export default async function PrintReport({ params }: Props) {
   const reportType = data.report_type || "market_snapshot";
   const reportTitle = REPORT_TITLES[reportType] || "Market Report";
 
+  // Use TrendyReports template for market_snapshot
+  if (reportType === "market_snapshot") {
+    try {
+      const template = await loadTemplate('trendy-market-snapshot.html');
+      const html = buildMarketSnapshotHtml(template, data);
+      
+      return (
+        <html lang="en">
+          <head>
+            <title>{reportTitle} - {data.city}</title>
+          </head>
+          <body dangerouslySetInnerHTML={{ __html: html }} />
+        </html>
+      );
+    } catch (error) {
+      console.error('[Print Page] Template error, falling back to simple view:', error);
+      // Fall through to simple view below
+    }
+  }
+
+  // Fallback simple view for other report types or template errors
   return (
     <html lang="en">
       <head>

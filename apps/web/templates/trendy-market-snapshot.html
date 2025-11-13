@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>TrendyReports • Market Snapshot</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  /* ====== Print Setup ====== */
+  @page {
+    size: letter;
+    margin: 0.2in;
+  }
+  @media print {
+    html, body { 
+      background: #fff !important; 
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    .page { 
+      box-shadow: none !important; 
+      width: 100% !important;
+      min-height: auto !important;
+      margin: 0 !important;
+      padding: 0.15in !important; /* Tighter for print */
+    }
+    a { color: inherit; text-decoration: none; }
+    .no-print { display: none !important; }
+    .avoid-break { break-inside: avoid; page-break-inside: avoid; }
+    * { 
+      -webkit-print-color-adjust: exact; 
+      print-color-adjust: exact; 
+    }
+    
+    /* Slightly reduce spacing for print to fit on one page */
+    .header { margin-bottom: 8px !important; }
+    h2 { margin: 8px 0 !important; font-size: 13px !important; }
+    h3 { margin: 6px 0 !important; font-size: 12px !important; }
+    p { 
+      margin: 6px 0 !important; 
+      line-height: 1.3 !important; 
+      font-size: 11px !important;
+    }
+    .ribbon { margin-bottom: 10px !important; padding: 12px 16px !important; }
+    .card { margin-bottom: 10px !important; padding: 10px !important; }
+    .stack > p { margin: 10px 0 4px !important; }
+    .grid-2 { gap: 10px !important; }
+    table { font-size: 11px !important; }
+  }
+
+  /* ====== Screen Canvas (kept subtle; prints white) ====== */
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: #f3f4f6; /* screen-only vibe */
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #111827;
+  }
+
+  :root{
+    --pct-blue: #7C3AED; /* TrendyReports violet */
+    --pct-accent: #F26B2B; /* TrendyReports coral */
+    --pct-gray: rgb(247,249,252);
+    --ink: #0f172a;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --success: #16a34a;
+    --danger: #dc2626;
+  }
+
+  .page{
+    width: 8.5in; /* for screen preview */
+    min-height: 11in;
+    box-sizing: border-box;
+    margin: 0 auto;
+    background: white;
+    box-shadow: 0 2px 24px rgba(0,0,0,.06);
+    padding: 0.25in; /* matches @page margin for identical content box */
+  }
+
+  /* ====== Header ====== */
+  .header{
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .brand{
+    display:flex; align-items:center; gap:12px;
+  }
+  .brand img{
+    height: 44px; width: auto; display:block;
+  }
+  .title-block h1{
+    font-size: 22px; line-height:1.2; margin:0; color: var(--ink);
+    letter-spacing: .2px;
+  }
+  .title-block .sub{
+    margin-top: 2px; font-size: 12px; color: var(--muted);
+  }
+  .badge{
+    background: var(--pct-blue); color: #fff; 
+    padding: 8px 12px; border-radius: 999px; font-weight: 600; font-size: 12px;
+  }
+
+  /* ====== Ribbon / Hero Stat ====== */
+  .ribbon{
+    background: linear-gradient(90deg, var(--pct-blue), var(--pct-accent));
+    color: #fff; border-radius: 14px;
+    padding: 14px 18px; margin: 6px 0 16px;
+    display:grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center;
+  }
+  .ribbon .kpi{
+    display:flex; gap: 24px; flex-wrap: wrap;
+  }
+  .ribbon .kpi .item{
+    min-width: 120px;
+  }
+  .ribbon .kpi .lbl{ font-size: 11px; opacity:.9; letter-spacing:.3px; }
+  .ribbon .kpi .val{ font-size: 20px; font-weight: 700; line-height:1.1; }
+
+  /* ====== Cards & Layout ====== */
+  .card{
+    background: #fff; border: 1px solid var(--border);
+    border-radius: 14px; padding: 12px 14px;
+  }
+  .card h3{
+    margin: 0 0 8px; font-size: 13px; letter-spacing:.2px; color: var(--muted);
+    text-transform: uppercase;
+  }
+  .stack > * { margin-bottom: 14px; }
+  .grid-2{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 900px){
+    .grid-2{ grid-template-columns: 1fr; }
+  }
+  @media print {
+    .grid-2 { grid-template-columns: 1fr 1fr; }
+  }
+
+  .stat-grid{
+    display:grid; grid-template-columns: repeat(3,1fr); gap: 10px;
+  }
+  .mini{
+    background: var(--pct-gray); border: 1px dashed #e6ebf1; 
+    border-radius: 12px; padding: 10px 12px;
+  }
+  .mini .label{ font-size: 11px; color: #4b5563; }
+  .mini .value{ font-size: 16px; font-weight: 700; color: var(--ink); }
+  .delta{
+    font-size: 11px; margin-top: 2px; display:flex; align-items:center; gap:6px;
+    font-weight: 600;
+  }
+  .delta.up{ color: var(--success); }
+  .delta.down{ color: var(--danger); }
+
+  /* Bar meter */
+  .meter{ height: 8px; background: #eef2ff; border-radius: 999px; overflow:hidden; margin-top: 8px; }
+  .meter > span{ display:block; height: 100%; width: var(--w, 50%); background: var(--pct-blue); }
+
+  /* ====== Tablelets ====== */
+  table{
+    width:100%; border-collapse: collapse; font-size: 12px;
+  }
+  th, td{ padding: 8px 8px; border-bottom: 1px solid var(--border); }
+  th{ text-align:left; color: #374151; font-weight: 700; font-size: 11.5px; }
+  tbody tr:last-child td{ border-bottom: none; }
+  .t-right{ text-align:right; }
+  .chip{
+    font-size: 10px; padding: 2px 6px; border-radius: 999px; 
+    background: #eef2ff; color: #1f3aa8; font-weight: 700;
+  }
+
+  /* ====== Footer ====== */
+  .footer{
+    margin-top: 12px; display:grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;
+  }
+  .foot-notes{
+    font-size: 10.5px; color: #6b7280;
+  }
+  .brandbar{
+    display:flex; gap: 10px; align-items:center;
+  }
+  .brandbar .dot{
+    width:10px; height:10px; border-radius:999px; background: var(--pct-blue);
+  }
+  .brandbar .dot.acc{ background: var(--pct-accent); }
+  .brandbar .tag{
+    font-weight: 800; letter-spacing: .4px; color: #111827; font-size: 11px;
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <!-- Header -->
+    <header class="header avoid-break">
+      <div class="brand">
+        <!-- TODO: Replace with actual TrendyReports logo URL -->
+        <svg width="44" height="44" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" rx="20" fill="#7C3AED"/>
+          <text x="50" y="65" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">T</text>
+        </svg>
+        <div class="title-block">
+          <h1>Market Snapshot — {{market_name}}</h1>
+          <div class="sub">Period: {{period_label}} &nbsp;•&nbsp; Source: Live MLS Data &nbsp;•&nbsp; Report Date: {{report_date}}</div>
+        </div>
+      </div>
+      <div class="badge">TrendyReports Insights</div>
+    </header>
+
+    <!-- Market Overview -->
+    <p style="margin: 12px 0 16px; font-size: 13px; line-height: 1.6; color: #6b7280;">
+      This snapshot provides key market indicators for <strong>{{market_name}}</strong> based on the most recent <strong>{{lookback_days}} days</strong> of MLS activity. 
+      These metrics help you understand current market conditions, pricing trends, and inventory levels to make informed decisions.
+    </p>
+
+    <!-- Hero ribbon -->
+    <section class="ribbon avoid-break">
+      <div class="kpi">
+        <div class="item">
+          <div class="lbl">Median Sale Price</div>
+          <div class="val">{{median_price}}</div>
+        </div>
+        <div class="item">
+          <div class="lbl">Closed Sales</div>
+          <div class="val">{{closed_sales}}</div>
+        </div>
+        <div class="item">
+          <div class="lbl">Avg. Days on Market</div>
+          <div class="val">{{avg_dom}}</div>
+        </div>
+        <div class="item">
+          <div class="lbl">Months of Inventory</div>
+          <div class="val">{{moi}}</div>
+        </div>
+      </div>
+      <div class="chip">Last {{lookback_days}} days</div>
+    </section>
+
+    <!-- Main content (stacked flow) -->
+    <section class="stack">
+      <!-- Core KPIs -->
+      <p style="margin: 20px 0 12px; font-size: 12px; line-height: 1.5; color: #6b7280; font-style: italic;">
+        <strong>Market Activity:</strong> Track new listings entering the market, pending transactions, and how close properties are selling to their asking price. These indicators reveal market momentum and buyer demand.
+      </p>
+      <div class="card avoid-break">
+        <h3>Core Indicators</h3>
+        <div class="stat-grid">
+          <div class="mini">
+            <div class="label">New Listings</div>
+            <div class="value">{{new_listings}}</div>
+            <div class="delta {{new_listings_delta_class}}">
+              <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4l6 8H6z"/></svg>
+              {{new_listings_delta}}%
+            </div>
+            <div class="meter" style="--w: {{new_listings_fill}}%;"><span></span></div>
+          </div>
+          <div class="mini">
+            <div class="label">Pending Sales</div>
+            <div class="value">{{pendings}}</div>
+            <div class="delta {{pendings_delta_class}}">
+              <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4l6 8H6z"/></svg>
+              {{pendings_delta}}%
+            </div>
+            <div class="meter" style="--w: {{pendings_fill}}%;"><span></span></div>
+          </div>
+          <div class="mini">
+            <div class="label">Sale-to-List Ratio</div>
+            <div class="value">{{close_to_list_ratio}}%</div>
+            <div class="delta {{ctl_delta_class}}">
+              <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4l6 8H6z"/></svg>
+              {{ctl_delta}}%
+            </div>
+            <div class="meter" style="--w: {{ctl_fill}}%;"><span></span></div>
+            <div style="font-size: 9px; color: #9ca3af; margin-top: 3px;">Avg. sale price vs. list price</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Below the core indicators: the two tables side-by-side -->
+      <p style="margin: 24px 0 12px; font-size: 12px; line-height: 1.5; color: #6b7280; font-style: italic;">
+        <strong>Market Segmentation:</strong> Compare performance across property types and price ranges to identify where demand is strongest and inventory is tightest.
+      </p>
+      <div class="grid-2">
+        <div class="card avoid-break">
+          <h3>By Property Type</h3>
+          <table>
+            <thead><tr><th>Type</th><th class="t-right">Median Price</th><th class="t-right">Closed</th><th class="t-right">DOM</th></tr></thead>
+            <tbody>
+              <tr><td>SFR</td><td class="t-right">{{sfr_median}}</td><td class="t-right">{{sfr_closed}}</td><td class="t-right">{{sfr_dom}}</td></tr>
+              <tr><td>Condo</td><td class="t-right">{{condo_median}}</td><td class="t-right">{{condo_closed}}</td><td class="t-right">{{condo_dom}}</td></tr>
+              <tr><td>Townhome</td><td class="t-right">{{th_median}}</td><td class="t-right">{{th_closed}}</td><td class="t-right">{{th_dom}}</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card avoid-break">
+          <h3>By Price Tier</h3>
+          <table>
+            <thead><tr><th>Tier</th><th class="t-right">Median</th><th class="t-right">Closed</th><th class="t-right">MOI</th></tr></thead>
+            <tbody>
+              <tr><td><span class="chip">Entry</span></td><td class="t-right">{{tier1_median}}</td><td class="t-right">{{tier1_closed}}</td><td class="t-right">{{tier1_moi}}</td></tr>
+              <tr><td><span class="chip">Move-Up</span></td><td class="t-right">{{tier2_median}}</td><td class="t-right">{{tier2_closed}}</td><td class="t-right">{{tier2_moi}}</td></tr>
+              <tr><td><span class="chip">Luxury</span></td><td class="t-right">{{tier3_median}}</td><td class="t-right">{{tier3_closed}}</td><td class="t-right">{{tier3_moi}}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer avoid-break">
+      <div class="foot-notes">
+        Notes: Residential resale only unless otherwise stated. Data reflect {{period_label}} activity and may be revised by MLS. <br/>
+        Contact your real estate professional for custom insights and detailed market analysis.
+      </div>
+      <div class="brandbar">
+        <span class="dot"></span><span class="dot acc"></span>
+        <span class="tag">TrendyReports • Market Intelligence Powered by Live MLS Data</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Optional helper: mark deltas up/down with a sign -->
+  <script>
+    (function(){
+      document.querySelectorAll('.delta').forEach(function(el){
+        const t = el.textContent.trim();
+        const path = el.querySelector('path');
+        if (t.startsWith('-')) {
+          el.classList.remove('up'); el.classList.add('down');
+          if (path) path.setAttribute('d','M12 20l6-8H6z'); // downward triangle
+        } else {
+          el.classList.remove('down'); el.classList.add('up');
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
+

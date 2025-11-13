@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>PCT • Market Snapshot</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  /* ====== Print Setup ====== */
+  @page {
+    size: letter;
+    margin: 0.2in;
+  }
+  @media print {
+    html, body { 
+      background: #fff !important; 
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    .page { 
+      box-shadow: none !important; 
+      width: 100% !important;
+      min-height: auto !important;
+      margin: 0 !important;
+      padding: 0.15in !important; /* Tighter for print */
+    }
+    a { color: inherit; text-decoration: none; }
+    .no-print { display: none !important; }
+    .avoid-break { break-inside: avoid; page-break-inside: avoid; }
+    * { 
+      -webkit-print-color-adjust: exact; 
+      print-color-adjust: exact; 
+    }
+    
+    /* Slightly reduce spacing for print to fit on one page */
+    .header { margin-bottom: 8px !important; }
+    h2 { margin: 8px 0 !important; font-size: 13px !important; }
+    h3 { margin: 6px 0 !important; font-size: 12px !important; }
+    p { 
+      margin: 6px 0 !important; 
+      line-height: 1.3 !important; 
+      font-size: 11px !important;
+    }
+    .ribbon { margin-bottom: 10px !important; padding: 12px 16px !important; }
+    .card { margin-bottom: 10px !important; padding: 10px !important; }
+    .stack > p { margin: 10px 0 4px !important; }
+    .grid-2 { gap: 10px !important; }
+    table { font-size: 11px !important; }
+  }
+
+  /* ====== Screen Canvas (kept subtle; prints white) ====== */
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: #f3f4f6; /* screen-only vibe */
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #111827;
+  }
+
+  :root{
+    --pct-blue: rgb(37,99,235);
+    --pct-gray: rgb(247,249,252);
+    --pct-accent: #f26b2b;
+    --ink: #0f172a;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --success: #16a34a;
+    --danger: #dc2626;
+  }
+
+  .page{
+    width: 8.5in; /* for screen preview */
+    min-height: 11in;
+    box-sizing: border-box;
+    margin: 0 auto;
+    background: white;
+    box-shadow: 0 2px 24px rgba(0,0,0,.06);
+    padding: 0.25in; /* matches @page margin for identical content box */
+  }
+
+  /* ====== Header ====== */
+  .header{
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .brand{
+    display:flex; align-items:center; gap:12px;
+  }
+  .brand img{
+    height: 44px; width: auto; display:block;
+  }
+  .title-block h1{
+    font-size: 22px; line-height:1.2; margin:0; color: var(--ink);
+    letter-spacing: .2px;
+  }
+  .title-block .sub{
+    margin-top: 2px; font-size: 12px; color: var(--muted);
+  }
+  .badge{
+    background: var(--pct-blue); color: #fff; 
+    padding: 8px 12px; border-radius: 999px; font-weight: 600; font-size: 12px;
+  }
+
+  /* ====== Ribbon / Hero Stat ====== */
+  .ribbon{
+    background: linear-gradient(90deg, var(--pct-blue), var(--pct-accent));
+    color: #fff; border-radius: 14px;
+    padding: 14px 18px; margin: 6px 0 16px;
+    display:grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center;
+  }
+  .ribbon .kpi{
+    display:flex; gap: 24px; flex-wrap: wrap;
+  }
+  .ribbon .kpi .item{
+    min-width: 120px;
+  }
+  .ribbon .kpi .lbl{ font-size: 11px; opacity:.9; letter-spacing:.3px; }
+  .ribbon .kpi .val{ font-size: 20px; font-weight: 700; line-height:1.1; }
+
+  /* ====== Cards & Layout ====== */
+  .card{
+    background: #fff; border: 1px solid var(--border);
+    border-radius: 14px; padding: 12px 14px;
+  }
+  .card h3{
+    margin: 0 0 8px; font-size: 13px; letter-spacing:.2px; color: var(--muted);
+    text-transform: uppercase;
+  }
+  .stack > * { margin-bottom: 14px; }
+  .grid-2{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 900px){
+    .grid-2{ grid-template-columns: 1fr; }
+  }
+  @media print {
+    .grid-2 { grid-template-columns: 1fr 1fr; }
+  }
+
+  .stat-grid{
+    display:grid; grid-template-columns: repeat(3,1fr); gap: 10px;
+  }
+  .mini{
+    background: var(--pct-gray); border: 1px dashed #e6ebf1; 
+    border-radius: 12px; padding: 10px 12px;
+  }
+  .mini .label{ font-size: 11px; color: #4b5563; }
+  .mini .value{ font-size: 16px; font-weight: 700; color: var(--ink); }
+  .delta{
+    font-size: 11px; margin-top: 2px; display:flex; align-items:center; gap:6px;
+    font-weight: 600;
+  }
+  .delta.up{ color: var(--success); }
+  .delta.down{ color: var(--danger); }
+
+  /* Bar meter */
+  .meter{ height: 8px; background: #eef2ff; border-radius: 999px; overflow:hidden; margin-top: 8px; }
+  .meter > span{ display:block; height: 100%; width: var(--w, 50%); background: var(--pct-blue); }
+
+  /* ====== Tablelets ====== */
+  table{
+    width:100%; border-collapse: collapse; font-size: 12px;
+  }
+  th, td{ padding: 8px 8px; border-bottom: 1px solid var(--border); }
+  th{ text-align:left; color: #374151; font-weight: 700; font-size: 11.5px; }
+  tbody tr:last-child td{ border-bottom: none; }
+  .t-right{ text-align:right; }
+  .chip{
+    font-size: 10px; padding: 2px 6px; border-radius: 999px; 
+    background: #eef2ff; color: #1f3aa8; font-weight: 700;
+  }
+
+  /* ====== Inline Sparkline ====== */
+  .spark{
+    width: 100%; height: 36px; display:block;
+  }
+  .spark path{ stroke: var(--pct-blue); fill: rgba(37,99,235,0.12); stroke-width: 2; }
+
+  /* ====== Footer ====== */
+  .footer{
+    margin-top: 12px; display:grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;
+  }
+  .foot-notes{
+    font-size: 10.5px; color: #6b7280;
+  }
+  .brandbar{
+    display:flex; gap: 10px; align-items:center;
+  }
+  .brandbar .dot{
+    width:10px; height:10px; border-radius:999px; background: var(--pct-blue);
+  }
+  .brandbar .dot.acc{ background: var(--pct-accent); }
+  .brandbar .tag{
+    font-weight: 800; letter-spacing: .4px; color: #111827; font-size: 11px;
+  }
+  
+  /* Action buttons */
+  .action-buttons {
+    position: fixed; top: 20px; right: 20px; 
+    display: flex; gap: 10px; z-index: 1000;
+  }
+  .print-btn, .social-btn{
+    background: var(--pct-blue); color: #fff; border: none;
+    padding: 12px 24px; border-radius: 8px; font-weight: 700; font-size: 14px;
+    cursor: pointer; box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+    transition: all 0.2s;
+  }
+  .print-btn:hover, .social-btn:hover{
+    background: var(--pct-accent); transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(242,107,43,0.4);
+  }
+  .social-btn {
+    background: #10b981;
+    box-shadow: 0 4px 12px rgba(16,185,129,0.3);
+  }
+  .social-btn:hover {
+    background: #059669;
+    box-shadow: 0 6px 16px rgba(5,150,105,0.4);
+  }
+  @media print {
+    .action-buttons { display: none; }
+  }
+  
+  /* Social Modal */
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal.active {
+    display: flex;
+  }
+  .modal-content {
+    background: white;
+    border-radius: 16px;
+    max-width: 900px;
+    width: 100%;
+    max-height: 90vh;
+    overflow: auto;
+    padding: 30px;
+    position: relative;
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .modal-header h2 {
+    margin: 0;
+    color: #111827;
+  }
+  .modal-close {
+    background: #ef4444;
+    color: white;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+  }
+  .modal-body {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 30px;
+    align-items: start;
+  }
+  .preview-container {
+    background: #f3f4f6;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .preview-frame {
+    width: 270px;
+    height: 480px;
+    border: 3px solid #111827;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  }
+  .preview-frame iframe {
+    width: 1080px;
+    height: 1920px;
+    border: none;
+    transform: scale(0.25);
+    transform-origin: 0 0;
+  }
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .control-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #374151;
+    font-size: 14px;
+  }
+  .control-group select {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  .download-btn {
+    background: var(--pct-blue);
+    color: white;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.2s;
+  }
+  .download-btn:hover {
+    background: var(--pct-accent);
+    transform: translateY(-2px);
+  }
+  .download-btn:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+    transform: none;
+  }
+</style>
+</head>
+<body>
+  <!-- Action Buttons -->
+  <div class="action-buttons no-print">
+    <button class="print-btn" onclick="window.print()">🖨️ Print / Save PDF</button>
+    <button class="social-btn" onclick="openSocialModal()">📱 Generate Social Graphic</button>
+  </div>
+
+  <!-- Social Modal -->
+  <div id="socialModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>📱 Generate Social Graphic</h2>
+        <button class="modal-close" onclick="closeSocialModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="preview-container">
+          <div class="preview-frame">
+            <iframe id="socialPreview" src=""></iframe>
+          </div>
+        </div>
+        <div class="controls">
+          <div class="control-group">
+            <label for="themeSelect">Background Theme</label>
+            <select id="themeSelect" onchange="updatePreview()">
+              <option value="">Sunset Wave (Default)</option>
+              <option value="classic">Classic Gradient</option>
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label>Preview Size</label>
+            <p style="margin: 0; font-size: 13px; color: #6b7280;">1080 × 1920 (Instagram/Facebook Story)</p>
+          </div>
+          <button class="download-btn" onclick="downloadSocialGraphic()" id="downloadBtn">
+            <span id="downloadText">📥 Download PNG (300 DPI - 4320×7680)</span>
+          </button>
+          <p style="margin: 0; font-size: 12px; color: #6b7280; text-align: center;">
+            Print-quality 300 DPI output • Perfect for Instagram/Facebook/LinkedIn
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="page">
+    <!-- Header -->
+    <header class="header avoid-break">
+      <div class="brand">
+        <img src="https://pct.com/vcard-new/assets/images/logo2-dark.png" alt="Pacific Coast Title" />
+        <div class="title-block">
+          <h1>Market Snapshot — {{market_name}}</h1>
+          <div class="sub">Period: {{period_label}} &nbsp;•&nbsp; Source: CRMLS/MLS data &nbsp;•&nbsp; Report Date: {{report_date}}</div>
+        </div>
+      </div>
+      <div class="badge">PCT Insights</div>
+    </header>
+
+    <!-- Market Overview -->
+    <p style="margin: 12px 0 16px; font-size: 13px; line-height: 1.6; color: #6b7280;">
+      This snapshot provides key market indicators for <strong>{{market_name}}</strong> based on the most recent <strong>{{lookback_days}} days</strong> of MLS activity. 
+      These metrics help you understand current market conditions, pricing trends, and inventory levels to make informed decisions.
+    </p>
+
+    <!-- Hero ribbon -->
+    <section class="ribbon avoid-break">
+      <div class="kpi">
+        <div class="item">
+          <div class="lbl">Median Sale Price</div>
+          <div class="val">{{median_price}}</div>
+        </div>
+        <div class="item">
+          <div class="lbl">Closed Sales</div>
+          <div class="val">{{closed_sales}}</div>
+        </div>
+        <div class="item">
+          <div class="lbl">Avg. Days on Market</div>
+          <div class="val">{{avg_dom}}</div>
+        </div>
+        <div class="item">
+          <div class="lbl">Months of Inventory</div>
+          <div class="val">{{moi}}</div>
+        </div>
+      </div>
+      <div class="chip">Last {{lookback_days}} days</div>
+    </section>
+
+    <!-- Main content (stacked flow) -->
+    <section class="stack">
+      <!-- Core KPIs -->
+      <p style="margin: 20px 0 12px; font-size: 12px; line-height: 1.5; color: #6b7280; font-style: italic;">
+        <strong>Market Activity:</strong> Track new listings entering the market, pending transactions, and how close properties are selling to their asking price. These indicators reveal market momentum and buyer demand.
+      </p>
+      <div class="card avoid-break">
+        <h3>Core Indicators</h3>
+        <div class="stat-grid">
+          <div class="mini">
+            <div class="label">New Listings</div>
+            <div class="value">{{new_listings}}</div>
+            <div class="delta {{new_listings_delta_class}}">
+              <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4l6 8H6z"/></svg>
+              {{new_listings_delta}}%
+            </div>
+            <div class="meter" style="--w: {{new_listings_fill}}%;"><span></span></div>
+          </div>
+          <div class="mini">
+            <div class="label">Pending Sales</div>
+            <div class="value">{{pendings}}</div>
+            <div class="delta {{pendings_delta_class}}">
+              <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4l6 8H6z"/></svg>
+              {{pendings_delta}}%
+            </div>
+            <div class="meter" style="--w: {{pendings_fill}}%;"><span></span></div>
+          </div>
+          <div class="mini">
+            <div class="label">Sale-to-List Ratio</div>
+            <div class="value">{{close_to_list_ratio}}%</div>
+            <div class="delta {{ctl_delta_class}}">
+              <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4l6 8H6z"/></svg>
+              {{ctl_delta}}%
+            </div>
+            <div class="meter" style="--w: {{ctl_fill}}%;"><span></span></div>
+            <div style="font-size: 9px; color: #9ca3af; margin-top: 3px;">Avg. sale price vs. list price</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 12-Month Trend -->
+      <p style="margin: 24px 0 12px; font-size: 12px; line-height: 1.5; color: #6b7280; font-style: italic;">
+        <strong>Price Trends:</strong> Visualize how median prices have changed over the past year to identify seasonality, appreciation rates, and market direction.
+      </p>
+      <div class="card avoid-break">
+        <h3>12-Month Trend (Median Price)</h3>
+        <svg class="spark" viewBox="0 0 300 60" preserveAspectRatio="none" role="img" aria-label="12 month price trend">
+          <path d="M0,42 L27,38 L54,36 L81,28 L108,26 L135,22 L162,18 L189,20 L216,16 L243,14 L270,12 L300,10" />
+          <polyline points="0,42 27,38 54,36 81,28 108,26 135,22 162,18 189,20 216,16 243,14 270,12 300,10"
+                    fill="none" stroke="rgb(37,99,235)" stroke-width="2"/>
+        </svg>
+        <div style="font-size:11px;color:#6b7280;margin-top:6px;">
+          Latest: <strong>{{median_price}}</strong> &nbsp;•&nbsp; YoY: <strong>{{median_price_yoy}}%</strong> &nbsp;•&nbsp; MoM: <strong>{{median_price_mom}}%</strong>
+        </div>
+      </div>
+
+      <!-- Below the trend: the two tables side-by-side -->
+      <p style="margin: 24px 0 12px; font-size: 12px; line-height: 1.5; color: #6b7280; font-style: italic;">
+        <strong>Market Segmentation:</strong> Compare performance across property types and price ranges to identify where demand is strongest and inventory is tightest.
+      </p>
+      <div class="grid-2">
+        <div class="card avoid-break">
+          <h3>By Property Type</h3>
+          <table>
+            <thead><tr><th>Type</th><th class="t-right">Median Price</th><th class="t-right">Closed</th><th class="t-right">DOM</th></tr></thead>
+            <tbody>
+              <tr><td>SFR</td><td class="t-right">{{sfr_median}}</td><td class="t-right">{{sfr_closed}}</td><td class="t-right">{{sfr_dom}}</td></tr>
+              <tr><td>Condo</td><td class="t-right">{{condo_median}}</td><td class="t-right">{{condo_closed}}</td><td class="t-right">{{condo_dom}}</td></tr>
+              <tr><td>Townhome</td><td class="t-right">{{th_median}}</td><td class="t-right">{{th_closed}}</td><td class="t-right">{{th_dom}}</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card avoid-break">
+          <h3>By Price Tier</h3>
+          <table>
+            <thead><tr><th>Tier</th><th class="t-right">Median</th><th class="t-right">Closed</th><th class="t-right">MOI</th></tr></thead>
+            <tbody>
+              <tr><td><span class="chip">Entry</span></td><td class="t-right">{{tier1_median}}</td><td class="t-right">{{tier1_closed}}</td><td class="t-right">{{tier1_moi}}</td></tr>
+              <tr><td><span class="chip">Move-Up</span></td><td class="t-right">{{tier2_median}}</td><td class="t-right">{{tier2_closed}}</td><td class="t-right">{{tier2_moi}}</td></tr>
+              <tr><td><span class="chip">Luxury</span></td><td class="t-right">{{tier3_median}}</td><td class="t-right">{{tier3_closed}}</td><td class="t-right">{{tier3_moi}}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer avoid-break">
+      <div class="foot-notes">
+        Notes: Residential resale only unless otherwise stated. Data reflect {{period_label}} activity and may be revised by MLS. <br/>
+        Interpret metrics with local context; contact your PCT rep for custom micro-market insights.
+      </div>
+      <div class="brandbar">
+        <span class="dot"></span><span class="dot acc"></span>
+        <span class="tag">Pacific Coast Title • Market Intelligence</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Optional helper: mark deltas up/down with a sign -->
+  <script>
+    (function(){
+      document.querySelectorAll('.delta').forEach(function(el){
+        const t = el.textContent.trim();
+        const path = el.querySelector('path');
+        if (t.startsWith('-')) {
+          el.classList.remove('up'); el.classList.add('down');
+          if (path) path.setAttribute('d','M12 20l6-8H6z'); // downward triangle
+        } else {
+          el.classList.remove('down'); el.classList.add('up');
+        }
+      });
+    })();
+  </script>
+
+  <!-- html2canvas library for PNG export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <!-- Social Modal Functionality -->
+  <script>
+    // Extract report data from the page
+    function extractReportData() {
+      // Debug: Log window.DATA and window.EMPLOYEE_DATA
+      console.log('window.DATA:', window.DATA);
+      console.log('window.EMPLOYEE_DATA:', window.EMPLOYEE_DATA);
+      
+      const data = {
+        city_name: document.querySelector('.title-block h1')?.textContent.replace('Market Snapshot — ', '').trim() || 'Unknown',
+        period_label: document.querySelector('.title-block .sub')?.textContent.split('•')[0].replace('Period:', '').trim() || '',
+        median_price: window.DATA?.median_price || 0,
+        closed_sales: window.DATA?.counts?.Closed || 0,
+        active_listings: window.DATA?.counts?.Active || 0,
+        avg_dom: window.DATA?.avg_dom || 0,
+        // Extract rep info from footer if present
+        rep_name: extractRepInfo('name'),
+        rep_title: extractRepInfo('title'),
+        rep_contact: extractRepInfo('contact'),
+        rep_photo: extractRepInfo('photo')
+      };
+      
+      console.log('Extracted report data:', data);
+      return data;
+    }
+
+    function extractRepInfo(field) {
+      // Prefer window.EMPLOYEE_DATA if available (more reliable)
+      if (window.EMPLOYEE_DATA) {
+        if (field === 'name') return window.EMPLOYEE_DATA.name || '';
+        if (field === 'title') return window.EMPLOYEE_DATA.title || 'Title Rep • Pacific Coast Title';
+        if (field === 'contact') {
+          const email = window.EMPLOYEE_DATA.email || '';
+          const phone = window.EMPLOYEE_DATA.mobile || '';
+          return email + (phone ? ' • ' + phone : '');
+        }
+        if (field === 'photo') return window.EMPLOYEE_DATA.photo || '';
+      }
+      
+      // Fallback to DOM extraction
+      const footer = document.querySelector('.employee-footer');
+      if (!footer) return '';
+      
+      if (field === 'name') {
+        const nameEl = footer.querySelector('.employee-name');
+        return nameEl?.textContent.trim() || '';
+      } else if (field === 'title') {
+        const titleEl = footer.querySelector('.employee-title');
+        return titleEl?.textContent.trim() || 'Title Rep • Pacific Coast Title';
+      } else if (field === 'contact') {
+        const mobileEl = footer.querySelector('.employee-mobile');
+        const emailEl = footer.querySelector('.employee-email');
+        const phone = mobileEl?.textContent.replace('📱 ', '').trim() || '';
+        const email = emailEl?.textContent.replace('✉️ ', '').trim() || '';
+        return email + (phone ? ' • ' + phone : '');
+      } else if (field === 'photo') {
+        const img = footer.querySelector('.employee-photo');
+        return img?.src || '';
+      }
+      return '';
+    }
+
+    // Build social template URL
+    function buildSocialURL(theme = '') {
+      const data = extractReportData();
+      // Always use V4 now
+      const baseURL = '/vcard-new/socialtemplates-v4/index.html';
+      
+      // V4 uses single-line rep names
+      let repNameFormatted = data.rep_name;
+      
+      const params = new URLSearchParams({
+        city_name: data.city_name,
+        period_label: 'Market Snapshot',
+        period_pill: data.period_label || 'Last 30 days',  // V2 uses pill instead
+        median_price: data.median_price,
+        closed_sales: data.closed_sales,
+        active_listings: data.active_listings,
+        avg_dom: Math.round(data.avg_dom),  // Round to nearest whole number
+        rep_name: repNameFormatted,
+        rep_title: data.rep_title,
+        rep_contact: data.rep_contact,
+        rep_photo: data.rep_photo
+      });
+      
+      if (theme) params.set('theme', theme);
+      
+      const fullURL = baseURL + '?' + params.toString();
+      console.log('Social template URL:', fullURL);
+      
+      return fullURL;
+    }
+
+    // Open social modal
+    function openSocialModal() {
+      const modal = document.getElementById('socialModal');
+      modal.classList.add('active');
+      updatePreview();
+    }
+
+    // Close social modal
+    function closeSocialModal() {
+      const modal = document.getElementById('socialModal');
+      modal.classList.remove('active');
+    }
+
+    // Update preview with selected theme
+    function updatePreview() {
+      const theme = document.getElementById('themeSelect').value;
+      const iframe = document.getElementById('socialPreview');
+      iframe.src = buildSocialURL(theme);
+    }
+
+    // Download social graphic as PNG (300 DPI quality)
+    async function downloadSocialGraphic() {
+      const btn = document.getElementById('downloadBtn');
+      const btnText = document.getElementById('downloadText');
+      const originalText = btnText.innerHTML;
+      
+      try {
+        // Disable button
+        btn.disabled = true;
+        btnText.innerHTML = '⏳ Generating High-Res PNG...';
+        
+        // Get iframe content
+        const iframe = document.getElementById('socialPreview');
+        
+        // Wait for iframe to fully load
+        await new Promise((resolve) => {
+          if (iframe.contentDocument?.readyState === 'complete') {
+            resolve();
+          } else {
+            iframe.addEventListener('load', resolve, { once: true });
+            // Fallback timeout
+            setTimeout(resolve, 2000);
+          }
+        });
+        
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        const bodyElement = iframeDoc.body;
+        const htmlElement = iframeDoc.documentElement;
+        const storyElement = iframeDoc.querySelector('.story');
+        
+        if (!storyElement) {
+          console.error('Story element not found. Available elements:', bodyElement.innerHTML.substring(0, 500));
+          throw new Error('Could not find social template content. Make sure the template loaded correctly.');
+        }
+        
+        // Prepare body for capture - ensure exact dimensions
+        const originalBodyStyle = bodyElement.style.cssText;
+        const originalHtmlStyle = htmlElement.style.cssText;
+        bodyElement.style.width = '1080px';
+        bodyElement.style.height = '1920px';
+        bodyElement.style.overflow = 'hidden';
+        bodyElement.style.margin = '0';
+        htmlElement.style.width = '1080px';
+        htmlElement.style.height = '1920px';
+        
+        // Wait for browser to repaint with new dimensions
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        console.log('Capturing element:', bodyElement);
+        console.log('Story dimensions:', storyElement.offsetWidth, 'x', storyElement.offsetHeight);
+        
+        // Generate canvas with 300 DPI quality
+        // Capture body to include gradient background
+        // Scale 4× gives us 4320×7680 which is print-quality 300 DPI
+        const canvas = await html2canvas(bodyElement, {
+          width: 1080,
+          height: 1920,
+          scale: 4, // 4× scale = 4320×7680 for 300 DPI print quality
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: null, // Let CSS background show through
+          logging: true, // Enable logging for debugging
+          foreignObjectRendering: false,
+          imageTimeout: 0
+        });
+        
+        // Restore original styles
+        bodyElement.style.cssText = originalBodyStyle;
+        htmlElement.style.cssText = originalHtmlStyle;
+        
+        console.log('Canvas generated:', canvas.width, 'x', canvas.height);
+        
+        // Convert to blob and download
+        canvas.toBlob((blob) => {
+          const data = extractReportData();
+          const filename = `market-snapshot-${data.city_name.toLowerCase().replace(/\s+/g, '-')}-300dpi.png`;
+          
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          
+          console.log('Download initiated:', filename);
+          
+          // Success feedback
+          btnText.innerHTML = '✅ Downloaded! (300 DPI)';
+          setTimeout(() => {
+            btnText.innerHTML = originalText;
+            btn.disabled = false;
+          }, 2000);
+        }, 'image/png', 1.0); // Maximum quality
+        
+      } catch (error) {
+        console.error('Error generating PNG:', error);
+        alert('Error: ' + error.message + '\n\nCheck browser console for details.');
+        btnText.innerHTML = '❌ Error - Try Again';
+        setTimeout(() => {
+          btnText.innerHTML = originalText;
+          btn.disabled = false;
+        }, 3000);
+      }
+    }
+
+    // Close modal on click outside
+    document.getElementById('socialModal').addEventListener('click', (e) => {
+      if (e.target.id === 'socialModal') {
+        closeSocialModal();
+      }
+    });
+  </script>
+</body>
+</html>
