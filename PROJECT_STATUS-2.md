@@ -1,7 +1,7 @@
 # Market Reports Platform - Current Status
 
 **Last Updated:** November 13, 2025 (Late Night)  
-**Current Phase:** Phase 26 Complete - TrendyReports Theme Fixed & Verified! 🎨✨🚀
+**Current Phase:** Phase 27 - Scheduled Reports Email MVP (In Progress) 📧🚀
 
 ---
 
@@ -597,13 +597,381 @@ ADMIN_CLOAK_404=1  # Optional: hide admin from non-admins
 
 ---
 
+## 🎯 Phase 27: Scheduled Reports Email MVP - IN PROGRESS (Nov 13, 2025)
+
+**STATUS:** UI fixes complete, moving to email delivery implementation
+
+### Current State - What's Working
+
+✅ **UI & Theme (v1 Complete):**
+- TrendyReports runs locally and on Vercel
+- Marketing site with v0 gradients and vibes
+- Dark app shell working correctly
+- **Decision:** No more structural UI changes until UI V2 later
+
+✅ **Backend Stack (Solid):**
+- Reports, schedules, ticker, Celery, R2, SimplyRETS, Stripe
+- Schedules backend fully wired (schema, ticker, worker, APIs)
+
+**The engine and the skin are both "good enough."**
+
+### New Milestone: Auto-Email Scheduled Reports
+
+**Goal:** A schedule can auto-generate a report and send an HTML email with a "View Full PDF" button to recipients.
+
+**Demo Value:** "Create schedule → get market report in inbox"
+
+Once this works, everything else (admin console polish, fancy templates, plan limits) is gravy.
+
+---
+
+### Phase 27A: Email Sender MVP
+
+**Target:** Wire up email sending from worker after report generation
+
+#### Manual Tasks (Your Checklist)
+
+**1. Email Provider Setup:**
+- [ ] Create Resend account (or confirm SendGrid)
+- [ ] Add sending domain (e.g., `mail.trendyreports.com`)
+- [ ] Get API key
+- [ ] Test domain verification
+
+**2. Environment Variables:**
+
+Add to `apps/api` and `apps/worker` (Render services):
+
+```bash
+EMAIL_PROVIDER=resend
+RESEND_API_KEY=sk_live_...
+DEFAULT_FROM_NAME=TrendyReports
+DEFAULT_FROM_EMAIL=reports@trendyreports.com
+WEB_BASE=https://reportscompany.vercel.app
+EMAIL_UNSUB_SECRET=<long-random-string>
+```
+
+- [ ] Add to Render environment variables
+- [ ] Update `.env.example` files
+- [ ] Commit env examples (not actual keys)
+
+**3. Test Checklist:**
+
+After implementation:
+- [ ] Create test schedule for small area
+- [ ] Wait for ticker + worker to run
+- [ ] Verify `report_generations` has new row
+- [ ] Verify `schedule_runs` has entry with status
+- [ ] Verify `email_log` has row with your email
+- [ ] Confirm email hits inbox
+- [ ] Test "View Full PDF" button opens correct PDF
+- [ ] Use unsubscribe link
+- [ ] Verify email appears in `email_suppressions`
+- [ ] Trigger another run, confirm no email sent to suppressed address
+
+#### Implementation Tasks (For Cursor)
+
+**File 1: Email Provider Adapter**
+
+`apps/worker/src/email/providers/resend.py`:
+
+```python
+import os
+from typing import List
+import httpx
+
+class EmailSendError(Exception):
+    pass
+
+async def send_schedule_email(
+    to_emails: List[str],
+    subject: str,
+    html_body: str,
+    from_name: str,
+    from_email: str,
+) -> None:
+    """Send email via Resend API"""
+    api_key = os.environ["RESEND_API_KEY"]
+    if not to_emails:
+        return
+
+    async with httpx.AsyncClient(base_url="https://api.resend.com") as client:
+        resp = await client.post(
+            "/emails",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={
+                "from": f"{from_name} <{from_email}>",
+                "to": to_emails,
+                "subject": subject,
+                "html": html_body,
+            },
+        )
+    if resp.status_code >= 300:
+        raise EmailSendError(f"Resend error {resp.status_code}: {resp.text}")
+```
+
+**File 2: Email Template Builder**
+
+`apps/worker/src/email/templates.py`:
+
+```python
+from typing import Dict
+
+def build_schedule_email_html(
+    result_json: Dict,
+    pdf_url: str,
+    unsubscribe_url: str,
+    account_name: str | None = None,
+) -> str:
+    """
+    Build HTML email with:
+    - Light background
+    - Title: 'Market Snapshot – {city}'
+    - 3-5 KPIs in simple grid
+    - Big button linking to pdf_url
+    - Unsubscribe link in footer
+    """
+    city = result_json.get("city") or "Your Market"
+    report_type = result_json.get("report_type") or "Market Snapshot"
+    kpis = [
+        ("Active Listings", result_json.get("active_count")),
+        ("Pending", result_json.get("pending_count")),
+        ("Closed (last 30 days)", result_json.get("closed_count")),
+        ("Median Price", result_json.get("median_price_display")),
+        ("Days on Market", result_json.get("dom_median")),
+    ]
+    title = f"{report_type} – {city}"
+    sender_name = account_name or "TrendyReports"
+    
+    # TODO: Build table-based HTML layout with inline styles
+    # (good for email compatibility)
+```
+
+**File 3: Wire into Worker**
+
+Update `apps/worker/src/worker/tasks.py` (or wherever `generate_report` lives):
+
+```python
+@celery_app.task
+def generate_report(report_id: str, schedule_id: str | None = None):
+    # ... existing report generation logic ...
+    
+    # After PDF upload success:
+    if schedule_id is None:
+        return  # One-off report, no email
+    
+    # Load schedule and account
+    schedule = db.query(Schedule).filter_by(id=schedule_id).first()
+    account = db.query(Account).filter_by(id=schedule.account_id).first()
+    
+    # Get recipients and filter suppressions
+    raw_recipients = schedule.recipients  # List[str]
+    suppressed = db.query(EmailSuppression).filter(
+        EmailSuppression.account_id == account.id,
+        EmailSuppression.email.in_(raw_recipients)
+    ).all()
+    suppressed_emails = {s.email for s in suppressed}
+    recipients = [e for e in raw_recipients if e not in suppressed_emails]
+    
+    if not recipients:
+        # Log and mark as suppressed
+        db.add(EmailLog(
+            account_id=account.id,
+            schedule_id=schedule_id,
+            report_generation_id=report_id,
+            status='all_suppressed',
+            to_emails=raw_recipients
+        ))
+        db.commit()
+        return
+    
+    # Build email
+    subject = f"[TrendyReports] {city} Market Snapshot"
+    pdf_url = report_generation.pdf_url
+    unsubscribe_url = build_unsubscribe_url(email, account.id)
+    html_body = build_schedule_email_html(
+        result_json=report_generation.result_json,
+        pdf_url=pdf_url,
+        unsubscribe_url=unsubscribe_url,
+        account_name=account.name
+    )
+    
+    # Send email
+    try:
+        await send_schedule_email(
+            to_emails=recipients,
+            subject=subject,
+            html_body=html_body,
+            from_name=os.environ.get("DEFAULT_FROM_NAME", "TrendyReports"),
+            from_email=os.environ.get("DEFAULT_FROM_EMAIL")
+        )
+        
+        # Log success
+        db.add(EmailLog(
+            account_id=account.id,
+            schedule_id=schedule_id,
+            report_generation_id=report_id,
+            provider='resend',
+            to_emails=recipients,
+            subject=subject,
+            status='sent'
+        ))
+        
+        # Update schedule run
+        run = db.query(ScheduleRun).filter_by(
+            schedule_id=schedule_id
+        ).order_by(desc(created_at)).first()
+        if run:
+            run.status = 'completed'
+            
+    except EmailSendError as e:
+        # Log failure
+        db.add(EmailLog(
+            account_id=account.id,
+            schedule_id=schedule_id,
+            report_generation_id=report_id,
+            provider='resend',
+            to_emails=recipients,
+            subject=subject,
+            status='failed',
+            error=str(e)
+        ))
+        
+        # Update schedule run
+        if run:
+            run.status = 'failed_email'
+    
+    db.commit()
+```
+
+**Error Handling Rules:**
+- Email send failure does NOT crash the task
+- Report generation failure marks run as `failed`
+- Email failure marks run as `failed_email`
+- All failures logged in `email_log` table
+
+---
+
+### Phase 27B: Schedules UI MVP
+
+**Target:** Basic schedule management in web UI
+
+#### Manual Decisions (Your Tasks)
+
+**1. Field Defaults:**
+- [ ] Decide default cadence: weekly or monthly?
+- [ ] Decide default send time: 7:00 AM account timezone?
+- [ ] Decide schedule name format: `{city} – {report_type} ({cadence})`?
+
+#### Implementation Tasks (For Cursor)
+
+**File 1: API Client Helpers**
+
+`apps/web/lib/apiClient.ts`:
+
+```typescript
+export async function getSchedules() {
+  const res = await fetch('/api/proxy/v1/schedules')
+  if (!res.ok) throw new Error('Failed to fetch schedules')
+  return res.json()
+}
+
+export async function createSchedule(payload: CreateSchedulePayload) {
+  const res = await fetch('/api/proxy/v1/schedules', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  if (!res.ok) throw new Error('Failed to create schedule')
+  return res.json()
+}
+
+export async function getScheduleRuns(id: string) {
+  const res = await fetch(`/api/proxy/v1/schedules/${id}/runs`)
+  if (!res.ok) throw new Error('Failed to fetch runs')
+  return res.json()
+}
+```
+
+**File 2: Schedules List Page**
+
+`apps/web/app/app/schedules/page.tsx`:
+
+- Use TrendyReports dark shell
+- Table showing: name, report type, area, cadence, next run, active status
+- "New Schedule" button → `/app/schedules/new`
+
+**File 3: New Schedule Page**
+
+`apps/web/app/app/schedules/new/page.tsx`:
+
+Minimal fields:
+- `report_type` (dropdown)
+- `city` or `zip_codes` (text input)
+- `cadence` (weekly/monthly radio)
+- `weekly_dow` OR `monthly_dom` (conditional)
+- `send_hour`, `send_minute` (time picker)
+- `recipients` (comma-separated text area)
+
+On submit:
+- Call `createSchedule()`
+- Redirect to `/app/schedules`
+
+**File 4: Schedule Detail Page**
+
+`apps/web/app/app/schedules/[id]/page.tsx`:
+
+Show:
+- Schedule metadata (name, type, area, cadence, recipients)
+- Table of recent runs (status, started_at, completed_at, link to report)
+
+**Import Rules:**
+- ✅ Use `@/components/v0/*` for v0 components
+- ✅ Use `@/components/ui/*` for UI primitives
+- ✅ Use `@/lib/utils` for utilities
+- ❌ NO `@repo/ui` imports (deprecated)
+
+---
+
+### Success Criteria
+
+**Phase 27A Complete When:**
+- ✅ Schedule triggers via ticker
+- ✅ Worker generates report
+- ✅ Worker sends email with PDF link
+- ✅ Email logged in `email_log` table
+- ✅ Email arrives in inbox
+- ✅ Unsubscribe link works
+- ✅ Suppressed emails not sent
+
+**Phase 27B Complete When:**
+- ✅ Can view schedules in UI
+- ✅ Can create schedule via form
+- ✅ Can see run history for schedule
+- ✅ Full loop working: UI → Ticker → Worker → Email → UI
+
+**Once both complete:** Real, demo-able SaaS! 🚀
+
+---
+
 ## 🚀 Next Steps (Optional Enhancements)
 
-### Phase 27: Email Delivery Testing
-- [ ] Test SendGrid integration end-to-end
-- [ ] Verify email templates render correctly
-- [ ] Test unsubscribe flow
-- [ ] Monitor email deliverability
+### Phase 28: Production Credentials
+- [ ] Switch to production SimplyRETS credentials
+- [ ] Test multi-city report generation
+- [ ] Verify sorting works correctly
+- [ ] Update query builders if needed
+
+### Phase 29: Monitoring & Observability
+- [ ] Add Sentry for error tracking
+- [ ] Create dashboard for system metrics
+- [ ] Set up alerts for failed reports
+- [ ] Monitor PDFShift API usage
+
+### Phase 30: Performance Optimization
+- [ ] Add Redis caching for API responses
+- [ ] Optimize database queries
+- [ ] Add pagination to large lists
+- [ ] Implement data archival strategy
 
 ### Phase 28: Production Credentials
 - [ ] Switch to production SimplyRETS credentials
@@ -660,13 +1028,14 @@ ADMIN_CLOAK_404=1  # Optional: hide admin from non-admins
 
 ---
 
-**Status:** ✅ **Production Ready - Theme & CSS Generation Fixed with Nuclear Option**  
-**Last Build:** November 13, 2025 (Late Night) - All fixes deployed and verified  
-**Fixes Applied:**  
-  1. Layout dark mode scoping (2 files) - Removed global dark class, added dashboard-specific dark wrapper  
-  2. Tailwind v4 CSS generation - Nuclear Option: Moved all v0 components to `apps/web/components/v0/`  
-  3. Import path updates - Changed all component imports to use `@/components/` aliases  
-**Result:** 🎨 **Beautiful TrendyReports violet/coral theme with perfect gradients** - Verified locally  
-**Ready to Deploy:** Push to trigger Vercel auto-deploy  
-**Next Milestone:** Phase 27 - Email delivery testing
+**Status:** ✅ **UI Complete - Moving to Email Delivery MVP**  
+**Last Build:** November 13, 2025 (Late Night) - Vercel build pending final TypeScript fixes  
+**Phase 26 Complete:**  
+  1. ✅ Layout dark mode scoping - Light marketing, dark dashboard  
+  2. ✅ Tailwind v4 CSS generation - Nuclear option: v0 components moved to `apps/web/components/v0/`  
+  3. ✅ Import path fixes - All components use `@/components/` aliases  
+  4. ✅ TypeScript hygiene - Chart.tsx and all imports fixed for prod build  
+**Result:** 🎨 **Beautiful TrendyReports violet/coral theme** - Verified locally with all gradients working  
+**Decision:** ✋ **No more UI changes until v2** - "Good enough" for MVP  
+**Current Focus:** Phase 27 - Scheduled Reports Email MVP (auto-generate + send via Resend/SendGrid)
 
