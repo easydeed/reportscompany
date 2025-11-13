@@ -649,7 +649,8 @@ DEFAULT_FROM_NAME=TrendyReports
 
 # Unsubscribe + Links
 UNSUBSCRIBE_SECRET=699e049667d5ff0fdd80dc5b7ad25fea00ff62cbea36608840e582a17fa98682
-WEB_BASE=https://reportscompany.vercel.app
+WEB_BASE=https://reportscompany-web.vercel.app
+PRINT_BASE=https://reportscompany-web.vercel.app
 ```
 
 **Services configured:**
