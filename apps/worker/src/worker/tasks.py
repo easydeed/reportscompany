@@ -302,11 +302,15 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
                                     SET status = %s,
                                         report_run_id = %s,
                                         finished_at = NOW()
-                                    WHERE schedule_id = %s
-                                      AND status = 'queued'
-                                      AND started_at IS NULL
-                                    ORDER BY created_at DESC
-                                    LIMIT 1
+                                    WHERE id = (
+                                        SELECT id
+                                        FROM schedule_runs
+                                        WHERE schedule_id = %s
+                                          AND status = 'queued'
+                                          AND started_at IS NULL
+                                        ORDER BY created_at DESC
+                                        LIMIT 1
+                                    )
                                 """, (run_status, run_id, schedule_id))
                             except Exception as update_error:
                                 logger.warning(f"Failed to update schedule_run status (non-critical): {update_error}")
