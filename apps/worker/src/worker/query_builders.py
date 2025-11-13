@@ -1,7 +1,30 @@
 from __future__ import annotations
 
+import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
+
+# Credential detection for feature flags
+SIMPLYRETS_USERNAME = os.getenv("SIMPLYRETS_USERNAME", "simplyrets")
+IS_DEMO = SIMPLYRETS_USERNAME.lower() == "simplyrets"
+IS_PRODUCTION = not IS_DEMO
+
+# Feature flags based on credential mode
+# Demo credentials (simplyrets/simplyrets) have restrictions:
+# - Houston-only data
+# - No city search via `q` parameter (use postalCodes only)
+# - No `sort` parameter
+# Production credentials enable:
+# - Multi-city MLS data
+# - City search via `q` parameter
+# - Full sorting support
+ALLOW_CITY_SEARCH = IS_PRODUCTION
+ALLOW_SORTING = IS_PRODUCTION
+
+print(f"[query_builders] Mode: {'PRODUCTION' if IS_PRODUCTION else 'DEMO'}")
+print(f"[query_builders] Username: {SIMPLYRETS_USERNAME}")
+print(f"[query_builders] City search: {'ENABLED' if ALLOW_CITY_SEARCH else 'DISABLED (use ZIP codes)'}")
+print(f"[query_builders] Sorting: {'ENABLED' if ALLOW_SORTING else 'DISABLED'}")
 
 # Common helpers
 
@@ -14,14 +37,23 @@ def _location(params: dict) -> Dict:
     """
     Location can be provided as a single city string or a list of ZIPs.
     - If zips present and non-empty: use postalCodes=comma-separated list
-    - Else: use q=<city>
+    - Else if PRODUCTION mode: use q=<city> (city search)
+    - Else (DEMO mode): return empty (Houston-only data)
+    
+    Note: Demo credentials do not support the `q` parameter.
     """
     zips = params.get("zips") or []
     city = (params.get("city") or "").strip()
+    
+    # ZIP codes work in both demo and production
     if zips:
         return {"postalCodes": ",".join(z.strip() for z in zips if z.strip())}
-    if city:
+    
+    # City search only works with production credentials
+    if city and ALLOW_CITY_SEARCH:
         return {"q": city}
+    
+    # Demo mode: no location filter (Houston-only data by default)
     return {}
 
 def _filters(filters: Optional[dict]) -> Dict:
