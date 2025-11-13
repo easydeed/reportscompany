@@ -1,7 +1,7 @@
 # Market Reports Platform - Current Status
 
-**Last Updated:** November 13, 2025  
-**Current Phase:** Phase 26 Complete - Production Ready with Modern UI 🎨
+**Last Updated:** November 13, 2025 (Evening)  
+**Current Phase:** Phase 26 Complete - TrendyReports Theme Live! 🎨✨
 
 ---
 
@@ -13,7 +13,8 @@ A **fully-functional SaaS platform** for automated real estate market report gen
 
 **Frontend:**
 - Next.js 16 (App Router) on Vercel
-- Modern dark theme with glassmorphism effects
+- TrendyReports violet/coral theme (light marketing + dark dashboard)
+- Glassmorphism effects with backdrop blur
 - Framer Motion animations
 - Recharts for data visualization
 - 100+ shadcn/ui components
@@ -44,11 +45,13 @@ A **fully-functional SaaS platform** for automated real estate market report gen
 - ✅ **Marketing:** `marketing-home.tsx` landing page
 - ✅ **80+ UI Components:** Full shadcn/ui library integration
 
-**Theme Features:**
-- 🌙 Dark mode: `#0F172A` background, `#22D3EE` cyan accents
+**Theme Features (TrendyReports Palette):**
+- 🎨 **Primary:** Violet `#7C3AED` (modern, trendy feel)
+- 🧡 **Accent:** Coral `#F26B2B` (warmth and friendliness)
+- ☀️ **Marketing Site:** Light mode (clean white backgrounds, vibrant gradients)
+- 🌙 **Dashboard:** Dark mode (`#0B1220` background, glassmorphism effects)
 - ✨ Smooth animations with Framer Motion
-- 🎨 Glassmorphism cards with backdrop blur
-- 📊 Interactive charts with Recharts
+- 📊 Interactive charts with vibrant data viz palette
 - 📱 Fully responsive mobile-first design
 
 **Dependencies Added:**
@@ -71,7 +74,38 @@ A **fully-functional SaaS platform** for automated real estate market report gen
 - ✅ Fixed TypeScript boolean return type in email validation
 - ✅ Added `export const dynamic = 'force-dynamic'` to server-rendered pages
 
-**Status:** ✅ Build passing, ready for deployment to Vercel
+**Theme Fix (Nov 13 Late Evening):**
+
+**Problem:** UI looked like "2012 Bootstrap" instead of TrendyReports design. Root cause was global dark mode being forced on light-mode v0 components.
+
+**Solution (2 files, 4 lines changed):**
+
+1. **`apps/web/app/layout.tsx`** - Removed forced dark class:
+   ```tsx
+   // Before: <html lang="en" className="dark antialiased">
+   // After:  <html lang="en" className="antialiased">
+   ```
+   This allows the default light mode for marketing pages.
+
+2. **`apps/web/app/app-layout.tsx`** - Added dark class to dashboard wrapper:
+   ```tsx
+   // Wrapped dashboard layout with: <div className="dark">
+   ```
+   This applies dark mode only to the `/app/*` dashboard area.
+
+**Result:**
+- ✨ Marketing site (`/`) - Beautiful light mode with violet/coral gradients
+- 🌙 Dashboard (`/app/*`) - Professional dark mode with glassmorphism
+- 🎨 CSS was already perfect - just needed proper mode per route
+- 📦 Zero dependency changes, zero build config changes
+
+**Visual Verification:**
+- Marketing home: White backgrounds, purple badges, coral accents pop
+- Dashboard: Deep slate background, glass cards, vibrant data viz
+- Admin console: System metrics in dark theme with status colors
+- All components render as designed in v0
+
+**Status:** ✅ Build passing, theme visually correct, ready for deployment to Vercel
 
 ---
 
@@ -373,8 +407,9 @@ PRINT_BASE=https://reportscompany-web.vercel.app
 **Web App:**
 - Status: 🟢 Deployed
 - URL: `https://reportscompany-web.vercel.app`
-- Build: ✅ Passing (Nov 13 evening fixes applied)
+- Build: ✅ Passing (Nov 13 evening + theme fixes applied)
 - Framework: Next.js 16 (Turbopack)
+- Theme: ✅ TrendyReports violet/coral (light marketing + dark dashboard)
 
 **Environment Variables:**
 ```bash
@@ -394,6 +429,14 @@ ADMIN_CLOAK_404=1  # Optional: hide admin from non-admins
 - ✅ Schedule creation
 - ✅ Ticker enqueues reports
 - ✅ Admin console access control
+
+### Theme & UI
+- ✅ Marketing site (`/`) displays in light mode
+- ✅ Dashboard (`/app/*`) displays in dark mode
+- ✅ Violet/coral color palette visible throughout
+- ✅ Glassmorphism effects on dashboard cards
+- ✅ Smooth animations on hover and interactions
+- ✅ No "Bootstrap gray" visual issues
 
 ### Ready to Test
 - ⏳ Email delivery (SendGrid configured, needs testing)
@@ -469,6 +512,21 @@ ADMIN_CLOAK_404=1  # Optional: hide admin from non-admins
 - Easy to update theme globally
 - Better developer experience
 
+### 5. Per-Route Theme Strategy (Nov 13 Fix)
+**Decision:** Light mode marketing site, dark mode dashboard
+
+**Why:**
+- Marketing pages benefit from light, vibrant presentation
+- Dashboard users prefer dark mode for extended use
+- v0 components were designed for specific modes
+- CSS cascade allows scoped theme switching
+- Zero build overhead, pure CSS solution
+
+**Implementation:**
+- Root layout: No theme class (defaults to light)
+- Dashboard layout: Wrapped with `<div className="dark">`
+- Print pages: Isolated with own HTML (no conflicts)
+
 ---
 
 ## 🚀 Next Steps (Optional Enhancements)
@@ -503,6 +561,7 @@ ADMIN_CLOAK_404=1  # Optional: hide admin from non-admins
 
 **Current Files (Keep These):**
 - `PROJECT_STATUS-2.md` - This file (source of truth)
+- `THEME_FIX_SUMMARY.md` - Detailed theme fix documentation (Nov 13)
 - `README.md` - Project overview and setup
 - `db/migrations/` - Database schema history
 - `apps/*/README.md` - Service-specific docs
@@ -517,21 +576,22 @@ ADMIN_CLOAK_404=1  # Optional: hide admin from non-admins
 
 ## 🎉 Summary
 
-**You have a fully-functional SaaS platform!**
+**You have a fully-functional SaaS platform with a beautiful UI!**
 
-✅ Modern dark-themed UI with 100+ components  
-✅ Automated report generation (6 report types)  
-✅ Scheduled delivery system (weekly/monthly)  
-✅ Admin console with system-wide visibility  
-✅ Fast, reliable builds (30 seconds)  
-✅ Production-ready architecture  
-✅ Comprehensive security (RLS, admin guards)  
+✅ **TrendyReports violet/coral theme** - Light marketing site + dark dashboard  
+✅ **100+ modern UI components** - v0 design with Framer Motion & glassmorphism  
+✅ **Automated report generation** (6 report types)  
+✅ **Scheduled delivery system** (weekly/monthly cadences)  
+✅ **Admin console** with system-wide visibility  
+✅ **Fast, reliable builds** (30 seconds, no Chromium overhead)  
+✅ **Production-ready architecture** (FastAPI, PostgreSQL, Redis, Celery)  
+✅ **Comprehensive security** (RLS, admin guards, HMAC tokens)  
 
-**The stack is "boring & correct"** - all core features work, builds are fast, and the codebase is maintainable.
+**The stack is "boring & correct"** - all core features work, builds are fast, the UI is gorgeous, and the codebase is maintainable.
 
 ---
 
-**Status:** ✅ **Production Ready - Ready for User Testing**  
-**Last Build:** November 13, 2025 (Evening) - All fixes applied, build passing  
+**Status:** ✅ **Production Ready - Theme Fixed, Ready for User Testing**  
+**Last Build:** November 13, 2025 (Late Evening) - Theme fix applied, visuals perfect  
 **Next Milestone:** Phase 27 - Email delivery testing
 

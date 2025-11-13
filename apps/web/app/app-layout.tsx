@@ -152,16 +152,18 @@ export default function AppLayoutClient({
   isAdmin: boolean
 }) {
   return (
-    <SidebarProvider>
-      <Suspense fallback={<div>Loading...</div>}>
-        <div className="flex min-h-screen w-full">
-          <DashboardSidebar isAdmin={isAdmin} />
-          <SidebarInset className="flex flex-col">
-            <DashboardTopbar />
-            <main className="flex-1 p-6">{children}</main>
-          </SidebarInset>
-        </div>
-      </Suspense>
-    </SidebarProvider>
+    <div className="dark">
+      <SidebarProvider>
+        <Suspense fallback={<div>Loading...</div>}>
+          <div className="flex min-h-screen w-full bg-background text-foreground">
+            <DashboardSidebar isAdmin={isAdmin} />
+            <SidebarInset className="flex flex-col">
+              <DashboardTopbar />
+              <main className="flex-1 p-6">{children}</main>
+            </SidebarInset>
+          </div>
+        </Suspense>
+      </SidebarProvider>
+    </div>
   )
 }
