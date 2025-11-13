@@ -25,7 +25,7 @@ export async function GET(
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error(`[API Proxy] Failed to fetch schedule ${params.id}:`, error);
+    console.error(`[API Proxy] Failed to fetch schedule ${id}:`, error);
     return NextResponse.json(
       { error: 'Failed to fetch schedule' },
       { status: 500 }
@@ -60,7 +60,7 @@ export async function PATCH(
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error(`[API Proxy] Failed to update schedule ${params.id}:`, error);
+    console.error(`[API Proxy] Failed to update schedule ${id}:`, error);
     return NextResponse.json(
       { error: 'Failed to update schedule' },
       { status: 500 }
@@ -95,7 +95,7 @@ export async function DELETE(
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error(`[API Proxy] Failed to delete schedule ${params.id}:`, error);
+    console.error(`[API Proxy] Failed to delete schedule ${id}:`, error);
     return NextResponse.json(
       { error: 'Failed to delete schedule' },
       { status: 500 }
