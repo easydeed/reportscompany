@@ -11,7 +11,8 @@ Deploy as a separate Render Background Worker:
 import os
 import time
 import logging
-from datetime import datetime, timedelta
+import json
+from datetime import datetime, timedelta, date
 from typing import Optional, Dict, Any
 import psycopg
 import ssl
@@ -59,6 +60,15 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# JSON serialization helper for datetime objects
+def safe_json_dumps(obj):
+    """JSON serializer that handles datetime objects."""
+    def default_handler(o):
+        if isinstance(o, (datetime, date)):
+            return o.isoformat()
+        raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable")
+    return json.dumps(obj, default=default_handler)
 
 # Database connection
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -169,10 +179,10 @@ def enqueue_report(
         with conn.cursor() as cur:
             cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
             cur.execute("""
-                INSERT INTO report_generations (account_id, status)
-                VALUES (%s::uuid, 'queued')
+                INSERT INTO report_generations (account_id, report_type, input_params, status)
+                VALUES (%s::uuid, %s, %s::jsonb, 'queued')
                 RETURNING id::text
-            """, (account_id,))
+            """, (account_id, report_type, safe_json_dumps(params)))
             run_id = cur.fetchone()[0]
         conn.commit()
     
