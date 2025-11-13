@@ -1,12 +1,38 @@
 type Props = { params: { runId: string } };
 
 async function fetchData(runId: string) {
-  const base = process.env.NEXT_PUBLIC_API_BASE!;
-  const res = await fetch(`${base}/v1/reports/${runId}/data`, {
-    cache: "no-store"
-  });
-  if (!res.ok) return null;
-  return res.json();
+  const base = process.env.NEXT_PUBLIC_API_BASE;
+  
+  if (!base) {
+    console.error('[Print Page] NEXT_PUBLIC_API_BASE not set');
+    return null;
+  }
+  
+  const url = `${base}/v1/reports/${runId}/data`;
+  console.log(`[Print Page] Fetching report data from: ${url}`);
+  
+  try {
+    const res = await fetch(url, {
+      cache: "no-store",
+      headers: {
+        'Accept': 'application/json',
+      }
+    });
+    
+    console.log(`[Print Page] Response status: ${res.status}`);
+    
+    if (!res.ok) {
+      console.error(`[Print Page] API error: ${res.status} ${res.statusText}`);
+      return null;
+    }
+    
+    const data = await res.json();
+    console.log(`[Print Page] Successfully fetched data for: ${data.city || 'unknown'}`);
+    return data;
+  } catch (error) {
+    console.error(`[Print Page] Failed to fetch report data:`, error);
+    return null;
+  }
 }
 
 // Map report type to display name
@@ -26,9 +52,27 @@ export default async function PrintReport({ params }: Props) {
   if (!data) {
     return (
       <html lang="en">
-        <body>
+        <head>
+          <title>Report Not Found</title>
+        </head>
+        <body style={{
+          fontFamily: 'system-ui, sans-serif',
+          padding: '40px',
+          textAlign: 'center'
+        }}>
           <h1>Report Not Found</h1>
-          <p>Run ID: {runId}</p>
+          <p>Report ID: <code>{runId}</code></p>
+          <p style={{color: '#666', fontSize: '14px'}}>
+            The report data could not be loaded. Please check:
+          </p>
+          <ul style={{textAlign: 'left', maxWidth: '400px', margin: '20px auto', color: '#666', fontSize: '14px'}}>
+            <li>Report ID is correct</li>
+            <li>Report has been generated</li>
+            <li>API connection is working</li>
+          </ul>
+          <p style={{color: '#999', fontSize: '12px', marginTop: '40px'}}>
+            API Base: {process.env.NEXT_PUBLIC_API_BASE || 'Not configured'}
+          </p>
         </body>
       </html>
     );
