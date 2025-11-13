@@ -11,6 +11,7 @@ from .query_builders import build_params
 from .redis_utils import create_redis_connection
 from .pdf_engine import render_pdf
 from .email.send import send_schedule_email
+from .report_builders import build_result_json
 import boto3
 from botocore.client import Config
 
@@ -169,20 +170,16 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
             raw = fetch_properties(q, limit=800)
             extracted = PropertyDataExtractor(raw).run()
             clean = filter_valid(extracted)
-            metrics = snapshot_metrics(clean)
-            result = {
-                "report_type": report_type,
+            
+            # Build context for report builders
+            context = {
                 "city": city,
                 "lookback_days": lookback,
                 "generated_at": int(time.time()),
-                "counts": {
-                    "Active": metrics["total_active"],
-                    "Pending": metrics["total_pending"],
-                    "Closed": metrics["total_closed"],
-                },
-                "metrics": metrics,
-                "listings_sample": clean[:20]
             }
+            
+            # Use report builder dispatcher to create result_json
+            result = build_result_json(report_type, clean, context)
             cache_set("report", cache_payload, result, ttl_s=3600)
 
         # 3) Save result_json
