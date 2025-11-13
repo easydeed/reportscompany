@@ -104,8 +104,11 @@ ModuleNotFoundError: No module named 'api'
 | `REDIS_URL` | Redis TLS URL with SSL param | `rediss://...?ssl_cert_reqs=CERT_REQUIRED` | ✅ |
 | `ALLOWED_ORIGINS` | JSON array | `["https://app.vercel.app","http://localhost:3000"]` | ✅ |
 | `JWT_SECRET` | Random string (32+ chars) | `c7f4e8a2d9b3f6e1a8c5d2b9f7e4a1c8...` | ✅ |
+| `UNSUBSCRIBE_SECRET` | HMAC secret (must match worker) | `699e049667d5ff0f...` | ✅ (Phase 27A) |
+| `WEB_BASE` | Frontend URL | `https://app.vercel.app` | ✅ (Phase 27A) |
 
-**Total:** 4 variables
+**Total:** 6 variables  
+**Phase 27A Added:** 2 unsubscribe-related variables (for `/v1/email/unsubscribe` endpoint)
 
 ---
 
@@ -128,8 +131,14 @@ ModuleNotFoundError: No module named 'api'
 | `PDF_ENGINE` | Engine type | `api` (prod) or `playwright` (local) | ✅ |
 | `PDF_API_URL` | PDF service endpoint | `https://api.pdfshift.io/v3/convert/pdf` | If `PDF_ENGINE=api` |
 | `PDF_API_KEY` | PDF service key | `sk_test_abc123...` | If `PDF_ENGINE=api` |
+| `SENDGRID_API_KEY` | SendGrid API key | `SG.xxx...` | ✅ (Phase 27A) |
+| `DEFAULT_FROM_EMAIL` | Sender email | `reports@trendyreports.io` | ✅ (Phase 27A) |
+| `DEFAULT_FROM_NAME` | Sender name | `TrendyReports` | ✅ (Phase 27A) |
+| `UNSUBSCRIBE_SECRET` | HMAC secret (32+ chars) | `699e049667d5ff0f...` | ✅ (Phase 27A) |
+| `WEB_BASE` | Frontend URL | `https://app.vercel.app` | ✅ (Phase 27A) |
 
-**Total:** 10-13 variables (depending on PDF engine)
+**Total:** 15-18 variables (depending on PDF engine)  
+**Phase 27A Added:** 5 email-related variables
 
 ---
 
@@ -137,9 +146,17 @@ ModuleNotFoundError: No module named 'api'
 
 **Root Directory:** `apps/worker` (shares codebase with Worker)
 
-**Environment Variables:** Same as Worker (all 10-13 variables)
+**Environment Variables:** Same as Worker (all 15-18 variables including Phase 27A email vars)
 
 **Rationale:** Consumer and Worker use the same `apps/worker` code, so they need identical configuration.
+
+### Ticker Service (`markets-report-ticker`)
+
+**Root Directory:** `apps/worker` (shares codebase with Worker/Consumer)
+
+**Environment Variables:** Same as Worker (all 15-18 variables including Phase 27A email vars)
+
+**Rationale:** Ticker service runs schedules and may need to send notifications
 
 ---
 

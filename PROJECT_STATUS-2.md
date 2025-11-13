@@ -633,29 +633,31 @@ Once this works, everything else (admin console polish, fancy templates, plan li
 
 **1. Email Provider Setup:**
 - [x] SendGrid account confirmed
-- [ ] Add sending domain (e.g., `mail.trendyreports.com`)
-- [ ] Get SendGrid API key
-- [ ] Test domain verification
+- [x] Sending domain configured: `reports@trendyreports.io`
+- [x] SendGrid API key obtained
+- [ ] Verify domain authentication in SendGrid dashboard
 
 **2. Environment Variables:**
 
-Add to `apps/api` and `apps/worker` (Render services):
+✅ **ADDED to Render services** (November 13, 2025):
 
 ```bash
-# Email provider
-EMAIL_PROVIDER=sendgrid
+# SendGrid Configuration
+SENDGRID_API_KEY=SG.wIadMZpsRSSjeo6VZF2ilg.*** (configured)
+DEFAULT_FROM_EMAIL=reports@trendyreports.io
+DEFAULT_FROM_NAME=TrendyReports
 
-# SendGrid
-SENDGRID_API_KEY=SG_xxx
-SENDGRID_FROM_EMAIL=reports@yourdomain.com
-SENDGRID_FROM_NAME="TrendyReports"
-
-# Unsubscribe + links
-UNSUBSCRIBE_SECRET=<long-random-string>
+# Unsubscribe + Links
+UNSUBSCRIBE_SECRET=699e049667d5ff0fdd80dc5b7ad25fea00ff62cbea36608840e582a17fa98682
 WEB_BASE=https://reportscompany.vercel.app
 ```
 
-- [ ] Add to Render environment variables (apps/api and apps/worker)
+**Services configured:**
+- [x] `reportscompany - worker-service` (Celery worker)
+- [x] `reportscompany-consumer-bridge` (Redis consumer)
+- [x] `markets-report-ticker` (Schedules ticker)
+- [x] `reportscompany-api` (API - unsubscribe vars only)
+
 - [ ] Update `.env.example` files
 - [ ] Commit env examples (not actual keys)
 
