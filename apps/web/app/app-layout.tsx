@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import NavAuth from "@/components/NavAuth"
 
 const baseNavigation = [
   { name: "Overview", href: "/app", icon: LayoutDashboard },
@@ -110,6 +111,8 @@ function DashboardTopbar() {
           <Input placeholder="Search reports..." className="pl-9 bg-muted/50" />
         </div>
       </div>
+
+      <NavAuth />
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

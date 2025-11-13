@@ -3,28 +3,19 @@ Admin Console API Routes
 Provides system-wide metrics, schedules, reports, and email logs for platform operators.
 Requires ADMIN role.
 """
-from fastapi import APIRouter, HTTPException, Request, Query
+from fastapi import APIRouter, HTTPException, Request, Query, Depends
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from ..db import db_conn
+from ..deps.admin import get_admin_user
 
 router = APIRouter(prefix="/v1/admin", tags=["admin"])
-
-
-def require_admin(request: Request):
-    """
-    Enforce ADMIN role. Raises 403 if user is not an admin.
-    Assumes request.state.user contains the authenticated user with 'role' field.
-    """
-    user = getattr(request.state, "user", None)
-    if not user or user.get("role") != "ADMIN":
-        raise HTTPException(status_code=403, detail="Admin access required")
 
 
 # ==================== Metrics ====================
 
 @router.get("/metrics")
-def get_admin_metrics(request: Request):
+def get_admin_metrics(_admin: dict = Depends(get_admin_user)):
     """
     Get system-wide metrics for the admin dashboard.
     
@@ -36,7 +27,6 @@ def get_admin_metrics(request: Request):
         - emails_24h: Number of emails sent in last 24 hours
         - queue_depth: Current queue depth (optional, returns 0 if not available)
     """
-    require_admin(request)
     
     with db_conn() as conn:
         cur = conn.cursor()
@@ -95,7 +85,10 @@ def get_admin_metrics(request: Request):
 
 
 @router.get("/metrics/timeseries")
-def get_admin_timeseries(request: Request, days: int = Query(30, ge=1, le=90)):
+def get_admin_timeseries(
+    days: int = Query(30, ge=1, le=90),
+    _admin: dict = Depends(get_admin_user)
+):
     """
     Get timeseries data for charts (reports and emails per day).
     
@@ -106,7 +99,6 @@ def get_admin_timeseries(request: Request, days: int = Query(30, ge=1, le=90)):
         - reports_by_day: Array of {date, count}
         - emails_by_day: Array of {date, count}
     """
-    require_admin(request)
     
     with db_conn() as conn:
         cur = conn.cursor()
@@ -151,10 +143,10 @@ def get_admin_timeseries(request: Request, days: int = Query(30, ge=1, le=90)):
 
 @router.get("/schedules")
 def list_admin_schedules(
-    request: Request,
     search: Optional[str] = None,
     active: Optional[bool] = None,
-    limit: int = Query(100, ge=1, le=500)
+    limit: int = Query(100, ge=1, le=500),
+    _admin: dict = Depends(get_admin_user)
 ):
     """
     List all schedules across all accounts with search and filter capabilities.
@@ -167,7 +159,6 @@ def list_admin_schedules(
     Returns:
         Array of schedules with account information
     """
-    require_admin(request)
     
     query = """
         SELECT 
@@ -239,10 +230,10 @@ def list_admin_schedules(
 
 @router.get("/reports")
 def list_admin_reports(
-    request: Request,
     status: Optional[str] = None,
     report_type: Optional[str] = None,
-    limit: int = Query(200, ge=1, le=1000)
+    limit: int = Query(200, ge=1, le=1000),
+    _admin: dict = Depends(get_admin_user)
 ):
     """
     List recent report generations across all accounts.
@@ -255,7 +246,6 @@ def list_admin_reports(
     Returns:
         Array of reports with account and timing information
     """
-    require_admin(request)
     
     query = """
         SELECT 
@@ -318,8 +308,8 @@ def list_admin_reports(
 
 @router.get("/emails")
 def list_admin_emails(
-    request: Request,
-    limit: int = Query(200, ge=1, le=1000)
+    limit: int = Query(200, ge=1, le=1000),
+    _admin: dict = Depends(get_admin_user)
 ):
     """
     List recent email sends across all accounts.
@@ -330,7 +320,6 @@ def list_admin_emails(
     Returns:
         Array of email logs with delivery information
     """
-    require_admin(request)
     
     query = """
         SELECT 
@@ -380,9 +369,9 @@ def list_admin_emails(
 
 @router.patch("/schedules/{schedule_id}")
 def update_admin_schedule(
-    request: Request,
     schedule_id: str,
-    active: bool
+    active: bool,
+    _admin: dict = Depends(get_admin_user)
 ):
     """
     Update schedule status (pause/resume) from admin console.
@@ -394,7 +383,6 @@ def update_admin_schedule(
     Returns:
         Success message
     """
-    require_admin(request)
     
     with db_conn() as conn:
         cur = conn.cursor()
