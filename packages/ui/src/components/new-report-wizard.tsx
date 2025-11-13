@@ -138,7 +138,7 @@ export function NewReportWizard({ onSubmit, onCancel }: NewReportWizardProps) {
           <h2 className="text-2xl font-display font-semibold text-foreground">New Report</h2>
           <p className="text-sm text-muted-foreground mt-1">Configure your market report parameters</p>
         </div>
-        <Button variant="ghost" size="icon" onClick={onCancel} className="hover:bg-muted">
+        <Button variant="ghost" size="icon" onClick={onCancel} className="hover:bg-muted/50">
           <X className="w-5 h-5" />
           <span className="sr-only">Close wizard</span>
         </Button>
@@ -154,9 +154,9 @@ export function NewReportWizard({ onSubmit, onCancel }: NewReportWizardProps) {
                   className={cn(
                     "w-10 h-10 rounded-xl flex items-center justify-center font-display font-semibold text-sm transition-all duration-220",
                     index < currentStep
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-primary text-primary-foreground shadow-md"
                       : index === currentStep
-                        ? "bg-gradient-to-br from-primary via-accent to-primary text-white shadow-lg shadow-primary/20"
+                        ? "bg-gradient-to-br from-primary to-accent text-white shadow-lg shadow-primary/30"
                         : "bg-muted text-muted-foreground border border-border",
                   )}
                 >
@@ -190,7 +190,7 @@ export function NewReportWizard({ onSubmit, onCancel }: NewReportWizardProps) {
         {/* Progress Bar */}
         <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
           <motion.div
-            className="h-full bg-gradient-to-r from-primary via-accent to-primary"
+            className="h-full bg-gradient-to-r from-primary to-accent"
             initial={{ width: "25%" }}
             animate={{ width: `${progress}%` }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
@@ -240,6 +240,7 @@ export function NewReportWizard({ onSubmit, onCancel }: NewReportWizardProps) {
             setCurrentStep(Math.max(0, currentStep - 1))
           }}
           disabled={currentStep === 0}
+          className="border-border/50"
         >
           Back
         </Button>
@@ -285,12 +286,12 @@ function Step1ReportType({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <button className="text-muted-foreground hover:text-accent transition-colors">
+              <button className="text-muted-foreground hover:text-primary transition-colors">
                 <HelpCircle className="w-4 h-4" />
                 <span className="sr-only">Why this?</span>
               </button>
             </TooltipTrigger>
-            <TooltipContent className="bg-accent text-accent-foreground">
+            <TooltipContent className="bg-primary text-primary-foreground border-primary/20">
               <p className="text-xs">Choose the type of market analysis you need</p>
             </TooltipContent>
           </Tooltip>
@@ -559,7 +560,7 @@ function Step4Review({ state }: { state: WizardState }) {
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Summary Panel */}
-        <div className="space-y-4 p-6 rounded-lg bg-muted/30 border border-border">
+        <div className="space-y-4 p-6 rounded-xl bg-muted/30 border border-border/50">
           <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Summary</h4>
 
           <div className="space-y-3">
@@ -601,10 +602,10 @@ function Step4Review({ state }: { state: WizardState }) {
         </div>
 
         {/* API Payload */}
-        <div className="space-y-3 p-6 rounded-lg bg-ink/50 border border-border">
+        <div className="space-y-3 p-6 rounded-xl bg-muted/30 border border-border/50">
           <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">API Payload</h4>
-          <pre className="text-xs bg-background/50 p-4 rounded-lg border border-border overflow-x-auto font-mono">
-            <code className="text-accent">{JSON.stringify(payload, null, 2)}</code>
+          <pre className="text-xs bg-background/80 p-4 rounded-lg border border-border/50 overflow-x-auto font-mono">
+            <code className="text-primary">{JSON.stringify(payload, null, 2)}</code>
           </pre>
         </div>
       </div>
