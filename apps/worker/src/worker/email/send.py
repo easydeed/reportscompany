@@ -33,9 +33,12 @@ def send_schedule_email(
     recipients: List[str],
     payload: Dict,
     account_name: Optional[str] = None,
+    db_conn=None,
 ) -> Tuple[int, str]:
     """
     Send a scheduled report notification email to recipients.
+    
+    Filters out suppressed recipients before sending.
     
     Args:
         account_id: Account UUID
@@ -48,6 +51,7 @@ def send_schedule_email(
             - metrics: Dictionary of key metrics
             - pdf_url: Direct link to the PDF
         account_name: Account name for personalization (optional)
+        db_conn: Database connection for suppression checking (optional)
     
     Returns:
         Tuple of (status_code, response_text)
@@ -55,6 +59,35 @@ def send_schedule_email(
     if not recipients:
         logger.warning("No recipients provided for schedule email")
         return (400, "No recipients")
+    
+    # Check suppression list if db_conn provided
+    filtered_recipients = recipients[:]
+    
+    if db_conn is not None:
+        try:
+            with db_conn.cursor() as cur:
+                # Query suppressed emails for this account
+                cur.execute("""
+                    SELECT email
+                    FROM email_suppressions
+                    WHERE account_id = %s
+                      AND email = ANY(%s)
+                """, (account_id, recipients))
+                
+                suppressed = [row[0] for row in cur.fetchall()]
+                
+                if suppressed:
+                    logger.info(f"Suppressed recipients: {suppressed}")
+                    filtered_recipients = [r for r in recipients if r not in suppressed]
+                
+                if not filtered_recipients:
+                    logger.info(f"All {len(recipients)} recipient(s) suppressed, skipping email send")
+                    return (200, "All recipients suppressed")
+                    
+        except Exception as e:
+            logger.warning(f"Error checking suppressions: {e}, proceeding with all recipients")
+            # On error, don't block email - proceed with original list
+            filtered_recipients = recipients
     
     # Extract data from payload
     report_type = payload.get("report_type", "market_snapshot")
@@ -91,9 +124,9 @@ def send_schedule_email(
     )
     
     # Send email via provider
-    logger.info(f"Sending schedule email to {len(recipients)} recipient(s)")
+    logger.info(f"Sending schedule email to {len(filtered_recipients)} recipient(s): {filtered_recipients}")
     status_code, response_text = send_email(
-        to_emails=recipients,
+        to_emails=filtered_recipients,
         subject=subject,
         html_content=html_content,
     )

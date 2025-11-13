@@ -254,42 +254,62 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
                                 "pdf_url": pdf_url,
                             }
                             
-                            # Send email
+                            # Send email (with suppression checking)
                             status_code, response_text = send_schedule_email(
                                 account_id=account_id,
                                 recipients=recipients,
                                 payload=email_payload,
                                 account_name=account_name,
+                                db_conn=conn,  # Pass connection for suppression checking
                             )
                             
-                            # Log email send
-                            subject = f"Your {report_type.replace('_', ' ').title()} Report"
-                            cur.execute("""
-                                INSERT INTO email_log (account_id, schedule_id, report_id, provider, to_emails, subject, response_code, error)
-                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                            """, (
-                                account_id,
-                                schedule_id,
-                                run_id,
-                                'sendgrid',
-                                recipients,
-                                subject,
-                                status_code,
-                                response_text if status_code != 202 else None
-                            ))
+                            # Log email send (defensive try/except)
+                            try:
+                                # Determine status based on response
+                                if status_code == 202:
+                                    email_status = 'sent'
+                                elif status_code == 200 and 'suppressed' in response_text.lower():
+                                    email_status = 'suppressed'
+                                else:
+                                    email_status = 'failed'
+                                
+                                subject = f"Your {report_type.replace('_', ' ').title()} Report"
+                                cur.execute("""
+                                    INSERT INTO email_log (
+                                        account_id, schedule_id, report_id, provider,
+                                        to_emails, subject, response_code, status, error
+                                    )
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                """, (
+                                    account_id,
+                                    schedule_id,
+                                    run_id,
+                                    'sendgrid',
+                                    recipients,
+                                    subject,
+                                    status_code,
+                                    email_status,
+                                    None if status_code in (200, 202) else response_text
+                                ))
+                            except Exception as log_error:
+                                logger.warning(f"Failed to log email send (non-critical): {log_error}")
                             
-                            # Update schedule_runs to mark as completed
-                            cur.execute("""
-                                UPDATE schedule_runs
-                                SET status = 'completed',
-                                    report_run_id = %s,
-                                    finished_at = NOW()
-                                WHERE schedule_id = %s
-                                  AND status = 'queued'
-                                  AND started_at IS NULL
-                                ORDER BY created_at DESC
-                                LIMIT 1
-                            """, (run_id, schedule_id))
+                            # Update schedule_runs to mark as completed (defensive try/except)
+                            try:
+                                run_status = 'completed' if status_code in (200, 202) else 'failed_email'
+                                cur.execute("""
+                                    UPDATE schedule_runs
+                                    SET status = %s,
+                                        report_run_id = %s,
+                                        finished_at = NOW()
+                                    WHERE schedule_id = %s
+                                      AND status = 'queued'
+                                      AND started_at IS NULL
+                                    ORDER BY created_at DESC
+                                    LIMIT 1
+                                """, (run_status, run_id, schedule_id))
+                            except Exception as update_error:
+                                logger.warning(f"Failed to update schedule_run status (non-critical): {update_error}")
                             
                             conn.commit()
                             print(f"✅ Email sent to {len(recipients)} recipient(s), status: {status_code}")
