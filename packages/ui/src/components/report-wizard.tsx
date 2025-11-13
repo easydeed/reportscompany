@@ -1,11 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
+import { Button } from "./ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"
+import { Input } from "./ui/input"
+import { Label } from "./ui/label"
+import { Badge } from "./ui/badge"
 import {
   FileText,
   TrendingUp,
@@ -23,7 +23,7 @@ import {
   ArrowLeft,
   Info,
 } from "lucide-react"
-import { Stepper } from "@/components/stepper"
+import { Stepper } from "./stepper"
 
 // Types
 export type ReportType = "market_snapshot" | "new_listings" | "inventory" | "closed" | "price_bands" | "open_houses"

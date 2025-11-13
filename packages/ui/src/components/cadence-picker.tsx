@@ -1,9 +1,9 @@
 "use client"
 
-import { cn } from "@/lib/utils"
-import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { cn } from "../lib/utils"
+import { Label } from "./ui/label"
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { TimePicker } from "./time-picker"
 
 type Cadence = "weekly" | "monthly"

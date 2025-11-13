@@ -1,7 +1,7 @@
 "use client"
 
-import { cn } from "@/lib/utils"
-import { Button, type ButtonProps } from "@/components/ui/button"
+import { cn } from "../lib/utils"
+import { Button, type ButtonProps } from "./ui/button"
 import { forwardRef } from "react"
 
 interface PillButtonProps extends ButtonProps {

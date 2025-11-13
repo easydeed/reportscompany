@@ -1,8 +1,8 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Navbar } from "@/components/navbar"
-import { CodeTabs } from "@/components/code-tabs"
+import { Button } from "./ui/button"
+import { Navbar } from "./navbar"
+import { CodeTabs } from "./code-tabs"
 import { motion } from "framer-motion"
 import { TrendingUp, FileText, Zap, BarChart3, Sparkles, Code, ArrowRight, Check } from "lucide-react"
 import { useState } from "react"

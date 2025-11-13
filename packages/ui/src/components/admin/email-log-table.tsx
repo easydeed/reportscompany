@@ -1,9 +1,9 @@
 "use client"
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Card } from "@/components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
+import { Card } from "./ui/card"
 import type { EmailLog } from "./types"
-import { cn } from "@/lib/utils"
+import { cn } from "../lib/utils"
 
 interface AdminEmailsTableProps {
   logs: EmailLog[]

@@ -1,10 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import { Check, Copy } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { Button } from "./ui/button"
+import { cn } from "../lib/utils"
 
 interface CodeTabsProps {
   pythonCode: string

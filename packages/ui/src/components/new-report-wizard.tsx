@@ -1,15 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { SegmentedControl } from "@/components/segmented-control"
-import { TagInput } from "@/components/tag-input"
-import { cn } from "@/lib/utils"
+import { Button } from "./ui/button"
+import { Input } from "./ui/input"
+import { Label } from "./ui/label"
+import { SegmentedControl } from "./segmented-control"
+import { TagInput } from "./tag-input"
+import { cn } from "../lib/utils"
 import { motion, AnimatePresence } from "framer-motion"
 import { Check, HelpCircle, ChevronRight, X } from "lucide-react"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
 
 // Types
 export type ReportType = "market_snapshot" | "new_listings" | "closed" | "inventory"

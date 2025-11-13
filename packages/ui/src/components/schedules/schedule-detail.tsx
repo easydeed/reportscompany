@@ -1,9 +1,9 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
+import { Button } from "./ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
+import { Badge } from "./ui/badge"
+import { Switch } from "./ui/switch"
 import {
   ArrowLeft,
   Play,

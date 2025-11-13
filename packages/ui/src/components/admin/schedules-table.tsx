@@ -1,11 +1,11 @@
 "use client"
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Card } from "@/components/ui/card"
-import { Switch } from "@/components/ui/switch"
-import { Button } from "@/components/ui/button"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
+import { Card } from "./ui/card"
+import { Switch } from "./ui/switch"
+import { Button } from "./ui/button"
 import { MoreVertical, Pause, Play, ExternalLink } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu"
 import type { AdminSchedule } from "./types"
 
 interface AdminSchedulesTableProps {

@@ -2,8 +2,8 @@
 
 import type React from "react"
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { cn } from "@/lib/utils"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table"
+import { cn } from "../lib/utils"
 
 interface Column<T> {
   key: keyof T
