@@ -284,6 +284,52 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
                             account_row = cur.fetchone()
                             account_name = account_row[0] if account_row else None
                             
+                            # Phase 30: Resolve brand for white-label emails
+                            brand = None
+                            try:
+                                # Determine branding account (sponsor for REGULAR, self for AFFILIATE)
+                                cur.execute("""
+                                    SELECT account_type, sponsor_account_id::text
+                                    FROM accounts
+                                    WHERE id = %s::uuid
+                                """, (account_id,))
+                                acc_row = cur.fetchone()
+                                
+                                if acc_row:
+                                    acc_type, sponsor_id = acc_row
+                                    branding_account_id = sponsor_id if (acc_type == 'REGULAR' and sponsor_id) else account_id
+                                    
+                                    # Load branding config
+                                    cur.execute("""
+                                        SELECT
+                                            brand_display_name,
+                                            logo_url,
+                                            primary_color,
+                                            accent_color,
+                                            rep_photo_url,
+                                            contact_line1,
+                                            contact_line2,
+                                            website_url
+                                        FROM affiliate_branding
+                                        WHERE account_id = %s::uuid
+                                    """, (branding_account_id,))
+                                    
+                                    brand_row = cur.fetchone()
+                                    if brand_row:
+                                        brand = {
+                                            "display_name": brand_row[0],
+                                            "logo_url": brand_row[1],
+                                            "primary_color": brand_row[2],
+                                            "accent_color": brand_row[3],
+                                            "rep_photo_url": brand_row[4],
+                                            "contact_line1": brand_row[5],
+                                            "contact_line2": brand_row[6],
+                                            "website_url": brand_row[7],
+                                        }
+                            except Exception as e:
+                                print(f"⚠️  Error loading brand for email: {e}")
+                                # Continue without brand (will use default branding)
+                            
                             # Build email payload
                             email_payload = {
                                 "report_type": report_type,
@@ -294,13 +340,14 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
                                 "pdf_url": pdf_url,
                             }
                             
-                            # Send email (with suppression checking)
+                            # Send email (with suppression checking + Phase 30 white-label brand)
                             status_code, response_text = send_schedule_email(
                                 account_id=account_id,
                                 recipients=recipients,
                                 payload=email_payload,
                                 account_name=account_name,
                                 db_conn=conn,  # Pass connection for suppression checking
+                                brand=brand,  # Phase 30: white-label branding
                             )
                             
                             # Log email send (defensive try/except)

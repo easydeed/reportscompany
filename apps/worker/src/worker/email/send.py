@@ -34,10 +34,12 @@ def send_schedule_email(
     payload: Dict,
     account_name: Optional[str] = None,
     db_conn=None,
+    brand: Optional[Dict] = None,
 ) -> Tuple[int, str]:
     """
     Send a scheduled report notification email to recipients.
     
+    Phase 30: Now supports white-label branding for affiliate accounts.
     Filters out suppressed recipients before sending.
     
     Args:
@@ -52,6 +54,7 @@ def send_schedule_email(
             - pdf_url: Direct link to the PDF
         account_name: Account name for personalization (optional)
         db_conn: Database connection for suppression checking (optional)
+        brand: Optional brand configuration for white-label output (Phase 30)
     
     Returns:
         Tuple of (status_code, response_text)
@@ -111,7 +114,7 @@ def send_schedule_email(
     # Generate email subject
     subject = schedule_email_subject(report_type, city, zip_codes)
     
-    # Generate HTML content
+    # Generate HTML content (Phase 30: with brand)
     html_content = schedule_email_html(
         account_name=account_name or "there",
         report_type=report_type,
@@ -121,6 +124,7 @@ def send_schedule_email(
         metrics=metrics,
         pdf_url=pdf_url,
         unsubscribe_url=unsubscribe_url,
+        brand=brand,
     )
     
     # Send email via provider

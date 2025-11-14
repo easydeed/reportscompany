@@ -1,5 +1,17 @@
 """HTML email template for scheduled report notifications."""
-from typing import Dict, Optional
+from typing import Dict, Optional, TypedDict
+
+
+class Brand(TypedDict, total=False):
+    """Brand configuration for white-label emails (Phase 30)."""
+    display_name: str
+    logo_url: Optional[str]
+    primary_color: Optional[str]
+    accent_color: Optional[str]
+    rep_photo_url: Optional[str]
+    contact_line1: Optional[str]
+    contact_line2: Optional[str]
+    website_url: Optional[str]
 
 
 def schedule_email_html(
@@ -11,9 +23,12 @@ def schedule_email_html(
     metrics: Dict,
     pdf_url: str,
     unsubscribe_url: str,
+    brand: Optional[Brand] = None,
 ) -> str:
     """
     Generate HTML email for a scheduled report notification.
+    
+    Phase 30: Now supports white-label branding for affiliate accounts.
     
     Args:
         account_name: Name of the account (for personalization)
@@ -24,10 +39,19 @@ def schedule_email_html(
         metrics: Dictionary of key metrics to display
         pdf_url: Direct link to the PDF report
         unsubscribe_url: Link to unsubscribe from future emails
+        brand: Optional brand configuration (for white-label output)
     
     Returns:
         HTML string for the email body
     """
+    # Phase 30: Extract brand values
+    brand_name = (brand.get("display_name") if brand else None) or account_name or "Market Reports"
+    logo_url = brand.get("logo_url") if brand else None
+    primary_color = (brand.get("primary_color") if brand else None) or "#667eea"
+    accent_color = (brand.get("accent_color") if brand else None) or "#764ba2"
+    contact_line1 = (brand.get("contact_line1") if brand else None)
+    contact_line2 = (brand.get("contact_line2") if brand else None)
+    website_url = (brand.get("website_url") if brand else None)
     # Format report type for display
     report_type_display = {
         "market_snapshot": "Market Snapshot",
@@ -154,11 +178,13 @@ def schedule_email_html(
                     <!-- Main Container -->
                     <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
                         
-                        <!-- Header -->
+                        <!-- Header (Phase 30: White-label branding) -->
                         <tr>
-                            <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px 8px 0 0;">
+                            <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%); border-radius: 8px 8px 0 0;">
+                                {f'<img src="{logo_url}" alt="{brand_name}" style="height: 40px; margin-bottom: 20px; object-fit: contain;" />' if logo_url else ''}
                                 <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">📊 Your {report_type_display} Report</h1>
                                 <p style="margin: 10px 0 0; color: #e0e7ff; font-size: 16px;">{area_display} • Last {lookback_days} days</p>
+                                {f'<p style="margin: 15px 0 0; color: #ffffff; font-size: 14px; font-weight: 500;">{brand_name}</p>' if brand else ''}
                             </td>
                         </tr>
                         
@@ -183,10 +209,10 @@ def schedule_email_html(
                             </td>
                         </tr>
                         
-                        <!-- CTA Button -->
+                        <!-- CTA Button (Phase 30: Uses brand accent color) -->
                         <tr>
                             <td style="padding: 0 40px 40px; text-align: center;">
-                                <a href="{pdf_url}" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                                <a href="{pdf_url}" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
                                     📄 View Full Report (PDF)
                                 </a>
                                 <p style="margin: 15px 0 0; font-size: 14px; color: #6b7280;">
@@ -195,18 +221,22 @@ def schedule_email_html(
                             </td>
                         </tr>
                         
-                        <!-- Footer -->
+                        <!-- Footer (Phase 30: White-label contact info) -->
                         <tr>
                             <td style="padding: 30px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb;">
-                                <p style="margin: 0; font-size: 14px; color: #6b7280; text-align: center;">
+                                {f'<p style="margin: 0; font-size: 14px; color: #374151; text-align: center; font-weight: 500;">{contact_line1}</p>' if contact_line1 else ''}
+                                {f'<p style="margin: 5px 0 0; font-size: 14px; color: #6b7280; text-align: center;">{contact_line2}</p>' if contact_line2 else ''}
+                                {f'<p style="margin: 10px 0 0; font-size: 14px; color: #6b7280; text-align: center;"><a href="{website_url}" style="color: {primary_color}; text-decoration: none;">{website_url.replace("https://", "").replace("http://", "")}</a></p>' if website_url else ''}
+                                <p style="margin: {'20px' if (contact_line1 or contact_line2 or website_url) else '0'} 0 0; font-size: 14px; color: #6b7280; text-align: center;">
                                     You're receiving this because you have an active schedule for {area_display}.
                                 </p>
                                 <p style="margin: 10px 0 0; font-size: 14px; color: #6b7280; text-align: center;">
                                     <a href="{unsubscribe_url}" style="color: #6b7280; text-decoration: underline;">Unsubscribe</a> from these automated reports
                                 </p>
                                 <p style="margin: 15px 0 0; font-size: 12px; color: #9ca3af; text-align: center;">
-                                    © {account_name or 'Market Reports'}. All rights reserved.
+                                    © {brand_name}. All rights reserved.
                                 </p>
+                                {'' if brand else '<p style="margin: 5px 0 0; font-size: 10px; color: #d1d5db; text-align: center;">Powered by TrendyReports</p>'}
                             </td>
                         </tr>
                         
