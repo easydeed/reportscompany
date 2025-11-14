@@ -8,6 +8,11 @@ from ..services.accounts import (
     verify_user_account_access,
     get_account_info
 )
+from ..services.usage import (
+    get_monthly_usage,
+    resolve_plan_for_account,
+    evaluate_report_limit
+)
 
 router = APIRouter(prefix="/v1")
 
@@ -153,4 +158,61 @@ def switch_account(
         "account_type": account["account_type"],
         "plan_slug": account["plan_slug"]
     }
+
+
+# Phase 29E: Plan & Usage endpoint for current user
+
+@router.get("/account/plan-usage")
+def get_current_account_plan_usage(request: Request, account_id: str = Depends(require_account_id)):
+    """
+    Get plan and usage information for the current account.
+    
+    Phase 29E: User-facing version of admin endpoint.
+    Shows plan details, current usage, and limit status.
+    """
+    with db_conn() as (conn, cur):
+        set_rls(cur, account_id)
+        
+        # Get account info
+        cur.execute("""
+            SELECT 
+                id::text,
+                name,
+                account_type,
+                plan_slug,
+                monthly_report_limit_override,
+                sponsor_account_id::text
+            FROM accounts
+            WHERE id = %s::uuid
+        """, (account_id,))
+        
+        acc_row = cur.fetchone()
+        if not acc_row:
+            raise HTTPException(status_code=404, detail="Account not found")
+        
+        account_info = {
+            "id": acc_row[0],
+            "name": acc_row[1],
+            "account_type": acc_row[2],
+            "plan_slug": acc_row[3],
+            "monthly_report_limit_override": acc_row[4],
+            "sponsor_account_id": acc_row[5],
+        }
+        
+        # Get plan details
+        plan = resolve_plan_for_account(cur, account_id)
+        
+        # Get usage
+        usage = get_monthly_usage(cur, account_id)
+        
+        # Evaluate limit
+        decision, info = evaluate_report_limit(cur, account_id)
+        
+        return {
+            "account": account_info,
+            "plan": plan,
+            "usage": usage,
+            "decision": decision.value,
+            "info": info
+        }
 
