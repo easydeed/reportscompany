@@ -1,9 +1,53 @@
 /**
  * Template utilities for TrendyReports PDF generation
  * 
+ * Phase 26: Convert PCT templates to TrendyReports branded PDFs
+ * Phase 30: Support white-label branding for affiliate accounts
+ * 
  * These functions map report data (result_json) to HTML template placeholders
  * following the pattern: {{placeholder_name}} → actual value
  */
+
+// Default TrendyReports brand colors (Phase 26)
+const DEFAULT_PRIMARY_COLOR = "#7C3AED"; // Trendy violet
+const DEFAULT_ACCENT_COLOR = "#F26B2B";  // Trendy coral
+
+/**
+ * Phase 30: Inject brand colors and metadata into template
+ */
+function injectBrand(html: string, brand: any): string {
+  if (!brand) return html;
+  
+  const primaryColor = brand.primary_color || DEFAULT_PRIMARY_COLOR;
+  const accentColor = brand.accent_color || DEFAULT_ACCENT_COLOR;
+  const brandName = brand.display_name || "TrendyReports";
+  const logoUrl = brand.logo_url || "";
+  
+  // Inject CSS color overrides right before </head>
+  const colorOverride = `
+    <style>
+      :root {
+        --pct-blue: ${primaryColor};
+        --pct-accent: ${accentColor};
+      }
+    </style>
+  `;
+  
+  let result = html.replace("</head>", `${colorOverride}</head>`);
+  
+  // Replace brand placeholders
+  result = result.replaceAll("{{brand_name}}", brandName);
+  result = result.replaceAll("{{brand_logo_url}}", logoUrl);
+  result = result.replaceAll("{{brand_badge}}", `${brandName} Insights`);
+  
+  // Tagline for footer
+  const tagline = brand.display_name 
+    ? `${brandName} • Market Intelligence`
+    : "TrendyReports • Market Intelligence Powered by Live MLS Data";
+  result = result.replaceAll("{{brand_tagline}}", tagline);
+  
+  return result;
+}
 
 // Format currency
 function formatCurrency(val: number | null | undefined): string {
@@ -127,7 +171,8 @@ export function buildMarketSnapshotHtml(
     html = html.replaceAll(key, value);
   }
   
-  return html;
+  // Phase 30: Inject brand colors and metadata
+  return injectBrand(html, data.brand);
 }
 
 /**
@@ -184,7 +229,8 @@ export function buildNewListingsHtml(
   
   html = html.replace('<!-- LISTINGS_TABLE_ROWS -->', rows);
   
-  return html;
+  // Phase 30: Inject brand colors and metadata
+  return injectBrand(html, data.brand);
 }
 
 /**
@@ -244,7 +290,8 @@ export function buildInventoryHtml(
   
   html = html.replace('<!-- LISTINGS_TABLE_ROWS -->', rows);
   
-  return html;
+  // Phase 30: Inject brand colors and metadata
+  return injectBrand(html, data.brand);
 }
 
 /**
@@ -304,7 +351,8 @@ export function buildClosedHtml(
   
   html = html.replace('<!-- LISTINGS_TABLE_ROWS -->', rows);
   
-  return html;
+  // Phase 30: Inject brand colors and metadata
+  return injectBrand(html, data.brand);
 }
 
 /**
@@ -389,6 +437,7 @@ export function buildPriceBandsHtml(
   
   html = html.replace('<!-- PRICE_BANDS_CONTENT -->', bandsHtml);
   
-  return html;
+  // Phase 30: Inject brand colors and metadata
+  return injectBrand(html, data.brand);
 }
 
