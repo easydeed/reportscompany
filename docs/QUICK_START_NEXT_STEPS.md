@@ -27,19 +27,20 @@ Here's your action plan (step by step, slow and steady):
 - Description: `50 reports per month with advanced features`
 - Pricing: `$29.00 USD` / month
 - Click "Save product"
-- **Copy the Price ID** (starts with `price_...`)
+- **Copy the Price ID** (starts with `price_...`) price_1STMtBBKYbtiKxfswkmFEPeR
 
 **Create Team Plan:**
 - Name: `TrendyReports Team`
 - Description: `200 reports per month for teams`
 - Pricing: `$99.00 USD` / month
 - Click "Save product"
-- **Copy the Price ID** (starts with `price_...`)
+- **Copy the Price ID** (starts with `price_...`) price_1STMtfBKYbtiKxfsqQ4r29Cw
 
 **Create Webhook:**
 1. Go to: https://dashboard.stripe.com/test/webhooks
 2. Click "Add endpoint"
 3. Endpoint URL: `https://reportscompany.onrender.com/v1/webhooks/stripe`
+   - Note: Webhook events are idempotent and safe to replay
 4. Events to send: Select these 3:
    - `customer.subscription.created`
    - `customer.subscription.updated`
