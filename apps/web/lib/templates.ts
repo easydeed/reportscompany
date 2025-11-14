@@ -321,7 +321,7 @@ export function buildPriceBandsHtml(
   
   // Calculate totals
   const totalListings = bands.reduce((sum: number, b: any) => sum + (b.count || 0), 0);
-  const prices = bands.flatMap((b: any) => b.listings || []).map((l: any) => l.list_price || 0).filter(p => p > 0);
+  const prices = bands.flatMap((b: any) => b.listings || []).map((l: any) => l.list_price || 0).filter((p: number) => p > 0);
   const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
   const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
   
