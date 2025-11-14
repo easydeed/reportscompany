@@ -15,11 +15,27 @@ def db_conn():
         conn.commit()
 
 
-def set_rls(cur, account_id: str):
-    # Enforce RLS using Postgres session variable (matches our RLS policy)
+def set_rls(cur, account_id: str, user_id: str | None = None, user_role: str | None = None):
+    """
+    Enforce RLS using Postgres session variables.
+    
+    Phase 29C: Extended to support multi-account and affiliate context.
+    
+    Args:
+        cur: Database cursor
+        account_id: Current account context (required)
+        user_id: Current user ID (optional, for Phase 29C multi-account)
+        user_role: User's global role (optional, for Phase 29C affiliate/admin features)
+    """
     # SET LOCAL expects a plain string value, so we manually quote it
     # (sql.Literal adds unwanted type casts like ::uuid)
     cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
+    
+    # Phase 29C: Set user context for multi-account RLS (future use)
+    if user_id:
+        cur.execute(f"SET LOCAL app.current_user_id TO '{user_id}'")
+    if user_role:
+        cur.execute(f"SET LOCAL app.current_user_role TO '{user_role}'")
 
 
 
