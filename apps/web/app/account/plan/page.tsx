@@ -1,9 +1,12 @@
 import { cookies } from 'next/headers';
+import { Suspense } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle2, TrendingUp, Building2, Calendar } from 'lucide-react';
+import { StripeBillingActions } from '@/components/stripe-billing-actions';
+import { CheckoutStatusBanner } from '@/components/checkout-status-banner';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
@@ -107,6 +110,11 @@ export default async function PlanPage() {
 
   return (
     <div className="space-y-6">
+      {/* Checkout Status Banner */}
+      <Suspense fallback={null}>
+        <CheckoutStatusBanner />
+      </Suspense>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -136,15 +144,15 @@ export default async function PlanPage() {
                 )}
               </CardDescription>
             </div>
-            {!isSponsored && data.plan.plan_slug !== 'affiliate' && (
-              <Button disabled>
-                Upgrade Plan
-                <span className="text-xs ml-2">(Coming Soon)</span>
-              </Button>
-            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Stripe Billing Actions */}
+          <StripeBillingActions
+            accountType={data.account.account_type}
+            planSlug={data.plan.plan_slug}
+            isSponsored={isSponsored}
+          />
           <div className="grid gap-4 md:grid-cols-3">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">

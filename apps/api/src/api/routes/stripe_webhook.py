@@ -1,63 +1,153 @@
+"""
+Phase 29D: Stripe Webhook Handler
+
+Syncs Stripe subscription events back to accounts.plan_slug.
+Allows existing plan/limit system to work seamlessly with Stripe.
+"""
+
 from fastapi import APIRouter, Request, HTTPException
-import os, stripe, psycopg, json
+import os
+import psycopg
+import logging
 from ..settings import settings
+from ..config.billing import (
+    get_plan_for_stripe_price,
+    STRIPE_SECRET_KEY,
+    STRIPE_WEBHOOK_SECRET
+)
 
 router = APIRouter(prefix="/v1")
 
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+logger = logging.getLogger(__name__)
+
+# Lazy import stripe
+try:
+    import stripe
+    if STRIPE_SECRET_KEY:
+        stripe.api_key = STRIPE_SECRET_KEY
+except ImportError:
+    stripe = None
+    logger.warning("Stripe SDK not installed")
+
 
 @router.post("/webhooks/stripe")
 async def stripe_webhook(req: Request):
+    """
+    Handle Stripe webhook events.
+    
+    Phase 29D: Updates accounts.plan_slug based on subscription changes.
+    
+    Events handled:
+    - customer.subscription.created: Set plan_slug from price_id
+    - customer.subscription.updated: Update plan_slug if price changed
+    - customer.subscription.deleted: Downgrade to 'free'
+    
+    Returns:
+        {"received": True} for all events (even unhandled ones)
+    
+    Raises:
+        400: Invalid webhook signature
+    """
+    if not stripe or not STRIPE_WEBHOOK_SECRET:
+        logger.error("Stripe webhook called but Stripe not configured")
+        return {"received": True, "error": "Stripe not configured"}
+    
     payload = await req.body()
     sig = req.headers.get("stripe-signature")
+    
+    # Validate webhook signature
     try:
-        event = stripe.Webhook.construct_event(payload, sig, WEBHOOK_SECRET)
-    except Exception as e:
+        event = stripe.Webhook.construct_event(
+            payload, sig, STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError as e:
+        logger.error(f"Invalid payload: {e}")
+        raise HTTPException(status_code=400, detail="Invalid payload")
+    except stripe.error.SignatureVerificationError as e:
+        logger.error(f"Invalid signature: {e}")
         raise HTTPException(status_code=400, detail="Invalid signature")
-
-    et = event["type"]
+    
+    event_type = event["type"]
     data = event["data"]["object"]
-
-    # Persist event (optional)
-    with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
-        with conn.cursor() as cur:
-            cur.execute("INSERT INTO billing_events (account_id, type, payload) VALUES (%s,%s,%s)",
-                        (data.get("metadata",{}).get("account_id") if isinstance(data, dict) else None, et, json.loads(payload.decode())))
-
-    # Handle subscription lifecycle
-    if et == "customer.subscription.created" or et == "customer.subscription.updated":
-        sub = data
-        acct_id = (sub.get("metadata") or {}).get("account_id")
-        plan_slug = (sub.get("metadata") or {}).get("plan")
-        if acct_id:
+    
+    logger.info(f"Received Stripe event: {event_type}, ID: {event.get('id')}")
+    
+    # Handle subscription created/updated
+    if event_type in ["customer.subscription.created", "customer.subscription.updated"]:
+        subscription = data
+        account_id = subscription.get("metadata", {}).get("account_id")
+        
+        if not account_id:
+            logger.warning(f"Subscription {subscription.get('id')} missing account_id metadata")
+            return {"received": True}
+        
+        # Get price_id from first line item
+        items = subscription.get("items", {}).get("data", [])
+        if not items:
+            logger.warning(f"Subscription {subscription.get('id')} has no line items")
+            return {"received": True}
+        
+        price_id = items[0].get("price", {}).get("id")
+        if not price_id:
+            logger.warning(f"Subscription {subscription.get('id')} missing price_id")
+            return {"received": True}
+        
+        # Map price_id → plan_slug
+        plan_slug = get_plan_for_stripe_price(price_id)
+        if not plan_slug:
+            logger.warning(f"Unknown price_id: {price_id}, cannot map to plan")
+            return {"received": True}
+        
+        # Update account
+        try:
             with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
                         UPDATE accounts
-                        SET stripe_subscription_id=%s,
-                            plan_slug=%s,
-                            billing_status=%s
-                        WHERE id=%s
-                    """, (sub.get("id"), plan_slug, sub.get("status"), acct_id))
-
-    if et == "customer.subscription.deleted":
-        sub = data
-        acct_id = (sub.get("metadata") or {}).get("account_id")
-        if acct_id:
+                        SET plan_slug = %s
+                        WHERE id = %s::uuid
+                    """, (plan_slug, account_id))
+                    
+                    if cur.rowcount > 0:
+                        logger.info(f"✅ Updated account {account_id} to plan '{plan_slug}' (price: {price_id})")
+                    else:
+                        logger.warning(f"Account {account_id} not found for subscription update")
+        
+        except Exception as e:
+            logger.error(f"Failed to update account {account_id}: {e}")
+            # Still return 200 to prevent Stripe retries
+    
+    # Handle subscription deleted/canceled
+    elif event_type == "customer.subscription.deleted":
+        subscription = data
+        account_id = subscription.get("metadata", {}).get("account_id")
+        
+        if not account_id:
+            logger.warning(f"Deleted subscription {subscription.get('id')} missing account_id metadata")
+            return {"received": True}
+        
+        # Downgrade to free
+        try:
             with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
                         UPDATE accounts
-                        SET stripe_subscription_id=NULL,
-                            billing_status='canceled'
-                        WHERE id=%s
-                    """, (acct_id,))
-
-    if et == "invoice.payment_succeeded":
-        # Optionally reset counters / mark month start
-        pass
-
+                        SET plan_slug = 'free'
+                        WHERE id = %s::uuid
+                    """, (account_id,))
+                    
+                    if cur.rowcount > 0:
+                        logger.info(f"✅ Downgraded account {account_id} to 'free' (subscription canceled)")
+                    else:
+                        logger.warning(f"Account {account_id} not found for subscription cancellation")
+        
+        except Exception as e:
+            logger.error(f"Failed to downgrade account {account_id}: {e}")
+    
+    # Log other events but don't process
+    else:
+        logger.info(f"Received unhandled event type: {event_type}")
+    
     return {"received": True}
 
 

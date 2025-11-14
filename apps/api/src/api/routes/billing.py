@@ -1,98 +1,309 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+"""
+Phase 29D: Stripe Billing Routes
+
+Handles subscription checkout and customer portal access.
+"""
+
+import os
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
-import stripe, psycopg
-from ..settings import settings
-from ..db import db_conn, set_rls, fetchone_dict
-from .reports import require_account_id  # temp auth shim
+from typing import Literal
+from ..db import db_conn, set_rls
+from .reports import require_account_id
+from ..config.billing import (
+    get_stripe_price_for_plan,
+    STRIPE_SECRET_KEY,
+    validate_stripe_config
+)
 
-router = APIRouter(prefix="/v1")
+router = APIRouter(prefix="/v1/billing", tags=["billing"])
 
-# Note: stripe.api_key will be set in each function to ensure settings are loaded
-APP_BASE = settings.APP_BASE
+WEB_BASE = os.getenv("WEB_BASE", "https://reportscompany-web.vercel.app")
 
-def get_price_map():
-    """Get price map from settings (evaluated at runtime)"""
-    return {
-        "starter": settings.STARTER_PRICE_ID,
-        "professional": settings.PRO_PRICE_ID,
-        "enterprise": settings.ENTERPRISE_PRICE_ID,
-    }
+# Lazy import stripe to avoid import errors if not installed
+try:
+    import stripe
+    if STRIPE_SECRET_KEY:
+        stripe.api_key = STRIPE_SECRET_KEY
+except ImportError:
+    stripe = None
 
-class CheckoutBody(BaseModel):
-  plan: str  # starter|professional|enterprise
 
-@router.get("/billing/debug")
-def debug_config():
-    """Debug endpoint to check Stripe config"""
-    return {
-        "stripe_key_set": bool(settings.STRIPE_SECRET_KEY),
-        "starter_price": settings.STARTER_PRICE_ID,
-        "pro_price": settings.PRO_PRICE_ID,
-        "enterprise_price": settings.ENTERPRISE_PRICE_ID,
-        "price_map": get_price_map()
-    }
+class CheckoutRequest(BaseModel):
+    """Request to create a Stripe Checkout Session."""
+    plan_slug: Literal["pro", "team"]
 
-@router.post("/billing/checkout", status_code=status.HTTP_200_OK)
-def create_checkout(body: CheckoutBody, request: Request, account_id: str = Depends(require_account_id)):
-    # Set Stripe API key at runtime to ensure settings are loaded
-    stripe.api_key = settings.STRIPE_SECRET_KEY
+
+class CheckoutResponse(BaseModel):
+    """Response containing Stripe Checkout Session URL."""
+    url: str
+
+
+class PortalResponse(BaseModel):
+    """Response containing Stripe Customer Portal URL."""
+    url: str
+
+
+@router.post("/checkout", response_model=CheckoutResponse)
+def create_checkout_session(
+    body: CheckoutRequest,
+    request: Request,
+    account_id: str = Depends(require_account_id)
+):
+    """
+    Create a Stripe Checkout Session for plan upgrade.
     
-    plan = body.plan.lower()
-    price_map = get_price_map()
-    price = price_map.get(plan)
-    if not price:
-        raise HTTPException(status_code=400, detail="Unknown plan")
-
-    # Ensure account has stripe_customer_id
+    Phase 29D: Allows REGULAR users to upgrade from free → pro/team.
+    
+    Flow:
+    1. Validate user account is eligible (REGULAR, not sponsored)
+    2. Get or create Stripe customer
+    3. Create checkout session with selected plan
+    4. Return checkout URL for frontend redirect
+    
+    Returns:
+        CheckoutResponse with Stripe checkout URL
+    
+    Raises:
+        400: Invalid plan, account is sponsored, or missing Stripe config
+        500: Stripe API error
+    """
+    # Validate Stripe config
+    is_valid, missing = validate_stripe_config()
+    if not is_valid:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "stripe_config_missing",
+                "message": f"Stripe is not configured. Missing: {', '.join(missing)}"
+            }
+        )
+    
+    if not stripe:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "stripe_not_installed",
+                "message": "Stripe SDK not installed"
+            }
+        )
+    
+    # Get price ID for requested plan
+    price_id = get_stripe_price_for_plan(body.plan_slug)
+    if not price_id:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "plan_not_configured",
+                "message": f"Plan '{body.plan_slug}' is not configured in Stripe"
+            }
+        )
+    
     with db_conn() as (conn, cur):
         set_rls(cur, account_id)
-        cur.execute("SELECT name, email FROM (SELECT a.name, u.email FROM accounts a LEFT JOIN users u ON u.account_id=a.id WHERE a.id=%s LIMIT 1) t", (account_id,))
-        row = fetchone_dict(cur) or {"name": "Market Reports Customer", "email": None}
+        
+        # Load account details
+        cur.execute("""
+            SELECT 
+                id::text,
+                name,
+                account_type,
+                plan_slug,
+                sponsor_account_id::text,
+                stripe_customer_id
+            FROM accounts
+            WHERE id = %s::uuid
+        """, (account_id,))
+        
+        acc_row = cur.fetchone()
+        if not acc_row:
+            raise HTTPException(status_code=404, detail="Account not found")
+        
+        acc_id, acc_name, acc_type, current_plan, sponsor_id, stripe_customer_id = acc_row
+        
+        # Validate account can upgrade
+        if acc_type != 'REGULAR':
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "invalid_account_type",
+                    "message": f"Only REGULAR accounts can upgrade via Stripe. Your account type: {acc_type}"
+                }
+            )
+        
+        if sponsor_id:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "sponsored_account",
+                    "message": "Sponsored accounts cannot self-upgrade. Contact your affiliate for plan changes."
+                }
+            )
+        
+        # Get user email for Stripe customer
+        cur.execute("""
+            SELECT email
+            FROM users
+            WHERE account_id = %s::uuid
+            LIMIT 1
+        """, (account_id,))
+        
+        user_row = cur.fetchone()
+        if not user_row:
+            raise HTTPException(
+                status_code=400,
+                detail="No user found for this account"
+            )
+        
+        user_email = user_row[0]
+        
+        # Ensure Stripe customer exists
+        if not stripe_customer_id:
+            try:
+                # Create Stripe customer
+                customer = stripe.Customer.create(
+                    email=user_email,
+                    metadata={
+                        "account_id": acc_id,
+                        "account_name": acc_name,
+                    }
+                )
+                stripe_customer_id = customer.id
+                
+                # Save customer ID
+                cur.execute("""
+                    UPDATE accounts
+                    SET stripe_customer_id = %s
+                    WHERE id = %s::uuid
+                """, (stripe_customer_id, account_id))
+                
+                conn.commit()
+                
+            except stripe.error.StripeError as e:
+                raise HTTPException(
+                    status_code=500,
+                    detail={
+                        "error": "stripe_customer_creation_failed",
+                        "message": str(e)
+                    }
+                )
+        
+        # Create Checkout Session
+        try:
+            session = stripe.checkout.Session.create(
+                mode="subscription",
+                customer=stripe_customer_id,
+                line_items=[{
+                    "price": price_id,
+                    "quantity": 1,
+                }],
+                success_url=f"{WEB_BASE}/app/account/plan?checkout=success",
+                cancel_url=f"{WEB_BASE}/app/account/plan?checkout=cancel",
+                metadata={
+                    "account_id": acc_id,
+                    "plan_slug": body.plan_slug,
+                },
+                subscription_data={
+                    "metadata": {
+                        "account_id": acc_id,
+                        "plan_slug": body.plan_slug,
+                    }
+                }
+            )
+            
+            return {"url": session.url}
+            
+        except stripe.error.StripeError as e:
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": "checkout_session_failed",
+                    "message": str(e)
+                }
+            )
 
-    # load account stripe IDs
-    customer_id = None
-    with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT stripe_customer_id FROM accounts WHERE id=%s", (account_id,))
-            r = cur.fetchone()
-            customer_id = r[0] if r and r[0] else None
 
-    if not customer_id:
-        customer = stripe.Customer.create(name=row.get("name") or "Market Reports Customer", metadata={"account_id": account_id})
-        customer_id = customer["id"]
-        with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
-            with conn.cursor() as cur:
-                cur.execute("UPDATE accounts SET stripe_customer_id=%s WHERE id=%s", (customer_id, account_id))
-
-    session = stripe.checkout.Session.create(
-        mode="subscription",
-        customer=customer_id,
-        line_items=[{"price": price, "quantity": 1}],
-        success_url=f"{APP_BASE}/app/billing?status=success",
-        cancel_url=f"{APP_BASE}/app/billing?status=cancel",
-        allow_promotion_codes=True,
-        automatic_tax={"enabled": False},
-        metadata={"account_id": account_id, "plan": plan},
-    )
-    return {"url": session["url"]}
-
-@router.get("/billing/portal")
-def billing_portal(request: Request, account_id: str = Depends(require_account_id)):
-    # Set Stripe API key at runtime
-    stripe.api_key = settings.STRIPE_SECRET_KEY
+@router.get("/portal", response_model=PortalResponse)
+def create_portal_session(
+    request: Request,
+    account_id: str = Depends(require_account_id)
+):
+    """
+    Create a Stripe Customer Portal Session.
     
-    # find customer
-    with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT stripe_customer_id FROM accounts WHERE id=%s", (account_id,))
-            r = cur.fetchone()
-            if not r or not r[0]:
-                raise HTTPException(status_code=400, detail="No Stripe customer for account")
-            customer_id = r[0]
-
-    portal = stripe.billing_portal.Session.create(
-        customer=customer_id,
-        return_url=f"{APP_BASE}/app/billing"
-    )
-    return {"url": portal["url"]}
-
+    Phase 29D: Allows users with active subscriptions to manage billing.
+    
+    Flow:
+    1. Verify account has Stripe customer ID
+    2. Create portal session
+    3. Return portal URL for frontend redirect
+    
+    Returns:
+        PortalResponse with Stripe portal URL
+    
+    Raises:
+        400: No Stripe customer for this account
+        500: Stripe API error or missing config
+    """
+    # Validate Stripe config
+    is_valid, missing = validate_stripe_config()
+    if not is_valid:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "stripe_config_missing",
+                "message": f"Stripe is not configured. Missing: {', '.join(missing)}"
+            }
+        )
+    
+    if not stripe:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "stripe_not_installed",
+                "message": "Stripe SDK not installed"
+            }
+        )
+    
+    with db_conn() as (conn, cur):
+        set_rls(cur, account_id)
+        
+        # Load stripe_customer_id
+        cur.execute("""
+            SELECT stripe_customer_id
+            FROM accounts
+            WHERE id = %s::uuid
+        """, (account_id,))
+        
+        acc_row = cur.fetchone()
+        if not acc_row:
+            raise HTTPException(status_code=404, detail="Account not found")
+        
+        stripe_customer_id = acc_row[0]
+        
+        if not stripe_customer_id:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "no_stripe_customer",
+                    "message": "No Stripe customer associated with this account. You must complete checkout first."
+                }
+            )
+        
+        # Create portal session
+        try:
+            portal_session = stripe.billing_portal.Session.create(
+                customer=stripe_customer_id,
+                return_url=f"{WEB_BASE}/app/account/plan",
+            )
+            
+            return {"url": portal_session.url}
+            
+        except stripe.error.StripeError as e:
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": "portal_session_failed",
+                    "message": str(e)
+                }
+            )
