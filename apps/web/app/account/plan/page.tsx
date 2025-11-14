@@ -1,5 +1,6 @@
-import { cookies } from 'next/headers';
-import { Suspense } from 'react';
+'use client';
+
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -7,8 +8,6 @@ import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle2, TrendingUp, Building2, Calendar } from 'lucide-react';
 import { StripeBillingActions } from '@/components/stripe-billing-actions';
 import { CheckoutStatusBanner } from '@/components/checkout-status-banner';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://reportscompany.onrender.com';
 
 interface PlanUsageData {
   account: {
@@ -39,37 +38,6 @@ interface PlanUsageData {
   };
 }
 
-async function getPlanUsage(): Promise<PlanUsageData | { error: string }> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('mr_token')?.value;
-
-  if (!token) {
-    return { error: 'Not authenticated' };
-  }
-
-  try {
-    // Call the API directly from server component
-    const apiBase = API_BASE || 'https://reportscompany.onrender.com';
-    const response = await fetch(`${apiBase}/v1/account/plan-usage`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Plan usage fetch failed: ${response.status} ${response.statusText}`, errorText);
-      return { error: 'Failed to load plan information' };
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Failed to fetch plan usage:', error);
-    return { error: 'Failed to load plan information' };
-  }
-}
 
 function getProgressColor(decision: string): string {
   switch (decision) {
@@ -89,11 +57,38 @@ function formatDate(dateString: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export default async function PlanPage() {
-  const data = await getPlanUsage();
+export default function PlanPage() {
+  const [data, setData] = useState<PlanUsageData | { error: string } | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Handle errors
-  if ('error' in data) {
+  useEffect(() => {
+    async function fetchPlanUsage() {
+      try {
+        const response = await fetch('/api/proxy/v1/account/plan-usage', {
+          credentials: 'include',
+          cache: 'no-store',
+        });
+
+        if (!response.ok) {
+          setData({ error: 'Failed to load plan information' });
+          return;
+        }
+
+        const result = await response.json();
+        setData(result);
+      } catch (error) {
+        console.error('Failed to fetch plan usage:', error);
+        setData({ error: 'Failed to load plan information' });
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchPlanUsage();
+  }, []);
+
+  // Handle loading
+  if (loading) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -101,7 +96,23 @@ export default async function PlanPage() {
         </div>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-muted-foreground">{data.error}</p>
+            <p className="text-muted-foreground">Loading...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Handle errors
+  if (!data || 'error' in data) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold tracking-tight">Plan & Usage</h1>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-muted-foreground">{data?.error || 'Failed to load'}</p>
           </CardContent>
         </Card>
       </div>
@@ -115,9 +126,7 @@ export default async function PlanPage() {
   return (
     <div className="space-y-6">
       {/* Checkout Status Banner */}
-      <Suspense fallback={null}>
-        <CheckoutStatusBanner />
-      </Suspense>
+      <CheckoutStatusBanner />
 
       {/* Header */}
       <div className="flex items-center justify-between">
