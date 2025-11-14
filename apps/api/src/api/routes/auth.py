@@ -29,6 +29,12 @@ def login(body: LoginIn):
             if not pw_hash or not check_password(body.password, pw_hash):
                 raise HTTPException(status_code=401, detail="Invalid credentials")
 
+    # Debug: Log JWT_SECRET being used for signing
+    import logging
+    logger = logging.getLogger(__name__)
+    secret_preview = settings.JWT_SECRET[:10] + "..." if len(settings.JWT_SECRET) > 10 else settings.JWT_SECRET
+    logger.warning(f"🔑 Signing JWT with secret: {secret_preview} (len={len(settings.JWT_SECRET)})")
+    
     token = sign_jwt({
         "sub": user_id,
         "user_id": user_id,
