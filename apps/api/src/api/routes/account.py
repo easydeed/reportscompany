@@ -1,8 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field, constr
 from typing import Optional
 from ..db import db_conn, set_rls, fetchone_dict
 from .reports import require_account_id  # reuse temporary shim
+from ..services.accounts import (
+    get_user_accounts,
+    verify_user_account_access,
+    get_account_info
+)
 
 router = APIRouter(prefix="/v1")
 
@@ -72,4 +77,80 @@ def patch_branding(payload: BrandingPatch, request: Request, account_id: str = D
         """, (account_id,))
         row = fetchone_dict(cur)
         return row
+
+
+# Phase 29C: Multi-account support
+
+@router.get("/account/accounts")
+def list_user_accounts(request: Request, account_id: str = Depends(require_account_id)):
+    """
+    Phase 29C: List all accounts the current user belongs to.
+    
+    Returns list of accounts with user's role in each.
+    """
+    # Get current user from request.state (set by AuthContextMiddleware)
+    user = getattr(request.state, "user", None)
+    if not user or not user.get("id"):
+        raise HTTPException(status_code=401, detail="User ID not found in session")
+    
+    user_id = user["id"]
+    
+    with db_conn() as (conn, cur):
+        accounts = get_user_accounts(cur, user_id)
+        return {"accounts": accounts, "count": len(accounts)}
+
+
+@router.post("/account/use")
+def switch_account(
+    body: dict,
+    response: Response,
+    request: Request,
+    account_id: str = Depends(require_account_id)
+):
+    """
+    Phase 29C: Switch current account context.
+    
+    Body: { "account_id": "uuid" }
+    
+    Sets mr_account_id cookie to chosen account.
+    """
+    new_account_id = body.get("account_id")
+    if not new_account_id:
+        raise HTTPException(status_code=400, detail="account_id required")
+    
+    user = getattr(request.state, "user", None)
+    if not user or not user.get("id"):
+        raise HTTPException(status_code=401, detail="User ID not found in session")
+    
+    user_id = user["id"]
+    
+    with db_conn() as (conn, cur):
+        # Verify user has access to this account
+        if not verify_user_account_access(cur, user_id, new_account_id):
+            raise HTTPException(
+                status_code=403,
+                detail="You do not have access to this account"
+            )
+        
+        # Get account info
+        account = get_account_info(cur, new_account_id)
+        if not account:
+            raise HTTPException(status_code=404, detail="Account not found")
+    
+    # Set cookie for account context
+    response.set_cookie(
+        key="mr_account_id",
+        value=new_account_id,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=30 * 24 * 60 * 60  # 30 days
+    )
+    
+    return {
+        "ok": True,
+        "current_account_id": new_account_id,
+        "account_type": account["account_type"],
+        "plan_slug": account["plan_slug"]
+    }
 
