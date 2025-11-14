@@ -56,6 +56,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
   // Add Affiliate Dashboard for affiliate accounts
   if (isAffiliate) {
     navigation.push({ name: "Affiliate Dashboard", href: "/app/affiliate", icon: Shield })
+    navigation.push({ name: "Affiliate Branding", href: "/app/affiliate/branding", icon: Palette })
   }
   
   // Add Admin link if user is admin
