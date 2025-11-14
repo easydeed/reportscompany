@@ -62,7 +62,9 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
             if cookie_token:
                 # Debug: Log JWT_SECRET length for diagnostics
                 secret_preview = settings.JWT_SECRET[:10] + "..." if len(settings.JWT_SECRET) > 10 else settings.JWT_SECRET
+                token_preview = cookie_token[:30] + "..." if len(cookie_token) > 30 else cookie_token
                 logger.warning(f"🔍 Verifying JWT cookie with secret: {secret_preview} (len={len(settings.JWT_SECRET)})")
+                logger.warning(f"🍪 Cookie token: {token_preview} (len={len(cookie_token)}, segments={cookie_token.count('.')+1})")
                 
                 claims = verify_jwt(cookie_token, settings.JWT_SECRET)
                 if claims and claims.get("account_id"):
