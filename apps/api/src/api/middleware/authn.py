@@ -60,12 +60,20 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
         if not acct:
             cookie_token = request.cookies.get("mr_token")
             if cookie_token:
+                # Debug: Log JWT_SECRET length for diagnostics
+                secret_preview = settings.JWT_SECRET[:10] + "..." if len(settings.JWT_SECRET) > 10 else settings.JWT_SECRET
+                logger.info(f"Verifying JWT cookie with secret: {secret_preview} (len={len(settings.JWT_SECRET)})")
+                
                 claims = verify_jwt(cookie_token, settings.JWT_SECRET)
                 if claims and claims.get("account_id"):
                     acct = claims["account_id"]
-                    logger.info(f"Auth via mr_token cookie for {path}")
+                    logger.info(f"✅ Auth via mr_token cookie for {path}")
                 else:
-                    logger.warning(f"JWT verification failed for mr_token cookie on {path}")
+                    logger.warning(f"❌ JWT verification failed for mr_token cookie on {path}")
+                    # Try with default secret as fallback
+                    claims_default = verify_jwt(cookie_token, "dev-secret")
+                    if claims_default:
+                        logger.warning(f"⚠️ JWT verified with dev-secret fallback! Env var not set?")
 
         # 3) Temporary demo header
         if not acct:
