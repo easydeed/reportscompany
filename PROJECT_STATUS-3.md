@@ -301,3 +301,642 @@ After extensive debugging session:
 **Status:** 🟢 Production Ready  
 **Next Review:** After full test suite execution
 
+---
+
+# 🎯 NEXT PHASES: Testing Stack + Auth Contract + White-Label Branding
+
+**Added:** November 14, 2025  
+**Purpose:** Comprehensive specification for automated testing, auth documentation, and affiliate white-label branding
+
+---
+
+## 🌐 GLOBAL CONSTRAINTS (APPLY TO ALL PHASES)
+
+### **Cursor – Read This First**
+
+1. **Do not change business logic unless explicitly instructed:**
+   - Auth flows, plan limits, affiliate relationships, invite flows, Stripe logic, templates are assumed correct and deployed
+
+2. **Do not commit secrets:**
+   - API keys, DB URLs, Stripe keys, passwords must use environment variables or local `.env` files (ignored by Git)
+
+3. **Do not touch CORS, Render/Vercel env, or monorepo structure** unless spec says so
+
+4. **All new code must:**
+   - Live under appropriate app (`apps/api`, `apps/worker`, `apps/web`)
+   - Be covered by tests where specified
+   - Be wired into CI workflows for automatic testing
+
+---
+
+## PHASE T – TESTING STACK (BACKEND, FRONTEND, E2E, CI)
+
+**Goal:** Fully automated tests that run in CI to detect regressions without manual clicking
+
+### T1 – Backend Tests (pytest)
+
+#### **T1.1 – Add pytest config & deps**
+
+**Location:** Backend environment (covering `apps/api` and `apps/worker`)
+
+**Tasks:**
+1. Add dev dependencies:
+   - `pytest`
+   - `pytest-asyncio`
+   - `httpx` (for ASGI TestClient)
+
+2. Create `pytest.ini` at repo root:
+```ini
+[pytest]
+asyncio_mode = auto
+python_files = test_*.py
+```
+
+3. Ensure `PYTHONPATH` or `conftest.py` allows importing from `apps/api/src` and `apps/worker/src`
+
+#### **T1.2 – Plan & limits tests**
+
+**File:** `apps/api/tests/test_plans_limits.py`
+
+**Import functions from Phase 29A/B:**
+- `resolve_plan_for_account`
+- `get_monthly_usage`
+- `evaluate_report_limit`
+
+**Test fixtures:**
+- Free plan: limit 50, `allow_overage=False`
+- Pro plan: limit 300, `allow_overage=True`
+
+**Tests:**
+- `test_resolve_plan_free_default_limit`
+- `test_resolve_plan_with_override`
+- `test_evaluate_report_limit_allow` (usage < 80%)
+- `test_evaluate_report_limit_warn` (80% ≤ usage < 100%)
+- `test_evaluate_report_limit_block` (usage ≥ 100%)
+
+#### **T1.3 – Invite flow tests**
+
+**File:** `apps/api/tests/test_accept_invite.py`
+
+**Use:** FastAPI `TestClient` for `POST /v1/auth/accept-invite`
+
+**Seed data:**
+- Users row without password
+- Accounts row
+- `signup_tokens` row with valid token, future `expires_at`, null `used_at`
+
+**Tests:**
+- `test_accept_invite_success`:
+  - POST valid `{ token, password }`
+  - Assert: 200 OK, `signup_tokens.used_at` set, user password hash updated
+- `test_accept_invite_invalid_token` (no matching row)
+- `test_accept_invite_expired_token` (`expires_at < now`)
+- `test_accept_invite_token_reuse` (`used_at` already set)
+
+#### **T1.4 – Affiliate branding helper tests**
+
+**File:** `apps/api/tests/test_affiliate_branding.py`
+
+**Import:** `get_brand_for_account(db, account_id)` (to be implemented in Phase W1)
+
+**Seed data:**
+- REGULAR account with no sponsor
+- INDUSTRY_AFFILIATE account with `affiliate_branding` row
+- REGULAR account with `sponsor_account_id` pointing to affiliate
+
+**Tests:**
+- `test_regular_without_sponsor_uses_trendy_fallback`
+- `test_affiliate_uses_own_branding`
+- `test_sponsored_regular_uses_affiliate_brand`
+
+---
+
+### T2 – Frontend Unit Tests (Jest + React Testing Library)
+
+#### **T2.1 – Jest setup**
+
+**Location:** `apps/web`
+
+**Tasks:**
+1. Add dev dependencies:
+```json
+"jest", "ts-jest", "@types/jest", 
+"@testing-library/react", "@testing-library/jest-dom"
+```
+
+2. Create `apps/web/jest.config.ts`:
+```typescript
+import type { Config } from "jest";
+
+const config: Config = {
+  testEnvironment: "jsdom",
+  preset: "ts-jest",
+  roots: ["<rootDir>/__tests__"],
+  moduleNameMapper: {
+    "^@/(.*)$": "<rootDir>/$1",
+  },
+  setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
+};
+
+export default config;
+```
+
+3. Create `apps/web/jest.setup.ts`:
+```typescript
+import "@testing-library/jest-dom";
+```
+
+4. Add script to `apps/web/package.json`:
+```json
+"scripts": {
+  "test": "jest"
+}
+```
+
+#### **T2.2 – UI component tests**
+
+**Directory:** `apps/web/__tests__/`
+
+**AccountSwitcher.test.tsx:**
+- Mock fetch for `/api/proxy/v1/account/accounts`
+- Case 1: Single account → only label shown, no dropdown
+- Case 2: Multiple accounts → dropdown appears, selecting calls `/api/proxy/v1/account/use`
+
+**PlanPage.test.tsx:**
+- Mock fetch for `/api/proxy/v1/account/plan-usage`:
+  - `plan_slug="free"`, usage < 80% → green meter, no warning
+  - `plan_slug="free"`, usage > 80% → yellow meter + warning
+  - `plan_slug="sponsored_free"` → shows "sponsored" badge, no Stripe buttons
+
+**AffiliatePage.test.tsx:**
+- Mock `/api/proxy/v1/affiliate/overview`
+- Assert summary cards and table render
+- Mock 403 → assert "not affiliate" message
+
+#### **T2.3 – Template mapping tests**
+
+**File:** `apps/web/__tests__/TemplatesMapping.test.ts`
+
+**Import:** Mapping functions from `apps/web/lib/templates.ts`
+
+**Provide fake data:**
+- `result_json` for each report type
+- `brand` for affiliate and fallback
+
+**For each builder, assert:**
+- HTML contains correct brand name
+- Contains expected metrics (e.g., "Median Price $850,000")
+- Contains CSS overrides for brand colors (e.g., `--pct-blue: #123456`)
+
+---
+
+### T3 – E2E Tests (Playwright) Against Staging
+
+#### **T3.1 – Install & configure Playwright**
+
+**Location:** Repo root (or `apps/web`)
+
+**Tasks:**
+1. Run `npx playwright install`
+2. Create `playwright.config.ts`:
+```typescript
+import { defineConfig } from "@playwright/test";
+
+export default defineConfig({
+  use: {
+    baseURL: process.env.E2E_BASE_URL || "https://reportscompany-web.vercel.app",
+    trace: "on-first-retry",
+    headless: true,
+  },
+  reporter: [["list"], ["html", { outputFolder: "playwright-report" }]],
+});
+```
+
+#### **T3.2 – E2E specs**
+
+**Directory:** `e2e/` (at repo root)
+
+**auth.spec.ts:**
+- Uses `E2E_REGULAR_EMAIL`, `E2E_REGULAR_PASSWORD` from env
+- Steps:
+  1. Go to `/login`
+  2. Fill login form
+  3. Assert redirect to `/app` and see "Dashboard" text
+
+**plan.spec.ts:**
+- Log in as REGULAR user
+- Go to `/account/plan`
+- Assert plan name, usage meter, and upgrade button present
+
+**affiliate.spec.ts:**
+- Log in as `E2E_AFFILIATE_EMAIL`
+- Go to `/app/affiliate`
+- Assert summary cards and table present
+
+**stripe.spec.ts:** (when Stripe fully ready)
+- As free user, go to `/account/plan`
+- Click "Upgrade to Pro"
+- Assert navigation to Stripe checkout (URL contains `checkout.stripe.com`)
+
+---
+
+### T4 – CI Workflows
+
+#### **T4.1 – Backend tests workflow**
+
+**File:** `.github/workflows/backend-tests.yml`
+
+```yaml
+name: Backend Tests
+on:
+  push:
+    paths:
+      - "apps/api/**"
+      - "apps/worker/**"
+      - ".github/workflows/backend-tests.yml"
+  pull_request:
+    paths:
+      - "apps/api/**"
+      - "apps/worker/**"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run API tests
+        run: pytest apps/api/tests
+      - name: Run Worker tests
+        run: pytest apps/worker/tests
+```
+
+#### **T4.2 – Frontend tests workflow**
+
+**File:** `.github/workflows/frontend-tests.yml`
+
+```yaml
+name: Frontend Tests
+on:
+  push:
+    paths:
+      - "apps/web/**"
+      - ".github/workflows/frontend-tests.yml"
+  pull_request:
+    paths:
+      - "apps/web/**"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install deps
+        run: pnpm install
+      - name: Run web tests
+        run: pnpm --filter web test
+```
+
+#### **T4.3 – E2E workflow**
+
+**File:** `.github/workflows/e2e.yml`
+
+```yaml
+name: E2E Tests
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install deps
+        run: pnpm install
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+      - name: Run E2E tests
+        env:
+          E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
+          E2E_REGULAR_EMAIL: ${{ secrets.E2E_REGULAR_EMAIL }}
+          E2E_REGULAR_PASSWORD: ${{ secrets.E2E_REGULAR_PASSWORD }}
+          E2E_AFFILIATE_EMAIL: ${{ secrets.E2E_AFFILIATE_EMAIL }}
+          E2E_AFFILIATE_PASSWORD: ${{ secrets.E2E_AFFILIATE_PASSWORD }}
+        run: npx playwright test
+```
+
+---
+
+## PHASE A – LOCK THE AUTH CONTRACT (DOCS + TESTS)
+
+**Goal:** Codify what we learned during Phase 29D debugging to prevent regressions
+
+### A1 – AUTH_ARCHITECTURE_V1.md
+
+**File:** `docs/AUTH_ARCHITECTURE_V1.md`
+
+**Content:**
+
+#### **Identity & Tokens**
+- `mr_token` is the **only** auth token used by the web app
+- It is a JWT issued by `/v1/auth/login` and stored as an **HttpOnly cookie**
+- Expires after 1 hour (login) or 7 days (invite acceptance)
+
+#### **Who Owns What**
+- **Backend (API)** is the only place that sets or validates `mr_token`
+- **Frontend never** writes/overwrites `document.cookie` for `mr_token`
+- **Proxy routes** (`apps/web/app/api/proxy/**`) simply forward cookies or translate to `Authorization: Bearer`
+
+#### **Authentication Flow**
+
+**Login:**
+```
+/login → POST /api/proxy/v1/auth/login 
+       → backend /v1/auth/login 
+       → Set-Cookie mr_token=<jwt>
+```
+
+**Authenticated Requests:**
+```
+Browser sends mr_token automatically
+→ Server-side or proxies read cookie
+→ Call API with cookie or Authorization: Bearer
+```
+
+**Invite:**
+```
+Affiliate → invite-agent → signup token created
+→ Invited user hits /welcome?token=...
+→ POST /v1/auth/accept-invite
+→ Sets password + mr_token cookie
+```
+
+#### **Verification**
+- API uses `set_rls` with:
+  - `app.current_account_id`
+  - `app.current_user_id`
+  - `app.current_user_role`
+- Functions like `get_brand_for_account`, `evaluate_report_limit` assume these are set by middleware
+
+### A2 – AUTH_TEST_CHECKLIST.md
+
+**File:** `docs/AUTH_TEST_CHECKLIST.md`
+
+**Content:** Short list of tests that must pass when auth changes:
+
+#### **Unit/Integration:**
+- `test_accept_invite_*` all green
+- `test_plans_limits_*` all green
+- `test_affiliate_branding_*` all green
+- `test_result_builders_*` all green
+
+#### **Web Unit:**
+- `AccountSwitcher.test.tsx`
+- `PlanPage.test.tsx`
+
+#### **E2E:**
+- `auth.spec.ts` – login to `/app` works
+- `plan.spec.ts` – `/account/plan` works after login
+- `affiliate.spec.ts` – `/app/affiliate` works for affiliate
+- (Optional) Invite E2E: invite → welcome → `/app`
+
+---
+
+## PHASE W – AFFILIATE WHITE-LABEL BRANDING (EMAILS + PDFs + UI)
+
+**Goal:** Affiliates look like the hero – their logo, colors, contact info. No obvious "TrendyReports" in client-facing surfaces
+
+### W1 – affiliate_branding Table & Helper
+
+#### **W1.1 – Create affiliate_branding table**
+
+**Migration:** `00xx_create_affiliate_branding.sql`
+
+```sql
+CREATE TABLE IF NOT EXISTS affiliate_branding (
+  account_id uuid PRIMARY KEY
+    REFERENCES accounts(id) ON DELETE CASCADE,
+  brand_display_name text NOT NULL,
+  logo_url text,
+  primary_color text,
+  accent_color text,
+  rep_photo_url text,
+  contact_line1 text,
+  contact_line2 text,
+  website_url text,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+```
+
+**Note:** This table is for accounts with `account_type='INDUSTRY_AFFILIATE'`
+
+#### **W1.2 – get_brand_for_account helper**
+
+**File:** `apps/api/src/api/services/branding.py`
+
+**Implementation:**
+
+```python
+from typing import TypedDict, Optional
+
+class Brand(TypedDict, total=False):
+    display_name: str
+    logo_url: Optional[str]
+    primary_color: Optional[str]
+    accent_color: Optional[str]
+    rep_photo_url: Optional[str]
+    contact_line1: Optional[str]
+    contact_line2: Optional[str]
+    website_url: Optional[str]
+
+DEFAULT_PRIMARY = "#7C3AED"
+DEFAULT_ACCENT = "#F26B2B"
+
+def get_brand_for_account(db, account_id: str) -> Brand:
+    """
+    Returns branding for an account:
+    - REGULAR with sponsor → use sponsor's branding
+    - INDUSTRY_AFFILIATE → use own branding
+    - Otherwise → Trendy fallback
+    """
+    # Load accounts row
+    # If account_type='REGULAR' and sponsor_account_id present:
+    #   branding_account_id = sponsor_account_id
+    # Else:
+    #   branding_account_id = account_id
+    
+    # Try to load affiliate_branding for branding_account_id
+    # If found → return that
+    # If not:
+    #   If branding_account_id is affiliate/sponsor:
+    #     Use display_name = accounts.name, no logo, default colors
+    #   Else:
+    #     Return Trendy fallback:
+    #       display_name="TrendyReports"
+    #       primary_color=DEFAULT_PRIMARY
+    #       accent_color=DEFAULT_ACCENT
+```
+
+**Tests:** Covered in T1.4
+
+---
+
+### W2 – Branding API + UI for Affiliates
+
+#### **W2.1 – Branding routes**
+
+**File:** `apps/api/src/api/routes/affiliates.py`
+
+**Add endpoints:**
+- `GET /v1/affiliate/branding`
+- `POST /v1/affiliate/branding`
+
+**Guards:**
+- Ensure current account is `INDUSTRY_AFFILIATE` or return 403
+
+**GET:** Load from `affiliate_branding` or return fallback derived from account
+
+**POST:** Validate payload, upsert into `affiliate_branding`, return updated branding
+
+#### **W2.2 – Proxy route & UI**
+
+**File:** `apps/web/app/api/proxy/v1/affiliate/branding/route.ts`
+- Forward GET/POST to `/v1/affiliate/branding`
+
+**File:** `apps/web/app/affiliate/branding/page.tsx`
+- Load branding via proxy
+- Render form with:
+  - Display name
+  - Logo URL
+  - Primary/accent colors (color pickers)
+  - Rep photo URL
+  - Contact lines
+  - Website URL
+- Submit to proxy via POST
+- Show live preview card with logo, name, and colored header
+
+**Navigation:** Add "Branding" link under affiliate section (visible only when `account_type='INDUSTRY_AFFILIATE'`)
+
+---
+
+### W3 – Wire Brand into Emails
+
+#### **W3.1 – Update email templates**
+
+**File:** `apps/worker/src/email/templates.py`
+
+**Update:** `build_schedule_email_html` to accept `brand: Optional[Brand]`
+
+**Use brand in HTML:**
+- **Header:**
+  - If `brand.logo_url` → show logo
+  - Use `brand.display_name` as sender/heading (not "TrendyReports")
+- **Colors:**
+  - Use `brand.primary_color`/`brand.accent_color` for header bar/CTA
+- **Footer:**
+  - Show `contact_line1`, `contact_line2`, `website_url`
+  - Optional minimal "Powered by TrendyReports" in small muted font
+- **Fallback:** If brand is Trendy default, keep current look
+
+#### **W3.2 – Use brand in worker**
+
+**File:** `apps/worker/src/worker/tasks.py`
+
+**When schedule's report is created:**
+1. You have `account_id` (owner of schedule)
+2. Use DB connection to call `get_brand_for_account(db, account_id)`
+3. Pass `brand` to `build_schedule_email_html`
+
+**Note:** For REGULAR accounts with `sponsor_account_id`, this automatically picks sponsor brand
+
+---
+
+### W4 – Wire Brand into PDF Templates
+
+#### **W4.1 – Add brand to report data API**
+
+**File:** `apps/api/src/api/routes/reports.py`
+
+**In:** `GET /v1/reports/{id}/data` or `GET /v1/report-runs/{id}`
+
+**After loading report data:**
+1. Call `get_brand_for_account(db, account_id)`
+2. Add to response:
+```json
+{
+  "brand": { ...Brand... },
+  ...existing fields...
+}
+```
+
+**Note:** Additive change – do not alter existing fields
+
+#### **W4.2 – Use brand in templates.ts**
+
+**File:** `apps/web/lib/templates.ts`
+
+**Update all `buildXxxHtml(templateHtml, data)` functions:**
+1. Read `const brand = data.brand || {}`
+2. Derive: `brandName`, `logoUrl`, `primary`, `accent`
+3. Inject overrides:
+   - Add `<style>` block overriding CSS variables (`--pct-blue`, `--pct-accent`)
+   - Replace header placeholders: `{{brand_name}}`, `{{brand_logo_url}}`, `{{brand_tagline}}`
+
+**Update HTML templates** in `apps/web/templates/trendy-*.html`:
+- Use placeholders instead of hard-coded values:
+  - Header text: `{{brand_name}}`
+  - Logo: `src="{{brand_logo_url}}"` with graceful fallback
+  - Footer: `{{brand_tagline}}`
+
+#### **W4.3 – Keep /print/[runId] simple**
+
+**File:** `apps/web/app/print/[runId]/page.tsx`
+
+**Ensure it:**
+1. Fetches report data via proxy (including `brand`)
+2. Passes data to mapping function to get full HTML
+3. Renders that HTML as-is
+
+---
+
+## ✅ After These Phases Complete
+
+### **You'll Have:**
+
+1. **Full automated test stack:**
+   - Backend tests (pytest)
+   - Frontend tests (Jest + RTL)
+   - E2E tests (Playwright)
+   - CI workflows running on every push
+
+2. **Auth behavior documented and protected:**
+   - `docs/AUTH_ARCHITECTURE_V1.md` explains the contract
+   - `docs/AUTH_TEST_CHECKLIST.md` lists required tests
+   - Tests prevent "mr_token=undefined" saga from repeating
+
+3. **Affiliates with proper white-label branding:**
+   - Branding UI for affiliates to manage their appearance
+   - Brand fully applied to emails and PDFs
+   - Clients see affiliate as hero, not "TrendyReports"
+
+### **Implementation Notes:**
+
+- Give this entire spec to Cursor with: **"Execute the Testing + Auth Contract + White-Label spec exactly as described."**
+- Phases are labeled (T1, T2, T3, T4, A1, A2, W1, W2, W3, W4) for tracking
+- Each phase has clear deliverables and acceptance criteria
+- Minimal room for "tripping" – maximum automation
+
+---
+
+**Status:** 📋 READY TO IMPLEMENT  
+**Next Action:** Execute phases in order (T → A → W)
+
