@@ -6,8 +6,9 @@ Requires ADMIN role.
 from fastapi import APIRouter, HTTPException, Request, Query, Depends
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
-from ..db import db_conn
+from ..db import db_conn, set_rls
 from ..deps.admin import get_admin_user
+from ..services import get_monthly_usage, resolve_plan_for_account, evaluate_report_limit
 
 router = APIRouter(prefix="/v1/admin", tags=["admin"])
 
@@ -404,5 +405,85 @@ def update_admin_schedule(
             "message": f"Schedule {'activated' if active else 'paused'}",
             "schedule_id": schedule_id,
             "active": active
+        }
+
+
+# ==================== Plan & Usage (Phase 29B) ====================
+
+@router.get("/accounts/{account_id}/plan-usage")
+def get_account_plan_usage(
+    account_id: str,
+    _admin: dict = Depends(get_admin_user)
+):
+    """
+    Get detailed plan and usage information for a specific account.
+    
+    Phase 29B: Admin-only endpoint for debugging plan limits and usage.
+    
+    Args:
+        account_id: Account UUID
+    
+    Returns:
+        - account_id: Account UUID
+        - account_type: REGULAR or INDUSTRY_AFFILIATE
+        - plan: Plan details (name, slug, limit, overage settings)
+        - usage: Current month usage (report count, schedule run count)
+        - decision: Current limit decision (ALLOW, ALLOW_WITH_WARNING, BLOCK)
+        - info: Additional decision info (ratio, message, etc.)
+    """
+    
+    with db_conn() as conn:
+        cur = conn.cursor()
+        
+        # Get basic account info
+        cur.execute("""
+            SELECT 
+                id::text,
+                name,
+                slug,
+                account_type,
+                plan_slug,
+                monthly_report_limit_override,
+                sponsor_account_id::text,
+                created_at
+            FROM accounts
+            WHERE id = %s::uuid
+        """, (account_id,))
+        
+        account_row = cur.fetchone()
+        if not account_row:
+            raise HTTPException(status_code=404, detail="Account not found")
+        
+        account_info = {
+            "id": account_row[0],
+            "name": account_row[1],
+            "slug": account_row[2],
+            "account_type": account_row[3],
+            "plan_slug": account_row[4],
+            "monthly_report_limit_override": account_row[5],
+            "sponsor_account_id": account_row[6],
+            "created_at": account_row[7].isoformat() if account_row[7] else None,
+        }
+        
+        # Get plan details
+        plan = resolve_plan_for_account(cur, account_id)
+        
+        # Get current usage
+        usage = get_monthly_usage(cur, account_id)
+        
+        # Evaluate current limit decision
+        decision, info = evaluate_report_limit(cur, account_id)
+        
+        return {
+            "account": account_info,
+            "plan": plan,
+            "usage": usage,
+            "decision": decision.value,
+            "info": {
+                "ratio": info.get("ratio", 0),
+                "message": info.get("message", ""),
+                "can_proceed": info.get("can_proceed", True),
+                "overage_count": info.get("overage_count", 0),
+            }
         }
 

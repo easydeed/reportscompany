@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Query, status, Response
 from pydantic import BaseModel, Field, constr
 from typing import List, Optional, Dict, Any
 import json
 from ..db import db_conn, set_rls, fetchone_dict, fetchall_dicts
+from ..services import evaluate_report_limit, log_limit_decision, LimitDecision
 
 router = APIRouter(prefix="/v1")
 
@@ -42,7 +43,18 @@ def require_account_id(request: Request) -> str:
 
 # ====== Routes ======
 @router.post("/reports", status_code=status.HTTP_202_ACCEPTED)
-def create_report(payload: ReportCreate, request: Request, account_id: str = Depends(require_account_id)):
+def create_report(
+    payload: ReportCreate, 
+    response: Response,
+    request: Request, 
+    account_id: str = Depends(require_account_id)
+):
+    """
+    Create a new report generation request.
+    
+    Enforces monthly report limits based on account's plan.
+    Returns 429 if limit exceeded (for non-overage plans).
+    """
     params = {
         "city": payload.city,
         "zips": payload.zips,
@@ -54,6 +66,28 @@ def create_report(payload: ReportCreate, request: Request, account_id: str = Dep
 
     with db_conn() as (conn, cur):
         set_rls(cur, account_id)
+        
+        # ===== PHASE 29B: CHECK USAGE LIMITS =====
+        decision, info = evaluate_report_limit(cur, account_id)
+        log_limit_decision(account_id, decision, info)
+        
+        # Block if limit reached and no overage allowed
+        if decision == LimitDecision.BLOCK:
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "error": "limit_reached",
+                    "message": info["message"],
+                    "usage": info["usage"],
+                    "plan": info["plan"],
+                }
+            )
+        
+        # Add warning header if approaching/over limit
+        if decision == LimitDecision.ALLOW_WITH_WARNING:
+            response.headers["X-TrendyReports-Usage-Warning"] = info["message"]
+        # ===== END PHASE 29B =====
+        
         cur.execute(
             """
             INSERT INTO report_generations
