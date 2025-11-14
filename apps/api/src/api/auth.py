@@ -16,9 +16,12 @@ def sign_jwt(payload: dict, secret: str, ttl_seconds: int = 3600) -> str:
     return jwt.encode(payload, secret, algorithm=JWT_ALG)
 
 def verify_jwt(token: str, secret: str) -> Optional[dict]:
+    import logging
+    logger = logging.getLogger(__name__)
     try:
         return jwt.decode(token, secret, algorithms=[JWT_ALG])
-    except Exception:
+    except Exception as e:
+        logger.error(f"🔥 JWT verification exception: {type(e).__name__}: {str(e)}")
         return None
 
 def new_api_key(prefix: str = "mr_live_") -> Tuple[str, str, str]:
