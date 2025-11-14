@@ -24,3 +24,9 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
+# Diagnostic logging for JWT_SECRET
+import logging
+logger = logging.getLogger(__name__)
+jwt_secret_preview = settings.JWT_SECRET[:10] + "..." if len(settings.JWT_SECRET) > 10 else settings.JWT_SECRET
+logger.info(f"Settings loaded: JWT_SECRET = {jwt_secret_preview} (length: {len(settings.JWT_SECRET)})")
+
