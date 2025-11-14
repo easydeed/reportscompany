@@ -15,8 +15,8 @@ class LoginOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
-@router.post("/auth/login", response_model=LoginOut)
-def login(body: LoginIn):
+@router.post("/auth/login")
+def login(body: LoginIn, response: Response):
     with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -41,6 +41,17 @@ def login(body: LoginIn):
         "account_id": account_id,
         "scopes": ["reports:read", "reports:write"]
     }, settings.JWT_SECRET, ttl_seconds=3600)
+    
+    # Set HTTP-only cookie
+    response.set_cookie(
+        key="mr_token",
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=3600
+    )
+    
     return {"access_token": token}
 
 # Optional seed endpoint for dev (remove/guard in prod)
