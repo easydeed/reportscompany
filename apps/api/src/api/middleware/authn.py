@@ -28,8 +28,9 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         acct: Optional[str] = None
+        claims = None  # Track JWT claims for later use
 
-        # 1) JWT
+        # 1) Try Authorization header first (Bearer token or API key)
         auth = request.headers.get("Authorization", "")
         if auth.startswith("Bearer "):
             token = auth.split(" ", 1)[1].strip()
@@ -37,14 +38,12 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
             claims = verify_jwt(token, settings.JWT_SECRET)
             if claims and claims.get("account_id"):
                 acct = claims["account_id"]
+                logger.info(f"Auth via Authorization header (JWT) for {path}")
             else:
-                # JWT decode failed or missing account_id
+                # JWT decode failed, try API key
                 if not claims:
-                    logger.warning(f"JWT verification failed for {path}")
-                elif not claims.get("account_id"):
-                    logger.warning(f"JWT missing account_id claim for {path}: {list(claims.keys())}")
+                    logger.info(f"JWT verification failed for Authorization header on {path}, trying API key")
                 
-                # Try API key
                 key_hash = hash_api_key(token)
                 with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
                     with conn.cursor() as cur:
@@ -55,6 +54,18 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
                         row = cur.fetchone()
                         if row:
                             acct = row[0]
+                            logger.info(f"Auth via Authorization header (API key) for {path}")
+
+        # 2) Cookie fallback (mr_token)
+        if not acct:
+            cookie_token = request.cookies.get("mr_token")
+            if cookie_token:
+                claims = verify_jwt(cookie_token, settings.JWT_SECRET)
+                if claims and claims.get("account_id"):
+                    acct = claims["account_id"]
+                    logger.info(f"Auth via mr_token cookie for {path}")
+                else:
+                    logger.warning(f"JWT verification failed for mr_token cookie on {path}")
 
         # 3) Temporary demo header
         if not acct:

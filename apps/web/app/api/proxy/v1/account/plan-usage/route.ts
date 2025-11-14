@@ -3,27 +3,24 @@ import { NextRequest, NextResponse } from 'next/server';
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://reportscompany.onrender.com';
 
 export async function GET(request: NextRequest) {
-  const token = request.cookies.get('mr_token')?.value;
-  
-  if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  
   try {
+    // Forward cookies directly to API (including mr_token)
+    const cookieHeader = request.headers.get('cookie') || '';
+    
     const response = await fetch(`${API_BASE}/v1/account/plan-usage`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        cookie: cookieHeader,
       },
       cache: 'no-store',
     });
     
-    // Mirror backend response status, even for errors
+    // Mirror backend response status and body
     const contentType = response.headers.get('content-type');
     if (contentType?.includes('application/json')) {
       const data = await response.json();
       return NextResponse.json(data, { status: response.status });
     } else {
-      // Non-JSON response (shouldn't happen, but handle it)
+      // Non-JSON response
       const text = await response.text();
       console.error(`[API Proxy] Non-JSON response (${response.status}):`, text);
       return NextResponse.json(
