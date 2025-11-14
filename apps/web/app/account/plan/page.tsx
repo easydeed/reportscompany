@@ -8,7 +8,7 @@ import { AlertCircle, CheckCircle2, TrendingUp, Building2, Calendar } from 'luci
 import { StripeBillingActions } from '@/components/stripe-billing-actions';
 import { CheckoutStatusBanner } from '@/components/checkout-status-banner';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://reportscompany.onrender.com';
 
 interface PlanUsageData {
   account: {
