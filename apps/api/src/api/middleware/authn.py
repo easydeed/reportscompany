@@ -2,9 +2,12 @@ from fastapi import Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from typing import Optional
 import redis, time
+import logging
 from ..settings import settings
 from ..auth import verify_jwt, hash_api_key
 import psycopg
+
+logger = logging.getLogger(__name__)
 
 class AuthContextMiddleware(BaseHTTPMiddleware):
     """
@@ -35,6 +38,12 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
             if claims and claims.get("account_id"):
                 acct = claims["account_id"]
             else:
+                # JWT decode failed or missing account_id
+                if not claims:
+                    logger.warning(f"JWT verification failed for {path}")
+                elif not claims.get("account_id"):
+                    logger.warning(f"JWT missing account_id claim for {path}: {list(claims.keys())}")
+                
                 # Try API key
                 key_hash = hash_api_key(token)
                 with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:

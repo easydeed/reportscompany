@@ -29,7 +29,12 @@ def login(body: LoginIn):
             if not pw_hash or not check_password(body.password, pw_hash):
                 raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    token = sign_jwt({"sub": user_id, "account_id": account_id, "scopes": ["reports:read","reports:write"]}, settings.JWT_SECRET, ttl_seconds=3600)
+    token = sign_jwt({
+        "sub": user_id,
+        "user_id": user_id,
+        "account_id": account_id,
+        "scopes": ["reports:read", "reports:write"]
+    }, settings.JWT_SECRET, ttl_seconds=3600)
     return {"access_token": token}
 
 # Optional seed endpoint for dev (remove/guard in prod)
