@@ -48,14 +48,17 @@ async function getPlanUsage(): Promise<PlanUsageData | { error: string }> {
   }
 
   try {
-    const response = await fetch(`${API_BASE}/v1/account/plan-usage`, {
+    // Use the proxy route which handles authentication cookies properly
+    const baseUrl = process.env.NEXT_PUBLIC_WEB_BASE || 'https://reportscompany-web.vercel.app';
+    const response = await fetch(`${baseUrl}/api/proxy/v1/account/plan-usage`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Cookie': `mr_token=${token}`,
       },
       cache: 'no-store',
     });
 
     if (!response.ok) {
+      console.error(`Plan usage fetch failed: ${response.status} ${response.statusText}`);
       return { error: 'Failed to load plan information' };
     }
 
