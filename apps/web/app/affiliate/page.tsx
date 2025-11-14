@@ -64,6 +64,29 @@ async function getAffiliateData(): Promise<AffiliateData | { error: string }> {
   }
 }
 
+// Phase 29E: Fetch plan usage for affiliate's own account
+async function getPlanUsage() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('mr_token')?.value;
+
+  if (!token) return null;
+
+  try {
+    const response = await fetch(`${API_BASE}/v1/account/plan-usage`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      cache: 'no-store',
+    });
+
+    if (!response.ok) return null;
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to fetch plan usage:', error);
+    return null;
+  }
+}
+
 function formatDate(dateString: string | null): string {
   if (!dateString) return '—';
   
@@ -81,6 +104,7 @@ function formatDate(dateString: string | null): string {
 
 export default async function AffiliateDashboardPage() {
   const data = await getAffiliateData();
+  const planUsage = await getPlanUsage(); // Phase 29E
 
   // Handle errors
   if ('error' in data) {
@@ -123,6 +147,22 @@ export default async function AffiliateDashboardPage() {
         </div>
         <InviteAgentModal />
       </div>
+
+      {/* Phase 29E: Affiliate Plan Card */}
+      {planUsage && (
+        <Card className="mb-4">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Your Affiliate Plan</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{planUsage.plan.plan_name}</div>
+            <p className="text-xs text-muted-foreground">
+              {planUsage.usage.report_count} / {planUsage.account.monthly_report_limit_override ?? planUsage.plan.monthly_report_limit} reports this month
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Overview Cards */}
       <div className="grid gap-4 md:grid-cols-2">

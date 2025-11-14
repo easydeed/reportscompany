@@ -72,8 +72,6 @@ function WelcomeContent() {
     setErrors({ password: '', confirmPassword: '' });
 
     try {
-      // TODO: This endpoint needs to be implemented in the backend
-      // For now, this is a placeholder that will return 404
       const response = await fetch('/api/proxy/v1/auth/accept-invite', {
         method: 'POST',
         headers: {
@@ -88,15 +86,13 @@ function WelcomeContent() {
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         
-        if (response.status === 404) {
-          throw new Error('Accept invite endpoint not yet implemented. Please contact support.');
-        }
-        
-        if (response.status === 400 || response.status === 410) {
-          throw new Error('This invitation link is invalid or has expired.');
+        if (response.status === 400) {
+          // Handle specific error messages from backend
+          const message = data.detail?.message || data.message || 'This invitation link is invalid or has expired.';
+          throw new Error(message);
         }
 
-        throw new Error(data.detail || data.error || 'Failed to activate account');
+        throw new Error(data.detail?.message || data.message || 'Failed to activate account');
       }
 
       // Success! Show success message

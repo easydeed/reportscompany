@@ -141,6 +141,9 @@ function DashboardTopbar() {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
+            <Link href="/app/account/plan">Plan & Usage</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
             <Link href="/app/branding">Branding</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
