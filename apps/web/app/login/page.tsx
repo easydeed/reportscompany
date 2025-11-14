@@ -24,6 +24,7 @@ function LoginForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
+        credentials: "include", // Allow browser to accept Set-Cookie from backend
       });
 
       if (!res.ok) {
@@ -31,10 +32,8 @@ function LoginForm() {
         throw new Error(data.detail || "Login failed");
       }
 
-      const data = await res.json();
-      
-      // Set token cookie
-      document.cookie = `mr_token=${data.token}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 days
+      // Backend sets mr_token cookie via Set-Cookie header
+      // No need to manually set cookie here
       
       // Redirect to next path or dashboard
       router.push(nextPath);
