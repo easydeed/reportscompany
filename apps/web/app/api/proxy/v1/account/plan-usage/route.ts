@@ -17,12 +17,24 @@ export async function GET(request: NextRequest) {
       cache: 'no-store',
     });
     
-    const data = await response.json();
-    return NextResponse.json(data, { status: response.status });
+    // Mirror backend response status, even for errors
+    const contentType = response.headers.get('content-type');
+    if (contentType?.includes('application/json')) {
+      const data = await response.json();
+      return NextResponse.json(data, { status: response.status });
+    } else {
+      // Non-JSON response (shouldn't happen, but handle it)
+      const text = await response.text();
+      console.error(`[API Proxy] Non-JSON response (${response.status}):`, text);
+      return NextResponse.json(
+        { error: `Backend returned ${response.status}` },
+        { status: response.status }
+      );
+    }
   } catch (error) {
-    console.error('[API Proxy] Failed to fetch plan usage:', error);
+    console.error('[API Proxy] Network error fetching plan usage:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch plan usage' },
+      { error: 'Network error contacting API' },
       { status: 500 }
     );
   }
