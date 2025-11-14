@@ -19,12 +19,12 @@ function LoginForm() {
     setLoading(true);
 
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_BASE;
-      const res = await fetch(`${apiBase}/v1/auth/login`, {
+      // Use proxy route to ensure Set-Cookie works (same-origin)
+      const res = await fetch("/api/proxy/v1/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
-        credentials: "include", // Allow browser to accept Set-Cookie from backend
+        credentials: "include", // Allow browser to accept Set-Cookie
       });
 
       if (!res.ok) {
