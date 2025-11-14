@@ -1,0 +1,22 @@
+name: Frontend Tests
+on:
+  push:
+    paths:
+      - "apps/web/**"
+      - ".github/workflows/frontend-tests.yml"
+  pull_request:
+    paths:
+      - "apps/web/**"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install deps
+        run: pnpm install
+      - name: Run web tests
+        run: pnpm --filter web test
+
