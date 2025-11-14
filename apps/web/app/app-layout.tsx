@@ -37,6 +37,7 @@ import {
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import NavAuth from "@/components/NavAuth"
+import { AccountSwitcher } from "@/components/account-switcher"
 
 const baseNavigation = [
   { name: "Overview", href: "/app", icon: LayoutDashboard },
@@ -46,13 +47,21 @@ const baseNavigation = [
   { name: "Billing", href: "/app/billing", icon: CreditCard },
 ]
 
-function DashboardSidebar({ isAdmin }: { isAdmin: boolean }) {
+function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffiliate: boolean }) {
   const pathname = usePathname()
   
+  // Build navigation based on user role
+  let navigation = [...baseNavigation]
+  
+  // Add Affiliate Dashboard for affiliate accounts
+  if (isAffiliate) {
+    navigation.push({ name: "Affiliate Dashboard", href: "/app/affiliate", icon: Shield })
+  }
+  
   // Add Admin link if user is admin
-  const navigation = isAdmin
-    ? [...baseNavigation, { name: "Admin", href: "/app/admin", icon: Shield }]
-    : baseNavigation
+  if (isAdmin) {
+    navigation.push({ name: "Admin", href: "/app/admin", icon: Shield })
+  }
 
   return (
     <Sidebar>
@@ -112,6 +121,7 @@ function DashboardTopbar() {
         </div>
       </div>
 
+      <AccountSwitcher />
       <NavAuth />
 
       <DropdownMenu>
@@ -147,16 +157,18 @@ function DashboardTopbar() {
 export default function AppLayoutClient({
   children,
   isAdmin,
+  isAffiliate = false,
 }: {
   children: React.ReactNode
   isAdmin: boolean
+  isAffiliate?: boolean
 }) {
   return (
     <div className="dark">
       <SidebarProvider>
         <Suspense fallback={<div>Loading...</div>}>
           <div className="flex min-h-screen w-full bg-background text-foreground">
-            <DashboardSidebar isAdmin={isAdmin} />
+            <DashboardSidebar isAdmin={isAdmin} isAffiliate={isAffiliate} />
             <SidebarInset className="flex flex-col">
               <DashboardTopbar />
               <main className="flex-1 p-6">{children}</main>
