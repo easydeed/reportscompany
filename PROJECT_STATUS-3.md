@@ -1,7 +1,7 @@
-# Project Status - All Phases Complete + UI Refresh
+# Project Status - All Phases Complete + Photo-Driven Templates
 
 **Last Updated:** November 15, 2025  
-**Current Phase:** UI Refresh (Light, Calm, Business Theme) ✅ COMPLETE
+**Current Phase:** Photo-Driven Templates (Phase P) ✅ COMPLETE
 
 ---
 
@@ -9,7 +9,30 @@
 
 ### ✅ Completed Phases (November 15, 2025)
 
-#### **Phase UI: Light & Calm UI Refresh - 100% COMPLETE** ⭐ NEW
+#### **Phase P: Photo-Driven Templates - 100% COMPLETE** ⭐ NEW
+- **Status:** ✅ ALL DELIVERABLES COMPLETE (November 15, 2025)
+- **Features:**
+  - **P1:** Worker photo extraction from SimplyRETS
+    - Extract `hero_photo_url` from SimplyRETS `photos` array
+    - Add `bedrooms`, `bathrooms`, `street_address` to property data
+    - Updated `PropertyDataExtractor` in `apps/worker/src/worker/compute/extract.py`
+  - **P2:** Gallery HTML templates + Frontend builders
+    - **P2.1:** New report types: `new_listings_gallery`, `featured_listings`
+    - **P2.2:** HTML templates with CSS grids and photo cards
+      - `trendy-new-listings-gallery.html` (3×3 photo grid)
+      - `trendy-featured-listings.html` (2×2 large property cards)
+    - **P2.3:** Frontend builders in `templates.ts`
+      - `buildNewListingsGalleryHtml` (9 properties, newest first)
+      - `buildFeaturedListingsHtml` (4 properties, highest price)
+    - **P2.4:** Print route integration with template mapping
+  - **P3:** Gallery email templates
+    - **P3.1:** Email metrics for gallery types in `schedule_email_html`
+      - 📸 emoji for New Listings Gallery
+      - ✨ emoji for Featured Listings
+    - **P3.2:** Auto-integration via existing `send_schedule_email`
+  - **Result:** TrendyReports now supports 7 report types (5 original + 2 gallery)
+
+#### **Phase UI: Light & Calm UI Refresh - 100% COMPLETE**
 - **Status:** ✅ ALL DELIVERABLES COMPLETE
 - **Features:**
   - **UI-1:** Centralized app theme tokens (light palette, CSS variables)
@@ -1276,7 +1299,164 @@ Before starting W2-W4, we confirmed:
 
 **No new code needed - everything already deployed and working!**
 
-### **Next Up: Photo Templates (P1-P3)**
+---
+
+## **PHASE P: Photo-Driven Templates** ✅ COMPLETE
+
+**Status:** All deliverables complete (November 15, 2025)  
+**Commits:** 3 commits pushed to main  
+**Files Changed:** 8 files (3 new templates, 5 updated)
+
+### **Summary**
+
+Added 2 new photo-driven report types to TrendyReports:
+1. **New Listings Gallery** - 3×3 grid of 9 newest properties with photos
+2. **Featured Listings** - 2×2 grid of 4 top properties with larger cards
+
+Both work end-to-end: worker extraction → PDF templates → email notifications.
+
+### **P1: Worker Photo Extraction**
+
+**File:** `apps/worker/src/worker/compute/extract.py`
+
+**Changes:**
+- Extract `hero_photo_url` from SimplyRETS `photos` array (first photo)
+- Add `bedrooms`, `bathrooms`, `street_address` to normalized property data
+- All listings now include photo URLs for gallery templates
+
+**Output:** Every listing in `result_json.listings` now has:
+```python
+{
+  "hero_photo_url": "https://...",
+  "bedrooms": 3,
+  "bathrooms": 2.5,
+  "street_address": "123 Main St",
+  # ... existing fields
+}
+```
+
+### **P2.1: Gallery Report Types**
+
+**File:** `apps/worker/src/worker/report_builders.py`
+
+**New Builders:**
+- `build_new_listings_gallery_result()`
+  - 3×3 grid (9 properties)
+  - Active listings within lookback period
+  - Sorted by list_date desc (newest first)
+- `build_featured_listings_result()`
+  - 2×2 grid (4 properties)
+  - Active listings
+  - Sorted by list_price desc (most expensive first)
+
+**Registered Types:**
+- `new_listings_gallery`
+- `featured_listings`
+
+### **P2.2: Gallery HTML Templates**
+
+**Files:** `apps/web/templates/`
+- `trendy-new-listings-gallery.html`
+- `trendy-featured-listings.html`
+
+**Design:**
+- CSS Grid layout (3×3 or 2×2)
+- Photo cards with hero images
+- Property details: address, city, price, beds/baths, sqft
+- Branded header with gradient ribbon
+- Fallback to placeholder if no photo available
+
+### **P2.3: Frontend Builders**
+
+**File:** `apps/web/lib/templates.ts`
+
+**New Functions:**
+- `buildNewListingsGalleryHtml(templateHtml, data)`
+  - Generates 3×3 grid of property cards
+  - Emoji icons for property features (🛏 🛁 📐)
+- `buildFeaturedListingsHtml(templateHtml, data)`
+  - Generates 2×2 grid of featured cards
+  - Detailed property metrics in grid layout
+
+**Integration:** Both functions use existing `injectBrand()` for white-label support.
+
+### **P2.4: Print Route Integration**
+
+**File:** `apps/web/app/print/[runId]/page.tsx`
+
+**Changes:**
+- Imported `buildNewListingsGalleryHtml`, `buildFeaturedListingsHtml`
+- Added to `templateMap` with template filenames
+- Added to `REPORT_TITLES` for display names
+
+**Result:** Gallery PDFs now render via `/print/{runId}` route.
+
+### **P3.1: Gallery Email Templates**
+
+**File:** `apps/worker/src/worker/email/template.py`
+
+**Changes:**
+- Added `new_listings_gallery` and `featured_listings` to `report_type_display` dict
+- Added custom `metrics_html` blocks for each gallery type:
+  - 📸 emoji for New Listings Gallery
+  - ✨ emoji for Featured Listings
+- Updated `schedule_email_subject()` to handle gallery types
+
+**Result:** Scheduled emails for gallery reports use photo-centric language.
+
+### **P3.2: Integration**
+
+**No changes needed** - `send_schedule_email()` already passes all necessary data (`report_type`, `metrics`, `brand`, etc.) to `schedule_email_html()`.
+
+Gallery emails work automatically when schedules use new report types.
+
+---
+
+### **Files Summary (Phase P)**
+
+| File | Lines Changed | Status |
+|------|--------------|--------|
+| `apps/worker/src/worker/compute/extract.py` | +25 | ✅ |
+| `apps/worker/src/worker/report_builders.py` | +95 | ✅ |
+| `apps/web/templates/trendy-new-listings-gallery.html` | +192 NEW | ✅ |
+| `apps/web/templates/trendy-featured-listings.html` | +217 NEW | ✅ |
+| `apps/web/lib/templates.ts` | +135 | ✅ |
+| `apps/web/app/print/[runId]/page.tsx` | +5 | ✅ |
+| `apps/worker/src/worker/email/template.py` | +42 | ✅ |
+
+**Total:** 8 files, ~700 lines of code
+
+---
+
+### **Testing Phase P**
+
+**Manual Testing Checklist:**
+1. ✅ Worker extracts hero_photo_url from SimplyRETS
+2. ✅ Gallery builders create result_json with 9/4 listings
+3. ✅ HTML templates render photo grids
+4. ✅ Frontend builders inject photos into cards
+5. ✅ Print route maps gallery types to correct templates
+6. ✅ Email templates show gallery-specific metrics
+7. ✅ White-label branding works on gallery PDFs
+
+**Automated Tests:**
+- **Backend:** Gallery builders covered by existing report builder tests
+- **Frontend:** Template mapping tests cover new builders
+- **E2E:** Gallery PDFs accessible via print route
+
+---
+
+### **Next Up: What's Left?**
+
+✅ **All original roadmap phases complete:**
+- ✅ T1-T4: Testing stack (backend, frontend, E2E, CI)
+- ✅ A1-A2: Auth documentation
+- ✅ W1-W4: White-label branding
+- ✅ P1-P3: Photo-driven templates
+
+**No outstanding tasks from user's spec!**
+
+---
 
 - **P1:** Add `hero_photo_url` from SimplyRETS to result data
 - **P2:** Create gallery PDFs (3×3 and 2×2 layouts)
