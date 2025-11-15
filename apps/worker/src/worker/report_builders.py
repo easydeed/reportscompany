@@ -434,12 +434,101 @@ def build_price_bands_result(listings: List[Dict], context: Dict) -> Dict:
 
 # ===== DISPATCHER =====
 
+# ===== PHASE P2: GALLERY TEMPLATES =====
+
+def build_new_listings_gallery_result(listings: List[Dict], context: Dict) -> Dict:
+    """
+    New Listings Gallery - 3×3 grid (9 properties) with hero photos
+    
+    Phase P2: Photo-first template for new listings.
+    Shows newest 9 active listings with images, address, price, beds/baths.
+    """
+    city = context.get("city", "Market")
+    lookback_days = context.get("lookback_days", 30)
+    
+    # Get new active listings
+    cutoff_date = datetime.now() - timedelta(days=lookback_days)
+    new_listings = [l for l in listings if l.get("status") == "Active" and l.get("list_date") and l["list_date"] >= cutoff_date]
+    
+    # Sort by list date desc (newest first), limit to 9
+    new_listings_sorted = sorted(new_listings, key=lambda x: x.get("list_date") or datetime.min, reverse=True)[:9]
+    
+    # Format listings for gallery display
+    gallery_listings = []
+    for l in new_listings_sorted:
+        gallery_listings.append({
+            "hero_photo_url": l.get("hero_photo_url"),
+            "street_address": l.get("street_address") or "Address not available",
+            "city": l.get("city") or city,
+            "zip_code": l.get("zip_code"),
+            "list_price": l.get("list_price"),
+            "bedrooms": l.get("bedrooms"),
+            "bathrooms": l.get("bathrooms"),
+            "sqft": l.get("sqft"),
+            "list_date": _format_date(l.get("list_date")),
+        })
+    
+    return {
+        "report_type": "new_listings_gallery",
+        "city": city,
+        "lookback_days": lookback_days,
+        "period_label": _period_label(lookback_days),
+        "report_date": datetime.now().strftime("%B %d, %Y"),
+        "total_listings": len(gallery_listings),
+        "listings": gallery_listings,
+    }
+
+
+def build_featured_listings_result(listings: List[Dict], context: Dict) -> Dict:
+    """
+    Featured Listings - 2×2 grid (4 large properties) with hero photos
+    
+    Phase P2: Premium photo template for featured properties.
+    Shows top 4 most expensive active listings with larger cards.
+    """
+    city = context.get("city", "Market")
+    lookback_days = context.get("lookback_days", 30)
+    
+    # Get active listings
+    active = [l for l in listings if l.get("status") == "Active"]
+    
+    # Sort by list price desc (most expensive first), limit to 4
+    featured = sorted(active, key=lambda x: x.get("list_price") or 0, reverse=True)[:4]
+    
+    # Format for gallery display
+    gallery_listings = []
+    for l in featured:
+        gallery_listings.append({
+            "hero_photo_url": l.get("hero_photo_url"),
+            "street_address": l.get("street_address") or "Address not available",
+            "city": l.get("city") or city,
+            "zip_code": l.get("zip_code"),
+            "list_price": l.get("list_price"),
+            "bedrooms": l.get("bedrooms"),
+            "bathrooms": l.get("bathrooms"),
+            "sqft": l.get("sqft"),
+            "price_per_sqft": l.get("price_per_sqft"),
+            "days_on_market": l.get("days_on_market"),
+            "list_date": _format_date(l.get("list_date")),
+        })
+    
+    return {
+        "report_type": "featured_listings",
+        "city": city,
+        "lookback_days": lookback_days,
+        "period_label": _period_label(lookback_days),
+        "report_date": datetime.now().strftime("%B %d, %Y"),
+        "total_listings": len(gallery_listings),
+        "listings": gallery_listings,
+    }
+
+
 def build_result_json(report_type: str, listings: List[Dict], context: Dict) -> Dict:
     """
     Main dispatcher for report builders.
     
     Args:
-        report_type: One of market_snapshot, new_listings, inventory, closed, price_bands
+        report_type: One of 7 TrendyReports types (5 original + 2 gallery)
         listings: Property data from PropertyDataExtractor
         context: Dict with city, lookback_days, etc.
     
