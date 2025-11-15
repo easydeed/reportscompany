@@ -113,12 +113,12 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
 
 function DashboardTopbar() {
   return (
-    <header className="flex h-16 shrink-0 items-center gap-4 border-b border-border bg-background px-6">
+    <header className="flex h-12 shrink-0 items-center gap-4 border-b border-[var(--app-border)] bg-[var(--app-surface)] px-4">
       <SidebarTrigger />
       <div className="flex items-center gap-4 flex-1">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Search reports..." className="pl-9 bg-muted/50" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--app-muted)]" />
+          <Input placeholder="Search reports..." className="pl-9 bg-slate-50 border-[var(--app-border)]" />
         </div>
       </div>
 
