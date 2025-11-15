@@ -4,18 +4,8 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Calendar } from "lucide-react"
 
-export type ScheduleRow = {
-  id: string;
-  name: string;
-  report_type: string;
-  city: string;
-  cadence: string;
-  next_run_at: string | null;
-  active: boolean;
-};
-
 export type SchedulesListShellProps = {
-  schedules: ScheduleRow[];
+  schedules: any[]; // Accept any[] since we're just passing through to ScheduleTable
 };
 
 export function SchedulesListShell(props: SchedulesListShellProps) {
