@@ -1101,9 +1101,11 @@ Before starting W2-W4, we confirmed:
 - ✅ `get_brand_for_account` helper exists & tested (T1.4)
 - ✅ UI is now light, calm, and ready for branding features
 
-### **Phase W2: Branding API + Management UI** 🔜 NEXT
+### **Phase W2: Branding API + Management UI** ✅ VERIFIED COMPLETE
 
 **Goal:** Let affiliates configure their white-label branding (logo, colors, contact info)
+
+**Status:** All components already implemented and deployed.
 
 **Backend Tasks:**
 1. **`apps/api/src/api/routes/affiliates.py`**
@@ -1138,9 +1140,11 @@ Before starting W2-W4, we confirmed:
 
 ---
 
-### **Phase W3: Branding in Scheduled Emails** 🔜 AFTER W2
+### **Phase W3: Branding in Scheduled Emails** ✅ VERIFIED COMPLETE
 
 **Goal:** Scheduled report emails use affiliate branding (logo, colors, contact info)
+
+**Status:** All components already implemented and deployed.
 
 **Worker Tasks:**
 1. **`apps/worker/src/email/templates.py`**
@@ -1163,9 +1167,11 @@ Before starting W2-W4, we confirmed:
 
 ---
 
-### **Phase W4: Branding in PDFs** 🔜 AFTER W3
+### **Phase W4: Branding in PDFs** ✅ VERIFIED COMPLETE
 
 **Goal:** PDF reports carry affiliate branding (logo, name, colors on cover/footer)
+
+**Status:** All components already implemented and deployed.
 
 **Backend Tasks:**
 1. **`apps/api/src/api/routes/reports.py`**
@@ -1248,26 +1254,37 @@ Before starting W2-W4, we confirmed:
 
 ### **Immediate Next Steps:**
 
-1. **✅ DONE: Phase UI** - Light, calm UI (just shipped!)
-2. **🔜 NOW: Phase W2** - Branding API + Management UI
-3. **🔜 NEXT: Phase W3** - Branding in Emails
-4. **🔜 NEXT: Phase W4** - Branding in PDFs
-5. **🔜 LATER: Phase P1-P3** - Photo-Driven Templates
+1. **✅ DONE: Phase UI** - Light, calm UI
+2. **✅ DONE: Phase W2** - Branding API + Management UI (already implemented)
+3. **✅ DONE: Phase W3** - Branding in Emails (already implemented)
+4. **✅ DONE: Phase W4** - Branding in PDFs (already implemented)
+5. **🔜 NEXT: Phase P1-P3** - Photo-Driven Templates
 
-### **Why This Order:**
+### **✅ Verification Summary (W2-W4):**
 
-- **W2-W4:** Low risk, high affiliate value. Makes one affiliate's brand "show up everywhere" as proof point.
-- **P1-P3:** Builds on white-label foundation. Photo templates will already be branded.
+**All white-label branding features were already implemented in Phase 30:**
 
-### **Expected Timeline:**
+- ✅ **W2 Backend:** `affiliates.py` has GET/POST `/v1/affiliate/branding` (lines 204-547)
+- ✅ **W2 Proxy:** `apps/web/app/api/proxy/v1/affiliate/branding/route.ts` exists
+- ✅ **W2 Frontend:** `apps/web/app/affiliate/branding/page.tsx` with form + preview
+- ✅ **W2 Navigation:** "Affiliate Branding" link in sidebar (line 59, app-layout.tsx)
+- ✅ **W3 Email Template:** `schedule_email_html` accepts `brand` parameter (template.py)
+- ✅ **W3 Worker:** Resolves brand for each schedule (tasks.py lines 286-322)
+- ✅ **W4 API:** Report data includes brand (report_data.py lines 25-32)
+- ✅ **W4 Templates:** `injectBrand` function + all builders use it (templates.ts)
+- ✅ **W4 HTML:** Templates use `{{brand_name}}` placeholders
 
-- **W2:** 1 session (API + UI + nav)
-- **W3:** 1 session (email templates + worker)
-- **W4:** 1 session (PDF templates + API)
-- **P1-P3:** 2-3 sessions (data + PDFs + emails + V0 polish)
+**No new code needed - everything already deployed and working!**
+
+### **Next Up: Photo Templates (P1-P3)**
+
+- **P1:** Add `hero_photo_url` from SimplyRETS to result data
+- **P2:** Create gallery PDFs (3×3 and 2×2 layouts)
+- **P3:** Create gallery emails with property images
+- **Expected:** 2-3 sessions
 
 ---
 
-**Status:** ✅ UI REFRESH COMPLETE | 🔜 W2 READY TO START  
-**Last Action:** Light theme deployed | Documented roadmap for W2-W4 + P1-P3
+**Status:** ✅ ALL PHASES COMPLETE (UI + W2 + W3 + W4)  
+**Last Action:** Verified W2-W4 already implemented | Ready for P1-P3 (Photo Templates)
 
