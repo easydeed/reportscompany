@@ -372,3 +372,177 @@ def save_branding(
             "website_url": row[7],
         }
 
+
+# Phase W2: Affiliate Branding API
+
+class BrandingRequest(BaseModel):
+    brand_display_name: str
+    logo_url: str | None = None
+    primary_color: str | None = None
+    accent_color: str | None = None
+    rep_photo_url: str | None = None
+    contact_line1: str | None = None
+    contact_line2: str | None = None
+    website_url: str | None = None
+
+
+@router.get("/branding")
+def get_branding(request: Request, account_id: str = Depends(require_account_id)):
+    """
+    Get branding configuration for current affiliate account.
+    
+    Phase W2: Returns affiliate's white-label branding settings.
+    
+    Returns 403 if account is not INDUSTRY_AFFILIATE.
+    """
+    with db_conn() as (conn, cur):
+        # Verify this is an affiliate account
+        if not verify_affiliate_account(cur, account_id):
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "error": "not_affiliate_account",
+                    "message": "This account is not an industry affiliate."
+                }
+            )
+        
+        # Query affiliate_branding table
+        cur.execute("""
+            SELECT 
+                brand_display_name,
+                logo_url,
+                primary_color,
+                accent_color,
+                rep_photo_url,
+                contact_line1,
+                contact_line2,
+                website_url
+            FROM affiliate_branding
+            WHERE account_id = %s::uuid
+        """, (account_id,))
+        
+        row = cur.fetchone()
+        
+        if row:
+            # Return existing branding
+            return {
+                "brand_display_name": row[0],
+                "logo_url": row[1],
+                "primary_color": row[2],
+                "accent_color": row[3],
+                "rep_photo_url": row[4],
+                "contact_line1": row[5],
+                "contact_line2": row[6],
+                "website_url": row[7],
+            }
+        else:
+            # No branding row yet, use account name as default
+            cur.execute("""
+                SELECT name FROM accounts WHERE id = %s::uuid
+            """, (account_id,))
+            acc_row = cur.fetchone()
+            account_name = acc_row[0] if acc_row else "My Company"
+            
+            return {
+                "brand_display_name": account_name,
+                "logo_url": None,
+                "primary_color": None,
+                "accent_color": None,
+                "rep_photo_url": None,
+                "contact_line1": None,
+                "contact_line2": None,
+                "website_url": None,
+            }
+
+
+@router.post("/branding")
+def save_branding(
+    body: BrandingRequest,
+    request: Request,
+    account_id: str = Depends(require_account_id)
+):
+    """
+    Save branding configuration for current affiliate account.
+    
+    Phase W2: Upserts affiliate's white-label branding settings.
+    
+    Returns 403 if account is not INDUSTRY_AFFILIATE.
+    """
+    with db_conn() as (conn, cur):
+        # Verify this is an affiliate account
+        if not verify_affiliate_account(cur, account_id):
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "error": "not_affiliate_account",
+                    "message": "This account is not an industry affiliate."
+                }
+            )
+        
+        # Validate input
+        is_valid, error_msg = validate_brand_input(body.model_dump())
+        if not is_valid:
+            raise HTTPException(status_code=400, detail={"error": "validation_error", "message": error_msg})
+        
+        # Upsert branding
+        cur.execute("""
+            INSERT INTO affiliate_branding (
+                account_id,
+                brand_display_name,
+                logo_url,
+                primary_color,
+                accent_color,
+                rep_photo_url,
+                contact_line1,
+                contact_line2,
+                website_url,
+                updated_at
+            ) VALUES (
+                %s::uuid, %s, %s, %s, %s, %s, %s, %s, %s, NOW()
+            )
+            ON CONFLICT (account_id)
+            DO UPDATE SET
+                brand_display_name = EXCLUDED.brand_display_name,
+                logo_url = EXCLUDED.logo_url,
+                primary_color = EXCLUDED.primary_color,
+                accent_color = EXCLUDED.accent_color,
+                rep_photo_url = EXCLUDED.rep_photo_url,
+                contact_line1 = EXCLUDED.contact_line1,
+                contact_line2 = EXCLUDED.contact_line2,
+                website_url = EXCLUDED.website_url,
+                updated_at = NOW()
+            RETURNING 
+                brand_display_name,
+                logo_url,
+                primary_color,
+                accent_color,
+                rep_photo_url,
+                contact_line1,
+                contact_line2,
+                website_url
+        """, (
+            account_id,
+            body.brand_display_name,
+            body.logo_url,
+            body.primary_color,
+            body.accent_color,
+            body.rep_photo_url,
+            body.contact_line1,
+            body.contact_line2,
+            body.website_url
+        ))
+        
+        row = cur.fetchone()
+        conn.commit()
+        
+        return {
+            "brand_display_name": row[0],
+            "logo_url": row[1],
+            "primary_color": row[2],
+            "accent_color": row[3],
+            "rep_photo_url": row[4],
+            "contact_line1": row[5],
+            "contact_line2": row[6],
+            "website_url": row[7],
+        }
+
