@@ -60,6 +60,8 @@ def schedule_email_html(
         "closed": "Closed Sales",
         "price_bands": "Price Bands Analysis",
         "open_houses": "Open Houses",
+        "new_listings_gallery": "New Listings Gallery",
+        "featured_listings": "Featured Listings",
     }.get(report_type, report_type.replace("_", " ").title())
     
     # Format area for display
@@ -136,6 +138,44 @@ def schedule_email_html(
           <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
             <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">Median Price</div>
             <div style="font-size: 24px; font-weight: 600; color: #111827;">{format_price(median_close_price)}</div>
+          </td>
+          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
+            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">Avg. DOM</div>
+            <div style="font-size: 24px; font-weight: 600; color: #111827;">{avg_dom or 'N/A'}</div>
+          </td>
+        </tr>
+        """
+    elif report_type == "new_listings_gallery":
+        # Phase P3: Gallery email with photo grid emphasis
+        total_listings = metrics.get("total_listings", total_active)
+        metrics_html = f"""
+        <tr>
+          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
+            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">📸 New Properties</div>
+            <div style="font-size: 24px; font-weight: 600; color: #111827;">{total_listings:,}</div>
+          </td>
+          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
+            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">Median Price</div>
+            <div style="font-size: 24px; font-weight: 600; color: #111827;">{format_price(median_list_price)}</div>
+          </td>
+          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
+            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">Avg. DOM</div>
+            <div style="font-size: 24px; font-weight: 600; color: #111827;">{avg_dom or 'N/A'}</div>
+          </td>
+        </tr>
+        """
+    elif report_type == "featured_listings":
+        # Phase P3: Featured listings with premium feel
+        total_listings = metrics.get("total_listings", 4)
+        metrics_html = f"""
+        <tr>
+          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
+            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">✨ Featured Properties</div>
+            <div style="font-size: 24px; font-weight: 600; color: #111827;">{total_listings:,}</div>
+          </td>
+          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
+            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">Median Price</div>
+            <div style="font-size: 24px; font-weight: 600; color: #111827;">{format_price(median_list_price)}</div>
           </td>
           <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
             <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">Avg. DOM</div>
@@ -261,6 +301,8 @@ def schedule_email_subject(report_type: str, city: Optional[str], zip_codes: Opt
         "closed": "Closed Sales",
         "price_bands": "Price Bands Analysis",
         "open_houses": "Open Houses",
+        "new_listings_gallery": "New Listings Gallery",
+        "featured_listings": "Featured Listings",
     }.get(report_type, report_type.replace("_", " ").title())
     
     # Format area
