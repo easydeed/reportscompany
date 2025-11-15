@@ -1092,6 +1092,182 @@ Executed all four UI refresh tickets to transform the app from a dark, high-cont
 
 ---
 
-**Status:** ✅ ALL PHASES COMPLETE  
-**Last Action:** UI Refresh deployed to production
+## 🎯 WHAT'S NEXT: White-Label Branding + Photo Templates
+
+### **Current Foundation (Verified ✅)**
+
+Before starting W2-W4, we confirmed:
+- ✅ `affiliate_branding` table exists (migration 0008)
+- ✅ `get_brand_for_account` helper exists & tested (T1.4)
+- ✅ UI is now light, calm, and ready for branding features
+
+### **Phase W2: Branding API + Management UI** 🔜 NEXT
+
+**Goal:** Let affiliates configure their white-label branding (logo, colors, contact info)
+
+**Backend Tasks:**
+1. **`apps/api/src/api/routes/affiliates.py`**
+   - Add `GET /v1/affiliate/branding`
+     - Guard: Only `INDUSTRY_AFFILIATE` accounts (403 otherwise)
+     - Return branding row or fallback to `accounts.name`
+   - Add `POST /v1/affiliate/branding`
+     - Accept: `brand_display_name`, `logo_url`, `primary_color`, `accent_color`, `rep_photo_url`, `contact_line1`, `contact_line2`, `website_url`
+     - Upsert into `affiliate_branding` table
+     - Return saved branding
+
+2. **`apps/web/app/api/proxy/v1/affiliate/branding/route.ts`**
+   - Simple GET/POST passthrough to backend API
+
+**Frontend Tasks:**
+3. **`apps/web/app/affiliate/branding/page.tsx`**
+   - Server component fetches branding via proxy
+   - If 403 → "This account is not an industry affiliate"
+   - Render form with all branding fields
+   - Live preview card showing:
+     - Logo (if provided)
+     - Brand name with primary/accent colors
+     - Contact info (photo, lines, website)
+   - Submit → POST to proxy → show success toast
+
+4. **Navigation**
+   - Add "Branding" nav item to sidebar
+   - Only visible when `account_type === 'INDUSTRY_AFFILIATE'`
+   - Links to `/app/affiliate/branding`
+
+**Result:** Affiliates can log in, configure their branding, see live preview
+
+---
+
+### **Phase W3: Branding in Scheduled Emails** 🔜 AFTER W2
+
+**Goal:** Scheduled report emails use affiliate branding (logo, colors, contact info)
+
+**Worker Tasks:**
+1. **`apps/worker/src/email/templates.py`**
+   - Update `build_schedule_email_html()` signature to accept `brand: Optional[Brand]`
+   - Use in email HTML:
+     - Header: `brand.logo_url` + `brand.display_name`
+     - Colors: `brand.primary_color` / `accent_color` for header bar + CTA button
+     - Footer: `rep_photo_url`, `contact_line1`, `contact_line2`, `website_url`
+     - Fallback: Trendy branding if no brand provided
+
+2. **`apps/worker/src/worker/tasks.py`**
+   - For each scheduled report:
+     - Get `account_id` that owns the schedule
+     - Call `brand = get_brand_for_account(db, account_id)`
+     - Pass `brand` to `build_schedule_email_html()`
+
+**Result:** 
+- Sponsored agents → emails look like they came from affiliate (name, logo, colors, contact)
+- Unsponsored → Trendy fallback branding
+
+---
+
+### **Phase W4: Branding in PDFs** 🔜 AFTER W3
+
+**Goal:** PDF reports carry affiliate branding (logo, name, colors on cover/footer)
+
+**Backend Tasks:**
+1. **`apps/api/src/api/routes/reports.py`**
+   - In `GET /v1/reports/{id}/data`:
+     - Resolve `account_id` for report
+     - Call `brand = get_brand_for_account(db, account_id)`
+     - Add `brand` object to JSON response
+
+**Frontend Tasks:**
+2. **`apps/web/lib/templates.ts`**
+   - For each builder (`buildMarketSnapshotHtml`, `buildNewListingsHtml`, etc.):
+     - Read `data.brand`
+     - Derive: `brand_name`, `logo_url`, `primary_color`, `accent_color`
+     - Inject CSS override: `<style> :root { --pct-blue: ${primary_color}; --pct-accent: ${accent_color}; } </style>`
+     - Replace placeholders: `{{brand_name}}`, `{{brand_logo_url}}`, `{{brand_tagline}}`
+
+3. **Update HTML Templates**
+   - Files:
+     - `apps/web/templates/trendy-market-snapshot.html`
+     - `apps/web/templates/trendy-new-listings.html`
+     - `apps/web/templates/trendy-inventory.html`
+     - `apps/web/templates/trendy-closed.html`
+     - `apps/web/templates/trendy-price-bands.html`
+   - Replace hardcoded "TrendyReports" with placeholders:
+     - Header: `{{brand_name}}`, `{{brand_logo_url}}`
+     - Footer: `{{brand_tagline}}`
+
+**Result:** PDFs for sponsored agents show affiliate logo/name/colors. Clients only see affiliate brand.
+
+---
+
+### **Phase P: Photo-Driven Templates** 🔜 AFTER W4
+
+**Goal:** Leverage SimplyRETS photo arrays for gallery-style PDFs and emails
+
+#### **P1: Add Photo URLs to Result Data**
+
+**Worker Task:**
+- In result builders (`new_listings`, `closed`, etc.):
+  - Extract `hero_photo_url = listing.photos?.[0]` from SimplyRETS
+  - Add `hero_photo_url` to each listing in `result_json`
+
+#### **P2: Photo Gallery PDFs**
+
+**New Report Types:**
+- `new_listings_gallery` (3×3 grid, 9 cards)
+- `featured_listings` (2×2 grid, 4 large cards)
+
+**Tasks:**
+1. Create HTML templates:
+   - `trendy-new-listings-gallery.html` (9-box layout)
+   - `trendy-featured-listings.html` (4-box layout)
+   - Each card: Large `<img>` at top, address + price + beds/baths below
+
+2. Add builders in `templates.ts`:
+   - `buildNewListingsGalleryHtml()` - loop 9 listings, inject into cards
+   - `buildFeaturedListingsHtml()` - loop 4 listings, inject into cards
+
+3. Wire in worker & print route:
+   - Worker creates `result_json` for new types
+   - `/print/[runId]` routes to correct template
+
+4. **V0 Polish:** Export HTML to V0 for visual refinement (spacing, fonts, shadows)
+
+#### **P3: Photo Gallery Emails**
+
+**Worker Task:**
+1. Create `build_gallery_email_html()` in `email/templates.py`
+   - Table-based layout (email-safe)
+   - 2-3 cards per row
+   - Each card: Image (max 260-300px), address, price, beds/baths
+
+2. Wire into schedules for gallery report types
+
+3. **V0 Polish:** Hand static HTML to V0 for "high-end property marketing email" styling
+
+---
+
+## 📋 EXECUTION ORDER
+
+### **Immediate Next Steps:**
+
+1. **✅ DONE: Phase UI** - Light, calm UI (just shipped!)
+2. **🔜 NOW: Phase W2** - Branding API + Management UI
+3. **🔜 NEXT: Phase W3** - Branding in Emails
+4. **🔜 NEXT: Phase W4** - Branding in PDFs
+5. **🔜 LATER: Phase P1-P3** - Photo-Driven Templates
+
+### **Why This Order:**
+
+- **W2-W4:** Low risk, high affiliate value. Makes one affiliate's brand "show up everywhere" as proof point.
+- **P1-P3:** Builds on white-label foundation. Photo templates will already be branded.
+
+### **Expected Timeline:**
+
+- **W2:** 1 session (API + UI + nav)
+- **W3:** 1 session (email templates + worker)
+- **W4:** 1 session (PDF templates + API)
+- **P1-P3:** 2-3 sessions (data + PDFs + emails + V0 polish)
+
+---
+
+**Status:** ✅ UI REFRESH COMPLETE | 🔜 W2 READY TO START  
+**Last Action:** Light theme deployed | Documented roadmap for W2-W4 + P1-P3
 
