@@ -1,0 +1,85 @@
+name: Release Check
+
+on:
+  workflow_dispatch:
+  # Optional: Run on manual trigger for pre-release validation
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Run API tests
+        run: pytest apps/api/tests
+      
+      - name: Run Worker tests
+        run: pytest apps/worker/tests
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    needs: backend-tests
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      
+      - name: Install dependencies
+        run: pnpm install
+      
+      - name: Run web tests
+        run: pnpm --filter web test
+      
+      - name: Run web build
+        run: pnpm --filter web build
+
+  e2e-tests:
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      
+      - name: Install dependencies
+        run: pnpm install
+      
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+      
+      - name: Run E2E tests
+        env:
+          E2E_BASE_URL: ${{ secrets.E2E_BASE_URL || 'https://reportscompany-web.vercel.app' }}
+          E2E_REGULAR_EMAIL: ${{ secrets.E2E_REGULAR_EMAIL || 'gerardoh@gmail.com' }}
+          E2E_REGULAR_PASSWORD: ${{ secrets.E2E_REGULAR_PASSWORD }}
+          E2E_AFFILIATE_EMAIL: ${{ secrets.E2E_AFFILIATE_EMAIL }}
+          E2E_AFFILIATE_PASSWORD: ${{ secrets.E2E_AFFILIATE_PASSWORD }}
+        run: npx playwright test
+      
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
