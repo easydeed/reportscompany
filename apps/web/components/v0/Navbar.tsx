@@ -69,13 +69,17 @@ export default function Navbar() {
 
           {/* Right Actions */}
           <div className="flex items-center gap-3">
-            <Button variant="ghost" className="hidden lg:inline-flex text-white hover:bg-white/10">
-              Login
-            </Button>
+            <Link href="/login">
+              <Button variant="ghost" className="hidden lg:inline-flex text-white hover:bg-white/10">
+                Login
+              </Button>
+            </Link>
 
-            <Button className="hidden lg:inline-flex bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white border-0">
-              Start Free Trial
-            </Button>
+            <Link href="/login">
+              <Button className="hidden lg:inline-flex bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white border-0">
+                Start Free Trial
+              </Button>
+            </Link>
 
             {/* Mobile Menu Button */}
             <Button
@@ -112,12 +116,16 @@ export default function Navbar() {
                 </Link>
               ))}
               <div className="pt-4 space-y-2 border-t border-white/10">
-                <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10">
-                  Login
-                </Button>
-                <Button className="w-full bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white border-0">
-                  Start Free Trial
-                </Button>
+                <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10">
+                    Login
+                  </Button>
+                </Link>
+                <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button className="w-full bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white border-0">
+                    Start Free Trial
+                  </Button>
+                </Link>
               </div>
             </div>
           </motion.div>
