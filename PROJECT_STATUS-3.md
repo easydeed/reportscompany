@@ -1,13 +1,35 @@
-# Project Status - Phases 29D + T + A + W Complete
+# Project Status - All Phases Complete + UI Refresh
 
 **Last Updated:** November 15, 2025  
-**Current Phase:** All Testing, Auth Docs, and White-Label Phases ✅ COMPLETE
+**Current Phase:** UI Refresh (Light, Calm, Business Theme) ✅ COMPLETE
 
 ---
 
 ## 🎯 Current Status
 
 ### ✅ Completed Phases (November 15, 2025)
+
+#### **Phase UI: Light & Calm UI Refresh - 100% COMPLETE** ⭐ NEW
+- **Status:** ✅ ALL DELIVERABLES COMPLETE
+- **Features:**
+  - **UI-1:** Centralized app theme tokens (light palette, CSS variables)
+    - Light neutral background (#f5f5f7)
+    - White cards with subtle borders
+    - Dark text for readability (#111827)
+    - Violet primary (#7c3aed) and coral accent (#f26b2b)
+  - **UI-2:** Updated primitive components
+    - Card: Light surface with soft shadows
+    - Button: Clean violet primary, light outline/ghost states
+    - All variants use app theme variables
+  - **UI-3:** Simplified app shell
+    - Topbar: Reduced height (h-12), clean light header
+    - Sidebar: Light background, subtle borders
+    - Removed all dark mode hardcoding
+  - **UI-4:** Reduced cognitive load on key pages
+    - Dashboard: Clear sections, improved alerts, breathing room
+    - Schedules: Card-wrapped table, descriptive headers
+    - Plan Page: Already well-organized (no changes)
+  - **Result:** Light, professional, low-cognitive-load business app UI
 
 #### **Phase T: Testing Stack - 100% COMPLETE**
 - **Status:** ✅ ALL DELIVERABLES COMPLETE
@@ -966,6 +988,110 @@ def get_brand_for_account(db, account_id: str) -> Brand:
 
 ---
 
-**Status:** 📋 READY TO IMPLEMENT  
-**Next Action:** Execute phases in order (T → A → W)
+## 🎨 UI REFRESH RESULTS (Phase UI)
+
+### **Implementation Summary**
+
+Executed all four UI refresh tickets to transform the app from a dark, high-contrast "hacker terminal" theme to a light, calm, professional business tool.
+
+### **What Changed**
+
+#### **UI-1: App Theme Tokens**
+- **File:** `apps/web/app/globals.css`
+- **Added Variables:**
+  ```css
+  --app-bg: #f5f5f7;        /* Light neutral background */
+  --app-surface: #ffffff;    /* White cards */
+  --app-border: #e5e7eb;    /* Subtle borders */
+  --app-text: #111827;      /* Dark readable text */
+  --app-muted: #6b7280;     /* Secondary text */
+  --app-primary: #7c3aed;   /* Violet */
+  --app-accent: #f26b2b;    /* Coral */
+  ```
+- **File:** `apps/web/app/app-layout.tsx`
+- **Removed:** `<div className="dark">` wrapper forcing dark mode
+- **Applied:** Light theme throughout app shell
+
+#### **UI-2: Primitive Components**
+- **Card (`components/ui/card.tsx`):**
+  - Background: `var(--app-surface)` (white)
+  - Border: `var(--app-border)` (light gray)
+  - Text: `var(--app-text)` (dark)
+  - Shadow: Soft, subtle
+  
+- **Button (`components/ui/button.tsx`):**
+  - Primary: Violet background, white text
+  - Outline: Light border, dark text, hover slate-100
+  - Ghost: Muted text, hover slate-100
+  - Removed all dark mode variants
+
+#### **UI-3: App Shell**
+- **Topbar (`app-layout.tsx`):**
+  - Height: Reduced from h-16 to h-12
+  - Background: White surface
+  - Border: Subtle light border
+  - Search: Light gray background
+  
+- **Sidebar:**
+  - Already using light CSS variables
+  - Automatically light with dark wrapper removed
+
+#### **UI-4: Key Pages**
+- **Dashboard (`app/app/page.tsx`):**
+  - Added descriptive header + subtitle
+  - Consistent spacing (space-y-6)
+  - Improved alert contrast (yellow/red states)
+  
+- **Schedules (`app/app/schedules/page.tsx`):**
+  - Wrapped table in Card component
+  - Added header with count description
+  - Clean "New Schedule" button with icon
+  
+- **Plan Page (`account/plan/page.tsx`):**
+  - Already well-organized (3 cards)
+  - No changes needed
+
+### **Visual Impact**
+
+**Before (Dark Theme):**
+- Deep slate backgrounds (#0B1220, #1e293b)
+- High contrast white-on-dark
+- Bright neon accents
+- Visual "weight" and density
+- "Developer terminal" aesthetic
+
+**After (Light Theme):**
+- Light neutral backgrounds (#f5f5f7, #ffffff)
+- Dark text on light (#111827)
+- Subtle borders (#e5e7eb)
+- More whitespace and breathing room
+- "Professional business tool" aesthetic
+
+### **Technical Notes**
+
+1. **No Infrastructure Changes:** All changes are CSS/component-level
+2. **No Auth/Routing Changes:** Preserved all working flows
+3. **No Dark Mode Support:** Removed dark theme entirely (light-first strategy)
+4. **Backward Compatible:** Existing components/pages work without modification
+5. **Marketing Site Unaffected:** Only internal `/app` routes updated
+
+### **Files Modified**
+
+1. `apps/web/app/globals.css` - Added app theme tokens
+2. `apps/web/app/app-layout.tsx` - Removed dark wrapper, applied light theme
+3. `apps/web/components/ui/card.tsx` - Light surface, subtle borders
+4. `apps/web/components/ui/button.tsx` - Clean violet primary, light variants
+5. `apps/web/app/app/page.tsx` - Improved dashboard layout
+6. `apps/web/app/app/schedules/page.tsx` - Card-wrapped, cleaner structure
+
+### **Commits**
+
+- `71acafe` - feat(ui): UI-1 - Centralize app theme tokens
+- `67c61f9` - feat(ui): UI-2 & UI-3 - Update primitives and app shell
+- `a2b5e33` - feat(ui): UI-4 - Reduce cognitive load on key pages
+
+---
+
+**Status:** ✅ ALL PHASES COMPLETE  
+**Last Action:** UI Refresh deployed to production
 
