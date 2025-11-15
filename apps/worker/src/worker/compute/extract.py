@@ -5,6 +5,8 @@ class PropertyDataExtractor:
     """
     Normalize SimplyRETS property objects into flat, typed rows ready for validation & metrics.
     Mirrors the fields used by our calculators: list/close prices, list/close dates, DOM, area, type, status, CTL, PPSF.
+    
+    Phase P1: Now extracts hero_photo_url from SimplyRETS photos array for gallery templates.
     """
 
     def __init__(self, raw: List[Dict[str, Any]]):
@@ -21,6 +23,16 @@ class PropertyDataExtractor:
                 area= _int((pr or {}).get("area"))
                 ppsf= round(lp/area,2) if lp and area else None
                 ctl = round((cp/lp)*100,2) if lp and cp else None
+                
+                # Phase P1: Extract hero photo URL from SimplyRETS photos array
+                photos = p.get("photos", [])
+                hero_photo_url = photos[0] if photos and len(photos) > 0 else None
+                
+                # Additional property details for gallery templates
+                beds = _int((pr or {}).get("bedrooms"))
+                baths = _int((pr or {}).get("bathrooms"))
+                street = (addr or {}).get("full") or (addr or {}).get("streetName")
+                
                 out.append({
                     "mls_id": p.get("mlsId"),
                     "list_date": _iso(p.get("listDate")),
@@ -34,7 +46,12 @@ class PropertyDataExtractor:
                     "property_type": (pr or {}).get("type","RES"),
                     "sqft": area,
                     "price_per_sqft": ppsf,
-                    "close_to_list_ratio": ctl
+                    "close_to_list_ratio": ctl,
+                    # Phase P1: Gallery template fields
+                    "hero_photo_url": hero_photo_url,
+                    "bedrooms": beds,
+                    "bathrooms": baths,
+                    "street_address": street,
                 })
             except Exception:
                 continue
