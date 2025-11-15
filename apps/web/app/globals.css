@@ -48,6 +48,15 @@
 
   --radius: 0.75rem;
 
+  /* App-specific theme tokens for internal app (light, calm, business UI) */
+  --app-bg: #f5f5f7; /* Light neutral background */
+  --app-surface: #ffffff; /* White cards/surfaces */
+  --app-border: #e5e7eb; /* Subtle borders */
+  --app-text: #111827; /* Dark text for readability */
+  --app-muted: #6b7280; /* Muted secondary text */
+  --app-primary: #7c3aed; /* Violet primary */
+  --app-accent: #f26b2b; /* Coral accent */
+
   --sidebar: oklch(0.99 0 0);
   --sidebar-foreground: oklch(0.15 0.01 264);
   --sidebar-primary: oklch(0.55 0.25 290);

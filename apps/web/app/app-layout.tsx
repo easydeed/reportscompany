@@ -168,18 +168,16 @@ export default function AppLayoutClient({
   isAffiliate?: boolean
 }) {
   return (
-    <div className="dark">
-      <SidebarProvider>
-        <Suspense fallback={<div>Loading...</div>}>
-          <div className="flex min-h-screen w-full bg-background text-foreground">
-            <DashboardSidebar isAdmin={isAdmin} isAffiliate={isAffiliate} />
-            <SidebarInset className="flex flex-col">
-              <DashboardTopbar />
-              <main className="flex-1 p-6">{children}</main>
-            </SidebarInset>
-          </div>
-        </Suspense>
-      </SidebarProvider>
-    </div>
+    <SidebarProvider>
+      <Suspense fallback={<div>Loading...</div>}>
+        <div className="flex min-h-screen w-full" style={{ backgroundColor: 'var(--app-bg)', color: 'var(--app-text)' }}>
+          <DashboardSidebar isAdmin={isAdmin} isAffiliate={isAffiliate} />
+          <SidebarInset className="flex flex-col">
+            <DashboardTopbar />
+            <main className="flex-1 p-6 bg-[var(--app-bg)]">{children}</main>
+          </SidebarInset>
+        </div>
+      </Suspense>
+    </SidebarProvider>
   )
 }
