@@ -36,13 +36,13 @@ export type PlanPageShellProps = {
 function getProgressColor(decision: string): string {
   switch (decision) {
     case 'ALLOW':
-      return 'bg-green-500';
+      return 'bg-emerald-500';
     case 'ALLOW_WITH_WARNING':
-      return 'bg-yellow-500';
+      return 'bg-amber-500';
     case 'BLOCK':
-      return 'bg-red-500';
+      return 'bg-rose-500';
     default:
-      return 'bg-gray-500';
+      return 'bg-muted';
   }
 }
 
@@ -59,183 +59,176 @@ export function PlanPageShell(props: PlanPageShellProps) {
   const isSponsored = account.sponsor_account_id !== null && plan.plan_slug === 'sponsored_free';
 
   return (
-    <div className="space-y-6">
-      {/* Checkout Status Banner */}
-      <CheckoutStatusBanner />
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {/* Checkout Status Banner */}
+        <CheckoutStatusBanner />
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Plan & Usage</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage your subscription and track your usage
+        <div className="space-y-1">
+          <h1 className="text-3xl font-display font-bold tracking-tight text-slate-900">Plan & Usage</h1>
+          <p className="text-slate-600">
+            Track your subscription and monitor report generation
           </p>
         </div>
-      </div>
 
-      {/* Plan Summary Card */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>{plan.plan_name} Plan</CardTitle>
-              <CardDescription>
-                {isSponsored ? (
-                  <span className="flex items-center gap-2 mt-2">
-                    <Badge variant="secondary" className="bg-primary/10 text-primary">
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader className="space-y-4 pb-4">
+            <div className="flex items-start justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <CardTitle className="text-2xl font-display text-slate-900">
+                    {plan.plan_name}
+                  </CardTitle>
+                  {isSponsored && (
+                    <Badge className="bg-primary/10 text-primary border-primary/20 font-medium">
                       Sponsored
                     </Badge>
-                    <span className="text-sm">Sponsored by your industry affiliate</span>
-                  </span>
-                ) : (
-                  <span className="text-sm">Current plan: {plan.plan_slug}</span>
-                )}
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Stripe Billing Actions */}
-          <StripeBillingActions
-            accountType={account.account_type}
-            planSlug={plan.plan_slug}
-            isSponsored={isSponsored}
-          />
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <TrendingUp className="h-5 w-5 text-primary" />
+                  )}
+                </div>
+                <CardDescription className="text-slate-600">
+                  {isSponsored 
+                    ? 'Sponsored by your industry affiliate partner'
+                    : `${formatDate(usage.period_start)} – ${formatDate(usage.period_end)}`
+                  }
+                </CardDescription>
               </div>
-              <div>
-                <p className="text-sm font-medium">Monthly Limit</p>
-                <p className="text-2xl font-bold">{limit}</p>
+              
+              <div className="text-right">
+                <div className="text-3xl font-display font-bold text-slate-900">
+                  {usage.report_count}
+                  <span className="text-lg text-slate-400 font-normal"> / {limit}</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">Reports this month</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Building2 className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Account Type</p>
-                <p className="text-sm font-semibold capitalize">
-                  {account.account_type.replace('_', ' ').toLowerCase()}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Calendar className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Billing Period</p>
-                <p className="text-sm font-semibold">Monthly</p>
-              </div>
-            </div>
-          </div>
-
-          {plan.allow_overage && (
-            <div className="p-3 rounded-lg bg-muted/50 border border-border">
-              <p className="text-sm text-muted-foreground">
-                <strong>Overage allowed:</strong> Additional reports beyond your limit
-                {plan.overage_price_cents && (
-                  <span> at ${(plan.overage_price_cents / 100).toFixed(2)} per report</span>
-                )}
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Usage Meter Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Current Usage</CardTitle>
-          <CardDescription>
-            Period: {formatDate(usage.period_start)} – {formatDate(usage.period_end)}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Reports Generated</span>
-                {decision === 'ALLOW' && (
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                )}
-                {decision === 'ALLOW_WITH_WARNING' && (
-                  <AlertCircle className="h-4 w-4 text-yellow-500" />
-                )}
-                {decision === 'BLOCK' && (
-                  <AlertCircle className="h-4 w-4 text-red-500" />
-                )}
-              </div>
-              <span className="text-2xl font-bold">
-                {usage.report_count} / {limit}
-              </span>
-            </div>
-
-            <div className="space-y-1">
-              <div className="h-3 w-full bg-muted rounded-full overflow-hidden">
+            <div className="space-y-2">
+              <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                 <div
-                  className={`h-full transition-all ${getProgressColor(decision)}`}
+                  className={`h-full transition-all duration-500 ${getProgressColor(decision)}`}
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
-              <p className="text-xs text-muted-foreground text-right">
-                {progressPercent.toFixed(1)}% of monthly limit
-              </p>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-500">{progressPercent.toFixed(0)}% used</span>
+                {decision === 'ALLOW' && (
+                  <span className="flex items-center gap-1 text-emerald-600 font-medium">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Available
+                  </span>
+                )}
+                {decision === 'ALLOW_WITH_WARNING' && (
+                  <span className="flex items-center gap-1 text-amber-600 font-medium">
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    Approaching Limit
+                  </span>
+                )}
+                {decision === 'BLOCK' && (
+                  <span className="flex items-center gap-1 text-rose-600 font-medium">
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    Limit Reached
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
 
-          {info.message && (
-            <div className={`p-3 rounded-lg border ${
-              decision === 'ALLOW' 
-                ? 'bg-green-500/10 border-green-500/20 text-green-700 dark:text-green-400'
-                : decision === 'ALLOW_WITH_WARNING'
-                ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-700 dark:text-yellow-400'
-                : 'bg-red-500/10 border-red-500/20 text-red-700 dark:text-red-400'
-            }`}>
-              <p className="text-sm font-medium flex items-center gap-2">
-                {decision === 'ALLOW_WITH_WARNING' && <AlertCircle className="h-4 w-4" />}
-                {decision === 'BLOCK' && <AlertCircle className="h-4 w-4" />}
+            {info.message && (
+              <div className={`px-4 py-3 rounded-lg border text-sm font-medium ${
+                decision === 'ALLOW' 
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  : decision === 'ALLOW_WITH_WARNING'
+                  ? 'bg-amber-50 border-amber-200 text-amber-800'
+                  : 'bg-rose-50 border-rose-200 text-rose-800'
+              }`}>
                 {info.message}
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Account Details Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 text-sm">
-            <div className="flex items-center justify-between py-2 border-b border-border">
-              <span className="text-muted-foreground">Account Name</span>
-              <span className="font-medium">{account.name}</span>
-            </div>
-            <div className="flex items-center justify-between py-2 border-b border-border">
-              <span className="text-muted-foreground">Account ID</span>
-              <span className="font-mono text-xs">{account.id}</span>
-            </div>
-            <div className="flex items-center justify-between py-2 border-b border-border">
-              <span className="text-muted-foreground">Plan</span>
-              <span className="font-medium capitalize">{plan.plan_name}</span>
-            </div>
-            {account.monthly_report_limit_override && (
-              <div className="flex items-center justify-between py-2 border-b border-border">
-                <span className="text-muted-foreground">Custom Limit Override</span>
-                <Badge variant="secondary">{account.monthly_report_limit_override} reports/month</Badge>
               </div>
             )}
-          </div>
-        </CardContent>
-      </Card>
+          </CardHeader>
+
+          <CardContent className="space-y-6 pt-4 border-t border-slate-100">
+            <StripeBillingActions
+              accountType={account.account_type}
+              planSlug={plan.plan_slug}
+              isSponsored={isSponsored}
+            />
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Monthly Limit</p>
+                  <p className="text-xl font-display font-bold text-slate-900 mt-1">{limit}</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Building2 className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Account Type</p>
+                  <p className="text-sm font-semibold text-slate-900 capitalize mt-1">
+                    {account.account_type.replace('_', ' ')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Calendar className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Billing Cycle</p>
+                  <p className="text-sm font-semibold text-slate-900 mt-1">Monthly</p>
+                </div>
+              </div>
+            </div>
+
+            {plan.allow_overage && (
+              <div className="px-4 py-3 rounded-lg bg-slate-50 border border-slate-200">
+                <p className="text-sm text-slate-700">
+                  <span className="font-semibold">Overage billing enabled:</span> Additional reports beyond your limit
+                  {plan.overage_price_cents && (
+                    <span> are billed at <span className="font-semibold text-slate-900">${(plan.overage_price_cents / 100).toFixed(2)}</span> per report</span>
+                  )}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg font-display text-slate-900">Account Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between py-3 border-b border-slate-100">
+                <span className="text-sm text-slate-600">Account Name</span>
+                <span className="font-medium text-slate-900">{account.name}</span>
+              </div>
+              <div className="flex items-center justify-between py-3 border-b border-slate-100">
+                <span className="text-sm text-slate-600">Account ID</span>
+                <span className="font-mono text-xs text-slate-500">{account.id}</span>
+              </div>
+              <div className="flex items-center justify-between py-3 border-b border-slate-100">
+                <span className="text-sm text-slate-600">Plan Type</span>
+                <span className="font-medium text-slate-900 capitalize">{plan.plan_name}</span>
+              </div>
+              {account.monthly_report_limit_override && (
+                <div className="flex items-center justify-between py-3">
+                  <span className="text-sm text-slate-600">Custom Limit</span>
+                  <Badge variant="secondary" className="bg-slate-100 text-slate-900 border-slate-200">
+                    {account.monthly_report_limit_override} reports/month
+                  </Badge>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
-

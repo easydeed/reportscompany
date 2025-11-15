@@ -45,135 +45,173 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
   const { overview, planSummary, sponsoredAccounts } = props;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Affiliate Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage your sponsored agents and track their activity
-          </p>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+              Affiliate Dashboard
+            </h1>
+            <p className="text-slate-600 mt-1.5 text-[15px]">
+              Manage your sponsored agents and track their activity
+            </p>
+          </div>
+          <InviteAgentModal />
         </div>
-        <InviteAgentModal />
-      </div>
 
-      {/* Affiliate Plan Card (optional) */}
-      {planSummary && (
-        <Card className="mb-4">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Your Affiliate Plan</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{planSummary.plan_name}</div>
-            <p className="text-xs text-muted-foreground">
-              {planSummary.report_count} / {planSummary.limit} reports this month
-            </p>
-          </CardContent>
-        </Card>
-      )}
+        {planSummary && (
+          <Card className="border-violet-200/60 bg-gradient-to-br from-violet-50/50 to-white shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
+              <div>
+                <CardTitle className="text-base font-semibold text-slate-900">
+                  Your Affiliate Plan
+                </CardTitle>
+                <div className="mt-3">
+                  <div className="text-2xl font-display font-bold text-violet-600">
+                    {planSummary.plan_name}
+                  </div>
+                  <p className="text-sm text-slate-600 mt-1">
+                    {planSummary.report_count} of {planSummary.limit} reports used this month
+                  </p>
+                </div>
+              </div>
+              <div className="rounded-xl bg-violet-100 p-2.5">
+                <TrendingUp className="h-5 w-5 text-violet-600" />
+              </div>
+            </CardHeader>
+          </Card>
+        )}
 
-      {/* Overview Cards */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Sponsored Accounts</CardTitle>
-            <Users2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{overview.sponsored_count}</div>
-            <p className="text-xs text-muted-foreground">
-              Total agents under your sponsorship
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Reports This Month</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{overview.total_reports_this_month}</div>
-            <p className="text-xs text-muted-foreground">
-              Combined reports from all sponsored accounts
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Sponsored Accounts Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Sponsored Accounts</CardTitle>
-          <CardDescription>
-            View and manage your sponsored agent accounts
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {sponsoredAccounts.length === 0 ? (
-            <div className="text-center py-12">
-              <Users2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Sponsored Accounts Yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Start by inviting your first agent
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card className="border-slate-200/60 bg-white shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
+              <div>
+                <CardTitle className="text-sm font-medium text-slate-600">
+                  Sponsored Accounts
+                </CardTitle>
+                <div className="mt-2">
+                  <div className="text-3xl font-display font-bold text-slate-900">
+                    {overview.sponsored_count}
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl bg-slate-100 p-2.5">
+                <Users2 className="h-5 w-5 text-slate-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-slate-600">
+                Total agents under your sponsorship
               </p>
-              <InviteAgentModal />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium text-sm text-muted-foreground">
-                      Account Name
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-sm text-muted-foreground">
-                      Plan
-                    </th>
-                    <th className="text-right py-3 px-4 font-medium text-sm text-muted-foreground">
-                      Reports This Month
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-sm text-muted-foreground">
-                      Last Activity
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-sm text-muted-foreground">
-                      Created
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sponsoredAccounts.map((account) => (
-                    <tr key={account.account_id} className="border-b hover:bg-muted/50">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{account.name}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                          {account.plan_slug}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono">
-                        {account.reports_this_month}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-muted-foreground">
-                        {formatDate(account.last_report_at)}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-muted-foreground">
-                        {formatDate(account.created_at)}
-                      </td>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200/60 bg-white shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
+              <div>
+                <CardTitle className="text-sm font-medium text-slate-600">
+                  Reports This Month
+                </CardTitle>
+                <div className="mt-2">
+                  <div className="text-3xl font-display font-bold text-slate-900">
+                    {overview.total_reports_this_month}
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl bg-orange-100 p-2.5">
+                <TrendingUp className="h-5 w-5 text-orange-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-slate-600">
+                Combined reports from all sponsored accounts
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="border-slate-200/60 bg-white shadow-sm">
+          <CardHeader className="border-b border-slate-100">
+            <CardTitle className="text-lg font-semibold text-slate-900">
+              Sponsored Accounts
+            </CardTitle>
+            <CardDescription className="text-slate-600">
+              View and manage your sponsored agent accounts
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            {sponsoredAccounts.length === 0 ? (
+              <div className="text-center py-16 px-4">
+                <div className="rounded-2xl bg-slate-100 w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                  <Users2 className="h-8 w-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                  No Sponsored Accounts Yet
+                </h3>
+                <p className="text-slate-600 mb-6 max-w-sm mx-auto">
+                  Start by inviting your first agent to begin tracking their activity
+                </p>
+                <InviteAgentModal />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-100 bg-slate-50/50">
+                      <th className="text-left py-3.5 px-6 font-medium text-xs uppercase tracking-wider text-slate-600">
+                        Account Name
+                      </th>
+                      <th className="text-left py-3.5 px-6 font-medium text-xs uppercase tracking-wider text-slate-600">
+                        Plan
+                      </th>
+                      <th className="text-right py-3.5 px-6 font-medium text-xs uppercase tracking-wider text-slate-600">
+                        Reports
+                      </th>
+                      <th className="text-left py-3.5 px-6 font-medium text-xs uppercase tracking-wider text-slate-600">
+                        Last Activity
+                      </th>
+                      <th className="text-left py-3.5 px-6 font-medium text-xs uppercase tracking-wider text-slate-600">
+                        Created
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {sponsoredAccounts.map((account) => (
+                      <tr key={account.account_id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-3">
+                            <div className="rounded-lg bg-violet-100 p-2">
+                              <Building2 className="h-4 w-4 text-violet-600" />
+                            </div>
+                            <span className="font-medium text-slate-900">{account.name}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-violet-100 text-violet-700 border border-violet-200/50">
+                            {account.plan_slug}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-right">
+                          <span className="font-mono font-semibold text-slate-900">
+                            {account.reports_this_month}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-sm text-slate-600">
+                          {formatDate(account.last_report_at)}
+                        </td>
+                        <td className="py-4 px-6 text-sm text-slate-600">
+                          {formatDate(account.created_at)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
-

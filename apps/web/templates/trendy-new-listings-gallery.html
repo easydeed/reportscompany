@@ -32,21 +32,23 @@
     }
   }
 
+  /* Refined base styles for TrendyReports aesthetic */
   html, body {
     height: 100%;
     margin: 0;
-    background: #f3f4f6;
-    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    color: #111827;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #0f172a;
+    -webkit-font-smoothing: antialiased;
   }
 
   :root{
-    --pct-blue: #7C3AED; /* TrendyReports violet */
-    --pct-accent: #F26B2B; /* TrendyReports coral */
-    --pct-gray: rgb(247,249,252);
+    --pct-blue: #7C3AED;
+    --pct-accent: #F26B2B;
+    --pct-gray: #f8fafc;
     --ink: #0f172a;
-    --muted: #6b7280;
-    --border: #e5e7eb;
+    --muted: #64748b;
+    --border: #e2e8f0;
     --success: #16a34a;
     --danger: #dc2626;
   }
@@ -57,107 +59,186 @@
     box-sizing: border-box;
     margin: 0 auto;
     background: white;
-    box-shadow: 0 2px 24px rgba(0,0,0,.06);
+    box-shadow: 0 4px 32px rgba(0,0,0,.08);
     padding: 0.5in;
+    border-radius: 2px;
   }
 
+  /* Enhanced header with better spacing and hierarchy */
   .header{
     display: grid;
     grid-template-columns: auto 1fr auto;
-    gap: 16px;
+    gap: 20px;
     align-items: center;
-    margin-bottom: 14px;
+    margin-bottom: 18px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--pct-gray);
   }
-  .brand{ display:flex; align-items:center; gap:12px; }
-  .brand img{ height: 44px; width: auto; display:block; }
+  .brand{ display:flex; align-items:center; gap:14px; }
+  .brand img{ height: 48px; width: auto; display:block; }
   .title-block h1{
-    font-size: 22px; line-height:1.2; margin:0; color: var(--ink);
-    letter-spacing: .2px;
+    font-size: 24px; 
+    line-height:1.2; 
+    margin:0; 
+    color: var(--ink);
+    letter-spacing: -0.3px;
+    font-weight: 700;
   }
-  .title-block .sub{ margin-top: 2px; font-size: 12px; color: var(--muted); }
+  .title-block .sub{ 
+    margin-top: 4px; 
+    font-size: 11.5px; 
+    color: var(--muted); 
+    letter-spacing: 0.2px;
+  }
   .badge{
-    background: var(--pct-blue); color: #fff; 
-    padding: 8px 12px; border-radius: 999px; font-weight: 600; font-size: 12px;
+    background: linear-gradient(135deg, var(--pct-blue), #9333ea);
+    color: #fff; 
+    padding: 9px 16px; 
+    border-radius: 999px; 
+    font-weight: 700; 
+    font-size: 11.5px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
   }
 
+  /* Refined ribbon with better visual hierarchy */
   .ribbon{
-    background: linear-gradient(90deg, var(--pct-blue), var(--pct-accent));
-    color: #fff; border-radius: 14px;
-    padding: 14px 18px; margin: 6px 0 20px;
+    background: linear-gradient(135deg, var(--pct-blue), #9333ea);
+    color: #fff; 
+    border-radius: 16px;
+    padding: 18px 20px; 
+    margin: 8px 0 24px;
     text-align: center;
+    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.2);
   }
-  .ribbon .count{ font-size: 28px; font-weight: 800; line-height:1; margin-bottom: 4px; }
-  .ribbon .label{ font-size: 13px; opacity:.9; letter-spacing:.3px; }
+  .ribbon .count{ 
+    font-size: 32px; 
+    font-weight: 800; 
+    line-height:1; 
+    margin-bottom: 6px; 
+    letter-spacing: -0.5px;
+  }
+  .ribbon .label{ 
+    font-size: 12.5px; 
+    opacity:.95; 
+    letter-spacing:.5px; 
+    font-weight: 600;
+    text-transform: uppercase;
+  }
 
-  /* ====== GALLERY GRID (3×3) ====== */
+  /* Enhanced gallery grid with better card design */
   .gallery-grid{
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 14px;
-    margin: 20px 0;
+    gap: 16px;
+    margin: 24px 0;
   }
 
   .property-card{
     background: #fff;
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 14px;
     overflow: hidden;
     break-inside: avoid;
     page-break-inside: avoid;
+    box-shadow: 0 2px 12px rgba(0,0,0,.04);
+    transition: all 0.2s ease;
+  }
+
+  .property-card:hover{
+    box-shadow: 0 4px 20px rgba(0,0,0,.08);
+    transform: translateY(-1px);
   }
 
   .property-card .photo{
     width: 100%;
-    height: 140px;
-    background: var(--pct-gray);
+    height: 150px;
+    background: linear-gradient(135deg, var(--pct-gray) 0%, #e2e8f0 100%);
     object-fit: cover;
     display: block;
   }
 
   .property-card .info{
-    padding: 10px;
+    padding: 12px;
   }
 
   .property-card .address{
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 11.5px;
+    font-weight: 700;
     color: var(--ink);
     margin: 0 0 4px;
-    line-height: 1.3;
+    line-height: 1.4;
+    letter-spacing: -0.1px;
   }
 
   .property-card .city{
     font-size: 10px;
     color: var(--muted);
-    margin: 0 0 8px;
+    margin: 0 0 10px;
+    letter-spacing: 0.2px;
   }
 
   .property-card .price{
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 800;
     color: var(--pct-blue);
-    margin: 0 0 6px;
+    margin: 0 0 8px;
+    letter-spacing: -0.2px;
   }
 
   .property-card .details{
     display: flex;
-    gap: 8px;
+    gap: 10px;
     font-size: 10px;
     color: var(--muted);
+    padding-top: 8px;
+    border-top: 1px solid var(--pct-gray);
   }
 
   .property-card .details .detail{
     display: flex;
     align-items: center;
-    gap: 3px;
+    gap: 4px;
+    font-weight: 600;
   }
 
-  .footer{ margin-top: 20px; display:grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
-  .foot-notes{ font-size: 10.5px; color: #6b7280; }
-  .brandbar{ display:flex; gap: 10px; align-items:center; }
-  .brandbar .dot{ width:10px; height:10px; border-radius:999px; background: var(--pct-blue); }
-  .brandbar .dot.acc{ background: var(--pct-accent); }
-  .brandbar .tag{ font-weight: 800; letter-spacing: .4px; color: #111827; font-size: 11px; }
+  /* Enhanced footer with better visual balance */
+  .footer{ 
+    margin-top: 24px; 
+    padding-top: 16px;
+    border-top: 2px solid var(--pct-gray);
+    display:grid; 
+    grid-template-columns: 1fr auto; 
+    gap: 16px; 
+    align-items: center; 
+  }
+  .foot-notes{ 
+    font-size: 10px; 
+    color: var(--muted); 
+    line-height: 1.5;
+  }
+  .brandbar{ 
+    display:flex; 
+    gap: 10px; 
+    align-items:center; 
+  }
+  .brandbar .dot{ 
+    width:10px; 
+    height:10px; 
+    border-radius:999px; 
+    background: var(--pct-blue); 
+  }
+  .brandbar .dot.acc{ 
+    background: var(--pct-accent); 
+  }
+  .brandbar .tag{ 
+    font-weight: 800; 
+    letter-spacing: .5px; 
+    color: var(--ink); 
+    font-size: 11px; 
+    text-transform: uppercase;
+  }
 </style>
 </head>
 <body>
@@ -199,4 +280,3 @@
   </div>
 </body>
 </html>
-
