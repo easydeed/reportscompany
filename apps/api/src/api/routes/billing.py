@@ -197,8 +197,8 @@ def create_checkout_session(
                     "price": price_id,
                     "quantity": 1,
                 }],
-                success_url=f"{WEB_BASE}/app/account/plan?checkout=success",
-                cancel_url=f"{WEB_BASE}/app/account/plan?checkout=cancel",
+                success_url=f"{WEB_BASE}/account/plan?checkout=success",
+                cancel_url=f"{WEB_BASE}/account/plan?checkout=cancel",
                 metadata={
                     "account_id": acc_id,
                     "plan_slug": body.plan_slug,
@@ -294,7 +294,7 @@ def create_portal_session(
         try:
             portal_session = stripe.billing_portal.Session.create(
                 customer=stripe_customer_id,
-                return_url=f"{WEB_BASE}/app/account/plan",
+                return_url=f"{WEB_BASE}/account/plan",
             )
             
             return {"url": portal_session.url}

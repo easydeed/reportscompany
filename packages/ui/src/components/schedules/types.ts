@@ -1,5 +1,5 @@
 // Schedule Types
-export type ReportType = "market_snapshot" | "new_listings" | "inventory" | "closed" | "price_bands" | "open_houses"
+export type ReportType = "market_snapshot" | "new_listings" | "inventory" | "closed" | "price_bands" | "new_listings_gallery" | "featured_listings"
 
 export type AreaMode = "city" | "zips"
 
@@ -62,7 +62,8 @@ export const reportTypeLabels: Record<ReportType, string> = {
   inventory: "Inventory Report",
   closed: "Closed Sales",
   price_bands: "Price Bands",
-  open_houses: "Open Houses",
+  new_listings_gallery: "New Listings (Photo Gallery)",
+  featured_listings: "Featured Listings (Photo Grid)",
 }
 
 export const weekdayLabels: Record<Weekday, string> = {

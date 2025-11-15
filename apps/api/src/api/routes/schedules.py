@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field, EmailStr, constr
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal
 from datetime import datetime
 from ..db import db_conn, set_rls, fetchone_dict, fetchall_dicts
 
@@ -9,7 +9,15 @@ router = APIRouter(prefix="/v1")
 # ====== Schemas ======
 class ScheduleCreate(BaseModel):
     name: constr(strip_whitespace=True, min_length=1, max_length=255)
-    report_type: constr(strip_whitespace=True, min_length=2)
+    report_type: Literal[
+        "market_snapshot",
+        "new_listings",
+        "inventory",
+        "closed",
+        "price_bands",
+        "new_listings_gallery",
+        "featured_listings",
+    ]
     city: Optional[str] = None
     zip_codes: Optional[List[str]] = None
     lookback_days: int = 30

@@ -28,6 +28,8 @@ import {
   ArrowLeft,
   Clock,
   Mail,
+  Image,
+  Star,
 } from "lucide-react"
 import { type ScheduleWizardState, type ReportType, type Weekday, weekdayLabels } from "./types"
 import { cn } from "../../lib/utils"
@@ -46,7 +48,8 @@ const reportTypes = [
   { id: "inventory" as ReportType, name: "Inventory Report", icon: BarChart3 },
   { id: "closed" as ReportType, name: "Closed Sales", icon: DollarSign },
   { id: "price_bands" as ReportType, name: "Price Bands", icon: BarChart3 },
-  { id: "open_houses" as ReportType, name: "Open Houses", icon: Calendar },
+  { id: "new_listings_gallery" as ReportType, name: "New Listings (Photo Gallery)", icon: Image },
+  { id: "featured_listings" as ReportType, name: "Featured Listings (Photo Grid)", icon: Star },
 ]
 
 const lookbackOptions = [7, 14, 30, 60, 90]
