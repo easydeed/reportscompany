@@ -441,3 +441,136 @@ export function buildPriceBandsHtml(
   return injectBrand(html, data.brand);
 }
 
+/**
+ * Phase P2: Build New Listings Gallery HTML (3×3 photo grid)
+ */
+export function buildNewListingsGalleryHtml(
+  templateHtml: string,
+  data: any
+): string {
+  const r = data.result_json || data;
+  const lookback = r.lookback_days || 30;
+  
+  // Build header and ribbon replacements
+  const replacements: Record<string, string> = {
+    "{{market_name}}": r.city || "Market",
+    "{{period_label}}": r.period_label || `Last ${lookback} days`,
+    "{{report_date}}": r.report_date || new Date().toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    }),
+    "{{lookback_days}}": String(lookback),
+    "{{total_listings}}": formatNumber(r.total_listings || 0),
+  };
+  
+  let html = templateHtml;
+  for (const [key, value] of Object.entries(replacements)) {
+    html = html.replaceAll(key, value);
+  }
+  
+  // Build gallery cards
+  const listings = r.listings || [];
+  const cards = listings.map((listing: any) => {
+    const photoUrl = listing.hero_photo_url || "https://via.placeholder.com/400x300/e5e7eb/9ca3af?text=No+Image";
+    
+    return `
+      <div class="property-card avoid-break">
+        <img src="${photoUrl}" alt="${listing.street_address || 'Property'}" class="photo" />
+        <div class="info">
+          <div class="address">${listing.street_address || "Address not available"}</div>
+          <div class="city">${listing.city || r.city || ""}, ${listing.zip_code || ""}</div>
+          <div class="price">${formatCurrency(listing.list_price)}</div>
+          <div class="details">
+            <div class="detail">🛏 ${formatNumber(listing.bedrooms)} bd</div>
+            <div class="detail">🛁 ${formatDecimal(listing.bathrooms, 1)} ba</div>
+            <div class="detail">📐 ${formatNumber(listing.sqft)} sqft</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  html = html.replace('<!-- GALLERY_CARDS -->', cards);
+  
+  // Phase 30: Inject brand colors and metadata
+  return injectBrand(html, data.brand);
+}
+
+/**
+ * Phase P2: Build Featured Listings HTML (2×2 large photo grid)
+ */
+export function buildFeaturedListingsHtml(
+  templateHtml: string,
+  data: any
+): string {
+  const r = data.result_json || data;
+  const lookback = r.lookback_days || 30;
+  
+  // Build header and ribbon replacements
+  const replacements: Record<string, string> = {
+    "{{market_name}}": r.city || "Market",
+    "{{period_label}}": r.period_label || `Last ${lookback} days`,
+    "{{report_date}}": r.report_date || new Date().toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    }),
+    "{{lookback_days}}": String(lookback),
+    "{{total_listings}}": formatNumber(r.total_listings || 0),
+  };
+  
+  let html = templateHtml;
+  for (const [key, value] of Object.entries(replacements)) {
+    html = html.replaceAll(key, value);
+  }
+  
+  // Build featured cards
+  const listings = r.listings || [];
+  const cards = listings.map((listing: any) => {
+    const photoUrl = listing.hero_photo_url || "https://via.placeholder.com/600x400/e5e7eb/9ca3af?text=No+Image";
+    
+    return `
+      <div class="featured-card avoid-break">
+        <img src="${photoUrl}" alt="${listing.street_address || 'Property'}" class="photo" />
+        <div class="info">
+          <div class="address">${listing.street_address || "Address not available"}</div>
+          <div class="city">${listing.city || r.city || ""}, ${listing.zip_code || ""}</div>
+          <div class="price">${formatCurrency(listing.list_price)}</div>
+          <div class="details">
+            <div class="detail">
+              <div class="label">Bedrooms</div>
+              <div class="value">${formatNumber(listing.bedrooms)} bd</div>
+            </div>
+            <div class="detail">
+              <div class="label">Bathrooms</div>
+              <div class="value">${formatDecimal(listing.bathrooms, 1)} ba</div>
+            </div>
+            <div class="detail">
+              <div class="label">Square Feet</div>
+              <div class="value">${formatNumber(listing.sqft)} sqft</div>
+            </div>
+            <div class="detail">
+              <div class="label">Price/SqFt</div>
+              <div class="value">${formatCurrency(listing.price_per_sqft || 0)}</div>
+            </div>
+            <div class="detail">
+              <div class="label">Days on Market</div>
+              <div class="value">${formatNumber(listing.days_on_market)}</div>
+            </div>
+            <div class="detail">
+              <div class="label">Listed</div>
+              <div class="value">${listing.list_date || "—"}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  html = html.replace('<!-- FEATURED_CARDS -->', cards);
+  
+  // Phase 30: Inject brand colors and metadata
+  return injectBrand(html, data.brand);
+}
+

@@ -5,7 +5,9 @@ import {
   buildNewListingsHtml,
   buildInventoryHtml,
   buildClosedHtml,
-  buildPriceBandsHtml
+  buildPriceBandsHtml,
+  buildNewListingsGalleryHtml,
+  buildFeaturedListingsHtml
 } from '@/lib/templates';
 
 type Props = { params: { runId: string } };
@@ -64,7 +66,9 @@ const REPORT_TITLES: Record<string, string> = {
   closed: "Closed Sales",
   inventory: "Inventory Report",
   open_houses: "Open Houses",
-  price_bands: "Price Bands"
+  price_bands: "Price Bands",
+  new_listings_gallery: "New Listings Gallery",
+  featured_listings: "Featured Listings"
 };
 
 export default async function PrintReport({ params }: Props) {
@@ -110,6 +114,8 @@ export default async function PrintReport({ params }: Props) {
     "inventory": { filename: 'trendy-inventory.html', builder: buildInventoryHtml },
     "closed": { filename: 'trendy-closed.html', builder: buildClosedHtml },
     "price_bands": { filename: 'trendy-price-bands.html', builder: buildPriceBandsHtml },
+    "new_listings_gallery": { filename: 'trendy-new-listings-gallery.html', builder: buildNewListingsGalleryHtml },
+    "featured_listings": { filename: 'trendy-featured-listings.html', builder: buildFeaturedListingsHtml },
   };
 
   const templateConfig = templateMap[reportType];
