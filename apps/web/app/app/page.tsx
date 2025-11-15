@@ -41,35 +41,41 @@ export default async function Overview() {
   const recent: any[] = [] // TODO: wire recent runs/emails
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Overview</h1>
+        <p className="text-[var(--app-muted)] mt-1">
+          Your account activity and key metrics
+        </p>
+      </div>
       
       {/* Phase 29E: Usage Warning Banner */}
       {planUsage && planUsage.decision === 'ALLOW_WITH_WARNING' && (
-        <Alert className="mb-6 border-yellow-500/20 bg-yellow-500/10">
-          <AlertTriangle className="h-4 w-4 text-yellow-500" />
-          <AlertTitle>Approaching Limit</AlertTitle>
-          <AlertDescription className="flex items-center justify-between">
+        <Alert className="border-yellow-500/30 bg-yellow-500/10">
+          <AlertTriangle className="h-4 w-4 text-yellow-600" />
+          <AlertTitle className="text-yellow-800">Approaching Limit</AlertTitle>
+          <AlertDescription className="flex items-center justify-between text-yellow-700">
             <span>
               You're approaching your monthly report limit for the <strong>{planUsage.plan.plan_name}</strong> plan. {planUsage.info.message}
             </span>
-            <Button asChild variant="outline" size="sm" className="ml-4">
-              <Link href="/app/account/plan">View Plan</Link>
+            <Button asChild variant="outline" size="sm" className="ml-4 border-yellow-600 text-yellow-700 hover:bg-yellow-50">
+              <Link href="/account/plan">View Plan</Link>
             </Button>
           </AlertDescription>
         </Alert>
       )}
       
       {planUsage && planUsage.decision === 'BLOCK' && (
-        <Alert className="mb-6 border-red-500/20 bg-red-500/10">
-          <AlertCircle className="h-4 w-4 text-red-500" />
-          <AlertTitle>Monthly Limit Reached</AlertTitle>
-          <AlertDescription className="flex items-center justify-between">
+        <Alert className="border-red-500/30 bg-red-500/10">
+          <AlertCircle className="h-4 w-4 text-red-600" />
+          <AlertTitle className="text-red-800">Monthly Limit Reached</AlertTitle>
+          <AlertDescription className="flex items-center justify-between text-red-700">
             <span>
               You've reached your monthly report limit for your current plan. New reports may be blocked until the period resets.
             </span>
-            <Button asChild variant="outline" size="sm" className="ml-4">
-              <Link href="/app/account/plan">View Plan</Link>
+            <Button asChild variant="outline" size="sm" className="ml-4 border-red-600 text-red-700 hover:bg-red-50">
+              <Link href="/account/plan">View Plan</Link>
             </Button>
           </AlertDescription>
         </Alert>
