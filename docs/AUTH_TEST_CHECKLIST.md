@@ -195,9 +195,10 @@ cd apps/web
 pnpm test
 
 # E2E (requires running services)
+# Use canonical demo accounts (see docs/DEMO_ACCOUNTS.md)
 E2E_BASE_URL=http://localhost:3000 \
-E2E_REGULAR_EMAIL=gerardoh@gmail.com \
-E2E_REGULAR_PASSWORD=Test123456! \
+E2E_REGULAR_EMAIL=agent-pro@trendyreports-demo.com \
+E2E_REGULAR_PASSWORD=DemoAgent123! \
 npx playwright test
 ```
 

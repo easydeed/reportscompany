@@ -65,6 +65,42 @@
 
 ---
 
+## 🎭 Demo Story / Roles
+
+**For investor demos, sales presentations, and QA walkthroughs.**
+
+We maintain **5 canonical demo accounts** in staging that showcase the complete product:
+
+| Role | Email | Password | What They See |
+|------|-------|----------|---------------|
+| **ADMIN** | admin@trendyreports-demo.com | `DemoAdmin123!` | Admin metrics, system health, all accounts |
+| **FREE AGENT** | agent-free@trendyreports-demo.com | `DemoAgent123!` | Free plan (50 reports/month), upgrade prompts |
+| **PRO AGENT** | agent-pro@trendyreports-demo.com | `DemoAgent123!` | Pro plan ($29/mo), full Stripe integration |
+| **AFFILIATE** | affiliate@trendyreports-demo.com | `DemoAff123!` | Sponsor dashboard, branding management, invite flow |
+| **SPONSORED** | agent-sponsored@trendyreports-demo.com | `DemoAgent123!` | White-label experience with affiliate branding |
+
+### Perfect 5-Minute Investor Demo
+1. **ADMIN** (30s): Show metrics, system health
+2. **FREE AGENT** (1m): Freemium model, upgrade CTA
+3. **PRO AGENT** (1m): Paid tier, Stripe integration
+4. **AFFILIATE** (1.5m): B2B2C model, sponsored agents list
+5. **SPONSORED** (1m): White-label experience end-to-end
+
+**Result**: Complete product, business model, and monetization in under 5 minutes.
+
+### Documentation
+- **`docs/DEMO_ACCOUNTS.md`**: User-facing demo credentials and walkthrough guide
+- **`docs/SEED_DEMO_ACCOUNTS.md`**: How to create/reset accounts in staging database
+- **`db/seed_demo_accounts.sql`**: Idempotent SQL script for account seeding
+
+### Usage
+- **Investor Demos**: Clean, role-based logins (no "gerardoh@gmail.com")
+- **E2E Tests**: Mapped via GitHub secrets (`E2E_REGULAR_EMAIL`, `E2E_AFFILIATE_EMAIL`)
+- **QA**: Manual testing of each user persona
+- **Sales**: Professional presentation-ready accounts
+
+---
+
 ## 🎯 What's Next (Optional Enhancements)
 
 These were planned but not critical for launch. Can be added post-launch as needed:

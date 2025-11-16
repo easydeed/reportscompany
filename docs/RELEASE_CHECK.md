@@ -77,13 +77,15 @@ Fix the failures and re-run the workflow.
 
 The E2E tests need these GitHub secrets configured:
 
-| Secret Name | Description | Example |
-|-------------|-------------|---------|
+| Secret Name | Description | Recommended Value |
+|-------------|-------------|-------------------|
 | `E2E_BASE_URL` | Staging URL | `https://reportscompany-web.vercel.app` |
-| `E2E_REGULAR_EMAIL` | Test account email | `gerardoh@gmail.com` |
-| `E2E_REGULAR_PASSWORD` | Test account password | (secure value) |
-| `E2E_AFFILIATE_EMAIL` | Affiliate test account | (if available) |
-| `E2E_AFFILIATE_PASSWORD` | Affiliate password | (if available) |
+| `E2E_REGULAR_EMAIL` | Regular agent test account | `agent-pro@trendyreports-demo.com` |
+| `E2E_REGULAR_PASSWORD` | Regular agent password | `DemoAgent123!` |
+| `E2E_AFFILIATE_EMAIL` | Affiliate test account | `affiliate@trendyreports-demo.com` |
+| `E2E_AFFILIATE_PASSWORD` | Affiliate password | `DemoAff123!` |
+
+**Note**: These map to canonical demo accounts. See `docs/DEMO_ACCOUNTS.md` for details.
 
 To add/update secrets:
 1. Go to: https://github.com/easydeed/reportscompany/settings/secrets/actions

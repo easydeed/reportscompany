@@ -1,102 +1,108 @@
-# Test Account Credentials
+# Test Credentials - Staging Environment
 
-**⚠️ IMPORTANT: Keep this file secure and do not commit to public repositories**
+**Purpose**: Canonical demo/test accounts for staging QA, E2E tests, and investor demos.
 
-## Production/Staging Test Accounts
-
-### Demo Account (REGULAR)
-- **Email:** `gerardoh@gmail.com`
-- **Password:** `Test123456!`
-- **Account ID:** `912014c3-6deb-4b40-a28d-489ef3923a3a`
-- **Account Name:** Demo Account
-- **Account Type:** `REGULAR`
-- **Plan:** `free` (can be upgraded via Stripe)
-- **User ID:** `abdcef61-20f2-46b9-8b24-8c4ce4462ee0`
-- **Role:** `ADMIN`
-
-**Use for testing:**
-- Login flows
-- Plan upgrades (Stripe)
-- Schedule creation
-- Report generation
-- Multi-account features (when additional accounts added)
+**⚠️ STAGING ONLY**: These credentials are for non-production environments. Never use in production.
 
 ---
 
-## Database Connection
+## Demo Accounts (Staging)
 
-### Render PostgreSQL (mr-staging-db)
-- **Dashboard:** https://dashboard.render.com/d/dpg-d474qiqli9vc738g17e0-a
-- **Connection String:** Available in Render Dashboard → Connect button
-- **Database:** `mr_staging_db`
-- **User:** `mr_staging_db_user`
-- **Password:** See Render Dashboard
-- **Host:** `dpg-d474qiqli9vc738g17e0-a.oregon-postgres.render.com`
-- **Port:** `5432`
+For complete details and seeding instructions, see: **`docs/DEMO_ACCOUNTS.md`** and **`docs/SEED_DEMO_ACCOUNTS.md`**.
 
----
+### Quick Reference
 
-## Application URLs
-
-### Frontend (Vercel)
-- **Production:** https://reportscompany-web.vercel.app
-- **Login:** https://reportscompany-web.vercel.app/login
-- **Dashboard:** https://reportscompany-web.vercel.app/app
-
-### Backend (Render)
-- **API Base:** https://reportscompany.onrender.com
-- **Health Check:** https://reportscompany.onrender.com/health
-- **Docs:** https://reportscompany.onrender.com/docs
+| Role | Email | Password | Use Case |
+|------|-------|----------|----------|
+| **ADMIN** | admin@trendyreports-demo.com | `DemoAdmin123!` | Admin metrics, system config |
+| **FREE AGENT** | agent-free@trendyreports-demo.com | `DemoAgent123!` | Free plan, limited usage |
+| **PRO AGENT** | agent-pro@trendyreports-demo.com | `DemoAgent123!` | Pro plan, Stripe flows |
+| **AFFILIATE** | affiliate@trendyreports-demo.com | `DemoAff123!` | Sponsor dashboard, branding |
+| **SPONSORED** | agent-sponsored@trendyreports-demo.com | `DemoAgent123!` | White-label experience |
 
 ---
 
-## Stripe Test Credentials
+## Environment Secrets
 
-### Test Mode Keys (Already Configured on Render)
-- **Secret Key:** `sk_test_51SNzPk...` (See Render environment variables)
-- **Webhook Secret:** `whsec_mIar...` (See Render environment variables)
-- **Pro Plan Price ID:** `price_1STMtBBKYbtiKxfswkmFEPeR`
-- **Team Plan Price ID:** `price_1STMtfBKYbtiKxfsqQ4r29Cw`
+**All secrets are stored in environment variables, NOT in this repository.**
 
-### Test Card Numbers
-- **Success:** `4242 4242 4242 4242`
-- **Decline:** `4000 0000 0000 0002`
-- **Requires Auth:** `4000 0027 6000 3184`
-- **Expiry:** Any future date (e.g., `12/34`)
-- **CVC:** Any 3 digits (e.g., `123`)
-- **ZIP:** Any 5 digits (e.g., `12345`)
+### Render (API)
+Secrets configured in Render dashboard:
+- `JWT_SECRET` - JWT signing key
+- `STRIPE_SECRET_KEY` - Stripe API key (sk_test_...)
+- `STRIPE_WEBHOOK_SECRET` - Stripe webhook signing secret (whsec_...)
+- `STRIPE_PRICE_PRO_MONTH` - Stripe Price ID for Pro plan
+- `STRIPE_PRICE_TEAM_MONTH` - Stripe Price ID for Team plan
+- `DATABASE_URL` - PostgreSQL connection string
+- `ALLOWED_ORIGINS` - CORS configuration
 
----
+### Vercel (Web)
+Secrets configured in Vercel dashboard:
+- `NEXT_PUBLIC_API_BASE` - Backend API URL
 
-## Password Reset Script
-
-If you need to reset the password again, use:
-
-```bash
-python reset_password.py
-```
-
-Or manually via SQL:
-
-```sql
-UPDATE users 
-SET password_hash = '$2b$12$6.xT9JvdYXl6f8HRoYyhq.7nUhIqcg5DRNeQ6WrWOt3p271KZN4d.',
-    email_verified = true
-WHERE email = 'gerardoh@gmail.com';
-```
+### GitHub Actions (E2E Tests)
+Secrets configured in repository settings:
+- `E2E_BASE_URL` - Staging web URL
+- `E2E_REGULAR_EMAIL` - Regular agent test account
+- `E2E_REGULAR_PASSWORD` - Regular agent password
+- `E2E_AFFILIATE_EMAIL` - Affiliate test account
+- `E2E_AFFILIATE_PASSWORD` - Affiliate password
 
 ---
 
-## Notes
+## Accessing Secrets
 
-- All passwords use bcrypt hashing with salt
-- Test account created: November 13, 2025
-- Password last updated: November 14, 2025
-- Database is PostgreSQL 17 on Render
-- All services deployed to Oregon region
+### For Local Development
+1. Copy `.env.example` to `.env.local`
+2. Request secrets from team lead or check team password manager
+3. Never commit `.env.local` to Git
+
+### For Staging/Production
+1. **Render**: https://dashboard.render.com → reportscompany-api → Environment
+2. **Vercel**: https://vercel.com/dashboard → reportscompany-web → Settings → Environment Variables
+3. **GitHub**: Repository → Settings → Secrets and variables → Actions
 
 ---
 
-**Last Updated:** November 14, 2025  
-**Status:** ✅ Active and tested
+## Legacy Accounts
 
+These accounts may still exist in staging but are being phased out:
+
+- `gerardoh@gmail.com` / `Test123456!` - Original test account
+
+Use canonical demo accounts above for all new testing and demos.
+
+---
+
+## Rotating Credentials
+
+### Demo Account Passwords
+1. Edit `db/seed_demo_accounts.sql`
+2. Update password values
+3. Re-run seed script: `psql $DATABASE_URL -f db/seed_demo_accounts.sql`
+
+### Environment Secrets
+1. Update in respective dashboard (Render/Vercel/GitHub)
+2. Trigger redeployment if needed
+3. Update team documentation
+
+---
+
+## Security Reminders
+
+✅ **DO**:
+- Use demo accounts for staging/QA
+- Store secrets in environment variables
+- Rotate passwords periodically
+- Use different credentials for production
+
+❌ **DON'T**:
+- Commit secrets to Git
+- Share credentials publicly
+- Use staging credentials in production
+- Log secrets in application code
+
+---
+
+**Last Updated**: November 15, 2025  
+**See Also**: `docs/DEMO_ACCOUNTS.md`, `docs/SEED_DEMO_ACCOUNTS.md`, `docs/AUTH_ARCHITECTURE_V1.md`
