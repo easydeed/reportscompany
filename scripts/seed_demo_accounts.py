@@ -20,7 +20,7 @@ def main():
         sys.exit(1)
     
     # Read the SQL seed script
-    seed_file = Path(__file__).parent.parent / 'db' / 'seed_demo_accounts.sql'
+    seed_file = Path(__file__).parent.parent / 'db' / 'seed_demo_accounts_v2.sql'
     
     if not seed_file.exists():
         print(f"❌ ERROR: Seed file not found at {seed_file}")
