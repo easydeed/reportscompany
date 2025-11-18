@@ -61,11 +61,14 @@ export function Navbar() {
 
           {/* Right Actions */}
           <div className="flex items-center gap-3">
+            <Link href="/login" className="hidden lg:inline-flex text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
+              Log in
+            </Link>
             <Button
               className="hidden lg:inline-flex bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white border-0 shadow-sm hover:shadow-md transition-all"
               asChild
             >
-              <Link href="/login">Get Started</Link>
+              <Link href="/register">Get Started</Link>
             </Button>
 
             {/* Mobile Menu Button */}
@@ -102,12 +105,19 @@ export function Navbar() {
                   {link.label}
                 </Link>
               ))}
-              <div className="pt-4 border-t border-slate-200">
+              <div className="pt-4 border-t border-slate-200 space-y-2">
+                <Link
+                  href="/login"
+                  className="block text-center px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Log in
+                </Link>
                 <Button
                   className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white border-0 shadow-sm hover:shadow-md transition-all"
                   asChild
                 >
-                  <Link href="/login">Get Started</Link>
+                  <Link href="/register" onClick={() => setIsMobileMenuOpen(false)}>Get Started</Link>
                 </Button>
               </div>
             </div>

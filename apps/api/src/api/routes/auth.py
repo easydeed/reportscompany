@@ -15,6 +15,11 @@ class LoginOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
+class RegisterIn(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+
 @router.post("/auth/login")
 def login(body: LoginIn, response: Response):
     with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
@@ -76,6 +81,99 @@ class AcceptInviteResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: dict
+
+
+@router.post("/auth/register")
+def register(body: RegisterIn, response: Response):
+    """
+    Register a new user with a free account.
+    
+    Creates:
+    - A new user with hashed password
+    - A new REGULAR account on the free plan
+    - Links user as OWNER of the account
+    - Returns auth session (JWT + cookie)
+    """
+    name = body.name.strip()
+    email = body.email.strip().lower()
+    password = body.password
+    
+    # Basic validation
+    if not name or not email or not password:
+        raise HTTPException(
+            status_code=400,
+            detail="Name, email, and password are required"
+        )
+    
+    if len(password) < 8:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 8 characters"
+        )
+    
+    with psycopg.connect(settings.DATABASE_URL, autocommit=False) as conn:
+        with conn.cursor() as cur:
+            # 1. Check if email already exists
+            cur.execute("""
+                SELECT id FROM users WHERE email = %s
+            """, (email,))
+            
+            if cur.fetchone():
+                raise HTTPException(
+                    status_code=400,
+                    detail="Email is already registered."
+                )
+            
+            # 2. Create account on free plan
+            cur.execute("""
+                INSERT INTO accounts (name, account_type, plan_slug)
+                VALUES (%s, 'REGULAR', 'free')
+                RETURNING id::text
+            """, (f"{name}'s Account",))
+            
+            account_id = cur.fetchone()[0]
+            
+            # 3. Create user
+            password_hash = hash_password(password)
+            
+            cur.execute("""
+                INSERT INTO users (account_id, email, password_hash, is_active, email_verified)
+                VALUES (%s::uuid, %s, %s, TRUE, TRUE)
+                RETURNING id::text
+            """, (account_id, email, password_hash))
+            
+            user_id = cur.fetchone()[0]
+            
+            # 4. Link user to account as OWNER
+            cur.execute("""
+                INSERT INTO account_users (account_id, user_id, role)
+                VALUES (%s::uuid, %s::uuid, 'OWNER')
+            """, (account_id, user_id))
+            
+            conn.commit()
+            
+            # 5. Generate JWT and set cookie
+            token = sign_jwt(
+                {
+                    "sub": user_id,
+                    "user_id": user_id,
+                    "account_id": account_id,
+                    "scopes": ["reports:read", "reports:write"]
+                },
+                settings.JWT_SECRET,
+                ttl_seconds=7 * 24 * 3600  # 7 days for new users
+            )
+            
+            response.set_cookie(
+                key="mr_token",
+                value=token,
+                httponly=True,
+                secure=True,
+                samesite="lax",
+                max_age=7 * 24 * 60 * 60  # 7 days
+            )
+            
+            return {"ok": True}
 
 
 @router.post("/auth/accept-invite", response_model=AcceptInviteResponse)
