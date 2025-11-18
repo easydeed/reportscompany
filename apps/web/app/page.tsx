@@ -1,4 +1,4 @@
-import { MarketingHome } from "@/components/v0/marketing-home";
+import { MarketingHome } from "@/components/marketing-home";
 
 export default function Home() {
   return <MarketingHome />;
