@@ -134,6 +134,16 @@ function DashboardTopbar({ accountType }: { accountType?: string }) {
           Agent Account
         </span>
       )}
+      
+      {/* Build marker - for deployment verification */}
+      <span className="text-[10px] text-slate-400">
+        build: {process.env.NEXT_PUBLIC_BUILD_TAG || "local-dev"}
+      </span>
+      
+      {/* Debug: show affiliate detection */}
+      <span className="text-[10px] text-slate-400">
+        role: {isAdmin ? "ADMIN" : "USER"} | affiliate: {isAffiliate ? "yes" : "no"} | type: {accountType || "unknown"}
+      </span>
 
       <AccountSwitcher />
       <NavAuth />
