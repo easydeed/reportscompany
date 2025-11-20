@@ -4,13 +4,22 @@ import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { API_BASE, DEMO_ACC } from "@/lib/api"
-import { CreditCard, Check } from "lucide-react"
+import { CreditCard, Check, Shield } from "lucide-react"
 
-type BillingState = { plan_slug?: string; billing_status?: string; stripe_customer_id?: string | null }
+type BillingState = { 
+  plan_slug?: string
+  billing_status?: string
+  stripe_customer_id?: string | null
+  account_type?: string
+}
 
 async function fetchAccount(): Promise<BillingState> {
-  const r = await fetch(`${API_BASE}/v1/account`, { headers: { "X-Demo-Account": DEMO_ACC } })
+  const r = await fetch('/api/proxy/v1/account', { cache: 'no-store' })
+  return r.ok ? r.json() : {}
+}
+
+async function fetchMe(): Promise<{ account_type?: string }> {
+  const r = await fetch('/api/proxy/v1/me', { cache: 'no-store' })
   return r.ok ? r.json() : {}
 }
 
@@ -44,17 +53,21 @@ const plans = [
 
 export default function BillingPage() {
   const [acct, setAcct] = useState<BillingState>({})
+  const [isAffiliate, setIsAffiliate] = useState(false)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    fetchAccount().then(setAcct)
+    Promise.all([fetchAccount(), fetchMe()]).then(([accountData, meData]) => {
+      setAcct(accountData)
+      setIsAffiliate(meData.account_type === 'INDUSTRY_AFFILIATE')
+    })
   }, [])
 
   async function checkout(plan: "starter" | "professional" | "enterprise") {
     setLoading(true)
-    const r = await fetch(`${API_BASE}/v1/billing/checkout`, {
+    const r = await fetch('/api/proxy/v1/billing/checkout', {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Demo-Account": DEMO_ACC },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plan }),
     })
     const j = await r.json()
@@ -63,11 +76,53 @@ export default function BillingPage() {
   }
 
   async function portal() {
-    const r = await fetch(`${API_BASE}/v1/billing/portal`, { headers: { "X-Demo-Account": DEMO_ACC } })
+    const r = await fetch('/api/proxy/v1/billing/portal')
     const j = await r.json()
     if (j.url) window.location.href = j.url
   }
 
+  // If affiliate, show different UI
+  if (isAffiliate) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="font-bold text-3xl mb-2">Billing</h1>
+          <p className="text-muted-foreground">Manage your affiliate plan</p>
+        </div>
+
+        <Card className="border-purple-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-purple-600" />
+              Your Affiliate Plan
+            </CardTitle>
+            <CardDescription>
+              Your affiliate plan is managed directly with TrendyReports. Contact us if you need to change it.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Current plan</p>
+              <p className="text-lg font-semibold">Affiliate</p>
+            </div>
+            <div className="pt-4 border-t">
+              <p className="text-sm text-slate-600 mb-3">
+                If you'd like to adjust your coverage or sponsored agent limits, please contact our team.
+              </p>
+              <Button variant="outline" asChild>
+                <a href="mailto:support@trendyreports.io">
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Contact Support
+                </a>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Regular agent billing UI
   return (
     <div className="space-y-6">
       <div>

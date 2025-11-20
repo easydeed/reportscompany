@@ -39,24 +39,22 @@ import { usePathname } from "next/navigation"
 import NavAuth from "@/components/NavAuth"
 import { AccountSwitcher } from "@/components/account-switcher"
 
-const baseNavigation = [
-  { name: "Overview", href: "/app", icon: LayoutDashboard },
-  { name: "Reports", href: "/app/reports", icon: FileText },
-  { name: "Schedules", href: "/app/schedules", icon: Calendar },
-  { name: "Branding", href: "/app/branding", icon: Palette },
-  { name: "Billing", href: "/app/billing", icon: CreditCard },
-]
-
 function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffiliate: boolean }) {
   const pathname = usePathname()
   
   // Build navigation based on user role
-  let navigation = [...baseNavigation]
+  let navigation = [
+    { name: "Overview", href: "/app", icon: LayoutDashboard },
+    { name: "Reports", href: "/app/reports", icon: FileText },
+    { name: "Schedules", href: "/app/schedules", icon: Calendar },
+    // Branding label varies by account type
+    { name: isAffiliate ? "Affiliate Branding" : "Branding", href: "/app/branding", icon: Palette },
+    { name: "Billing", href: "/app/billing", icon: CreditCard },
+  ]
   
-  // Add Affiliate Dashboard for affiliate accounts
+  // Add Affiliate Dashboard for affiliate accounts (placed after Overview)
   if (isAffiliate) {
-    navigation.push({ name: "Affiliate Dashboard", href: "/app/affiliate", icon: Shield })
-    navigation.push({ name: "Affiliate Branding", href: "/app/affiliate/branding", icon: Palette })
+    navigation.splice(1, 0, { name: "Affiliate Dashboard", href: "/app/affiliate", icon: Shield })
   }
   
   // Add Admin link if user is admin
