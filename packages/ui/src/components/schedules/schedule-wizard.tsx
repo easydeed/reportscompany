@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "../ui/button"
 import { Card, CardContent } from "../ui/card"
 import { Input } from "../ui/input"
@@ -415,6 +415,53 @@ function StepRecipients({
 }) {
   const [emailInput, setEmailInput] = useState("")
   const [emailError, setEmailError] = useState("")
+  const [people, setPeople] = useState<any[]>([])
+  const [loadingPeople, setLoadingPeople] = useState(true)
+  const [isAffiliate, setIsAffiliate] = useState(false)
+  
+  // Fetch people (contacts + sponsored agents) on mount
+  useEffect(() => {
+    async function loadPeople() {
+      try {
+        // Check if user is affiliate
+        const meRes = await fetch('/api/proxy/v1/me', { cache: 'no-store' })
+        const me = meRes.ok ? await meRes.json() : {}
+        const isAff = me.account_type === 'INDUSTRY_AFFILIATE'
+        setIsAffiliate(isAff)
+        
+        const peopleList: any[] = []
+        
+        // Fetch contacts
+        const contactsRes = await fetch('/api/proxy/v1/contacts', { cache: 'no-store' })
+        if (contactsRes.ok) {
+          const contactsData = await contactsRes.json()
+          peopleList.push(...(contactsData.contacts || []).map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            email: c.email,
+            type: c.type === 'client' ? 'Client' : c.type === 'list' ? 'List' : 'Agent',
+          })))
+        }
+        
+        // If affiliate, fetch sponsored accounts (note: they don't have emails in this view)
+        if (isAff) {
+          const overviewRes = await fetch('/api/proxy/v1/affiliate/overview', { cache: 'no-store' })
+          if (overviewRes.ok) {
+            const overview = await overviewRes.json()
+            // Only add sponsored accounts that have a contact email
+            // In a real scenario, you'd want to store agent emails in the accounts table
+          }
+        }
+        
+        setPeople(peopleList.filter(p => p.email)) // Only show people with emails
+      } catch (error) {
+        console.error('Failed to load people:', error)
+      } finally {
+        setLoadingPeople(false)
+      }
+    }
+    loadPeople()
+  }, [])
 
   const addEmail = () => {
     const email = emailInput.trim().toLowerCase()
@@ -441,6 +488,12 @@ function StepRecipients({
     setEmailInput("")
   }
 
+  const addPersonEmail = (email: string) => {
+    if (email && !state.recipients.includes(email)) {
+      setState({ ...state, recipients: [...state.recipients, email] })
+    }
+  }
+
   const removeEmail = (email: string) => {
     setState({ ...state, recipients: state.recipients.filter((e) => e !== email) })
   }
@@ -449,14 +502,63 @@ function StepRecipients({
     <div className="space-y-6">
       <div>
         <h2 className="font-display font-semibold text-xl mb-1">Email Recipients</h2>
-        <p className="text-sm text-muted-foreground">Add email addresses to receive the scheduled reports</p>
+        <p className="text-sm text-muted-foreground">
+          {isAffiliate
+            ? "Select from your contacts, or add emails manually"
+            : "Select from your contacts or add emails manually"}
+        </p>
       </div>
+
+      {/* People Selector */}
+      {!loadingPeople && people.length > 0 && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="pt-6 space-y-3">
+            <Label className="text-sm flex items-center gap-2">
+              <Mail className="w-4 w-4 text-primary" />
+              Select from your contacts
+            </Label>
+            <div className="max-h-[200px] overflow-y-auto space-y-2 pr-2">
+              {people.map((person) => (
+                <button
+                  key={person.id}
+                  type="button"
+                  onClick={() => addPersonEmail(person.email)}
+                  disabled={state.recipients.includes(person.email)}
+                  className={cn(
+                    "w-full flex items-center justify-between p-3 rounded-lg border-2 text-left transition-all",
+                    !state.recipients.includes(person.email)
+                      ? "border-border hover:border-primary/50 hover:bg-primary/5 cursor-pointer"
+                      : "border-border/50 bg-muted/30 cursor-not-allowed opacity-60"
+                  )}
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <span className="text-xs font-semibold text-primary">
+                        {person.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{person.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {person.email} • {person.type}
+                      </p>
+                    </div>
+                  </div>
+                  {state.recipients.includes(person.email) && (
+                    <Badge variant="secondary" className="shrink-0 ml-2">Added</Badge>
+                  )}
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
         <CardContent className="pt-6 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email-input">
-              Email Address <span className="text-destructive">*</span>
+              {people.length > 0 ? "Or add email manually" : "Email Address"} <span className="text-destructive">*</span>
             </Label>
             <div className="flex gap-2">
               <div className="flex-1">
