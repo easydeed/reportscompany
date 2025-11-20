@@ -77,6 +77,13 @@ Fix the failures and re-run the workflow.
 
 The E2E tests need these GitHub secrets configured:
 
+- `E2E_REGULAR_EMAIL` - Regular agent email (use `agent-pro@trendyreports-demo.com`)
+- `E2E_REGULAR_PASSWORD` - Regular agent password (use `DemoAgent123!`)
+- `E2E_AFFILIATE_EMAIL` - Affiliate account email (use `affiliate@trendyreports-demo.com`)
+- `E2E_AFFILIATE_PASSWORD` - Affiliate account password (use `DemoAff123!`)
+
+**Note:** These should map to the canonical demo accounts from `docs/PROD_DEMO_ACCOUNTS_CHECKLIST.md`.
+
 | Secret Name | Description | Recommended Value |
 |-------------|-------------|-------------------|
 | `E2E_BASE_URL` | Staging URL | `https://reportscompany-web.vercel.app` |
