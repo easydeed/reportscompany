@@ -13,8 +13,11 @@ import os
 import sys
 import psycopg
 
-# Production database URL
-DATABASE_URL = "postgresql://mr_staging_db_user:vlFYf9ykajrJC7y62as6RKazBSr37fUU@dpg-d474qiqli9vc738g17e0-a.oregon-postgres.render.com/mr_staging_db"
+# Production database URL - read from environment
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgresql://mr_staging_db_user:vlFYf9ykajrJC7y62as6RKazBSr37fUU@dpg-d474qiqli9vc738g17e0-a.oregon-postgres.render.com/mr_staging_db"
+)
 
 def main():
     print("=" * 80)
