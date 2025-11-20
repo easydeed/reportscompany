@@ -43,7 +43,7 @@ async function getAffiliateData(): Promise<AffiliateData | { error: string }> {
   try {
     const response = await fetch(`${API_BASE}/v1/affiliate/overview`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Cookie': `mr_token=${token}`,
       },
       cache: 'no-store',
     });
@@ -74,7 +74,7 @@ async function getPlanUsage() {
   try {
     const response = await fetch(`${API_BASE}/v1/account/plan-usage`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Cookie': `mr_token=${token}`,
       },
       cache: 'no-store',
     });

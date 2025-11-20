@@ -27,7 +27,7 @@ async function getBranding(): Promise<BrandingData | { error: string }> {
   try {
     const response = await fetch(`${API_BASE}/v1/affiliate/branding`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Cookie': `mr_token=${token}`,
       },
       cache: 'no-store',
     });
