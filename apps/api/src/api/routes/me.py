@@ -6,8 +6,8 @@ router = APIRouter(prefix="/v1")
 @router.get("/me")
 def me(request: Request):
     """
-    Get current user information including role.
-    Returns: { account_id, user_id, email, role }
+    Get current user information including role and account type.
+    Returns: { account_id, user_id, email, role, account_type }
     """
     # Auth middleware already set account_id and user info
     account_id = getattr(request.state, "account_id", None)
@@ -16,13 +16,25 @@ def me(request: Request):
     if not account_id:
         raise HTTPException(status_code=401, detail="Unauthorized")
     
+    # Fetch account_type from accounts table
+    with db_conn() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT account_type
+            FROM accounts
+            WHERE id = %s::uuid
+        """, (account_id,))
+        account_row = cur.fetchone()
+        account_type = account_row[0] if account_row else "REGULAR"
+    
     # If auth middleware set user info (JWT authentication), use it
     if user_info and user_info.get("id"):
         return {
             "account_id": account_id,
             "user_id": user_info.get("id"),
             "email": user_info.get("email"),
-            "role": user_info.get("role", "USER")
+            "role": user_info.get("role", "USER"),
+            "account_type": account_type
         }
     
     # Fallback: look up first user in account (API key authentication)
@@ -44,6 +56,7 @@ def me(request: Request):
             "account_id": account_id,
             "user_id": row[0],
             "email": row[1],
-            "role": (row[2] or "USER").upper()
+            "role": (row[2] or "USER").upper(),
+            "account_type": account_type
         }
 
