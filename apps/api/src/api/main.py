@@ -20,6 +20,7 @@ from .routes.unsubscribe import router as unsubscribe_router
 from .routes.admin import router as admin_router
 from .routes.me import router as me_router
 from .routes.affiliates import router as affiliates_router
+from .routes.contacts import router as contacts_router
 
 app = FastAPI(
     title="Market Reports API",
@@ -62,6 +63,7 @@ app.include_router(unsubscribe_router)
 app.include_router(admin_router)
 app.include_router(me_router)
 app.include_router(affiliates_router)
+app.include_router(contacts_router)
 
 # Root
 @app.get("/")

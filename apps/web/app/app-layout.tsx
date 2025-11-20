@@ -22,6 +22,7 @@ import {
   ChevronDown,
   Shield,
   Calendar,
+  Users,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -47,6 +48,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
     { name: "Overview", href: "/app", icon: LayoutDashboard },
     { name: "Reports", href: "/app/reports", icon: FileText },
     { name: "Schedules", href: "/app/schedules", icon: Calendar },
+    { name: "People", href: "/app/people", icon: Users },
     // Branding label varies by account type
     { name: isAffiliate ? "Affiliate Branding" : "Branding", href: "/app/branding", icon: Palette },
     { name: "Billing", href: "/app/billing", icon: CreditCard },
