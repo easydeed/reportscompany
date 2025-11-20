@@ -546,3 +546,188 @@ def save_branding(
             "website_url": row[7],
         }
 
+
+# Phase: Sponsored account management (metrics + suspend)
+
+@router.get("/accounts/{sponsored_account_id}")
+def get_sponsored_account_detail(
+    sponsored_account_id: str,
+    request: Request,
+    account_id: str = Depends(require_account_id)
+):
+    """
+    Get detailed metrics for a specific sponsored account.
+    
+    Returns 403 if:
+    - Current account is not INDUSTRY_AFFILIATE
+    - sponsored_account_id is not actually sponsored by current account
+    """
+    with db_conn() as (conn, cur):
+        # Verify this is an affiliate account
+        if not verify_affiliate_account(cur, account_id):
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "error": "not_affiliate_account",
+                    "message": "This account is not an industry affiliate."
+                }
+            )
+        
+        # Verify the sponsored account belongs to this affiliate
+        cur.execute("""
+            SELECT 
+                a.id::text,
+                a.name,
+                a.plan_slug,
+                a.is_active,
+                a.created_at
+            FROM accounts a
+            WHERE a.id = %s::uuid
+              AND a.sponsor_account_id = %s::uuid
+        """, (sponsored_account_id, account_id))
+        
+        acc_row = cur.fetchone()
+        if not acc_row:
+            raise HTTPException(
+                status_code=404,
+                detail="Sponsored account not found or not owned by you"
+            )
+        
+        # Get usage metrics for this month
+        cur.execute("""
+            SELECT COUNT(*) 
+            FROM reports
+            WHERE account_id = %s::uuid
+              AND created_at >= date_trunc('month', CURRENT_DATE)
+        """, (sponsored_account_id,))
+        reports_this_month = cur.fetchone()[0]
+        
+        # Get last report date
+        cur.execute("""
+            SELECT MAX(created_at)
+            FROM reports
+            WHERE account_id = %s::uuid
+        """, (sponsored_account_id,))
+        last_report_row = cur.fetchone()
+        last_report_at = last_report_row[0].isoformat() if last_report_row and last_report_row[0] else None
+        
+        # Get total reports all time
+        cur.execute("""
+            SELECT COUNT(*)
+            FROM reports
+            WHERE account_id = %s::uuid
+        """, (sponsored_account_id,))
+        total_reports = cur.fetchone()[0]
+        
+        return {
+            "account": {
+                "account_id": acc_row[0],
+                "name": acc_row[1],
+                "plan_slug": acc_row[2],
+                "is_active": acc_row[3],
+                "created_at": acc_row[4].isoformat() if acc_row[4] else None,
+            },
+            "metrics": {
+                "reports_this_month": reports_this_month,
+                "total_reports": total_reports,
+                "last_report_at": last_report_at,
+            }
+        }
+
+
+@router.post("/accounts/{sponsored_account_id}/deactivate")
+def deactivate_sponsored_account(
+    sponsored_account_id: str,
+    request: Request,
+    account_id: str = Depends(require_account_id)
+):
+    """
+    Suspend/deactivate a sponsored account.
+    
+    Sets is_active = FALSE on the account.
+    Future: worker can respect this flag and skip sending schedules.
+    """
+    with db_conn() as (conn, cur):
+        # Verify this is an affiliate account
+        if not verify_affiliate_account(cur, account_id):
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "error": "not_affiliate_account",
+                    "message": "This account is not an industry affiliate."
+                }
+            )
+        
+        # Verify ownership and update
+        cur.execute("""
+            UPDATE accounts
+            SET is_active = FALSE
+            WHERE id = %s::uuid
+              AND sponsor_account_id = %s::uuid
+            RETURNING id::text, name, is_active
+        """, (sponsored_account_id, account_id))
+        
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(
+                status_code=404,
+                detail="Sponsored account not found or not owned by you"
+            )
+        
+        conn.commit()
+        
+        return {
+            "ok": True,
+            "account_id": row[0],
+            "name": row[1],
+            "is_active": row[2],
+        }
+
+
+@router.post("/accounts/{sponsored_account_id}/reactivate")
+def reactivate_sponsored_account(
+    sponsored_account_id: str,
+    request: Request,
+    account_id: str = Depends(require_account_id)
+):
+    """
+    Reactivate a suspended account.
+    
+    Sets is_active = TRUE on the account.
+    """
+    with db_conn() as (conn, cur):
+        # Verify this is an affiliate account
+        if not verify_affiliate_account(cur, account_id):
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "error": "not_affiliate_account",
+                    "message": "This account is not an industry affiliate."
+                }
+            )
+        
+        # Verify ownership and update
+        cur.execute("""
+            UPDATE accounts
+            SET is_active = TRUE
+            WHERE id = %s::uuid
+              AND sponsor_account_id = %s::uuid
+            RETURNING id::text, name, is_active
+        """, (sponsored_account_id, account_id))
+        
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(
+                status_code=404,
+                detail="Sponsored account not found or not owned by you"
+            )
+        
+        conn.commit()
+        
+        return {
+            "ok": True,
+            "account_id": row[0],
+            "name": row[1],
+            "is_active": row[2],
+        }
+
