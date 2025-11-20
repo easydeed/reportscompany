@@ -111,7 +111,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
   )
 }
 
-function DashboardTopbar() {
+function DashboardTopbar({ accountType }: { accountType?: string }) {
   return (
     <header className="flex h-12 shrink-0 items-center gap-4 border-b border-[var(--app-border)] bg-[var(--app-surface)] px-4">
       <SidebarTrigger />
@@ -121,6 +121,19 @@ function DashboardTopbar() {
           <Input placeholder="Search reports..." className="pl-9 bg-slate-50 border-[var(--app-border)]" />
         </div>
       </div>
+
+      {/* Account Type Badge */}
+      {accountType === "INDUSTRY_AFFILIATE" && (
+        <span className="rounded-full bg-purple-50 text-purple-700 text-xs font-medium px-3 py-1 border border-purple-200 flex items-center gap-1.5">
+          <Shield className="h-3 w-3" />
+          Affiliate Account
+        </span>
+      )}
+      {accountType === "REGULAR" && (
+        <span className="rounded-full bg-slate-50 text-slate-600 text-xs font-medium px-3 py-1 border border-slate-200">
+          Agent Account
+        </span>
+      )}
 
       <AccountSwitcher />
       <NavAuth />
@@ -162,10 +175,12 @@ export default function AppLayoutClient({
   children,
   isAdmin,
   isAffiliate = false,
+  accountType,
 }: {
   children: React.ReactNode
   isAdmin: boolean
   isAffiliate?: boolean
+  accountType?: string
 }) {
   return (
     <SidebarProvider>
@@ -173,7 +188,7 @@ export default function AppLayoutClient({
         <div className="flex min-h-screen w-full" style={{ backgroundColor: 'var(--app-bg)', color: 'var(--app-text)' }}>
           <DashboardSidebar isAdmin={isAdmin} isAffiliate={isAffiliate} />
           <SidebarInset className="flex flex-col">
-            <DashboardTopbar />
+            <DashboardTopbar accountType={accountType} />
             <main className="flex-1 p-6 bg-[var(--app-bg)]">{children}</main>
           </SidebarInset>
         </div>

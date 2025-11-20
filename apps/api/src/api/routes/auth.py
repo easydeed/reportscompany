@@ -30,9 +30,27 @@ def login(body: LoginIn, response: Response):
             row = cur.fetchone()
             if not row:
                 raise HTTPException(status_code=401, detail="Invalid credentials")
-            user_id, account_id, pw_hash = row
+            user_id, default_account_id, pw_hash = row
             if not pw_hash or not check_password(body.password, pw_hash):
                 raise HTTPException(status_code=401, detail="Invalid credentials")
+            
+            # Prioritize INDUSTRY_AFFILIATE account if user belongs to one
+            # This ensures affiliates land in their affiliate dashboard by default
+            cur.execute("""
+                SELECT a.id::text, a.account_type
+                FROM account_users au
+                JOIN accounts a ON a.id = au.account_id
+                WHERE au.user_id = %s::uuid
+                ORDER BY 
+                    CASE 
+                        WHEN a.account_type = 'INDUSTRY_AFFILIATE' THEN 1
+                        WHEN a.id = %s::uuid THEN 2
+                        ELSE 3
+                    END
+                LIMIT 1
+            """, (user_id, default_account_id))
+            account_row = cur.fetchone()
+            account_id = account_row[0] if account_row else default_account_id
 
     token = sign_jwt({
         "sub": user_id,

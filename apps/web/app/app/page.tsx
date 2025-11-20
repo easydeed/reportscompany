@@ -1,13 +1,91 @@
 import { apiFetch } from "@/lib/api"
 import { DashboardOverview } from "@repo/ui"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle, AlertTriangle } from "lucide-react"
+import { AlertCircle, AlertTriangle, Shield, Palette, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 
 export const dynamic = 'force-dynamic'
 
 export default async function Overview() {
+  // Check if user is an affiliate
+  let isAffiliate = false
+  let userEmail = ""
+  try {
+    const me = await apiFetch("/v1/me")
+    isAffiliate = me?.account_type === "INDUSTRY_AFFILIATE"
+    userEmail = me?.email || ""
+  } catch (error) {
+    console.error("Failed to fetch user info:", error)
+  }
+  
+  // If affiliate, show affiliate-specific dashboard
+  if (isAffiliate) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Affiliate Dashboard</h1>
+          <p className="text-slate-600 mt-1">
+            Manage your sponsored agents and white-label branding
+          </p>
+        </div>
+
+        <Card className="border-purple-200 bg-purple-50/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-purple-600" />
+              Industry Affiliate Account
+            </CardTitle>
+            <CardDescription>
+              You're viewing your <strong>industry affiliate account</strong>. Use this space to manage your sponsored agents and customize your brand.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3">
+              <Link href="/app/affiliate" className="group">
+                <div className="flex items-center justify-between p-4 rounded-lg border border-slate-200 hover:border-purple-300 hover:bg-white transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                      <Shield className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-900">Affiliate Dashboard</p>
+                      <p className="text-sm text-slate-600">View sponsored accounts and usage metrics</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-5 w-5 text-slate-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
+                </div>
+              </Link>
+
+              <Link href="/app/affiliate/branding" className="group">
+                <div className="flex items-center justify-between p-4 rounded-lg border border-slate-200 hover:border-purple-300 hover:bg-white transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                      <Palette className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-900">White-Label Branding</p>
+                      <p className="text-sm text-slate-600">Customize your logo, colors, and tagline</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-5 w-5 text-slate-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
+                </div>
+              </Link>
+            </div>
+
+            <div className="pt-4 border-t border-purple-200">
+              <p className="text-sm text-slate-600">
+                Your sponsored agents will see your branding on all reports and emails. Manage invitations and view their activity from the Affiliate Dashboard.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+  
+  // Regular agent dashboard
   let data: any = null
   try {
     data = await apiFetch("/v1/usage")
