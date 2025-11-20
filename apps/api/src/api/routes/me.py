@@ -17,8 +17,7 @@ def me(request: Request):
         raise HTTPException(status_code=401, detail="Unauthorized")
     
     # Fetch account_type from accounts table
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
         cur.execute("""
             SELECT account_type
             FROM accounts
@@ -38,8 +37,7 @@ def me(request: Request):
         }
     
     # Fallback: look up first user in account (API key authentication)
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
         cur.execute("""
             SELECT id::text AS user_id, email, role 
             FROM users 
