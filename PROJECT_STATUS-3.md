@@ -1,7 +1,7 @@
 # Project Status - All Phases Complete + Photo-Driven Templates
 
-**Last Updated:** November 15, 2025  
-**Current Phase:** 🚀 LAUNCH READY - All Systems Operational
+**Last Updated:** November 20, 2025  
+**Current Phase:** 🚀 LAUNCH READY - All Systems Operational + Production Demo Accounts
 
 ---
 
@@ -69,7 +69,7 @@
 
 **For investor demos, sales presentations, and QA walkthroughs.**
 
-We maintain **5 canonical demo accounts** in staging that showcase the complete product:
+We maintain **5 canonical demo accounts** in **BOTH staging AND production** that showcase the complete product:
 
 | Role | Email | Password | What They See |
 |------|-------|----------|---------------|
@@ -90,14 +90,32 @@ We maintain **5 canonical demo accounts** in staging that showcase the complete 
 
 ### Documentation
 - **`docs/DEMO_ACCOUNTS.md`**: User-facing demo credentials and walkthrough guide
-- **`docs/SEED_DEMO_ACCOUNTS.md`**: How to create/reset accounts in staging database
-- **`db/seed_demo_accounts.sql`**: Idempotent SQL script for account seeding
+- **`docs/SEED_DEMO_ACCOUNTS.md`**: How to create/reset accounts in **staging** database
+- **`db/seed_demo_accounts_v2.sql`**: Idempotent SQL script for **staging** account seeding
+- **`docs/SEED_DEMO_ACCOUNTS_PROD.md`**: How to create/reset accounts in **production** database ⭐ NEW
+- **`db/seed_demo_accounts_prod.sql`**: Idempotent SQL script for **production** account seeding ⭐ NEW
+- **`docs/AFFILIATE_CONTEXT_VERIFICATION_RESULTS.md`**: Staging DB verification (all passing)
+
+### Production Demo Accounts (www.trendyreports.io) ⭐ NEW
+**Ready for buyer conversations and investor demos on the live production site:**
+- ✅ All 5 roles available with same credentials
+- ✅ Idempotent seed script ready to run (`db/seed_demo_accounts_prod.sql`)
+- ✅ Complete documentation for running on production DB
+- ✅ Safe to reset passwords by re-running script
+- ✅ Showcases full multi-tenant architecture with real data
+
+### Staging Demo Accounts (reportscompany-web.vercel.app)
+**For QA, E2E tests, and development validation:**
+- ✅ All 5 roles seeded and verified
+- ✅ Used by automated E2E tests via GitHub secrets
+- ✅ Safe testing environment without affecting production data
 
 ### Usage
-- **Investor Demos**: Clean, role-based logins (no "gerardoh@gmail.com")
+- **Investor Demos**: Professional demo accounts on production (www.trendyreports.io)
+- **Buyer Conversations**: Show live product with all roles in 5 minutes
 - **E2E Tests**: Mapped via GitHub secrets (`E2E_REGULAR_EMAIL`, `E2E_AFFILIATE_EMAIL`)
-- **QA**: Manual testing of each user persona
-- **Sales**: Professional presentation-ready accounts
+- **QA**: Manual testing of each user persona on staging
+- **Sales**: Presentation-ready accounts with real-world UX
 
 ---
 
@@ -112,9 +130,35 @@ These were planned but not critical for launch. Can be added post-launch as need
 
 ---
 
-### ✅ Completed Phases (November 15, 2025)
+### ✅ Completed Phases (November 2025)
 
-#### **Phase FINAL: Launch Polish - 100% COMPLETE** ⭐ LATEST
+#### **Phase PRODUCTION DEMO ACCOUNTS: Canonical Demo Seeding - 100% COMPLETE** ⭐ LATEST
+- **Status:** ✅ ALL DELIVERABLES COMPLETE (November 20, 2025)
+- **Commits:** `f72ed37` (prod seed), `485fb50` (CORS/affiliate fix)
+- **Features:**
+  - **Production Demo Account Seeding:**
+    - ✅ Created `db/seed_demo_accounts_prod.sql` - Idempotent script for all 5 roles
+    - ✅ Created `docs/SEED_DEMO_ACCOUNTS_PROD.md` - Complete setup and verification guide
+    - ✅ Script safely handles users, accounts, and relationships (sponsor_account_id)
+    - ✅ Uses pgcrypto for secure password hashing with bcrypt
+    - ✅ Safe to run multiple times without duplicating data
+    - ✅ Includes verification query showing all accounts
+  - **CORS Fix for www Domain:**
+    - ✅ Added `https://www.trendyreports.io` to ALLOWED_ORIGINS on Render
+    - ✅ Fixed CORS errors when accessing from www subdomain
+    - ✅ Documentation: `docs/DOMAIN_CORS_FIX.md`
+  - **Reports Proxy Route:**
+    - ✅ Created `/api/proxy/v1/reports/route.ts` with GET and POST handlers
+    - ✅ Fixed 405 Method Not Allowed error on `/app/reports` page
+  - **Affiliate/Sponsored Agent UX Verification:**
+    - ✅ Verified staging DB accounts correctly configured
+    - ✅ Created `db/verify_affiliate_account_context.sql` - Check account setup
+    - ✅ Created `db/fix_affiliate_account_context.sql` - Fix account linkage if needed
+    - ✅ Confirmed login prioritizes INDUSTRY_AFFILIATE accounts
+    - ✅ Documentation: `docs/AFFILIATE_UX_FIX.md`, `docs/AFFILIATE_CONTEXT_VERIFICATION_RESULTS.md`
+  - **Result:** Ready for production demos with canonical accounts on www.trendyreports.io
+
+#### **Phase FINAL: Launch Polish - 100% COMPLETE**
 - **Status:** ✅ ALL DELIVERABLES COMPLETE (November 15, 2025)
 - **Commits:** `2f09b00` (Tasks 2-3), `1434239` (Task 5.1)
 - **Features:**
