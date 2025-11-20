@@ -1,19 +1,37 @@
-import { apiFetch } from "@/lib/api"
 import { DashboardOverview } from "@repo/ui"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, AlertTriangle, Shield, Palette, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
+
+async function fetchWithAuth(path: string) {
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://reportscompany.onrender.com'
+  const cookieStore = await cookies()
+  const token = cookieStore.get('mr_token')?.value
+  
+  if (!token) return null
+  
+  const response = await fetch(`${API_BASE}${path}`, {
+    headers: {
+      'Cookie': `mr_token=${token}`,
+    },
+    cache: 'no-store',
+  })
+  
+  if (!response.ok) return null
+  return response.json()
+}
 
 export default async function Overview() {
   // Check if user is an affiliate
   let isAffiliate = false
   let userEmail = ""
   try {
-    const me = await apiFetch("/v1/me")
+    const me = await fetchWithAuth("/v1/me")
     isAffiliate = me?.account_type === "INDUSTRY_AFFILIATE"
     userEmail = me?.email || ""
   } catch (error) {
@@ -88,7 +106,7 @@ export default async function Overview() {
   // Regular agent dashboard
   let data: any = null
   try {
-    data = await apiFetch("/v1/usage")
+    data = await fetchWithAuth("/v1/usage")
   } catch (error) {
     console.error("Failed to fetch usage data:", error)
   }
@@ -96,7 +114,7 @@ export default async function Overview() {
   // Phase 29E: Fetch plan usage for warning banner
   let planUsage: any = null
   try {
-    planUsage = await apiFetch("/v1/account/plan-usage")
+    planUsage = await fetchWithAuth("/v1/account/plan-usage")
   } catch (error) {
     console.error("Failed to fetch plan usage:", error)
   }

@@ -1,5 +1,5 @@
 import AppLayoutClient from "../app-layout"
-import { apiFetch } from "@/lib/api"
+import { cookies } from 'next/headers'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   let isAdmin = false
@@ -7,10 +7,29 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let accountType = ""
   
   try {
-    const me = await apiFetch("/v1/me")
-    isAdmin = me?.role === "ADMIN"
-    isAffiliate = me?.account_type === "INDUSTRY_AFFILIATE"
-    accountType = me?.account_type || "REGULAR"
+    // Get the API base URL
+    const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://reportscompany.onrender.com'
+    
+    // Get cookies from the incoming request
+    const cookieStore = await cookies()
+    const token = cookieStore.get('mr_token')?.value
+    
+    if (token) {
+      // Call /v1/me with the JWT cookie
+      const response = await fetch(`${API_BASE}/v1/me`, {
+        headers: {
+          'Cookie': `mr_token=${token}`,
+        },
+        cache: 'no-store',
+      })
+      
+      if (response.ok) {
+        const me = await response.json()
+        isAdmin = me?.role === "ADMIN"
+        isAffiliate = me?.account_type === "INDUSTRY_AFFILIATE"
+        accountType = me?.account_type || "REGULAR"
+      }
+    }
   } catch (error) {
     // User not authenticated or API error
     console.error("Failed to fetch user role:", error)
