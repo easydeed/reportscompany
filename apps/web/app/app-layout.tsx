@@ -111,7 +111,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
   )
 }
 
-function DashboardTopbar({ accountType }: { accountType?: string }) {
+function DashboardTopbar({ accountType, isAdmin, isAffiliate }: { accountType?: string; isAdmin: boolean; isAffiliate: boolean }) {
   return (
     <header className="flex h-12 shrink-0 items-center gap-4 border-b border-[var(--app-border)] bg-[var(--app-surface)] px-4">
       <SidebarTrigger />
@@ -198,7 +198,7 @@ export default function AppLayoutClient({
         <div className="flex min-h-screen w-full" style={{ backgroundColor: 'var(--app-bg)', color: 'var(--app-text)' }}>
           <DashboardSidebar isAdmin={isAdmin} isAffiliate={isAffiliate} />
           <SidebarInset className="flex flex-col">
-            <DashboardTopbar accountType={accountType} />
+            <DashboardTopbar accountType={accountType} isAdmin={isAdmin} isAffiliate={isAffiliate} />
             <main className="flex-1 p-6 bg-[var(--app-bg)]">{children}</main>
           </SidebarInset>
         </div>
