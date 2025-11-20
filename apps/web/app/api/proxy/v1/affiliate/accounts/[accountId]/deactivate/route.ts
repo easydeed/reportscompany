@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://reportscompany.onrender.com';
 
-export async function POST(req: NextRequest, { params }: { params: { accountId: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ accountId: string }> }) {
   const cookieHeader = req.headers.get('cookie') || '';
-  const { accountId } = params;
+  const { accountId } = await params;
   
   const res = await fetch(`${API_BASE}/v1/affiliate/accounts/${accountId}/deactivate`, {
     method: 'POST',

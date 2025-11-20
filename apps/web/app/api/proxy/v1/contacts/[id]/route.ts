@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://reportscompany.onrender.com';
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const cookieHeader = req.headers.get('cookie') || '';
-  const { id } = params;
+  const { id } = await params;
   
   const res = await fetch(`${API_BASE}/v1/contacts/${id}`, {
     headers: {
@@ -22,9 +22,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   });
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const cookieHeader = req.headers.get('cookie') || '';
-  const { id } = params;
+  const { id } = await params;
   const body = await req.text();
   
   const res = await fetch(`${API_BASE}/v1/contacts/${id}`, {
@@ -46,9 +46,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   });
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const cookieHeader = req.headers.get('cookie') || '';
-  const { id } = params;
+  const { id } = await params;
   
   const res = await fetch(`${API_BASE}/v1/contacts/${id}`, {
     method: 'DELETE',
