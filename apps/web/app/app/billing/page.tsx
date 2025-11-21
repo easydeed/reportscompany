@@ -5,36 +5,61 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CreditCard, Check, Shield } from "lucide-react"
+import { useRouter } from "next/navigation"
 
-type BillingState = { 
-  plan_slug?: string
-  billing_status?: string
-  stripe_customer_id?: string | null
-  account_type?: string
+type PlanUsageData = {
+  account: {
+    id: string
+    name: string
+    account_type: string
+    plan_slug: string
+  }
+  plan: {
+    plan_name: string
+    plan_slug: string
+    monthly_report_limit: number
+  }
+  usage: {
+    report_count: number
+  }
+  stripe_billing?: {
+    stripe_price_id: string
+    amount: number // cents
+    currency: string
+    interval: string
+    interval_count: number
+    nickname?: string | null
+  } | null
 }
 
-async function fetchAccount(): Promise<BillingState> {
-  const r = await fetch('/api/proxy/v1/account', { cache: 'no-store' })
-  return r.ok ? r.json() : {}
-}
+// Helper to format price display from Stripe billing data
+function getPlanDisplay(data: PlanUsageData) {
+  const sb = data.stripe_billing
+  let planName = data.plan.plan_name || data.account.plan_slug
+  let priceDisplay = ""
 
-async function fetchMe(): Promise<{ account_type?: string }> {
-  const r = await fetch('/api/proxy/v1/me', { cache: 'no-store' })
-  return r.ok ? r.json() : {}
+  if (sb && sb.amount != null && sb.currency && sb.interval) {
+    const dollars = (sb.amount / 100).toFixed(2)
+    const interval = sb.interval // 'month'
+    planName = sb.nickname || planName
+    priceDisplay = `$${dollars} / ${interval}`
+  }
+
+  return { planName, priceDisplay }
 }
 
 const plans = [
   {
     name: "Starter",
-    slug: "starter",
-    price: "$29",
+    slug: "free",
+    price: "$0",
     period: "/month",
     description: "Perfect for individual agents",
-    features: ["100 reports / month", "6 report types", "PDF export", "Email support"],
+    features: ["10 reports / month", "6 report types", "PDF export", "Email support"],
   },
   {
     name: "Professional",
-    slug: "professional",
+    slug: "pro",
     price: "$99",
     period: "/month",
     description: "For growing teams",
@@ -42,8 +67,8 @@ const plans = [
     popular: true,
   },
   {
-    name: "Enterprise",
-    slug: "enterprise",
+    name: "Team",
+    slug: "team",
     price: "$299",
     period: "/month",
     description: "For large organizations",
@@ -52,36 +77,72 @@ const plans = [
 ]
 
 export default function BillingPage() {
-  const [acct, setAcct] = useState<BillingState>({})
-  const [isAffiliate, setIsAffiliate] = useState(false)
+  const [data, setData] = useState<PlanUsageData | null>(null)
   const [loading, setLoading] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
-    Promise.all([fetchAccount(), fetchMe()]).then(([accountData, meData]) => {
-      setAcct(accountData)
-      setIsAffiliate(meData.account_type === 'INDUSTRY_AFFILIATE')
-    })
+    async function loadData() {
+      const res = await fetch("/api/proxy/v1/account/plan-usage", { cache: "no-store" })
+      if (res.ok) {
+        const json = await res.json()
+        setData(json)
+      }
+    }
+    loadData()
   }, [])
 
-  async function checkout(plan: "starter" | "professional" | "enterprise") {
+  async function checkout(planSlug: string) {
     setLoading(true)
-    const r = await fetch('/api/proxy/v1/billing/checkout', {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan }),
-    })
-    const j = await r.json()
-    setLoading(false)
-    if (j.url) window.location.href = j.url
+    try {
+      const res = await fetch("/api/proxy/v1/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: planSlug }),
+      })
+      const j = await res.json()
+      if (res.ok && j.url) {
+        router.push(j.url)
+      } else {
+        console.error("Checkout failed:", j.detail || "Unknown error")
+      }
+    } catch (error) {
+      console.error("Error during checkout:", error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  async function portal() {
-    const r = await fetch('/api/proxy/v1/billing/portal')
-    const j = await r.json()
-    if (j.url) window.location.href = j.url
+  async function openBillingPortal() {
+    setLoading(true)
+    try {
+      const res = await fetch("/api/proxy/v1/billing/portal", { method: "POST" })
+      const j = await res.json()
+      if (res.ok && j.url) {
+        router.push(j.url)
+      } else {
+        console.error("Billing portal failed:", j.detail || "Unknown error")
+      }
+    } catch (error) {
+      console.error("Error opening billing portal:", error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  // If affiliate, show different UI
+  if (!data) {
+    return (
+      <div className="space-y-6">
+        <h1 className="font-bold text-3xl mb-2">Billing</h1>
+        <p className="text-muted-foreground">Loading billing information...</p>
+      </div>
+    )
+  }
+
+  const isAffiliate = data.account.account_type === "INDUSTRY_AFFILIATE"
+  const { planName, priceDisplay } = getPlanDisplay(data)
+
+  // Affiliate billing UI
   if (isAffiliate) {
     return (
       <div className="space-y-6">
@@ -90,31 +151,34 @@ export default function BillingPage() {
           <p className="text-muted-foreground">Manage your affiliate plan</p>
         </div>
 
-        <Card className="border-purple-200">
+        <Card className="border-purple-200 bg-purple-50/30">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-purple-600" />
               Your Affiliate Plan
             </CardTitle>
             <CardDescription>
-              Your affiliate plan is managed directly with TrendyReports. Contact us if you need to change it.
+              Manage or cancel your affiliate subscription in the billing portal.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm text-muted-foreground mb-1">Current plan</p>
-              <p className="text-lg font-semibold">Affiliate</p>
+              <p className="text-lg font-semibold">{planName}</p>
+              {priceDisplay && (
+                <p className="text-sm text-slate-600 mt-1">
+                  Billing: <strong>{priceDisplay}</strong>
+                </p>
+              )}
             </div>
             <div className="pt-4 border-t">
-              <p className="text-sm text-slate-600 mb-3">
-                If you'd like to adjust your coverage or sponsored agent limits, please contact our team.
-              </p>
-              <Button variant="outline" asChild>
-                <a href="mailto:support@trendyreports.io">
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  Contact Support
-                </a>
+              <Button onClick={openBillingPortal} disabled={loading}>
+                <CreditCard className="w-4 h-4 mr-2" />
+                {loading ? "Loading..." : "Manage billing"}
               </Button>
+              <p className="text-xs text-slate-500 mt-2">
+                You can update your payment method or cancel your subscription in the Stripe billing portal.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -122,7 +186,7 @@ export default function BillingPage() {
     )
   }
 
-  // Regular agent billing UI
+  // Agent billing UI
   return (
     <div className="space-y-6">
       <div>
@@ -130,7 +194,7 @@ export default function BillingPage() {
         <p className="text-muted-foreground">Manage your subscription and billing details</p>
       </div>
 
-      {acct.plan_slug && (
+      {data.account.plan_slug && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -142,24 +206,32 @@ export default function BillingPage() {
             <div className="flex items-center gap-4">
               <div className="flex-1">
                 <p className="text-sm text-muted-foreground">Plan</p>
-                <p className="text-lg font-semibold capitalize">{acct.plan_slug || "—"}</p>
+                <p className="text-lg font-semibold">{planName}</p>
+                {priceDisplay && (
+                  <p className="text-sm text-slate-600">
+                    {priceDisplay}
+                  </p>
+                )}
               </div>
               <div className="flex-1">
-                <p className="text-sm text-muted-foreground">Status</p>
-                <Badge variant={acct.billing_status === "active" ? "default" : "outline"}>
-                  {acct.billing_status || "—"}
-                </Badge>
+                <p className="text-sm text-muted-foreground">Usage</p>
+                <p className="text-lg font-semibold">
+                  {data.usage.report_count} / {data.plan.monthly_report_limit} reports
+                </p>
+                <p className="text-xs text-slate-500">This month</p>
               </div>
             </div>
-            <Button onClick={portal} variant="outline">
-              Open Billing Portal
-            </Button>
+            {data.stripe_billing && (
+              <Button onClick={openBillingPortal} variant="outline" disabled={loading}>
+                {loading ? "Loading..." : "Manage Billing"}
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}
 
       <div>
-        <h2 className="text-2xl font-semibold mb-4">Plans</h2>
+        <h2 className="text-2xl font-semibold mb-4">Available Plans</h2>
         <div className="grid gap-6 md:grid-cols-3">
           {plans.map((plan) => (
             <Card key={plan.slug} className={plan.popular ? "border-primary shadow-lg" : ""}>
@@ -188,12 +260,12 @@ export default function BillingPage() {
                 </ul>
 
                 <Button
-                  onClick={() => checkout(plan.slug as any)}
-                  disabled={loading}
+                  onClick={() => checkout(plan.slug)}
+                  disabled={loading || data.account.plan_slug === plan.slug}
                   className="w-full"
                   variant={plan.popular ? "default" : "outline"}
                 >
-                  {acct.plan_slug === plan.slug ? "Current Plan" : "Choose " + plan.name}
+                  {data.account.plan_slug === plan.slug ? "Current Plan" : "Choose " + plan.name}
                 </Button>
               </CardContent>
             </Card>

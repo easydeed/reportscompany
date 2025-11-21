@@ -13,6 +13,7 @@ from ..services.usage import (
     resolve_plan_for_account,
     evaluate_report_limit
 )
+from ..services.plans import get_plan_catalog
 
 router = APIRouter(prefix="/v1")
 
@@ -208,11 +209,27 @@ def get_current_account_plan_usage(request: Request, account_id: str = Depends(r
         # Evaluate limit
         decision, info = evaluate_report_limit(cur, account_id)
         
+        # Get Stripe billing info from plan catalog
+        catalog = get_plan_catalog(cur)
+        plan_entry = catalog.get(account_info["plan_slug"])
+        
+        stripe_billing = None
+        if plan_entry and plan_entry.get("amount") is not None:
+            stripe_billing = {
+                "stripe_price_id": plan_entry["stripe_price_id"],
+                "amount": plan_entry["amount"],              # cents
+                "currency": plan_entry["currency"],          # 'usd'
+                "interval": plan_entry["interval"],          # 'month'
+                "interval_count": plan_entry["interval_count"],  # 1
+                "nickname": plan_entry["nickname"],          # 'Pro – $29/mo'
+            }
+        
         return {
             "account": account_info,
             "plan": plan,
             "usage": usage,
             "decision": decision.value,
-            "info": info
+            "info": info,
+            "stripe_billing": stripe_billing,  # can be null for free plans
         }
 
