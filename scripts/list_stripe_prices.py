@@ -1,80 +1,102 @@
 #!/usr/bin/env python3
 """
-Stripe Plan Sync Helper
-
-Lists all active Stripe prices with their details.
-Use this to discover price_ids and update your plans table.
+List active Stripe prices for plan configuration.
 
 Usage:
-    STRIPE_SECRET_KEY=sk_test_... python scripts/list_stripe_prices.py
+    python scripts/list_stripe_prices.py
 
-Output:
-    price_id, product_name, nickname, amount, currency, interval
+This script lists all active recurring Stripe prices to help map them to plan_slugs
+in the plans table. Copy the price IDs and update your plans records accordingly.
 
-Then update your plans table:
-    UPDATE plans SET stripe_price_id='price_abc123' WHERE plan_slug='pro';
+Example output:
+    Price ID                       | Product              | Nickname              | Amount  | Currency | Interval
+    ------------------------------------------------------------------------------------------------
+    price_1SO4sDBKYbtiKxfsUnKeJiox | Solo Agent           | Solo – $19/month      | $19.00  | usd      | month
+    price_1STMtfBKYbtiKxfsqQ4r29Cw | Affiliate            | Affiliate – $99/month | $99.00  | usd      | month
+
+Then update your database:
+    UPDATE plans SET stripe_price_id = 'price_1SO4sDBKYbtiKxfsUnKeJiox' WHERE plan_slug = 'solo';
+    UPDATE plans SET stripe_price_id = 'price_1STMtfBKYbtiKxfsqQ4r29Cw' WHERE plan_slug = 'affiliate';
 """
 
 import os
 import sys
 import stripe
 
-
 def main():
-    stripe_key = os.environ.get("STRIPE_SECRET_KEY")
+    # Get Stripe API key from environment
+    stripe_key = os.getenv("STRIPE_SECRET_KEY")
     
     if not stripe_key:
-        print("Error: STRIPE_SECRET_KEY environment variable not set", file=sys.stderr)
-        print("Usage: STRIPE_SECRET_KEY=sk_test_... python scripts/list_stripe_prices.py", file=sys.stderr)
+        print("❌ Error: STRIPE_SECRET_KEY environment variable not set")
+        print("\nUsage:")
+        print("  export STRIPE_SECRET_KEY=sk_test_...")
+        print("  python scripts/list_stripe_prices.py")
         sys.exit(1)
     
     stripe.api_key = stripe_key
     
-    print("Fetching active Stripe prices...\n")
-    print(f"{'Price ID':<30} {'Product':<25} {'Nickname':<25} {'Amount':<10} {'Currency':<10} {'Interval':<10}")
-    print("=" * 120)
+    print("\n" + "="*120)
+    print("Active Stripe Prices (Recurring)")
+    print("="*120)
+    print(f"{'Price ID':<35} | {'Product':<25} | {'Nickname':<25} | {'Amount':<8} | {'Currency':<8} | {'Interval':<10}")
+    print("-"*120)
     
     try:
-        prices = stripe.Price.list(limit=100, active=True, expand=["data.product"])
+        # List all active recurring prices
+        prices = stripe.Price.list(
+            limit=100,
+            active=True,
+            expand=["data.product"],
+            type="recurring"
+        )
         
-        for p in prices.auto_paging_iter():
-            product = p.get("product")
-            product_name = product.get("name") if isinstance(product, dict) else "N/A"
-            nickname = p.get("nickname") or ""
-            amount = p.get("unit_amount")
-            currency = p.get("currency", "").upper()
-            
-            recurring = p.get("recurring")
-            if recurring:
-                interval = recurring.get("interval", "N/A")
-                interval_count = recurring.get("interval_count", 1)
-                interval_display = f"{interval_count} {interval}" if interval_count > 1 else interval
-            else:
-                interval_display = "one-time"
-            
-            # Format amount
-            amount_display = f"${amount / 100:.2f}" if amount else "N/A"
-            
-            print(f"{p['id']:<30} {product_name:<25} {nickname:<25} {amount_display:<10} {currency:<10} {interval_display:<10}")
+        found_count = 0
         
-        print("\n" + "=" * 120)
-        print("\nTo use these prices in your app:")
-        print("1. Find the price_id for each plan (pro, team, affiliate)")
-        print("2. Update your database:")
-        print("   UPDATE plans SET stripe_price_id='price_abc123' WHERE plan_slug='pro';")
-        print("3. Restart your API server to pick up the changes")
+        for price in prices.auto_paging_iter():
+            product = price.product
+            product_name = product.name if hasattr(product, 'name') else str(product)
+            nickname = price.get("nickname") or ""
+            amount = price.unit_amount / 100 if price.unit_amount else 0
+            currency = price.currency or ""
+            interval = ""
+            
+            if price.recurring:
+                interval = price.recurring.interval
+                interval_count = price.recurring.interval_count
+                if interval_count > 1:
+                    interval = f"{interval_count} {interval}s"
+            
+            print(f"{price.id:<35} | {product_name:<25} | {nickname:<25} | ${amount:<7.2f} | {currency:<8} | {interval:<10}")
+            found_count += 1
+        
+        print("-"*120)
+        print(f"\nFound {found_count} active recurring price(s)")
+        
+        if found_count == 0:
+            print("\n⚠️  No active recurring prices found in Stripe.")
+            print("   Create prices in your Stripe Dashboard first:")
+            print("   https://dashboard.stripe.com/prices")
+        else:
+            print("\n✅ To use these prices in your app:")
+            print("   1. Choose the price_id for each plan (solo, affiliate, etc.)")
+            print("   2. Update your database:")
+            print("      UPDATE plans SET stripe_price_id = 'price_xxx' WHERE plan_slug = 'solo';")
+            print("   3. Restart your API to pick up the changes")
+            print("   4. Visit /app/billing to see the prices displayed")
+        
+        print("\n" + "="*120 + "\n")
         
     except stripe.error.AuthenticationError:
-        print("Error: Invalid Stripe API key", file=sys.stderr)
+        print("\n❌ Authentication failed: Invalid Stripe API key")
+        print("   Check that STRIPE_SECRET_KEY is correct")
         sys.exit(1)
     except stripe.error.StripeError as e:
-        print(f"Stripe API error: {e}", file=sys.stderr)
+        print(f"\n❌ Stripe API error: {e}")
         sys.exit(1)
     except Exception as e:
-        print(f"Unexpected error: {e}", file=sys.stderr)
+        print(f"\n❌ Unexpected error: {e}")
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()
-

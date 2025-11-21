@@ -214,14 +214,15 @@ def get_current_account_plan_usage(request: Request, account_id: str = Depends(r
         plan_entry = catalog.get(account_info["plan_slug"])
         
         stripe_billing = None
-        if plan_entry and plan_entry.get("amount") is not None:
+        if plan_entry and plan_entry.stripe_billing:
+            # Convert Pydantic model to dict for API response
             stripe_billing = {
-                "stripe_price_id": plan_entry["stripe_price_id"],
-                "amount": plan_entry["amount"],              # cents
-                "currency": plan_entry["currency"],          # 'usd'
-                "interval": plan_entry["interval"],          # 'month'
-                "interval_count": plan_entry["interval_count"],  # 1
-                "nickname": plan_entry["nickname"],          # 'Pro – $29/mo'
+                "stripe_price_id": plan_entry.stripe_price_id,
+                "amount": plan_entry.stripe_billing.amount,              # cents
+                "currency": plan_entry.stripe_billing.currency,          # 'usd'
+                "interval": plan_entry.stripe_billing.interval,          # 'month'
+                "interval_count": plan_entry.stripe_billing.interval_count,  # 1
+                "nickname": plan_entry.stripe_billing.nickname,          # 'Pro – $29/mo'
             }
         
         return {
