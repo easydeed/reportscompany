@@ -1,9 +1,9 @@
 """
 Development endpoint to list Stripe prices.
-Only available in non-production environments or to admins.
+Public endpoint for verifying Stripe integration.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from ..db import db_conn
 from ..services.plans import get_plan_catalog
 import os
@@ -12,15 +12,16 @@ router = APIRouter(prefix="/v1/dev")
 
 
 @router.get("/stripe-prices")
-def list_stripe_prices():
+def list_stripe_prices(request: Request):
     """
     List all Stripe prices from the plan catalog.
     
+    Public endpoint - no authentication required.
     Useful for debugging and verifying Stripe integration.
     Returns the enriched plan catalog with Stripe pricing data.
     """
-    # Optional: Add admin-only check here
-    # For now, anyone can call this in development
+    # Mark this endpoint as public for auth middleware
+    request.state.skip_auth = True
     
     with db_conn() as (conn, cur):
         catalog = get_plan_catalog(cur)
