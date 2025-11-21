@@ -109,12 +109,12 @@ def resolve_plan_for_account(cur, account_id: str) -> Dict[str, Any]:
             a.plan_slug,
             a.monthly_report_limit_override,
             a.account_type,
-            p.name as plan_name,
+            p.plan_name,
             p.monthly_report_limit as plan_limit,
             p.allow_overage,
             p.overage_price_cents
         FROM accounts a
-        LEFT JOIN plans p ON a.plan_slug = p.slug
+        LEFT JOIN plans p ON a.plan_slug = p.plan_slug
         WHERE a.id = %s
     """, (account_id,))
     

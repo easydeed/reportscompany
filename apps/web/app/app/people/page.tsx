@@ -30,8 +30,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { UserPlus, Mail, Trash2, Users, Shield } from "lucide-react"
+import { UserPlus, Mail, Trash2, Users, Shield, Pencil } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 type Contact = {
   id: string
@@ -60,16 +61,49 @@ type Person = {
   reportsThisMonth?: number
 }
 
+type ContactGroup = {
+  id: string
+  name: string
+  description?: string | null
+  member_count: number
+  created_at?: string
+  updated_at?: string
+}
+
 export default function PeoplePage() {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [sponsoredAccounts, setSponsoredAccounts] = useState<SponsoredAccount[]>([])
   const [isAffiliate, setIsAffiliate] = useState(false)
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editingContact, setEditingContact] = useState<Contact | null>(null)
+  const [groups, setGroups] = useState<ContactGroup[]>([])
+  const [groupsLoading, setGroupsLoading] = useState(false)
+  const [groupDialogOpen, setGroupDialogOpen] = useState(false)
+  const [groupForm, setGroupForm] = useState({ name: "", description: "" })
+  const [addToGroupDialogOpen, setAddToGroupDialogOpen] = useState(false)
+  const [selectedPersonForGroup, setSelectedPersonForGroup] = useState<Person | null>(null)
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([])
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importSummary, setImportSummary] = useState<{
+    created_contacts: number
+    created_groups: number
+    errors: { row: number; reason: string }[]
+  } | null>(null)
+  const [importFile, setImportFile] = useState<File | null>(null)
   const { toast } = useToast()
 
   // Form state
   const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    type: "client" as "client" | "list" | "agent",
+    notes: "",
+  })
+
+  const [editFormData, setEditFormData] = useState({
     name: "",
     email: "",
     type: "client" as "client" | "list" | "agent",
@@ -104,6 +138,8 @@ export default function PeoplePage() {
           setSponsoredAccounts(overview.sponsored_accounts || [])
         }
       }
+      // Load groups for this account
+      await loadGroups()
     } catch (error) {
       console.error("Failed to load people:", error)
       toast({
@@ -113,6 +149,21 @@ export default function PeoplePage() {
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function loadGroups() {
+    setGroupsLoading(true)
+    try {
+      const res = await fetch("/api/proxy/v1/contact-groups", { cache: "no-store" })
+      if (res.ok) {
+        const data = await res.json()
+        setGroups(data.groups || [])
+      }
+    } catch (error) {
+      console.error("Failed to load groups:", error)
+    } finally {
+      setGroupsLoading(false)
     }
   }
 
@@ -155,6 +206,47 @@ export default function PeoplePage() {
     }
   }
 
+  async function handleUpdateContact() {
+    if (!editingContact) return
+
+    if (!editFormData.name || !editFormData.email) {
+      toast({
+        title: "Error",
+        description: "Name and email are required",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const res = await fetch(`/api/proxy/v1/contacts/${editingContact.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editFormData),
+      })
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => null)
+        throw new Error(error?.detail || "Failed to update contact")
+      }
+
+      toast({
+        title: "Success",
+        description: `Updated ${editFormData.name}`,
+      })
+
+      setEditDialogOpen(false)
+      setEditingContact(null)
+      await loadData()
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update contact",
+        variant: "destructive",
+      })
+    }
+  }
+
   async function handleDeleteContact(id: string, name: string) {
     if (!confirm(`Delete ${name}?`)) return
 
@@ -173,6 +265,136 @@ export default function PeoplePage() {
         description: "Failed to delete contact",
         variant: "destructive",
       })
+    }
+  }
+
+  async function handleCreateGroup() {
+    if (!groupForm.name.trim()) {
+      toast({
+        title: "Error",
+        description: "Group name is required",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const res = await fetch("/api/proxy/v1/contact-groups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: groupForm.name.trim(),
+          description: groupForm.description.trim() || null,
+        }),
+      })
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => null)
+        throw new Error(error?.detail || "Failed to create group")
+      }
+
+      toast({
+        title: "Success",
+        description: `Created group "${groupForm.name}"`,
+      })
+
+      setGroupDialogOpen(false)
+      setGroupForm({ name: "", description: "" })
+      await loadGroups()
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create group",
+        variant: "destructive",
+      })
+    }
+  }
+
+  async function handleAddPersonToGroups() {
+    if (!selectedPersonForGroup || selectedGroupIds.length === 0) {
+      toast({
+        title: "Error",
+        description: "Select at least one group",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const member_type = selectedPersonForGroup.type === "sponsored_agent" ? "sponsored_agent" : "contact"
+    const member_id = selectedPersonForGroup.id
+
+    try {
+      for (const groupId of selectedGroupIds) {
+        await fetch(`/api/proxy/v1/contact-groups/${groupId}/members`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            members: [{ member_type, member_id }],
+          }),
+        })
+      }
+
+      toast({
+        title: "Success",
+        description: `${selectedPersonForGroup.name} added to ${selectedGroupIds.length} group(s)`,
+      })
+
+      setAddToGroupDialogOpen(false)
+      setSelectedPersonForGroup(null)
+      setSelectedGroupIds([])
+      await loadGroups()
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add to group(s)",
+        variant: "destructive",
+      })
+    }
+  }
+
+  async function handleImportContacts() {
+    if (!importFile) {
+      toast({
+        title: "Error",
+        description: "Please select a CSV file to import",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const formData = new FormData()
+    formData.append("file", importFile)
+
+    setImporting(true)
+    try {
+      const res = await fetch("/api/proxy/v1/contacts/import", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "")
+        throw new Error(text || "Import failed")
+      }
+
+      const summary = await res.json()
+      setImportSummary(summary)
+
+      toast({
+        title: "Import completed",
+        description: `Created ${summary.created_contacts} contacts and ${summary.created_groups} groups`,
+      })
+
+      await loadData()
+      await loadGroups()
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to import contacts",
+        variant: "destructive",
+      })
+    } finally {
+      setImporting(false)
     }
   }
 
@@ -210,13 +432,83 @@ export default function PeoplePage() {
               : "Manage your client contacts and recipients"}
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Add Contact
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Mail className="h-4 w-4 mr-2" />
+                Import CSV
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Import Contacts from CSV</DialogTitle>
+                <DialogDescription>
+                  Upload a CSV file with columns: <code>name</code>, <code>email</code>, optional{" "}
+                  <code>type</code> (client/agent/list), and optional <code>group</code> (group name).
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="import-file">CSV File</Label>
+                  <Input
+                    id="import-file"
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        setImportFile(file)
+                        setImportSummary(null)
+                      }
+                    }}
+                  />
+                </div>
+                {importSummary && (
+                  <div className="space-y-2 rounded-md border p-4">
+                    <h4 className="text-sm font-semibold">Import Summary</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Created {importSummary.created_contacts} contact(s), {importSummary.created_groups} group(s)
+                    </p>
+                    {importSummary.errors.length > 0 && (
+                      <div className="text-sm text-destructive">
+                        <p className="font-semibold">Errors:</p>
+                        <ul className="list-disc list-inside">
+                          {importSummary.errors.map((err, i) => (
+                            <li key={i}>
+                              Row {err.row}: {err.reason}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setImportDialogOpen(false)
+                    setImportFile(null)
+                    setImportSummary(null)
+                  }}
+                >
+                  Close
+                </Button>
+                <Button onClick={handleImportCSV} disabled={!importFile || importing}>
+                  {importing ? "Importing..." : "Import"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add Contact
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add New Contact</DialogTitle>
@@ -280,6 +572,276 @@ export default function PeoplePage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Import Contacts Dialog */}
+        <Dialog
+          open={importDialogOpen}
+          onOpenChange={(open) => {
+            setImportDialogOpen(open)
+            if (!open) {
+              setImportFile(null)
+              setImportSummary(null)
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Import Contacts from CSV</DialogTitle>
+              <DialogDescription>
+                Upload a CSV file with columns: <code>name</code>, <code>email</code>, optional{" "}
+                <code>type</code> (client/agent/list), and optional <code>group</code> (group name).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="import-file">CSV File</Label>
+                <Input
+                  id="import-file"
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null
+                    setImportFile(file)
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Example row: <code>Jane Doe,jane@example.com,client,Top Clients</code>
+                </p>
+              </div>
+              {importSummary && (
+                <div className="rounded-md border border-muted-foreground/20 bg-muted/30 p-3 text-xs space-y-1">
+                  <div>
+                    <span className="font-semibold">Created contacts:</span>{" "}
+                    {importSummary.created_contacts}
+                  </div>
+                  <div>
+                    <span className="font-semibold">Created groups:</span>{" "}
+                    {importSummary.created_groups}
+                  </div>
+                  {importSummary.errors?.length > 0 && (
+                    <div className="mt-1">
+                      <span className="font-semibold">Errors:</span>{" "}
+                      {importSummary.errors.length} row(s) had issues.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setImportDialogOpen(false)
+                  setImportFile(null)
+                  setImportSummary(null)
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleImportContacts} disabled={importing}>
+                {importing ? "Importing..." : "Import"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Create Group Dialog */}
+        <Dialog open={groupDialogOpen} onOpenChange={setGroupDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>New Group</DialogTitle>
+              <DialogDescription>
+                Create a group to organize your contacts and sponsored agents.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="group-name">Group Name</Label>
+                <Input
+                  id="group-name"
+                  placeholder="Top Clients"
+                  value={groupForm.name}
+                  onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="group-description">Description (Optional)</Label>
+                <Input
+                  id="group-description"
+                  placeholder="E.g., Clients receiving monthly market reports"
+                  value={groupForm.description}
+                  onChange={(e) => setGroupForm({ ...groupForm, description: e.target.value })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setGroupDialogOpen(false)
+                  setGroupForm({ name: "", description: "" })
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleCreateGroup}>Create Group</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Person to Group(s) Dialog */}
+        <Dialog
+          open={addToGroupDialogOpen}
+          onOpenChange={(open) => {
+            setAddToGroupDialogOpen(open)
+            if (!open) {
+              setSelectedPersonForGroup(null)
+              setSelectedGroupIds([])
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add to Group</DialogTitle>
+              <DialogDescription>
+                Choose one or more groups to add{" "}
+                <span className="font-semibold">
+                  {selectedPersonForGroup?.name || "this person"}
+                </span>{" "}
+                to.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {groupsLoading ? (
+                <div className="text-sm text-muted-foreground">Loading groups...</div>
+              ) : groups.length === 0 ? (
+                <div className="text-sm text-muted-foreground">
+                  You don&apos;t have any groups yet. Create one first.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Groups</Label>
+                  <div className="max-h-60 overflow-y-auto border rounded-md p-2 space-y-1">
+                    {groups.map((group) => {
+                      const checked = selectedGroupIds.includes(group.id)
+                      return (
+                        <button
+                          key={group.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedGroupIds((prev) =>
+                              checked ? prev.filter((id) => id !== group.id) : [...prev, group.id],
+                            )
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-md border text-sm ${
+                            checked
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/40 hover:bg-muted/40"
+                          }`}
+                        >
+                          <div className="font-medium">{group.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {group.description || "No description"} • {group.member_count} members
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setAddToGroupDialogOpen(false)
+                  setSelectedPersonForGroup(null)
+                  setSelectedGroupIds([])
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleAddPersonToGroups} disabled={groups.length === 0}>
+                Add to Group{selectedGroupIds.length > 1 ? "s" : ""}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Contact Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={(open) => {
+          setEditDialogOpen(open)
+          if (!open) {
+            setEditingContact(null)
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Contact</DialogTitle>
+              <DialogDescription>Update this contact’s details.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Name</Label>
+                <Input
+                  id="edit-name"
+                  placeholder="John Doe"
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  placeholder="john@example.com"
+                  value={editFormData.email}
+                  onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-type">Type</Label>
+                <Select
+                  value={editFormData.type}
+                  onValueChange={(value: "client" | "list" | "agent") =>
+                    setEditFormData({ ...editFormData, type: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="client">Client (Individual)</SelectItem>
+                    <SelectItem value="list">List (Group)</SelectItem>
+                    <SelectItem value="agent">Agent (External)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-notes">Notes (Optional)</Label>
+                <Input
+                  id="edit-notes"
+                  placeholder="Any additional notes..."
+                  value={editFormData.notes}
+                  onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditDialogOpen(false)
+                  setEditingContact(null)
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateContact}>Save Changes</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Stats Card (for affiliates) */}
@@ -315,76 +877,168 @@ export default function PeoplePage() {
         </div>
       )}
 
-      {/* People Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All People</CardTitle>
-          <CardDescription>
-            {isAffiliate
-              ? "Your sponsored agents and contacts in one place"
-              : "Your client contacts and recipients"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="text-center py-8 text-muted-foreground">Loading...</div>
-          ) : people.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No people yet. Add your first contact to get started.</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Type</TableHead>
-                  {isAffiliate && <TableHead>Reports This Month</TableHead>}
-                  {isAffiliate && <TableHead>Last Activity</TableHead>}
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {people.map((person) => (
-                  <TableRow key={person.id}>
-                    <TableCell className="font-medium">{person.name}</TableCell>
-                    <TableCell>{person.email || "—"}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={person.type === "sponsored_agent" ? "default" : "outline"}
-                      >
-                        {person.displayType}
-                      </Badge>
-                    </TableCell>
-                    {isAffiliate && (
-                      <TableCell>{person.reportsThisMonth ?? "—"}</TableCell>
-                    )}
-                    {isAffiliate && (
-                      <TableCell>
-                        {person.lastActivity
-                          ? new Date(person.lastActivity).toLocaleDateString()
-                          : "—"}
-                      </TableCell>
-                    )}
-                    <TableCell className="text-right">
-                      {person.type !== "sponsored_agent" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteContact(person.id, person.name)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      {/* People & Groups Tabs */}
+      <Tabs defaultValue="people">
+        <TabsList>
+          <TabsTrigger value="people">People</TabsTrigger>
+          <TabsTrigger value="groups">Groups</TabsTrigger>
+        </TabsList>
+        <TabsContent value="people" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>All People</CardTitle>
+              <CardDescription>
+                {isAffiliate
+                  ? "Your sponsored agents and contacts in one place"
+                  : "Your client contacts and recipients"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="text-center py-8 text-muted-foreground">Loading...</div>
+              ) : people.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No people yet. Add your first contact to get started.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Type</TableHead>
+                      {isAffiliate && <TableHead>Reports This Month</TableHead>}
+                      {isAffiliate && <TableHead>Last Activity</TableHead>}
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {people.map((person) => (
+                      <TableRow key={person.id}>
+                        <TableCell className="font-medium">{person.name}</TableCell>
+                        <TableCell>{person.email || "—"}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={person.type === "sponsored_agent" ? "default" : "outline"}
+                          >
+                            {person.displayType}
+                          </Badge>
+                        </TableCell>
+                        {isAffiliate && (
+                          <TableCell>{person.reportsThisMonth ?? "—"}</TableCell>
+                        )}
+                        {isAffiliate && (
+                          <TableCell>
+                            {person.lastActivity
+                              ? new Date(person.lastActivity).toLocaleDateString()
+                              : "—"}
+                          </TableCell>
+                        )}
+                        <TableCell className="text-right space-x-1">
+                          {/* Add to Group (contacts and sponsored agents) */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPersonForGroup(person)
+                              setSelectedGroupIds([])
+                              setAddToGroupDialogOpen(true)
+                            }}
+                          >
+                            <Users className="h-4 w-4" />
+                          </Button>
+
+                          {/* Edit/Delete only for contacts */}
+                          {person.type !== "sponsored_agent" && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const contact = contacts.find((c) => c.id === person.id)
+                                  if (!contact) return
+                                  setEditingContact(contact)
+                                  setEditFormData({
+                                    name: contact.name,
+                                    email: contact.email,
+                                    type: contact.type,
+                                    notes: contact.notes || "",
+                                  })
+                                  setEditDialogOpen(true)
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteContact(person.id, person.name)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="groups" className="mt-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Groups</CardTitle>
+                <CardDescription>
+                  Create and manage groups of contacts and sponsored agents for easy scheduling.
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setGroupDialogOpen(true)
+                }}
+              >
+                <Users className="h-4 w-4 mr-2" />
+                New Group
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {groupsLoading ? (
+                <div className="text-center py-8 text-muted-foreground">Loading groups...</div>
+              ) : groups.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No groups yet. Create a group to start organizing your people.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Members</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {groups.map((group) => (
+                      <TableRow key={group.id}>
+                        <TableCell className="font-medium">{group.name}</TableCell>
+                        <TableCell>{group.description || "—"}</TableCell>
+                        <TableCell>{group.member_count ?? 0}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
