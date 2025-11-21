@@ -1,10 +1,26 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field, EmailStr, constr
-from typing import List, Optional, Dict, Any, Literal
+from typing import List, Optional, Dict, Any, Literal, Union
 from datetime import datetime
+import json
 from ..db import db_conn, set_rls, fetchone_dict, fetchall_dicts
 
 router = APIRouter(prefix="/v1")
+
+# ====== Recipient Schemas ======
+class RecipientInput(BaseModel):
+    """
+    Typed recipient for schedules.
+    
+    Each recipient is stored in the DB as a JSON-encoded string:
+    - {"type":"contact","id":"<contact_id>"}
+    - {"type":"sponsored_agent","id":"<account_id>"}
+    - {"type":"manual_email","email":"<email>"}
+    """
+    type: Literal["contact", "sponsored_agent", "manual_email"]
+    id: Optional[str] = None
+    email: Optional[EmailStr] = None
+
 
 # ====== Schemas ======
 class ScheduleCreate(BaseModel):
@@ -26,7 +42,7 @@ class ScheduleCreate(BaseModel):
     monthly_dom: Optional[int] = Field(None, ge=1, le=28)  # 1-28
     send_hour: int = Field(9, ge=0, le=23)
     send_minute: int = Field(0, ge=0, le=59)
-    recipients: List[EmailStr] = Field(..., min_items=1)
+    recipients: List[Union[RecipientInput, EmailStr]] = Field(..., min_items=1)  # Support both typed and legacy plain emails
     include_attachment: bool = False
     active: bool = True
 
@@ -41,7 +57,7 @@ class ScheduleUpdate(BaseModel):
     monthly_dom: Optional[int] = Field(None, ge=1, le=28)
     send_hour: Optional[int] = Field(None, ge=0, le=23)
     send_minute: Optional[int] = Field(None, ge=0, le=59)
-    recipients: Optional[List[EmailStr]] = None
+    recipients: Optional[List[Union[RecipientInput, EmailStr]]] = None  # Support both typed and legacy plain emails
     include_attachment: Optional[bool] = None
     active: Optional[bool] = None
 
@@ -58,7 +74,8 @@ class ScheduleRow(BaseModel):
     monthly_dom: Optional[int] = None
     send_hour: int
     send_minute: int
-    recipients: List[str]
+    recipients: List[str]  # Raw JSON strings from DB
+    resolved_recipients: Optional[List[Dict[str, Any]]] = None  # Decoded recipient objects for frontend
     include_attachment: bool
     active: bool
     last_run_at: Optional[str] = None
@@ -88,6 +105,93 @@ def require_account_id(request: Request) -> str:
     return account_id
 
 
+def validate_recipient_ownership(cur, account_id: str, recipient: RecipientInput) -> bool:
+    """
+    Validate that the account has permission to send to this recipient.
+    
+    Returns True if valid, False otherwise.
+    """
+    if recipient.type == "manual_email":
+        # Manual emails don't require ownership check
+        return True
+    
+    elif recipient.type == "contact":
+        # Verify contact belongs to this account
+        if not recipient.id:
+            return False
+        cur.execute("""
+            SELECT 1 FROM contacts 
+            WHERE id = %s::uuid AND account_id = %s::uuid
+        """, (recipient.id, account_id))
+        return cur.fetchone() is not None
+    
+    elif recipient.type == "sponsored_agent":
+        # Verify sponsorship relationship
+        if not recipient.id:
+            return False
+        cur.execute("""
+            SELECT 1 FROM accounts 
+            WHERE id = %s::uuid AND sponsor_account_id = %s::uuid
+        """, (recipient.id, account_id))
+        return cur.fetchone() is not None
+    
+    return False
+
+
+def encode_recipients(recipients: List[Union[RecipientInput, EmailStr, str]], cur=None, account_id: str = None) -> List[str]:
+    """
+    Convert RecipientInput objects or plain emails into JSON-encoded strings for DB storage.
+    
+    Supports both:
+    - RecipientInput objects (new typed format)
+    - Plain email strings (legacy format, converted to manual_email type)
+    
+    If cur and account_id are provided, validates ownership of typed recipients.
+    """
+    encoded = []
+    for r in recipients:
+        if isinstance(r, RecipientInput):
+            # Validate ownership if DB cursor provided
+            if cur and account_id and not validate_recipient_ownership(cur, account_id, r):
+                print(f"⚠️  Skipping recipient {r.type}:{r.id} - no permission for account {account_id}")
+                continue
+            encoded.append(json.dumps(r.model_dump(exclude_none=True)))
+        elif isinstance(r, str):
+            # Legacy plain email or already JSON string
+            if r.startswith("{"):
+                # Already JSON encoded
+                encoded.append(r)
+            else:
+                # Plain email - convert to typed format
+                encoded.append(json.dumps({"type": "manual_email", "email": r}))
+        else:
+            # EmailStr type
+            encoded.append(json.dumps({"type": "manual_email", "email": str(r)}))
+    return encoded
+
+
+def decode_recipients(recipients: List[str]) -> List[Dict[str, Any]]:
+    """
+    Decode JSON-encoded recipient strings into dictionaries for frontend.
+    
+    Handles both:
+    - JSON objects: {"type":"contact","id":"..."}
+    - Plain emails: converts to {"type":"manual_email","email":"..."}
+    """
+    decoded = []
+    for r in recipients:
+        try:
+            if r.startswith("{"):
+                decoded.append(json.loads(r))
+            else:
+                # Legacy plain email
+                decoded.append({"type": "manual_email", "email": r})
+        except (json.JSONDecodeError, AttributeError):
+            # If parsing fails, treat as plain email
+            decoded.append({"type": "manual_email", "email": r})
+    return decoded
+
+
 def validate_schedule_params(cadence: str, weekly_dow: Optional[int], monthly_dom: Optional[int]):
     """
     Validate that cadence-specific parameters are provided.
@@ -114,6 +218,7 @@ def create_schedule(
     """
     Create a new schedule.
     Validates cadence-specific parameters and stores with RLS.
+    Supports typed recipients (contact, sponsored_agent, manual_email).
     """
     # Validate cadence params
     validate_schedule_params(payload.cadence, payload.weekly_dow, payload.monthly_dom)
@@ -122,8 +227,20 @@ def create_schedule(
         set_rls(conn, account_id)
         cur = conn.cursor()
         
+        # Encode recipients to JSON strings (with ownership validation)
+        encoded_recipients = encode_recipients(payload.recipients, cur=cur, account_id=account_id)
+        
+        if not encoded_recipients:
+            raise HTTPException(
+                status_code=400,
+                detail="No valid recipients provided"
+            )
+        
         # Convert recipients list to PostgreSQL array
-        recipients_array = "{" + ",".join(payload.recipients) + "}"
+        # Escape quotes and format for Postgres TEXT[] literal
+        recipients_escaped = [r.replace('"', '\\"') for r in encoded_recipients]
+        recipients_array = "{\"" + "\",\"".join(recipients_escaped) + "\"}"
+        
         zip_codes_array = None
         if payload.zip_codes:
             zip_codes_array = "{" + ",".join(payload.zip_codes) + "}"
@@ -152,6 +269,7 @@ def create_schedule(
         row = cur.fetchone()
         conn.commit()
         
+        recipients_raw = row[11]
         return {
             "id": row[0],
             "name": row[1],
@@ -164,7 +282,8 @@ def create_schedule(
             "monthly_dom": row[8],
             "send_hour": row[9],
             "send_minute": row[10],
-            "recipients": row[11],
+            "recipients": recipients_raw,  # Raw for backwards compat
+            "resolved_recipients": decode_recipients(recipients_raw),  # Decoded for frontend
             "include_attachment": row[12],
             "active": row[13],
             "last_run_at": row[14].isoformat() if row[14] else None,
@@ -204,6 +323,7 @@ def list_schedules(
         
         schedules = []
         for row in rows:
+            recipients_raw = row[11]
             schedules.append({
                 "id": row[0],
                 "name": row[1],
@@ -216,7 +336,8 @@ def list_schedules(
                 "monthly_dom": row[8],
                 "send_hour": row[9],
                 "send_minute": row[10],
-                "recipients": row[11],
+                "recipients": recipients_raw,  # Raw for backwards compat
+                "resolved_recipients": decode_recipients(recipients_raw),  # Decoded for frontend
                 "include_attachment": row[12],
                 "active": row[13],
                 "last_run_at": row[14].isoformat() if row[14] else None,
@@ -253,6 +374,7 @@ def get_schedule(
         if not row:
             raise HTTPException(status_code=404, detail="Schedule not found")
         
+        recipients_raw = row[11]
         return {
             "id": row[0],
             "name": row[1],
@@ -265,7 +387,8 @@ def get_schedule(
             "monthly_dom": row[8],
             "send_hour": row[9],
             "send_minute": row[10],
-            "recipients": row[11],
+            "recipients": recipients_raw,  # Raw for backwards compat
+            "resolved_recipients": decode_recipients(recipients_raw),  # Decoded for frontend
             "include_attachment": row[12],
             "active": row[13],
             "last_run_at": row[14].isoformat() if row[14] else None,
@@ -326,10 +449,8 @@ def update_schedule(
         updates.append("send_minute = %s")
         params.append(payload.send_minute)
     
-    if payload.recipients is not None:
-        recipients_array = "{" + ",".join(payload.recipients) + "}"
-        updates.append("recipients = %s")
-        params.append(recipients_array)
+    # Note: recipients validation happens below after DB connection is established
+    recipients_to_update = payload.recipients
     
     if payload.include_attachment is not None:
         updates.append("include_attachment = %s")
@@ -339,18 +460,34 @@ def update_schedule(
         updates.append("active = %s")
         params.append(payload.active)
     
-    if not updates:
+    if not updates and recipients_to_update is None:
         raise HTTPException(status_code=400, detail="No fields to update")
-    
-    # Always null out next_run_at on updates so ticker recomputes
-    updates.append("next_run_at = NULL")
-    
-    # Add schedule_id to params
-    params.append(schedule_id)
     
     with db_conn() as conn:
         set_rls(conn, account_id)
         cur = conn.cursor()
+        
+        # Handle recipients separately to validate ownership
+        if recipients_to_update is not None:
+            encoded_recipients = encode_recipients(recipients_to_update, cur=cur, account_id=account_id)
+            if not encoded_recipients:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No valid recipients provided"
+                )
+            recipients_escaped = [r.replace('"', '\\"') for r in encoded_recipients]
+            recipients_array = "{\"" + "\",\"".join(recipients_escaped) + "\"}"
+            updates.append("recipients = %s")
+            params.append(recipients_array)
+        
+        if not updates:
+            raise HTTPException(status_code=400, detail="No fields to update")
+        
+        # Always null out next_run_at on updates so ticker recomputes
+        updates.append("next_run_at = NULL")
+        
+        # Add schedule_id to params
+        params.append(schedule_id)
         
         query = f"""
             UPDATE schedules

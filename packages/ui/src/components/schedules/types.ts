@@ -35,6 +35,13 @@ export interface ScheduleRun {
   error?: string
 }
 
+// Typed recipient for API
+export interface TypedRecipient {
+  type: "contact" | "sponsored_agent" | "manual_email"
+  id?: string
+  email?: string
+}
+
 export interface ScheduleWizardState {
   // Step 1: Basics
   name: string
@@ -53,7 +60,8 @@ export interface ScheduleWizardState {
   time: string
 
   // Step 4: Recipients
-  recipients: string[]
+  recipients: string[]  // Legacy: for display only
+  typedRecipients?: TypedRecipient[]  // New: for API submission
 }
 
 export const reportTypeLabels: Record<ReportType, string> = {

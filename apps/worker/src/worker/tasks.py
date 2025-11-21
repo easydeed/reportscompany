@@ -29,6 +29,92 @@ def safe_json_dumps(obj):
     
     return json.dumps(obj, default=default_handler)
 
+
+def resolve_recipients_to_emails(cur, account_id: str, recipients_raw: list) -> list:
+    """
+    Resolve typed recipients to a list of email addresses.
+    
+    Handles three recipient types:
+    - contact: {"type":"contact","id":"<contact_id>"} -> lookup from contacts table
+    - sponsored_agent: {"type":"sponsored_agent","id":"<account_id>"} -> lookup from users/accounts
+    - manual_email: {"type":"manual_email","email":"<email>"} -> use directly
+    - Plain strings: Legacy format, treated as manual_email
+    
+    Returns a deduplicated list of valid email addresses.
+    """
+    emails = []
+    
+    for recipient_str in recipients_raw:
+        try:
+            # Try to parse as JSON
+            if recipient_str.startswith("{"):
+                recipient = json.loads(recipient_str)
+                recipient_type = recipient.get("type")
+                
+                if recipient_type == "contact":
+                    # Lookup contact email
+                    contact_id = recipient.get("id")
+                    if contact_id:
+                        cur.execute("""
+                            SELECT email
+                            FROM contacts
+                            WHERE id = %s::uuid AND account_id = %s::uuid
+                        """, (contact_id, account_id))
+                        row = cur.fetchone()
+                        if row and row[0]:
+                            emails.append(row[0])
+                        else:
+                            print(f"⚠️  Contact {contact_id} not found or has no email")
+                
+                elif recipient_type == "sponsored_agent":
+                    # Lookup sponsored agent email from users table
+                    agent_account_id = recipient.get("id")
+                    if agent_account_id:
+                        # Verify sponsorship
+                        cur.execute("""
+                            SELECT a.id::text
+                            FROM accounts a
+                            WHERE a.id = %s::uuid 
+                              AND a.sponsor_account_id = %s::uuid
+                        """, (agent_account_id, account_id))
+                        
+                        if cur.fetchone():
+                            # Get agent's primary email from users
+                            cur.execute("""
+                                SELECT u.email
+                                FROM users u
+                                WHERE u.account_id = %s::uuid
+                                ORDER BY u.created_at
+                                LIMIT 1
+                            """, (agent_account_id,))
+                            row = cur.fetchone()
+                            if row and row[0]:
+                                emails.append(row[0])
+                            else:
+                                print(f"⚠️  Sponsored agent {agent_account_id} has no user email")
+                        else:
+                            print(f"⚠️  Sponsored agent {agent_account_id} not sponsored by {account_id}")
+                
+                elif recipient_type == "manual_email":
+                    # Use email directly
+                    email = recipient.get("email")
+                    if email:
+                        emails.append(email)
+                else:
+                    print(f"⚠️  Unknown recipient type: {recipient_type}")
+            else:
+                # Legacy plain email string
+                emails.append(recipient_str)
+                
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            print(f"⚠️  Error parsing recipient '{recipient_str}': {e}")
+            # Treat as plain email if JSON parsing fails
+            if "@" in recipient_str:
+                emails.append(recipient_str)
+    
+    # Deduplicate and filter empties
+    return list(set([e for e in emails if e and "@" in e]))
+
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 QUEUE_KEY = os.getenv("MR_REPORT_ENQUEUE_KEY", "mr:enqueue:reports")
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/market_reports")
@@ -277,7 +363,10 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
                         if not schedule_row:
                             print(f"⚠️  Schedule {schedule_id} not found, skipping email")
                         else:
-                            recipients, city, zip_codes = schedule_row
+                            recipients_raw, city, zip_codes = schedule_row
+                            
+                            # Resolve typed recipients to email addresses
+                            recipients = resolve_recipients_to_emails(cur, account_id, recipients_raw)
                             
                             # Get account name
                             cur.execute("SELECT name FROM accounts WHERE id = %s", (account_id,))

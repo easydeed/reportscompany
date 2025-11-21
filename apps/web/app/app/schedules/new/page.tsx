@@ -12,10 +12,28 @@ export default function NewSchedulePage() {
     setErr(null)
 
     try {
+      // Map frontend state to API format
+      const apiPayload = {
+        name: payload.name,
+        report_type: payload.report_type,
+        city: payload.area_mode === 'city' ? payload.city : null,
+        zip_codes: payload.area_mode === 'zips' ? payload.zips : null,
+        lookback_days: payload.lookback_days,
+        cadence: payload.cadence,
+        weekly_dow: payload.cadence === 'weekly' ? weekdayToNumber(payload.weekday) : null,
+        monthly_dom: payload.cadence === 'monthly' ? payload.monthly_day : null,
+        send_hour: parseInt(payload.time.split(':')[0], 10),
+        send_minute: parseInt(payload.time.split(':')[1], 10),
+        // Use typedRecipients if available, otherwise fall back to plain recipients
+        recipients: payload.typedRecipients || payload.recipients,
+        include_attachment: false,
+        active: true,
+      }
+
       const res = await fetch(`/api/proxy/v1/schedules`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(apiPayload),
       })
 
       if (!res.ok) {
@@ -28,6 +46,20 @@ export default function NewSchedulePage() {
     } catch (error: any) {
       setErr(error.message || "Unknown error")
     }
+  }
+
+  // Helper to convert weekday string to number (0=Sunday, 6=Saturday)
+  function weekdayToNumber(weekday: string): number {
+    const map: Record<string, number> = {
+      'sunday': 0,
+      'monday': 1,
+      'tuesday': 2,
+      'wednesday': 3,
+      'thursday': 4,
+      'friday': 5,
+      'saturday': 6,
+    }
+    return map[weekday.toLowerCase()] ?? 1
   }
 
   function onCancel() {

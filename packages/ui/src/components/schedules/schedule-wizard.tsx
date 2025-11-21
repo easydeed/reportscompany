@@ -484,18 +484,43 @@ function StepRecipients({
       return
     }
 
-    setState({ ...state, recipients: [...state.recipients, email] })
+    // Add to both recipients (display) and typedRecipients (API submission)
+    const typedRecipient = { type: "manual_email" as const, email }
+    setState({ 
+      ...state, 
+      recipients: [...state.recipients, email],
+      typedRecipients: [...(state.typedRecipients || []), typedRecipient]
+    })
     setEmailInput("")
   }
 
-  const addPersonEmail = (email: string) => {
+  const addPersonEmail = (personId: string, email: string, personType: string) => {
     if (email && !state.recipients.includes(email)) {
-      setState({ ...state, recipients: [...state.recipients, email] })
+      // Determine typed recipient based on person type
+      const recipientType = personType === 'Agent' ? 'contact' : 'contact'  // All from contacts table are 'contact' type
+      const typedRecipient = { 
+        type: recipientType as "contact" | "sponsored_agent", 
+        id: personId 
+      }
+      
+      setState({ 
+        ...state, 
+        recipients: [...state.recipients, email],
+        typedRecipients: [...(state.typedRecipients || []), typedRecipient]
+      })
     }
   }
 
   const removeEmail = (email: string) => {
-    setState({ ...state, recipients: state.recipients.filter((e) => e !== email) })
+    const newRecipients = state.recipients.filter((e) => e !== email)
+    // Also remove from typedRecipients
+    const newTypedRecipients = (state.typedRecipients || []).filter(r => r.email !== email && !state.recipients.includes(email))
+    
+    setState({ 
+      ...state, 
+      recipients: newRecipients,
+      typedRecipients: newTypedRecipients
+    })
   }
 
   return (
@@ -522,7 +547,7 @@ function StepRecipients({
                 <button
                   key={person.id}
                   type="button"
-                  onClick={() => addPersonEmail(person.email)}
+                  onClick={() => addPersonEmail(person.id, person.email, person.type)}
                   disabled={state.recipients.includes(person.email)}
                   className={cn(
                     "w-full flex items-center justify-between p-3 rounded-lg border-2 text-left transition-all",
