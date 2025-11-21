@@ -572,78 +572,7 @@ export default function PeoplePage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
-        {/* Import Contacts Dialog */}
-        <Dialog
-          open={importDialogOpen}
-          onOpenChange={(open) => {
-            setImportDialogOpen(open)
-            if (!open) {
-              setImportFile(null)
-              setImportSummary(null)
-            }
-          }}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Import Contacts from CSV</DialogTitle>
-              <DialogDescription>
-                Upload a CSV file with columns: <code>name</code>, <code>email</code>, optional{" "}
-                <code>type</code> (client/agent/list), and optional <code>group</code> (group name).
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="import-file">CSV File</Label>
-                <Input
-                  id="import-file"
-                  type="file"
-                  accept=".csv,text/csv"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0] || null
-                    setImportFile(file)
-                  }}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Example row: <code>Jane Doe,jane@example.com,client,Top Clients</code>
-                </p>
-              </div>
-              {importSummary && (
-                <div className="rounded-md border border-muted-foreground/20 bg-muted/30 p-3 text-xs space-y-1">
-                  <div>
-                    <span className="font-semibold">Created contacts:</span>{" "}
-                    {importSummary.created_contacts}
-                  </div>
-                  <div>
-                    <span className="font-semibold">Created groups:</span>{" "}
-                    {importSummary.created_groups}
-                  </div>
-                  {importSummary.errors?.length > 0 && (
-                    <div className="mt-1">
-                      <span className="font-semibold">Errors:</span>{" "}
-                      {importSummary.errors.length} row(s) had issues.
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setImportDialogOpen(false)
-                  setImportFile(null)
-                  setImportSummary(null)
-                }}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleImportContacts} disabled={importing}>
-                {importing ? "Importing..." : "Import"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        </div>
 
         {/* Create Group Dialog */}
         <Dialog open={groupDialogOpen} onOpenChange={setGroupDialogOpen}>
