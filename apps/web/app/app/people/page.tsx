@@ -496,7 +496,7 @@ export default function PeoplePage() {
                 >
                   Close
                 </Button>
-                <Button onClick={handleImportCSV} disabled={!importFile || importing}>
+                <Button onClick={handleImportContacts} disabled={!importFile || importing}>
                   {importing ? "Importing..." : "Import"}
                 </Button>
               </DialogFooter>
