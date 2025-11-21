@@ -38,9 +38,9 @@ def get_plan_catalog(cur) -> Dict[str, Dict[str, Any]]:
     The function is resilient: if Stripe API fails, returns plan info without pricing.
     """
     cur.execute("""
-        SELECT plan_slug, plan_name, stripe_price_id, description
+        SELECT slug, name, stripe_price_id, description
         FROM plans
-        ORDER BY plan_slug
+        ORDER BY slug
     """)
     rows = cur.fetchall()
     
