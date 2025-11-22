@@ -42,6 +42,7 @@ type Contact = {
   phone?: string | null
   notes?: string | null
   created_at: string
+  groups?: Array<{ id: string; name: string }>
 }
 
 type SponsoredAccount = {
@@ -50,6 +51,7 @@ type SponsoredAccount = {
   plan_slug: string
   reports_this_month: number
   last_report_at: string | null
+  groups?: Array<{ id: string; name: string }>
 }
 
 type Person = {
@@ -60,6 +62,8 @@ type Person = {
   displayType: string
   lastActivity?: string
   reportsThisMonth?: number
+  groups?: Array<{ id: string; name: string }>
+  kind: "contact" | "sponsored_agent"
 }
 
 type ContactGroup = {
@@ -94,6 +98,9 @@ export default function PeoplePage() {
     errors: { row: number; reason: string }[]
   } | null>(null)
   const [importFile, setImportFile] = useState<File | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [filterType, setFilterType] = useState<"all" | "agents" | "groups" | "sponsored_agents">("all")
+  const [selectedPeopleIds, setSelectedPeopleIds] = useState<string[]>([])
   const { toast } = useToast()
 
   // Form state
@@ -438,15 +445,21 @@ export default function PeoplePage() {
   }
 
   // Combine contacts and sponsored accounts into unified list
-  const people: Person[] = [
+  const allPeople: Person[] = [
     ...contacts.map((c) => ({
       id: c.id,
       name: c.name,
-      email: c.email,
+      email: c.email || "",
       type: c.type,
-      displayType: c.type === "client" ? "Client" : c.type === "list" ? "List" : "Agent",
+      displayType: 
+        c.type === "client" ? "Client" : 
+        c.type === "list" ? "List" : 
+        c.type === "group" ? "Group" :
+        "Agent",
       lastActivity: undefined,
       reportsThisMonth: undefined,
+      groups: c.groups || [],
+      kind: "contact" as const,
     })),
     ...sponsoredAccounts.map((s) => ({
       id: s.account_id,
@@ -456,8 +469,29 @@ export default function PeoplePage() {
       displayType: "Agent (Sponsored)",
       lastActivity: s.last_report_at || undefined,
       reportsThisMonth: s.reports_this_month,
+      groups: s.groups || [],
+      kind: "sponsored_agent" as const,
     })),
   ]
+
+  // Apply search filter
+  const searchFiltered = allPeople.filter((person) => {
+    if (!searchQuery) return true
+    const query = searchQuery.toLowerCase()
+    return (
+      person.name.toLowerCase().includes(query) ||
+      person.email.toLowerCase().includes(query)
+    )
+  })
+
+  // Apply type filter
+  const people = searchFiltered.filter((person) => {
+    if (filterType === "all") return true
+    if (filterType === "agents") return person.type === "agent" || person.kind === "sponsored_agent"
+    if (filterType === "groups") return person.type === "group"
+    if (filterType === "sponsored_agents") return person.kind === "sponsored_agent"
+    return true
+  })
 
   return (
     <div className="space-y-6">
@@ -922,20 +956,62 @@ export default function PeoplePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Search & Filter Bar */}
+              <div className="flex items-center gap-4 mb-4">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Search by name or email..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="max-w-md"
+                  />
+                </div>
+                <Select value={filterType} onValueChange={(val: any) => setFilterType(val)}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All People</SelectItem>
+                    <SelectItem value="agents">Agents</SelectItem>
+                    <SelectItem value="groups">Groups</SelectItem>
+                    {isAffiliate && <SelectItem value="sponsored_agents">Sponsored Agents</SelectItem>}
+                  </SelectContent>
+                </Select>
+              </div>
+
               {loading ? (
                 <div className="text-center py-8 text-muted-foreground">Loading...</div>
               ) : people.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No people yet. Add your first contact to get started.</p>
+                  <p>
+                    {searchQuery || filterType !== "all"
+                      ? "No results found. Try adjusting your search or filter."
+                      : "No people yet. Add your first contact to get started."}
+                  </p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <input
+                          type="checkbox"
+                          checked={selectedPeopleIds.length === people.length && people.length > 0}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedPeopleIds(people.map((p) => p.id))
+                            } else {
+                              setSelectedPeopleIds([])
+                            }
+                          }}
+                          className="rounded border-gray-300"
+                        />
+                      </TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Type</TableHead>
+                      <TableHead>Groups</TableHead>
                       {isAffiliate && <TableHead>Reports This Month</TableHead>}
                       {isAffiliate && <TableHead>Last Activity</TableHead>}
                       <TableHead className="text-right">Actions</TableHead>
@@ -944,6 +1020,20 @@ export default function PeoplePage() {
                   <TableBody>
                     {people.map((person) => (
                       <TableRow key={person.id}>
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            checked={selectedPeopleIds.includes(person.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedPeopleIds([...selectedPeopleIds, person.id])
+                              } else {
+                                setSelectedPeopleIds(selectedPeopleIds.filter((id) => id !== person.id))
+                              }
+                            }}
+                            className="rounded border-gray-300"
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">{person.name}</TableCell>
                         <TableCell>{person.email || "—"}</TableCell>
                         <TableCell>
@@ -952,6 +1042,19 @@ export default function PeoplePage() {
                           >
                             {person.displayType}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {person.groups && person.groups.length > 0 ? (
+                            <div className="flex gap-1 flex-wrap">
+                              {person.groups.map((group) => (
+                                <Badge key={group.id} variant="secondary" className="text-xs">
+                                  {group.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">—</span>
+                          )}
                         </TableCell>
                         {isAffiliate && (
                           <TableCell>{person.reportsThisMonth ?? "—"}</TableCell>
