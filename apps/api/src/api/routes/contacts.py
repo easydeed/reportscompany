@@ -44,7 +44,7 @@ def list_contacts(request: Request):
     """
     List all contacts for the current account.
     
-    Returns contacts created by this account for scheduling and People view.
+    Returns contacts with their group memberships for the People view.
     """
     account_id = getattr(request.state, "account_id", None)
     if not account_id:
@@ -53,6 +53,7 @@ def list_contacts(request: Request):
     with db_conn() as (conn, cur):
         set_rls((conn, cur), account_id)
         
+        # Get contacts
         cur.execute("""
             SELECT 
                 id::text,
@@ -70,6 +71,21 @@ def list_contacts(request: Request):
         """, (account_id,))
         
         contacts = list(fetchall_dicts(cur))
+        
+        # For each contact, get their group memberships
+        for contact in contacts:
+            cur.execute("""
+                SELECT 
+                    cg.id::text,
+                    cg.name
+                FROM contact_group_members cgm
+                JOIN contact_groups cg ON cgm.group_id = cg.id
+                WHERE cgm.member_type = 'contact'
+                  AND cgm.member_id = %s::uuid
+                  AND cgm.account_id = %s::uuid
+            """, (contact["id"], account_id))
+            
+            contact["groups"] = list(fetchall_dicts(cur))
         
     return {"contacts": contacts}
 

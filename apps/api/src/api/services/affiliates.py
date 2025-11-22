@@ -16,7 +16,7 @@ def get_sponsored_accounts(cur, affiliate_account_id: str) -> List[Dict[str, Any
         affiliate_account_id: Affiliate account UUID
     
     Returns:
-        List of sponsored accounts with usage metrics
+        List of sponsored accounts with usage metrics and group memberships
     """
     cur.execute("""
         SELECT
@@ -44,15 +44,38 @@ def get_sponsored_accounts(cur, affiliate_account_id: str) -> List[Dict[str, Any
     
     accounts = []
     for row in cur.fetchall():
-        accounts.append({
-            "account_id": row[0],
+        account_id = row[0]
+        account_data = {
+            "account_id": account_id,
             "name": row[1],
             "plan_slug": row[2],
             "account_type": row[3],
             "created_at": row[4].isoformat() if row[4] else None,
             "reports_this_month": row[5],
             "last_report_at": row[6].isoformat() if row[6] else None,
-        })
+        }
+        
+        # Get group memberships for this sponsored agent
+        cur.execute("""
+            SELECT 
+                cg.id::text,
+                cg.name
+            FROM contact_group_members cgm
+            JOIN contact_groups cg ON cgm.group_id = cg.id
+            WHERE cgm.member_type = 'sponsored_agent'
+              AND cgm.member_id = %s::uuid
+              AND cgm.account_id = %s::uuid
+        """, (account_id, affiliate_account_id))
+        
+        groups = []
+        for group_row in cur.fetchall():
+            groups.append({
+                "id": group_row[0],
+                "name": group_row[1],
+            })
+        
+        account_data["groups"] = groups
+        accounts.append(account_data)
     
     return accounts
 
