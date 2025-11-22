@@ -11,13 +11,14 @@ router = APIRouter(prefix="/v1")
 class RecipientInput(BaseModel):
     """
     Typed recipient for schedules.
-    
+
     Each recipient is stored in the DB as a JSON-encoded string:
     - {"type":"contact","id":"<contact_id>"}
     - {"type":"sponsored_agent","id":"<account_id>"}
+    - {"type":"group","id":"<group_id>"}
     - {"type":"manual_email","email":"<email>"}
     """
-    type: Literal["contact", "sponsored_agent", "manual_email"]
+    type: Literal["contact", "sponsored_agent", "group", "manual_email"]
     id: Optional[str] = None
     email: Optional[EmailStr] = None
 
@@ -134,7 +135,20 @@ def validate_recipient_ownership(cur, account_id: str, recipient: RecipientInput
             WHERE id = %s::uuid AND sponsor_account_id = %s::uuid
         """, (recipient.id, account_id))
         return cur.fetchone() is not None
-    
+
+    elif recipient.type == "group":
+        # Verify group belongs to this account
+        if not recipient.id:
+            return False
+        cur.execute(
+            """
+            SELECT 1 FROM contact_groups
+            WHERE id = %s::uuid AND account_id = %s::uuid
+            """,
+            (recipient.id, account_id),
+        )
+        return cur.fetchone() is not None
+
     return False
 
 

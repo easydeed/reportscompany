@@ -4,9 +4,11 @@ Contacts API - Manage client contacts, recipients, and lists.
 Used by the People view to show all contacts associated with an account.
 Supports affiliates and regular agents.
 """
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, UploadFile, File
 from pydantic import BaseModel, EmailStr
 from typing import Literal
+import csv
+import io
 from ..db import db_conn, set_rls, fetchall_dicts, fetchone_dict
 
 router = APIRouter(prefix="/v1")
@@ -14,15 +16,26 @@ router = APIRouter(prefix="/v1")
 
 class ContactCreate(BaseModel):
     name: str
-    email: EmailStr
-    type: Literal["client", "list", "agent"]
+    email: EmailStr | None = None
+    type: Literal["client", "list", "agent", "group"]
+    phone: str | None = None
     notes: str | None = None
+    
+    def model_post_init(self, __context):
+        """Validate fields based on type."""
+        if self.type == "agent":
+            if not self.email:
+                raise ValueError("Email is required for agent contacts")
+        elif self.type == "group":
+            # Groups don't require email or phone
+            pass
 
 
 class ContactUpdate(BaseModel):
     name: str | None = None
     email: EmailStr | None = None
-    type: Literal["client", "list", "agent"] | None = None
+    type: Literal["client", "list", "agent", "group"] | None = None
+    phone: str | None = None
     notes: str | None = None
 
 
@@ -47,6 +60,7 @@ def list_contacts(request: Request):
                 name,
                 email,
                 type,
+                phone,
                 notes,
                 created_at,
                 updated_at
@@ -78,32 +92,34 @@ def create_contact(contact: ContactCreate, request: Request):
     with db_conn() as (conn, cur):
         set_rls((conn, cur), account_id)
         
-        # Check for duplicate email within account
-        cur.execute("""
-            SELECT id FROM contacts
-            WHERE account_id = %s::uuid AND email = %s
-        """, (account_id, contact.email))
-        
-        if cur.fetchone():
-            raise HTTPException(
-                status_code=400,
-                detail=f"A contact with email {contact.email} already exists"
-            )
+        # Check for duplicate email within account (only if email provided)
+        if contact.email:
+            cur.execute("""
+                SELECT id FROM contacts
+                WHERE account_id = %s::uuid AND email = %s
+            """, (account_id, contact.email))
+            
+            if cur.fetchone():
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"A contact with email {contact.email} already exists"
+                )
         
         # Insert contact
         cur.execute("""
-            INSERT INTO contacts (account_id, name, email, type, notes)
-            VALUES (%s::uuid, %s, %s, %s, %s)
+            INSERT INTO contacts (account_id, name, email, type, phone, notes)
+            VALUES (%s::uuid, %s, %s, %s, %s, %s)
             RETURNING 
                 id::text,
                 account_id::text,
                 name,
                 email,
+                phone,
                 type,
                 notes,
                 created_at,
                 updated_at
-        """, (account_id, contact.name, contact.email, contact.type, contact.notes))
+        """, (account_id, contact.name, contact.email, contact.type, contact.phone, contact.notes))
         
         result = fetchone_dict(cur)
         
@@ -165,6 +181,9 @@ def update_contact(contact_id: str, updates: ContactUpdate, request: Request):
         if updates.type is not None:
             fields.append("type = %s")
             values.append(updates.type)
+        if updates.phone is not None:
+            fields.append("phone = %s")
+            values.append(updates.phone)
         if updates.notes is not None:
             fields.append("notes = %s")
             values.append(updates.notes)
@@ -220,4 +239,129 @@ def delete_contact(contact_id: str, request: Request):
         raise HTTPException(status_code=404, detail="Contact not found")
     
     return {"ok": True, "deleted_id": contact_id}
+
+
+@router.post("/contacts/import")
+def import_contacts(request: Request, file: UploadFile = File(...)):
+    """
+    Import contacts from a CSV file.
+
+    Expected columns (header row):
+      - name (required)
+      - email (required)
+      - type (optional: client | agent | list; default: client)
+      - group (optional: group name; will create group if missing)
+
+    If group is provided, a contact group will be created (if needed) and the
+    contact will be added as a member (member_type='contact').
+    """
+    account_id = getattr(request.state, "account_id", None)
+    if not account_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        content = file.file.read().decode("utf-8")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Unable to read uploaded file as UTF-8")
+
+    reader = csv.DictReader(io.StringIO(content))
+
+    created_contacts = 0
+    created_groups = 0
+    errors: list[dict] = []
+
+    with db_conn() as (conn, cur):
+        set_rls((conn, cur), account_id)
+
+        # Cache of group_name -> group_id to avoid repeated lookups
+        group_cache: dict[str, str] = {}
+
+        for idx, row in enumerate(reader, start=2):  # start=2 to account for header row
+            name = (row.get("name") or "").strip()
+            email = (row.get("email") or "").strip()
+            raw_type = (row.get("type") or "").strip().lower()
+            group_name = (row.get("group") or "").strip()
+
+            if not name or not email:
+                errors.append({"row": idx, "reason": "Missing name or email"})
+                continue
+
+            contact_type: str
+            if raw_type in ("client", "agent", "list"):
+                contact_type = raw_type
+            else:
+                contact_type = "client"
+
+            try:
+                # Insert contact (dedupe on email within account)
+                cur.execute(
+                    """
+                    SELECT id FROM contacts
+                    WHERE account_id = %s::uuid AND email = %s
+                    """,
+                    (account_id, email),
+                )
+                existing = cur.fetchone()
+
+                if existing:
+                    contact_id = existing[0]
+                else:
+                    cur.execute(
+                        """
+                        INSERT INTO contacts (account_id, name, email, type)
+                        VALUES (%s::uuid, %s, %s, %s)
+                        RETURNING id::text
+                        """,
+                        (account_id, name, email, contact_type),
+                    )
+                    contact_id = cur.fetchone()[0]
+                    created_contacts += 1
+
+                # Handle optional group
+                if group_name:
+                    group_id = group_cache.get(group_name)
+                    if not group_id:
+                        # Find or create group
+                        cur.execute(
+                            """
+                            SELECT id::text FROM contact_groups
+                            WHERE account_id = %s::uuid AND name = %s
+                            """,
+                            (account_id, group_name),
+                        )
+                        row_group = cur.fetchone()
+                        if row_group:
+                            group_id = row_group[0]
+                        else:
+                            cur.execute(
+                                """
+                                INSERT INTO contact_groups (account_id, name)
+                                VALUES (%s::uuid, %s)
+                                RETURNING id::text
+                                """,
+                                (account_id, group_name),
+                            )
+                            group_id = cur.fetchone()[0]
+                            created_groups += 1
+
+                        group_cache[group_name] = group_id
+
+                    # Insert membership (deduped by unique constraint)
+                    cur.execute(
+                        """
+                        INSERT INTO contact_group_members (group_id, account_id, member_type, member_id)
+                        VALUES (%s::uuid, %s::uuid, 'contact', %s::uuid)
+                        ON CONFLICT (group_id, member_type, member_id) DO NOTHING
+                        """,
+                        (group_id, account_id, contact_id),
+                    )
+
+            except Exception as e:
+                errors.append({"row": idx, "reason": str(e)})
+
+    return {
+        "created_contacts": created_contacts,
+        "created_groups": created_groups,
+        "errors": errors,
+    }
 

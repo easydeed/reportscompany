@@ -33,68 +33,111 @@ def safe_json_dumps(obj):
 def resolve_recipients_to_emails(cur, account_id: str, recipients_raw: list) -> list:
     """
     Resolve typed recipients to a list of email addresses.
-    
-    Handles three recipient types:
+
+    Handles recipient types:
     - contact: {"type":"contact","id":"<contact_id>"} -> lookup from contacts table
     - sponsored_agent: {"type":"sponsored_agent","id":"<account_id>"} -> lookup from users/accounts
+    - group: {"type":"group","id":"<group_id>"} -> expand members to contact/sponsored_agent and resolve
     - manual_email: {"type":"manual_email","email":"<email>"} -> use directly
     - Plain strings: Legacy format, treated as manual_email
-    
+
     Returns a deduplicated list of valid email addresses.
     """
-    emails = []
-    
+    emails: list[str] = []
+
+    def add_contact_email(contact_id: str):
+        cur.execute(
+            """
+            SELECT email
+            FROM contacts
+            WHERE id = %s::uuid AND account_id = %s::uuid
+            """,
+            (contact_id, account_id),
+        )
+        row = cur.fetchone()
+        if row and row[0]:
+            emails.append(row[0])
+        else:
+            print(f"⚠️  Contact {contact_id} not found or has no email")
+
+    def add_sponsored_agent_email(agent_account_id: str):
+        # Verify sponsorship
+        cur.execute(
+            """
+            SELECT a.id::text
+            FROM accounts a
+            WHERE a.id = %s::uuid
+              AND a.sponsor_account_id = %s::uuid
+            """,
+            (agent_account_id, account_id),
+        )
+
+        if cur.fetchone():
+            # Get agent's primary email from users
+            cur.execute(
+                """
+                SELECT u.email
+                FROM users u
+                WHERE u.account_id = %s::uuid
+                ORDER BY u.created_at
+                LIMIT 1
+                """,
+                (agent_account_id,),
+            )
+            row = cur.fetchone()
+            if row and row[0]:
+                emails.append(row[0])
+            else:
+                print(f"⚠️  Sponsored agent {agent_account_id} has no user email")
+        else:
+            print(f"⚠️  Sponsored agent {agent_account_id} not sponsored by {account_id}")
+
     for recipient_str in recipients_raw:
         try:
             # Try to parse as JSON
             if recipient_str.startswith("{"):
                 recipient = json.loads(recipient_str)
                 recipient_type = recipient.get("type")
-                
+
                 if recipient_type == "contact":
-                    # Lookup contact email
                     contact_id = recipient.get("id")
                     if contact_id:
-                        cur.execute("""
-                            SELECT email
-                            FROM contacts
-                            WHERE id = %s::uuid AND account_id = %s::uuid
-                        """, (contact_id, account_id))
-                        row = cur.fetchone()
-                        if row and row[0]:
-                            emails.append(row[0])
-                        else:
-                            print(f"⚠️  Contact {contact_id} not found or has no email")
-                
+                        add_contact_email(contact_id)
+
                 elif recipient_type == "sponsored_agent":
-                    # Lookup sponsored agent email from users table
                     agent_account_id = recipient.get("id")
                     if agent_account_id:
-                        # Verify sponsorship
-                        cur.execute("""
-                            SELECT a.id::text
-                            FROM accounts a
-                            WHERE a.id = %s::uuid 
-                              AND a.sponsor_account_id = %s::uuid
-                        """, (agent_account_id, account_id))
-                        
-                        if cur.fetchone():
-                            # Get agent's primary email from users
-                            cur.execute("""
-                                SELECT u.email
-                                FROM users u
-                                WHERE u.account_id = %s::uuid
-                                ORDER BY u.created_at
-                                LIMIT 1
-                            """, (agent_account_id,))
-                            row = cur.fetchone()
-                            if row and row[0]:
-                                emails.append(row[0])
-                            else:
-                                print(f"⚠️  Sponsored agent {agent_account_id} has no user email")
-                        else:
-                            print(f"⚠️  Sponsored agent {agent_account_id} not sponsored by {account_id}")
-                
+                        add_sponsored_agent_email(agent_account_id)
+
+                elif recipient_type == "group":
+                    group_id = recipient.get("id")
+                    if group_id:
+                        # Verify group belongs to this account and load members
+                        cur.execute(
+                            """
+                            SELECT 1 FROM contact_groups
+                            WHERE id = %s::uuid AND account_id = %s::uuid
+                            """,
+                            (group_id, account_id),
+                        )
+                        if not cur.fetchone():
+                            print(f"⚠️  Group {group_id} not found for account {account_id}")
+                            continue
+
+                        cur.execute(
+                            """
+                            SELECT member_type, member_id::text
+                            FROM contact_group_members
+                            WHERE group_id = %s::uuid AND account_id = %s::uuid
+                            """,
+                            (group_id, account_id),
+                        )
+                        for member_type, member_id in cur.fetchall():
+                            if member_type == "contact":
+                                add_contact_email(member_id)
+                            elif member_type == "sponsored_agent":
+                                add_sponsored_agent_email(member_id)
+
                 elif recipient_type == "manual_email":
                     # Use email directly
                     email = recipient.get("email")
@@ -105,13 +148,13 @@ def resolve_recipients_to_emails(cur, account_id: str, recipients_raw: list) -> 
             else:
                 # Legacy plain email string
                 emails.append(recipient_str)
-                
+
         except (json.JSONDecodeError, KeyError, TypeError) as e:
             print(f"⚠️  Error parsing recipient '{recipient_str}': {e}")
             # Treat as plain email if JSON parsing fails
             if "@" in recipient_str:
                 emails.append(recipient_str)
-    
+
     # Deduplicate and filter empties
     return list(set([e for e in emails if e and "@" in e]))
 

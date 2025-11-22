@@ -37,7 +37,7 @@ export interface ScheduleRun {
 
 // Typed recipient for API
 export interface TypedRecipient {
-  type: "contact" | "sponsored_agent" | "manual_email"
+  type: "contact" | "sponsored_agent" | "group" | "manual_email"
   id?: string
   email?: string
 }

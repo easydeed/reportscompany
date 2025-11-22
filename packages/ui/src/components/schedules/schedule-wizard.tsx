@@ -418,6 +418,8 @@ function StepRecipients({
   const [people, setPeople] = useState<any[]>([])
   const [loadingPeople, setLoadingPeople] = useState(true)
   const [isAffiliate, setIsAffiliate] = useState(false)
+  const [groups, setGroups] = useState<any[]>([])
+  const [loadingGroups, setLoadingGroups] = useState(true)
   
   // Fetch people (contacts + sponsored agents) on mount
   useEffect(() => {
@@ -430,7 +432,7 @@ function StepRecipients({
         setIsAffiliate(isAff)
         
         const peopleList: any[] = []
-        
+
         // Fetch contacts
         const contactsRes = await fetch('/api/proxy/v1/contacts', { cache: 'no-store' })
         if (contactsRes.ok) {
@@ -442,7 +444,7 @@ function StepRecipients({
             type: c.type === 'client' ? 'Client' : c.type === 'list' ? 'List' : 'Agent',
           })))
         }
-        
+
         // If affiliate, fetch sponsored accounts (note: they don't have emails in this view)
         if (isAff) {
           const overviewRes = await fetch('/api/proxy/v1/affiliate/overview', { cache: 'no-store' })
@@ -452,12 +454,20 @@ function StepRecipients({
             // In a real scenario, you'd want to store agent emails in the accounts table
           }
         }
-        
+
+        // Fetch groups
+        const groupsRes = await fetch('/api/proxy/v1/contact-groups', { cache: 'no-store' })
+        if (groupsRes.ok) {
+          const groupsData = await groupsRes.json()
+          setGroups(groupsData.groups || [])
+        }
+
         setPeople(peopleList.filter(p => p.email)) // Only show people with emails
       } catch (error) {
         console.error('Failed to load people:', error)
       } finally {
         setLoadingPeople(false)
+        setLoadingGroups(false)
       }
     }
     loadPeople()
@@ -574,6 +584,69 @@ function StepRecipients({
                   )}
                 </button>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Groups Selector */}
+      {!loadingGroups && groups.length > 0 && (
+        <Card className="border-border/60 bg-muted/40">
+          <CardContent className="pt-6 space-y-3">
+            <Label className="text-sm flex items-center gap-2">
+              <Users className="w-4 h-4 text-primary" />
+              Add groups as recipients
+            </Label>
+            <div className="max-h-[200px] overflow-y-auto space-y-2 pr-2">
+              {groups.map((group: any) => {
+                const isSelected =
+                  (state.typedRecipients || []).some(
+                    (r) => r.type === "group" && r.id === group.id,
+                  )
+                return (
+                  <button
+                    key={group.id}
+                    type="button"
+                    onClick={() => {
+                      const current = state.typedRecipients || []
+                      if (isSelected) {
+                        setState({
+                          ...state,
+                          typedRecipients: current.filter(
+                            (r) => !(r.type === "group" && r.id === group.id),
+                          ),
+                        })
+                      } else {
+                        setState({
+                          ...state,
+                          typedRecipients: [
+                            ...current,
+                            { type: "group", id: group.id } as any,
+                          ],
+                        })
+                      }
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between p-3 rounded-lg border-2 text-left transition-all",
+                      isSelected
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50 hover:bg-muted/40 cursor-pointer",
+                    )}
+                  >
+                    <div className="flex flex-col gap-1 min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{group.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {group.description || "No description"} • {group.member_count ?? 0} members
+                      </p>
+                    </div>
+                    {isSelected && (
+                      <Badge variant="secondary" className="shrink-0 ml-2">
+                        Added
+                      </Badge>
+                    )}
+                  </button>
+                )
+              })}
             </div>
           </CardContent>
         </Card>
