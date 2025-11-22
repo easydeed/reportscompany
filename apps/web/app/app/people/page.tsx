@@ -83,6 +83,13 @@ export default function PeoplePage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [editingContact, setEditingContact] = useState<Contact | null>(null)
+  const [editSponsoredDialogOpen, setEditSponsoredDialogOpen] = useState(false)
+  const [editingSponsoredAgent, setEditingSponsoredAgent] = useState<SponsoredAccount | null>(null)
+  const [sponsoredEditForm, setSponsoredEditForm] = useState({
+    phone: "",
+    notes: "",
+    isSponsored: true,
+  })
   const [groups, setGroups] = useState<ContactGroup[]>([])
   const [groupsLoading, setGroupsLoading] = useState(false)
   const [groupDialogOpen, setGroupDialogOpen] = useState(false)
@@ -309,6 +316,41 @@ export default function PeoplePage() {
       toast({
         title: "Error",
         description: "Failed to delete contact",
+        variant: "destructive",
+      })
+    }
+  }
+
+  async function handleUnsponsorAgent() {
+    if (!editingSponsoredAgent) return
+    
+    if (!confirm(
+      `Remove sponsorship from ${editingSponsoredAgent.name}? They will become an independent account with a free plan.`
+    )) return
+
+    try {
+      const res = await fetch(
+        `/api/proxy/v1/affiliate/accounts/${editingSponsoredAgent.account_id}/unsponsor`,
+        { method: "POST" }
+      )
+      
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.detail || "Failed to unsponsor agent")
+      }
+
+      toast({
+        title: "Success",
+        description: `${editingSponsoredAgent.name} is now independent`,
+      })
+      
+      setEditSponsoredDialogOpen(false)
+      setEditingSponsoredAgent(null)
+      loadData()
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to unsponsor agent",
         variant: "destructive",
       })
     }
@@ -904,6 +946,102 @@ export default function PeoplePage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Sponsored Agent Dialog */}
+        <Dialog open={editSponsoredDialogOpen} onOpenChange={(open) => {
+          setEditSponsoredDialogOpen(open)
+          if (!open) {
+            setEditingSponsoredAgent(null)
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Sponsored Agent</DialogTitle>
+              <DialogDescription>
+                Manage {editingSponsoredAgent?.name || "this agent"}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {/* Name (readonly) */}
+              <div className="space-y-2">
+                <Label>Name</Label>
+                <Input
+                  value={editingSponsoredAgent?.name || ""}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+              
+              {/* Email (readonly - sponsored accounts don't expose email here) */}
+              <div className="space-y-2">
+                <Label>Account ID</Label>
+                <Input
+                  value={editingSponsoredAgent?.account_id || ""}
+                  disabled
+                  className="bg-muted text-xs"
+                />
+              </div>
+              
+              {/* Phone (optional, future use) */}
+              <div className="space-y-2">
+                <Label htmlFor="sponsored-phone">Phone (Optional)</Label>
+                <Input
+                  id="sponsored-phone"
+                  type="tel"
+                  placeholder="(555) 123-4567"
+                  value={sponsoredEditForm.phone}
+                  onChange={(e) => setSponsoredEditForm({ ...sponsoredEditForm, phone: e.target.value })}
+                />
+              </div>
+              
+              {/* Notes (optional, future use) */}
+              <div className="space-y-2">
+                <Label htmlFor="sponsored-notes">Notes (Optional)</Label>
+                <Input
+                  id="sponsored-notes"
+                  placeholder="Any notes about this agent..."
+                  value={sponsoredEditForm.notes}
+                  onChange={(e) => setSponsoredEditForm({ ...sponsoredEditForm, notes: e.target.value })}
+                />
+              </div>
+              
+              {/* Sponsorship Toggle */}
+              <div className="space-y-2 pt-4 border-t">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base">Sponsored by your account</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Remove sponsorship to make them independent
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={sponsoredEditForm.isSponsored}
+                    onChange={(e) => {
+                      if (!e.target.checked) {
+                        // User is turning OFF sponsorship
+                        handleUnsponsorAgent()
+                      }
+                      setSponsoredEditForm({ ...sponsoredEditForm, isSponsored: e.target.checked })
+                    }}
+                    className="h-5 w-5 rounded border-gray-300"
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditSponsoredDialogOpen(false)
+                  setEditingSponsoredAgent(null)
+                }}
+              >
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Stats Card (for affiliates) */}
@@ -1080,8 +1218,8 @@ export default function PeoplePage() {
                             <Users className="h-4 w-4" />
                           </Button>
 
-                          {/* Edit/Delete only for contacts */}
-                          {person.type !== "sponsored_agent" && (
+                          {/* Edit for contacts */}
+                          {person.kind === "contact" && (
                             <>
                               <Button
                                 variant="ghost"
@@ -1092,8 +1230,9 @@ export default function PeoplePage() {
                                   setEditingContact(contact)
                                   setEditFormData({
                                     name: contact.name,
-                                    email: contact.email,
+                                    email: contact.email || "",
                                     type: contact.type,
+                                    phone: contact.phone || "",
                                     notes: contact.notes || "",
                                   })
                                   setEditDialogOpen(true)
@@ -1109,6 +1248,27 @@ export default function PeoplePage() {
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </>
+                          )}
+                          
+                          {/* Edit for sponsored agents */}
+                          {person.kind === "sponsored_agent" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const agent = sponsoredAccounts.find((a) => a.account_id === person.id)
+                                if (!agent) return
+                                setEditingSponsoredAgent(agent)
+                                setSponsoredEditForm({
+                                  phone: "",
+                                  notes: "",
+                                  isSponsored: true,
+                                })
+                                setEditSponsoredDialogOpen(true)
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
                           )}
                         </TableCell>
                       </TableRow>
