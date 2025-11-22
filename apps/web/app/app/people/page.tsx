@@ -37,9 +37,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 type Contact = {
   id: string
   name: string
-  email: string
-  type: "client" | "list" | "agent"
-  notes?: string
+  email: string | null
+  type: "client" | "list" | "agent" | "group"
+  phone?: string | null
+  notes?: string | null
   created_at: string
 }
 
@@ -99,14 +100,16 @@ export default function PeoplePage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    type: "client" as "client" | "list" | "agent",
+    type: "" as "" | "client" | "list" | "agent" | "group",
+    phone: "",
     notes: "",
   })
 
   const [editFormData, setEditFormData] = useState({
     name: "",
     email: "",
-    type: "client" as "client" | "list" | "agent",
+    type: "client" as "client" | "list" | "agent" | "group",
+    phone: "",
     notes: "",
   })
 
@@ -168,20 +171,56 @@ export default function PeoplePage() {
   }
 
   async function handleAddContact() {
-    if (!formData.name || !formData.email) {
+    // Validate based on type
+    if (!formData.type) {
       toast({
         title: "Error",
-        description: "Name and email are required",
+        description: "Please select a contact type",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    if (!formData.name) {
+      toast({
+        title: "Error",
+        description: "Name is required",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    if (formData.type === "agent" && !formData.email) {
+      toast({
+        title: "Error",
+        description: "Email is required for agent contacts",
         variant: "destructive",
       })
       return
     }
 
     try {
+      // Build payload based on type
+      const payload: any = {
+        name: formData.name,
+        type: formData.type,
+        notes: formData.notes || null,
+      }
+      
+      // Add email if provided (required for agent)
+      if (formData.email) {
+        payload.email = formData.email
+      }
+      
+      // Add phone if provided (for agent)
+      if (formData.phone) {
+        payload.phone = formData.phone
+      }
+      
       const res = await fetch("/api/proxy/v1/contacts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       })
 
       if (!res.ok) {
@@ -195,7 +234,7 @@ export default function PeoplePage() {
       })
 
       setDialogOpen(false)
-      setFormData({ name: "", email: "", type: "client", notes: "" })
+      setFormData({ name: "", email: "", type: "", phone: "", notes: "" })
       loadData()
     } catch (error) {
       toast({
@@ -513,62 +552,122 @@ export default function PeoplePage() {
             <DialogHeader>
               <DialogTitle>Add New Contact</DialogTitle>
               <DialogDescription>
-                Add a client, recipient list, or external agent to your contacts
+                Select a type first, then fill in the required details
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
+              {/* Type - FIRST */}
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  placeholder="John Doe"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="john@example.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="type">Type</Label>
+                <Label htmlFor="type">Type *</Label>
                 <Select
                   value={formData.type}
-                  onValueChange={(value: "client" | "list" | "agent") =>
+                  onValueChange={(value: "client" | "list" | "agent" | "group") =>
                     setFormData({ ...formData, type: value })
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select a type..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="client">Client (Individual)</SelectItem>
-                    <SelectItem value="list">List (Group)</SelectItem>
                     <SelectItem value="agent">Agent (External)</SelectItem>
+                    <SelectItem value="group">Group (Office/Company)</SelectItem>
+                    <SelectItem value="client">Client (Individual)</SelectItem>
+                    <SelectItem value="list">List (Recipients)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes (Optional)</Label>
-                <Input
-                  id="notes"
-                  placeholder="Any additional notes..."
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                />
-              </div>
+
+              {/* Conditional fields based on type */}
+              {formData.type && (
+                <>
+                  {/* Name - Required for all */}
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Name *</Label>
+                    <Input
+                      id="name"
+                      placeholder={
+                        formData.type === "group"
+                          ? "e.g. ABC Realty - La Verne"
+                          : formData.type === "agent"
+                            ? "e.g. John Doe"
+                            : "e.g. Jane Smith"
+                      }
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    />
+                  </div>
+
+                  {/* Email - Required for agent, optional for others */}
+                  {formData.type === "agent" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="john@example.com"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      />
+                    </div>
+                  )}
+
+                  {/* Email - Optional for others except group */}
+                  {formData.type !== "agent" && formData.type !== "group" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="email@example.com (optional)"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      />
+                    </div>
+                  )}
+
+                  {/* Phone - Show for agent only */}
+                  {formData.type === "agent" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="(555) 123-4567 (optional)"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      />
+                    </div>
+                  )}
+
+                  {/* Notes - Always optional */}
+                  <div className="space-y-2">
+                    <Label htmlFor="notes">
+                      {formData.type === "group" ? "Description" : "Notes"}
+                    </Label>
+                    <Input
+                      id="notes"
+                      placeholder={
+                        formData.type === "group"
+                          ? "e.g. Real estate office in La Verne..."
+                          : "Any additional notes..."
+                      }
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    />
+                  </div>
+                </>
+              )}
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              <Button variant="outline" onClick={() => {
+                setDialogOpen(false)
+                setFormData({ name: "", email: "", type: "", phone: "", notes: "" })
+              }}>
                 Cancel
               </Button>
-              <Button onClick={handleAddContact}>Add Contact</Button>
+              <Button onClick={handleAddContact} disabled={!formData.type || !formData.name}>
+                Add Contact
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
