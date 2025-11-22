@@ -684,6 +684,76 @@ def deactivate_sponsored_account(
         }
 
 
+@router.post("/accounts/{sponsored_account_id}/unsponsor")
+def unsponsor_account(
+    sponsored_account_id: str,
+    request: Request,
+    account_id: str = Depends(require_account_id)
+):
+    """
+    Remove sponsorship from an account.
+    
+    Sets sponsor_account_id = NULL and optionally downgrades to free plan.
+    The account becomes independent.
+    """
+    with db_conn() as (conn, cur):
+        # Verify this is an affiliate account
+        if not verify_affiliate_account(cur, account_id):
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "error": "not_affiliate_account",
+                    "message": "This account is not an industry affiliate."
+                }
+            )
+        
+        # Verify sponsorship and get account details
+        cur.execute("""
+            SELECT id::text, name, plan_slug
+            FROM accounts
+            WHERE id = %s::uuid
+              AND sponsor_account_id = %s::uuid
+        """, (sponsored_account_id, account_id))
+        
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(
+                status_code=404,
+                detail="Sponsored account not found or not sponsored by you"
+            )
+        
+        # Remove sponsorship and optionally downgrade to free
+        cur.execute("""
+            UPDATE accounts
+            SET sponsor_account_id = NULL,
+                plan_slug = CASE 
+                    WHEN plan_slug = 'sponsored_free' THEN 'free'
+                    ELSE plan_slug
+                END,
+                updated_at = NOW()
+            WHERE id = %s::uuid
+            RETURNING id::text, name, plan_slug, sponsor_account_id
+        """, (sponsored_account_id,))
+        
+        updated_row = cur.fetchone()
+        if not updated_row:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to unsponsor account"
+            )
+        
+        conn.commit()
+        
+        return {
+            "ok": True,
+            "account_id": updated_row[0],
+            "name": updated_row[1],
+            "plan_slug": updated_row[2],
+            "sponsor_account_id": updated_row[3],  # Should be None
+            "message": "Account is now independent"
+        }
+
+
 @router.post("/accounts/{sponsored_account_id}/reactivate")
 def reactivate_sponsored_account(
     sponsored_account_id: str,
