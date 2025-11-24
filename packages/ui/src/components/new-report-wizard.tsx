@@ -12,7 +12,18 @@ import { Check, HelpCircle, ChevronRight, X } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
 
 // Types
-export type ReportType = "market_snapshot" | "new_listings" | "closed" | "inventory"
+// NOTE: ReportType is now imported from shared module to ensure consistency
+// See apps/web/app/lib/reportTypes.ts for the canonical list
+export type ReportType = 
+  | "market_snapshot" 
+  | "new_listings" 
+  | "inventory" 
+  | "closed" 
+  | "price_bands" 
+  | "open_houses" 
+  | "new_listings_gallery" 
+  | "featured_listings"
+
 export type AreaMode = "city" | "zips"
 
 export interface ReportPayload {
@@ -275,8 +286,12 @@ function Step1ReportType({
   const reportTypes: { label: string; value: ReportType }[] = [
     { label: "Market Snapshot", value: "market_snapshot" },
     { label: "New Listings", value: "new_listings" },
+    { label: "New Listings Gallery", value: "new_listings_gallery" },
+    { label: "Featured Listings", value: "featured_listings" },
     { label: "Closed Sales", value: "closed" },
     { label: "Inventory", value: "inventory" },
+    { label: "Price Bands", value: "price_bands" },
+    { label: "Open Houses", value: "open_houses" },
   ]
 
   return (
@@ -547,8 +562,12 @@ function Step4Review({ state }: { state: WizardState }) {
   const reportTypeLabels: Record<ReportType, string> = {
     market_snapshot: "Market Snapshot",
     new_listings: "New Listings",
+    new_listings_gallery: "New Listings Gallery",
+    featured_listings: "Featured Listings",
     closed: "Closed Sales",
     inventory: "Inventory",
+    price_bands: "Price Bands",
+    open_houses: "Open Houses",
   }
 
   return (
