@@ -8,10 +8,10 @@ import psycopg
 def run_migration():
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
-        print("❌ DATABASE_URL environment variable not set")
+        print("[-] DATABASE_URL environment variable not set")
         return False
     
-    print("🔄 Running migration 0016: Add failure tracking to schedules...")
+    print("[*] Running migration 0016: Add failure tracking to schedules...")
     
     try:
         with psycopg.connect(database_url) as conn:
@@ -29,7 +29,7 @@ def run_migration():
                 cur.execute(migration_sql)
                 conn.commit()
                 
-                print("✅ Migration 0016 completed successfully")
+                print("[+] Migration 0016 completed successfully")
                 
                 # Verify columns exist
                 cur.execute("""
@@ -46,12 +46,12 @@ def run_migration():
                     for col, dtype in results:
                         print(f"     - {col} ({dtype})")
                 else:
-                    print(f"   ⚠️ Warning: Expected 3 columns, found {len(results)}")
+                    print(f"   [!] Warning: Expected 3 columns, found {len(results)}")
                 
                 return True
                 
     except Exception as e:
-        print(f"❌ Migration failed: {e}")
+        print(f"[-] Migration failed: {e}")
         return False
 
 if __name__ == "__main__":

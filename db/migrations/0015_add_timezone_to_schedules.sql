@@ -10,7 +10,15 @@ ADD COLUMN IF NOT EXISTS timezone TEXT NOT NULL DEFAULT 'UTC';
 COMMENT ON COLUMN schedules.timezone IS 'IANA timezone for schedule execution (e.g., America/Los_Angeles). send_hour and send_minute are interpreted in this timezone, then converted to UTC for next_run_at storage.';
 
 -- Validation: Ensure timezone is not empty (we don't validate IANA at DB level)
-ALTER TABLE schedules
-ADD CONSTRAINT IF NOT EXISTS schedules_timezone_not_empty
-CHECK (timezone != '');
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'schedules_timezone_not_empty'
+    ) THEN
+        ALTER TABLE schedules
+        ADD CONSTRAINT schedules_timezone_not_empty
+        CHECK (timezone != '');
+    END IF;
+END $$;
 

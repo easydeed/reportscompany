@@ -8,10 +8,10 @@ import psycopg
 def run_migration():
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
-        print("❌ DATABASE_URL environment variable not set")
+        print("[-] DATABASE_URL environment variable not set")
         return False
     
-    print("🔄 Running migration 0015: Add timezone to schedules...")
+    print("[*] Running migration 0015: Add timezone to schedules...")
     
     try:
         with psycopg.connect(database_url) as conn:
@@ -29,7 +29,7 @@ def run_migration():
                 cur.execute(migration_sql)
                 conn.commit()
                 
-                print("✅ Migration 0015 completed successfully")
+                print("[+] Migration 0015 completed successfully")
                 
                 # Verify column exists
                 cur.execute("""
@@ -42,12 +42,12 @@ def run_migration():
                 if result:
                     print(f"   Column added: {result[0]} ({result[1]}) DEFAULT {result[2]}")
                 else:
-                    print("   ⚠️ Warning: Column verification failed")
+                    print("   [!] Warning: Column verification failed")
                 
                 return True
                 
     except Exception as e:
-        print(f"❌ Migration failed: {e}")
+        print(f"[-] Migration failed: {e}")
         return False
 
 if __name__ == "__main__":
