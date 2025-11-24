@@ -556,17 +556,78 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
                             str(email_error)
                         ))
 
-        # 7) Webhook
+        # 7) PASS S3: Reset consecutive failures on success
+        if schedule_id:
+            try:
+                with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
+                        cur.execute("""
+                            UPDATE schedules
+                            SET consecutive_failures = 0,
+                                last_error = NULL,
+                                last_error_at = NULL
+                            WHERE id = %s::uuid
+                        """, (schedule_id,))
+                        print(f"✅ Reset failure count for schedule {schedule_id}")
+            except Exception as reset_error:
+                print(f"⚠️  Failed to reset failure count (non-critical): {reset_error}")
+        
+        # 8) Webhook
         payload = {"report_id": run_id, "status": "completed", "html_url": html_url, "pdf_url": pdf_url, "json_url": json_url}
         _deliver_webhooks(account_id, "report.completed", payload)
         return {"ok": True, "run_id": run_id}
 
     except Exception as e:
+        # PASS S3: Track failures and auto-pause after threshold
+        error_msg = str(e)[:2000]  # Truncate to 2KB
+        
         with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
             with conn.cursor() as cur:
                 cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
-                cur.execute("UPDATE report_generations SET status='failed', error=%s WHERE id=%s", (str(e), run_id))
-        return {"ok": False, "error": str(e)}
+                
+                # Update report_generations
+                cur.execute("UPDATE report_generations SET status='failed', error=%s WHERE id=%s", (error_msg, run_id))
+                
+                # Update schedule_runs if this was a scheduled report
+                if schedule_id:
+                    try:
+                        cur.execute("""
+                            UPDATE schedule_runs
+                            SET status = 'failed',
+                                error = %s,
+                                finished_at = NOW()
+                            WHERE report_run_id = %s::uuid
+                        """, (error_msg, run_id))
+                    except Exception:
+                        pass  # Non-critical
+                
+                # PASS S3: Increment consecutive failures and check threshold
+                if schedule_id:
+                    cur.execute("""
+                        UPDATE schedules
+                        SET consecutive_failures = consecutive_failures + 1,
+                            last_error = %s,
+                            last_error_at = NOW()
+                        WHERE id = %s::uuid
+                        RETURNING consecutive_failures
+                    """, (error_msg, schedule_id))
+                    
+                    result = cur.fetchone()
+                    if result:
+                        consecutive_failures = result[0]
+                        print(f"⚠️  Schedule {schedule_id} failure count: {consecutive_failures}")
+                        
+                        # Auto-pause after 3 consecutive failures
+                        if consecutive_failures >= 3:
+                            cur.execute("""
+                                UPDATE schedules
+                                SET active = false
+                                WHERE id = %s::uuid
+                            """, (schedule_id,))
+                            print(f"🛑 Auto-paused schedule {schedule_id} after {consecutive_failures} consecutive failures")
+        
+        return {"ok": False, "error": error_msg}
 
 
 def run_redis_consumer_forever():

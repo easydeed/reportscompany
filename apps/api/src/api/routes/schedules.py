@@ -43,6 +43,7 @@ class ScheduleCreate(BaseModel):
     monthly_dom: Optional[int] = Field(None, ge=1, le=28)  # 1-28
     send_hour: int = Field(9, ge=0, le=23)
     send_minute: int = Field(0, ge=0, le=59)
+    timezone: str = "UTC"  # PASS S2: IANA timezone (e.g., America/Los_Angeles)
     recipients: List[Union[RecipientInput, EmailStr]] = Field(..., min_items=1)  # Support both typed and legacy plain emails
     include_attachment: bool = False
     active: bool = True
@@ -58,6 +59,7 @@ class ScheduleUpdate(BaseModel):
     monthly_dom: Optional[int] = Field(None, ge=1, le=28)
     send_hour: Optional[int] = Field(None, ge=0, le=23)
     send_minute: Optional[int] = Field(None, ge=0, le=59)
+    timezone: Optional[str] = None  # PASS S2: IANA timezone
     recipients: Optional[List[Union[RecipientInput, EmailStr]]] = None  # Support both typed and legacy plain emails
     include_attachment: Optional[bool] = None
     active: Optional[bool] = None
@@ -75,6 +77,7 @@ class ScheduleRow(BaseModel):
     monthly_dom: Optional[int] = None
     send_hour: int
     send_minute: int
+    timezone: str = "UTC"  # PASS S2: IANA timezone
     recipients: List[str]  # Raw JSON strings from DB
     resolved_recipients: Optional[List[Dict[str, Any]]] = None  # Decoded recipient objects for frontend
     include_attachment: bool
@@ -262,28 +265,28 @@ def create_schedule(
         cur.execute("""
             INSERT INTO schedules (
                 account_id, name, report_type, city, zip_codes, lookback_days,
-                cadence, weekly_dow, monthly_dom, send_hour, send_minute,
+                cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone,
                 recipients, include_attachment, active
             ) VALUES (
                 %s, %s, %s, %s, %s, %s,
-                %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s, %s,
                 %s, %s, %s
             )
             RETURNING id::text, name, report_type, city, zip_codes, lookback_days,
-                      cadence, weekly_dow, monthly_dom, send_hour, send_minute,
+                      cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone,
                       recipients, include_attachment, active,
                       last_run_at, next_run_at, created_at
         """, (
             account_id, payload.name, payload.report_type, payload.city, zip_codes_array,
             payload.lookback_days, payload.cadence, payload.weekly_dow, payload.monthly_dom,
-            payload.send_hour, payload.send_minute, recipients_array,
+            payload.send_hour, payload.send_minute, payload.timezone, recipients_array,
             payload.include_attachment, payload.active
         ))
         
         row = cur.fetchone()
         conn.commit()
         
-        recipients_raw = row[11]
+        recipients_raw = row[12]  # Shifted by 1 due to timezone
         return {
             "id": row[0],
             "name": row[1],
@@ -296,13 +299,14 @@ def create_schedule(
             "monthly_dom": row[8],
             "send_hour": row[9],
             "send_minute": row[10],
+            "timezone": row[11],  # PASS S2
             "recipients": recipients_raw,  # Raw for backwards compat
             "resolved_recipients": decode_recipients(recipients_raw),  # Decoded for frontend
-            "include_attachment": row[12],
-            "active": row[13],
-            "last_run_at": row[14].isoformat() if row[14] else None,
-            "next_run_at": row[15].isoformat() if row[15] else None,
-            "created_at": row[16].isoformat()
+            "include_attachment": row[13],
+            "active": row[14],
+            "last_run_at": row[15].isoformat() if row[15] else None,
+            "next_run_at": row[16].isoformat() if row[16] else None,
+            "created_at": row[17].isoformat()
         }
 
 
@@ -321,7 +325,7 @@ def list_schedules(
         
         query = """
             SELECT id::text, name, report_type, city, zip_codes, lookback_days,
-                   cadence, weekly_dow, monthly_dom, send_hour, send_minute,
+                   cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone,
                    recipients, include_attachment, active,
                    last_run_at, next_run_at, created_at
             FROM schedules
@@ -337,7 +341,7 @@ def list_schedules(
         
         schedules = []
         for row in rows:
-            recipients_raw = row[11]
+            recipients_raw = row[12]  # Shifted by 1 due to timezone
             schedules.append({
                 "id": row[0],
                 "name": row[1],
@@ -350,13 +354,14 @@ def list_schedules(
                 "monthly_dom": row[8],
                 "send_hour": row[9],
                 "send_minute": row[10],
+                "timezone": row[11],  # PASS S2
                 "recipients": recipients_raw,  # Raw for backwards compat
                 "resolved_recipients": decode_recipients(recipients_raw),  # Decoded for frontend
-                "include_attachment": row[12],
-                "active": row[13],
-                "last_run_at": row[14].isoformat() if row[14] else None,
-                "next_run_at": row[15].isoformat() if row[15] else None,
-                "created_at": row[16].isoformat()
+                "include_attachment": row[13],
+                "active": row[14],
+                "last_run_at": row[15].isoformat() if row[15] else None,
+                "next_run_at": row[16].isoformat() if row[16] else None,
+                "created_at": row[17].isoformat()
             })
         
         return {"schedules": schedules, "count": len(schedules)}
@@ -377,7 +382,7 @@ def get_schedule(
         
         cur.execute("""
             SELECT id::text, name, report_type, city, zip_codes, lookback_days,
-                   cadence, weekly_dow, monthly_dom, send_hour, send_minute,
+                   cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone,
                    recipients, include_attachment, active,
                    last_run_at, next_run_at, created_at
             FROM schedules
@@ -388,7 +393,7 @@ def get_schedule(
         if not row:
             raise HTTPException(status_code=404, detail="Schedule not found")
         
-        recipients_raw = row[11]
+        recipients_raw = row[12]  # Shifted by 1 due to timezone
         return {
             "id": row[0],
             "name": row[1],
@@ -401,13 +406,14 @@ def get_schedule(
             "monthly_dom": row[8],
             "send_hour": row[9],
             "send_minute": row[10],
+            "timezone": row[11],  # PASS S2
             "recipients": recipients_raw,  # Raw for backwards compat
             "resolved_recipients": decode_recipients(recipients_raw),  # Decoded for frontend
-            "include_attachment": row[12],
-            "active": row[13],
-            "last_run_at": row[14].isoformat() if row[14] else None,
-            "next_run_at": row[15].isoformat() if row[15] else None,
-            "created_at": row[16].isoformat()
+            "include_attachment": row[13],
+            "active": row[14],
+            "last_run_at": row[15].isoformat() if row[15] else None,
+            "next_run_at": row[16].isoformat() if row[16] else None,
+            "created_at": row[17].isoformat()
         }
 
 
@@ -462,6 +468,10 @@ def update_schedule(
     if payload.send_minute is not None:
         updates.append("send_minute = %s")
         params.append(payload.send_minute)
+    
+    if payload.timezone is not None:
+        updates.append("timezone = %s")
+        params.append(payload.timezone)
     
     # Note: recipients validation happens below after DB connection is established
     recipients_to_update = payload.recipients

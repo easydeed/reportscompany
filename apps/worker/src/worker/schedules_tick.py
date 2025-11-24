@@ -4,6 +4,9 @@ Schedules Ticker: Background process that finds due schedules and enqueues repor
 Runs every 60 seconds, finds schedules where next_run_at <= NOW() or NULL,
 computes next run time, enqueues report to Celery, creates audit record.
 
+PASS S2: Timezone-aware - interprets send_hour/send_minute in schedule's timezone,
+converts to UTC for next_run_at storage.
+
 Deploy as a separate Render Background Worker:
   Start command: PYTHONPATH=./src poetry run python -m worker.schedules_tick
 """
@@ -14,6 +17,7 @@ import logging
 import json
 from datetime import datetime, timedelta, date
 from typing import Optional, Dict, Any
+from zoneinfo import ZoneInfo
 import psycopg
 import ssl
 from celery import Celery
@@ -85,41 +89,60 @@ def compute_next_run(
     monthly_dom: Optional[int],
     send_hour: int,
     send_minute: int,
+    timezone: str = "UTC",
     from_time: Optional[datetime] = None
 ) -> datetime:
     """
-    Compute the next run time for a schedule based on its cadence.
+    Compute the next run time for a schedule based on its cadence (PASS S2: Timezone-aware).
     
     Args:
         cadence: 'weekly' or 'monthly'
         weekly_dow: Day of week (0=Sun, 6=Sat) for weekly schedules
         monthly_dom: Day of month (1-28) for monthly schedules
-        send_hour: Hour to send (0-23)
-        send_minute: Minute to send (0-59)
+        send_hour: Hour to send (0-23) in schedule's local timezone
+        send_minute: Minute to send (0-59) in schedule's local timezone
+        timezone: IANA timezone (e.g., 'America/Los_Angeles')
         from_time: Base time to compute from (defaults to now UTC)
     
     Returns:
         Next run datetime in UTC
     """
     if from_time is None:
-        from_time = datetime.utcnow()
+        from_time = datetime.now(ZoneInfo("UTC"))
+    
+    # Convert from_time to schedule's local timezone
+    try:
+        tz = ZoneInfo(timezone)
+    except Exception:
+        logger.warning(f"Invalid timezone '{timezone}', falling back to UTC")
+        tz = ZoneInfo("UTC")
+    
+    now_local = from_time.astimezone(tz)
     
     if cadence == "weekly":
         if weekly_dow is None:
             raise ValueError("weekly_dow required for weekly cadence")
         
-        # Start with today at the desired time
-        next_run = from_time.replace(hour=send_hour, minute=send_minute, second=0, microsecond=0)
+        # Start with today at the desired local time
+        next_local = now_local.replace(hour=send_hour, minute=send_minute, second=0, microsecond=0)
         
         # Find next occurrence of the target day of week
-        days_ahead = weekly_dow - next_run.weekday()
+        # Python weekday: 0=Mon, 6=Sun; our weekly_dow: 0=Sun, 6=Sat
+        # Convert our format to Python format
+        target_weekday = (weekly_dow - 1) % 7  # Sun(0) -> 6, Mon(1) -> 0, etc.
+        current_weekday = now_local.weekday()
         
-        # If the day is today but the time has passed, or day is in the past, move to next week
-        if days_ahead < 0 or (days_ahead == 0 and next_run <= from_time):
-            days_ahead += 7
+        days_ahead = (target_weekday - current_weekday) % 7
         
-        next_run = next_run + timedelta(days=days_ahead)
-        return next_run
+        # If the day is today but the time has passed, move to next week
+        if days_ahead == 0 and next_local <= now_local:
+            days_ahead = 7
+        
+        next_local = next_local + timedelta(days=days_ahead)
+        
+        # Convert to UTC
+        next_utc = next_local.astimezone(ZoneInfo("UTC"))
+        return next_utc.replace(tzinfo=None)  # Return naive UTC datetime for DB storage
     
     elif cadence == "monthly":
         if monthly_dom is None:
@@ -128,23 +151,26 @@ def compute_next_run(
         # Cap at 28 to avoid issues with different month lengths
         target_dom = min(monthly_dom, 28)
         
-        # Start with this month at the target day and time
+        # Start with this month at the target day and time in local timezone
         try:
-            next_run = from_time.replace(day=target_dom, hour=send_hour, minute=send_minute, second=0, microsecond=0)
+            next_local = now_local.replace(day=target_dom, hour=send_hour, minute=send_minute, second=0, microsecond=0)
         except ValueError:
             # If target day doesn't exist in current month (shouldn't happen with cap at 28)
-            # Move to next month's first day, then add target days
-            next_run = (from_time.replace(day=1) + timedelta(days=32)).replace(day=target_dom, hour=send_hour, minute=send_minute, second=0, microsecond=0)
+            # Move to next month's first day, then set target day
+            next_month = now_local.replace(day=1) + timedelta(days=32)
+            next_local = next_month.replace(day=target_dom, hour=send_hour, minute=send_minute, second=0, microsecond=0)
         
         # If that time has already passed this month, move to next month
-        if next_run <= from_time:
+        if next_local <= now_local:
             # Move to next month
-            if next_run.month == 12:
-                next_run = next_run.replace(year=next_run.year + 1, month=1)
+            if next_local.month == 12:
+                next_local = next_local.replace(year=next_local.year + 1, month=1)
             else:
-                next_run = next_run.replace(month=next_run.month + 1)
+                next_local = next_local.replace(month=next_local.month + 1)
         
-        return next_run
+        # Convert to UTC
+        next_utc = next_local.astimezone(ZoneInfo("UTC"))
+        return next_utc.replace(tzinfo=None)  # Return naive UTC datetime for DB storage
     
     else:
         raise ValueError(f"Unknown cadence: {cadence}")
@@ -208,12 +234,12 @@ def process_due_schedules():
     try:
         with psycopg.connect(DATABASE_URL) as conn:
             with conn.cursor() as cur:
-                # Find due schedules
+                # Find due schedules (PASS S2: include timezone)
                 cur.execute("""
                     SELECT id::text, account_id::text, name, report_type,
                            city, zip_codes, lookback_days,
                            cadence, weekly_dow, monthly_dom,
-                           send_hour, send_minute,
+                           send_hour, send_minute, timezone,
                            recipients, include_attachment
                     FROM schedules
                     WHERE active = true
@@ -243,14 +269,15 @@ def process_due_schedules():
                     monthly_dom = row[9]
                     send_hour = row[10]
                     send_minute = row[11]
-                    recipients = row[12]
-                    include_attachment = row[13]
+                    timezone = row[12]  # PASS S2
+                    recipients = row[13]
+                    include_attachment = row[14]
                     
                     try:
-                        # Compute next run time
+                        # Compute next run time (PASS S2: timezone-aware)
                         next_run_at = compute_next_run(
                             cadence, weekly_dow, monthly_dom,
-                            send_hour, send_minute
+                            send_hour, send_minute, timezone
                         )
                         
                         # Enqueue report generation (creates report_generations record + Celery task)
