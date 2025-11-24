@@ -11,10 +11,10 @@ from typing import Literal
 from ..db import db_conn, set_rls
 from .reports import require_account_id
 from ..config.billing import (
-    get_stripe_price_for_plan,
     STRIPE_SECRET_KEY,
     validate_stripe_config
 )
+from ..services.plan_lookup import get_plan_by_slug
 
 router = APIRouter(prefix="/v1/billing", tags=["billing"])
 
@@ -31,7 +31,7 @@ except ImportError:
 
 class CheckoutRequest(BaseModel):
     """Request to create a Stripe Checkout Session."""
-    plan_slug: Literal["pro", "team"]
+    plan_slug: str  # Any plan_slug with stripe_price_id set
 
 
 class CheckoutResponse(BaseModel):
@@ -88,18 +88,27 @@ def create_checkout_session(
             }
         )
     
-    # Get price ID for requested plan
-    price_id = get_stripe_price_for_plan(body.plan_slug)
-    if not price_id:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": "plan_not_configured",
-                "message": f"Plan '{body.plan_slug}' is not configured in Stripe"
-            }
-        )
-    
     with db_conn() as (conn, cur):
+        # Get plan from database (PASS 1: Single source of truth)
+        plan = get_plan_by_slug(cur, body.plan_slug)
+        if not plan:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "plan_not_found",
+                    "message": f"Plan '{body.plan_slug}' does not exist or is inactive"
+                }
+            )
+        
+        price_id = plan.get("stripe_price_id")
+        if not price_id:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "plan_not_configured",
+                    "message": f"Plan '{body.plan_slug}' is not configured for Stripe checkout"
+                }
+            )
         set_rls(cur, account_id)
         
         # Load account details

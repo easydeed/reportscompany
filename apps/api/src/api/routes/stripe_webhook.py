@@ -11,10 +11,10 @@ import psycopg
 import logging
 from ..settings import settings
 from ..config.billing import (
-    get_plan_for_stripe_price,
     STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET
 )
+from ..services.plan_lookup import get_plan_slug_for_stripe_price
 
 router = APIRouter(prefix="/v1")
 
@@ -92,16 +92,15 @@ async def stripe_webhook(req: Request):
             logger.warning(f"Subscription {subscription.get('id')} missing price_id")
             return {"received": True}
         
-        # Map price_id → plan_slug
-        plan_slug = get_plan_for_stripe_price(price_id)
-        if not plan_slug:
-            logger.warning(f"Unknown price_id: {price_id}, cannot map to plan")
-            return {"received": True}
-        
-        # Update account
+        # Map price_id → plan_slug (PASS 1: DB lookup)
         try:
             with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
                 with conn.cursor() as cur:
+                    plan_slug = get_plan_slug_for_stripe_price(cur, price_id)
+                    if not plan_slug:
+                        logger.warning(f"Stripe webhook: no plan found for price_id={price_id}")
+                        return {"received": True}
+                    
                     cur.execute("""
                         UPDATE accounts
                         SET plan_slug = %s

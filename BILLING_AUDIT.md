@@ -794,3 +794,38 @@ if acc_type == 'INDUSTRY_AFFILIATE':
 **Files Reviewed**: 8 backend files, 1 frontend file, 3 migration files  
 **Confidence**: HIGH - All billing code located and analyzed
 
+---
+
+## S1 – Plan/Price Unification (PASS 1)
+
+**Date**: Nov 24, 2025  
+**Status**: ✅ COMPLETE
+
+### Changes Made
+
+1. **Created `plan_lookup.py` service**:
+   - `get_plan_by_slug(cur, plan_slug)` - Fetch plan from database
+   - `get_plan_slug_for_stripe_price(cur, price_id)` - Reverse lookup for webhooks
+
+2. **Updated Checkout (`billing.py`)**:
+   - Removed dependency on `get_stripe_price_for_plan()` (env-based)
+   - Now uses `get_plan_by_slug()` to fetch `stripe_price_id` from database
+   - Validates plan exists and has `stripe_price_id` set
+   - Changed `CheckoutRequest` to accept any `plan_slug` (not just "pro"/"team")
+
+3. **Updated Webhooks (`stripe_webhook.py`)**:
+   - Removed dependency on `get_plan_for_stripe_price()` (env-based)
+   - Now uses `get_plan_slug_for_stripe_price()` for price → plan mapping
+   - Logs warnings for unmapped price IDs instead of failing silently
+
+4. **Logging & Safety**:
+   - All mapping failures logged with context
+   - Webhooks always return HTTP 200 to avoid Stripe retries
+   - Clear error messages for invalid/inactive plans
+
+### Result
+- ✅ Checkout uses `plans.stripe_price_id`
+- ✅ Webhooks use DB to map `price_id` → `plan_slug`
+- ✅ Env price maps (`STRIPE_PRICE_MAP`) no longer used in active logic
+- ✅ Single source of truth: `plans` table
+
