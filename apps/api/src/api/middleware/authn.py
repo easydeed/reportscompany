@@ -34,7 +34,7 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
             path.startswith("/v1/billing/debug") or 
             path.startswith("/v1/email/unsubscribe") or 
             path.startswith("/v1/dev/") or
-            path.startswith("/v1/reports/") and "/data" in path):  # Allow /v1/reports/{id}/data for PDF generation
+            (path.startswith("/v1/reports/") and path.endswith("/data"))):  # Allow /v1/reports/{id}/data for PDF generation
             return await call_next(request)
 
         acct: Optional[str] = None
