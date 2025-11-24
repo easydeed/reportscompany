@@ -279,8 +279,12 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
     pdf_url = html_url = None
     schedule_id = (params or {}).get("schedule_id")  # Check if this is a scheduled report
     
+    # PHASE 1: STRUCTURED LOGGING FOR DEBUGGING
+    print(f"🔍 REPORT RUN {run_id}: start (account={account_id}, type={report_type})")
+    
     try:
         # 1) Persist 'processing' + input
+        print(f"🔍 REPORT RUN {run_id}: step=persist_status")
         with psycopg.connect(DATABASE_URL, autocommit=False) as conn:
             with conn.cursor() as cur:
                 cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
@@ -290,6 +294,7 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
                     WHERE id=%s
                 """, (safe_json_dumps(params or {}), run_id))
             conn.commit()
+        print(f"✅ REPORT RUN {run_id}: persist_status complete")
         
         # ===== PHASE 29B: CHECK USAGE LIMITS FOR SCHEDULED REPORTS =====
         if schedule_id:
@@ -333,16 +338,21 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
         # ===== END PHASE 29B =====
 
         # 2) Compute results (cache by report_type + params hash)
+        print(f"🔍 REPORT RUN {run_id}: step=data_fetch")
         city = (params or {}).get("city") or (params or {}).get("zips", [])[0] if (params or {}).get("zips") else "Houston"
         lookback = int((params or {}).get("lookback_days") or 30)
         cache_payload = {"type": report_type, "params": params}
         result = cache_get("report", cache_payload)
         if not result:
+            print(f"🔍 REPORT RUN {run_id}: cache_miss, fetching from SimplyRETS")
             # Build SimplyRETS query using query_builders
             q = build_params(report_type, params or {})
+            print(f"🔍 REPORT RUN {run_id}: simplyrets_query={q}")
             raw = fetch_properties(q, limit=800)
+            print(f"🔍 REPORT RUN {run_id}: fetched {len(raw)} properties from SimplyRETS")
             extracted = PropertyDataExtractor(raw).run()
             clean = filter_valid(extracted)
+            print(f"🔍 REPORT RUN {run_id}: cleaned to {len(clean)} valid properties")
             
             # Build context for report builders
             context = {
@@ -351,31 +361,43 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
                 "generated_at": int(time.time()),
             }
             
+            print(f"🔍 REPORT RUN {run_id}: step=build_context")
             # Use report builder dispatcher to create result_json
             result = build_result_json(report_type, clean, context)
             cache_set("report", cache_payload, result, ttl_s=3600)
+            print(f"✅ REPORT RUN {run_id}: data_fetch complete (from SimplyRETS)")
+        else:
+            print(f"✅ REPORT RUN {run_id}: data_fetch complete (from cache)")
 
         # 3) Save result_json
+        print(f"🔍 REPORT RUN {run_id}: step=save_result_json")
         with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
             with conn.cursor() as cur:
                 cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
                 cur.execute("UPDATE report_generations SET result_json=%s WHERE id=%s", (safe_json_dumps(result), run_id))
+        print(f"✅ REPORT RUN {run_id}: save_result_json complete")
 
         # 4) Generate PDF (via configured engine: playwright or pdfshift)
+        print(f"🔍 REPORT RUN {run_id}: step=generate_pdf")
+        print(f"🔍 REPORT RUN {run_id}: pdf_backend=<checking pdf_engine module>")
         pdf_path, html_url = render_pdf(
             run_id=run_id,
             account_id=account_id,
             html_content=None,  # Will navigate to /print/{run_id}
             print_base=DEV_BASE
         )
+        print(f"✅ REPORT RUN {run_id}: generate_pdf complete (path={pdf_path})")
         
         # 5) Upload PDF to Cloudflare R2
+        print(f"🔍 REPORT RUN {run_id}: step=upload_pdf")
         s3_key = f"reports/{account_id}/{run_id}.pdf"
         pdf_url = upload_to_r2(pdf_path, s3_key)
+        print(f"✅ REPORT RUN {run_id}: upload_pdf complete (url={pdf_url[:100] if pdf_url else None}...)")
         
         # JSON URL (future: could upload result_json to R2 too)
         json_url = f"{DEV_BASE}/api/reports/{run_id}/data"
 
+        print(f"🔍 REPORT RUN {run_id}: step=mark_completed")
         with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
             with conn.cursor() as cur:
                 cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
@@ -384,6 +406,7 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
                     SET status='completed', html_url=%s, json_url=%s, pdf_url=%s, processing_time_ms=%s
                     WHERE id = %s
                 """, (html_url, json_url, pdf_url, int((time.perf_counter()-started)*1000), run_id))
+        print(f"✅ REPORT RUN {run_id}: mark_completed SUCCESS")
 
         # 6) Send email if this was triggered by a schedule
         if schedule_id and pdf_url:
