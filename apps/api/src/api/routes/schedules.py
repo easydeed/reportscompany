@@ -26,6 +26,10 @@ class RecipientInput(BaseModel):
 # ====== Schemas ======
 class ScheduleCreate(BaseModel):
     name: constr(strip_whitespace=True, min_length=1, max_length=255)
+    # IMPORTANT: Keep this Literal in sync with:
+    # - Frontend: apps/web/app/lib/reportTypes.ts (ReportType union)
+    # - Email: apps/worker/src/worker/email/template.py (report_type_display map)
+    # - Worker: apps/worker/src/worker/report_builders.py (builders dict)
     report_type: Literal[
         "market_snapshot",
         "new_listings",

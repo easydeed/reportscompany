@@ -53,6 +53,10 @@ def schedule_email_html(
     contact_line2 = (brand.get("contact_line2") if brand else None)
     website_url = (brand.get("website_url") if brand else None)
     # Format report type for display
+    # IMPORTANT: Keep this map in sync with:
+    # - Frontend: apps/web/app/lib/reportTypes.ts (reportTypes array)
+    # - Backend: apps/api/src/api/routes/schedules.py (report_type Literal)
+    # - Worker: apps/worker/src/worker/report_builders.py (builders dict)
     report_type_display = {
         "market_snapshot": "Market Snapshot",
         "new_listings": "New Listings",

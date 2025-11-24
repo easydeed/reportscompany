@@ -535,6 +535,10 @@ def build_result_json(report_type: str, listings: List[Dict], context: Dict) -> 
     Returns:
         result_json dict matching template expectations
     """
+    # IMPORTANT: Keep this builders dict in sync with:
+    # - Frontend: apps/web/app/lib/reportTypes.ts (ReportType union)
+    # - Backend: apps/api/src/api/routes/schedules.py (report_type Literal)
+    # - Email: apps/worker/src/worker/email/template.py (report_type_display map)
     builders = {
         "market_snapshot": build_market_snapshot_result,
         "new_listings": build_new_listings_result,
