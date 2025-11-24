@@ -15,8 +15,8 @@
 | `closed` | Recently sold properties and trends | **PARTIAL** | **WORKS** | NOT_IMPLEMENTED | **PARTIAL** | YES | Email: Template exists, shows closed sales metrics. PDF: Works. Less polished than market_snapshot. |
 | `price_bands` | Market segmentation by price ranges | **PARTIAL** | **WORKS** | NOT_IMPLEMENTED | **PARTIAL** | YES | Email: Template exists but no chart/visual breakdown. PDF: Works but lacks visual appeal. |
 | `open_houses` | Upcoming open house schedule | **PARTIAL** | **WORKS** | NOT_IMPLEMENTED | **PARTIAL** | YES | Email: Template exists. PDF: Works. May show empty if no upcoming open houses. |
-| `new_listings_gallery` | New listings with photo gallery layout | **WORKS** | **WORKS** | NOT_IMPLEMENTED | **WORKS** | YES | Email: Hero images for each listing. PDF: Gallery layout with photos. Uses `hero_photo_url` from SimplyRETS. Template: buildNewListingsGalleryHtml. |
-| `featured_listings` | Curated featured properties with photos | **WORKS** | **WORKS** | NOT_IMPLEMENTED | **WORKS** | YES | Email: Similar to gallery. PDF: Featured layout. Template: buildFeaturedListingsHtml. May need manual curation logic (currently shows top listings). |
+| `new_listings_gallery` | New listings with photo gallery layout | **WORKS** | **WORKS** | NOT_IMPLEMENTED | **WORKS** | YES | Email: Hero images for each listing. PDF: Gallery layout with photos. Uses `hero_photo_url` from SimplyRETS. Template: buildNewListingsGalleryHtml. ✅ Now in wizard (R1). |
+| `featured_listings` | Curated featured properties with photos | **WORKS** | **WORKS** | NOT_IMPLEMENTED | **WORKS** | YES | Email: Similar to gallery. PDF: Featured layout. Template: buildFeaturedListingsHtml. May need manual curation logic (currently shows top listings). ✅ Now in wizard (R1). |
 
 ---
 
@@ -46,6 +46,8 @@
 2. **No chart rendering** in emails (all metrics are text/tables)
 3. **No curation logic** for featured_listings (shows top N instead of curated)
 4. **Limited branding** on partial reports (inventory, closed, etc.)
+
+**✅ R1 COMPLETE** (Nov 24, 2025): All 8 report types now aligned across frontend wizard, API, and email templates. No more discrepancies.
 
 ---
 
