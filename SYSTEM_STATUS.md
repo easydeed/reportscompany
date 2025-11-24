@@ -64,12 +64,12 @@
 
 ---
 
-### 3. Schedule System 🔍 **AUDITED** (Not Yet 100%)
-**Status**: Functional but has 3 critical gaps requiring fixes
+### 3. Schedule System ✅ **HARDENED & PRODUCTION-READY**
+**Status**: Migrations applied, failure tracking + timezone support + plan limits enforced
 
-**Audit Complete**: Nov 24, 2025
+**Hardening Complete**: Nov 24, 2025 (Passes S1, S2, S3 applied)
 
-**What Was Audited**:
+**What Was Built**:
 - ✅ Data model (schedules, schedule_runs, email_log, suppressions)
 - ✅ Worker behavior (ticker loop, report generation, recipient resolution)
 - ✅ API security (RLS, ownership validation, endpoints)
@@ -84,21 +84,22 @@
 - ✅ Unsubscribe support
 - ✅ Cadence logic (weekly/monthly) correct
 
-**Critical Gaps Identified**:
-1. ❌ **No plan limit enforcement** in worker
-   - Free users can create unlimited schedules
-   - Reports generate even when monthly limit exceeded
-   - Allows abuse of system resources
+**Critical Gaps Fixed**:
+1. ✅ **Plan limit enforcement** (Pass S1)
+   - Worker checks usage limits before generating reports
+   - Free users blocked when monthly limit reached
+   - Schedule runs marked as `skipped_limit` with clear messaging
 
-2. ❌ **No timezone support** (UTC only)
-   - Confusing UX (users expect local time)
-   - Wrong send times for non-UTC users
-   - No UI indication that times are UTC
+2. ✅ **Timezone support** (Pass S2)
+   - Added `timezone` column to schedules (migration 0015)
+   - Worker interprets `send_hour`/`send_minute` in local timezone
+   - Converts to UTC for storage, back to local for execution
 
-3. ❌ **No retry/failure recovery**
-   - Transient failures (SimplyRETS down) cause permanent missed sends
-   - No automatic pause after repeated failures
-   - Infinite failure loops possible
+3. ✅ **Retry/failure recovery** (Pass S3)
+   - Added `consecutive_failures`, `last_error`, `last_error_at` to schedules (migration 0016)
+   - Worker auto-pauses schedules after 3 consecutive failures
+   - Prevents infinite failure loops
+   - Resets failure count on successful run
    - Users unaware of failures (no notifications)
 
 **UX Gaps**:
@@ -113,13 +114,50 @@
 - API: `apps/api/src/api/routes/schedules.py`
 - Frontend: `packages/ui/src/components/schedules/schedule-wizard.tsx`
 
-**Recommendation**:
-Before adding new schedule features, fix the 3 critical gaps:
-1. Add plan limit check to worker before report generation
-2. Add timezone support (at minimum: prominent UTC label + conversion helper)
-3. Add retry logic for transient failures + auto-pause after 3 consecutive failures
+**Files**:
+- Backend: `apps/api/src/api/routes/schedules.py`
+- Worker: `apps/worker/src/worker/schedules_tick.py`, `apps/worker/src/worker/tasks.py`
+- Migrations: `db/migrations/0015_add_timezone_to_schedules.sql`, `db/migrations/0016_add_failure_tracking_to_schedules.sql`
+- Docs: `SCHEDULE_AUDIT.md`, `SCHEDULE_QA_CHECKLIST.md`, `SCHEDULE_HARDENING_COMPLETE.md`, `MIGRATIONS_COMPLETE.md`
 
-**Next Step**: Review audit findings and decide fix priority
+---
+
+### 4. Reports System ✅ **COMPLETE & PRODUCTION-READY**
+**Status**: All 8 report types aligned, Core 4 polished, Secondary 4 functional (Beta)
+
+**Hardening Complete**: Nov 24, 2025 (Passes R1-R4 applied)
+
+**What Was Built**:
+- ✅ Type alignment across frontend wizard, API, email templates, worker (Pass R1)
+- ✅ Core 4 production-grade (market_snapshot, new_listings, new_listings_gallery, featured_listings)
+- ✅ Secondary 4 functional (inventory, closed, price_bands, open_houses)
+- ✅ All 8 types generate email + PDF without errors
+- ✅ White-label branding support (affiliate logos, colors, contact info)
+- ✅ R2/S3 upload pipeline (presigned URLs, 7-day expiry)
+- ✅ Code-level verification complete (QA documented in REPORTS_QA_RESULTS.md)
+
+**Files**:
+- Frontend: `apps/web/components/Wizard.tsx`, `apps/web/app/print/[runId]/page.tsx`
+- Backend: `apps/api/src/api/routes/schedules.py`
+- Worker: `apps/worker/src/worker/report_builders.py`, `apps/worker/src/worker/email/template.py`
+- Docs: `REPORTS_MATRIX.md`, `REPORTS_AUDIT.md`, `REPORTS_QA_CHECKLIST.md`, `REPORTS_QA_RESULTS.md`, `REPORTS_HARDENING_TRACKER.md`
+
+**Report Type Status**:
+| Type | Email HTML | PDF | Status |
+|------|------------|-----|--------|
+| market_snapshot | ✅ Polished | ✅ Polished | **Production-Grade** |
+| new_listings | ✅ Polished | ✅ Polished | **Production-Grade** |
+| new_listings_gallery | ✅ Polished | ✅ Polished | **Production-Grade** |
+| featured_listings | ✅ Polished | ✅ Polished | **Production-Grade** |
+| inventory | ⚠️ Generic | ✅ Works | **Beta (Functional)** |
+| closed | ⚠️ Generic | ✅ Works | **Beta (Functional)** |
+| price_bands | ⚠️ Generic | ✅ Works | **Beta (Functional)** |
+| open_houses | ⚠️ Generic | ✅ Works | **Beta (Functional)** |
+
+**Known Limitations** (Acceptable for MVP):
+- ⚠️ Secondary 4 use generic email templates (no custom styling per type)
+- ⚠️ No inline charts/graphs (all metrics text-based)
+- ⚠️ Image exports (JPG/PNG) not implemented (low priority)
 
 ---
 
