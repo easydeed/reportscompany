@@ -182,7 +182,8 @@ def get_current_account_plan_usage(request: Request, account_id: str = Depends(r
                 account_type,
                 plan_slug,
                 monthly_report_limit_override,
-                sponsor_account_id::text
+                sponsor_account_id::text,
+                billing_status
             FROM accounts
             WHERE id = %s::uuid
         """, (account_id,))
@@ -198,6 +199,7 @@ def get_current_account_plan_usage(request: Request, account_id: str = Depends(r
             "plan_slug": acc_row[3],
             "monthly_report_limit_override": acc_row[4],
             "sponsor_account_id": acc_row[5],
+            "billing_status": acc_row[6],  # PASS 2: Expose billing_status
         }
         
         # Get plan details

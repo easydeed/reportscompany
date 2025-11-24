@@ -15,6 +15,7 @@ from ..config.billing import (
     STRIPE_WEBHOOK_SECRET
 )
 from ..services.plan_lookup import get_plan_slug_for_stripe_price
+from ..services.billing_state import update_account_billing_state
 
 router = APIRouter(prefix="/v1")
 
@@ -101,6 +102,7 @@ async def stripe_webhook(req: Request):
                         logger.warning(f"Stripe webhook: no plan found for price_id={price_id}")
                         return {"received": True}
                     
+                    # Update plan_slug
                     cur.execute("""
                         UPDATE accounts
                         SET plan_slug = %s
@@ -111,6 +113,9 @@ async def stripe_webhook(req: Request):
                         logger.info(f"✅ Updated account {account_id} to plan '{plan_slug}' (price: {price_id})")
                     else:
                         logger.warning(f"Account {account_id} not found for subscription update")
+                    
+                    # Update subscription state (PASS 2)
+                    update_account_billing_state(cur, account_id=account_id, subscription=subscription)
         
         except Exception as e:
             logger.error(f"Failed to update account {account_id}: {e}")
@@ -125,10 +130,11 @@ async def stripe_webhook(req: Request):
             logger.warning(f"Deleted subscription {subscription.get('id')} missing account_id metadata")
             return {"received": True}
         
-        # Downgrade to free
+        # Downgrade to free and clear subscription state
         try:
             with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
                 with conn.cursor() as cur:
+                    # Downgrade plan
                     cur.execute("""
                         UPDATE accounts
                         SET plan_slug = 'free'
@@ -139,6 +145,9 @@ async def stripe_webhook(req: Request):
                         logger.info(f"✅ Downgraded account {account_id} to 'free' (subscription canceled)")
                     else:
                         logger.warning(f"Account {account_id} not found for subscription cancellation")
+                    
+                    # Clear subscription state (PASS 2)
+                    update_account_billing_state(cur, account_id=account_id, subscription=None)
         
         except Exception as e:
             logger.error(f"Failed to downgrade account {account_id}: {e}")
