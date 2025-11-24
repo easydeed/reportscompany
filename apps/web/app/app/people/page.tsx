@@ -1044,36 +1044,46 @@ export default function PeoplePage() {
         </Dialog>
       </div>
 
-      {/* Stats Card (for affiliates) */}
-      {isAffiliate && (
-        <div className="grid gap-4 md:grid-cols-3">
+      {/* Top Summary Cards */}
+      {!loading && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Sponsored Agents</CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{sponsoredAccounts.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Contacts</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <div className="text-2xl font-bold">{contacts.length}</div>
+              <p className="text-sm text-muted-foreground mt-1">Total Contacts</p>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total People</CardTitle>
-              <Mail className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{people.length}</div>
+            <CardContent className="pt-6">
+              <div className="text-2xl font-bold">
+                {contacts.filter((c) => c.type === "agent").length}
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">Agent Contacts</p>
             </CardContent>
           </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-2xl font-bold">
+                {contacts.filter((c) => c.type === "group").length}
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">Group Contacts</p>
+            </CardContent>
+          </Card>
+          {isAffiliate ? (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-2xl font-bold">{sponsoredAccounts.length}</div>
+                <p className="text-sm text-muted-foreground mt-1">Sponsored Agents</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-2xl font-bold">{groups.length}</div>
+                <p className="text-sm text-muted-foreground mt-1">Total Groups</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 
