@@ -13,6 +13,7 @@ type PlanUsageData = {
     name: string
     account_type: string
     plan_slug: string
+    billing_status?: string | null  // PASS 2: active, past_due, canceled, etc.
   }
   plan: {
     plan_name: string
@@ -48,31 +49,26 @@ function getPlanDisplay(data: PlanUsageData) {
   return { planName, priceDisplay }
 }
 
+// TODO PASS 4: Replace hardcoded upgrade cards with DB-backed plans
+// For now, showing static plans as reference
+// In future: Fetch available plans from /v1/billing/plans endpoint
 const plans = [
   {
-    name: "Starter",
+    name: "Free",
     slug: "free",
     price: "$0",
     period: "/month",
-    description: "Perfect for individual agents",
-    features: ["10 reports / month", "6 report types", "PDF export", "Email support"],
+    description: "Perfect for trying out",
+    features: ["50 reports / month", "6 report types", "PDF export", "Email support"],
   },
   {
-    name: "Professional",
-    slug: "pro",
-    price: "$99",
+    name: "Solo Agent",
+    slug: "solo",
+    price: "$19",  // Reference price - actual from Stripe
     period: "/month",
-    description: "For growing teams",
-    features: ["500 reports / month", "All report types", "API access", "Custom branding", "Priority support"],
+    description: "For individual agents",
+    features: ["500 reports / month", "All report types", "Custom branding", "Priority support"],
     popular: true,
-  },
-  {
-    name: "Team",
-    slug: "team",
-    price: "$299",
-    period: "/month",
-    description: "For large organizations",
-    features: ["Unlimited reports", "White-label", "Dedicated support", "Custom integrations", "SLA guarantee"],
   },
 ]
 
@@ -170,6 +166,11 @@ export default function BillingPage() {
                   Billing: <strong>{priceDisplay}</strong>
                 </p>
               )}
+              {data.account.billing_status && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Status: <span className="capitalize">{data.account.billing_status}</span>
+                </p>
+              )}
             </div>
             <div className="pt-4 border-t">
               <Button onClick={openBillingPortal} disabled={loading}>
@@ -210,6 +211,11 @@ export default function BillingPage() {
                 {priceDisplay && (
                   <p className="text-sm text-slate-600">
                     {priceDisplay}
+                  </p>
+                )}
+                {data.account.billing_status && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Status: <span className="capitalize">{data.account.billing_status}</span>
                   </p>
                 )}
               </div>
