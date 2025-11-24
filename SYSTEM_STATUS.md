@@ -5,7 +5,7 @@
 
 ---
 
-## ✅ COMPLETED SYSTEMS
+## ✅ COMPLETED & AUDITED SYSTEMS
 
 ### 1. People System ✅ **100% COMPLETE**
 **Status**: Frozen - Changes require spec updates
@@ -64,6 +64,65 @@
 
 ---
 
+### 3. Schedule System 🔍 **AUDITED** (Not Yet 100%)
+**Status**: Functional but has 3 critical gaps requiring fixes
+
+**Audit Complete**: Nov 24, 2025
+
+**What Was Audited**:
+- ✅ Data model (schedules, schedule_runs, email_log, suppressions)
+- ✅ Worker behavior (ticker loop, report generation, recipient resolution)
+- ✅ API security (RLS, ownership validation, endpoints)
+- ✅ Frontend UX (wizard, schedule management)
+- ✅ Edge cases (failures, deletions, concurrency)
+
+**What Works Well**:
+- ✅ Typed recipients integrate cleanly with People system
+- ✅ RLS enforcement prevents cross-account access
+- ✅ Graceful recipient resolution (missing contacts/agents skipped)
+- ✅ Audit trail (schedule_runs + email_log)
+- ✅ Unsubscribe support
+- ✅ Cadence logic (weekly/monthly) correct
+
+**Critical Gaps Identified**:
+1. ❌ **No plan limit enforcement** in worker
+   - Free users can create unlimited schedules
+   - Reports generate even when monthly limit exceeded
+   - Allows abuse of system resources
+
+2. ❌ **No timezone support** (UTC only)
+   - Confusing UX (users expect local time)
+   - Wrong send times for non-UTC users
+   - No UI indication that times are UTC
+
+3. ❌ **No retry/failure recovery**
+   - Transient failures (SimplyRETS down) cause permanent missed sends
+   - No automatic pause after repeated failures
+   - Infinite failure loops possible
+   - Users unaware of failures (no notifications)
+
+**UX Gaps**:
+- ⚠️ No "Run Now" action in UI (testing is cumbersome)
+- ⚠️ No schedule execution history view (schedule_runs data not exposed)
+- ⚠️ No failure notifications
+
+**Files**:
+- Audit: `SCHEDULE_AUDIT.md` (comprehensive 9-section analysis)
+- QA Plan: `SCHEDULE_QA_CHECKLIST.md` (10 test scenarios)
+- Backend: `apps/worker/src/worker/schedules_tick.py`, `apps/worker/src/worker/tasks.py`
+- API: `apps/api/src/api/routes/schedules.py`
+- Frontend: `packages/ui/src/components/schedules/schedule-wizard.tsx`
+
+**Recommendation**:
+Before adding new schedule features, fix the 3 critical gaps:
+1. Add plan limit check to worker before report generation
+2. Add timezone support (at minimum: prominent UTC label + conversion helper)
+3. Add retry logic for transient failures + auto-pause after 3 consecutive failures
+
+**Next Step**: Review audit findings and decide fix priority
+
+---
+
 ## 🚀 PRODUCTION STATUS
 
 ### Deployments
@@ -80,7 +139,38 @@
 
 ---
 
-## 📋 NEXT PHASE OPTIONS
+## 📋 RECOMMENDED NEXT STEPS
+
+**Priority Order** (based on audit findings):
+
+### Phase A: Fix Schedule Critical Gaps 🔧 **RECOMMENDED FIRST**
+**Why First**: Schedule system is the engine—if it's unreliable or abusable, nothing else matters.
+
+**3 Concrete Fixes**:
+1. **Plan Limit Enforcement** (1-2 hours):
+   - Add `check_usage_limit()` call in `generate_report` task before execution
+   - If over limit: Skip report, set `schedule_runs.status = 'blocked'`, optionally pause schedule
+   - Prevents abuse, ensures plan value
+
+2. **Timezone Support** (2-3 hours):
+   - Option A (Quick): Add prominent "All times are UTC" label + timezone converter in wizard
+   - Option B (Better): Add `timezone` column to schedules, store as IANA (e.g., "America/Los_Angeles"), convert in ticker
+   - Fixes major UX confusion
+
+3. **Retry Logic + Failure Threshold** (3-4 hours):
+   - Add Celery retry for transient failures (max 3 attempts, exponential backoff)
+   - Track consecutive failures in schedules table
+   - Auto-pause schedule after 3 consecutive failures
+   - Optional: Email notification on auto-pause
+   - Prevents infinite failure loops
+
+**Total Effort**: 6-9 hours (1-2 focused sessions)
+
+**Impact**: Makes schedules production-ready, prevents abuse, improves UX
+
+---
+
+### Phase B: Revenue-Focused Features (After Schedule Fixes)
 
 **Now that People ✅ and Billing ✅ are complete**, choose next revenue-moving feature:
 
@@ -130,17 +220,18 @@
 
 ---
 
-## 🎯 RECOMMENDED NEXT STEP
+## 🎯 FINAL RECOMMENDATION
 
-**Start with Option A: Affiliate Analytics v1**
+**PHASE A (Schedule Fixes) → THEN → PHASE B (Revenue Features)**
 
 **Rationale**:
-1. Affiliates are highest revenue ($99/mo vs $19/mo)
-2. Analytics directly supports retention and upsell
-3. Builds on existing People/Billing foundation
-4. Clear success metrics (affiliate engagement, churn reduction)
+1. **Schedules are the engine** - If broken/abusable, everything else fails
+2. **3 critical gaps identified** in audit (limits, timezone, retries)
+3. **Quick wins** - Each fix is 1-4 hours, total 6-9 hours
+4. **Prevents abuse** - Free users currently unlimited, costs you money
+5. **After fixes** - Schedule system is rock solid, can move to revenue features with confidence
 
-**After Analytics**: Do Onboarding (Option B), then Marketing (Option C)
+**Then**: Affiliate Analytics (Phase B Option A) → Onboarding (Phase B Option B) → Marketing (Phase B Option C)
 
 ---
 
@@ -154,6 +245,10 @@
 - `BILLING_AUDIT.md` - Complete audit + QA verification
 - `BILLING_QA_CHECKLIST.md` - Test scenarios
 - `BILLING_QA_RESULTS.md` - Test results (all PASS)
+
+### Schedule System
+- `SCHEDULE_AUDIT.md` - Comprehensive 9-section analysis
+- `SCHEDULE_QA_CHECKLIST.md` - 10 test scenarios + known issues
 
 ### Architecture
 - `RENDER_BUILD_CONFIGURATION.md` - Deployment setup
@@ -189,9 +284,10 @@
 
 **People**: ✅ Complete, Frozen, Production-ready  
 **Billing**: ✅ Complete, Frozen, Production-ready  
-**Next**: Choose Affiliate Analytics, Onboarding, or Marketing
+**Schedules**: 🔍 Audited, 3 critical gaps identified, fixes recommended before new features  
+**Next**: Fix Schedule Gaps (Phase A), then Revenue Features (Phase B)
 
-**All core systems are stable. Ready to build revenue-focused features on this foundation.**
+**Core systems are functional but schedules need hardening before scale.**
 
 ---
 
