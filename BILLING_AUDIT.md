@@ -829,3 +829,64 @@ if acc_type == 'INDUSTRY_AFFILIATE':
 - ✅ Env price maps (`STRIPE_PRICE_MAP`) no longer used in active logic
 - ✅ Single source of truth: `plans` table
 
+---
+
+## S2 – QA VERIFIED (Nov 24, 2025)
+
+**Status**: ✅ **BILLING 100% COMPLETE**
+
+### QA Results Summary
+All 7 QA tests **PASSED** (see `BILLING_QA_RESULTS.md` for full details):
+
+1. ✅ **Plan ↔ Price Mapping** - Database is single source of truth
+2. ✅ **Subscription Created** - State tracked (subscription_id + billing_status)
+3. ✅ **Subscription Canceled** - State cleared correctly
+4. ✅ **plan-usage API** - Returns correct billing data
+5. ✅ **Agent Billing UI** - Shows Stripe data, no hardcoded prices
+6. ✅ **Affiliate Billing UI** - Shows Stripe data, Portal works
+7. ✅ **Regressions** - No errors, all flows functional
+
+### Implementation Complete
+- ✅ PASS 1: Single source of truth (commit d6bcb78)
+- ✅ PASS 2: Subscription state tracking (commit 2d01af3)
+- ✅ PASS 3: Plan Catalog verified (commit b7f326f)
+- ✅ PASS 4: Frontend uses plan-usage (commit a117afd)
+- ✅ PASS 5: QA checklist created (commit f3a7614)
+
+### Stability Declaration
+**Billing behavior is now considered STABLE and FROZEN.**
+
+Future changes to billing must:
+1. Have a clear business justification (bug fix or new product decision)
+2. Include updated QA test cases
+3. Pass all existing + new QA tests before deployment
+
+**Do not modify billing logic** without explicit approval and test coverage.
+
+---
+
+## S3 – Current Billing Configuration
+
+**Active Plans** (as of Nov 24, 2025):
+| plan_slug | plan_name | stripe_price_id | Monthly Limit | Description |
+|-----------|-----------|----------------|---------------|-------------|
+| `free` | Free | NULL | 50 | Free tier for trial users |
+| `solo` | Solo Agent | `price_1SO4sDBKYbtiKxfsUnKeJiox` | 500 | Individual agents - $19/month |
+| `affiliate` | Affiliate | `price_1STMtfBKYbtiKxfsqQ4r29Cw` | 5000 | Industry affiliates - $99/month |
+
+**Deprecated Plans**: `pro`, `team` (never in production, removed from UI)
+
+**Stripe Configuration**:
+- Mode: Test keys in staging, Production keys in production
+- Webhook events handled: `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`
+- Portal: Enabled for subscription management and cancellation
+
+**Frontend**:
+- Agent billing: `/app/billing` (shows current plan + upgrade options)
+- Affiliate billing: `/app/billing` (shows plan + portal button)
+- All pricing pulled from Stripe API in real-time
+
+---
+
+**End of Audit + QA Verification**
+
