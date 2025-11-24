@@ -1,8 +1,11 @@
 """
-Plan Catalog Service
+Plan Catalog Service - PASS 3
 
 Provides a single source of truth for plan information by reading from the plans table
 and enriching with real-time Stripe pricing data.
+
+✅ PASS 3 COMPLETE: This service already exists and is used by /v1/account/plan-usage
+to return stripe_billing info (amount, currency, interval, nickname) from Stripe API.
 
 Usage:
     catalog = get_plan_catalog(cur)
