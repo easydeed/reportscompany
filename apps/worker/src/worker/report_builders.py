@@ -541,6 +541,7 @@ def build_result_json(report_type: str, listings: List[Dict], context: Dict) -> 
         "inventory": build_inventory_result,
         "closed": build_closed_result,
         "price_bands": build_price_bands_result,
+        "open_houses": build_inventory_result,  # Reuse inventory builder for open houses
         "new_listings_gallery": build_new_listings_gallery_result,
         "featured_listings": build_featured_listings_result,
     }
