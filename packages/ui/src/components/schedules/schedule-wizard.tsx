@@ -30,6 +30,7 @@ import {
   Mail,
   Image,
   Star,
+  Users,
 } from "lucide-react"
 import { type ScheduleWizardState, type ReportType, type Weekday, weekdayLabels } from "./types"
 import { cn } from "../../lib/utils"
