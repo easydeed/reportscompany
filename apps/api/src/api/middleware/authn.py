@@ -24,7 +24,17 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
         
         # Skip auth for public endpoints
         path = request.url.path
-        if path.startswith("/health") or path.startswith("/docs") or path.startswith("/redoc") or path.startswith("/openapi") or path.startswith("/v1/auth/") or path.startswith("/dev-files/") or path.startswith("/v1/webhooks/stripe") or path.startswith("/v1/billing/debug") or path.startswith("/v1/email/unsubscribe") or path.startswith("/v1/dev/"):
+        if (path.startswith("/health") or 
+            path.startswith("/docs") or 
+            path.startswith("/redoc") or 
+            path.startswith("/openapi") or 
+            path.startswith("/v1/auth/") or 
+            path.startswith("/dev-files/") or 
+            path.startswith("/v1/webhooks/stripe") or 
+            path.startswith("/v1/billing/debug") or 
+            path.startswith("/v1/email/unsubscribe") or 
+            path.startswith("/v1/dev/") or
+            path.startswith("/v1/reports/") and "/data" in path):  # Allow /v1/reports/{id}/data for PDF generation
             return await call_next(request)
 
         acct: Optional[str] = None
