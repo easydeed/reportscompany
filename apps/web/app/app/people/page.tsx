@@ -113,7 +113,9 @@ export default function PeoplePage() {
   const [loadingMembers, setLoadingMembers] = useState(false)
   const [addMembersOpen, setAddMembersOpen] = useState(false)
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([])
-  const { toast } = useToast()
+  const [manageGroupsContact, setManageGroupsContact] = useState<Contact | null>(null)
+  const [manageGroupsDialogOpen, setManageGroupsDialogOpen] = useState(false)
+  const { toast} = useToast()
 
   // Form state
   const [formData, setFormData] = useState({
@@ -583,6 +585,71 @@ export default function PeoplePage() {
       toast({
         title: "Error",
         description: "Failed to add members to group",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Manage Groups Per Contact Functions
+  async function handleRemoveContactFromGroup(contactId: string, groupId: string, groupName: string) {
+    if (!confirm(`Remove this contact from "${groupName}"?`)) return
+
+    try {
+      const res = await fetch(`/api/proxy/v1/contact-groups/${groupId}/members`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ member_type: "contact", member_id: contactId }),
+      })
+
+      if (!res.ok) throw new Error("Failed to remove from group")
+
+      toast({
+        title: "Success",
+        description: `Removed from ${groupName}`,
+      })
+
+      await loadData()
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove from group",
+        variant: "destructive",
+      })
+    }
+  }
+
+  async function handleAddContactToGroupsFromManage(contactId: string) {
+    if (selectedGroupIds.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one group",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      for (const groupId of selectedGroupIds) {
+        await fetch(`/api/proxy/v1/contact-groups/${groupId}/members`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            members: [{ member_type: "contact", member_id: contactId }],
+          }),
+        })
+      }
+
+      toast({
+        title: "Success",
+        description: `Added to ${selectedGroupIds.length} group(s)`,
+      })
+
+      setSelectedGroupIds([])
+      await loadData()
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add to groups",
         variant: "destructive",
       })
     }
@@ -1317,19 +1384,6 @@ export default function PeoplePage() {
                           </TableCell>
                         )}
                         <TableCell className="text-right space-x-1">
-                          {/* Add to Group (contacts and sponsored agents) */}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedPersonForGroup(person)
-                              setSelectedGroupIds([])
-                              setAddToGroupDialogOpen(true)
-                            }}
-                          >
-                            <Users className="h-4 w-4" />
-                          </Button>
-
                           {/* Edit for contacts */}
                           {person.kind === "contact" && (
                             <>
@@ -1351,6 +1405,18 @@ export default function PeoplePage() {
                                 }}
                               >
                                 <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const contact = contacts.find((c) => c.id === person.id)
+                                  if (!contact) return
+                                  setManageGroupsContact(contact)
+                                  setManageGroupsDialogOpen(true)
+                                }}
+                              >
+                                <Users className="h-4 w-4" />
                               </Button>
                               <Button
                                 variant="ghost"
@@ -1630,6 +1696,116 @@ export default function PeoplePage() {
               disabled={selectedMemberIds.length === 0}
             >
               Add {selectedMemberIds.length} Member{selectedMemberIds.length !== 1 ? "s" : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Groups Dialog (Per Contact) */}
+      <Dialog open={manageGroupsDialogOpen} onOpenChange={(open) => {
+        setManageGroupsDialogOpen(open)
+        if (!open) {
+          setManageGroupsContact(null)
+          setSelectedGroupIds([])
+        }
+      }}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Manage Groups for {manageGroupsContact?.name}</DialogTitle>
+            <DialogDescription>
+              View and manage which groups this contact belongs to.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Current Memberships */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Current Groups</Label>
+              {manageGroupsContact?.groups && manageGroupsContact.groups.length > 0 ? (
+                <div className="space-y-2">
+                  {manageGroupsContact.groups.map((group) => (
+                    <div
+                      key={group.id}
+                      className="flex items-center justify-between px-3 py-2 border rounded-md"
+                    >
+                      <div>
+                        <div className="font-medium text-sm">{group.name}</div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          manageGroupsContact &&
+                          handleRemoveContactFromGroup(manageGroupsContact.id, group.id, group.name)
+                        }
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground py-4">
+                  Not in any groups yet.
+                </p>
+              )}
+            </div>
+
+            {/* Add to New Groups */}
+            <div className="space-y-2 pt-4 border-t">
+              <Label className="text-sm font-semibold">Add to Groups</Label>
+              <div className="max-h-48 overflow-y-auto border rounded-md p-2 space-y-1">
+                {groups
+                  .filter(
+                    (g) =>
+                      !manageGroupsContact?.groups?.some((mg) => mg.id === g.id)
+                  )
+                  .map((group) => {
+                    const checked = selectedGroupIds.includes(group.id)
+                    return (
+                      <button
+                        key={group.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedGroupIds((prev) =>
+                            checked
+                              ? prev.filter((id) => id !== group.id)
+                              : [...prev, group.id]
+                          )
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-md border text-sm ${
+                          checked
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/40 hover:bg-muted/40"
+                        }`}
+                      >
+                        <div className="font-medium">{group.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {group.description || "No description"} • {group.member_count} members
+                        </div>
+                      </button>
+                    )
+                  })}
+              </div>
+              {selectedGroupIds.length > 0 && (
+                <Button
+                  className="w-full mt-2"
+                  onClick={() =>
+                    manageGroupsContact &&
+                    handleAddContactToGroupsFromManage(manageGroupsContact.id)
+                  }
+                >
+                  Add to {selectedGroupIds.length} Group{selectedGroupIds.length !== 1 ? "s" : ""}
+                </Button>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setManageGroupsDialogOpen(false)
+              setManageGroupsContact(null)
+              setSelectedGroupIds([])
+            }}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
