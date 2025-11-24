@@ -26,7 +26,7 @@ import {
 import { Stepper } from "@/components/stepper"
 
 // Types
-export type ReportType = "market_snapshot" | "new_listings" | "inventory" | "closed" | "price_bands" | "open_houses"
+export type ReportType = "market_snapshot" | "new_listings" | "inventory" | "closed" | "price_bands" | "open_houses" | "new_listings_gallery" | "featured_listings"
 
 export type AreaMode = "city" | "zips" | "polygon"
 
@@ -94,6 +94,18 @@ const reportTypes = [
     name: "Open Houses",
     description: "Upcoming open house schedule",
     icon: Calendar,
+  },
+  {
+    id: "new_listings_gallery" as ReportType,
+    name: "New Listings Gallery",
+    description: "Photo-rich gallery of new listings",
+    icon: Home,
+  },
+  {
+    id: "featured_listings" as ReportType,
+    name: "Featured Listings",
+    description: "Curated showcase of featured properties",
+    icon: Home,
   },
 ]
 

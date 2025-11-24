@@ -32,6 +32,7 @@ class ScheduleCreate(BaseModel):
         "inventory",
         "closed",
         "price_bands",
+        "open_houses",
         "new_listings_gallery",
         "featured_listings",
     ]
