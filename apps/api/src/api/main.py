@@ -24,6 +24,7 @@ from .routes.contacts import router as contacts_router
 from .routes.contact_groups import router as contact_groups_router
 from .routes.dev_stripe_prices import router as dev_stripe_prices_router
 from .routes.upload import router as upload_router
+from .routes.branding_tools import router as branding_tools_router
 
 app = FastAPI(
     title="Market Reports API",
@@ -70,6 +71,7 @@ app.include_router(contacts_router)
 app.include_router(contact_groups_router)
 app.include_router(dev_stripe_prices_router)
 app.include_router(upload_router)
+app.include_router(branding_tools_router)
 
 # Root
 @app.get("/")
