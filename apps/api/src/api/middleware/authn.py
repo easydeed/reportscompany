@@ -24,7 +24,13 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
         
         # Skip auth for public endpoints
         path = request.url.path
-        if (path.startswith("/health") or 
+        
+        # Debug: Log path for reports endpoints
+        if "/reports/" in path:
+            logger.info(f"AUTH_DEBUG: path={path}, starts_with_reports={path.startswith('/v1/reports/')}, ends_with_data={path.endswith('/data')}")
+        
+        is_public = (
+            path.startswith("/health") or 
             path.startswith("/docs") or 
             path.startswith("/redoc") or 
             path.startswith("/openapi") or 
@@ -34,7 +40,11 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
             path.startswith("/v1/billing/debug") or 
             path.startswith("/v1/email/unsubscribe") or 
             path.startswith("/v1/dev/") or
-            (path.startswith("/v1/reports/") and path.endswith("/data"))):  # Allow /v1/reports/{id}/data for PDF generation
+            (path.startswith("/v1/reports/") and path.endswith("/data"))  # Allow /v1/reports/{id}/data for PDF generation
+        )
+        
+        if is_public:
+            logger.info(f"AUTH_DEBUG: Allowing public access to {path}")
             return await call_next(request)
 
         acct: Optional[str] = None
