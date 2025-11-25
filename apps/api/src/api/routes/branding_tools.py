@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, EmailStr
 from typing import Optional
+from urllib.parse import urlencode
 import io
 import os
 import httpx
@@ -121,14 +122,18 @@ async def generate_sample_pdf(
     
     # Build the preview URL with branding params
     # We'll use a special preview endpoint that renders sample data
-    preview_url = f"{PRINT_BASE}/branding-preview/{report_type}"
-    preview_url += f"?brand_name={branding['brand_display_name']}"
+    params = {
+        "brand_name": branding['brand_display_name'] or "Your Brand",
+    }
     if branding.get("logo_url"):
-        preview_url += f"&logo_url={branding['logo_url']}"
+        params["logo_url"] = branding['logo_url']
     if branding.get("primary_color"):
-        preview_url += f"&primary_color={branding['primary_color'].replace('#', '')}"
+        params["primary_color"] = branding['primary_color'].replace('#', '')
     if branding.get("accent_color"):
-        preview_url += f"&accent_color={branding['accent_color'].replace('#', '')}"
+        params["accent_color"] = branding['accent_color'].replace('#', '')
+    
+    preview_url = f"{PRINT_BASE}/branding-preview/{report_type}?{urlencode(params)}"
+    print(f"[Branding PDF] Preview URL: {preview_url}")
     
     # Generate PDF using PDFShift
     if not PDFSHIFT_API_KEY:
