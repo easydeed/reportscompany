@@ -565,7 +565,7 @@ export default function BrandingPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium" style={{ color: formData.primary_color }}>
+                        <div className="font-medium" style={{ color: formData.primary_color || undefined }}>
                           {formData.brand_display_name || "Your Brand"}
                         </div>
                         {formData.website_url && (
