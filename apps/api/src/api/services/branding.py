@@ -73,21 +73,27 @@ def get_brand_for_account(cur, account_id: str) -> Brand:
         branding_account_id = acc_id
     
     # Look up branding configuration
-    cur.execute("""
-        SELECT
-            brand_display_name,
-            logo_url,
-            primary_color,
-            accent_color,
-            rep_photo_url,
-            contact_line1,
-            contact_line2,
-            website_url
-        FROM affiliate_branding
-        WHERE account_id = %s::uuid
-    """, (branding_account_id,))
-    
-    branding_row = cur.fetchone()
+    # Note: affiliate_branding table may not exist in all environments
+    branding_row = None
+    try:
+        cur.execute("""
+            SELECT
+                brand_display_name,
+                logo_url,
+                primary_color,
+                accent_color,
+                rep_photo_url,
+                contact_line1,
+                contact_line2,
+                website_url
+            FROM affiliate_branding
+            WHERE account_id = %s::uuid
+        """, (branding_account_id,))
+        
+        branding_row = cur.fetchone()
+    except Exception:
+        # Table may not exist yet - fall through to defaults
+        pass
     
     if branding_row:
         # Branding configured - use it
