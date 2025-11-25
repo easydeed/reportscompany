@@ -203,41 +203,56 @@
     font-weight: 600;
   }
 
-  /* Enhanced footer with better visual balance */
-  .footer{ 
-    margin-top: 24px; 
+  /* Enhanced footer with photo, contact info, and logo */
+  .footer{
+    margin-top: 24px;
     padding-top: 16px;
     border-top: 2px solid var(--pct-gray);
-    display:grid; 
-    grid-template-columns: 1fr auto; 
-    gap: 16px; 
-    align-items: center; 
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: center;
   }
-  .foot-notes{ 
-    font-size: 10px; 
-    color: var(--muted); 
-    line-height: 1.5;
+  .footer-contact{
+    display: flex;
+    align-items: center;
+    gap: 12px;
   }
-  .brandbar{ 
-    display:flex; 
-    gap: 10px; 
-    align-items:center; 
+  .footer-photo{
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border);
+    flex-shrink: 0;
   }
-  .brandbar .dot{ 
-    width:10px; 
-    height:10px; 
-    border-radius:999px; 
-    background: var(--pct-blue); 
+  .footer-info{
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
   }
-  .brandbar .dot.acc{ 
-    background: var(--pct-accent); 
+  .footer-line1{
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink);
   }
-  .brandbar .tag{ 
-    font-weight: 800; 
-    letter-spacing: .5px; 
-    color: var(--ink); 
-    font-size: 11px; 
-    text-transform: uppercase;
+  .footer-line2{
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .footer-website{
+    font-size: 10px;
+    color: var(--pct-blue);
+  }
+  .footer-logo{
+    display: flex;
+    align-items: center;
+  }
+  .footer-logo .logo-img{
+    height: 44px;
+    width: auto;
+    max-width: 140px;
+    object-fit: contain;
   }
 </style>
 </head>
@@ -268,13 +283,16 @@
     </section>
 
     <footer class="footer avoid-break">
-      <div class="foot-notes">
-        Notes: Residential resale only unless otherwise stated. Data reflect {{period_label}} activity and may be revised by MLS.<br/>
-        Contact your real estate professional for custom insights and detailed market analysis.
+      <div class="footer-contact">
+        <img src="{{rep_photo_url}}" alt="{{contact_line1}}" class="footer-photo" />
+        <div class="footer-info">
+          <div class="footer-line1">{{contact_line1}}</div>
+          <div class="footer-line2">{{contact_line2}}</div>
+          <div class="footer-website">{{website_url}}</div>
+        </div>
       </div>
-      <div class="brandbar">
-        <span class="dot"></span><span class="dot acc"></span>
-        <span class="tag">{{brand_tagline}}</span>
+      <div class="footer-logo">
+        <img src="{{logo_url}}" alt="{{brand_name}}" class="logo-img" />
       </div>
     </footer>
   </div>
