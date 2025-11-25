@@ -17,7 +17,7 @@ import logging
 from .reports import require_account_id
 from ..db import db_conn
 from ..services.affiliates import verify_affiliate_account
-from ..services.branding import get_branding_for_account
+# Note: get_branding_for_account is defined locally in this module (not imported)
 
 logger = logging.getLogger(__name__)
 

@@ -2,7 +2,7 @@
 
 > Complete technical documentation for the email infrastructure, templates, and delivery pipeline.
 
-**Last Updated:** November 2025
+**Last Updated:** November 25, 2025
 
 ---
 
@@ -10,64 +10,65 @@
 
 1. [Architecture Overview](#1-architecture-overview)
 2. [Email Data Model](#2-email-data-model)
-3. [SendGrid Integration](#3-sendgrid-integration)
+3. [Provider Integration (SendGrid)](#3-provider-integration-sendgrid)
 4. [Scheduled Report Emails](#4-scheduled-report-emails)
 5. [Branding Test Emails](#5-branding-test-emails)
-6. [White-Label Branding](#6-white-label-branding)
-7. [Email Templates](#7-email-templates)
-8. [Unsubscribe System](#8-unsubscribe-system)
+6. [Email Templates](#6-email-templates)
+7. [White-Label Branding](#7-white-label-branding)
+8. [Unsubscribe & Suppression](#8-unsubscribe--suppression)
 9. [Environment Variables](#9-environment-variables)
-10. [Troubleshooting](#10-troubleshooting)
+10. [Email Flow Diagrams](#10-email-flow-diagrams)
+11. [Troubleshooting](#11-troubleshooting)
+12. [Future Enhancements](#12-future-enhancements)
 
 ---
 
 ## 1. Architecture Overview
 
-### High-Level Flow
+TrendyReports sends emails through two distinct pathways:
+
+### Email Pathways
+
+| Pathway | Trigger | Service | Purpose |
+|---------|---------|---------|---------|
+| **Scheduled Reports** | Ticker finds due schedule | Worker (Celery) | Automated market report delivery |
+| **Branding Test** | User clicks "Send Test Email" | API (FastAPI) | Preview branding in inbox |
+
+### Infrastructure Stack
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         TrendyReports Email System                          │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  SCHEDULED REPORTS                         BRANDING TEST EMAILS             │
-│  ─────────────────                         ────────────────────             │
-│                                                                             │
-│  ┌─────────┐    ┌─────────┐    ┌────────┐  ┌─────────┐    ┌────────┐       │
-│  │ Ticker  │───▶│ Celery  │───▶│ Worker │  │   API   │───▶│SendGrid│       │
-│  │(60s loop)│   │  Queue  │    │        │  │         │    │        │       │
-│  └─────────┘    └─────────┘    │        │  └─────────┘    └────────┘       │
-│                                │        │                                   │
-│                                │   ▼    │                                   │
-│                           ┌────┴────────┴────┐                              │
-│                           │    SendGrid      │                              │
-│                           │   (v3 API)       │                              │
-│                           └────────┬─────────┘                              │
-│                                    │                                        │
-│                                    ▼                                        │
-│                           ┌─────────────────┐                               │
-│                           │   Recipient     │                               │
-│                           │    Inbox        │                               │
-│                           └─────────────────┘                               │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                        Email System                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐     │
+│  │   Ticker     │────▶│    Worker    │────▶│   SendGrid   │     │
+│  │ (schedules)  │     │   (Celery)   │     │    (API)     │     │
+│  └──────────────┘     └──────────────┘     └──────────────┘     │
+│                              │                    │              │
+│                              ▼                    ▼              │
+│                       ┌──────────────┐     ┌──────────────┐     │
+│                       │  email_log   │     │   Recipient  │     │
+│                       │   (Postgres) │     │    Inbox     │     │
+│                       └──────────────┘     └──────────────┘     │
+│                                                                  │
+│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐     │
+│  │  Branding    │────▶│     API      │────▶│   SendGrid   │     │
+│  │    Page      │     │   (FastAPI)  │     │    (API)     │     │
+│  └──────────────┘     └──────────────┘     └──────────────┘     │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Service Responsibilities
+### Key Components
 
-| Service | Email Role | Description |
-|---------|------------|-------------|
-| **Ticker** (`markets-report-ticker`) | Triggers | Finds due schedules every 60s, enqueues jobs |
-| **Worker** (`reportscompany-worker-service`) | Sends scheduled emails | Generates reports, renders templates, sends via SendGrid |
-| **Consumer** (`reportscompany-consumer-bridge`) | Processes queue | Reads Redis queue, dispatches to Celery |
-| **API** (`reportscompany-api`) | Sends test emails | Handles branding preview test emails |
-
-### Technology Stack
-
-- **Email Provider:** SendGrid (v3 API)
-- **Queue:** Redis (Upstash) + Celery
-- **Templates:** Python string templates with inline CSS
-- **Storage:** PostgreSQL (email_log, email_suppressions)
+| Component | Location | Responsibility |
+|-----------|----------|----------------|
+| SendGrid Provider | `apps/worker/src/worker/email/providers/sendgrid.py` | Low-level email sending |
+| Email Template | `apps/worker/src/worker/email/template.py` | HTML generation for scheduled emails |
+| Email Orchestrator | `apps/worker/src/worker/email/send.py` | Suppression filtering, template rendering |
+| Branding Test | `apps/api/src/api/routes/branding_tools.py` | Test email endpoint |
+| Unsubscribe API | `apps/api/src/api/routes/unsubscribe.py` | Handle unsubscribe requests |
 
 ---
 
@@ -84,21 +85,21 @@ CREATE TABLE email_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     account_id UUID NOT NULL REFERENCES accounts(id),
     schedule_id UUID REFERENCES schedules(id),
-    report_id UUID REFERENCES report_generations(id),
-    provider TEXT NOT NULL,              -- 'sendgrid'
-    to_emails TEXT[] NOT NULL,           -- Array of recipients
+    report_id UUID,  -- Links to report_generations.id
+    provider TEXT NOT NULL,  -- 'sendgrid'
+    to_emails TEXT[] NOT NULL,
     subject TEXT,
-    response_code INT,                   -- 202 = success, 4xx/5xx = error
-    status TEXT,                         -- 'sent', 'failed', 'suppressed'
-    error TEXT,                          -- Error message if failed
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    response_code INT,  -- 202 = success, 4xx/5xx = error
+    status TEXT,  -- 'sent', 'failed', 'suppressed'
+    error TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
 
-**Key Fields:**
-- `provider`: Always `'sendgrid'` currently
-- `response_code`: `202` means SendGrid accepted the email
-- `status`: `'sent'`, `'failed'`, or `'suppressed'` (all recipients blocked)
+**Usage:**
+- Worker logs every email attempt after calling SendGrid
+- Includes both successful (202) and failed sends
+- Links to `schedule_id` and `report_id` for traceability
 
 ### 2.2 `email_suppressions`
 
@@ -109,63 +110,58 @@ CREATE TABLE email_suppressions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     account_id UUID NOT NULL REFERENCES accounts(id),
     email TEXT NOT NULL,
-    reason TEXT NOT NULL,                -- 'unsubscribe', 'bounce', 'complaint'
-    created_at TIMESTAMPTZ DEFAULT NOW(),
+    reason TEXT NOT NULL,  -- 'unsubscribe', 'bounce', 'complaint'
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(account_id, email)
 );
 ```
 
-**Behavior:**
-- Before sending, worker queries this table
-- Suppressed emails are filtered out
-- If ALL recipients are suppressed, no email is sent
+**Usage:**
+- Checked before every email send
+- Populated via unsubscribe endpoint or webhook events
+- Per-account isolation (same email can be suppressed for one account but not another)
 
 ### 2.3 `schedules` (Email-Related Fields)
 
 ```sql
--- Relevant email fields in schedules table
-recipients TEXT[],           -- Array of email addresses
-include_attachment BOOLEAN,  -- Future: attach PDF vs link-only
-active BOOLEAN,              -- Must be true for emails to send
+-- Key fields for email delivery
+recipients TEXT[],              -- Array of email addresses
+include_attachment BOOLEAN,     -- v1: always FALSE (link-only)
+active BOOLEAN,                 -- Must be TRUE to send emails
+next_run_at TIMESTAMPTZ,        -- When ticker should process
+last_run_at TIMESTAMPTZ         -- Last successful run
 ```
 
 ### 2.4 `schedule_runs`
 
-Tracks each execution of a schedule.
+Tracks individual schedule executions:
 
 ```sql
 CREATE TABLE schedule_runs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     schedule_id UUID NOT NULL REFERENCES schedules(id),
-    report_run_id UUID REFERENCES report_generations(id),
-    status TEXT NOT NULL,    -- 'queued', 'processing', 'completed', 'failed', 'failed_email'
+    report_run_id UUID,  -- Links to report_generations.id
+    status TEXT NOT NULL,  -- 'queued', 'processing', 'completed', 'failed', 'failed_email'
     error TEXT,
     started_at TIMESTAMPTZ,
     finished_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
 
-**Status Values:**
-- `queued`: Ticker created the run, waiting for worker
-- `processing`: Worker is generating the report
-- `completed`: Report generated AND email sent successfully
-- `failed`: Report generation failed
-- `failed_email`: Report generated but email failed
-
 ---
 
-## 3. SendGrid Integration
+## 3. Provider Integration (SendGrid)
 
-### 3.1 Provider Client
+### 3.1 SendGrid Client
 
-**Location:** `apps/worker/src/worker/email/providers/sendgrid.py`
+**File:** `apps/worker/src/worker/email/providers/sendgrid.py`
 
 ```python
-import httpx
-
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", "")
 SENDGRID_API_URL = "https://api.sendgrid.com/v3/mail/send"
+DEFAULT_FROM_NAME = os.getenv("DEFAULT_FROM_NAME", "Market Reports")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "reports@example.com")
 
 def send_email(
     to_emails: List[str],
@@ -175,105 +171,97 @@ def send_email(
     from_email: str = None,
 ) -> Tuple[int, str]:
     """
-    Send email via SendGrid v3 API.
+    Send an email using SendGrid v3 API.
     
     Returns:
-        (status_code, response_text)
-        - 202: Email accepted by SendGrid
-        - 4xx/5xx: Error occurred
+        Tuple of (status_code, response_text)
+        - 202 = Email accepted for delivery
+        - 4xx/5xx = Error
     """
-    payload = {
-        "personalizations": [{
-            "to": [{"email": email} for email in to_emails],
-            "subject": subject,
-        }],
-        "from": {
-            "email": from_email or DEFAULT_FROM_EMAIL,
-            "name": from_name or DEFAULT_FROM_NAME,
-        },
-        "content": [{
-            "type": "text/html",
-            "value": html_content,
-        }],
-    }
-    
-    headers = {
-        "Authorization": f"Bearer {SENDGRID_API_KEY}",
-        "Content-Type": "application/json",
-    }
-    
-    response = httpx.post(SENDGRID_API_URL, json=payload, headers=headers)
-    return (response.status_code, response.text)
 ```
 
 ### 3.2 Response Codes
 
 | Code | Meaning | Action |
 |------|---------|--------|
-| `202` | Accepted | Email queued for delivery |
-| `400` | Bad Request | Check payload format |
-| `401` | Unauthorized | Invalid API key |
-| `403` | Forbidden | Sender not verified |
-| `429` | Rate Limited | Slow down requests |
-| `500` | Server Error | Retry later |
+| 202 | Accepted | Email queued for delivery |
+| 400 | Bad Request | Check payload format |
+| 401 | Unauthorized | Invalid API key |
+| 403 | Forbidden | Sender not verified |
+| 429 | Rate Limited | Retry with backoff |
+| 500+ | Server Error | Retry later |
 
-### 3.3 Sender Verification
+### 3.3 SendGrid Configuration
 
-SendGrid requires sender email verification:
-- Verify `reports@trendyreports.io` in SendGrid dashboard
-- Or use a verified domain with SPF/DKIM/DMARC
+Required SendGrid setup:
+1. **API Key**: Create in SendGrid dashboard with "Mail Send" permission
+2. **Sender Verification**: Verify `reports@trendyreports.io` as sender
+3. **Domain Authentication**: Configure SPF/DKIM for `trendyreports.io`
 
 ---
 
 ## 4. Scheduled Report Emails
 
-### 4.1 Flow Diagram
+### 4.1 Flow Overview
 
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                    Scheduled Report Email Flow                           │
-├──────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  1. TICKER (every 60s)                                                   │
-│     │                                                                    │
-│     ├─▶ Query: SELECT * FROM schedules                                   │
-│     │          WHERE active = true AND next_run_at <= NOW()              │
-│     │                                                                    │
-│     ├─▶ For each due schedule:                                           │
-│     │   • Insert schedule_runs row (status='queued')                     │
-│     │   • Enqueue job to Redis with schedule_id in params                │
-│     │   • Calculate and update next_run_at                               │
-│     │                                                                    │
-│  2. CONSUMER                                                             │
-│     │                                                                    │
-│     ├─▶ Read job from Redis queue                                        │
-│     ├─▶ Call Celery task: generate_report.delay(...)                     │
-│     │                                                                    │
-│  3. WORKER (generate_report task)                                        │
-│     │                                                                    │
-│     ├─▶ Fetch MLS data from SimplyRETS                                   │
-│     ├─▶ Build result_json with metrics                                   │
-│     ├─▶ Generate PDF via PDFShift                                        │
-│     ├─▶ Upload PDF to R2                                                 │
-│     │                                                                    │
-│     ├─▶ IF schedule_id in params:                                        │
-│     │   │                                                                │
-│     │   ├─▶ Load schedule recipients                                     │
-│     │   ├─▶ Get brand via get_brand_for_account()                        │
-│     │   ├─▶ Filter against email_suppressions                            │
-│     │   ├─▶ Render HTML template with brand + metrics                    │
-│     │   ├─▶ Send via SendGrid                                            │
-│     │   ├─▶ Log to email_log                                             │
-│     │   └─▶ Update schedule_runs status                                  │
-│     │                                                                    │
-│  4. RECIPIENT receives branded email with PDF link                       │
-│                                                                          │
-└──────────────────────────────────────────────────────────────────────────┘
+1. Ticker (every 60s)
+   └─▶ Find due schedules (active=TRUE, next_run_at <= NOW())
+       └─▶ Enqueue job to Redis
+           └─▶ Insert schedule_runs row (status='queued')
+
+2. Worker (Celery consumer)
+   └─▶ Pick up job from queue
+       └─▶ Generate report (SimplyRETS → metrics → PDF)
+           └─▶ Get branding for account
+               └─▶ Build email HTML
+                   └─▶ Filter suppressed recipients
+                       └─▶ Send via SendGrid
+                           └─▶ Log to email_log
+                               └─▶ Update schedule_runs (status='completed')
 ```
 
-### 4.2 Email Send Orchestrator
+### 4.2 Code Path
 
-**Location:** `apps/worker/src/worker/email/send.py`
+**Ticker:** `apps/worker/src/worker/schedules_tick.py`
+```python
+# Finds due schedules and enqueues
+def tick():
+    with db_conn() as conn:
+        due_schedules = find_due_schedules(conn)
+        for schedule in due_schedules:
+            enqueue_job(schedule)
+            insert_schedule_run(schedule.id, status='queued')
+            update_next_run_at(schedule)
+```
+
+**Worker Task:** `apps/worker/src/worker/tasks.py`
+```python
+@celery.task(name="generate_report")
+def generate_report(run_id, account_id, report_type, params):
+    # ... generate report and PDF ...
+    
+    schedule_id = params.get("schedule_id")
+    if schedule_id:
+        # This is a scheduled run - send email
+        brand = get_brand_for_account(db, account_id)
+        send_schedule_email(
+            account_id=account_id,
+            recipients=schedule.recipients,
+            payload={
+                "report_type": report_type,
+                "city": params.get("city"),
+                "metrics": result_json.get("metrics"),
+                "pdf_url": pdf_url,
+            },
+            brand=brand,
+            db_conn=conn,
+        )
+```
+
+### 4.3 Email Orchestrator
+
+**File:** `apps/worker/src/worker/email/send.py`
 
 ```python
 def send_schedule_email(
@@ -285,77 +273,12 @@ def send_schedule_email(
     brand: Optional[Dict] = None,
 ) -> Tuple[int, str]:
     """
-    Send scheduled report email with:
-    - Suppression filtering
-    - White-label branding
-    - Unsubscribe link generation
+    1. Filter suppressed recipients
+    2. Generate unsubscribe tokens
+    3. Build email HTML with branding
+    4. Send via SendGrid
+    5. Return status
     """
-    # 1. Filter suppressed recipients
-    if db_conn:
-        suppressed = query_suppressions(db_conn, account_id, recipients)
-        recipients = [r for r in recipients if r not in suppressed]
-        
-        if not recipients:
-            return (200, "All recipients suppressed")
-    
-    # 2. Generate unsubscribe token
-    unsub_token = generate_unsubscribe_token(account_id, recipients[0])
-    unsubscribe_url = f"{WEB_BASE}/api/v1/email/unsubscribe?token={unsub_token}"
-    
-    # 3. Render HTML with brand
-    html = schedule_email_html(
-        account_name=account_name,
-        report_type=payload["report_type"],
-        metrics=payload["metrics"],
-        pdf_url=payload["pdf_url"],
-        unsubscribe_url=unsubscribe_url,
-        brand=brand,  # White-label branding
-    )
-    
-    # 4. Send via provider
-    return send_email(recipients, subject, html)
-```
-
-### 4.3 Worker Integration
-
-**Location:** `apps/worker/src/worker/tasks.py` (inside `generate_report`)
-
-```python
-# After successful report generation...
-if schedule_id:
-    # Load schedule and recipients
-    schedule = load_schedule(cur, schedule_id)
-    recipients = schedule["recipients"]
-    
-    # Get branding for this account
-    brand = get_brand_for_account(cur, account_id)
-    
-    # Build email payload
-    payload = {
-        "report_type": report_type,
-        "city": city,
-        "zip_codes": zip_codes,
-        "lookback_days": lookback_days,
-        "metrics": result_json.get("metrics", {}),
-        "pdf_url": pdf_url,
-    }
-    
-    # Send email
-    status_code, response_text = send_schedule_email(
-        account_id=account_id,
-        recipients=recipients,
-        payload=payload,
-        account_name=account_name,
-        db_conn=conn,
-        brand=brand,
-    )
-    
-    # Log to email_log
-    cur.execute("""
-        INSERT INTO email_log (account_id, schedule_id, report_id, provider,
-                               to_emails, subject, response_code, status, error)
-        VALUES (%s, %s, %s, 'sendgrid', %s, %s, %s, %s, %s)
-    """, (...))
 ```
 
 ---
@@ -364,14 +287,11 @@ if schedule_id:
 
 ### 5.1 Purpose
 
-The branding test email feature allows affiliates to:
-- Preview how their branded emails will look
-- Verify logo, colors, and contact info appear correctly
-- Send a sample to themselves before going live
+Allows affiliates to preview how their branding appears in emails before any scheduled reports are sent.
 
-### 5.2 API Endpoint
+### 5.2 Endpoint
 
-**Location:** `apps/api/src/api/routes/branding_tools.py`
+**File:** `apps/api/src/api/routes/branding_tools.py`
 
 ```
 POST /v1/branding/test-email
@@ -380,289 +300,212 @@ POST /v1/branding/test-email
 **Request Body:**
 ```json
 {
-    "email": "affiliate@example.com",
-    "report_type": "market_snapshot"
+  "email": "user@example.com",
+  "report_type": "market_snapshot"
 }
 ```
 
 **Response (Success):**
 ```json
 {
-    "ok": true,
-    "message": "Test email sent to affiliate@example.com",
-    "report_type": "market_snapshot"
+  "ok": true,
+  "message": "Test email sent to user@example.com",
+  "report_type": "market_snapshot"
 }
 ```
 
-### 5.3 Implementation
+### 5.3 Flow
 
-```python
-@router.post("/test-email")
-async def send_test_email(
-    body: TestEmailRequest,
-    account_id: str = Depends(require_account_id)
-):
-    # 1. Verify SendGrid is configured
-    if not SENDGRID_API_KEY:
-        raise HTTPException(503, "Email service not configured")
-    
-    # 2. Get affiliate branding
-    with db_conn() as (conn, cur):
-        verify_affiliate_account(cur, account_id)
-        branding = get_branding_for_account(cur, account_id)
-    
-    # 3. Build sample email HTML with branding
-    email_html = build_test_email_html(branding, body.report_type)
-    
-    # 4. Send via SendGrid
-    response = await httpx.post(
-        SENDGRID_API_URL,
-        json={
-            "personalizations": [{"to": [{"email": body.email}]}],
-            "from": {"email": DEFAULT_FROM_EMAIL, "name": branding["brand_display_name"]},
-            "content": [{"type": "text/html", "value": email_html}],
-        },
-        headers={"Authorization": f"Bearer {SENDGRID_API_KEY}"}
-    )
-    
-    return {"ok": True, "message": f"Test email sent to {body.email}"}
+```
+1. User enters email on /app/branding
+2. Frontend calls POST /api/proxy/v1/branding/test-email
+3. API proxy forwards to backend
+4. Backend:
+   a. Verify affiliate account
+   b. Get branding from affiliate_branding
+   c. Build sample email HTML with branding
+   d. Send via SendGrid (directly, not via worker)
+   e. Return success/failure
 ```
 
-### 5.4 Frontend Integration
+### 5.4 Test Email Content
 
-**Proxy Route:** `apps/web/app/api/proxy/v1/branding/test-email/route.ts`
-
-```typescript
-export async function POST(request: NextRequest) {
-    const token = cookies().get("mr_token")?.value;
-    const body = await request.json();
-    
-    const response = await fetch(`${API_BASE}/v1/branding/test-email`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Cookie: `mr_token=${token}`,
-        },
-        body: JSON.stringify(body),
-    });
-    
-    return NextResponse.json(await response.json());
-}
-```
+The test email includes:
+- Branded header (logo, colors, brand name)
+- Sample metrics (hardcoded Beverly Hills data)
+- Sample metric table
+- Branded footer with contact info
+- "[Test]" prefix in subject line
 
 ---
 
-## 6. White-Label Branding
+## 6. Email Templates
 
-### 6.1 Branding Resolution Logic
+### 6.1 Scheduled Report Template
 
-**Location:** `apps/api/src/api/services/branding.py`
-
-```python
-def get_branding_for_account(cur, account_id: str) -> Dict:
-    """
-    Resolve branding for an account:
-    
-    1. If INDUSTRY_AFFILIATE → use their affiliate_branding
-    2. If REGULAR with sponsor → use sponsor's affiliate_branding
-    3. Otherwise → TrendyReports default branding
-    """
-    # Get account info
-    cur.execute("""
-        SELECT account_type, sponsor_account_id
-        FROM accounts WHERE id = %s
-    """, (account_id,))
-    account = cur.fetchone()
-    
-    if account["account_type"] == "INDUSTRY_AFFILIATE":
-        # Use this account's branding
-        return get_affiliate_branding(cur, account_id)
-    
-    if account["sponsor_account_id"]:
-        # Use sponsor's branding (agent sponsored by affiliate)
-        return get_affiliate_branding(cur, account["sponsor_account_id"])
-    
-    # Default TrendyReports branding
-    return DEFAULT_BRAND
-```
-
-### 6.2 Brand Data Structure
+**File:** `apps/worker/src/worker/email/template.py`
 
 ```python
-{
-    "brand_display_name": "Pacific Coast Title Company",
-    "logo_url": "https://r2.example.com/branding/logo.png",
-    "primary_color": "#0061BD",
-    "accent_color": "#F26B2B",
-    "rep_photo_url": "https://r2.example.com/branding/headshot.png",
-    "contact_line1": "Jane Smith • Senior Title Rep",
-    "contact_line2": "(555) 123-4567 • jane@pctitle.com",
-    "website_url": "https://www.pctitle.com"
-}
-```
-
-### 6.3 Branding in Emails
-
-The brand object is passed to email templates and used for:
-
-| Element | Brand Field | Usage |
-|---------|-------------|-------|
-| Header Logo | `logo_url` | `<img src="{logo_url}">` |
-| Header Background | `primary_color` | `background: linear-gradient(..., {primary_color}, {accent_color})` |
-| Brand Name | `brand_display_name` | Header text, footer signature |
-| CTA Button | `accent_color` | Button background color |
-| Footer Photo | `rep_photo_url` | Representative headshot |
-| Contact Info | `contact_line1`, `contact_line2` | Footer contact block |
-| Website Link | `website_url` | Clickable link in footer |
-
----
-
-## 7. Email Templates
-
-### 7.1 Template Location
-
-**Location:** `apps/worker/src/worker/email/template.py`
-
-### 7.2 Scheduled Report Email Structure
-
-```html
-<!DOCTYPE html>
-<html>
-<body style="background-color: #f9fafb; font-family: Arial, sans-serif;">
-    <table width="600" align="center">
-        
-        <!-- HEADER (Branded) -->
-        <tr>
-            <td style="background: linear-gradient(135deg, {primary_color}, {accent_color}); 
-                       padding: 40px; text-align: center; border-radius: 8px 8px 0 0;">
-                <!-- Logo (if present) -->
-                <img src="{logo_url}" alt="{brand_name}" style="height: 50px;">
-                
-                <!-- Report Title -->
-                <h1 style="color: white;">📊 Your {report_type} Report</h1>
-                <p style="color: #e0e7ff;">{area} • Last {lookback_days} days</p>
-                <p style="color: white; font-weight: 500;">{brand_name}</p>
-            </td>
-        </tr>
-        
-        <!-- GREETING -->
-        <tr>
-            <td style="padding: 30px 40px;">
-                <p>Hi {account_name},</p>
-                <p>Your scheduled <strong>{report_type}</strong> report is ready!</p>
-            </td>
-        </tr>
-        
-        <!-- KEY METRICS -->
-        <tr>
-            <td style="padding: 0 40px;">
-                <table style="background: #f3f4f6; border-radius: 8px; width: 100%;">
-                    <tr>
-                        <td>Active Listings</td>
-                        <td style="text-align: right; font-weight: bold;">{metrics.active}</td>
-                    </tr>
-                    <tr>
-                        <td>Median Price</td>
-                        <td style="text-align: right; font-weight: bold;">${metrics.median_price}</td>
-                    </tr>
-                    <tr>
-                        <td>Days on Market</td>
-                        <td style="text-align: right; font-weight: bold;">{metrics.avg_dom}</td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-        
-        <!-- CTA BUTTON -->
-        <tr>
-            <td style="padding: 30px 40px; text-align: center;">
-                <a href="{pdf_url}" style="display: inline-block; padding: 16px 40px;
-                   background: linear-gradient(135deg, {primary_color}, {accent_color});
-                   color: white; text-decoration: none; border-radius: 8px;">
-                    📄 View Full Report (PDF)
-                </a>
-                <p style="color: #6b7280; font-size: 14px;">Link expires in 7 days</p>
-            </td>
-        </tr>
-        
-        <!-- FOOTER (Branded) -->
-        <tr>
-            <td style="padding: 30px 40px; background: #f9fafb; border-top: 1px solid #e5e7eb;">
-                <table>
-                    <tr>
-                        <!-- Rep Photo (if present) -->
-                        <td style="width: 60px; vertical-align: top;">
-                            <img src="{rep_photo_url}" style="width: 50px; height: 50px; 
-                                 border-radius: 50%; border: 2px solid {primary_color};">
-                        </td>
-                        <!-- Contact Info -->
-                        <td>
-                            <p style="font-weight: 600;">{brand_name}</p>
-                            <p style="color: #6b7280;">{contact_line1}</p>
-                            <p style="color: #6b7280;">{contact_line2}</p>
-                            <a href="{website_url}" style="color: {primary_color};">{website_url}</a>
-                        </td>
-                    </tr>
-                </table>
-                
-                <!-- Unsubscribe -->
-                <p style="text-align: center; font-size: 12px; color: #9ca3af;">
-                    <a href="{unsubscribe_url}" style="color: #6b7280;">Unsubscribe</a>
-                </p>
-            </td>
-        </tr>
-        
-    </table>
-</body>
-</html>
-```
-
-### 7.3 Template Functions
-
-```python
-def schedule_email_subject(report_type: str, city: str, zip_codes: list) -> str:
-    """Generate email subject line."""
-    type_display = report_type.replace("_", " ").title()
-    area = city or f"ZIP {', '.join(zip_codes[:2])}"
-    return f"📊 Your {type_display} Report – {area}"
-
 def schedule_email_html(
     account_name: str,
     report_type: str,
-    city: str,
-    zip_codes: list,
+    city: Optional[str],
+    zip_codes: Optional[list],
     lookback_days: int,
     metrics: Dict,
     pdf_url: str,
     unsubscribe_url: str,
-    brand: Optional[Dict] = None,
+    brand: Optional[Brand] = None,
 ) -> str:
-    """Render full HTML email with branding."""
-    # Extract brand values with defaults
-    brand_name = brand.get("brand_display_name", "TrendyReports") if brand else "TrendyReports"
-    primary_color = brand.get("primary_color", "#667eea") if brand else "#667eea"
-    # ... etc
+```
+
+**Template Structure:**
+
+```html
+<!DOCTYPE html>
+<html>
+<body>
+  <!-- Header with gradient background -->
+  <table>
+    <tr>
+      <td style="background: linear-gradient(primary_color, accent_color)">
+        <!-- Logo (if provided) -->
+        <img src="{logo_url}" />
+        
+        <!-- Report title -->
+        <h1>📊 Your {report_type} Report</h1>
+        <p>{area} • Last {lookback_days} days</p>
+        <p>{brand_name}</p>
+      </td>
+    </tr>
+  </table>
+  
+  <!-- Greeting -->
+  <p>Hi {account_name},</p>
+  <p>Your scheduled report is ready!</p>
+  
+  <!-- Metrics table -->
+  <table>
+    <tr><td>Active Listings</td><td>{active_count}</td></tr>
+    <tr><td>Median Price</td><td>{median_price}</td></tr>
+    <tr><td>Days on Market</td><td>{avg_dom}</td></tr>
+  </table>
+  
+  <!-- CTA Button -->
+  <a href="{pdf_url}" style="background: {primary_color}">
+    📄 View Full Report (PDF)
+  </a>
+  
+  <!-- Footer -->
+  <table>
+    <tr>
+      <!-- Rep photo (if provided) -->
+      <td><img src="{rep_photo_url}" /></td>
+      <td>
+        <p>{brand_name}</p>
+        <p>{contact_line1}</p>
+        <p>{contact_line2}</p>
+        <a href="{website_url}">{website_url}</a>
+      </td>
+    </tr>
+  </table>
+  
+  <!-- Unsubscribe -->
+  <a href="{unsubscribe_url}">Unsubscribe</a>
+</body>
+</html>
+```
+
+### 6.2 Subject Line Generation
+
+```python
+def schedule_email_subject(
+    report_type: str,
+    city: Optional[str] = None,
+    zip_codes: Optional[List[str]] = None
+) -> str:
+    """
+    Generate email subject line.
     
-    return f"""<!DOCTYPE html>..."""
+    Examples:
+    - "📊 Market Snapshot: Beverly Hills"
+    - "📊 New Listings: 90210, 90211"
+    - "📊 Closed Sales Report"
+    """
 ```
 
 ---
 
-## 8. Unsubscribe System
+## 7. White-Label Branding
 
-### 8.1 Token Generation
+### 7.1 Brand Resolution
 
-Unsubscribe links use HMAC-SHA256 tokens to prevent tampering:
+**File:** `apps/api/src/api/services/branding.py`
 
 ```python
-import hmac
-import hashlib
+def get_branding_for_account(cur, account_id: str) -> dict:
+    """
+    Resolve branding for an account.
+    
+    Logic:
+    1. If account is INDUSTRY_AFFILIATE → use their affiliate_branding
+    2. If account has sponsor_account_id → use sponsor's branding
+    3. Otherwise → return TrendyReports default branding
+    """
+```
 
+### 7.2 Branding Data Structure
+
+```python
+{
+    "brand_display_name": "Pacific Coast Title Company",
+    "logo_url": "https://r2.../branding/logo.png",
+    "primary_color": "#0061bd",
+    "accent_color": "#f26b2b",
+    "rep_photo_url": "https://r2.../branding/headshot.png",
+    "contact_line1": "John Smith • Senior Rep",
+    "contact_line2": "(555) 123-4567 • john@company.com",
+    "website_url": "https://www.company.com"
+}
+```
+
+### 7.3 How Branding Appears in Emails
+
+| Element | Branding Field |
+|---------|----------------|
+| Header background | `primary_color` → `accent_color` gradient |
+| Logo in header | `logo_url` |
+| Brand name | `brand_display_name` |
+| CTA button | `primary_color` background |
+| Footer photo | `rep_photo_url` |
+| Footer contact | `contact_line1`, `contact_line2` |
+| Footer link | `website_url` |
+
+---
+
+## 8. Unsubscribe & Suppression
+
+### 8.1 Unsubscribe Flow
+
+```
+1. Recipient clicks unsubscribe link in email
+   URL: /api/v1/email/unsubscribe?token={token}&email={email}
+
+2. Token is HMAC-SHA256 of "{account_id}:{email}" with EMAIL_UNSUB_SECRET
+
+3. API verifies token:
+   - Decode and extract account_id, email
+   - Verify HMAC signature
+   - If valid, insert into email_suppressions
+
+4. Recipient sees confirmation page
+```
+
+### 8.2 Token Generation
+
+**Worker side:** `apps/worker/src/worker/email/send.py`
+```python
 def generate_unsubscribe_token(account_id: str, email: str) -> str:
-    """
-    Generate secure unsubscribe token.
-    Token = HMAC-SHA256(secret, "account_id:email")
-    """
     message = f"{account_id}:{email}".encode()
     signature = hmac.new(
         EMAIL_UNSUB_SECRET.encode(),
@@ -672,59 +515,24 @@ def generate_unsubscribe_token(account_id: str, email: str) -> str:
     return signature
 ```
 
-### 8.2 Unsubscribe Endpoint
-
-**Location:** `apps/api/src/api/routes/email.py`
-
-```
-POST /v1/email/unsubscribe/{token}?email={email}
-```
-
-**Flow:**
-1. Extract `token` and `email` from request
-2. Regenerate expected token using `EMAIL_UNSUB_SECRET`
-3. Compare tokens (timing-safe comparison)
-4. If valid, insert into `email_suppressions`
-5. Return success/error response
-
-```python
-@router.post("/unsubscribe/{token}")
-async def unsubscribe(token: str, email: str):
-    # Decode and verify token
-    # (token contains account_id:email signed with HMAC)
-    
-    # Insert suppression
-    cur.execute("""
-        INSERT INTO email_suppressions (account_id, email, reason)
-        VALUES (%s, %s, 'unsubscribe')
-        ON CONFLICT (account_id, email) DO NOTHING
-    """, (account_id, email))
-    
-    return {"ok": True, "message": "Successfully unsubscribed"}
-```
-
-### 8.3 Unsubscribe Link Format
-
-```
-https://www.trendyreports.io/api/v1/email/unsubscribe?token={hmac_token}&email={recipient_email}
-```
-
-### 8.4 Suppression Checking
+### 8.3 Suppression Checking
 
 Before sending any scheduled email:
 
 ```python
-# In send_schedule_email()
+# Query suppressed emails for this account
 cur.execute("""
-    SELECT email FROM email_suppressions
-    WHERE account_id = %s AND email = ANY(%s)
+    SELECT email
+    FROM email_suppressions
+    WHERE account_id = %s
+      AND email = ANY(%s)
 """, (account_id, recipients))
 
 suppressed = [row[0] for row in cur.fetchall()]
 filtered_recipients = [r for r in recipients if r not in suppressed]
 
 if not filtered_recipients:
-    # All recipients suppressed - don't send
+    # All recipients suppressed - skip email
     return (200, "All recipients suppressed")
 ```
 
@@ -734,160 +542,253 @@ if not filtered_recipients:
 
 ### 9.1 Worker Services
 
-Required on: `reportscompany-worker-service`, `reportscompany-consumer-bridge`, `markets-report-ticker`
+Required on all worker services (`worker-service`, `consumer-bridge`, `ticker`):
 
 ```bash
 # SendGrid
-SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxx
+SENDGRID_API_KEY=SG.xxxxxxxxxxxxx
 DEFAULT_FROM_EMAIL=reports@trendyreports.io
 DEFAULT_FROM_NAME=TrendyReports
 
 # Unsubscribe
-EMAIL_UNSUB_SECRET=your_32_char_minimum_secret_here
+EMAIL_UNSUB_SECRET=your_32_char_secret_here
 WEB_BASE=https://www.trendyreports.io
 ```
 
 ### 9.2 API Service
 
-Required on: `reportscompany-api`
+Required on the API service for branding test emails:
 
 ```bash
-# SendGrid (for branding test emails)
-SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxx
+# SendGrid (for test emails only)
+SENDGRID_API_KEY=SG.xxxxxxxxxxxxx
 DEFAULT_FROM_EMAIL=reports@trendyreports.io
 DEFAULT_FROM_NAME=TrendyReports
 
-# Unsubscribe (must match worker)
-UNSUBSCRIBE_SECRET=your_32_char_minimum_secret_here
+# Unsubscribe verification (must match worker's EMAIL_UNSUB_SECRET)
+EMAIL_UNSUB_SECRET=same_as_worker_EMAIL_UNSUB_SECRET
 WEB_BASE=https://www.trendyreports.io
 ```
 
-### 9.3 Variable Descriptions
+### 9.3 Variable Reference
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `SENDGRID_API_KEY` | SendGrid API key (starts with `SG.`) | `SG.abc123...` |
-| `DEFAULT_FROM_EMAIL` | Sender email (must be verified in SendGrid) | `reports@trendyreports.io` |
-| `DEFAULT_FROM_NAME` | Default sender name | `TrendyReports` |
-| `EMAIL_UNSUB_SECRET` | HMAC secret for unsubscribe tokens | 32+ char random string |
-| `WEB_BASE` | Base URL for unsubscribe links | `https://www.trendyreports.io` |
+| Variable | Service | Description |
+|----------|---------|-------------|
+| `SENDGRID_API_KEY` | Worker, API | SendGrid API key with Mail Send permission |
+| `DEFAULT_FROM_EMAIL` | Worker, API | Verified sender email address |
+| `DEFAULT_FROM_NAME` | Worker, API | Default sender name |
+| `EMAIL_UNSUB_SECRET` | Worker, API | HMAC secret for unsubscribe tokens (must match on both) |
+| `WEB_BASE` | Worker, API | Base URL for unsubscribe links |
 
 ---
 
-## 10. Troubleshooting
+## 10. Email Flow Diagrams
 
-### 10.1 Common Issues
+### 10.1 Scheduled Email Flow
 
-#### Email Not Sending
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     SCHEDULED EMAIL FLOW                                 │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐              │
+│  │ Ticker  │───▶│  Redis  │───▶│ Worker  │───▶│ SimplyRETS│            │
+│  │ (60s)   │    │ Queue   │    │ (Celery)│    │   API    │             │
+│  └─────────┘    └─────────┘    └─────────┘    └─────────┘              │
+│       │                             │              │                     │
+│       ▼                             ▼              ▼                     │
+│  ┌─────────┐                  ┌─────────┐    ┌─────────┐               │
+│  │schedule_│                  │ Report  │───▶│  PDF    │               │
+│  │  runs   │                  │ Builder │    │ (R2)    │               │
+│  │(queued) │                  └─────────┘    └─────────┘               │
+│  └─────────┘                        │              │                    │
+│                                     ▼              │                    │
+│                               ┌─────────┐         │                    │
+│                               │Branding │◀────────┘                    │
+│                               │ Service │                              │
+│                               └─────────┘                              │
+│                                     │                                   │
+│                                     ▼                                   │
+│  ┌─────────┐                  ┌─────────┐                              │
+│  │  email  │◀────────────────│ SendGrid│                              │
+│  │   log   │                  │   API   │                              │
+│  └─────────┘                  └─────────┘                              │
+│                                     │                                   │
+│                                     ▼                                   │
+│                               ┌─────────┐                              │
+│                               │Recipient│                              │
+│                               │  Inbox  │                              │
+│                               └─────────┘                              │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
 
-**Symptoms:** Schedule runs complete but no email received
+### 10.2 Unsubscribe Flow
 
-**Check:**
-1. `SENDGRID_API_KEY` is set correctly
-2. Sender email is verified in SendGrid
-3. Check `email_log` table for errors:
-   ```sql
-   SELECT * FROM email_log 
-   WHERE schedule_id = 'xxx' 
-   ORDER BY created_at DESC LIMIT 5;
-   ```
-4. Check if recipient is suppressed:
-   ```sql
-   SELECT * FROM email_suppressions 
-   WHERE email = 'recipient@example.com';
-   ```
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      UNSUBSCRIBE FLOW                                    │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐              │
+│  │ Email   │───▶│  Click  │───▶│   API   │───▶│ Verify  │              │
+│  │ Footer  │    │  Link   │    │Endpoint │    │  HMAC   │              │
+│  └─────────┘    └─────────┘    └─────────┘    └─────────┘              │
+│                                                      │                   │
+│                                                      ▼                   │
+│                                                ┌─────────┐              │
+│                                                │  email  │              │
+│                                                │suppress │              │
+│                                                │  ions   │              │
+│                                                └─────────┘              │
+│                                                      │                   │
+│                                                      ▼                   │
+│                                                ┌─────────┐              │
+│                                                │ Confirm │              │
+│                                                │  Page   │              │
+│                                                └─────────┘              │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
 
-#### 401 Unauthorized from SendGrid
+---
 
-**Cause:** Invalid or expired API key
+## 11. Troubleshooting
 
-**Fix:** 
-1. Verify API key in SendGrid dashboard
-2. Update `SENDGRID_API_KEY` in Render environment
-3. Redeploy service
+### 11.1 Common Issues
 
-#### 403 Forbidden from SendGrid
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| Emails not sending | `SENDGRID_API_KEY` not set | Add to Render environment |
+| 401 from SendGrid | Invalid API key | Regenerate key in SendGrid |
+| 403 from SendGrid | Sender not verified | Verify sender in SendGrid |
+| No branding in email | `affiliate_branding` table missing | Run migration 0008 |
+| Unsubscribe not working | `UNSUBSCRIBE_SECRET` mismatch | Ensure same on API and Worker |
+| All recipients suppressed | Users unsubscribed | Check `email_suppressions` table |
 
-**Cause:** Sender email not verified
-
-**Fix:**
-1. Go to SendGrid → Settings → Sender Authentication
-2. Verify `DEFAULT_FROM_EMAIL` domain or single sender
-3. Wait for DNS propagation if using domain authentication
-
-#### Emails Going to Spam
-
-**Causes:**
-- Missing SPF/DKIM/DMARC records
-- Poor sender reputation
-- Spammy content
-
-**Fix:**
-1. Set up domain authentication in SendGrid
-2. Add SPF, DKIM, DMARC DNS records
-3. Warm up sending volume gradually
-
-### 10.2 Debugging Queries
+### 11.2 Checking Email Logs
 
 ```sql
 -- Recent email sends
-SELECT id, to_emails, response_code, status, error, created_at
+SELECT 
+    created_at,
+    to_emails,
+    subject,
+    response_code,
+    status,
+    error
 FROM email_log
+WHERE account_id = 'your-account-id'
 ORDER BY created_at DESC
 LIMIT 20;
 
--- Failed emails
-SELECT * FROM email_log
-WHERE response_code NOT IN (200, 202)
-ORDER BY created_at DESC;
-
--- Suppression list for an account
+-- Check suppressions
 SELECT email, reason, created_at
 FROM email_suppressions
-WHERE account_id = 'xxx';
-
--- Schedule run history
-SELECT sr.*, s.name as schedule_name
-FROM schedule_runs sr
-JOIN schedules s ON sr.schedule_id = s.id
-WHERE s.account_id = 'xxx'
-ORDER BY sr.created_at DESC;
+WHERE account_id = 'your-account-id';
 ```
 
-### 10.3 Testing Email Flow
+### 11.3 Testing Email Locally
 
-1. **Create test schedule:**
-   - Set yourself as recipient
-   - Use short interval for testing
-   - Verify email arrives
+```bash
+# Set environment
+export SENDGRID_API_KEY=SG.your_key
+export DEFAULT_FROM_EMAIL=reports@trendyreports.io
 
-2. **Test unsubscribe:**
-   - Click unsubscribe link in email
-   - Verify `email_suppressions` entry created
-   - Trigger another schedule run
-   - Verify no email sent (check `email_log` for "suppressed")
-
-3. **Test branding:**
-   - Go to `/app/branding` as affiliate
-   - Use "Send Test Email" feature
-   - Verify branding appears correctly
-
----
-
-## Appendix: File Locations
-
-| Component | Path |
-|-----------|------|
-| SendGrid Provider | `apps/worker/src/worker/email/providers/sendgrid.py` |
-| Email Orchestrator | `apps/worker/src/worker/email/send.py` |
-| Email Templates | `apps/worker/src/worker/email/template.py` |
-| Worker Tasks | `apps/worker/src/worker/tasks.py` |
-| Branding Tools API | `apps/api/src/api/routes/branding_tools.py` |
-| Unsubscribe API | `apps/api/src/api/routes/email.py` |
-| Branding Service | `apps/api/src/api/services/branding.py` |
-| Test Email Proxy | `apps/web/app/api/proxy/v1/branding/test-email/route.ts` |
+# Run worker
+cd apps/worker
+poetry run python -c "
+from worker.email.providers.sendgrid import send_email
+status, msg = send_email(
+    to_emails=['test@example.com'],
+    subject='Test Email',
+    html_content='<h1>Test</h1>'
+)
+print(f'Status: {status}, Message: {msg}')
+"
+```
 
 ---
 
-*End of Email System Documentation*
+## 12. Future Enhancements
 
+### 12.1 Planned Features
+
+| Feature | Description | Priority |
+|---------|-------------|----------|
+| **Email Events Webhook** | Track delivered/opened/clicked/bounced via SendGrid webhooks | High |
+| **Auto-pause on Bounces** | Disable schedules with high bounce rates | Medium |
+| **People-based Recipients** | Select recipients from `/app/people` instead of raw emails | High |
+| **Attachment Support** | Option to attach PDF instead of link-only | Low |
+| **Template Variants** | Different templates for different report types | Medium |
+| **A/B Testing** | Test subject lines and layouts | Low |
+
+### 12.2 Email Events Table (Planned)
+
+```sql
+CREATE TABLE email_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email_log_id UUID REFERENCES email_log(id),
+    event_type TEXT NOT NULL,  -- 'delivered', 'opened', 'clicked', 'bounced', 'spam'
+    recipient TEXT NOT NULL,
+    timestamp TIMESTAMPTZ NOT NULL,
+    metadata JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### 12.3 Webhook Handler (Planned)
+
+```python
+@router.post("/v1/webhooks/sendgrid")
+async def handle_sendgrid_webhook(events: List[SendGridEvent]):
+    for event in events:
+        # Log event
+        insert_email_event(event)
+        
+        # Handle bounces
+        if event.type == "bounce":
+            insert_suppression(
+                account_id=event.account_id,
+                email=event.email,
+                reason="bounce"
+            )
+```
+
+---
+
+## Quick Reference
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `apps/worker/src/worker/email/providers/sendgrid.py` | SendGrid API client |
+| `apps/worker/src/worker/email/template.py` | HTML template generation |
+| `apps/worker/src/worker/email/send.py` | Email orchestration |
+| `apps/worker/src/worker/tasks.py` | Celery task with email hook |
+| `apps/api/src/api/routes/branding_tools.py` | Test email endpoint |
+| `apps/api/src/api/routes/unsubscribe.py` | Unsubscribe endpoint |
+
+### Key Tables
+
+| Table | Purpose |
+|-------|---------|
+| `email_log` | Audit trail of all sends |
+| `email_suppressions` | Unsubscribed/bounced emails |
+| `schedules` | Schedule config including recipients |
+| `schedule_runs` | Individual run tracking |
+| `affiliate_branding` | White-label branding data |
+
+### Key Environment Variables
+
+| Variable | Where |
+|----------|-------|
+| `SENDGRID_API_KEY` | Worker + API |
+| `DEFAULT_FROM_EMAIL` | Worker + API |
+| `EMAIL_UNSUB_SECRET` | Worker + API |
+| `WEB_BASE` | Worker + API |
+
+---
+
+*This document is the single source of truth for TrendyReports email system implementation.*
