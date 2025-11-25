@@ -28,17 +28,35 @@ UNSUBSCRIBE_SECRET=same_secret_as_worker_service
 WEB_BASE=https://your-app.vercel.app
 ```
 
+## PDF Generation - Branding Tools
+
+```bash
+PDF_API_KEY=your_pdfshift_api_key_here
+PRINT_BASE=https://www.trendyreports.io
+```
+
+## Email - Branding Test Emails (Optional)
+
+```bash
+SENDGRID_API_KEY=SG.your_sendgrid_api_key_here
+DEFAULT_FROM_EMAIL=reports@trendyreports.io
+DEFAULT_FROM_NAME=TrendyReports
+```
+
 ---
 
-**Total Variables:** 6
+**Total Variables:** 11
 - 2 Database/Redis
 - 1 Authentication
 - 1 CORS
 - 2 Unsubscribe (Phase 27A)
+- 2 PDF Generation
+- 3 Email (Branding test emails)
 
 **Important Notes:**
 - `UNSUBSCRIBE_SECRET` **must match** the worker service secret exactly
 - `ALLOWED_ORIGINS` must be a JSON array (include quotes)
-- API service does NOT need SendGrid keys (only worker services send emails)
-- API service uses these vars for the `/v1/email/unsubscribe` endpoint only
+- `SENDGRID_API_KEY` is needed for the branding "Send Test Email" feature
+- Copy `SENDGRID_API_KEY` from the worker service to keep consistent
+- Scheduled report emails are sent by the worker, not the API
 
