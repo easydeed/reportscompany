@@ -1,6 +1,0 @@
-IMPORTANT: Add this line to your .gitignore file:
-
-docs/TEST_CREDENTIALS.md
-
-This ensures test credentials are not committed to version control.
-
