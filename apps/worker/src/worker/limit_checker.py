@@ -65,7 +65,7 @@ def check_usage_limit(cur, account_id: str) -> Tuple[str, Dict[str, Any]]:
             p.allow_overage,
             p.overage_price_cents
         FROM accounts a
-        LEFT JOIN plans p ON a.plan_slug = p.slug
+        LEFT JOIN plans p ON a.plan_slug = p.plan_slug
         WHERE a.id = %s::uuid
     """, (account_id,))
     
