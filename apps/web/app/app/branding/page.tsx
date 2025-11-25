@@ -10,6 +10,7 @@ import { Save, Palette, Mail, FileText, Image, Eye, Download, Loader2 } from "lu
 import { useToast } from "@/components/ui/use-toast"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { ReportPreview } from "@/components/branding/report-preview"
+import { DownloadTools } from "@/components/branding/download-tools"
 
 type BrandingData = {
   brand_display_name: string
@@ -558,17 +559,11 @@ export default function BrandingPage() {
             <CardHeader>
               <CardTitle>Download & Test</CardTitle>
               <CardDescription>
-                Download sample reports and send test emails with your branding
+                Download sample reports and send test emails to verify your branding looks perfect
               </CardDescription>
             </CardHeader>
-            <CardContent className="min-h-[400px] flex items-center justify-center">
-              <div className="text-center text-muted-foreground">
-                <Download className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">Coming Soon</p>
-                <p className="text-sm mt-2">
-                  Download sample PDFs and send test emails to yourself
-                </p>
-              </div>
+            <CardContent>
+              <DownloadTools brandName={formData.brand_display_name || "Your Brand"} />
             </CardContent>
           </Card>
         </TabsContent>
