@@ -10,7 +10,7 @@ import {
   buildFeaturedListingsHtml
 } from '@/lib/templates';
 
-type Props = { params: { runId: string } };
+type Props = { params: Promise<{ runId: string }> };
 
 async function fetchData(runId: string) {
   const base = process.env.NEXT_PUBLIC_API_BASE;
@@ -72,7 +72,7 @@ const REPORT_TITLES: Record<string, string> = {
 };
 
 export default async function PrintReport({ params }: Props) {
-  const { runId } = params;
+  const { runId } = await params;
   const data = await fetchData(runId);
 
   if (!data) {
