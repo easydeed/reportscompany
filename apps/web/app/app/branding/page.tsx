@@ -487,7 +487,7 @@ export default function BrandingPage() {
                           </div>
                         )}
                         {formData.website_url && (
-                          <div className="text-xs" style={{ color: formData.primary_color }}>
+                          <div className="text-xs" style={{ color: formData.primary_color || undefined }}>
                             {formData.website_url.replace("https://", "").replace("http://", "")}
                           </div>
                         )}
