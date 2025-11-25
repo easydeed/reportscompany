@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Save, Palette, Mail, FileText, Image, Eye, Download, Loader2 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { ImageUpload } from "@/components/ui/image-upload"
+import { ReportPreview } from "@/components/branding/report-preview"
 
 type BrandingData = {
   brand_display_name: string
@@ -541,17 +542,12 @@ export default function BrandingPage() {
             <CardHeader>
               <CardTitle>Live Report Preview</CardTitle>
               <CardDescription>
-                See exactly how your branding appears on different report types
+                See exactly how your branding appears on different report types.
+                Select a report type and view mode to preview.
               </CardDescription>
             </CardHeader>
-            <CardContent className="min-h-[400px] flex items-center justify-center">
-              <div className="text-center text-muted-foreground">
-                <Eye className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">Coming Soon</p>
-                <p className="text-sm mt-2">
-                  Live preview of all 8 report types with your branding
-                </p>
-              </div>
+            <CardContent>
+              <ReportPreview branding={formData} />
             </CardContent>
           </Card>
         </TabsContent>
