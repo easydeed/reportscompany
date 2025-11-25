@@ -49,6 +49,7 @@ def schedule_email_html(
     logo_url = brand.get("logo_url") if brand else None
     primary_color = (brand.get("primary_color") if brand else None) or "#667eea"
     accent_color = (brand.get("accent_color") if brand else None) or "#764ba2"
+    rep_photo_url = (brand.get("rep_photo_url") if brand else None)  # Pass B5: Headshot
     contact_line1 = (brand.get("contact_line1") if brand else None)
     contact_line2 = (brand.get("contact_line2") if brand else None)
     website_url = (brand.get("website_url") if brand else None)
@@ -265,9 +266,18 @@ def schedule_email_html(
                             </td>
                         </tr>
                         
-                        <!-- Footer (Phase 30: White-label contact info) -->
+                        <!-- Footer (Phase 30: White-label contact info + Pass B5: Headshot) -->
                         <tr>
                             <td style="padding: 30px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb;">
+                                {f'''
+                                <table role="presentation" style="width: 100%; margin-bottom: 20px;">
+                                    <tr>
+                                        <td style="text-align: center;">
+                                            <img src="{rep_photo_url}" alt="Representative" style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 3px solid {primary_color};" />
+                                        </td>
+                                    </tr>
+                                </table>
+                                ''' if rep_photo_url else ''}
                                 {f'<p style="margin: 0; font-size: 14px; color: #374151; text-align: center; font-weight: 500;">{contact_line1}</p>' if contact_line1 else ''}
                                 {f'<p style="margin: 5px 0 0; font-size: 14px; color: #6b7280; text-align: center;">{contact_line2}</p>' if contact_line2 else ''}
                                 {f'<p style="margin: 10px 0 0; font-size: 14px; color: #6b7280; text-align: center;"><a href="{website_url}" style="color: {primary_color}; text-decoration: none;">{website_url.replace("https://", "").replace("http://", "")}</a></p>' if website_url else ''}

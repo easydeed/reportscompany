@@ -420,39 +420,82 @@ export default function BrandingPage() {
                   <CardDescription>How your brand appears in email headers</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="border rounded-lg p-4 bg-white dark:bg-zinc-900">
-                    <div className="flex items-center gap-4">
-                      {formData.logo_url ? (
-                        <img
-                          src={formData.logo_url}
-                          className="h-10 w-auto max-w-[140px] object-contain"
-                          alt={formData.brand_display_name}
-                        />
-                      ) : (
-                        <div
-                          className="h-10 w-10 rounded-lg flex items-center justify-center text-white font-bold text-lg"
-                          style={{ backgroundColor: formData.primary_color || "#7C3AED" }}
-                        >
-                          {(formData.brand_display_name || "B")[0].toUpperCase()}
+                  <div className="border rounded-lg overflow-hidden">
+                    {/* Header gradient */}
+                    <div
+                      className="p-4 text-white"
+                      style={{
+                        background: `linear-gradient(135deg, ${formData.primary_color || "#7C3AED"} 0%, ${formData.accent_color || "#F26B2B"} 100%)`,
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        {formData.logo_url ? (
+                          <img
+                            src={formData.logo_url}
+                            className="h-8 w-auto max-w-[120px] object-contain brightness-0 invert"
+                            alt={formData.brand_display_name}
+                          />
+                        ) : (
+                          <div className="h-8 w-8 rounded-lg bg-white/20 flex items-center justify-center text-white font-bold">
+                            {(formData.brand_display_name || "B")[0].toUpperCase()}
+                          </div>
+                        )}
+                        <div className="text-sm font-medium opacity-90">
+                          {formData.brand_display_name || "Your Brand"}
                         </div>
-                      )}
-                      <div>
-                        <div
-                          className="font-semibold"
-                          style={{ color: formData.primary_color || "#111827" }}
-                        >
-                          {formData.brand_display_name || "Your Brand Name"}
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          {formData.contact_line1 || formData.contact_line2
-                            ? `${formData.contact_line1 || ""} ${formData.contact_line2 ? "• " + formData.contact_line2 : ""}`
-                            : "Contact info appears here"}
-                        </div>
+                      </div>
+                    </div>
+                    {/* Email body preview */}
+                    <div className="p-4 bg-white dark:bg-zinc-900">
+                      <div className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                        📊 Your Market Snapshot Report
+                      </div>
+                      <div className="text-sm text-slate-500 mt-1">
+                        Beverly Hills • Last 30 days
                       </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Email Footer Preview - Pass B5 */}
+              {isAffiliate && (formData.rep_photo_url || formData.contact_line1) && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Email Footer Preview</CardTitle>
+                    <CardDescription>Your contact info in email footers</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="border rounded-lg p-4 bg-slate-50 dark:bg-zinc-900">
+                      <div className="flex flex-col items-center gap-3 text-center">
+                        {formData.rep_photo_url && (
+                          <img
+                            src={formData.rep_photo_url}
+                            className="w-16 h-16 rounded-full object-cover"
+                            style={{ border: `3px solid ${formData.primary_color || "#7C3AED"}` }}
+                            alt="Representative"
+                          />
+                        )}
+                        {formData.contact_line1 && (
+                          <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                            {formData.contact_line1}
+                          </div>
+                        )}
+                        {formData.contact_line2 && (
+                          <div className="text-xs text-slate-500">
+                            {formData.contact_line2}
+                          </div>
+                        )}
+                        {formData.website_url && (
+                          <div className="text-xs" style={{ color: formData.primary_color }}>
+                            {formData.website_url.replace("https://", "").replace("http://", "")}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* PDF Header Preview */}
               <Card>
