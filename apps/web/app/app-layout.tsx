@@ -44,20 +44,25 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
   const pathname = usePathname()
   
   // Build navigation based on user role
-  let navigation = [
-    { name: "Overview", href: "/app", icon: LayoutDashboard },
-    { name: "Reports", href: "/app/reports", icon: FileText },
-    { name: "Schedules", href: "/app/schedules", icon: Calendar },
-    { name: "People", href: "/app/people", icon: Users },
-    // Branding label varies by account type
-    { name: isAffiliate ? "Affiliate Branding" : "Branding", href: "/app/branding", icon: Palette },
-    { name: "Billing", href: "/app/billing", icon: CreditCard },
-  ]
-  
-  // Add Affiliate Dashboard for affiliate accounts (placed after Overview)
-  if (isAffiliate) {
-    navigation.splice(1, 0, { name: "Affiliate Dashboard", href: "/app/affiliate", icon: Shield })
-  }
+  let navigation = isAffiliate 
+    ? [
+        // Affiliate navigation - Dashboard first, no Overview
+        { name: "Dashboard", href: "/app/affiliate", icon: LayoutDashboard },
+        { name: "Reports", href: "/app/reports", icon: FileText },
+        { name: "Schedules", href: "/app/schedules", icon: Calendar },
+        { name: "People", href: "/app/people", icon: Users },
+        { name: "Branding", href: "/app/branding", icon: Palette },
+        { name: "Billing", href: "/app/billing", icon: CreditCard },
+      ]
+    : [
+        // Agent navigation - Overview first
+        { name: "Overview", href: "/app", icon: LayoutDashboard },
+        { name: "Reports", href: "/app/reports", icon: FileText },
+        { name: "Schedules", href: "/app/schedules", icon: Calendar },
+        { name: "People", href: "/app/people", icon: Users },
+        { name: "Branding", href: "/app/branding", icon: Palette },
+        { name: "Billing", href: "/app/billing", icon: CreditCard },
+      ]
   
   // Add Admin link if user is admin
   if (isAdmin) {
