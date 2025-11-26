@@ -7,6 +7,10 @@ type Props = {
     logo_url?: string;
     primary_color?: string;
     accent_color?: string;
+    rep_photo_url?: string;
+    contact_line1?: string;
+    contact_line2?: string;
+    website_url?: string;
   }>;
 };
 
@@ -34,6 +38,11 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
   const logoUrl = query.logo_url ? decodeURIComponent(query.logo_url) : null;
   const primaryColor = query.primary_color ? `#${query.primary_color}` : "#7C3AED";
   const accentColor = query.accent_color ? `#${query.accent_color}` : "#F26B2B";
+  // Footer branding
+  const repPhotoUrl = query.rep_photo_url ? decodeURIComponent(query.rep_photo_url) : null;
+  const contactLine1 = query.contact_line1 ? decodeURIComponent(query.contact_line1) : null;
+  const contactLine2 = query.contact_line2 ? decodeURIComponent(query.contact_line2) : null;
+  const websiteUrl = query.website_url ? decodeURIComponent(query.website_url) : null;
 
   // Format helpers
   const formatCurrency = (val: number) => {
@@ -277,27 +286,81 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
                 color: #6b7280;
               }
               
-              .footer {
-                background: #f9fafb;
-                padding: 20px 32px;
-                border-top: 1px solid #e5e7eb;
-                position: absolute;
-                bottom: 0;
-                left: 0;
-                right: 0;
-              }
-              
-              .footer-content {
+              /* Branded Footer (above gray footer) */
+              .branded-footer {
+                margin: 24px 32px 0;
+                padding: 16px 20px;
+                background: #f8fafc;
+                border-radius: 12px;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                gap: 16px;
+              }
+              
+              .branded-footer-contact {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+              }
+              
+              .branded-footer-photo {
+                width: 52px;
+                height: 52px;
+                border-radius: 50%;
+                object-fit: cover;
+                border: 2px solid var(--primary);
+                flex-shrink: 0;
+              }
+              
+              .branded-footer-info {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+              }
+              
+              .branded-footer-name {
+                font-size: 13px;
+                font-weight: 600;
+                color: #0f172a;
+              }
+              
+              .branded-footer-details {
                 font-size: 11px;
                 color: #6b7280;
               }
               
-              .footer-brand {
+              .branded-footer-website {
+                font-size: 10px;
+                color: var(--primary);
+              }
+              
+              .branded-footer-logo {
+                display: flex;
+                align-items: center;
+              }
+              
+              .branded-footer-logo img {
+                height: 48px;
+                width: auto;
+                max-width: 160px;
+                object-fit: contain;
+              }
+              
+              .branded-footer-logo-text {
+                font-size: 14px;
                 font-weight: 600;
                 color: var(--primary);
+              }
+
+              /* Gray Footer (bottom) */
+              .footer {
+                margin-top: 16px;
+                padding: 12px 32px;
+                border-top: 1px solid #e5e7eb;
+                text-align: center;
+                font-size: 10px;
+                color: #9ca3af;
               }
               
               .sample-watermark {
@@ -433,13 +496,34 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
             )}
           </div>
 
-          <div className="footer">
-            <div className="footer-content">
-              <div>
-                <span className="footer-brand">{brandName}</span> • Market Intelligence
+          {/* Branded Footer */}
+          <div className="branded-footer">
+            <div className="branded-footer-contact">
+              {repPhotoUrl && (
+                <img src={repPhotoUrl} alt="Representative" className="branded-footer-photo" />
+              )}
+              <div className="branded-footer-info">
+                {contactLine1 && <div className="branded-footer-name">{contactLine1}</div>}
+                {contactLine2 && <div className="branded-footer-details">{contactLine2}</div>}
+                {websiteUrl && (
+                  <div className="branded-footer-website">
+                    {websiteUrl.replace("https://", "").replace("http://", "")}
+                  </div>
+                )}
               </div>
-              <div>Sample report generated for branding preview</div>
             </div>
+            <div className="branded-footer-logo">
+              {logoUrl ? (
+                <img src={logoUrl} alt={brandName} />
+              ) : (
+                <div className="branded-footer-logo-text">{brandName}</div>
+              )}
+            </div>
+          </div>
+
+          {/* Gray Footer */}
+          <div className="footer">
+            Report generated by {brandName} • Data source: MLS • Sample Data
           </div>
         </div>
       </body>

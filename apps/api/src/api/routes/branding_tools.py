@@ -141,6 +141,15 @@ async def generate_sample_pdf(
         params["primary_color"] = branding['primary_color'].replace('#', '')
     if branding.get("accent_color"):
         params["accent_color"] = branding['accent_color'].replace('#', '')
+    # Pass contact/footer info for branded footer
+    if branding.get("rep_photo_url"):
+        params["rep_photo_url"] = branding['rep_photo_url']
+    if branding.get("contact_line1"):
+        params["contact_line1"] = branding['contact_line1']
+    if branding.get("contact_line2"):
+        params["contact_line2"] = branding['contact_line2']
+    if branding.get("website_url"):
+        params["website_url"] = branding['website_url']
     
     preview_url = f"{PRINT_BASE}/branding-preview/{report_type}?{urlencode(params)}"
     print(f"[Branding PDF] Preview URL: {preview_url}")
