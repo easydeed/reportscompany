@@ -23,6 +23,53 @@ type BrandingData = {
   website_url: string | null
 }
 
+// Extended form data with separate contact fields
+type FormData = BrandingData & {
+  rep_name: string
+  rep_title: string
+  rep_email: string
+  rep_phone: string
+}
+
+// Helper to parse contact_line1 (typically "Name • Title")
+function parseContactLine1(line: string | null): { name: string; title: string } {
+  if (!line) return { name: "", title: "" }
+  if (line.includes("•")) {
+    const parts = line.split("•").map(p => p.trim())
+    return { name: parts[0] || "", title: parts[1] || "" }
+  }
+  return { name: line, title: "" }
+}
+
+// Helper to parse contact_line2 (typically "phone • email")
+function parseContactLine2(line: string | null): { phone: string; email: string } {
+  if (!line) return { phone: "", email: "" }
+  if (line.includes("•")) {
+    const parts = line.split("•").map(p => p.trim())
+    // Determine which is phone vs email
+    const emailPart = parts.find(p => p.includes("@")) || ""
+    const phonePart = parts.find(p => !p.includes("@")) || ""
+    return { phone: phonePart, email: emailPart }
+  }
+  // Single value - check if it's email or phone
+  if (line.includes("@")) return { phone: "", email: line }
+  return { phone: line, email: "" }
+}
+
+// Helper to build contact_line1 from name and title
+function buildContactLine1(name: string, title: string): string | null {
+  if (!name && !title) return null
+  if (name && title) return `${name} • ${title}`
+  return name || title
+}
+
+// Helper to build contact_line2 from phone and email
+function buildContactLine2(phone: string, email: string): string | null {
+  if (!phone && !email) return null
+  if (phone && email) return `${phone} • ${email}`
+  return phone || email
+}
+
 /**
  * Branding Page - Pass B2.2
  * 
@@ -37,7 +84,7 @@ export default function BrandingPage() {
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
 
-  const [formData, setFormData] = useState<BrandingData>({
+  const [formData, setFormData] = useState<FormData>({
     brand_display_name: "",
     logo_url: null,
     primary_color: "#7C3AED",
@@ -46,6 +93,11 @@ export default function BrandingPage() {
     contact_line1: null,
     contact_line2: null,
     website_url: null,
+    // Separate contact fields
+    rep_name: "",
+    rep_title: "",
+    rep_email: "",
+    rep_phone: "",
   })
 
   useEffect(() => {
@@ -68,6 +120,10 @@ export default function BrandingPage() {
       if (res.ok) {
         const data = await res.json()
         if (isAff) {
+          // Parse contact lines into separate fields
+          const { name: repName, title: repTitle } = parseContactLine1(data.contact_line1)
+          const { phone: repPhone, email: repEmail } = parseContactLine2(data.contact_line2)
+          
           // Full branding for affiliates
           setFormData({
             brand_display_name: data.brand_display_name || "",
@@ -78,6 +134,11 @@ export default function BrandingPage() {
             contact_line1: data.contact_line1 || null,
             contact_line2: data.contact_line2 || null,
             website_url: data.website_url || null,
+            // Populate separate fields - use account name as fallback for rep_name
+            rep_name: repName || me.name || "",
+            rep_title: repTitle || "",
+            rep_email: repEmail || me.email || "",
+            rep_phone: repPhone || "",
           })
         } else {
           // Limited branding for agents
@@ -90,6 +151,10 @@ export default function BrandingPage() {
             contact_line1: null,
             contact_line2: null,
             website_url: null,
+            rep_name: "",
+            rep_title: "",
+            rep_email: "",
+            rep_phone: "",
           })
         }
       }
@@ -110,8 +175,21 @@ export default function BrandingPage() {
     try {
       const endpoint = isAffiliate ? "/api/proxy/v1/affiliate/branding" : "/api/proxy/v1/account/branding"
 
+      // Build contact lines from separate fields
+      const contact_line1 = buildContactLine1(formData.rep_name, formData.rep_title)
+      const contact_line2 = buildContactLine2(formData.rep_phone, formData.rep_email)
+
       const body = isAffiliate
-        ? formData
+        ? {
+            brand_display_name: formData.brand_display_name,
+            logo_url: formData.logo_url,
+            primary_color: formData.primary_color,
+            accent_color: formData.accent_color,
+            rep_photo_url: formData.rep_photo_url,
+            contact_line1,
+            contact_line2,
+            website_url: formData.website_url,
+          }
         : {
             logo_url: formData.logo_url,
             primary_color: formData.primary_color,
@@ -360,28 +438,56 @@ export default function BrandingPage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="contact1">Contact Line 1</Label>
-                        <Input
-                          id="contact1"
-                          value={formData.contact_line1 || ""}
-                          onChange={(e) =>
-                            setFormData({ ...formData, contact_line1: e.target.value })
-                          }
-                          placeholder="John Doe • Senior Title Rep"
-                        />
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="rep_name">Name</Label>
+                          <Input
+                            id="rep_name"
+                            value={formData.rep_name}
+                            onChange={(e) =>
+                              setFormData({ ...formData, rep_name: e.target.value })
+                            }
+                            placeholder="John Doe"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="rep_title">Title</Label>
+                          <Input
+                            id="rep_title"
+                            value={formData.rep_title}
+                            onChange={(e) =>
+                              setFormData({ ...formData, rep_title: e.target.value })
+                            }
+                            placeholder="Senior Title Rep"
+                          />
+                        </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="contact2">Contact Line 2</Label>
-                        <Input
-                          id="contact2"
-                          value={formData.contact_line2 || ""}
-                          onChange={(e) =>
-                            setFormData({ ...formData, contact_line2: e.target.value })
-                          }
-                          placeholder="(555) 123-4567 • john@company.com"
-                        />
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="rep_email">Email</Label>
+                          <Input
+                            id="rep_email"
+                            type="email"
+                            value={formData.rep_email}
+                            onChange={(e) =>
+                              setFormData({ ...formData, rep_email: e.target.value })
+                            }
+                            placeholder="john@company.com"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="rep_phone">Phone</Label>
+                          <Input
+                            id="rep_phone"
+                            type="tel"
+                            value={formData.rep_phone}
+                            onChange={(e) =>
+                              setFormData({ ...formData, rep_phone: e.target.value })
+                            }
+                            placeholder="(555) 123-4567"
+                          />
+                        </div>
                       </div>
 
                       <div className="space-y-2">
@@ -459,7 +565,7 @@ export default function BrandingPage() {
               </Card>
 
               {/* Email Footer Preview - Pass B5 */}
-              {isAffiliate && (formData.rep_photo_url || formData.contact_line1) && (
+              {isAffiliate && (formData.rep_photo_url || formData.rep_name || formData.rep_email) && (
                 <Card>
                   <CardHeader>
                     <CardTitle>Email Footer Preview</CardTitle>
@@ -467,29 +573,42 @@ export default function BrandingPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="border rounded-lg p-4 bg-slate-50 dark:bg-zinc-900">
-                      <div className="flex flex-col items-center gap-3 text-center">
-                        {formData.rep_photo_url && (
+                      <div className="flex items-center justify-between gap-4">
+                        {/* Left side: Photo + Contact Info */}
+                        <div className="flex items-center gap-3">
+                          {formData.rep_photo_url && (
+                            <img
+                              src={formData.rep_photo_url}
+                              className="w-14 h-14 rounded-full object-cover flex-shrink-0"
+                              style={{ border: `3px solid ${formData.primary_color || "#7C3AED"}` }}
+                              alt="Representative"
+                            />
+                          )}
+                          <div className="flex flex-col gap-0.5">
+                            {(formData.rep_name || formData.rep_title) && (
+                              <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                {formData.rep_name}{formData.rep_name && formData.rep_title && " • "}{formData.rep_title}
+                              </div>
+                            )}
+                            {(formData.rep_phone || formData.rep_email) && (
+                              <div className="text-xs text-slate-500">
+                                {formData.rep_phone}{formData.rep_phone && formData.rep_email && " • "}{formData.rep_email}
+                              </div>
+                            )}
+                            {formData.website_url && (
+                              <div className="text-xs" style={{ color: formData.primary_color || undefined }}>
+                                {formData.website_url.replace("https://", "").replace("http://", "")}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {/* Right side: Logo */}
+                        {formData.logo_url && (
                           <img
-                            src={formData.rep_photo_url}
-                            className="w-16 h-16 rounded-full object-cover"
-                            style={{ border: `3px solid ${formData.primary_color || "#7C3AED"}` }}
-                            alt="Representative"
+                            src={formData.logo_url}
+                            className="h-10 w-auto max-w-[120px] object-contain flex-shrink-0"
+                            alt={formData.brand_display_name}
                           />
-                        )}
-                        {formData.contact_line1 && (
-                          <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                            {formData.contact_line1}
-                          </div>
-                        )}
-                        {formData.contact_line2 && (
-                          <div className="text-xs text-slate-500">
-                            {formData.contact_line2}
-                          </div>
-                        )}
-                        {formData.website_url && (
-                          <div className="text-xs" style={{ color: formData.primary_color || undefined }}>
-                            {formData.website_url.replace("https://", "").replace("http://", "")}
-                          </div>
                         )}
                       </div>
                     </div>
@@ -547,29 +666,50 @@ export default function BrandingPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="border rounded-lg p-4 bg-slate-50 dark:bg-zinc-900">
-                    <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-between gap-4">
+                      {/* Left side: Photo + Contact Info */}
+                      <div className="flex items-center gap-3">
                         {formData.rep_photo_url && (
                           <img
                             src={formData.rep_photo_url}
-                            className="w-8 h-8 rounded-full object-cover"
+                            className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                            style={{ border: `2px solid ${formData.primary_color || "#7C3AED"}` }}
                             alt="Representative"
                           />
                         )}
-                        <div>
-                          {formData.contact_line1 && <div>{formData.contact_line1}</div>}
-                          {formData.contact_line2 && <div>{formData.contact_line2}</div>}
-                          {!formData.contact_line1 && !formData.contact_line2 && (
+                        <div className="text-xs text-slate-600 dark:text-slate-400">
+                          {(formData.rep_name || formData.rep_title) && (
+                            <div className="font-semibold text-slate-700 dark:text-slate-300">
+                              {formData.rep_name}{formData.rep_name && formData.rep_title && " • "}{formData.rep_title}
+                            </div>
+                          )}
+                          {(formData.rep_phone || formData.rep_email) && (
+                            <div>{formData.rep_phone}{formData.rep_phone && formData.rep_email && " • "}{formData.rep_email}</div>
+                          )}
+                          {formData.website_url && (
+                            <div style={{ color: formData.primary_color || undefined }}>
+                              {formData.website_url.replace("https://", "").replace("http://", "")}
+                            </div>
+                          )}
+                          {!formData.rep_name && !formData.rep_email && !formData.rep_phone && (
                             <div className="italic">Contact info appears here</div>
                           )}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-medium" style={{ color: formData.primary_color || undefined }}>
-                          {formData.brand_display_name || "Your Brand"}
-                        </div>
-                        {formData.website_url && (
-                          <div className="text-slate-400">{formData.website_url}</div>
+                      {/* Right side: Logo */}
+                      <div className="flex-shrink-0">
+                        {formData.logo_url ? (
+                          <img
+                            src={formData.logo_url}
+                            className="h-10 w-auto max-w-[120px] object-contain"
+                            alt={formData.brand_display_name}
+                          />
+                        ) : (
+                          <div className="text-right text-xs">
+                            <div className="font-medium" style={{ color: formData.primary_color || undefined }}>
+                              {formData.brand_display_name || "Your Brand"}
+                            </div>
+                          </div>
                         )}
                       </div>
                     </div>
