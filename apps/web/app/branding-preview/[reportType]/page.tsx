@@ -84,9 +84,20 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
         <style
           dangerouslySetInnerHTML={{
             __html: `
+              /* ====== CSS Paged Media - Running Footer ====== */
               @page {
                 size: Letter;
-                margin: 0;
+                margin: 0.4in 0.4in 1.3in 0.4in; /* Extra bottom margin for footer */
+                
+                @bottom-left {
+                  content: element(running-footer);
+                }
+              }
+              
+              /* Running footer - gets placed at bottom of EVERY page */
+              .running-footer {
+                position: running(running-footer);
+                width: 7.7in; /* Full page width minus margins */
               }
               
               :root {
@@ -114,10 +125,26 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
                 page-break-after: always;
               }
               
+              /* Fallback: Fixed height page with flexbox for single-page reports */
+              .page-single {
+                width: 8.5in;
+                height: 11in;
+                padding: 0.4in;
+                padding-bottom: 0; /* Footer handled by @page */
+                display: flex;
+                flex-direction: column;
+              }
+              
+              .page-content {
+                flex: 1;
+              }
+              
               .header {
                 background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
                 color: white;
                 padding: 24px 32px;
+                border-radius: 12px;
+                margin-bottom: 20px;
               }
               
               .header-content {
@@ -169,7 +196,7 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
               }
               
               .content {
-                padding: 32px;
+                flex: 1;
               }
               
               .intro {
@@ -286,16 +313,20 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
                 color: #6b7280;
               }
               
-              /* Branded Footer (above gray footer) */
+              /* ====== Running Footer Styles ====== */
+              .running-footer {
+                padding: 12px 0;
+              }
+              
               .branded-footer {
-                margin: 24px 32px 0;
-                padding: 16px 20px;
+                padding: 14px 18px;
                 background: #f8fafc;
                 border-radius: 12px;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 gap: 16px;
+                margin-bottom: 8px;
               }
               
               .branded-footer-contact {
@@ -305,8 +336,8 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
               }
               
               .branded-footer-photo {
-                width: 52px;
-                height: 52px;
+                width: 48px;
+                height: 48px;
                 border-radius: 50%;
                 object-fit: cover;
                 border: 2px solid var(--primary);
@@ -320,18 +351,18 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
               }
               
               .branded-footer-name {
-                font-size: 13px;
+                font-size: 12px;
                 font-weight: 600;
                 color: #0f172a;
               }
               
               .branded-footer-details {
-                font-size: 11px;
+                font-size: 10px;
                 color: #6b7280;
               }
               
               .branded-footer-website {
-                font-size: 10px;
+                font-size: 9px;
                 color: var(--primary);
               }
               
@@ -341,26 +372,25 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
               }
               
               .branded-footer-logo img {
-                height: 48px;
+                height: 40px;
                 width: auto;
-                max-width: 160px;
+                max-width: 140px;
                 object-fit: contain;
               }
               
               .branded-footer-logo-text {
-                font-size: 14px;
+                font-size: 13px;
                 font-weight: 600;
                 color: var(--primary);
               }
 
-              /* Gray Footer (bottom) */
-              .footer {
-                margin-top: 16px;
-                padding: 12px 32px;
-                border-top: 1px solid #e5e7eb;
+              /* Gray Footer line */
+              .footer-line {
                 text-align: center;
-                font-size: 10px;
+                font-size: 9px;
                 color: #9ca3af;
+                border-top: 1px solid #e5e7eb;
+                padding-top: 8px;
               }
               
               .sample-watermark {
@@ -379,9 +409,40 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
         />
       </head>
       <body>
+        {/* Running Footer - This gets placed at bottom of EVERY page by CSS @page */}
+        <div className="running-footer">
+          <div className="branded-footer">
+            <div className="branded-footer-contact">
+              {repPhotoUrl && (
+                <img src={repPhotoUrl} alt="Representative" className="branded-footer-photo" />
+              )}
+              <div className="branded-footer-info">
+                {contactLine1 && <div className="branded-footer-name">{contactLine1}</div>}
+                {contactLine2 && <div className="branded-footer-details">{contactLine2}</div>}
+                {websiteUrl && (
+                  <div className="branded-footer-website">
+                    {websiteUrl.replace("https://", "").replace("http://", "")}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="branded-footer-logo">
+              {logoUrl ? (
+                <img src={logoUrl} alt={brandName} />
+              ) : (
+                <div className="branded-footer-logo-text">{brandName}</div>
+              )}
+            </div>
+          </div>
+          <div className="footer-line">
+            Report generated by {brandName} • Data source: MLS • Sample Data
+          </div>
+        </div>
+
         <div className="sample-watermark">SAMPLE</div>
         
-        <div className="page" style={{ position: "relative" }}>
+        <div className="page-single">
+          <div className="page-content">
           <div className="header">
             <div className="header-content">
               <div className="header-left">
@@ -496,36 +557,8 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
             )}
           </div>
 
-          {/* Branded Footer */}
-          <div className="branded-footer">
-            <div className="branded-footer-contact">
-              {repPhotoUrl && (
-                <img src={repPhotoUrl} alt="Representative" className="branded-footer-photo" />
-              )}
-              <div className="branded-footer-info">
-                {contactLine1 && <div className="branded-footer-name">{contactLine1}</div>}
-                {contactLine2 && <div className="branded-footer-details">{contactLine2}</div>}
-                {websiteUrl && (
-                  <div className="branded-footer-website">
-                    {websiteUrl.replace("https://", "").replace("http://", "")}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="branded-footer-logo">
-              {logoUrl ? (
-                <img src={logoUrl} alt={brandName} />
-              ) : (
-                <div className="branded-footer-logo-text">{brandName}</div>
-              )}
-            </div>
-          </div>
-
-          {/* Gray Footer */}
-          <div className="footer">
-            Report generated by {brandName} • Data source: MLS • Sample Data
-          </div>
-        </div>
+          </div>{/* /.page-content */}
+        </div>{/* /.page-single */}
       </body>
     </html>
   );
