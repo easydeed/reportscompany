@@ -23,6 +23,7 @@ import {
   Shield,
   Calendar,
   Users,
+  Settings,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -44,7 +45,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
   const pathname = usePathname()
   
   // Build navigation based on user role
-  let navigation = isAffiliate 
+  let navigation = isAffiliate
     ? [
         // Affiliate navigation - Dashboard first, no Overview
         { name: "Dashboard", href: "/app/affiliate", icon: LayoutDashboard },
@@ -52,6 +53,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
         { name: "Schedules", href: "/app/schedules", icon: Calendar },
         { name: "People", href: "/app/people", icon: Users },
         { name: "Branding", href: "/app/branding", icon: Palette },
+        { name: "Settings", href: "/app/account/settings", icon: Settings },
         { name: "Billing", href: "/app/billing", icon: CreditCard },
       ]
     : [
@@ -61,6 +63,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
         { name: "Schedules", href: "/app/schedules", icon: Calendar },
         { name: "People", href: "/app/people", icon: Users },
         { name: "Branding", href: "/app/branding", icon: Palette },
+        { name: "Settings", href: "/app/account/settings", icon: Settings },
         { name: "Billing", href: "/app/billing", icon: CreditCard },
       ]
   
@@ -169,6 +172,9 @@ function DashboardTopbar({ accountType, isAdmin, isAffiliate }: { accountType?: 
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          <DropdownMenuItem asChild>
+            <Link href="/app/account/settings">Account Settings</Link>
+          </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href="/app/account/plan">Plan & Usage</Link>
           </DropdownMenuItem>
