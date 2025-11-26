@@ -218,12 +218,57 @@
     margin-top: 2px;
   }
 
-  .footer{ margin-top: 12px; display:grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
-  .foot-notes{ font-size: 10.5px; color: #6b7280; }
-  .brandbar{ display:flex; gap: 10px; align-items:center; }
-  .brandbar .dot{ width:10px; height:10px; border-radius:999px; background: var(--pct-blue); }
-  .brandbar .dot.acc{ background: var(--pct-accent); }
-  .brandbar .tag{ font-weight: 800; letter-spacing: .4px; color: #111827; font-size: 11px; }
+  /* Footer with photo, contact info, and logo */
+  .footer{
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: center;
+  }
+  .footer-contact{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .footer-photo{
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border);
+    flex-shrink: 0;
+  }
+  .footer-info{
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .footer-line1{
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .footer-line2{
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .footer-website{
+    font-size: 10px;
+    color: var(--pct-blue);
+  }
+  .footer-logo{
+    display: flex;
+    align-items: center;
+  }
+  .footer-logo .logo-img{
+    height: 44px;
+    width: auto;
+    max-width: 140px;
+    object-fit: contain;
+  }
 </style>
 </head>
 <body>
@@ -281,13 +326,16 @@
     </div>
 
     <footer class="footer avoid-break">
-      <div class="foot-notes">
-        Notes: Residential resale only unless otherwise stated. Data reflect {{period_label}} activity and may be revised by MLS.<br/>
-        Contact your real estate professional for custom insights and detailed market analysis.
+      <div class="footer-contact">
+        <img src="{{rep_photo_url}}" alt="{{contact_line1}}" class="footer-photo" />
+        <div class="footer-info">
+          <div class="footer-line1">{{contact_line1}}</div>
+          <div class="footer-line2">{{contact_line2}}</div>
+          <div class="footer-website">{{website_url}}</div>
+        </div>
       </div>
-      <div class="brandbar">
-        <span class="dot"></span><span class="dot acc"></span>
-        <span class="tag">{{brand_tagline}}</span>
+      <div class="footer-logo">
+        <img src="{{logo_url}}" alt="{{brand_name}}" class="logo-img" />
       </div>
     </footer>
   </div>
