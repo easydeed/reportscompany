@@ -75,6 +75,14 @@
     background: white;
     box-shadow: 0 2px 24px rgba(0,0,0,.06);
     padding: 0.25in; /* matches @page margin for identical content box */
+    /* Flexbox layout for footer positioning */
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Main content area grows to push footer to bottom */
+  .page-content{
+    flex: 1;
   }
 
   /* ====== Header ====== */
@@ -240,6 +248,8 @@
 </head>
 <body>
   <div class="page">
+    <!-- Main content wrapper for flexbox footer positioning -->
+    <div class="page-content">
     <!-- Header -->
     <header class="header avoid-break">
       <div class="brand">
@@ -355,6 +365,7 @@
         </div>
       </div>
     </section>
+    </div><!-- /.page-content -->
 
     <!-- Branded Footer (above gray footer) -->
     <section class="branded-footer avoid-break">
