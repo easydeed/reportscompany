@@ -64,6 +64,14 @@
     background: white;
     box-shadow: 0 2px 24px rgba(0,0,0,.06);
     padding: 0.5in;
+    /* Flexbox layout for footer positioning */
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Main content area grows to push footer to bottom */
+  .page-content{
+    flex: 1;
   }
 
   .header{
@@ -284,6 +292,8 @@
 </head>
 <body>
   <div class="page">
+    <!-- Main content wrapper for flexbox footer positioning -->
+    <div class="page-content">
     <header class="header avoid-break">
       <div class="brand">
         <svg width="44" height="44" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -335,6 +345,7 @@
     <div id="bands-container">
       <!-- PRICE_BANDS_CONTENT -->
     </div>
+    </div><!-- /.page-content -->
 
     <!-- Branded Footer (above gray footer) -->
     <section class="branded-footer avoid-break">
