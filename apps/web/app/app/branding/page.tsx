@@ -731,7 +731,12 @@ export default function BrandingPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ReportPreview branding={formData} />
+              <ReportPreview branding={{
+                ...formData,
+                // Build contact lines from separate fields for preview
+                contact_line1: buildContactLine1(formData.rep_name, formData.rep_title),
+                contact_line2: buildContactLine2(formData.rep_phone, formData.rep_email),
+              }} />
             </CardContent>
           </Card>
         </TabsContent>
