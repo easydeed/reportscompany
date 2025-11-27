@@ -2,14 +2,27 @@
 
 import { useState } from "react"
 import { Button } from "./ui/button"
+import { Card, CardContent } from "./ui/card"
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
-import { SegmentedControl } from "./segmented-control"
-import { TagInput } from "./tag-input"
-import { cn } from "../lib/utils"
-import { motion, AnimatePresence } from "framer-motion"
-import { Check, HelpCircle, ChevronRight, X } from "lucide-react"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
+import { Badge } from "./ui/badge"
+import { HorizontalStepper } from "./horizontal-stepper"
+import {
+  FileText,
+  TrendingUp,
+  Home,
+  DollarSign,
+  BarChart3,
+  MapPin,
+  Hash,
+  X,
+  ArrowRight,
+  ArrowLeft,
+  Image,
+  Star,
+  Calendar,
+  Building,
+} from "lucide-react"
 
 // Types
 // NOTE: ReportType is now imported from shared module to ensure consistency
@@ -101,6 +114,34 @@ function validateStep(state: WizardState, step: number): { valid: boolean; error
   }
 }
 
+const steps = [
+  { id: "type", label: "Type" },
+  { id: "area", label: "Area" },
+  { id: "options", label: "Options" },
+  { id: "review", label: "Review" },
+]
+
+const reportTypes = [
+  { id: "market_snapshot" as ReportType, name: "Market Snapshot", icon: TrendingUp },
+  { id: "new_listings" as ReportType, name: "New Listings", icon: Home },
+  { id: "inventory" as ReportType, name: "Inventory Report", icon: BarChart3 },
+  { id: "closed" as ReportType, name: "Closed Sales", icon: DollarSign },
+  { id: "price_bands" as ReportType, name: "Price Bands", icon: BarChart3 },
+  { id: "new_listings_gallery" as ReportType, name: "New Listings (Photo Gallery)", icon: Image },
+  { id: "featured_listings" as ReportType, name: "Featured Listings (Photo Grid)", icon: Star },
+  { id: "open_houses" as ReportType, name: "Open Houses", icon: Calendar },
+]
+
+const lookbackOptions = [7, 14, 30, 60, 90]
+
+const propertyTypes = [
+  { id: "RES", name: "Residential", icon: Home },
+  { id: "CND", name: "Condo", icon: Building },
+  { id: "MUL", name: "Multi-Family", icon: Building },
+  { id: "LND", name: "Land", icon: MapPin },
+  { id: "COM", name: "Commercial", icon: Building },
+]
+
 export function NewReportWizard({ onSubmit, onCancel }: NewReportWizardProps) {
   const [currentStep, setCurrentStep] = useState(0)
   const [state, setState] = useState<WizardState>({
@@ -115,13 +156,6 @@ export function NewReportWizard({ onSubmit, onCancel }: NewReportWizardProps) {
   })
   const [error, setError] = useState<string | null>(null)
 
-  const steps = [
-    { number: 1, label: "Type" },
-    { number: 2, label: "Area" },
-    { number: 3, label: "Options" },
-    { number: 4, label: "Review" },
-  ]
-
   const handleNext = () => {
     const validation = validateStep(state, currentStep)
     if (!validation.valid) {
@@ -134,137 +168,56 @@ export function NewReportWizard({ onSubmit, onCancel }: NewReportWizardProps) {
     }
   }
 
+  const handleBack = () => {
+    setError(null)
+    setCurrentStep(Math.max(0, currentStep - 1))
+  }
+
   const handleSubmit = () => {
     const payload = buildPayload(state)
     onSubmit(payload)
   }
 
-  const progress = ((currentStep + 1) / 4) * 100
-
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-8">
-      {/* Header */}
+    <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-display font-semibold text-foreground">New Report</h2>
-          <p className="text-sm text-muted-foreground mt-1">Configure your market report parameters</p>
+          <h1 className="font-display font-bold text-3xl mb-2">New Report</h1>
+          <p className="text-muted-foreground">Generate a one-time market report</p>
         </div>
-        <Button variant="ghost" size="icon" onClick={onCancel} className="hover:bg-muted/50">
-          <X className="w-5 h-5" />
-          <span className="sr-only">Close wizard</span>
+        <Button variant="ghost" onClick={onCancel}>
+          Cancel
         </Button>
       </div>
 
-      {/* Progress Steps */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          {steps.map((step, index) => (
-            <div key={step.number} className="flex items-center flex-1">
-              <div className="flex flex-col items-center gap-2 flex-1">
-                <div
-                  className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center font-display font-semibold text-sm transition-all duration-220",
-                    index < currentStep
-                      ? "bg-primary text-primary-foreground shadow-md"
-                      : index === currentStep
-                        ? "bg-gradient-to-br from-primary to-accent text-white shadow-lg shadow-primary/30"
-                        : "bg-muted text-muted-foreground border border-border",
-                  )}
-                >
-                  {index < currentStep ? <Check className="w-5 h-5" /> : step.number}
-                </div>
-                <span
-                  className={cn(
-                    "text-xs font-medium transition-colors duration-220",
-                    index <= currentStep ? "text-foreground" : "text-muted-foreground",
-                  )}
-                >
-                  {step.label}
-                </span>
-              </div>
-              {index < steps.length - 1 && (
-                <div className="w-full h-0.5 bg-muted mx-2 relative overflow-hidden">
-                  {index < currentStep && (
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: "100%" }}
-                      transition={{ duration: 0.3 }}
-                      className="absolute inset-y-0 left-0 bg-primary"
-                    />
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+      <HorizontalStepper steps={steps} currentStep={currentStep} />
+
+      {error && (
+        <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive" role="alert">
+          <p className="font-medium text-sm">{error}</p>
         </div>
+      )}
 
-        {/* Progress Bar */}
-        <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
-          <motion.div
-            className="h-full bg-gradient-to-r from-primary to-accent"
-            initial={{ width: "25%" }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-          />
-        </div>
-      </div>
-
-      {/* Error Message */}
-      <AnimatePresence mode="wait">
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm"
-            role="alert"
-          >
-            {error}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Step Content */}
       <div className="min-h-[400px]">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentStep}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.2 }}
-          >
-            {currentStep === 0 && <Step1ReportType state={state} setState={setState} setError={setError} />}
-            {currentStep === 1 && <Step2Area state={state} setState={setState} setError={setError} />}
-            {currentStep === 2 && <Step3Options state={state} setState={setState} setError={setError} />}
-            {currentStep === 3 && <Step4Review state={state} />}
-          </motion.div>
-        </AnimatePresence>
+        {currentStep === 0 && <Step1ReportType state={state} setState={setState} setError={setError} />}
+        {currentStep === 1 && <Step2Area state={state} setState={setState} setError={setError} />}
+        {currentStep === 2 && <Step3Options state={state} setState={setState} setError={setError} />}
+        {currentStep === 3 && <Step4Review state={state} />}
       </div>
 
-      {/* Navigation */}
-      <div className="flex items-center justify-between pt-6 border-t border-border">
-        <Button
-          variant="outline"
-          onClick={() => {
-            setError(null)
-            setCurrentStep(Math.max(0, currentStep - 1))
-          }}
-          disabled={currentStep === 0}
-          className="border-border/50"
-        >
+      <div className="flex justify-between pt-4 border-t border-border">
+        <Button variant="outline" onClick={handleBack} disabled={currentStep === 0} className="gap-2 bg-transparent">
+          <ArrowLeft className="w-4 h-4" />
           Back
         </Button>
-        {currentStep < 3 ? (
-          <Button onClick={handleNext} className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90">
+        {currentStep < steps.length - 1 ? (
+          <Button onClick={handleNext} className="gap-2">
             Next
-            <ChevronRight className="w-4 h-4" />
+            <ArrowRight className="w-4 h-4" />
           </Button>
         ) : (
-          <Button
-            onClick={handleSubmit}
-            className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 min-w-[200px]"
-          >
+          <Button onClick={handleSubmit} className="gap-2">
+            <FileText className="w-4 h-4" />
             Generate Report
           </Button>
         )}
@@ -283,46 +236,54 @@ function Step1ReportType({
   setState: (s: WizardState) => void
   setError: (e: string | null) => void
 }) {
-  const reportTypes: { label: string; value: ReportType }[] = [
-    { label: "Market Snapshot", value: "market_snapshot" },
-    { label: "New Listings", value: "new_listings" },
-    { label: "New Listings Gallery", value: "new_listings_gallery" },
-    { label: "Featured Listings", value: "featured_listings" },
-    { label: "Closed Sales", value: "closed" },
-    { label: "Inventory", value: "inventory" },
-    { label: "Price Bands", value: "price_bands" },
-    { label: "Open Houses", value: "open_houses" },
-  ]
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <h3 className="text-lg font-display font-semibold">Report Type</h3>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button className="text-muted-foreground hover:text-primary transition-colors">
-                <HelpCircle className="w-4 h-4" />
-                <span className="sr-only">Why this?</span>
-              </button>
-            </TooltipTrigger>
-            <TooltipContent className="bg-primary text-primary-foreground border-primary/20">
-              <p className="text-xs">Choose the type of market analysis you need</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+      <div>
+        <h2 className="font-display font-semibold text-xl mb-1">Report Type</h2>
+        <p className="text-sm text-muted-foreground">Choose the type of market analysis you need</p>
       </div>
-      <p className="text-sm text-muted-foreground">Pick your insight</p>
 
-      <SegmentedControl
-        options={reportTypes}
-        value={state.report_type || "market_snapshot"}
-        onChange={(value) => {
-          setState({ ...state, report_type: value })
-          setError(null)
-        }}
-        className="w-full"
-      />
+      <Card>
+        <CardContent className="pt-6 space-y-6">
+          <div className="space-y-3">
+            <Label>
+              Report Type <span className="text-destructive">*</span>
+            </Label>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {reportTypes.map((type) => {
+                const Icon = type.icon
+                return (
+                  <button
+                    key={type.id}
+                    type="button"
+                    onClick={() => {
+                      setState({ ...state, report_type: type.id })
+                      setError(null)
+                    }}
+                    className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left ${
+                      state.report_type === type.id
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                    aria-pressed={state.report_type === type.id}
+                  >
+                    <div
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                        state.report_type === type.id
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-primary/10 text-primary"
+                      }`}
+                    >
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <span className="font-medium text-sm">{type.name}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -337,92 +298,127 @@ function Step2Area({
   setState: (s: WizardState) => void
   setError: (e: string | null) => void
 }) {
+  const [zipInput, setZipInput] = useState("")
+
+  const addZip = () => {
+    const zip = zipInput.trim()
+    if (zip && /^\d{5}$/.test(zip) && !state.zips.includes(zip) && state.zips.length < 10) {
+      setState({ ...state, zips: [...state.zips, zip] })
+      setZipInput("")
+      setError(null)
+    }
+  }
+
+  const removeZip = (zip: string) => {
+    setState({ ...state, zips: state.zips.filter((z) => z !== zip) })
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <h3 className="text-lg font-display font-semibold">Area Selection</h3>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button className="text-muted-foreground hover:text-accent transition-colors">
-                <HelpCircle className="w-4 h-4" />
-                <span className="sr-only">Why this?</span>
+      <div>
+        <h2 className="font-display font-semibold text-xl mb-1">Select Area</h2>
+        <p className="text-sm text-muted-foreground">Define the geographic area for your report</p>
+      </div>
+
+      <Card>
+        <CardContent className="pt-6 space-y-6">
+          <div className="space-y-3">
+            <Label>Area Type</Label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setState({ ...state, area_mode: "city" })}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all ${
+                  state.area_mode === "city"
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-border hover:border-primary/50"
+                }`}
+                aria-pressed={state.area_mode === "city"}
+              >
+                <MapPin className="w-4 h-4" />
+                <span className="font-medium">City</span>
               </button>
-            </TooltipTrigger>
-            <TooltipContent className="bg-accent text-accent-foreground">
-              <p className="text-xs">Define the geographic scope of your report</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
+              <button
+                type="button"
+                onClick={() => setState({ ...state, area_mode: "zips" })}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all ${
+                  state.area_mode === "zips"
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-border hover:border-primary/50"
+                }`}
+                aria-pressed={state.area_mode === "zips"}
+              >
+                <Hash className="w-4 h-4" />
+                <span className="font-medium">ZIP Codes</span>
+              </button>
+            </div>
+          </div>
 
-      {/* Area Mode Chips */}
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => setState({ ...state, area_mode: "city" })}
-          className={cn(
-            "px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-180",
-            state.area_mode === "city"
-              ? "bg-primary/10 border-primary text-primary"
-              : "bg-muted border-border text-muted-foreground hover:border-primary/50",
+          {state.area_mode === "city" && (
+            <div className="space-y-2">
+              <Label htmlFor="city">
+                City Name <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="city"
+                type="text"
+                placeholder="e.g., San Francisco"
+                value={state.city}
+                onChange={(e) => {
+                  setState({ ...state, city: e.target.value })
+                  setError(null)
+                }}
+                aria-required="true"
+              />
+            </div>
           )}
-        >
-          City
-        </button>
-        <button
-          type="button"
-          onClick={() => setState({ ...state, area_mode: "zips" })}
-          className={cn(
-            "px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-180",
-            state.area_mode === "zips"
-              ? "bg-primary/10 border-primary text-primary"
-              : "bg-muted border-border text-muted-foreground hover:border-primary/50",
+
+          {state.area_mode === "zips" && (
+            <div className="space-y-3">
+              <Label htmlFor="zip-input">
+                ZIP Codes <span className="text-destructive">*</span>
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  id="zip-input"
+                  type="text"
+                  placeholder="Enter 5-digit ZIP"
+                  value={zipInput}
+                  onChange={(e) => setZipInput(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      addZip()
+                    }
+                  }}
+                  maxLength={5}
+                />
+                <Button type="button" onClick={addZip} disabled={!zipInput || zipInput.length !== 5 || state.zips.length >= 10}>
+                  Add
+                </Button>
+              </div>
+              {state.zips.length > 0 && (
+                <div className="flex flex-wrap gap-2 p-3 rounded-lg bg-muted/50 border border-border">
+                  {state.zips.map((zip) => (
+                    <Badge key={zip} variant="secondary" className="gap-1.5 pl-3 pr-2 py-1.5">
+                      {zip}
+                      <button
+                        type="button"
+                        onClick={() => removeZip(zip)}
+                        className="hover:bg-background/50 rounded-sm p-0.5"
+                        aria-label={`Remove ZIP ${zip}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">Maximum 10 ZIP codes allowed</p>
+            </div>
           )}
-        >
-          ZIP Codes
-        </button>
-      </div>
-
-      {/* City Input */}
-      {state.area_mode === "city" && (
-        <div className="space-y-2">
-          <Label htmlFor="city" className="text-sm font-medium">
-            City Name
-          </Label>
-          <Input
-            id="city"
-            type="text"
-            placeholder="e.g., San Francisco"
-            value={state.city}
-            onChange={(e) => {
-              setState({ ...state, city: e.target.value })
-              setError(null)
-            }}
-            className="h-11"
-          />
-          <p className="text-xs text-muted-foreground">Enter the city name for your market area</p>
-        </div>
-      )}
-
-      {/* ZIP Input */}
-      {state.area_mode === "zips" && (
-        <div className="space-y-2">
-          <Label htmlFor="zips" className="text-sm font-medium">
-            ZIP Codes
-          </Label>
-          <TagInput
-            tags={state.zips}
-            onTagsChange={(zips) => {
-              setState({ ...state, zips })
-              setError(null)
-            }}
-            placeholder="Type ZIP and press Enter..."
-            validate={(zip) => /^\d{5}$/.test(zip)}
-          />
-          <p className="text-xs text-muted-foreground">Max 10 ZIPs</p>
-        </div>
-      )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -437,9 +433,6 @@ function Step3Options({
   setState: (s: WizardState) => void
   setError: (e: string | null) => void
 }) {
-  const lookbackOptions = [7, 14, 30, 60, 90]
-  const propertyTypes = ["RES", "CND", "MUL", "LND", "COM"]
-
   const togglePropertyType = (type: string) => {
     const types = state.property_types.includes(type)
       ? state.property_types.filter((t) => t !== type)
@@ -449,185 +442,178 @@ function Step3Options({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <h3 className="text-lg font-display font-semibold">Report Options</h3>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button className="text-muted-foreground hover:text-accent transition-colors">
-                <HelpCircle className="w-4 h-4" />
-                <span className="sr-only">Why this?</span>
-              </button>
-            </TooltipTrigger>
-            <TooltipContent className="bg-accent text-accent-foreground">
-              <p className="text-xs">Refine your data parameters and filters</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+      <div>
+        <h2 className="font-display font-semibold text-xl mb-1">Report Options</h2>
+        <p className="text-sm text-muted-foreground">Refine your data parameters and filters</p>
       </div>
 
-      {/* Lookback Period */}
-      <div className="space-y-3">
-        <Label className="text-sm font-medium">Lookback Period (days)</Label>
-        <div className="flex gap-2">
-          {lookbackOptions.map((days) => (
-            <button
-              key={days}
-              type="button"
-              onClick={() => {
-                setState({ ...state, lookback_days: days })
-                setError(null)
-              }}
-              className={cn(
-                "flex-1 px-4 py-2.5 rounded-lg text-sm font-medium border transition-all duration-180",
-                state.lookback_days === days
-                  ? "bg-primary/10 border-primary text-primary"
-                  : "bg-muted border-border text-muted-foreground hover:border-primary/50",
-              )}
-            >
-              {days}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Property Type */}
-      <div className="space-y-3">
-        <Label className="text-sm font-medium">Property Type (optional)</Label>
-        <div className="flex gap-2">
-          {propertyTypes.map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => togglePropertyType(type)}
-              className={cn(
-                "flex-1 px-4 py-2.5 rounded-lg text-sm font-medium border transition-all duration-180",
-                state.property_types.includes(type)
-                  ? "bg-accent/10 border-accent text-accent"
-                  : "bg-muted border-border text-muted-foreground hover:border-accent/50",
-              )}
-            >
-              {type}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Price Range */}
-      <div className="space-y-3">
-        <Label className="text-sm font-medium">Price Range (optional)</Label>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="minprice" className="text-xs text-muted-foreground">
-              Min
+      <Card>
+        <CardContent className="pt-6 space-y-6">
+          {/* Lookback Period */}
+          <div className="space-y-3">
+            <Label>
+              Lookback Period <span className="text-destructive">*</span>
             </Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-              <Input
-                id="minprice"
-                type="number"
-                placeholder="0"
-                value={state.minprice}
-                onChange={(e) => setState({ ...state, minprice: e.target.value })}
-                className="pl-7 h-11"
-              />
+            <div className="flex flex-wrap gap-2">
+              {lookbackOptions.map((days) => (
+                <button
+                  key={days}
+                  type="button"
+                  onClick={() => {
+                    setState({ ...state, lookback_days: days })
+                    setError(null)
+                  }}
+                  className={`px-4 py-2.5 rounded-lg border-2 font-medium transition-all ${
+                    state.lookback_days === days
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                  aria-pressed={state.lookback_days === days}
+                >
+                  {days} days
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">How far back to include data in the report</p>
+          </div>
+
+          {/* Property Type */}
+          <div className="space-y-3">
+            <Label>Property Type (optional)</Label>
+            <div className="grid sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              {propertyTypes.map((type) => {
+                const Icon = type.icon
+                return (
+                  <button
+                    key={type.id}
+                    type="button"
+                    onClick={() => togglePropertyType(type.id)}
+                    className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                      state.property_types.includes(type.id)
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                    aria-pressed={state.property_types.includes(type.id)}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span className="font-medium text-sm">{type.name}</span>
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground">Leave empty to include all property types</p>
+          </div>
+
+          {/* Price Range */}
+          <div className="space-y-3">
+            <Label>Price Range (optional)</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="minprice" className="text-xs text-muted-foreground">
+                  Minimum Price
+                </Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="minprice"
+                    type="number"
+                    placeholder="0"
+                    value={state.minprice}
+                    onChange={(e) => setState({ ...state, minprice: e.target.value })}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="maxprice" className="text-xs text-muted-foreground">
+                  Maximum Price
+                </Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="maxprice"
+                    type="number"
+                    placeholder="No limit"
+                    value={state.maxprice}
+                    onChange={(e) => setState({ ...state, maxprice: e.target.value })}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
             </div>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="maxprice" className="text-xs text-muted-foreground">
-              Max
-            </Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-              <Input
-                id="maxprice"
-                type="number"
-                placeholder="No limit"
-                value={state.maxprice}
-                onChange={(e) => setState({ ...state, maxprice: e.target.value })}
-                className="pl-7 h-11"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
 
 // Step 4: Review
 function Step4Review({ state }: { state: WizardState }) {
-  const payload = buildPayload(state)
+  const selectedType = reportTypes.find((t) => t.id === state.report_type)
 
-  const reportTypeLabels: Record<ReportType, string> = {
-    market_snapshot: "Market Snapshot",
-    new_listings: "New Listings",
-    new_listings_gallery: "New Listings Gallery",
-    featured_listings: "Featured Listings",
-    closed: "Closed Sales",
-    inventory: "Inventory",
-    price_bands: "Price Bands",
-    open_houses: "Open Houses",
+  const formatArea = () => {
+    if (state.area_mode === "city") return state.city
+    return `${state.zips.length} ZIP code${state.zips.length !== 1 ? "s" : ""}`
+  }
+
+  const formatPriceRange = () => {
+    if (!state.minprice && !state.maxprice) return null
+    const min = state.minprice ? `$${Number(state.minprice).toLocaleString()}` : "$0"
+    const max = state.maxprice ? `$${Number(state.maxprice).toLocaleString()}` : "No limit"
+    return `${min} - ${max}`
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-display font-semibold">Review & Generate</h3>
-        <p className="text-sm text-muted-foreground mt-1">Verify your configuration before generating</p>
+        <h2 className="font-display font-semibold text-xl mb-1">Review Report</h2>
+        <p className="text-sm text-muted-foreground">Verify all details before generating your report</p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Summary Panel */}
-        <div className="space-y-4 p-6 rounded-xl bg-muted/30 border border-border/50">
-          <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Summary</h4>
-
-          <div className="space-y-3">
+      <Card>
+        <CardContent className="pt-6 space-y-4">
+          <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <p className="text-xs text-muted-foreground">Report Type</p>
-              <p className="text-sm font-medium font-display">{reportTypeLabels[state.report_type!]}</p>
+              <p className="text-xs text-muted-foreground mb-1">Report Type</p>
+              <p className="font-medium">{selectedType?.name}</p>
             </div>
-
             <div>
-              <p className="text-xs text-muted-foreground">Area</p>
-              {state.area_mode === "city" ? (
-                <p className="text-sm font-medium font-display">{state.city}</p>
-              ) : (
-                <p className="text-sm font-medium font-display">{state.zips.length} ZIP codes</p>
-              )}
+              <p className="text-xs text-muted-foreground mb-1">Area</p>
+              <p className="font-medium">{formatArea()}</p>
             </div>
-
             <div>
-              <p className="text-xs text-muted-foreground">Lookback</p>
-              <p className="text-sm font-medium font-display">{state.lookback_days} days</p>
+              <p className="text-xs text-muted-foreground mb-1">Lookback Period</p>
+              <p className="font-medium">{state.lookback_days} days</p>
             </div>
-
             {state.property_types.length > 0 && (
               <div>
-                <p className="text-xs text-muted-foreground">Property Types</p>
-                <p className="text-sm font-medium font-display">{state.property_types.join(", ")}</p>
+                <p className="text-xs text-muted-foreground mb-1">Property Types</p>
+                <p className="font-medium">{state.property_types.join(", ")}</p>
               </div>
             )}
-
-            {(state.minprice || state.maxprice) && (
+            {formatPriceRange() && (
               <div>
-                <p className="text-xs text-muted-foreground">Price Range</p>
-                <p className="text-sm font-medium font-display">
-                  ${state.minprice || "0"} - ${state.maxprice || "∞"}
-                </p>
+                <p className="text-xs text-muted-foreground mb-1">Price Range</p>
+                <p className="font-medium">{formatPriceRange()}</p>
               </div>
             )}
           </div>
-        </div>
 
-        {/* API Payload */}
-        <div className="space-y-3 p-6 rounded-xl bg-muted/30 border border-border/50">
-          <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">API Payload</h4>
-          <pre className="text-xs bg-background/80 p-4 rounded-lg border border-border/50 overflow-x-auto font-mono">
-            <code className="text-primary">{JSON.stringify(payload, null, 2)}</code>
-          </pre>
-        </div>
-      </div>
+          {state.area_mode === "zips" && state.zips.length > 0 && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">ZIP Codes</p>
+              <div className="flex flex-wrap gap-2">
+                {state.zips.map((zip) => (
+                  <Badge key={zip} variant="secondary">
+                    {zip}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

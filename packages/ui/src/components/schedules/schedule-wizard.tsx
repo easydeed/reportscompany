@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Checkbox } from "../ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group"
 import { ScrollArea } from "../ui/scroll-area"
-import { Stepper } from "../stepper"
+import { HorizontalStepper } from "../horizontal-stepper"
 import { TagInput } from "../tag-input"
 import { TimePicker } from "../time-picker"
 import { CadencePicker } from "../cadence-picker"
@@ -36,11 +36,11 @@ import { type ScheduleWizardState, type ReportType, type Weekday, weekdayLabels 
 import { cn } from "../../lib/utils"
 
 const steps = [
-  { title: "Basics", description: "Name and report type" },
-  { title: "Area", description: "Select location" },
-  { title: "Cadence", description: "Schedule frequency" },
-  { title: "Recipients", description: "Email addresses" },
-  { title: "Review", description: "Confirm details" },
+  { id: "basics", label: "Basics" },
+  { id: "area", label: "Area" },
+  { id: "cadence", label: "Cadence" },
+  { id: "recipients", label: "Recipients" },
+  { id: "review", label: "Review" },
 ]
 
 const reportTypes = [
@@ -881,7 +881,7 @@ export function ScheduleWizard({ onSubmit, onCancel }: ScheduleWizardProps) {
         </Button>
       </div>
 
-      <Stepper steps={steps} currentStep={currentStep} />
+      <HorizontalStepper steps={steps} currentStep={currentStep} />
 
       {error && (
         <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive" role="alert">
