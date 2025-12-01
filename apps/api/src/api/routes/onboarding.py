@@ -163,7 +163,7 @@ def check_auto_completions(cur, user_id: str, account_id: str, account_type: str
     # Check first schedule
     cur.execute("""
         SELECT COUNT(*) FROM schedules
-        WHERE account_id = %s::uuid AND is_active = TRUE
+        WHERE account_id = %s::uuid AND active = TRUE
     """, (account_id,))
     schedule_count = cur.fetchone()[0]
     if schedule_count > 0:
