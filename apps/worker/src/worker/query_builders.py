@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 
 # Credential detection for feature flags
 SIMPLYRETS_USERNAME = os.getenv("SIMPLYRETS_USERNAME", "simplyrets")
-SIMPLYRETS_VENDOR = os.getenv("SIMPLYRETS_VENDOR", "crmls")  # MLS vendor ID
+SIMPLYRETS_VENDOR = os.getenv("SIMPLYRETS_VENDOR", "")  # MLS vendor ID - only set if needed
 IS_DEMO = SIMPLYRETS_USERNAME.lower() == "simplyrets"
 IS_PRODUCTION = not IS_DEMO
 
@@ -24,7 +24,7 @@ ALLOW_SORTING = IS_PRODUCTION
 
 print(f"[query_builders] Mode: {'PRODUCTION' if IS_PRODUCTION else 'DEMO'}")
 print(f"[query_builders] Username: {SIMPLYRETS_USERNAME}")
-print(f"[query_builders] Vendor: {SIMPLYRETS_VENDOR}")
+print(f"[query_builders] Vendor: {SIMPLYRETS_VENDOR or '(not set)'}")
 print(f"[query_builders] City search: {'ENABLED' if ALLOW_CITY_SEARCH else 'DISABLED (use ZIP codes)'}")
 print(f"[query_builders] Sorting: {'ENABLED' if ALLOW_SORTING else 'DISABLED'}")
 
@@ -32,10 +32,14 @@ print(f"[query_builders] Sorting: {'ENABLED' if ALLOW_SORTING else 'DISABLED'}")
 def _common_params() -> Dict:
     """
     Common parameters for all SimplyRETS queries.
-    - vendor: MLS feed identifier (e.g., 'crmls')
+    - vendor: MLS feed identifier (e.g., 'crmls') - only if explicitly set
+    
+    Note: The vendor parameter may not be supported by all SimplyRETS accounts.
+    Only include it if SIMPLYRETS_VENDOR is explicitly set in environment.
     """
-    if IS_PRODUCTION:
-        return {"vendor": SIMPLYRETS_VENDOR}
+    vendor = os.getenv("SIMPLYRETS_VENDOR")  # Only use if explicitly set
+    if vendor:
+        return {"vendor": vendor}
     return {}
 
 # Common helpers
