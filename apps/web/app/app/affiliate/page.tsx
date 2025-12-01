@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Building2 } from 'lucide-react';
 import { AffiliateDashboardShell, type AffiliateDashboardShellProps } from '@/components/v0-styling/AffiliateDashboardShell';
+import { DashboardOnboarding } from '@/components/onboarding/dashboard-onboarding';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
@@ -131,6 +132,11 @@ export default async function AffiliateDashboardPage() {
     sponsoredAccounts: data.sponsored_accounts,
   };
 
-  return <AffiliateDashboardShell {...shellProps} />;
+  return (
+    <>
+      <DashboardOnboarding />
+      <AffiliateDashboardShell {...shellProps} />
+    </>
+  );
 }
 

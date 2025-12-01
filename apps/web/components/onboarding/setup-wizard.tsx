@@ -33,6 +33,7 @@ interface SetupWizardProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onComplete?: () => void
+  isAffiliate?: boolean
 }
 
 type WizardStep = "welcome" | "profile" | "branding" | "complete"
@@ -50,11 +51,12 @@ interface BrandingData {
   primary_color: string
 }
 
-export function SetupWizard({ open, onOpenChange, onComplete }: SetupWizardProps) {
+export function SetupWizard({ open, onOpenChange, onComplete, isAffiliate = false }: SetupWizardProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [step, setStep] = useState<WizardStep>("welcome")
   const [saving, setSaving] = useState(false)
+  const [accountType, setAccountType] = useState<string | null>(null)
 
   const [profile, setProfile] = useState<ProfileData>({
     first_name: "",
@@ -91,7 +93,7 @@ export function SetupWizard({ open, onOpenChange, onComplete }: SetupWizardProps
         })
       }
 
-      // Load branding
+      // Load branding and account type
       const brandingRes = await fetch("/api/proxy/v1/account")
       if (brandingRes.ok) {
         const data = await brandingRes.json()
@@ -99,11 +101,15 @@ export function SetupWizard({ open, onOpenChange, onComplete }: SetupWizardProps
           logo_url: data.logo_url || null,
           primary_color: data.primary_color || "#7C3AED",
         })
+        setAccountType(data.account_type || null)
       }
     } catch (error) {
       console.error("Failed to load existing data:", error)
     }
   }
+
+  // Check if user is an affiliate
+  const isAffiliateAccount = isAffiliate || accountType === "INDUSTRY_AFFILIATE"
 
   async function saveProfile() {
     setSaving(true)
@@ -190,7 +196,12 @@ export function SetupWizard({ open, onOpenChange, onComplete }: SetupWizardProps
     } else if (step === "complete") {
       onOpenChange(false)
       onComplete?.()
-      router.push("/app/reports/new")
+      // Route affiliates to their dashboard, agents to create report
+      if (isAffiliateAccount) {
+        router.push("/app/affiliate")
+      } else {
+        router.push("/app/reports/new")
+      }
     }
   }
 
@@ -243,17 +254,29 @@ export function SetupWizard({ open, onOpenChange, onComplete }: SetupWizardProps
                     <Palette className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <p className="font-medium text-sm">Set up your branding</p>
-                    <p className="text-xs text-muted-foreground">Upload your logo and colors</p>
+                    <p className="font-medium text-sm">
+                      {isAffiliateAccount ? "Set up white-label branding" : "Set up your branding"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {isAffiliateAccount ? "Your branding appears on sponsored agent reports" : "Upload your logo and colors"}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <FileText className="w-4 h-4 text-primary" />
+                    {isAffiliateAccount ? (
+                      <Building className="w-4 h-4 text-primary" />
+                    ) : (
+                      <FileText className="w-4 h-4 text-primary" />
+                    )}
                   </div>
                   <div>
-                    <p className="font-medium text-sm">Create your first report</p>
-                    <p className="text-xs text-muted-foreground">Generate a market snapshot</p>
+                    <p className="font-medium text-sm">
+                      {isAffiliateAccount ? "Invite your first agent" : "Create your first report"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {isAffiliateAccount ? "Sponsor agents with your branding" : "Generate a market snapshot"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -423,21 +446,36 @@ export function SetupWizard({ open, onOpenChange, onComplete }: SetupWizardProps
               </div>
               <DialogTitle className="text-2xl">You're all set!</DialogTitle>
               <DialogDescription className="text-base mt-2">
-                Your account is ready. Let's create your first market report.
+                {isAffiliateAccount 
+                  ? "Your affiliate account is ready. Start inviting agents to sponsor them with your branding."
+                  : "Your account is ready. Let's create your first market report."
+                }
               </DialogDescription>
             </DialogHeader>
             <div className="py-6">
               <div className="rounded-lg border bg-gradient-to-br from-primary/5 to-primary/10 p-4 text-center">
-                <FileText className="w-12 h-12 text-primary mx-auto mb-3" />
-                <h3 className="font-semibold mb-1">Create Your First Report</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Generate a beautiful market snapshot report in seconds.
-                </p>
+                {isAffiliateAccount ? (
+                  <>
+                    <Building className="w-12 h-12 text-primary mx-auto mb-3" />
+                    <h3 className="font-semibold mb-1">Invite Your First Agent</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Sponsored agents get your branding on all their reports.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-12 h-12 text-primary mx-auto mb-3" />
+                    <h3 className="font-semibold mb-1">Create Your First Report</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Generate a beautiful market snapshot report in seconds.
+                    </p>
+                  </>
+                )}
               </div>
             </div>
             <div className="flex justify-center">
               <Button onClick={handleNext} size="lg" className="gap-2">
-                Create Report
+                {isAffiliateAccount ? "Go to Dashboard" : "Create Report"}
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </div>
