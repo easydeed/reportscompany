@@ -17,10 +17,12 @@ IS_PRODUCTION = not IS_DEMO
 # - No `sort` parameter
 # Production credentials enable:
 # - Multi-city MLS data
-# - City search via `cities` parameter (more explicit than `q`)
-# - Full sorting support
+# - City search via `q` parameter (fuzzy search - more widely supported)
+# - Sorting support (disabled for now - may not be supported by all accounts)
 ALLOW_CITY_SEARCH = IS_PRODUCTION
-ALLOW_SORTING = IS_PRODUCTION
+# Disable sorting for now - some accounts don't support it
+# Set SIMPLYRETS_ALLOW_SORT=true to enable if your account supports it
+ALLOW_SORTING = os.getenv("SIMPLYRETS_ALLOW_SORT", "").lower() == "true"
 
 print(f"[query_builders] Mode: {'PRODUCTION' if IS_PRODUCTION else 'DEMO'}")
 print(f"[query_builders] Username: {SIMPLYRETS_USERNAME}")
@@ -58,9 +60,12 @@ def _location(params: dict) -> Dict:
     - Use `postalCodes` for ZIP-based filtering
     - `q` is fuzzy search (MLS #, address, city, zip) - less precise
     
+    NOTE: Some SimplyRETS accounts may not support `cities` parameter.
+    We use `q` as a fallback which performs fuzzy search.
+    
     Priority:
     1. If zips present: use postalCodes=comma-separated list
-    2. Else if city present (PRODUCTION mode): use cities=<city>
+    2. Else if city present (PRODUCTION mode): use q=<city> (fuzzy search)
     3. Else (DEMO mode): return empty (Houston-only data by default)
     """
     zips = params.get("zips") or []
@@ -70,10 +75,10 @@ def _location(params: dict) -> Dict:
     if zips:
         return {"postalCodes": ",".join(z.strip() for z in zips if z.strip())}
     
-    # City search only works with production credentials
-    # Use `cities` parameter for explicit city filtering (per ReportsQueries.md)
+    # City search - use `q` parameter (fuzzy search) which works with all accounts
+    # Note: `cities` parameter is more explicit but may not be supported by all accounts
     if city and ALLOW_CITY_SEARCH:
-        return {"cities": city}
+        return {"q": city}
     
     # Demo mode: no location filter (Houston-only data by default)
     return {}
