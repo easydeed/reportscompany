@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { DashboardOnboarding } from "@/components/onboarding"
 
 export const dynamic = 'force-dynamic'
 
@@ -83,7 +84,10 @@ export default async function Overview() {
           Your account activity and key metrics
         </p>
       </div>
-      
+
+      {/* Onboarding Checklist & Wizard */}
+      <DashboardOnboarding />
+
       {/* Phase 29E: Usage Warning Banner */}
       {planUsage && planUsage.decision === 'ALLOW_WITH_WARNING' && (
         <Alert className="border-yellow-500/30 bg-yellow-500/10">

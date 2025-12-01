@@ -1,9 +1,13 @@
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, HTTPException, Request, Response, status, BackgroundTasks
 from pydantic import BaseModel, EmailStr
 import psycopg
+import logging
 from datetime import datetime
 from ..settings import settings
 from ..auth import sign_jwt, check_password, hash_password
+from ..services.email import send_welcome_email
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1")
 
@@ -102,14 +106,15 @@ class AcceptInviteResponse(BaseModel):
 
 
 @router.post("/auth/register")
-def register(body: RegisterIn, response: Response):
+def register(body: RegisterIn, response: Response, background_tasks: BackgroundTasks):
     """
     Register a new user with a free account.
-    
+
     Creates:
     - A new user with hashed password
     - A new REGULAR account on the free plan
     - Links user as OWNER of the account
+    - Sends welcome email
     - Returns auth session (JWT + cookie)
     """
     name = body.name.strip()
@@ -190,7 +195,15 @@ def register(body: RegisterIn, response: Response):
                 samesite="lax",
                 max_age=7 * 24 * 60 * 60  # 7 days
             )
-            
+
+            # 6. Send welcome email in background
+            try:
+                background_tasks.add_task(send_welcome_email, email, name)
+                logger.info(f"Welcome email queued for {email}")
+            except Exception as e:
+                # Don't fail registration if email fails
+                logger.error(f"Failed to queue welcome email for {email}: {e}")
+
             return {"ok": True}
 
 
