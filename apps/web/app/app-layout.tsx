@@ -18,7 +18,6 @@ import {
   FileText,
   Palette,
   CreditCard,
-  Search,
   ChevronDown,
   Shield,
   Calendar,
@@ -26,7 +25,6 @@ import {
   Settings,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -123,12 +121,7 @@ function DashboardTopbar({ accountType, isAdmin, isAffiliate }: { accountType?: 
   return (
     <header className="flex h-12 shrink-0 items-center gap-4 border-b border-[var(--app-border)] bg-[var(--app-surface)] px-4">
       <SidebarTrigger />
-      <div className="flex items-center gap-4 flex-1">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--app-muted)]" />
-          <Input placeholder="Search reports..." className="pl-9 bg-slate-50 border-[var(--app-border)]" />
-        </div>
-      </div>
+      <div className="flex-1" />
 
       {/* Account Type Badge */}
       {accountType === "INDUSTRY_AFFILIATE" && (
