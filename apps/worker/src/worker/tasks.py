@@ -339,8 +339,15 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
 
         # 2) Compute results (cache by report_type + params hash)
         print(f"🔍 REPORT RUN {run_id}: step=data_fetch")
-        city = (params or {}).get("city") or (params or {}).get("zips", [])[0] if (params or {}).get("zips") else "Houston"
-        lookback = int((params or {}).get("lookback_days") or 30)
+        # Fix: Properly extract city from params - don't default to Houston
+        _params = params or {}
+        city = _params.get("city")
+        if not city and _params.get("zips"):
+            city = _params.get("zips")[0]  # Use first ZIP as fallback
+        if not city:
+            city = "Unknown"  # Don't default to Houston - this indicates a problem
+        print(f"🔍 REPORT RUN {run_id}: city={city}")
+        lookback = int(_params.get("lookback_days") or 30)
         cache_payload = {"type": report_type, "params": params}
         result = cache_get("report", cache_payload)
         if not result:
