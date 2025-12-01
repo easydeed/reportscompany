@@ -97,6 +97,7 @@ function StepBasics({ state, setState }: { state: ScheduleWizardState; setState:
               value={state.name}
               onChange={(e) => setState({ ...state, name: e.target.value })}
               aria-required="true"
+              className="h-11"
             />
             <p className="text-xs text-muted-foreground">Choose a descriptive name for this schedule</p>
           </div>
@@ -234,6 +235,7 @@ function StepArea({ state, setState }: { state: ScheduleWizardState; setState: (
                 value={state.city}
                 onChange={(e) => setState({ ...state, city: e.target.value })}
                 aria-required="true"
+                className="h-11"
               />
             </div>
           )}
@@ -257,6 +259,7 @@ function StepArea({ state, setState }: { state: ScheduleWizardState; setState: (
                     }
                   }}
                   maxLength={5}
+                  className="h-11"
                 />
                 <Button type="button" onClick={addZip} disabled={!zipInput || zipInput.length !== 5}>
                   Add
@@ -394,7 +397,7 @@ function StepCadence({ state, setState }: { state: ScheduleWizardState; setState
                 type="time"
                 value={state.time}
                 onChange={(e) => setState({ ...state, time: e.target.value })}
-                className="max-w-[200px]"
+                className="h-11 max-w-[200px]"
                 aria-required="true"
               />
             </div>
@@ -676,7 +679,7 @@ function StepRecipients({
                       addEmail()
                     }
                   }}
-                  className="bg-background/50"
+                  className="h-11 bg-background/50"
                   aria-invalid={!!emailError}
                   aria-describedby={emailError ? "email-error" : undefined}
                 />
@@ -898,17 +901,17 @@ export function ScheduleWizard({ onSubmit, onCancel }: ScheduleWizardProps) {
       </div>
 
       <div className="flex justify-between pt-4 border-t border-border">
-        <Button variant="outline" onClick={handleBack} disabled={currentStep === 0} className="gap-2 bg-transparent">
+        <Button variant="outline" onClick={handleBack} disabled={currentStep === 0} className="gap-2 h-11 bg-transparent">
           <ArrowLeft className="w-4 h-4" />
           Back
         </Button>
         {currentStep < steps.length - 1 ? (
-          <Button onClick={handleNext} className="gap-2">
+          <Button onClick={handleNext} className="gap-2 h-11">
             Next
             <ArrowRight className="w-4 h-4" />
           </Button>
         ) : (
-          <Button onClick={handleSubmit} className="gap-2">
+          <Button onClick={handleSubmit} className="gap-2 h-11">
             <FileText className="w-4 h-4" />
             Create Schedule
           </Button>

@@ -18,11 +18,11 @@ interface HorizontalStepperProps {
 export function HorizontalStepper({ steps, currentStep, className }: HorizontalStepperProps) {
   return (
     <div className={cn("w-full", className)}>
-      {/* Progress bar */}
+      {/* Progress bar - line is vertically centered with circles (h-10 = 40px, so center is 20px = top-[19px] accounting for line height) */}
       <div className="relative mb-8">
-        <div className="absolute top-5 left-0 right-0 h-0.5 bg-border" />
+        <div className="absolute top-[19px] left-0 right-0 h-0.5 bg-border" />
         <motion.div
-          className="absolute top-5 left-0 h-0.5 gradient-quantum"
+          className="absolute top-[19px] left-0 h-0.5 bg-primary"
           initial={{ width: 0 }}
           animate={{
             width: `${(currentStep / (steps.length - 1)) * 100}%`,

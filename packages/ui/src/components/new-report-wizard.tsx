@@ -206,17 +206,17 @@ export function NewReportWizard({ onSubmit, onCancel }: NewReportWizardProps) {
       </div>
 
       <div className="flex justify-between pt-4 border-t border-border">
-        <Button variant="outline" onClick={handleBack} disabled={currentStep === 0} className="gap-2 bg-transparent">
+        <Button variant="outline" onClick={handleBack} disabled={currentStep === 0} className="gap-2 h-11 bg-transparent">
           <ArrowLeft className="w-4 h-4" />
           Back
         </Button>
         {currentStep < steps.length - 1 ? (
-          <Button onClick={handleNext} className="gap-2">
+          <Button onClick={handleNext} className="gap-2 h-11">
             Next
             <ArrowRight className="w-4 h-4" />
           </Button>
         ) : (
-          <Button onClick={handleSubmit} className="gap-2">
+          <Button onClick={handleSubmit} className="gap-2 h-11">
             <FileText className="w-4 h-4" />
             Generate Report
           </Button>
@@ -369,6 +369,7 @@ function Step2Area({
                   setError(null)
                 }}
                 aria-required="true"
+                className="h-11"
               />
             </div>
           )}
@@ -392,6 +393,7 @@ function Step2Area({
                     }
                   }}
                   maxLength={5}
+                  className="h-11"
                 />
                 <Button type="button" onClick={addZip} disabled={!zipInput || zipInput.length !== 5 || state.zips.length >= 10}>
                   Add
@@ -520,7 +522,7 @@ function Step3Options({
                     placeholder="0"
                     value={state.minprice}
                     onChange={(e) => setState({ ...state, minprice: e.target.value })}
-                    className="pl-9"
+                    className="h-11 pl-9"
                   />
                 </div>
               </div>
@@ -536,7 +538,7 @@ function Step3Options({
                     placeholder="No limit"
                     value={state.maxprice}
                     onChange={(e) => setState({ ...state, maxprice: e.target.value })}
-                    className="pl-9"
+                    className="h-11 pl-9"
                   />
                 </div>
               </div>
