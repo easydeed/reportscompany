@@ -6,25 +6,37 @@ from typing import Dict, List, Optional
 
 # Credential detection for feature flags
 SIMPLYRETS_USERNAME = os.getenv("SIMPLYRETS_USERNAME", "simplyrets")
+SIMPLYRETS_VENDOR = os.getenv("SIMPLYRETS_VENDOR", "crmls")  # MLS vendor ID
 IS_DEMO = SIMPLYRETS_USERNAME.lower() == "simplyrets"
 IS_PRODUCTION = not IS_DEMO
 
 # Feature flags based on credential mode
 # Demo credentials (simplyrets/simplyrets) have restrictions:
 # - Houston-only data
-# - No city search via `q` parameter (use postalCodes only)
+# - No city search via `cities` parameter (use postalCodes only)
 # - No `sort` parameter
 # Production credentials enable:
 # - Multi-city MLS data
-# - City search via `q` parameter
+# - City search via `cities` parameter (more explicit than `q`)
 # - Full sorting support
 ALLOW_CITY_SEARCH = IS_PRODUCTION
 ALLOW_SORTING = IS_PRODUCTION
 
 print(f"[query_builders] Mode: {'PRODUCTION' if IS_PRODUCTION else 'DEMO'}")
 print(f"[query_builders] Username: {SIMPLYRETS_USERNAME}")
+print(f"[query_builders] Vendor: {SIMPLYRETS_VENDOR}")
 print(f"[query_builders] City search: {'ENABLED' if ALLOW_CITY_SEARCH else 'DISABLED (use ZIP codes)'}")
 print(f"[query_builders] Sorting: {'ENABLED' if ALLOW_SORTING else 'DISABLED'}")
+
+# Common base params (per ReportsQueries.md)
+def _common_params() -> Dict:
+    """
+    Common parameters for all SimplyRETS queries.
+    - vendor: MLS feed identifier (e.g., 'crmls')
+    """
+    if IS_PRODUCTION:
+        return {"vendor": SIMPLYRETS_VENDOR}
+    return {}
 
 # Common helpers
 
@@ -36,11 +48,16 @@ def _date_window(lookback_days: int) -> tuple[str, str]:
 def _location(params: dict) -> Dict:
     """
     Location can be provided as a single city string or a list of ZIPs.
-    - If zips present and non-empty: use postalCodes=comma-separated list
-    - Else if PRODUCTION mode: use q=<city> (city search)
-    - Else (DEMO mode): return empty (Houston-only data)
     
-    Note: Demo credentials do not support the `q` parameter.
+    Per ReportsQueries.md:
+    - Use `cities` parameter for explicit city filtering (recommended)
+    - Use `postalCodes` for ZIP-based filtering
+    - `q` is fuzzy search (MLS #, address, city, zip) - less precise
+    
+    Priority:
+    1. If zips present: use postalCodes=comma-separated list
+    2. Else if city present (PRODUCTION mode): use cities=<city>
+    3. Else (DEMO mode): return empty (Houston-only data by default)
     """
     zips = params.get("zips") or []
     city = (params.get("city") or "").strip()
@@ -50,8 +67,9 @@ def _location(params: dict) -> Dict:
         return {"postalCodes": ",".join(z.strip() for z in zips if z.strip())}
     
     # City search only works with production credentials
+    # Use `cities` parameter for explicit city filtering (per ReportsQueries.md)
     if city and ALLOW_CITY_SEARCH:
-        return {"q": city}
+        return {"cities": city}
     
     # Demo mode: no location filter (Houston-only data by default)
     return {}
@@ -75,82 +93,118 @@ def _filters(filters: Optional[dict]) -> Dict:
 
 def build_market_snapshot(params: dict) -> Dict:
     """
-    Active + Pending + Closed in date window.
-    NOTE: sort parameter removed - not supported by all MLS vendors when using city search.
+    Market Snapshot: Active + Pending + Closed in date window.
+    
+    Per ReportsQueries.md:
+    - status: Active,Pending,Closed
+    - mindate/maxdate: lookback window
+    - sort: -listDate (newest listings first) - only in production
+    - limit: 1000
     """
     start, end = _date_window(params.get("lookback_days") or 30)
     q = {
+        **_common_params(),
         "status": "Active,Pending,Closed",
         "mindate": start,
         "maxdate": end,
-        "limit": 500,
+        "limit": 1000,
+        "offset": 0,
     }
+    # Add sorting in production mode
+    if ALLOW_SORTING:
+        q["sort"] = "-listDate"
     q |= _location(params)
     q |= _filters(params.get("filters"))
     return q
 
 def build_new_listings(params: dict) -> Dict:
     """
-    Fresh actives in date window.
-    NOTE: sort parameter removed - not supported by all MLS vendors when using city search.
+    New Listings: Fresh actives in date window.
+    
+    Per ReportsQueries.md (Listing Inventory):
+    - status: Active
+    - mindate/maxdate: lookback window
+    - sort: -listDate (newest first) - only in production
     """
     start, end = _date_window(params.get("lookback_days") or 30)
     q = {
+        **_common_params(),
         "status": "Active",
         "mindate": start,
         "maxdate": end,
         "limit": 500,
+        "offset": 0,
     }
+    if ALLOW_SORTING:
+        q["sort"] = "-listDate"
     q |= _location(params)
     q |= _filters(params.get("filters"))
     return q
 
 def build_closed(params: dict) -> Dict:
     """
-    Recently closed within date window.
-    NOTE: For a first pass we use mindate/maxdate window with status=Closed.
-    (If needed later, we can switch to close-date-specific params.)
-    Sort parameter removed - not supported by all MLS vendors when using city search.
+    Closed Listings: Recently closed sales in date window.
+    
+    Per ReportsQueries.md:
+    - status: Closed
+    - mindate/maxdate: lookback window
+    - sort: -closeDate (most recent closings first) - only in production
+    - limit: 1000
     """
     start, end = _date_window(params.get("lookback_days") or 30)
     q = {
+        **_common_params(),
         "status": "Closed",
         "mindate": start,
         "maxdate": end,
-        "limit": 500,
+        "limit": 1000,
+        "offset": 0,
     }
+    # Sort by close date for closed listings (per ReportsQueries.md)
+    if ALLOW_SORTING:
+        q["sort"] = "-closeDate"
     q |= _location(params)
     q |= _filters(params.get("filters"))
     return q
 
 def build_inventory_by_zip(params: dict) -> Dict:
     """
-    All currently active listings (no date window).
-    Typically grouped by ZIP code in the compute layer.
-    NOTE: sort parameter removed - not supported by all MLS vendors when using city search.
+    Listing Inventory: All currently active listings (no date window).
+    
+    Per ReportsQueries.md:
+    - status: Active
+    - sort: daysOnMarket (lowest DOM first = freshest) - only in production
+    - No date filter (current inventory snapshot)
     """
     q = {
+        **_common_params(),
         "status": "Active",
         "limit": 500,
+        "offset": 0,
     }
+    if ALLOW_SORTING:
+        q["sort"] = "daysOnMarket"  # Freshest listings first
     q |= _location(params)
     q |= _filters(params.get("filters"))
     return q
 
 def build_open_houses(params: dict) -> Dict:
     """
-    Active listings with upcoming/recent open houses.
-    Uses date window to capture current week's open houses.
-    Note: SimplyRETS filters listings with openHouse data; we'll need to
-    check for openHouse array in the response during compute phase.
-    Sort parameter removed - not supported by all MLS vendors when using city search.
+    Open Houses: Active listings with upcoming open houses.
+    
+    Per ReportsQueries.md:
+    - status: Active
+    - mindate/maxdate: week window
+    - Post-filter for listings with openHouse data in compute layer
     """
     start, end = _date_window(params.get("lookback_days") or 7)  # Default 7 days for open houses
     q = {
+        **_common_params(),
         "status": "Active",
         "mindate": start,
         "maxdate": end,
         "limit": 500,
+        "offset": 0,
     }
     q |= _location(params)
     q |= _filters(params.get("filters"))
@@ -160,22 +214,21 @@ def build_open_houses(params: dict) -> Dict:
 
 def build_price_bands(params: dict) -> Dict:
     """
-    Active listings across all price ranges.
-    Price banding (segmentation) happens in the compute layer.
+    Price Bands: Active listings for price tier analysis.
     
-    Note: For optimal performance, this could be split into multiple
-    API calls with minprice/maxprice filters (see Section 3.6 of docs).
-    Current implementation fetches all Active listings and bands them
-    in the compute phase.
-    Sort parameter removed - not supported by all MLS vendors when using city search.
+    Per ReportsQueries.md:
+    - status: Active
+    - For optimal performance, could split into multiple queries per band
+    - Current implementation fetches all and bands in compute layer
     """
     q = {
+        **_common_params(),
         "status": "Active",
         "limit": 1000,  # Higher limit since we're analyzing the full market
+        "offset": 0,
     }
     q |= _location(params)
     q |= _filters(params.get("filters"))
-    # Optional: If user provides specific bands via filters, we could use minprice/maxprice
     return q
 
 # Dispatcher
@@ -209,7 +262,3 @@ def build_params(report_type: str, params: dict) -> Dict:
     
     # default fallback
     return build_market_snapshot(params)
-
-
-
-
