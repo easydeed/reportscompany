@@ -26,6 +26,7 @@ from .routes.dev_stripe_prices import router as dev_stripe_prices_router
 from .routes.upload import router as upload_router
 from .routes.branding_tools import router as branding_tools_router
 from .routes.users import router as users_router
+from .routes.onboarding import router as onboarding_router
 
 app = FastAPI(
     title="Market Reports API",
@@ -74,6 +75,7 @@ app.include_router(dev_stripe_prices_router)
 app.include_router(upload_router)
 app.include_router(branding_tools_router)
 app.include_router(users_router)
+app.include_router(onboarding_router)
 
 # Root
 @app.get("/")
