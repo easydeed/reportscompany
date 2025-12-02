@@ -7,6 +7,9 @@ class PropertyDataExtractor:
     Mirrors the fields used by our calculators: list/close prices, list/close dates, DOM, area, type, status, CTL, PPSF.
     
     Phase P1: Now extracts hero_photo_url from SimplyRETS photos array for gallery templates.
+    
+    NOTE: SimplyRETS doesn't return daysOnMarket for Closed listings, so we calculate it
+    from listDate to closeDate when available.
     """
 
     def __init__(self, raw: List[Dict[str, Any]]):
@@ -17,7 +20,25 @@ class PropertyDataExtractor:
         for p in self.raw:
             try:
                 addr = p.get("address",{}) ; pr = p.get("property",{}) ; mls=p.get("mls",{}) ; sales=p.get("sales",{})
+                
+                # Parse dates first (we need them for DOM calculation)
+                list_date = _iso(p.get("listDate"))
+                close_date = _iso((sales or {}).get("closeDate"))
+                
+                # DOM: Use API value if available, otherwise calculate from dates
+                # SimplyRETS doesn't return daysOnMarket for Closed listings
                 dom = _int(p.get("daysOnMarket"))
+                if dom is None and list_date and close_date:
+                    # Calculate DOM from list to close date
+                    dom = (close_date - list_date).days
+                    if dom < 0:
+                        dom = 0  # Sanity check
+                elif dom is None and list_date:
+                    # For active/pending: calculate from list date to now
+                    dom = (datetime.now() - list_date).days
+                    if dom < 0:
+                        dom = 0
+                
                 lp  = _int(p.get("listPrice"))
                 cp  = _int((sales or {}).get("closePrice"))
                 area= _int((pr or {}).get("area"))
@@ -48,8 +69,8 @@ class PropertyDataExtractor:
                 
                 out.append({
                     "mls_id": p.get("mlsId"),
-                    "list_date": _iso(p.get("listDate")),
-                    "close_date": _iso((sales or {}).get("closeDate")),
+                    "list_date": list_date,
+                    "close_date": close_date,
                     "status": (mls or {}).get("status") or p.get("status"),
                     "days_on_market": dom,
                     "list_price": lp,
@@ -72,9 +93,17 @@ class PropertyDataExtractor:
         return out
 
 def _iso(s: Optional[str]):
+    """
+    Parse ISO datetime string to timezone-naive datetime for consistent comparisons.
+    SimplyRETS returns dates like: "2025-11-15T00:00:00.000Z"
+    """
     if not s: return None
     try:
-        return datetime.fromisoformat(s.replace("Z","+00:00"))
+        # Parse ISO format (handles Z and +00:00 timezone suffixes)
+        dt = datetime.fromisoformat(s.replace("Z","+00:00"))
+        # Convert to timezone-naive for consistent comparisons
+        # (report_builders.py uses datetime.now() which is timezone-naive)
+        return dt.replace(tzinfo=None)
     except: return None
 
 def _int(v): 

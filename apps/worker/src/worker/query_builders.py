@@ -83,13 +83,13 @@ def _location(params: dict) -> Dict:
     # Demo mode: no location filter (Houston-only data by default)
     return {}
 
-def _filters(filters: Optional[dict]) -> Dict:
+def _filters(filters: Optional[dict], default_type: str = "RES") -> Dict:
     """
     Map optional filters to SimplyRETS params.
     
     Supported inputs (optional):
       - minprice, maxprice: Price range
-      - type: Property type (RES=Residential, CND=Condo, MUL=Multi-family, LND=Land, COM=Commercial)
+      - type: Property type (RES=Residential, CND=Condo, MUL=Multi-family, LND=Land, COM=Commercial, RNT=Rental)
       - subtype: Property subtype (SingleFamilyResidence, Condominium, Townhouse, ManufacturedHome, Duplex)
       - beds, baths: Minimum bedrooms/bathrooms
     
@@ -97,12 +97,20 @@ def _filters(filters: Optional[dict]) -> Dict:
       - type=RES includes all residential (SFR, Condo, Townhouse)
       - subtype is more specific (e.g., SingleFamilyResidence only)
       - Can combine: type=RES + subtype=SingleFamilyResidence
+    
+    IMPORTANT: Defaults to type=RES to exclude rentals (RNT) which have
+    monthly rent prices instead of sale prices. This prevents metrics
+    from being skewed by $3,000-$5,000 rental prices mixed with $1M+ sales.
     """
     f = filters or {}
     out: Dict = {}
     if f.get("minprice") is not None: out["minprice"] = int(f["minprice"])
     if f.get("maxprice") is not None: out["maxprice"] = int(f["maxprice"])
-    if f.get("type"):                 out["type"]     = f["type"]
+    
+    # Default to RES (Residential) to exclude rentals
+    # User can override by explicitly setting type in filters
+    out["type"] = f.get("type") or default_type
+    
     if f.get("subtype"):              out["subtype"]  = f["subtype"]
     if f.get("beds") is not None:     out["minbeds"]  = int(f["beds"])
     if f.get("baths") is not None:    out["minbaths"] = int(f["baths"])

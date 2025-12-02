@@ -73,6 +73,8 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
     AVG_DAYS_PER_MONTH = 30.437
     
     # Calculate date cutoff for filtering
+    # Use timezone-naive datetime for comparison (extract.py strips timezone in _iso)
+    # But some dates may be timezone-aware, so we need to handle both cases
     cutoff_date = datetime.now() - timedelta(days=lookback_days)
     
     # Segment by status
@@ -82,23 +84,45 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
     # Pending: Properties under contract (filter by list_date in period)
     pending = [l for l in listings if l.get("status") == "Pending"]
     
-    # Closed: ONLY those with close_date within the lookback period
-    # This is critical for accurate Closed Sales count
-    closed = [
-        l for l in listings 
-        if l.get("status") == "Closed" 
-        and l.get("close_date") 
-        and l["close_date"] >= cutoff_date
-    ]
-    
-    # Also track all closed for reference (even those outside date range)
+    # All closed (before date filtering)
     all_closed = [l for l in listings if l.get("status") == "Closed"]
     
+    # Debug: Log close_date values to verify extraction
+    print(f"📊 METRICS DEBUG: {len(all_closed)} total Closed listings found")
+    if all_closed:
+        sample = all_closed[0]
+        print(f"📊 METRICS DEBUG: Sample close_date={sample.get('close_date')}, type={type(sample.get('close_date'))}")
+        print(f"📊 METRICS DEBUG: cutoff_date={cutoff_date}, type={type(cutoff_date)}")
+    
+    # Closed: ONLY those with close_date within the lookback period
+    # This is critical for accurate Closed Sales count
+    closed = []
+    for l in all_closed:
+        close_date = l.get("close_date")
+        if close_date:
+            try:
+                # Handle both timezone-aware and timezone-naive datetimes
+                if close_date.tzinfo is not None:
+                    close_date = close_date.replace(tzinfo=None)
+                if close_date >= cutoff_date:
+                    closed.append(l)
+            except Exception as e:
+                print(f"📊 METRICS DEBUG: Error comparing dates: {e}")
+    
+    print(f"📊 METRICS DEBUG: {len(closed)} Closed listings after date filter (cutoff={cutoff_date})")
+    
     # New Listings: Active listings with list_date within the lookback period
-    new_listings = [
-        l for l in active
-        if l.get("list_date") and l["list_date"] >= cutoff_date
-    ]
+    new_listings = []
+    for l in active:
+        list_date = l.get("list_date")
+        if list_date:
+            try:
+                if list_date.tzinfo is not None:
+                    list_date = list_date.replace(tzinfo=None)
+                if list_date >= cutoff_date:
+                    new_listings.append(l)
+            except Exception as e:
+                print(f"📊 METRICS DEBUG: Error comparing list dates: {e}")
     
     # Core metrics (using date-filtered closed listings)
     median_close_price = _median([l["close_price"] for l in closed if l.get("close_price")])
