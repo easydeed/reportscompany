@@ -9,20 +9,31 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
   SidebarFooter,
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import {
   LayoutDashboard,
   FileText,
   Palette,
   CreditCard,
   ChevronDown,
+  ChevronRight,
   Shield,
   Calendar,
   Users,
   Settings,
+  Building2,
+  Building,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -42,8 +53,11 @@ import { AccountSwitcher } from "@/components/account-switcher"
 function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffiliate: boolean }) {
   const pathname = usePathname()
   
+  // Check if we're in admin section
+  const isInAdminSection = pathname?.startsWith("/app/admin")
+  
   // Build navigation based on user role
-  let navigation = isAffiliate
+  const navigation = isAffiliate
     ? [
         // Affiliate navigation - Dashboard first, no Overview
         { name: "Dashboard", href: "/app/affiliate", icon: LayoutDashboard },
@@ -65,10 +79,13 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
         { name: "Billing", href: "/app/billing", icon: CreditCard },
       ]
   
-  // Add Admin link if user is admin
-  if (isAdmin) {
-    navigation.push({ name: "Admin", href: "/app/admin", icon: Shield })
-  }
+  // Admin sub-navigation
+  const adminNavigation = [
+    { name: "Overview", href: "/app/admin", icon: LayoutDashboard },
+    { name: "Title Companies", href: "/app/admin/affiliates", icon: Building2 },
+    { name: "All Accounts", href: "/app/admin/accounts", icon: Building },
+    { name: "All Users", href: "/app/admin/users", icon: Users },
+  ]
 
   return (
     <Sidebar>
@@ -98,6 +115,38 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
               </SidebarMenuItem>
             )
           })}
+          
+          {/* Admin Section with Collapsible Sub-menu */}
+          {isAdmin && (
+            <Collapsible defaultOpen={isInAdminSection} className="group/collapsible">
+              <SidebarMenuItem>
+                <CollapsibleTrigger asChild>
+                  <SidebarMenuButton isActive={isInAdminSection}>
+                    <Shield className="w-4 h-4" />
+                    <span>Admin</span>
+                    <ChevronRight className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                  </SidebarMenuButton>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarMenuSub>
+                    {adminNavigation.map((item) => {
+                      const isSubActive = pathname === item.href
+                      return (
+                        <SidebarMenuSubItem key={item.name}>
+                          <SidebarMenuSubButton asChild isActive={isSubActive}>
+                            <Link href={item.href}>
+                              <item.icon className="w-4 h-4" />
+                              <span>{item.name}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      )
+                    })}
+                  </SidebarMenuSub>
+                </CollapsibleContent>
+              </SidebarMenuItem>
+            </Collapsible>
+          )}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
