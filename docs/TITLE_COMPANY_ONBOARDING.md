@@ -279,14 +279,17 @@ When a rep generates a report, the system determines branding:
 - [x] Branding UI page (`/app/branding`)
 - [x] Image upload component
 - [x] PDF branding injection
+- [x] **Invite system** - Rep invitation via `/v1/affiliate/invite-agent`
+- [x] **Invite emails** - Automated Resend email with invite link
+- [x] **Accept invite flow** - `/welcome?token=` page for password setup
+- [x] **Affiliate onboarding checklist** - Dashboard guidance for new affiliates
+- [x] **User onboarding system** - Step-by-step setup wizard
 
 ### Needs Building 🔧
 
-- [ ] **Bulk import script** - CSV → Database
+- [ ] **Bulk import script** - CSV → Database for batch onboarding
 - [ ] **Asset upload API** - Direct to R2 with URL return
-- [ ] **Admin dashboard** - View/manage all sponsored accounts
-- [ ] **Invite system** - Rep self-registration with invite code
-- [ ] **Welcome email** - Automated onboarding email with credentials
+- [ ] **Admin dashboard** - View/manage all affiliates (superadmin)
 - [ ] **Branding preview** - Live preview before saving
 
 ---
@@ -317,9 +320,18 @@ When a rep generates a report, the system determines branding:
 ### For Scale (Future)
 
 1. Build **admin dashboard** at `/admin/affiliates`
-2. Create **CSV import** endpoint
-3. Add **invite code** system for self-service
-4. Automate **welcome emails** via Resend
+2. Create **CSV import** endpoint for bulk agent onboarding
+3. ~~Add **invite code** system for self-service~~ ✅ Done - `/v1/affiliate/invite-agent`
+4. ~~Automate **welcome emails** via Resend~~ ✅ Done - `send_invite_email()`
+
+### What's Now Automated
+
+When you invite an agent via the affiliate dashboard:
+
+1. **Account Creation**: User + Account + Branding automatically created
+2. **Email Delivery**: Invite email sent via Resend with accept link
+3. **Self-Service Setup**: Agent visits `/welcome?token=...` to set password
+4. **Auto-Linking**: Agent sees affiliate branding on all their reports
 
 ---
 

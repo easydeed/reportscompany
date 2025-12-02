@@ -4,9 +4,10 @@ Affiliate API Routes
 Phase 29C: Industry affiliate dashboard and management
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
 from pydantic import BaseModel, EmailStr
 import secrets
+import logging
 from ..db import db_conn
 from ..services.affiliates import (
     get_affiliate_overview,
@@ -18,7 +19,10 @@ from ..services.branding import (
     validate_brand_input,
     Brand
 )
+from ..services.email import send_invite_email
 from .reports import require_account_id
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/affiliate", tags=["affiliate"])
 
@@ -82,6 +86,7 @@ class InviteAgentRequest(BaseModel):
 def invite_agent(
     body: InviteAgentRequest,
     request: Request,
+    background_tasks: BackgroundTasks,
     account_id: str = Depends(require_account_id)
 ):
     """
@@ -171,17 +176,52 @@ def invite_agent(
             VALUES (%s, %s::uuid, %s::uuid)
         """, (token, new_user_id, new_account_id))
         
+        # Get inviter info (affiliate account name)
+        cur.execute("""
+            SELECT a.name FROM accounts a WHERE a.id = %s::uuid
+        """, (account_id,))
+        affiliate_row = cur.fetchone()
+        company_name = affiliate_row[0] if affiliate_row else "Your Sponsor"
+
+        # Get inviter user name (the user making the request)
+        # Extract user_id from the JWT token context
+        user_id_from_token = getattr(request.state, 'user_id', None)
+        inviter_name = company_name  # Default to company name
+
+        if user_id_from_token:
+            cur.execute("""
+                SELECT COALESCE(first_name || ' ' || last_name, email)
+                FROM users WHERE id = %s::uuid
+            """, (user_id_from_token,))
+            inviter_row = cur.fetchone()
+            if inviter_row and inviter_row[0]:
+                inviter_name = inviter_row[0].strip()
+                if not inviter_name or inviter_name == ' ':
+                    inviter_name = company_name
+
         conn.commit()
-        
-        # TODO: Send invitation email (Phase 29C - optional enhancement)
-        # For now, just return the token
-        
+
+        # Send invitation email in background
+        try:
+            background_tasks.add_task(
+                send_invite_email,
+                body.email,
+                inviter_name,
+                company_name,
+                token
+            )
+            logger.info(f"Invite email queued for {body.email} from {company_name}")
+        except Exception as e:
+            # Don't fail the invite if email fails
+            logger.error(f"Failed to queue invite email for {body.email}: {e}")
+
         return {
             "ok": True,
             "account_id": new_account_id,
             "user_id": new_user_id,
             "token": token,
-            "invite_url": f"https://reportscompany-web.vercel.app/welcome?token={token}"
+            "invite_url": f"https://reportscompany-web.vercel.app/welcome?token={token}",
+            "email_sent": True
         }
 
 
