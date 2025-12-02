@@ -654,7 +654,6 @@ Error: A <Select.Item /> must have a value prop that is not an empty string.
 2. **No Bulk Delete**: Can only deactivate accounts, not delete
 3. **No Export**: No CSV export of account/user data yet
 4. **No Batch Headshot Upload**: Must upload headshots one at a time
-5. **No Branding Preview**: Can't preview how branding will look on reports
 
 ---
 
@@ -667,3 +666,6 @@ Error: A <Select.Item /> must have a value prop that is not an empty string.
 - **Added**: Admin headshot upload for agents
 - **Added**: Direct logo upload (R2) on Create Affiliate form
 - **Added**: Color pickers for brand colors
+- **Added**: Collapsible admin sub-navigation in sidebar
+  - Overview, Title Companies, All Accounts, All Users
+  - Auto-expands when in admin section
