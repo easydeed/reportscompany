@@ -53,8 +53,8 @@ async function getUsers(params: {
   try {
     const searchParams = new URLSearchParams()
     if (params.search) searchParams.set("search", params.search)
-    if (params.is_active) searchParams.set("is_active", params.is_active)
-    if (params.role) searchParams.set("role", params.role)
+    if (params.is_active && params.is_active !== "all") searchParams.set("is_active", params.is_active)
+    if (params.role && params.role !== "all") searchParams.set("role", params.role)
 
     const url = `/v1/admin/users?${searchParams.toString()}`
     const data = await apiFetch(url)
@@ -140,22 +140,22 @@ export default async function AdminUsersPage({
               defaultValue={params.search}
               className="w-64"
             />
-            <Select name="is_active" defaultValue={params.is_active || ""}>
+            <Select name="is_active" defaultValue={params.is_active || "all"}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Status</SelectItem>
+                <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="true">Active</SelectItem>
                 <SelectItem value="false">Inactive</SelectItem>
               </SelectContent>
             </Select>
-            <Select name="role" defaultValue={params.role || ""}>
+            <Select name="role" defaultValue={params.role || "all"}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="All Roles" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Roles</SelectItem>
+                <SelectItem value="all">All Roles</SelectItem>
                 <SelectItem value="OWNER">Owner</SelectItem>
                 <SelectItem value="MEMBER">Member</SelectItem>
                 <SelectItem value="ADMIN">Admin</SelectItem>

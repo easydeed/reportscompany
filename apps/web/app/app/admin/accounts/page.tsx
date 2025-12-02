@@ -51,8 +51,8 @@ async function getAccounts(params: {
   try {
     const searchParams = new URLSearchParams()
     if (params.search) searchParams.set("search", params.search)
-    if (params.account_type) searchParams.set("account_type", params.account_type)
-    if (params.plan_slug) searchParams.set("plan_slug", params.plan_slug)
+    if (params.account_type && params.account_type !== "all") searchParams.set("account_type", params.account_type)
+    if (params.plan_slug && params.plan_slug !== "all") searchParams.set("plan_slug", params.plan_slug)
 
     const url = `/v1/admin/accounts?${searchParams.toString()}`
     const data = await apiFetch(url)
@@ -139,22 +139,22 @@ export default async function AdminAccountsPage({
               defaultValue={params.search}
               className="w-64"
             />
-            <Select name="account_type" defaultValue={params.account_type || ""}>
+            <Select name="account_type" defaultValue={params.account_type || "all"}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Types</SelectItem>
+                <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="REGULAR">Regular</SelectItem>
                 <SelectItem value="INDUSTRY_AFFILIATE">Affiliate</SelectItem>
               </SelectContent>
             </Select>
-            <Select name="plan_slug" defaultValue={params.plan_slug || ""}>
+            <Select name="plan_slug" defaultValue={params.plan_slug || "all"}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="All Plans" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Plans</SelectItem>
+                <SelectItem value="all">All Plans</SelectItem>
                 <SelectItem value="free">Free</SelectItem>
                 <SelectItem value="pro">Pro</SelectItem>
                 <SelectItem value="team">Team</SelectItem>
