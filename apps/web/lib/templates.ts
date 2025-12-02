@@ -138,31 +138,33 @@ export function buildMarketSnapshotHtml(
     "{{ctl_delta_class}}": closeToListRatio >= 100 ? "up" : "down",
     "{{ctl_fill}}": String(Math.min(100, closeToListRatio)),
     
-    // By Property Type
-    "{{sfr_median}}": formatCurrency(byType.SFR?.median || metrics.median_close_price),
-    "{{sfr_closed}}": formatNumber(byType.SFR?.count || Math.round(closedCount * 0.7)),
-    "{{sfr_dom}}": formatDecimal(byType.SFR?.dom || metrics.avg_dom),
+    // By Property Type - use actual data from result_json
+    // byType is a dict like { "SFR": { label, count, median_price, avg_dom }, ... }
+    "{{sfr_median}}": formatCurrency(byType.SFR?.median_price ?? 0),
+    "{{sfr_closed}}": formatNumber(byType.SFR?.count ?? 0),
+    "{{sfr_dom}}": formatDecimal(byType.SFR?.avg_dom ?? 0),
     
-    "{{condo_median}}": formatCurrency(byType.Condo?.median || metrics.median_close_price * 0.7),
-    "{{condo_closed}}": formatNumber(byType.Condo?.count || Math.round(closedCount * 0.2)),
-    "{{condo_dom}}": formatDecimal(byType.Condo?.dom || metrics.avg_dom),
+    "{{condo_median}}": formatCurrency(byType.Condo?.median_price ?? 0),
+    "{{condo_closed}}": formatNumber(byType.Condo?.count ?? 0),
+    "{{condo_dom}}": formatDecimal(byType.Condo?.avg_dom ?? 0),
     
-    "{{th_median}}": formatCurrency(byType.Townhome?.median || metrics.median_close_price * 0.85),
-    "{{th_closed}}": formatNumber(byType.Townhome?.count || Math.round(closedCount * 0.1)),
-    "{{th_dom}}": formatDecimal(byType.Townhome?.dom || metrics.avg_dom),
+    "{{th_median}}": formatCurrency(byType.Townhome?.median_price ?? 0),
+    "{{th_closed}}": formatNumber(byType.Townhome?.count ?? 0),
+    "{{th_dom}}": formatDecimal(byType.Townhome?.avg_dom ?? 0),
     
-    // By Price Tier
-    "{{tier1_median}}": formatCurrency(tiers.entry?.median || metrics.median_close_price * 0.6),
-    "{{tier1_closed}}": formatNumber(tiers.entry?.count || Math.round(closedCount * 0.3)),
-    "{{tier1_moi}}": formatDecimal(tiers.entry?.moi || moi * 0.8),
+    // By Price Tier - use actual data from result_json
+    // tiers is a dict like { "Entry": { label, count, median_price, moi }, ... }
+    "{{tier1_median}}": formatCurrency(tiers.Entry?.median_price ?? 0),
+    "{{tier1_closed}}": formatNumber(tiers.Entry?.count ?? 0),
+    "{{tier1_moi}}": formatDecimal(tiers.Entry?.moi ?? 0),
     
-    "{{tier2_median}}": formatCurrency(tiers.move_up?.median || metrics.median_close_price),
-    "{{tier2_closed}}": formatNumber(tiers.move_up?.count || Math.round(closedCount * 0.5)),
-    "{{tier2_moi}}": formatDecimal(tiers.move_up?.moi || moi),
+    "{{tier2_median}}": formatCurrency(tiers["Move-Up"]?.median_price ?? 0),
+    "{{tier2_closed}}": formatNumber(tiers["Move-Up"]?.count ?? 0),
+    "{{tier2_moi}}": formatDecimal(tiers["Move-Up"]?.moi ?? 0),
     
-    "{{tier3_median}}": formatCurrency(tiers.luxury?.median || metrics.median_close_price * 2),
-    "{{tier3_closed}}": formatNumber(tiers.luxury?.count || Math.round(closedCount * 0.2)),
-    "{{tier3_moi}}": formatDecimal(tiers.luxury?.moi || moi * 1.5),
+    "{{tier3_median}}": formatCurrency(tiers.Luxury?.median_price ?? 0),
+    "{{tier3_closed}}": formatNumber(tiers.Luxury?.count ?? 0),
+    "{{tier3_moi}}": formatDecimal(tiers.Luxury?.moi ?? 0),
   };
   
   // Apply all replacements

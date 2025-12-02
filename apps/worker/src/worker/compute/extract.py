@@ -33,6 +33,19 @@ class PropertyDataExtractor:
                 baths = _int((pr or {}).get("bathrooms"))
                 street = (addr or {}).get("full") or (addr or {}).get("streetName")
                 
+                # Extract property subtype for better categorization
+                # SimplyRETS subType: SingleFamilyResidence, Condominium, Townhouse, etc.
+                raw_subtype = (pr or {}).get("subType") or ""
+                # Map to display-friendly names
+                subtype_map = {
+                    "SingleFamilyResidence": "SFR",
+                    "Condominium": "Condo",
+                    "Townhouse": "Townhome",
+                    "ManufacturedHome": "Manufactured",
+                    "Duplex": "Multi-Family",
+                }
+                property_subtype = subtype_map.get(raw_subtype, raw_subtype or "Other")
+                
                 out.append({
                     "mls_id": p.get("mlsId"),
                     "list_date": _iso(p.get("listDate")),
@@ -44,6 +57,7 @@ class PropertyDataExtractor:
                     "city": (addr or {}).get("city"),
                     "zip_code": (addr or {}).get("postalCode"),
                     "property_type": (pr or {}).get("type","RES"),
+                    "property_subtype": property_subtype,  # NEW: Human-readable subtype
                     "sqft": area,
                     "price_per_sqft": ppsf,
                     "close_to_list_ratio": ctl,

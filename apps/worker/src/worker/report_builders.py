@@ -80,23 +80,27 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
     ctl_ratios = [l["close_to_list_ratio"] for l in closed if l.get("close_to_list_ratio")]
     ctl = _average(ctl_ratios) if ctl_ratios else 100.0
     
-    # Property types (SFR, Condo, Townhome, etc.)
-    property_types = {}
+    # Property types (SFR, Condo, Townhome, etc.) - using property_subtype for better categorization
+    property_subtypes = {}
     for listing in listings:
-        ptype = listing.get("property_type") or "SFR"
-        if ptype not in property_types:
-            property_types[ptype] = []
-        property_types[ptype].append(listing)
+        # Use property_subtype (mapped from SimplyRETS subType) for accurate breakdown
+        ptype = listing.get("property_subtype") or listing.get("property_type") or "Other"
+        if ptype not in property_subtypes:
+            property_subtypes[ptype] = []
+        property_subtypes[ptype].append(listing)
     
     by_type = []
-    for ptype, props in property_types.items():
+    for ptype, props in property_subtypes.items():
         closed_props = [p for p in props if p.get("status") == "Closed"]
-        if closed_props:
+        active_props = [p for p in props if p.get("status") == "Active"]
+        # Include types that have either closed or active listings
+        if closed_props or active_props:
             by_type.append({
                 "label": ptype,
                 "count": len(closed_props),
-                "median_price": _median([p["close_price"] for p in closed_props if p.get("close_price")]),
-                "avg_dom": _average([p["days_on_market"] for p in closed_props if p.get("days_on_market")])
+                "active_count": len(active_props),
+                "median_price": _median([p["close_price"] for p in closed_props if p.get("close_price")]) if closed_props else _median([p["list_price"] for p in active_props if p.get("list_price")]),
+                "avg_dom": _average([p["days_on_market"] for p in (closed_props or active_props) if p.get("days_on_market")])
             })
     
     # Price tiers (dynamic based on market)
