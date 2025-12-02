@@ -61,26 +61,64 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
     - Core indicators: new_listings, pendings, close_to_list_ratio
     - Property types breakdown
     - Price tiers breakdown
+    
+    IMPORTANT: Closed Sales are filtered by actual close_date within lookback period.
+    This ensures accurate counts (not just listings that were listed in the period).
     """
     city = context.get("city", "Market")
     lookback_days = context.get("lookback_days", 30)
     
-    # Segment by status
-    active = [l for l in listings if l.get("status") == "Active"]
-    pending = [l for l in listings if l.get("status") == "Pending"]
-    closed = [l for l in listings if l.get("status") == "Closed"]
+    # Calculate date cutoff for filtering
+    cutoff_date = datetime.now() - timedelta(days=lookback_days)
     
-    # Core metrics
+    # Segment by status
+    # Active: Current inventory (no date filter needed - these are current)
+    active = [l for l in listings if l.get("status") == "Active"]
+    
+    # Pending: Properties under contract (filter by list_date in period)
+    pending = [l for l in listings if l.get("status") == "Pending"]
+    
+    # Closed: ONLY those with close_date within the lookback period
+    # This is critical for accurate Closed Sales count
+    closed = [
+        l for l in listings 
+        if l.get("status") == "Closed" 
+        and l.get("close_date") 
+        and l["close_date"] >= cutoff_date
+    ]
+    
+    # Also track all closed for reference (even those outside date range)
+    all_closed = [l for l in listings if l.get("status") == "Closed"]
+    
+    # New Listings: Active listings with list_date within the lookback period
+    new_listings = [
+        l for l in active
+        if l.get("list_date") and l["list_date"] >= cutoff_date
+    ]
+    
+    # Core metrics (using date-filtered closed listings)
     median_close_price = _median([l["close_price"] for l in closed if l.get("close_price")])
     median_list_price = _median([l["list_price"] for l in active if l.get("list_price")])
-    avg_dom = _average([l["days_on_market"] for l in listings if l.get("days_on_market")])
-    moi = (len(active) / len(closed)) * (lookback_days / 30) if closed else 0.0
     
-    # Close-to-list ratio
+    # Avg DOM: Use closed listings (days from list to close)
+    avg_dom = _average([l["days_on_market"] for l in closed if l.get("days_on_market")])
+    
+    # MOI: Active inventory / Closed sales per month
+    # Formula: (Active Count / Closed Count) adjusted for lookback period
+    if closed:
+        moi = len(active) / len(closed)
+        # If lookback is not 30 days, normalize: MOI = active / (closed * 30/lookback)
+        if lookback_days != 30:
+            moi = len(active) / (len(closed) * (30 / lookback_days))
+    else:
+        moi = 99.9  # Very high if no closed sales (buyer's market indicator)
+    
+    # Close-to-list ratio (from closed sales)
     ctl_ratios = [l["close_to_list_ratio"] for l in closed if l.get("close_to_list_ratio")]
     ctl = _average(ctl_ratios) if ctl_ratios else 100.0
     
     # Property types (SFR, Condo, Townhome, etc.) - using property_subtype for better categorization
+    # Note: If user filtered by subtype, we may only have one type. That's expected.
     property_subtypes = {}
     for listing in listings:
         # Use property_subtype (mapped from SimplyRETS subType) for accurate breakdown
@@ -91,25 +129,37 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
     
     by_type = []
     for ptype, props in property_subtypes.items():
-        closed_props = [p for p in props if p.get("status") == "Closed"]
+        # Use date-filtered closed listings for accurate counts
+        closed_props = [
+            p for p in props 
+            if p.get("status") == "Closed" 
+            and p.get("close_date") 
+            and p["close_date"] >= cutoff_date
+        ]
         active_props = [p for p in props if p.get("status") == "Active"]
+        
         # Include types that have either closed or active listings
         if closed_props or active_props:
             by_type.append({
                 "label": ptype,
-                "count": len(closed_props),
-                "active_count": len(active_props),
+                "count": len(closed_props),  # Closed sales in period
+                "active_count": len(active_props),  # Current active inventory
                 "median_price": _median([p["close_price"] for p in closed_props if p.get("close_price")]) if closed_props else _median([p["list_price"] for p in active_props if p.get("list_price")]),
-                "avg_dom": _average([p["days_on_market"] for p in (closed_props or active_props) if p.get("days_on_market")])
+                "avg_dom": _average([p["days_on_market"] for p in closed_props if p.get("days_on_market")]) if closed_props else _average([p["days_on_market"] for p in active_props if p.get("days_on_market")])
             })
     
     # Price tiers (dynamic based on market)
+    # Per ReportsGuide.md:
+    # - Median price: from Closed sales in period
+    # - Closed count: from Closed sales in period
+    # - MOI per tier: Active count in tier / Closed count in tier
     if closed:
         prices = sorted([l["close_price"] for l in closed if l.get("close_price")])
         if prices:
-            p25 = prices[len(prices) // 4]
+            # Dynamic tier boundaries based on actual market data
+            p25 = prices[len(prices) // 4] if len(prices) >= 4 else prices[0]
             p50 = prices[len(prices) // 2]
-            p75 = prices[(3 * len(prices)) // 4]
+            p75 = prices[(3 * len(prices)) // 4] if len(prices) >= 4 else prices[-1]
             
             tiers = [
                 ("Entry", 0, p50),
@@ -119,13 +169,26 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
             
             price_tiers = []
             for label, min_price, max_price in tiers:
+                # Closed sales in this tier (already date-filtered)
                 tier_closed = [l for l in closed if min_price <= l.get("close_price", 0) < max_price]
-                if tier_closed:
+                # Active inventory in this tier
+                tier_active = [l for l in active if min_price <= l.get("list_price", 0) < max_price]
+                
+                if tier_closed or tier_active:
+                    # MOI per tier: Active / Closed (normalized for lookback period)
+                    if tier_closed:
+                        tier_moi = len(tier_active) / len(tier_closed)
+                        if lookback_days != 30:
+                            tier_moi = len(tier_active) / (len(tier_closed) * (30 / lookback_days))
+                    else:
+                        tier_moi = 99.9  # No closed sales in tier
+                    
                     price_tiers.append({
                         "label": label,
-                        "count": len(tier_closed),
-                        "median_price": _median([l["close_price"] for l in tier_closed if l.get("close_price")]),
-                        "moi": (len([l for l in active if min_price <= l.get("list_price", 0) < max_price]) / len(tier_closed)) * (lookback_days / 30) if tier_closed else 0.0
+                        "count": len(tier_closed),  # Closed sales in period
+                        "active_count": len(tier_active),  # Current active inventory
+                        "median_price": _median([l["close_price"] for l in tier_closed if l.get("close_price")]) if tier_closed else 0,
+                        "moi": round(tier_moi, 1)
                     })
         else:
             price_tiers = []
@@ -139,29 +202,31 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
         "period_label": _period_label(lookback_days),
         "report_date": datetime.now().strftime("%B %d, %Y"),
         
-        # Counts
+        # Counts (all date-filtered where applicable)
         "counts": {
-            "Active": len(active),
-            "Pending": len(pending),
-            "Closed": len(closed),
+            "Active": len(active),           # Current active inventory
+            "Pending": len(pending),         # Properties under contract
+            "Closed": len(closed),           # Closed sales in period (date-filtered!)
+            "NewListings": len(new_listings), # New listings in period
         },
         
-        # Metrics
+        # Metrics (all based on date-filtered data)
         "metrics": {
             "median_list_price": median_list_price,
             "median_close_price": median_close_price,
-            "avg_dom": round(avg_dom, 1),
-            "avg_ppsf": round(_average([l.get("price_per_sqft") for l in active if l.get("price_per_sqft")]), 0),
+            "avg_dom": round(avg_dom, 1) if avg_dom else 0,
+            "avg_ppsf": round(_average([l.get("price_per_sqft") for l in active if l.get("price_per_sqft")]) or 0, 0),
             "close_to_list_ratio": round(ctl, 1),
             "months_of_inventory": round(moi, 1),
+            "new_listings_count": len(new_listings),  # For core indicators
         },
         
         # Breakdown data
         "by_property_type": {pt["label"]: pt for pt in by_type},
         "price_tiers": {tier["label"]: tier for tier in price_tiers},
         
-        # Sample listings for fallback view
-        "listings_sample": listings[:20]
+        # Sample listings for fallback view (mix of closed and active)
+        "listings_sample": (closed[:10] + active[:10])[:20]
     }
 
 

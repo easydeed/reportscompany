@@ -129,24 +129,27 @@ export function buildMarketSnapshotHtml(
   const metrics = r.metrics || {};
   const counts = r.counts || {};
   
-  // Calculate derived values
+  // Get counts from result_json (these are now date-filtered by the worker)
   const activeCount = counts.Active ?? 0;
   const pendingCount = counts.Pending ?? 0;
-  const closedCount = counts.Closed ?? 0;
+  const closedCount = counts.Closed ?? 0;  // Now accurately filtered by close_date
+  const newListingsCount = counts.NewListings ?? metrics.new_listings_count ?? 0;
   
-  // MOI calculation: (active listings / closed sales) * (lookback days / 30)
+  // Use metrics from worker (already calculated correctly)
   const lookback = r.lookback_days || 30;
-  const moi = closedCount > 0 ? (activeCount / closedCount) * (lookback / 30) : 0;
+  const moi = metrics.months_of_inventory ?? (closedCount > 0 ? activeCount / closedCount : 0);
   
-  // Sale-to-List ratio
-  const closeToListRatio = (metrics.median_close_price && metrics.median_list_price)
-    ? (metrics.median_close_price / metrics.median_list_price) * 100
-    : 0;
+  // Sale-to-List ratio - use from metrics if available
+  const closeToListRatio = metrics.close_to_list_ratio ?? (
+    (metrics.median_close_price && metrics.median_list_price)
+      ? (metrics.median_close_price / metrics.median_list_price) * 100
+      : 0
+  );
   
-  // Property type data (placeholder - needs worker enhancement)
+  // Property type data from worker
   const byType = r.by_property_type || {};
   
-  // Price tier data (placeholder - needs worker enhancement)
+  // Price tier data from worker
   const tiers = r.price_tiers || {};
   
   // Build replacements map
@@ -168,10 +171,10 @@ export function buildMarketSnapshotHtml(
     "{{moi}}": formatDecimal(moi),
     
     // Core indicators
-    "{{new_listings}}": formatNumber(activeCount), // Approximation
+    "{{new_listings}}": formatNumber(newListingsCount),  // New listings in period
     "{{new_listings_delta}}": "0", // TODO: Calculate from historical
     "{{new_listings_delta_class}}": "up",
-    "{{new_listings_fill}}": String(Math.min(100, (activeCount / 100) * 100)),
+    "{{new_listings_fill}}": String(Math.min(100, (newListingsCount / 100) * 100)),
     
     "{{pendings}}": formatNumber(pendingCount),
     "{{pendings_delta}}": "0",
