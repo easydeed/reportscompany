@@ -24,9 +24,13 @@ import {
   ExternalLink,
   CheckCircle,
   XCircle,
+  FileUp,
+  User,
 } from "lucide-react"
 import { InviteAgentForm } from "./invite-agent-form"
 import { AffiliateActions } from "./affiliate-actions"
+import { BulkImportForm } from "./bulk-import-form"
+import { AgentHeadshotUpload } from "./agent-headshot-upload"
 
 export const dynamic = 'force-dynamic'
 
@@ -40,6 +44,7 @@ interface Agent {
   email: string
   first_name: string | null
   last_name: string | null
+  avatar_url: string | null
   reports_this_month: number
   last_report_at: string | null
 }
@@ -294,6 +299,22 @@ export default async function AffiliateDetailPage({
         </CardContent>
       </Card>
 
+      {/* Bulk Import */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <FileUp className="h-5 w-5" />
+            Bulk Import Agents
+          </CardTitle>
+          <CardDescription>
+            Import multiple agents at once from a CSV file. Great for full-service onboarding.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <BulkImportForm affiliateId={affiliate.account_id} affiliateName={affiliate.name} />
+        </CardContent>
+      </Card>
+
       {/* Agents Table */}
       <Card>
         <CardHeader>
@@ -324,18 +345,34 @@ export default async function AffiliateDetailPage({
                   <TableHead>Last Report</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Joined</TableHead>
+                  <TableHead className="w-[50px]">Headshot</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {affiliate.agents.map((agent) => (
                   <TableRow key={agent.account_id}>
                     <TableCell>
-                      <div className="font-medium">{agent.name}</div>
-                      {(agent.first_name || agent.last_name) && (
-                        <div className="text-sm text-muted-foreground">
-                          {agent.first_name} {agent.last_name}
+                      <div className="flex items-center gap-3">
+                        {agent.avatar_url ? (
+                          <img
+                            src={agent.avatar_url}
+                            alt={agent.name}
+                            className="h-8 w-8 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-medium">{agent.name}</div>
+                          {(agent.first_name || agent.last_name) && (
+                            <div className="text-sm text-muted-foreground">
+                              {agent.first_name} {agent.last_name}
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </TableCell>
                     <TableCell>{agent.email}</TableCell>
                     <TableCell>{agent.reports_this_month}</TableCell>
@@ -353,6 +390,13 @@ export default async function AffiliateDetailPage({
                       {agent.created_at
                         ? new Date(agent.created_at).toLocaleDateString()
                         : '-'}
+                    </TableCell>
+                    <TableCell>
+                      <AgentHeadshotUpload
+                        accountId={agent.account_id}
+                        agentName={agent.name}
+                        currentHeadshot={agent.avatar_url}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}

@@ -78,11 +78,13 @@ Manage industry affiliates (title companies) and their sponsored agents.
 ### API Endpoints
 
 ```
-GET    /v1/admin/affiliates              # List affiliates
-GET    /v1/admin/affiliates/:id          # Get affiliate detail
-POST   /v1/admin/affiliates              # Create affiliate
-PATCH  /v1/admin/affiliates/:id          # Update affiliate
-POST   /v1/admin/affiliates/:id/invite-agent  # Invite agent
+GET    /v1/admin/affiliates                    # List affiliates
+GET    /v1/admin/affiliates/:id                # Get affiliate detail
+POST   /v1/admin/affiliates                    # Create affiliate
+PATCH  /v1/admin/affiliates/:id                # Update affiliate
+POST   /v1/admin/affiliates/:id/invite-agent   # Invite single agent
+POST   /v1/admin/affiliates/:id/bulk-import    # Bulk import agents from CSV
+PATCH  /v1/admin/agents/:accountId/headshot    # Update agent headshot
 ```
 
 ---
@@ -115,15 +117,47 @@ Form to add agents to this affiliate:
 - Email Address
 - Sends automatic invite email
 
+#### Bulk Import Agents
+For full-service onboarding, import multiple agents at once from CSV:
+
+1. Download the CSV template
+2. Fill in agent data: `email, first_name, last_name, name`
+3. Upload the CSV file
+4. Preview the agents to be imported
+5. Click "Import" to create all accounts and send invites
+
+**CSV Columns:**
+| Column | Required | Description |
+|--------|----------|-------------|
+| email | Yes | Agent's email address |
+| first_name | No | Agent's first name |
+| last_name | No | Agent's last name |
+| name | No | Business/Account name (auto-generated from names if empty) |
+
+**Import Results:**
+- Success count with green badge
+- Error count with red badge (e.g., duplicate emails)
+- Detailed results per agent
+
 #### Sponsored Agents Table
 | Column | Description |
 |--------|-------------|
-| Agent | Name and contact name |
+| Agent | Avatar, name, and contact name |
 | Email | Agent's email |
 | Reports/Month | Monthly report count |
 | Last Report | Date of last report |
 | Status | Active/Inactive |
 | Joined | Account creation date |
+| Headshot | Upload button to set agent photo |
+
+#### Admin Headshot Upload
+For each agent in the table, admins can upload a professional headshot:
+1. Click the camera icon in the Headshot column
+2. Drag & drop or click to upload image
+3. Image uploads to R2 automatically
+4. Click Save to apply the headshot
+
+This is useful for full-service onboarding where the title company provides agent photos.
 
 ### Actions
 - **Activate/Deactivate**: Toggle affiliate status
@@ -141,9 +175,17 @@ Form to onboard a new title company.
 ### Optional Fields
 - **Admin First/Last Name**: Contact name
 - **Website URL**: Company website
-- **Logo URL**: Logo image URL
-- **Primary Color**: Main brand color (hex)
-- **Accent Color**: Secondary brand color (hex)
+- **Logo**: Drag-and-drop upload to R2 (PNG/SVG recommended)
+- **Primary Color**: Main brand color (hex) with color picker
+- **Accent Color**: Secondary brand color (hex) with color picker
+
+### Logo Upload
+The logo upload uses the R2-backed ImageUpload component:
+- Drag & drop or click to upload
+- Automatically uploads to Cloudflare R2
+- Supports PNG, JPG, SVG
+- Transparent backgrounds recommended
+- Wide aspect ratio for report headers
 
 ### What Happens
 1. Creates `INDUSTRY_AFFILIATE` account
@@ -326,6 +368,77 @@ Response:
 }
 ```
 
+#### Bulk Import Agents
+```
+POST /v1/admin/affiliates/:affiliateId/bulk-import
+Content-Type: application/json
+
+{
+  "affiliate_id": "uuid",
+  "agents": [
+    {
+      "email": "john@example.com",
+      "first_name": "John",
+      "last_name": "Doe",
+      "name": "John Doe Realty"
+    },
+    {
+      "email": "jane@example.com",
+      "first_name": "Jane",
+      "last_name": "Smith",
+      "name": "Jane Smith Team"
+    }
+  ]
+}
+```
+
+Response:
+```json
+{
+  "ok": true,
+  "affiliate_id": "uuid",
+  "affiliate_name": "Pacific Coast Title",
+  "total": 2,
+  "success_count": 2,
+  "error_count": 0,
+  "results": [
+    {
+      "email": "john@example.com",
+      "success": true,
+      "account_id": "uuid",
+      "user_id": "uuid"
+    },
+    {
+      "email": "jane@example.com",
+      "success": true,
+      "account_id": "uuid",
+      "user_id": "uuid"
+    }
+  ]
+}
+```
+
+#### Update Agent Headshot
+```
+PATCH /v1/admin/agents/:accountId/headshot
+Content-Type: application/json
+
+{
+  "headshot_url": "https://r2.example.com/headshots/uuid.jpg"
+}
+```
+
+Response:
+```json
+{
+  "ok": true,
+  "account_id": "uuid",
+  "user_id": "uuid",
+  "email": "john@example.com",
+  "headshot_url": "https://r2.example.com/headshots/uuid.jpg"
+}
+```
+
 ---
 
 ## Database Schema
@@ -387,11 +500,13 @@ apps/
     │   ├── affiliates/
     │   │   ├── page.tsx            # List affiliates
     │   │   ├── new/
-    │   │   │   └── page.tsx        # Create affiliate
+    │   │   │   └── page.tsx        # Create affiliate (with ImageUpload)
     │   │   └── [id]/
     │   │       ├── page.tsx        # Affiliate detail
     │   │       ├── invite-agent-form.tsx
-    │   │       └── affiliate-actions.tsx
+    │   │       ├── affiliate-actions.tsx
+    │   │       ├── bulk-import-form.tsx    # CSV import UI
+    │   │       └── agent-headshot-upload.tsx # Headshot upload dialog
     │   ├── accounts/
     │   │   └── page.tsx            # List accounts
     │   └── users/
@@ -403,8 +518,14 @@ apps/
         │   ├── route.ts            # List/create affiliates
         │   └── [affiliateId]/
         │       ├── route.ts        # Get/update affiliate
-        │       └── invite-agent/
-        │           └── route.ts    # Invite agent
+        │       ├── invite-agent/
+        │       │   └── route.ts    # Invite single agent
+        │       └── bulk-import/
+        │           └── route.ts    # Bulk import agents
+        ├── agents/
+        │   └── [accountId]/
+        │       └── headshot/
+        │           └── route.ts    # Update agent headshot
         ├── accounts/
         │   ├── route.ts            # List accounts
         │   └── [accountId]/
@@ -437,11 +558,12 @@ apps/
 1. Go to `/app/admin/affiliates`
 2. Click "Add Title Company"
 3. Fill in company name and admin email
-4. Optionally add branding (logo, colors)
-5. Submit → Admin receives invite email
-6. Admin clicks link → Sets password → Account ready
+4. Upload logo (drag & drop to R2)
+5. Set brand colors with color picker
+6. Submit → Admin receives invite email
+7. Admin clicks link → Sets password → Account ready
 
-### Add Agent to Title Company
+### Add Agent to Title Company (Single)
 
 1. Go to `/app/admin/affiliates`
 2. Click on the title company
@@ -449,6 +571,31 @@ apps/
 4. Enter agent name and email
 5. Submit → Agent receives invite email
 6. Agent clicks link → Sets password → Can generate reports
+
+### Bulk Import Agents (Full-Service Onboarding)
+
+For title companies that want hands-off onboarding:
+
+1. Go to `/app/admin/affiliates`
+2. Click on the title company
+3. Scroll to "Bulk Import Agents"
+4. Download the CSV template
+5. Fill in agent data (email, first_name, last_name, name)
+6. Upload the completed CSV
+7. Review the preview
+8. Click "Import" → All agents receive invite emails
+9. Optionally upload headshots for each agent (see below)
+
+### Upload Agent Headshots (Admin)
+
+For full-service onboarding where admin manages agent photos:
+
+1. Go to `/app/admin/affiliates`
+2. Click on the title company
+3. In the "Sponsored Agents" table, find the agent
+4. Click the camera icon in the "Headshot" column
+5. Drag & drop the headshot image
+6. Click "Save"
 
 ### Resend Lost Invite
 
