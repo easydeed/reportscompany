@@ -22,6 +22,10 @@ function injectBrand(html: string, brand: any): string {
   const accentColor = brand.accent_color || DEFAULT_ACCENT_COLOR;
   const brandName = brand.display_name || "TrendyReports";
   const logoUrl = brand.logo_url || "";
+  const repPhotoUrl = brand.rep_photo_url || "";
+  const contactLine1 = brand.contact_line1 || "";
+  const contactLine2 = brand.contact_line2 || "";
+  const websiteUrl = brand.website_url || "";
   
   // Inject CSS color overrides right before </head>
   const colorOverride = `
@@ -39,6 +43,47 @@ function injectBrand(html: string, brand: any): string {
   result = result.replaceAll("{{brand_name}}", brandName);
   result = result.replaceAll("{{brand_logo_url}}", logoUrl);
   result = result.replaceAll("{{brand_badge}}", `${brandName} Insights`);
+  
+  // Replace contact/branding placeholders
+  result = result.replaceAll("{{logo_url}}", logoUrl);
+  result = result.replaceAll("{{rep_photo_url}}", repPhotoUrl);
+  result = result.replaceAll("{{contact_line1}}", contactLine1);
+  result = result.replaceAll("{{contact_line2}}", contactLine2);
+  result = result.replaceAll("{{website_url}}", websiteUrl);
+  
+  // Handle Handlebars-style conditionals for branded footer
+  // {{#if rep_photo_url}}...{{/if}}
+  if (repPhotoUrl) {
+    result = result.replace(/\{\{#if rep_photo_url\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+  } else {
+    result = result.replace(/\{\{#if rep_photo_url\}\}[\s\S]*?\{\{\/if\}\}/g, '');
+  }
+  
+  if (contactLine1) {
+    result = result.replace(/\{\{#if contact_line1\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+  } else {
+    result = result.replace(/\{\{#if contact_line1\}\}[\s\S]*?\{\{\/if\}\}/g, '');
+  }
+  
+  if (contactLine2) {
+    result = result.replace(/\{\{#if contact_line2\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+  } else {
+    result = result.replace(/\{\{#if contact_line2\}\}[\s\S]*?\{\{\/if\}\}/g, '');
+  }
+  
+  if (websiteUrl) {
+    result = result.replace(/\{\{#if website_url\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+  } else {
+    result = result.replace(/\{\{#if website_url\}\}[\s\S]*?\{\{\/if\}\}/g, '');
+  }
+  
+  if (logoUrl) {
+    result = result.replace(/\{\{#if logo_url\}\}([\s\S]*?)\{\{else\}\}[\s\S]*?\{\{\/if\}\}/g, '$1');
+    result = result.replace(/\{\{#if logo_url\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+  } else {
+    result = result.replace(/\{\{#if logo_url\}\}[\s\S]*?\{\{else\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+    result = result.replace(/\{\{#if logo_url\}\}[\s\S]*?\{\{\/if\}\}/g, '');
+  }
   
   // Tagline for footer
   const tagline = brand.display_name 

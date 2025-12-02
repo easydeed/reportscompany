@@ -166,6 +166,33 @@ def build_market_snapshot_closed(params: dict) -> Dict:
     q |= _filters(params.get("filters"))
     return q
 
+
+def build_market_snapshot_pending(params: dict) -> Dict:
+    """
+    Market Snapshot (Pending): Pending listings in date window.
+    
+    Per ReportsGuide.md: Query pending listings for "Pending Sales" core indicator.
+    
+    Parameters:
+    - status: Pending
+    - mindate/maxdate: lookback window (uses listDate/modifiedDate)
+    - type/subtype: optional property type filters
+    - limit: 1000
+    """
+    start, end = _date_window(params.get("lookback_days") or 30)
+    q = {
+        **_common_params(),
+        "status": "Pending",
+        "mindate": start,
+        "maxdate": end,
+        "limit": 1000,
+        "offset": 0,
+    }
+    q |= _location(params)
+    q |= _filters(params.get("filters"))
+    return q
+
+
 def build_new_listings(params: dict) -> Dict:
     """
     New Listings: Fresh actives in date window.

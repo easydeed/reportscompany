@@ -7,7 +7,7 @@ from .compute.extract import PropertyDataExtractor
 from .compute.validate import filter_valid
 from .compute.calc import snapshot_metrics
 from .cache import get as cache_get, set as cache_set
-from .query_builders import build_params, build_market_snapshot, build_market_snapshot_closed
+from .query_builders import build_params, build_market_snapshot, build_market_snapshot_closed, build_market_snapshot_pending
 from .redis_utils import create_redis_connection
 from .pdf_engine import render_pdf
 from .email.send import send_schedule_email
@@ -356,24 +356,31 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
             # Normalize report type for comparison
             rt_normalized = (report_type or "market_snapshot").lower().replace("_", "-").replace(" ", "-")
             
-            # For Market Snapshot: Query Active and Closed SEPARATELY for cleaner data
+            # For Market Snapshot: Query Active, Closed, and Pending SEPARATELY for accurate metrics
+            # Per ReportsGuide.md: Each status type needs its own query for accurate counts
             if rt_normalized in ("market-snapshot", "snapshot"):
-                print(f"🔍 REPORT RUN {run_id}: Using separate Active/Closed queries")
+                print(f"🔍 REPORT RUN {run_id}: Using separate Active/Closed/Pending queries")
                 
-                # Query 1: Active listings
+                # Query 1: Active listings (current inventory)
                 active_query = build_market_snapshot(_params)
                 print(f"🔍 REPORT RUN {run_id}: active_query={active_query}")
-                active_raw = fetch_properties(active_query, limit=500)
+                active_raw = fetch_properties(active_query, limit=1000)
                 print(f"🔍 REPORT RUN {run_id}: fetched {len(active_raw)} Active properties")
                 
-                # Query 2: Closed listings
+                # Query 2: Closed listings (recent sales for metrics)
                 closed_query = build_market_snapshot_closed(_params)
                 print(f"🔍 REPORT RUN {run_id}: closed_query={closed_query}")
-                closed_raw = fetch_properties(closed_query, limit=500)
+                closed_raw = fetch_properties(closed_query, limit=1000)
                 print(f"🔍 REPORT RUN {run_id}: fetched {len(closed_raw)} Closed properties")
                 
+                # Query 3: Pending listings (contracts pending)
+                pending_query = build_market_snapshot_pending(_params)
+                print(f"🔍 REPORT RUN {run_id}: pending_query={pending_query}")
+                pending_raw = fetch_properties(pending_query, limit=500)
+                print(f"🔍 REPORT RUN {run_id}: fetched {len(pending_raw)} Pending properties")
+                
                 # Combine for extraction (mark each with status for metrics)
-                raw = active_raw + closed_raw
+                raw = active_raw + closed_raw + pending_raw
                 print(f"🔍 REPORT RUN {run_id}: combined {len(raw)} total properties")
             else:
                 # Standard single query for other report types
@@ -422,7 +429,23 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
         
         # 5) Upload PDF to Cloudflare R2
         print(f"🔍 REPORT RUN {run_id}: step=upload_pdf")
-        s3_key = f"reports/{account_id}/{run_id}.pdf"
+        # Create descriptive filename: City_ReportType_RunId.pdf
+        # Sanitize city name (remove spaces, special chars)
+        safe_city = (city or "Market").replace(" ", "_").replace(",", "").replace(".", "")[:30]
+        # Map report_type to title case
+        report_type_map = {
+            "market_snapshot": "MarketSnapshot",
+            "new_listings": "NewListings",
+            "closed": "ClosedSales",
+            "inventory": "Inventory",
+            "price_bands": "PriceBands",
+            "open_houses": "OpenHouses",
+            "new_listings_gallery": "NewListingsGallery",
+            "featured_listings": "FeaturedListings",
+        }
+        safe_report_type = report_type_map.get(report_type, report_type.replace("_", "").title())
+        pdf_filename = f"{safe_city}_{safe_report_type}_{run_id[:8]}.pdf"
+        s3_key = f"reports/{account_id}/{pdf_filename}"
         pdf_url = upload_to_r2(pdf_path, s3_key)
         print(f"✅ REPORT RUN {run_id}: upload_pdf complete (url={pdf_url[:100] if pdf_url else None}...)")
         
