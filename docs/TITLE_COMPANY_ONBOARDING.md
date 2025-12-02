@@ -300,52 +300,62 @@ When a rep generates a report, the system determines branding:
 - [x] **Affiliate onboarding checklist** - Dashboard guidance for new affiliates
 - [x] **User onboarding system** - Step-by-step setup wizard
 
-### Needs Building 🔧 (Nice to Have)
+### ✅ Recently Added
 
-- [ ] **Bulk import script** - CSV → Database for batch onboarding (50+ agents)
-- [ ] **Direct asset upload** - Upload to R2 from admin UI
+- [x] **Bulk CSV import** - Import 50+ agents at once via UI
+- [x] **Direct logo upload** - Drag & drop in create affiliate form
+- [x] **Agent headshot upload** - Camera icon per agent in table
+
+### 🔧 Nice to Have (Future)
+
 - [ ] **Branding preview** - Live preview before saving
+- [ ] **Batch headshot upload** - Upload multiple headshots at once
 
 ---
 
 ## 6. Recommended Approach
 
-### ✅ NEW: Use the Admin Dashboard (Recommended)
+### ✅ Use the Admin Dashboard (Recommended)
 
-**No SQL required!** Use the admin UI at `/app/admin/affiliates`:
+**No SQL required!** Full UI for everything:
 
-1. **Go to** `/app/admin/affiliates/new`
-2. **Fill in the form:**
+#### Step 1: Create Title Company
+1. Go to `/app/admin/affiliates/new`
+2. Fill in:
    - Company Name (required)
    - Admin Email (required)
-   - Logo URL (optional - host on R2 first)
-   - Primary/Accent Colors (optional)
+   - **Drag & drop logo** (uploads to R2 automatically!)
+   - Pick colors with color picker
    - Website URL (optional)
-3. **Click** "Create Affiliate"
-4. **Admin receives** invite email automatically
-5. **Admin logs in** → Can invite their own agents from their dashboard
+3. Click "Create Affiliate"
+4. Admin receives invite email automatically
 
-### Adding Agents
+#### Step 2: Add Agents
 
-**Option A: Admin does it (from Admin Dashboard)**
+**Option A: Single Agent**
 1. Go to `/app/admin/affiliates/[id]`
 2. Scroll to "Invite New Agent"
 3. Enter name and email → Click "Send Invite"
 
-**Option B: Title Company does it (self-service)**
+**Option B: Bulk Import (CSV)** 🆕
+1. Go to `/app/admin/affiliates/[id]`
+2. Scroll to "Bulk Import Agents"
+3. Download CSV template
+4. Fill in: `email, first_name, last_name, name`
+5. Upload CSV → Preview → Import
+6. All agents receive invite emails automatically!
+
+#### Step 3: Upload Headshots 🆕
+
+For each agent in the "Sponsored Agents" table:
+1. Click the **camera icon** in the "Headshot" column
+2. **Drag & drop** the headshot image
+3. Click "Save" → Uploads to R2 automatically!
+
+**Option C: Title Company does it (self-service)**
 1. Title company admin logs in
 2. Goes to their affiliate dashboard
 3. Uses invite agent form
-
-### Asset Upload (Still Manual)
-
-Logos and headshots need to be uploaded to R2 first:
-```
-/branding/pacific-coast-title/logo.png
-/branding/pacific-coast-title/reps/john-smith.jpg
-```
-
-Then paste the URL into the admin form.
 4. ~~Automate **welcome emails** via Resend~~ ✅ Done - `send_invite_email()`
 
 ### What's Now Automated
