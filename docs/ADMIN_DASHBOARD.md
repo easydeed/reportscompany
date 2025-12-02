@@ -1,6 +1,6 @@
 # Admin Dashboard Documentation
 
-**Last Updated**: December 2, 2025
+**Last Updated**: December 2, 2025 (v2)
 **Purpose**: Comprehensive guide to the admin console for platform operators
 
 ---
@@ -603,3 +603,67 @@ For full-service onboarding where admin manages agent photos:
 2. Find the unverified user
 3. Click the mail icon → New invite sent
 4. Copy the invite URL if needed
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+#### "Application error: a client-side exception has occurred"
+
+**Symptom**: Page crashes with a generic error message.
+
+**Common Causes**:
+1. **Empty Select values**: Radix UI `<SelectItem>` components cannot have empty string values (`value=""`). Use a sentinel value like `"all"` instead.
+2. **Missing API data**: Backend returns null/undefined where UI expects an object.
+3. **Invalid date parsing**: Dates from API may be null or malformed.
+
+**Fix**: Check browser console for specific error. Common pattern:
+```
+Error: A <Select.Item /> must have a value prop that is not an empty string.
+```
+
+**Solution**: Change `<SelectItem value="">` to `<SelectItem value="all">` and update filter logic to ignore "all" values.
+
+#### Filters Not Working
+
+**Symptom**: Selecting a filter doesn't change results.
+
+**Checklist**:
+1. Verify the filter value is being sent to API (check Network tab)
+2. Confirm API endpoint accepts that query parameter
+3. Check that "all" values are excluded from API calls
+
+#### Data Shows 0 or Empty
+
+**Symptom**: Stats cards show 0 even though data exists.
+
+**Causes**:
+1. API endpoint not returning expected fields
+2. Response shape changed (e.g., `accounts` vs `data`)
+3. User doesn't have ADMIN role
+
+**Debug**: Check Network tab for API response structure.
+
+---
+
+## Known Limitations
+
+1. **No Pagination**: Account and user lists load all records (fine for <1000)
+2. **No Bulk Delete**: Can only deactivate accounts, not delete
+3. **No Export**: No CSV export of account/user data yet
+4. **No Batch Headshot Upload**: Must upload headshots one at a time
+5. **No Branding Preview**: Can't preview how branding will look on reports
+
+---
+
+## Changelog
+
+### December 2, 2025
+- **Fixed**: Select component empty value error on Accounts and Users pages
+- **Added**: Quick navigation cards on Admin Overview
+- **Added**: Bulk CSV import for agents
+- **Added**: Admin headshot upload for agents
+- **Added**: Direct logo upload (R2) on Create Affiliate form
+- **Added**: Color pickers for brand colors
