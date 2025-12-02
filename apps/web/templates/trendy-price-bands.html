@@ -8,7 +8,7 @@
   /* ====== Print Setup ====== */
   @page {
     size: letter;
-    margin: 0.2in;
+    margin: 0;  /* We handle margins in .page padding */
   }
   @media print {
     html, body { 
@@ -18,10 +18,14 @@
     }
     .page { 
       box-shadow: none !important; 
-      width: 100% !important;
-      min-height: auto !important;
+      width: var(--page-width) !important;
+      height: var(--page-height) !important;  /* EXACT page size */
       margin: 0 !important;
-      padding: 0.15in !important;
+      padding: var(--page-padding) !important;
+      overflow: hidden !important;  /* CRITICAL: Clip overflow */
+    }
+    .page-content {
+      overflow: hidden !important;
     }
     .price-band {
       page-break-inside: avoid;
@@ -46,6 +50,7 @@
   }
 
   :root{
+    /* Brand Colors */
     --pct-blue: #7C3AED; /* TrendyReports violet */
     --pct-accent: #F26B2B; /* TrendyReports coral */
     --pct-gray: rgb(247,249,252);
@@ -54,23 +59,34 @@
     --border: #e5e7eb;
     --success: #16a34a;
     --danger: #dc2626;
+    
+    /* ====== Page Layout Constants (US Letter 8.5" x 11") ====== */
+    --page-width: 8.5in;
+    --page-height: 11in;
+    --page-padding: 0.5in;
   }
 
   .page{
-    width: 8.5in;
-    min-height: 11in;
+    width: var(--page-width);
+    height: var(--page-height);  /* EXACT page height */
     box-sizing: border-box;
     margin: 0 auto;
     background: white;
     box-shadow: 0 2px 24px rgba(0,0,0,.06);
-    padding: 0.5in;
-    /* Removed flexbox - it causes blank page issues when content is short */
-    /* PDFShift remove_blank=true handles empty trailing pages */
+    padding: var(--page-padding);
+    
+    /* Fixed layout: header at top, footer at bottom, content in between */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;  /* Prevent content overflow causing blank pages */
   }
 
-  /* Main content area - no flex grow to avoid blank page issues */
+  /* Main content area - takes remaining space */
   .page-content{
-    /* Content flows naturally, footer follows */
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 
   .header{

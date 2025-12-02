@@ -8,7 +8,7 @@
   /* ====== Print Setup ====== */
   @page {
     size: letter;
-    margin: 0.2in;
+    margin: 0;  /* We handle margins in .page padding */
   }
   @media print {
     html, body { 
@@ -18,10 +18,14 @@
     }
     .page { 
       box-shadow: none !important; 
-      width: 100% !important;
-      min-height: auto !important;
+      width: var(--page-width) !important;
+      height: var(--page-height) !important;  /* EXACT page size */
       margin: 0 !important;
-      padding: 0.15in !important;
+      padding: var(--page-padding) !important;
+      overflow: hidden !important;  /* CRITICAL: Clip overflow */
+    }
+    .page-content {
+      overflow: hidden !important;
     }
     table thead {
       display: table-header-group;
@@ -48,6 +52,7 @@
   }
 
   :root{
+    /* Brand Colors */
     --pct-blue: #7C3AED; /* TrendyReports violet */
     --pct-accent: #F26B2B; /* TrendyReports coral */
     --pct-gray: rgb(247,249,252);
@@ -56,27 +61,58 @@
     --border: #e5e7eb;
     --success: #16a34a;
     --danger: #dc2626;
+    
+    /* ====== Page Layout Constants (US Letter 8.5" x 11") ====== */
+    /* These are FIXED values - do not change without recalculating */
+    --page-width: 8.5in;
+    --page-height: 11in;
+    --page-margin: 0.5in;           /* PDFShift margin */
+    --page-padding: 0.5in;          /* Internal padding */
+    
+    /* Content area = 11in - (0.5in × 2 margin) - (0.5in × 2 padding) = 9in */
+    --content-height: 9in;
+    
+    /* Header: logo(44px) + margin(14px) + ribbon(80px) ≈ 138px = 1.44in */
+    --header-height: 1.5in;
+    
+    /* Footer: branded(92px) + gray(32px) ≈ 124px = 1.3in */
+    --footer-height: 1.3in;
+    
+    /* Table area = 9in - 1.5in - 1.3in = 6.2in ≈ 595px */
+    --table-area-height: 6.2in;
   }
 
   .page{
-    width: 8.5in;
-    min-height: 11in;
+    width: var(--page-width);
+    height: var(--page-height);  /* EXACT page height - no min-height */
     box-sizing: border-box;
     margin: 0 auto;
     background: white;
     box-shadow: 0 2px 24px rgba(0,0,0,.06);
-    padding: 0.5in;
+    padding: var(--page-padding);
     page-break-after: always;
-    /* Removed flexbox - it causes blank page issues when content is short */
-    /* Footer will naturally flow after content */
+    
+    /* Fixed layout: header at top, footer at bottom, content in between */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;  /* Prevent content overflow causing blank pages */
   }
   .page:last-child {
     page-break-after: avoid;
   }
 
-  /* Main content area - no flex grow to avoid blank page issues */
+  /* Main content area - takes remaining space between header and footer */
   .page-content{
-    /* Content flows naturally, footer follows */
+    flex: 1;
+    overflow: hidden;  /* Clip any overflow - prevents blank page */
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Data section fills available space */
+  .data-section {
+    flex: 1;
+    overflow: hidden;
   }
 
   /* Condensed header for continuation pages */
