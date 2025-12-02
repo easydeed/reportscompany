@@ -68,6 +68,10 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
     city = context.get("city", "Market")
     lookback_days = context.get("lookback_days", 30)
     
+    # Constants for MOI calculation
+    # 30.437 = average days per month (365.25 / 12)
+    AVG_DAYS_PER_MONTH = 30.437
+    
     # Calculate date cutoff for filtering
     cutoff_date = datetime.now() - timedelta(days=lookback_days)
     
@@ -104,12 +108,12 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
     avg_dom = _average([l["days_on_market"] for l in closed if l.get("days_on_market")])
     
     # MOI: Active inventory / Closed sales per month
-    # Formula: (Active Count / Closed Count) adjusted for lookback period
+    # Per market_worker.py reference:
+    # MOI = Active Listings ÷ Monthly Sales Rate
+    # Monthly Sales Rate = (Closings in period) × (30.437 / period_days)
     if closed:
-        moi = len(active) / len(closed)
-        # If lookback is not 30 days, normalize: MOI = active / (closed * 30/lookback)
-        if lookback_days != 30:
-            moi = len(active) / (len(closed) * (30 / lookback_days))
+        monthly_sales_rate = len(closed) * (AVG_DAYS_PER_MONTH / lookback_days)
+        moi = len(active) / monthly_sales_rate if monthly_sales_rate > 0 else 99.9
     else:
         moi = 99.9  # Very high if no closed sales (buyer's market indicator)
     
@@ -175,11 +179,11 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
                 tier_active = [l for l in active if min_price <= l.get("list_price", 0) < max_price]
                 
                 if tier_closed or tier_active:
-                    # MOI per tier: Active / Closed (normalized for lookback period)
+                    # MOI per tier: Active / Monthly Sales Rate
+                    # Per market_worker.py: Monthly Sales Rate = Closed × (30.437 / lookback)
                     if tier_closed:
-                        tier_moi = len(tier_active) / len(tier_closed)
-                        if lookback_days != 30:
-                            tier_moi = len(tier_active) / (len(tier_closed) * (30 / lookback_days))
+                        tier_monthly_rate = len(tier_closed) * (AVG_DAYS_PER_MONTH / lookback_days)
+                        tier_moi = len(tier_active) / tier_monthly_rate if tier_monthly_rate > 0 else 99.9
                     else:
                         tier_moi = 99.9  # No closed sales in tier
                     
