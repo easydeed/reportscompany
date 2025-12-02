@@ -106,7 +106,7 @@ export default function NewReportPage() {
   // Show loading overlay when generating
   if (generationState === "generating" || generationState === "completed" || generationState === "failed") {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-md">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/10 backdrop-blur-md">
         <div className="w-full max-w-lg mx-4">
           <div className="bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
             {/* Header */}
