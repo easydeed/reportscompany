@@ -657,6 +657,7 @@ def get_affiliate_detail(
                 u.email,
                 u.first_name,
                 u.last_name,
+                u.avatar_url,
                 (SELECT COUNT(*) FROM report_generations rg
                  WHERE rg.account_id = a.id
                  AND rg.created_at >= date_trunc('month', CURRENT_DATE)) as reports_this_month,
@@ -679,8 +680,9 @@ def get_affiliate_detail(
                 "email": agent_row[6],
                 "first_name": agent_row[7],
                 "last_name": agent_row[8],
-                "reports_this_month": agent_row[9] or 0,
-                "last_report_at": agent_row[10].isoformat() if agent_row[10] else None,
+                "avatar_url": agent_row[9],
+                "reports_this_month": agent_row[10] or 0,
+                "last_report_at": agent_row[11].isoformat() if agent_row[11] else None,
             })
 
         affiliate["agents"] = agents
@@ -1359,6 +1361,237 @@ def update_user(
             "email": row[1],
             "is_active": row[2],
             "email_verified": row[3],
+        }
+
+
+class BulkAgentImportRequest(BaseModel):
+    """Request body for bulk agent import."""
+    affiliate_id: str
+    agents: List[Dict[str, Any]]  # List of {email, first_name, last_name, name}
+
+
+class BulkAgentResult(BaseModel):
+    """Result for a single agent in bulk import."""
+    email: str
+    success: bool
+    account_id: Optional[str] = None
+    user_id: Optional[str] = None
+    error: Optional[str] = None
+
+
+@router.post("/affiliates/{affiliate_id}/bulk-import")
+def bulk_import_agents(
+    affiliate_id: str,
+    body: BulkAgentImportRequest,
+    background_tasks: BackgroundTasks,
+    _admin: dict = Depends(get_admin_user)
+):
+    """
+    Bulk import agents for an affiliate from CSV data.
+
+    Creates accounts and users for each agent, sends invite emails.
+    Used for full-service title company onboarding where admin does everything.
+
+    Args:
+        affiliate_id: The affiliate account ID to sponsor these agents
+        body: Contains list of agents with email, first_name, last_name, name
+
+    Returns:
+        Summary of results with success/failure for each agent
+    """
+    with db_conn() as conn:
+        cur = conn.cursor()
+
+        # Verify affiliate exists
+        cur.execute("""
+            SELECT name FROM accounts
+            WHERE id = %s::uuid AND account_type = 'INDUSTRY_AFFILIATE'
+        """, (affiliate_id,))
+        affiliate_row = cur.fetchone()
+        if not affiliate_row:
+            raise HTTPException(status_code=404, detail="Affiliate not found")
+
+        company_name = affiliate_row[0]
+
+        results = []
+        success_count = 0
+        error_count = 0
+
+        for agent_data in body.agents:
+            email = agent_data.get("email", "").strip().lower()
+            first_name = agent_data.get("first_name", "").strip() or None
+            last_name = agent_data.get("last_name", "").strip() or None
+            name = agent_data.get("name", "").strip()
+
+            # Generate name if not provided
+            if not name:
+                if first_name and last_name:
+                    name = f"{first_name} {last_name}"
+                elif first_name:
+                    name = first_name
+                elif email:
+                    name = email.split("@")[0].replace(".", " ").title()
+                else:
+                    results.append({
+                        "email": email or "unknown",
+                        "success": False,
+                        "error": "No email provided"
+                    })
+                    error_count += 1
+                    continue
+
+            if not email:
+                results.append({
+                    "email": "unknown",
+                    "success": False,
+                    "error": "No email provided"
+                })
+                error_count += 1
+                continue
+
+            try:
+                # Check if email already exists
+                cur.execute("SELECT id FROM users WHERE email = %s", (email,))
+                if cur.fetchone():
+                    results.append({
+                        "email": email,
+                        "success": False,
+                        "error": "Email already exists"
+                    })
+                    error_count += 1
+                    continue
+
+                # Generate slug
+                slug = name.lower().replace(' ', '-').replace('.', '').replace(',', '')[:50]
+
+                cur.execute("SELECT id FROM accounts WHERE slug = %s", (slug,))
+                if cur.fetchone():
+                    import time
+                    slug = f"{slug}-{int(time.time())}"[:50]
+
+                # Create agent account
+                cur.execute("""
+                    INSERT INTO accounts (name, slug, account_type, plan_slug, sponsor_account_id)
+                    VALUES (%s, %s, 'REGULAR', 'sponsored_free', %s::uuid)
+                    RETURNING id::text
+                """, (name, slug, affiliate_id))
+                new_account_id = cur.fetchone()[0]
+
+                # Create user
+                cur.execute("""
+                    INSERT INTO users (account_id, email, first_name, last_name, is_active, email_verified, role)
+                    VALUES (%s::uuid, %s, %s, %s, true, false, 'member')
+                    RETURNING id::text
+                """, (new_account_id, email, first_name, last_name))
+                new_user_id = cur.fetchone()[0]
+
+                # Create account_users entry
+                cur.execute("""
+                    INSERT INTO account_users (account_id, user_id, role)
+                    VALUES (%s::uuid, %s::uuid, 'OWNER')
+                """, (new_account_id, new_user_id))
+
+                # Generate invite token
+                token = secrets.token_urlsafe(32)
+
+                cur.execute("""
+                    INSERT INTO signup_tokens (token, user_id, account_id)
+                    VALUES (%s, %s::uuid, %s::uuid)
+                """, (token, new_user_id, new_account_id))
+
+                # Queue invite email
+                try:
+                    background_tasks.add_task(
+                        send_invite_email,
+                        email,
+                        "TrendyReports Admin",
+                        company_name,
+                        token
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to queue invite email for {email}: {e}")
+
+                results.append({
+                    "email": email,
+                    "success": True,
+                    "account_id": new_account_id,
+                    "user_id": new_user_id,
+                })
+                success_count += 1
+
+            except Exception as e:
+                logger.error(f"Failed to create agent {email}: {e}")
+                results.append({
+                    "email": email,
+                    "success": False,
+                    "error": str(e)
+                })
+                error_count += 1
+
+        conn.commit()
+
+        return {
+            "ok": True,
+            "affiliate_id": affiliate_id,
+            "affiliate_name": company_name,
+            "total": len(body.agents),
+            "success_count": success_count,
+            "error_count": error_count,
+            "results": results,
+        }
+
+
+class UpdateAgentHeadshotRequest(BaseModel):
+    """Request to update an agent's headshot."""
+    headshot_url: str
+
+
+@router.patch("/agents/{account_id}/headshot")
+def update_agent_headshot(
+    account_id: str,
+    body: UpdateAgentHeadshotRequest,
+    _admin: dict = Depends(get_admin_user)
+):
+    """
+    Update an agent's headshot from admin.
+
+    Used for full-service onboarding where admin uploads headshots for agents.
+    """
+    with db_conn() as conn:
+        cur = conn.cursor()
+
+        # Verify account exists and is a regular account (agent)
+        cur.execute("""
+            SELECT a.id, u.id as user_id
+            FROM accounts a
+            JOIN users u ON u.account_id = a.id
+            WHERE a.id = %s::uuid AND a.account_type = 'REGULAR'
+            LIMIT 1
+        """, (account_id,))
+
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Agent account not found")
+
+        user_id = row[1]
+
+        # Update user's avatar
+        cur.execute("""
+            UPDATE users
+            SET avatar_url = %s, updated_at = NOW()
+            WHERE id = %s
+            RETURNING id::text, email, avatar_url
+        """, (body.headshot_url, user_id))
+
+        updated = cur.fetchone()
+        conn.commit()
+
+        return {
+            "ok": True,
+            "account_id": account_id,
+            "user_id": str(updated[0]),
+            "email": updated[1],
+            "headshot_url": updated[2],
         }
 
 

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { ImageUpload } from "@/components/ui/image-upload"
 import { ArrowLeft, Building2, Loader2, CheckCircle, Copy } from "lucide-react"
 
 export default function NewAffiliatePage() {
@@ -21,6 +22,9 @@ export default function NewAffiliatePage() {
     accountId: string
   } | null>(null)
   const [copied, setCopied] = useState(false)
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [primaryColor, setPrimaryColor] = useState("#7C3AED")
+  const [accentColor, setAccentColor] = useState("#F26B2B")
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -34,9 +38,9 @@ export default function NewAffiliatePage() {
       admin_email: formData.get("admin_email") as string,
       admin_first_name: formData.get("admin_first_name") as string || undefined,
       admin_last_name: formData.get("admin_last_name") as string || undefined,
-      logo_url: formData.get("logo_url") as string || undefined,
-      primary_color: formData.get("primary_color") as string || undefined,
-      accent_color: formData.get("accent_color") as string || undefined,
+      logo_url: logoUrl || undefined,
+      primary_color: primaryColor || undefined,
+      accent_color: accentColor || undefined,
       website_url: formData.get("website_url") as string || undefined,
     }
 
@@ -231,37 +235,30 @@ export default function NewAffiliatePage() {
             <CardDescription>White-label branding for reports</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="logo_url">Logo URL</Label>
-              <Input
-                id="logo_url"
-                name="logo_url"
-                type="url"
-                placeholder="https://example.com/logo.png"
-                disabled={loading}
-              />
-              <p className="text-sm text-muted-foreground mt-1">
-                PNG or SVG with transparent background recommended
-              </p>
-            </div>
+            <ImageUpload
+              label="Company Logo"
+              value={logoUrl}
+              onChange={setLogoUrl}
+              assetType="logo"
+              aspectRatio="wide"
+              helpText="PNG or SVG with transparent background recommended"
+            />
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="primary_color">Primary Color</Label>
                 <div className="flex gap-2">
                   <Input
                     id="primary_color"
-                    name="primary_color"
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
                     placeholder="#7C3AED"
                     disabled={loading}
                     className="flex-1"
                   />
                   <input
                     type="color"
-                    defaultValue="#7C3AED"
-                    onChange={(e) => {
-                      const input = document.getElementById("primary_color") as HTMLInputElement
-                      if (input) input.value = e.target.value
-                    }}
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
                     className="w-10 h-10 rounded border cursor-pointer"
                     disabled={loading}
                   />
@@ -272,18 +269,16 @@ export default function NewAffiliatePage() {
                 <div className="flex gap-2">
                   <Input
                     id="accent_color"
-                    name="accent_color"
+                    value={accentColor}
+                    onChange={(e) => setAccentColor(e.target.value)}
                     placeholder="#F26B2B"
                     disabled={loading}
                     className="flex-1"
                   />
                   <input
                     type="color"
-                    defaultValue="#F26B2B"
-                    onChange={(e) => {
-                      const input = document.getElementById("accent_color") as HTMLInputElement
-                      if (input) input.value = e.target.value
-                    }}
+                    value={accentColor}
+                    onChange={(e) => setAccentColor(e.target.value)}
                     className="w-10 h-10 rounded border cursor-pointer"
                     disabled={loading}
                   />
