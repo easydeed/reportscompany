@@ -66,18 +66,17 @@
     background: white;
     box-shadow: 0 2px 24px rgba(0,0,0,.06);
     padding: 0.5in;
-    /* Flexbox layout for footer positioning */
-    display: flex;
-    flex-direction: column;
     page-break-after: always;
+    /* Removed flexbox - it causes blank page issues when content is short */
+    /* Footer will naturally flow after content */
   }
   .page:last-child {
     page-break-after: avoid;
   }
 
-  /* Main content area grows to push footer to bottom */
+  /* Main content area - no flex grow to avoid blank page issues */
   .page-content{
-    flex: 1;
+    /* Content flows naturally, footer follows */
   }
 
   /* Condensed header for continuation pages */

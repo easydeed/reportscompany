@@ -68,6 +68,10 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
     city = context.get("city", "Market")
     lookback_days = context.get("lookback_days", 30)
     
+    # Filter to only include listings from the requested city
+    # (SimplyRETS q parameter may return nearby cities)
+    listings = _filter_by_city(listings, city)
+    
     # Constants for MOI calculation
     # 30.437 = average days per month (365.25 / 12)
     AVG_DAYS_PER_MONTH = 30.437
@@ -258,6 +262,31 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
     }
 
 
+def _filter_by_city(listings: List[Dict], city: str) -> List[Dict]:
+    """
+    Filter listings to only include those in the specified city.
+    
+    SimplyRETS `q` parameter is a free-text search that can return results
+    from nearby cities (e.g., searching "La Verne" may return "East Los Angeles").
+    This function ensures we only include listings from the exact city requested.
+    
+    Comparison is case-insensitive and handles common variations.
+    """
+    if not city or city == "Market":
+        return listings
+    
+    city_lower = city.lower().strip()
+    
+    filtered = []
+    for l in listings:
+        listing_city = (l.get("city") or "").lower().strip()
+        # Exact match (case-insensitive)
+        if listing_city == city_lower:
+            filtered.append(l)
+    
+    return filtered
+
+
 def build_new_listings_result(listings: List[Dict], context: Dict) -> Dict:
     """
     New Listings - Fresh inventory report
@@ -269,10 +298,14 @@ def build_new_listings_result(listings: List[Dict], context: Dict) -> Dict:
     city = context.get("city", "Market")
     lookback_days = context.get("lookback_days", 30)
     
+    # Filter to only include listings from the requested city
+    # (SimplyRETS q parameter may return nearby cities)
+    city_filtered = _filter_by_city(listings, city)
+    
     # Filter to active listings listed within lookback period
     cutoff_date = datetime.now() - timedelta(days=lookback_days)
     new_listings = [
-        l for l in listings 
+        l for l in city_filtered 
         if l.get("status") == "Active" and l.get("list_date") and l["list_date"] >= cutoff_date
     ]
     
@@ -320,6 +353,9 @@ def build_inventory_result(listings: List[Dict], context: Dict) -> Dict:
     """
     city = context.get("city", "Market")
     lookback_days = context.get("lookback_days", 30)
+    
+    # Filter to only include listings from the requested city
+    listings = _filter_by_city(listings, city)
     
     # Active listings only
     active = [l for l in listings if l.get("status") == "Active"]
@@ -375,6 +411,9 @@ def build_closed_result(listings: List[Dict], context: Dict) -> Dict:
     city = context.get("city", "Market")
     lookback_days = context.get("lookback_days", 30)
     
+    # Filter to only include listings from the requested city
+    listings = _filter_by_city(listings, city)
+    
     # Closed listings only
     closed = [l for l in listings if l.get("status") == "Closed"]
     
@@ -426,6 +465,9 @@ def build_price_bands_result(listings: List[Dict], context: Dict) -> Dict:
     """
     city = context.get("city", "Market")
     lookback_days = context.get("lookback_days", 30)
+    
+    # Filter to only include listings from the requested city
+    listings = _filter_by_city(listings, city)
     
     # Use all listings for price band analysis
     if not listings:
@@ -543,6 +585,9 @@ def build_new_listings_gallery_result(listings: List[Dict], context: Dict) -> Di
     city = context.get("city", "Market")
     lookback_days = context.get("lookback_days", 30)
     
+    # Filter to only include listings from the requested city
+    listings = _filter_by_city(listings, city)
+    
     # Get new active listings
     cutoff_date = datetime.now() - timedelta(days=lookback_days)
     new_listings = [l for l in listings if l.get("status") == "Active" and l.get("list_date") and l["list_date"] >= cutoff_date]
@@ -585,6 +630,9 @@ def build_featured_listings_result(listings: List[Dict], context: Dict) -> Dict:
     """
     city = context.get("city", "Market")
     lookback_days = context.get("lookback_days", 30)
+    
+    # Filter to only include listings from the requested city
+    listings = _filter_by_city(listings, city)
     
     # Get active listings
     active = [l for l in listings if l.get("status") == "Active"]

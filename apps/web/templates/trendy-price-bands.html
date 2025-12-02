@@ -64,14 +64,13 @@
     background: white;
     box-shadow: 0 2px 24px rgba(0,0,0,.06);
     padding: 0.5in;
-    /* Flexbox layout for footer positioning */
-    display: flex;
-    flex-direction: column;
+    /* Removed flexbox - it causes blank page issues when content is short */
+    /* PDFShift remove_blank=true handles empty trailing pages */
   }
 
-  /* Main content area grows to push footer to bottom */
+  /* Main content area - no flex grow to avoid blank page issues */
   .page-content{
-    flex: 1;
+    /* Content flows naturally, footer follows */
   }
 
   .header{

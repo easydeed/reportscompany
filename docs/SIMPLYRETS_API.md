@@ -1,6 +1,6 @@
 # SimplyRETS API - Complete Technical Guide
 
-**Last Updated**: December 2, 2025  
+**Last Updated**: December 2, 2025 (v2)  
 **Status**: ✅ Production Ready  
 **Test Scripts**: `scripts/test_simplyrets.py`, `scripts/test_report_flow.py`
 
@@ -409,6 +409,48 @@ def parse_date(date_str):
     return dt.replace(tzinfo=None)  # Make timezone-naive
 ```
 
+### "Listings from wrong city (e.g., searched La Verne, got East Los Angeles)"
+
+**Cause**: The `q` parameter is a fuzzy search that can return nearby cities.
+
+**Fix**: Filter listings client-side by exact city match:
+
+```python
+def filter_by_city(listings, city):
+    """Filter to only include listings from the exact city."""
+    if not city or city == "Market":
+        return listings
+    
+    city_lower = city.lower().strip()
+    return [l for l in listings if (l.get("city") or "").lower().strip() == city_lower]
+```
+
+### "Address, Beds, Baths columns are blank in reports"
+
+**Cause**: Template uses wrong field names. PropertyDataExtractor saves:
+- `street_address` (not `address`)
+- `bedrooms` (not `beds`)
+- `bathrooms` (not `baths`)
+
+**Fix**: Update template to use correct field names.
+
+### "PDF has blank second page / footer jumps to fill empty space"
+
+**Cause**: CSS flexbox `flex:1` on `.page-content` pushes footer down, creating overflow.
+
+**Fix**: Two-part solution:
+1. Remove flexbox from templates (let content flow naturally)
+2. Use PDFShift's `remove_blank=true` parameter to remove empty trailing pages
+
+```python
+# In pdf_adapter.py
+payload = {
+    "source": url,
+    "remove_blank": True,  # PDFShift removes empty last page
+    "use_print": True,     # Use @media print stylesheet
+}
+```
+
 ---
 
 ## 8. Code Files Reference
@@ -462,6 +504,14 @@ SIMPLYRETS_PASSWORD=lm0182gh3pu6f827
 ---
 
 ## 11. Changelog
+
+### December 2, 2025 (v2) - Data & PDF Fixes
+- ✅ **Fixed field mapping in templates**: `address`→`street_address`, `beds`→`bedrooms`, `baths`→`bathrooms`
+- ✅ **Fixed price/sqft formatting**: Now displays as `$540` instead of `540`
+- ✅ **Added city filtering**: Filter listings to exact city match (API `q` param returns nearby cities)
+- ✅ **Fixed PDF blank page issue**: Added `remove_blank=true` to PDFShift API calls
+- ✅ **Fixed PDF footer positioning**: Removed CSS flexbox `flex:1` that caused overflow to blank pages
+- ✅ **Updated all HTML templates**: Consistent page break handling across all report types
 
 ### December 2, 2025 - Major Fixes
 - ✅ **Fixed rental pollution**: Default all queries to `type=RES`

@@ -283,13 +283,18 @@ export function buildNewListingsHtml(
   `;
 
   // Build row HTML helper
+  // Note: Field mapping from PropertyDataExtractor:
+  // - street_address (not address)
+  // - bedrooms (not beds)
+  // - bathrooms (not baths)
+  // - price_per_sqft for $/sqft
   const buildRow = (listing: any) => `
     <tr>
       <td>${listing.city || r.city || "—"}</td>
-      <td>${listing.address || "—"}</td>
+      <td>${listing.street_address || "—"}</td>
       <td class="t-right">${formatCurrency(listing.list_price)}</td>
-      <td class="t-right">${formatNumber(listing.beds)}</td>
-      <td class="t-right">${formatDecimal(listing.baths, 1)}</td>
+      <td class="t-right">${formatNumber(listing.bedrooms)}</td>
+      <td class="t-right">${formatDecimal(listing.bathrooms, 1)}</td>
       <td class="t-right">${formatNumber(listing.sqft)}</td>
       <td class="t-right">${formatNumber(listing.days_on_market)}</td>
       <td class="t-right">${listing.list_date ? new Date(listing.list_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "—"}</td>
@@ -342,7 +347,7 @@ export function buildNewListingsHtml(
             <div class="item"><div class="lbl">Total New Listings</div><div class="val">${formatNumber(counts.Active || 0)}</div></div>
             <div class="item"><div class="lbl">Median List Price</div><div class="val">${formatCurrency(metrics.median_list_price)}</div></div>
             <div class="item"><div class="lbl">Avg DOM</div><div class="val">${formatDecimal(metrics.avg_dom)}</div></div>
-            <div class="item"><div class="lbl">Avg Price/SqFt</div><div class="val">${formatDecimal(metrics.avg_ppsf || 0)}</div></div>
+            <div class="item"><div class="lbl">Avg Price/SqFt</div><div class="val">${formatCurrency(metrics.avg_ppsf || 0)}</div></div>
           </div>
           <div class="chip">Last ${lookback} days</div>
         </section>
@@ -447,14 +452,18 @@ export function buildInventoryHtml(
     </footer>
   `;
 
-  // Build row HTML helper
+  // Build row HTML helper (Inventory)
+  // Note: Field mapping from PropertyDataExtractor:
+  // - street_address (not address)
+  // - bedrooms (not beds)
+  // - bathrooms (not baths)
   const buildRow = (listing: any) => `
     <tr>
       <td>${listing.city || r.city || "—"}</td>
-      <td>${listing.address || "—"}</td>
+      <td>${listing.street_address || "—"}</td>
       <td class="t-right">${formatCurrency(listing.list_price)}</td>
-      <td class="t-right">${formatNumber(listing.beds)}</td>
-      <td class="t-right">${formatDecimal(listing.baths, 1)}</td>
+      <td class="t-right">${formatNumber(listing.bedrooms)}</td>
+      <td class="t-right">${formatDecimal(listing.bathrooms, 1)}</td>
       <td class="t-right">${formatNumber(listing.sqft)}</td>
       <td class="t-right">${formatNumber(listing.days_on_market)}</td>
       <td class="t-right">${listing.status || "Active"}</td>
@@ -612,14 +621,18 @@ export function buildClosedHtml(
     </footer>
   `;
 
-  // Build row HTML helper
+  // Build row HTML helper (Closed)
+  // Note: Field mapping from PropertyDataExtractor:
+  // - street_address (not address)
+  // - bedrooms (not beds)
+  // - bathrooms (not baths)
   const buildRow = (listing: any) => `
     <tr>
       <td>${listing.city || r.city || "—"}</td>
-      <td>${listing.address || "—"}</td>
+      <td>${listing.street_address || "—"}</td>
       <td class="t-right">${formatCurrency(listing.close_price || listing.list_price)}</td>
-      <td class="t-right">${formatNumber(listing.beds)}</td>
-      <td class="t-right">${formatDecimal(listing.baths, 1)}</td>
+      <td class="t-right">${formatNumber(listing.bedrooms)}</td>
+      <td class="t-right">${formatDecimal(listing.bathrooms, 1)}</td>
       <td class="t-right">${formatNumber(listing.sqft)}</td>
       <td class="t-right">${formatNumber(listing.days_on_market)}</td>
       <td class="t-right">${listing.close_date ? new Date(listing.close_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "—"}</td>

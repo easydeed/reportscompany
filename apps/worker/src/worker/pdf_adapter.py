@@ -88,6 +88,13 @@ def _generate_via_api(url: str, output_path: str) -> bool:
     Configure via environment variables:
     - PDF_API_URL: API endpoint
     - PDF_API_KEY: API authentication key
+    
+    PDFShift-specific features used:
+    - remove_blank: Removes the last page if it's considered empty
+      (fixes the "extra blank page" issue when content doesn't fill the page)
+    - use_print: Uses the print stylesheet for better PDF rendering
+    
+    See: https://docs.pdfshift.io/
     """
     if not PDF_API_URL or not PDF_API_KEY:
         raise ValueError(
@@ -98,6 +105,9 @@ def _generate_via_api(url: str, output_path: str) -> bool:
     headers = {
         "Content-Type": "application/json",
     }
+    
+    # Check if this is PDFShift for service-specific options
+    is_pdfshift = "pdfshift" in PDF_API_URL.lower()
     
     payload = {
         "source": url,
@@ -110,8 +120,19 @@ def _generate_via_api(url: str, output_path: str) -> bool:
         }
     }
     
-    # PDFShift uses Basic Auth
-    auth = (PDF_API_KEY, "") if "pdfshift" in PDF_API_URL.lower() else None
+    # PDFShift-specific options
+    # See: https://docs.pdfshift.io/
+    if is_pdfshift:
+        # remove_blank: Remove the last page if it's empty
+        # This fixes the issue where flexbox footer positioning creates
+        # extra empty space that pushes to a second blank page
+        payload["remove_blank"] = True
+        
+        # use_print: Use the @media print stylesheet
+        payload["use_print"] = True
+    
+    # PDFShift uses Basic Auth with API key as username, empty password
+    auth = (PDF_API_KEY, "") if is_pdfshift else None
     
     with httpx.Client(timeout=60.0) as client:
         response = client.post(
