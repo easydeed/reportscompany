@@ -48,6 +48,7 @@ export interface ReportPayload {
     minprice?: number
     maxprice?: number
     type?: string
+    subtype?: string
   }
 }
 
@@ -58,6 +59,7 @@ interface WizardState {
   zips: string[]
   lookback_days: number
   property_types: string[]
+  property_subtype: string  // SingleFamilyResidence, Condominium, Townhouse, or empty for all
   minprice: string
   maxprice: string
 }
@@ -84,6 +86,7 @@ export function buildPayload(state: WizardState): ReportPayload {
   if (state.minprice) filters.minprice = Number.parseInt(state.minprice)
   if (state.maxprice) filters.maxprice = Number.parseInt(state.maxprice)
   if (state.property_types.length > 0) filters.type = state.property_types.join(",")
+  if (state.property_subtype) filters.subtype = state.property_subtype
 
   if (Object.keys(filters).length > 0) {
     payload.filters = filters
@@ -134,12 +137,21 @@ const reportTypes = [
 
 const lookbackOptions = [7, 14, 30, 60, 90]
 
+// Property types (broad category)
 const propertyTypes = [
   { id: "RES", name: "Residential", icon: Home },
   { id: "CND", name: "Condo", icon: Building },
   { id: "MUL", name: "Multi-Family", icon: Building },
   { id: "LND", name: "Land", icon: MapPin },
   { id: "COM", name: "Commercial", icon: Building },
+]
+
+// Property subtypes (more specific - verified working with SimplyRETS)
+const propertySubtypes = [
+  { id: "", name: "All Types", description: "Include all property types" },
+  { id: "SingleFamilyResidence", name: "Single Family", description: "Detached single-family homes" },
+  { id: "Condominium", name: "Condo", description: "Condominiums" },
+  { id: "Townhouse", name: "Townhouse", description: "Attached townhomes" },
 ]
 
 export function NewReportWizard({ onSubmit, onCancel }: NewReportWizardProps) {
@@ -150,7 +162,8 @@ export function NewReportWizard({ onSubmit, onCancel }: NewReportWizardProps) {
     city: "",
     zips: [],
     lookback_days: 30,
-    property_types: [],
+    property_types: ["RES"],  // Default to Residential
+    property_subtype: "",     // Empty = all subtypes
     minprice: "",
     maxprice: "",
   })
@@ -479,31 +492,27 @@ function Step3Options({
             <p className="text-xs text-muted-foreground">How far back to include data in the report</p>
           </div>
 
-          {/* Property Type */}
+          {/* Property SubType (More User-Friendly) */}
           <div className="space-y-3">
-            <Label>Property Type (optional)</Label>
-            <div className="grid sm:grid-cols-3 lg:grid-cols-5 gap-3">
-              {propertyTypes.map((type) => {
-                const Icon = type.icon
-                return (
-                  <button
-                    key={type.id}
-                    type="button"
-                    onClick={() => togglePropertyType(type.id)}
-                    className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
-                      state.property_types.includes(type.id)
-                        ? "border-primary bg-primary/5 text-primary"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                    aria-pressed={state.property_types.includes(type.id)}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span className="font-medium text-sm">{type.name}</span>
-                  </button>
-                )
-              })}
+            <Label>Property Type</Label>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {propertySubtypes.map((subtype) => (
+                <button
+                  key={subtype.id}
+                  type="button"
+                  onClick={() => setState({ ...state, property_subtype: subtype.id })}
+                  className={`flex flex-col items-start p-4 rounded-lg border-2 transition-all text-left ${
+                    state.property_subtype === subtype.id
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                  aria-pressed={state.property_subtype === subtype.id}
+                >
+                  <span className="font-medium">{subtype.name}</span>
+                  <span className="text-xs text-muted-foreground mt-1">{subtype.description}</span>
+                </button>
+              ))}
             </div>
-            <p className="text-xs text-muted-foreground">Leave empty to include all property types</p>
           </div>
 
           {/* Price Range */}
@@ -553,6 +562,7 @@ function Step3Options({
 // Step 4: Review
 function Step4Review({ state }: { state: WizardState }) {
   const selectedType = reportTypes.find((t) => t.id === state.report_type)
+  const selectedSubtype = propertySubtypes.find((t) => t.id === state.property_subtype)
 
   const formatArea = () => {
     if (state.area_mode === "city") return state.city
@@ -588,12 +598,10 @@ function Step4Review({ state }: { state: WizardState }) {
               <p className="text-xs text-muted-foreground mb-1">Lookback Period</p>
               <p className="font-medium">{state.lookback_days} days</p>
             </div>
-            {state.property_types.length > 0 && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Property Types</p>
-                <p className="font-medium">{state.property_types.join(", ")}</p>
-              </div>
-            )}
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Property Type</p>
+              <p className="font-medium">{selectedSubtype?.name || "All Types"}</p>
+            </div>
             {formatPriceRange() && (
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Price Range</p>

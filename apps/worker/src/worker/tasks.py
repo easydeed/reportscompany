@@ -7,7 +7,7 @@ from .compute.extract import PropertyDataExtractor
 from .compute.validate import filter_valid
 from .compute.calc import snapshot_metrics
 from .cache import get as cache_get, set as cache_set
-from .query_builders import build_params
+from .query_builders import build_params, build_market_snapshot, build_market_snapshot_closed
 from .redis_utils import create_redis_connection
 from .pdf_engine import render_pdf
 from .email.send import send_schedule_email
@@ -352,11 +352,36 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
         result = cache_get("report", cache_payload)
         if not result:
             print(f"🔍 REPORT RUN {run_id}: cache_miss, fetching from SimplyRETS")
-            # Build SimplyRETS query using query_builders
-            q = build_params(report_type, params or {})
-            print(f"🔍 REPORT RUN {run_id}: simplyrets_query={q}")
-            raw = fetch_properties(q, limit=800)
-            print(f"🔍 REPORT RUN {run_id}: fetched {len(raw)} properties from SimplyRETS")
+            
+            # Normalize report type for comparison
+            rt_normalized = (report_type or "market_snapshot").lower().replace("_", "-").replace(" ", "-")
+            
+            # For Market Snapshot: Query Active and Closed SEPARATELY for cleaner data
+            if rt_normalized in ("market-snapshot", "snapshot"):
+                print(f"🔍 REPORT RUN {run_id}: Using separate Active/Closed queries")
+                
+                # Query 1: Active listings
+                active_query = build_market_snapshot(_params)
+                print(f"🔍 REPORT RUN {run_id}: active_query={active_query}")
+                active_raw = fetch_properties(active_query, limit=500)
+                print(f"🔍 REPORT RUN {run_id}: fetched {len(active_raw)} Active properties")
+                
+                # Query 2: Closed listings
+                closed_query = build_market_snapshot_closed(_params)
+                print(f"🔍 REPORT RUN {run_id}: closed_query={closed_query}")
+                closed_raw = fetch_properties(closed_query, limit=500)
+                print(f"🔍 REPORT RUN {run_id}: fetched {len(closed_raw)} Closed properties")
+                
+                # Combine for extraction (mark each with status for metrics)
+                raw = active_raw + closed_raw
+                print(f"🔍 REPORT RUN {run_id}: combined {len(raw)} total properties")
+            else:
+                # Standard single query for other report types
+                q = build_params(report_type, params or {})
+                print(f"🔍 REPORT RUN {run_id}: simplyrets_query={q}")
+                raw = fetch_properties(q, limit=800)
+                print(f"🔍 REPORT RUN {run_id}: fetched {len(raw)} properties from SimplyRETS")
+            
             extracted = PropertyDataExtractor(raw).run()
             clean = filter_valid(extracted)
             print(f"🔍 REPORT RUN {run_id}: cleaned to {len(clean)} valid properties")

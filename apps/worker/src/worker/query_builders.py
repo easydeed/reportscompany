@@ -86,42 +86,82 @@ def _location(params: dict) -> Dict:
 def _filters(filters: Optional[dict]) -> Dict:
     """
     Map optional filters to SimplyRETS params.
+    
     Supported inputs (optional):
-      minprice, maxprice, type (RES,CND,MUL,LND,COM), beds, baths
+      - minprice, maxprice: Price range
+      - type: Property type (RES=Residential, CND=Condo, MUL=Multi-family, LND=Land, COM=Commercial)
+      - subtype: Property subtype (SingleFamilyResidence, Condominium, Townhouse, ManufacturedHome, Duplex)
+      - beds, baths: Minimum bedrooms/bathrooms
+    
+    Note on type vs subtype:
+      - type=RES includes all residential (SFR, Condo, Townhouse)
+      - subtype is more specific (e.g., SingleFamilyResidence only)
+      - Can combine: type=RES + subtype=SingleFamilyResidence
     """
     f = filters or {}
     out: Dict = {}
     if f.get("minprice") is not None: out["minprice"] = int(f["minprice"])
     if f.get("maxprice") is not None: out["maxprice"] = int(f["maxprice"])
-    if f.get("type"):                out["type"]      = f["type"]
-    if f.get("beds") is not None:    out["minbeds"]   = int(f["beds"])
-    if f.get("baths") is not None:   out["minbaths"]  = int(f["baths"])
+    if f.get("type"):                 out["type"]     = f["type"]
+    if f.get("subtype"):              out["subtype"]  = f["subtype"]
+    if f.get("beds") is not None:     out["minbeds"]  = int(f["beds"])
+    if f.get("baths") is not None:    out["minbaths"] = int(f["baths"])
     return out
 
 # Builders per report type
 
 def build_market_snapshot(params: dict) -> Dict:
     """
-    Market Snapshot: Active + Pending + Closed in date window.
+    Market Snapshot: Active listings in date window.
     
-    Per ReportsQueries.md:
-    - status: Active,Pending,Closed
+    Note: We query Active and Closed separately for cleaner data.
+    The worker will make two calls:
+    1. build_market_snapshot() for Active listings
+    2. build_market_snapshot_closed() for Closed listings
+    
+    This gives us more accurate metrics for each status type.
+    
+    Parameters:
+    - status: Active (single status for cleaner queries)
     - mindate/maxdate: lookback window
-    - sort: -listDate (newest listings first) - only in production
+    - type/subtype: optional property type filters
     - limit: 1000
     """
     start, end = _date_window(params.get("lookback_days") or 30)
     q = {
         **_common_params(),
-        "status": "Active,Pending,Closed",
+        "status": "Active",
         "mindate": start,
         "maxdate": end,
         "limit": 1000,
         "offset": 0,
     }
-    # Add sorting in production mode
-    if ALLOW_SORTING:
-        q["sort"] = "-listDate"
+    q |= _location(params)
+    q |= _filters(params.get("filters"))
+    return q
+
+
+def build_market_snapshot_closed(params: dict) -> Dict:
+    """
+    Market Snapshot (Closed): Closed listings in date window.
+    
+    Companion to build_market_snapshot() - queries Closed listings separately.
+    
+    Parameters:
+    - status: Closed (single status for cleaner queries)
+    - mindate/maxdate: lookback window
+    - type/subtype: optional property type filters
+    - limit: 1000
+    """
+    start, end = _date_window(params.get("lookback_days") or 30)
+    q = {
+        **_common_params(),
+        "status": "Closed",
+        "mindate": start,
+        "maxdate": end,
+        "limit": 1000,
+        "offset": 0,
+    }
     q |= _location(params)
     q |= _filters(params.get("filters"))
     return q
