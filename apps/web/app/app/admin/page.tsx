@@ -8,27 +8,45 @@ export const dynamic = 'force-dynamic'
 
 async function getAdminData() {
   try {
-    const [kpisRes, reportsChartRes, emailsChartRes, reportsRes, schedulesRes, emailLogsRes] = await Promise.all([
+    const [metricsRes, timeseriesRes, reportsRes, schedulesRes, emailLogsRes] = await Promise.all([
       apiFetch("/v1/admin/metrics"),
       apiFetch("/v1/admin/metrics/timeseries"),
-      apiFetch("/v1/admin/metrics/timeseries?type=emails"),
       apiFetch("/v1/admin/reports?limit=10"),
       apiFetch("/v1/admin/schedules?limit=10"),
       apiFetch("/v1/admin/emails?limit=10"),
     ])
 
-    const kpis = kpisRes || { activeSchedules: 0, reportsPerDay: 0, emailsPerDay: 0, avgRenderMs: 0 }
-    const reportsChartData = reportsChartRes || []
-    const emailsChartData = emailsChartRes || []
-    const reports = reportsRes || []
-    const schedules = schedulesRes || []
-    const emailLogs = emailLogsRes || []
+    // Transform API response to match component expected format
+    const metrics = metricsRes || {}
+    const kpis = {
+      activeSchedules: metrics.schedules_active || 0,
+      reportsPerDay: Math.round((metrics.reports_7d || 0) / 7),
+      emailsPerDay: Math.round((metrics.emails_24h || 0)),
+      avgRenderMs: metrics.avg_processing_ms_7d || 0,
+      errorRate: 0, // TODO: Calculate from failed reports if needed
+    }
+
+    // Transform timeseries data for charts
+    const timeseries = timeseriesRes || {}
+    const reportsChartData = (timeseries.reports_by_day || []).map((item: { date: string; count: number }) => ({
+      date: item.date,
+      reports: item.count,
+    })).reverse()
+
+    const emailsChartData = (timeseries.emails_by_day || []).map((item: { date: string; count: number }) => ({
+      date: item.date,
+      emails: item.count,
+    })).reverse()
+
+    const reports = reportsRes?.reports || []
+    const schedules = schedulesRes?.schedules || []
+    const emailLogs = emailLogsRes?.emails || []
 
     return { kpis, reportsChartData, emailsChartData, reports, schedules, emailLogs }
   } catch (error) {
     console.error("Failed to fetch admin data:", error)
     return {
-      kpis: { activeSchedules: 0, reportsPerDay: 0, emailsPerDay: 0, avgRenderMs: 0 },
+      kpis: { activeSchedules: 0, reportsPerDay: 0, emailsPerDay: 0, avgRenderMs: 0, errorRate: 0 },
       reportsChartData: [],
       emailsChartData: [],
       reports: [],
