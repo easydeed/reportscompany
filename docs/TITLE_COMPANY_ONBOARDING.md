@@ -1,7 +1,22 @@
 # Title Company Onboarding Guide
 
 **Last Updated**: December 2, 2025  
-**Purpose**: Scalable process for onboarding title companies and their representatives
+**Purpose**: Scalable process for onboarding title companies and their representatives  
+**Admin Dashboard**: `/app/admin/affiliates`
+
+---
+
+## 🎉 Self-Service Admin Dashboard Now Available!
+
+The admin dashboard at `/app/admin` provides a complete UI for onboarding title companies and their agents. **No SQL required!**
+
+### Quick Start (3 Steps)
+
+1. **Go to** `/app/admin/affiliates/new`
+2. **Fill in** company name, admin email, logo URL, colors
+3. **Click** "Create Affiliate" → Admin receives invite email automatically
+
+That's it! The admin can then log in and invite their own agents.
 
 ---
 
@@ -285,43 +300,52 @@ When a rep generates a report, the system determines branding:
 - [x] **Affiliate onboarding checklist** - Dashboard guidance for new affiliates
 - [x] **User onboarding system** - Step-by-step setup wizard
 
-### Needs Building 🔧
+### Needs Building 🔧 (Nice to Have)
 
-- [ ] **Bulk import script** - CSV → Database for batch onboarding
-- [ ] **Asset upload API** - Direct to R2 with URL return
-- [ ] **Admin dashboard** - View/manage all affiliates (superadmin)
+- [ ] **Bulk import script** - CSV → Database for batch onboarding (50+ agents)
+- [ ] **Direct asset upload** - Upload to R2 from admin UI
 - [ ] **Branding preview** - Live preview before saving
 
 ---
 
 ## 6. Recommended Approach
 
-### For First Title Company (Manual)
+### ✅ NEW: Use the Admin Dashboard (Recommended)
 
-1. **Collect assets** via email/shared folder:
-   - Company logo (PNG, transparent)
-   - Brand colors (hex codes)
-   - Rep list with headshots
-   - Contact info for each rep
+**No SQL required!** Use the admin UI at `/app/admin/affiliates`:
 
-2. **Upload assets** to R2:
-   ```
-   /branding/pacific-coast-title/logo.png
-   /branding/pacific-coast-title/reps/john-smith.jpg
-   /branding/pacific-coast-title/reps/jane-doe.jpg
-   ```
+1. **Go to** `/app/admin/affiliates/new`
+2. **Fill in the form:**
+   - Company Name (required)
+   - Admin Email (required)
+   - Logo URL (optional - host on R2 first)
+   - Primary/Accent Colors (optional)
+   - Website URL (optional)
+3. **Click** "Create Affiliate"
+4. **Admin receives** invite email automatically
+5. **Admin logs in** → Can invite their own agents from their dashboard
 
-3. **Run SQL** to create accounts (Phase 1 & 2 above)
+### Adding Agents
 
-4. **Test** by logging in as a rep and generating a report
+**Option A: Admin does it (from Admin Dashboard)**
+1. Go to `/app/admin/affiliates/[id]`
+2. Scroll to "Invite New Agent"
+3. Enter name and email → Click "Send Invite"
 
-5. **Verify** branding appears correctly in PDF
+**Option B: Title Company does it (self-service)**
+1. Title company admin logs in
+2. Goes to their affiliate dashboard
+3. Uses invite agent form
 
-### For Scale (Future)
+### Asset Upload (Still Manual)
 
-1. Build **admin dashboard** at `/admin/affiliates`
-2. Create **CSV import** endpoint for bulk agent onboarding
-3. ~~Add **invite code** system for self-service~~ ✅ Done - `/v1/affiliate/invite-agent`
+Logos and headshots need to be uploaded to R2 first:
+```
+/branding/pacific-coast-title/logo.png
+/branding/pacific-coast-title/reps/john-smith.jpg
+```
+
+Then paste the URL into the admin form.
 4. ~~Automate **welcome emails** via Resend~~ ✅ Done - `send_invite_email()`
 
 ### What's Now Automated
