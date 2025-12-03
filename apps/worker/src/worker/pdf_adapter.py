@@ -112,24 +112,35 @@ def _generate_via_api(url: str, output_path: str) -> bool:
     payload = {
         "source": url,
         "landscape": False,
-        "margin": {
-            "top": "0.5in",
-            "right": "0.5in",
-            "bottom": "0.5in",
-            "left": "0.5in"
-        }
+        "format": "Letter",  # Explicit US Letter format
     }
     
     # PDFShift-specific options
     # See: https://docs.pdfshift.io/
     if is_pdfshift:
-        # remove_blank: Remove the last page if it's empty
-        # This fixes the issue where flexbox footer positioning creates
-        # extra empty space that pushes to a second blank page
+        # CRITICAL: Set margin to 0 - our HTML handles all margins via CSS
+        # Our templates use @page { margin: 0 } and .page { padding: 0.5in }
+        # If we add PDFShift margins ON TOP of CSS, it causes overflow to blank page
+        payload["margin"] = {
+            "top": "0",
+            "right": "0",
+            "bottom": "0",
+            "left": "0"
+        }
+        
+        # remove_blank: Remove the last page if it's empty (backup safety)
         payload["remove_blank"] = True
         
         # use_print: Use the @media print stylesheet
         payload["use_print"] = True
+    else:
+        # Non-PDFShift services: use margins (they may not support @page CSS)
+        payload["margin"] = {
+            "top": "0.5in",
+            "right": "0.5in",
+            "bottom": "0.5in",
+            "left": "0.5in"
+        }
     
     # PDFShift uses Basic Auth with API key as username, empty password
     auth = (PDF_API_KEY, "") if is_pdfshift else None
