@@ -302,11 +302,13 @@ def build_new_listings_result(listings: List[Dict], context: Dict) -> Dict:
     # (SimplyRETS q parameter may return nearby cities)
     city_filtered = _filter_by_city(listings, city)
     
-    # Filter to active listings listed within lookback period
-    cutoff_date = datetime.now() - timedelta(days=lookback_days)
+    # Filter to active listings only
+    # NOTE: Don't re-filter by date here! The API query already filtered by mindate/maxdate.
+    # Re-filtering causes timezone mismatches (API returns UTC, datetime.now() is local time)
+    # which can incorrectly exclude valid listings.
     new_listings = [
         l for l in city_filtered 
-        if l.get("status") == "Active" and l.get("list_date") and l["list_date"] >= cutoff_date
+        if l.get("status") == "Active"
     ]
     
     # Sort by list date descending

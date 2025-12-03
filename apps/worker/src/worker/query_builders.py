@@ -209,6 +209,7 @@ def build_new_listings(params: dict) -> Dict:
     - status: Active
     - mindate/maxdate: lookback window
     - sort: -listDate (newest first) - only in production
+    - limit: 1000 (increased to capture all new listings in busy markets)
     """
     start, end = _date_window(params.get("lookback_days") or 30)
     q = {
@@ -216,7 +217,7 @@ def build_new_listings(params: dict) -> Dict:
         "status": "Active",
         "mindate": start,
         "maxdate": end,
-        "limit": 500,
+        "limit": 1000,  # Increased from 500 to capture all listings
         "offset": 0,
     }
     if ALLOW_SORTING:
