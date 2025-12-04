@@ -68,7 +68,6 @@ export default function NewSchedulePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">New Schedule</h1>
       <ScheduleWizard onSubmit={onSubmit} onCancel={onCancel} />
       {err && <p className="text-sm text-red-400">{err}</p>}
     </div>
