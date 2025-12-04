@@ -409,6 +409,9 @@ def build_closed_result(listings: List[Dict], context: Dict) -> Dict:
     Template expects:
     - Hero KPIs: total_closed, median_price, avg_dom, ctl
     - listings array sorted by close_date desc
+    
+    IMPORTANT: SimplyRETS mindate/maxdate filter by listDate, NOT closeDate!
+    We must filter by close_date client-side to ensure accurate counts.
     """
     city = context.get("city", "Market")
     lookback_days = context.get("lookback_days", 30)
@@ -416,8 +419,27 @@ def build_closed_result(listings: List[Dict], context: Dict) -> Dict:
     # Filter to only include listings from the requested city
     listings = _filter_by_city(listings, city)
     
-    # Closed listings only
-    closed = [l for l in listings if l.get("status") == "Closed"]
+    # Calculate date cutoff for filtering closed sales
+    cutoff_date = datetime.now() - timedelta(days=lookback_days)
+    
+    # Filter closed listings by close_date within lookback period
+    # API's mindate/maxdate filter by listDate, so we must filter by closeDate here
+    closed = []
+    for l in listings:
+        if l.get("status") != "Closed":
+            continue
+        close_date = l.get("close_date")
+        if close_date:
+            try:
+                # Handle both timezone-aware and timezone-naive datetimes
+                if hasattr(close_date, 'tzinfo') and close_date.tzinfo is not None:
+                    close_date = close_date.replace(tzinfo=None)
+                if close_date >= cutoff_date:
+                    closed.append(l)
+            except Exception as e:
+                print(f"📊 CLOSED DEBUG: Error comparing dates: {e}")
+    
+    print(f"📊 CLOSED DEBUG: {len(closed)} Closed listings after date filter (cutoff={cutoff_date})")
     
     # Sort by close date descending
     closed_sorted = sorted(closed, key=lambda x: x.get("close_date") or datetime.min, reverse=True)
@@ -590,9 +612,11 @@ def build_new_listings_gallery_result(listings: List[Dict], context: Dict) -> Di
     # Filter to only include listings from the requested city
     listings = _filter_by_city(listings, city)
     
-    # Get new active listings
-    cutoff_date = datetime.now() - timedelta(days=lookback_days)
-    new_listings = [l for l in listings if l.get("status") == "Active" and l.get("list_date") and l["list_date"] >= cutoff_date]
+    # Get active listings only
+    # NOTE: Don't re-filter by date here! The API query already filtered by mindate/maxdate.
+    # Re-filtering causes timezone mismatches (API returns UTC, datetime.now() is local time)
+    # which can incorrectly exclude valid listings.
+    new_listings = [l for l in listings if l.get("status") == "Active"]
     
     # Sort by list date desc (newest first), limit to 9
     new_listings_sorted = sorted(new_listings, key=lambda x: x.get("list_date") or datetime.min, reverse=True)[:9]
