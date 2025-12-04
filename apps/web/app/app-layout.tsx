@@ -59,24 +59,24 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
   // Build navigation based on user role
   const navigation = isAffiliate
     ? [
-        // Affiliate navigation - Dashboard first, no Overview
-        { name: "Dashboard", href: "/app/affiliate", icon: LayoutDashboard },
-        { name: "Reports", href: "/app/reports", icon: FileText },
-        { name: "Schedules", href: "/app/schedules", icon: Calendar },
-        { name: "People", href: "/app/people", icon: Users },
-        { name: "Branding", href: "/app/branding", icon: Palette },
+        // Affiliate navigation
+        { name: "Affiliate Dashboard", href: "/app/affiliate", icon: LayoutDashboard },
+        { name: "Create Report", href: "/app/reports", icon: FileText },
+        { name: "Scheduled Reports", href: "/app/schedules", icon: Calendar },
+        { name: "Agents & Contacts", href: "/app/people", icon: Users },
+        { name: "Affiliate Branding", href: "/app/branding", icon: Palette },
         { name: "Settings", href: "/app/account/settings", icon: Settings },
-        { name: "Billing", href: "/app/billing", icon: CreditCard },
+        { name: "Plan & Billing", href: "/app/billing", icon: CreditCard },
       ]
     : [
-        // Agent navigation - Overview first
-        { name: "Overview", href: "/app", icon: LayoutDashboard },
+        // Agent navigation
+        { name: "Dashboard", href: "/app", icon: LayoutDashboard },
         { name: "Reports", href: "/app/reports", icon: FileText },
-        { name: "Schedules", href: "/app/schedules", icon: Calendar },
-        { name: "People", href: "/app/people", icon: Users },
+        { name: "Scheduled Reports", href: "/app/schedules", icon: Calendar },
+        { name: "Contacts", href: "/app/people", icon: Users },
         { name: "Branding", href: "/app/branding", icon: Palette },
         { name: "Settings", href: "/app/account/settings", icon: Settings },
-        { name: "Billing", href: "/app/billing", icon: CreditCard },
+        { name: "Plan & Billing", href: "/app/billing", icon: CreditCard },
       ]
   
   // Admin sub-navigation
