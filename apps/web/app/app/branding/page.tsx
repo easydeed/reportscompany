@@ -9,20 +9,19 @@ import { Separator } from "@/components/ui/separator"
 import { 
   Save, 
   Loader2, 
-  Upload, 
   User, 
   Building2, 
   Palette,
   Eye,
-  Download,
   Mail,
-  FileText,
   Globe,
   Phone,
   Sparkles,
+  FileText,
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { ImageUpload } from "@/components/ui/image-upload"
+import { DownloadTools } from "@/components/branding/download-tools"
 import { cn } from "@/lib/utils"
 
 type BrandingData = {
@@ -379,43 +378,74 @@ export default function BrandingPage() {
                 </div>
               </div>
               <CardContent className="p-6 space-y-6">
-                {/* Photo Upload */}
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">Profile Photo</Label>
-                  <ImageUpload
-                    label=""
-                    value={formData.rep_photo_url}
-                    onChange={(url) => setFormData({ ...formData, rep_photo_url: url })}
-                    assetType="headshot"
-                    aspectRatio="square"
-                    helpText="Square format recommended • 400×400px"
-                  />
-                </div>
-
-                <Separator />
-
-                {/* Name & Title */}
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="rep_name" className="flex items-center gap-2">
-                      <User className="w-3.5 h-3.5 text-muted-foreground" />
-                      Your Name
-                    </Label>
-                    <Input
-                      id="rep_name"
-                      value={formData.rep_name}
-                      onChange={(e) => setFormData({ ...formData, rep_name: e.target.value })}
-                      placeholder="John Doe"
-                    />
+                {/* Photo + Name/Title Row */}
+                <div className="flex gap-4">
+                  {/* Compact Photo Upload */}
+                  <div className="flex-shrink-0">
+                    <Label className="text-sm font-medium mb-2 block">Photo</Label>
+                    <div className="w-20 h-20 relative rounded-lg border-2 border-dashed border-border overflow-hidden bg-muted/30 hover:bg-muted/50 transition-colors">
+                      {formData.rep_photo_url ? (
+                        <img
+                          src={formData.rep_photo_url}
+                          alt="Profile"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                          <User className="w-8 h-8" />
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          const formDataUpload = new FormData()
+                          formDataUpload.append("file", file)
+                          formDataUpload.append("asset_type", "headshot")
+                          try {
+                            const res = await fetch("/api/proxy/v1/assets/upload", {
+                              method: "POST",
+                              body: formDataUpload,
+                            })
+                            if (res.ok) {
+                              const data = await res.json()
+                              setFormData({ ...formData, rep_photo_url: data.url })
+                            }
+                          } catch (err) {
+                            console.error("Upload failed:", err)
+                          }
+                        }}
+                      />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-1 text-center">Click to upload</p>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="rep_title">Title</Label>
-                    <Input
-                      id="rep_title"
-                      value={formData.rep_title}
-                      onChange={(e) => setFormData({ ...formData, rep_title: e.target.value })}
-                      placeholder="Senior Title Rep"
-                    />
+
+                  {/* Name & Title */}
+                  <div className="flex-1 space-y-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="rep_name" className="flex items-center gap-2">
+                        <User className="w-3.5 h-3.5 text-muted-foreground" />
+                        Your Name
+                      </Label>
+                      <Input
+                        id="rep_name"
+                        value={formData.rep_name}
+                        onChange={(e) => setFormData({ ...formData, rep_name: e.target.value })}
+                        placeholder="John Doe"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="rep_title">Title</Label>
+                      <Input
+                        id="rep_title"
+                        value={formData.rep_title}
+                        onChange={(e) => setFormData({ ...formData, rep_title: e.target.value })}
+                        placeholder="Senior Title Rep"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -643,20 +673,18 @@ export default function BrandingPage() {
               </div>
             </Card>
 
-            {/* Quick Actions */}
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="flex-1 gap-2" disabled>
-                <Download className="w-3.5 h-3.5" />
-                Sample PDF
-              </Button>
-              <Button variant="outline" size="sm" className="flex-1 gap-2" disabled>
-                <Mail className="w-3.5 h-3.5" />
-                Test Email
-              </Button>
-            </div>
-            <p className="text-[10px] text-center text-muted-foreground">
-              Save your changes first, then download samples
-            </p>
+            {/* Download Tools Section */}
+            <Card className="overflow-hidden">
+              <div className="px-4 py-3 border-b bg-muted/30">
+                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                  <FileText className="w-3.5 h-3.5" />
+                  Test Your Branding
+                </div>
+              </div>
+              <CardContent className="p-4">
+                <DownloadTools brandName={formData.brand_display_name || "Sample"} />
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
