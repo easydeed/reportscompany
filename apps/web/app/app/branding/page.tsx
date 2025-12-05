@@ -581,7 +581,7 @@ export default function BrandingPage() {
                           {formData.rep_email || "email@company.com"}
                         </div>
                         {formData.website_url && (
-                          <div className="text-xs truncate" style={{ color: formData.primary_color }}>
+                          <div className="text-xs truncate" style={{ color: formData.primary_color || undefined }}>
                             {formData.website_url.replace("https://", "").replace("http://", "")}
                           </div>
                         )}
