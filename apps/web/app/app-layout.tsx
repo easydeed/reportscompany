@@ -25,7 +25,6 @@ import {
   LayoutDashboard,
   FileText,
   Palette,
-  CreditCard,
   ChevronDown,
   ChevronRight,
   Shield,
@@ -66,7 +65,6 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
         { name: "Agents & Contacts", href: "/app/people", icon: Users },
         { name: "Affiliate Branding", href: "/app/branding", icon: Palette },
         { name: "Settings", href: "/app/account/settings", icon: Settings },
-        { name: "Plan & Billing", href: "/app/billing", icon: CreditCard },
       ]
     : [
         // Agent navigation
@@ -76,7 +74,6 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
         { name: "Contacts", href: "/app/people", icon: Users },
         { name: "Branding", href: "/app/branding", icon: Palette },
         { name: "Settings", href: "/app/account/settings", icon: Settings },
-        { name: "Plan & Billing", href: "/app/billing", icon: CreditCard },
       ]
   
   // Admin sub-navigation

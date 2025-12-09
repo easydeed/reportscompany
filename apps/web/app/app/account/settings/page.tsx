@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import {
   User,
   Lock,
@@ -20,9 +21,13 @@ import {
   EyeOff,
   AlertCircle,
   CheckCircle2,
+  CreditCard,
+  Check,
+  Shield,
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { ImageUpload } from "@/components/ui/image-upload"
+import { useRouter } from "next/navigation"
 
 type UserProfile = {
   id: string
@@ -55,19 +60,69 @@ type EmailFormData = {
   currentPassword: string
 }
 
+type PlanUsageData = {
+  account: {
+    id: string
+    name: string
+    account_type: string
+    plan_slug: string
+    billing_status?: string | null
+  }
+  plan: {
+    plan_name: string
+    plan_slug: string
+    monthly_report_limit: number
+  }
+  usage: {
+    report_count: number
+  }
+  stripe_billing?: {
+    stripe_price_id: string
+    amount: number
+    currency: string
+    interval: string
+    interval_count: number
+    nickname?: string | null
+  } | null
+}
+
+// Available plans for upgrade
+const plans = [
+  {
+    name: "Free",
+    slug: "free",
+    price: "$0",
+    period: "/month",
+    description: "Perfect for trying out",
+    features: ["50 reports / month", "6 report types", "PDF export", "Email support"],
+  },
+  {
+    name: "Solo Agent",
+    slug: "solo",
+    price: "$19",
+    period: "/month",
+    description: "For individual agents",
+    features: ["500 reports / month", "All report types", "Custom branding", "Priority support"],
+    popular: true,
+  },
+]
+
 /**
  * Account Settings Page
  *
  * Tabs:
  * - Profile: Edit personal information (name, company, phone, avatar)
  * - Security: Change password, update email
+ * - Plan & Billing: View and manage subscription
  */
 export default function AccountSettingsPage() {
   const [loading, setLoading] = useState(true)
   const [savingProfile, setSavingProfile] = useState(false)
   const [savingPassword, setSavingPassword] = useState(false)
   const [savingEmail, setSavingEmail] = useState(false)
+  const [billingLoading, setBillingLoading] = useState(false)
   const { toast } = useToast()
+  const router = useRouter()
 
   // User profile state
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -96,8 +151,12 @@ export default function AccountSettingsPage() {
   })
   const [showEmailPassword, setShowEmailPassword] = useState(false)
 
+  // Billing state
+  const [billingData, setBillingData] = useState<PlanUsageData | null>(null)
+
   useEffect(() => {
     loadProfile()
+    loadBillingData()
   }, [])
 
   async function loadProfile() {
@@ -129,6 +188,88 @@ export default function AccountSettingsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  async function loadBillingData() {
+    try {
+      const res = await fetch("/api/proxy/v1/account/plan-usage", { cache: "no-store" })
+      if (res.ok) {
+        const data = await res.json()
+        setBillingData(data)
+      }
+    } catch (error) {
+      console.error("Failed to load billing data:", error)
+    }
+  }
+
+  async function checkout(planSlug: string) {
+    setBillingLoading(true)
+    try {
+      const res = await fetch("/api/proxy/v1/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: planSlug }),
+      })
+      const j = await res.json()
+      if (res.ok && j.url) {
+        router.push(j.url)
+      } else {
+        toast({
+          title: "Error",
+          description: j.detail || "Failed to start checkout",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to start checkout",
+        variant: "destructive",
+      })
+    } finally {
+      setBillingLoading(false)
+    }
+  }
+
+  async function openBillingPortal() {
+    setBillingLoading(true)
+    try {
+      const res = await fetch("/api/proxy/v1/billing/portal", { method: "POST" })
+      const j = await res.json()
+      if (res.ok && j.url) {
+        router.push(j.url)
+      } else {
+        toast({
+          title: "Error",
+          description: j.detail || "Failed to open billing portal",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to open billing portal",
+        variant: "destructive",
+      })
+    } finally {
+      setBillingLoading(false)
+    }
+  }
+
+  // Helper to format price display from Stripe billing data
+  function getPlanDisplay() {
+    if (!billingData) return { planName: "Loading...", priceDisplay: "" }
+    const sb = billingData.stripe_billing
+    let planName = billingData.plan.plan_name || billingData.account.plan_slug
+    let priceDisplay = ""
+
+    if (sb && sb.amount != null && sb.currency && sb.interval) {
+      const dollars = (sb.amount / 100).toFixed(2)
+      planName = sb.nickname || planName
+      priceDisplay = `$${dollars} / ${sb.interval}`
+    }
+
+    return { planName, priceDisplay }
   }
 
   async function saveProfile() {
@@ -341,14 +482,18 @@ export default function AccountSettingsPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
-          <TabsTrigger value="profile" className="gap-2">
+        <TabsList className="grid w-full grid-cols-3 max-w-lg h-14 p-1.5 bg-muted/60 border border-border/50 rounded-xl shadow-sm">
+          <TabsTrigger value="profile" className="gap-2 h-full rounded-lg text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-md transition-all duration-200">
             <User className="w-4 h-4" />
             <span>Profile</span>
           </TabsTrigger>
-          <TabsTrigger value="security" className="gap-2">
+          <TabsTrigger value="security" className="gap-2 h-full rounded-lg text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-md transition-all duration-200">
             <Lock className="w-4 h-4" />
             <span>Security</span>
+          </TabsTrigger>
+          <TabsTrigger value="billing" className="gap-2 h-full rounded-lg text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-md transition-all duration-200">
+            <CreditCard className="w-4 h-4" />
+            <span>Plan & Billing</span>
           </TabsTrigger>
         </TabsList>
 
@@ -675,6 +820,138 @@ export default function AccountSettingsPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Plan & Billing Tab */}
+        <TabsContent value="billing" className="space-y-6">
+          {!billingData ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : billingData.account.account_type === "INDUSTRY_AFFILIATE" ? (
+            // Affiliate billing UI
+            <Card className="border-purple-200 bg-purple-50/30 dark:bg-purple-950/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-purple-600" />
+                  Your Affiliate Plan
+                </CardTitle>
+                <CardDescription>
+                  Manage or cancel your affiliate subscription in the billing portal.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Current plan</p>
+                  <p className="text-lg font-semibold">{getPlanDisplay().planName}</p>
+                  {getPlanDisplay().priceDisplay && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Billing: <strong>{getPlanDisplay().priceDisplay}</strong>
+                    </p>
+                  )}
+                  {billingData.account.billing_status && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Status: <span className="capitalize">{billingData.account.billing_status}</span>
+                    </p>
+                  )}
+                </div>
+                <Separator />
+                <Button onClick={openBillingPortal} disabled={billingLoading} className="gap-2">
+                  <CreditCard className="w-4 h-4" />
+                  {billingLoading ? "Loading..." : "Manage Billing"}
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Update payment method or cancel subscription via Stripe.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            // Agent billing UI
+            <div className="space-y-6">
+              {/* Current Plan Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="w-5 h-5" />
+                    Current Plan
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-6">
+                    <div className="flex-1">
+                      <p className="text-sm text-muted-foreground">Plan</p>
+                      <p className="text-lg font-semibold">{getPlanDisplay().planName}</p>
+                      {getPlanDisplay().priceDisplay && (
+                        <p className="text-sm text-muted-foreground">{getPlanDisplay().priceDisplay}</p>
+                      )}
+                      {billingData.account.billing_status && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Status: <span className="capitalize">{billingData.account.billing_status}</span>
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm text-muted-foreground">Usage</p>
+                      <p className="text-lg font-semibold">
+                        {billingData.usage.report_count} / {billingData.plan.monthly_report_limit} reports
+                      </p>
+                      <p className="text-xs text-muted-foreground">This month</p>
+                    </div>
+                  </div>
+                  {billingData.stripe_billing && (
+                    <Button onClick={openBillingPortal} variant="outline" disabled={billingLoading} className="gap-2">
+                      <CreditCard className="w-4 h-4" />
+                      {billingLoading ? "Loading..." : "Manage Billing"}
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Available Plans */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Available Plans</h3>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {plans.map((plan) => (
+                    <Card key={plan.slug} className={plan.popular ? "border-primary shadow-md" : ""}>
+                      <CardHeader className="pb-3">
+                        {plan.popular && (
+                          <Badge className="w-fit mb-2" variant="default">
+                            Most Popular
+                          </Badge>
+                        )}
+                        <CardTitle className="text-lg">{plan.name}</CardTitle>
+                        <CardDescription>{plan.description}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div>
+                          <span className="text-3xl font-bold">{plan.price}</span>
+                          <span className="text-muted-foreground">{plan.period}</span>
+                        </div>
+
+                        <ul className="space-y-2">
+                          {plan.features.map((feature, i) => (
+                            <li key={i} className="flex items-start gap-2 text-sm">
+                              <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                              <span>{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+
+                        <Button
+                          onClick={() => checkout(plan.slug)}
+                          disabled={billingLoading || billingData?.account.plan_slug === plan.slug}
+                          className="w-full"
+                          variant={plan.popular ? "default" : "outline"}
+                        >
+                          {billingData?.account.plan_slug === plan.slug ? "Current Plan" : "Choose " + plan.name}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
