@@ -20,6 +20,8 @@ import {
   Download,
   Check,
   AlertCircle,
+  Send,
+  FlaskConical,
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { ImageUpload } from "@/components/ui/image-upload"
@@ -313,9 +315,10 @@ export default function BrandingPage() {
 
   const primaryColor = formData.primary_color || "#7C3AED"
   const accentColor = formData.accent_color || "#F26B2B"
+  const currentReportLabel = REPORT_TYPE_OPTIONS.find(t => t.value === reportType)?.label || "Market Snapshot"
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -343,51 +346,50 @@ export default function BrandingPage() {
         </Button>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* LEFT: Settings Form */}
-        <div className="space-y-6">
-          <Tabs defaultValue="brand" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="brand" className="gap-2">
-                <Building2 className="w-4 h-4" />
-                Brand
-              </TabsTrigger>
-              {isAffiliate && (
-                <TabsTrigger value="contact" className="gap-2">
-                  <User className="w-4 h-4" />
-                  Contact Info
-                </TabsTrigger>
-              )}
-              {!isAffiliate && (
-                <TabsTrigger value="colors" className="gap-2">
-                  <Palette className="w-4 h-4" />
-                  Colors
-                </TabsTrigger>
-              )}
-            </TabsList>
+      {/* Main Tabs */}
+      <Tabs defaultValue="logo-colors" className="w-full">
+        <TabsList className={cn(
+          "grid w-full",
+          isAffiliate ? "grid-cols-3" : "grid-cols-2"
+        )}>
+          <TabsTrigger value="logo-colors" className="gap-2">
+            <Palette className="w-4 h-4" />
+            Logo and Colors
+          </TabsTrigger>
+          {isAffiliate && (
+            <TabsTrigger value="contact" className="gap-2">
+              <User className="w-4 h-4" />
+              Contact Info
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="test" className="gap-2">
+            <FlaskConical className="w-4 h-4" />
+            Test
+          </TabsTrigger>
+        </TabsList>
 
-            {/* Brand Tab */}
-            <TabsContent value="brand" className="mt-4 space-y-4">
-              {/* Logo */}
+        {/* ===== LOGO AND COLORS TAB ===== */}
+        <TabsContent value="logo-colors" className="mt-6">
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Left: Form */}
+            <div className="space-y-6">
+              {/* Logo Section */}
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-muted-foreground" />
-                    Logo & Name
+                    <Building2 className="w-4 h-4 text-primary" />
+                    Company Logo
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Company Logo</Label>
-                    <ImageUpload
-                      label=""
-                      value={formData.logo_url}
-                      onChange={(url) => setFormData({ ...formData, logo_url: url })}
-                      assetType="logo"
-                      aspectRatio="wide"
-                      helpText="PNG with transparency • 400×150px"
-                    />
-                  </div>
+                  <ImageUpload
+                    label=""
+                    value={formData.logo_url}
+                    onChange={(url) => setFormData({ ...formData, logo_url: url })}
+                    assetType="logo"
+                    aspectRatio="wide"
+                    helpText="PNG with transparency • 400×150px recommended"
+                  />
                   <div className="space-y-2">
                     <Label htmlFor="brand_name">Brand Display Name</Label>
                     <Input
@@ -400,21 +402,21 @@ export default function BrandingPage() {
                 </CardContent>
               </Card>
 
-              {/* Colors */}
+              {/* Colors Section */}
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <Palette className="w-4 h-4 text-muted-foreground" />
+                    <Palette className="w-4 h-4 text-primary" />
                     Brand Colors
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Primary</Label>
+                      <Label>Primary Color</Label>
                       <div className="flex gap-2">
                         <div 
-                          className="w-12 h-11 rounded-lg border-2 overflow-hidden cursor-pointer relative"
+                          className="w-12 h-11 rounded-lg border-2 overflow-hidden cursor-pointer relative shadow-sm"
                           style={{ backgroundColor: primaryColor }}
                         >
                           <input
@@ -433,10 +435,10 @@ export default function BrandingPage() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>Accent</Label>
+                      <Label>Accent Color</Label>
                       <div className="flex gap-2">
                         <div 
-                          className="w-12 h-11 rounded-lg border-2 overflow-hidden cursor-pointer relative"
+                          className="w-12 h-11 rounded-lg border-2 overflow-hidden cursor-pointer relative shadow-sm"
                           style={{ backgroundColor: accentColor }}
                         >
                           <input
@@ -455,312 +457,29 @@ export default function BrandingPage() {
                       </div>
                     </div>
                   </div>
-                  {/* Gradient Preview */}
-                  <div 
-                    className="h-10 rounded-lg"
-                    style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Contact Tab (Affiliates only) */}
-            {isAffiliate && (
-              <TabsContent value="contact" className="mt-4 space-y-4">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <User className="w-4 h-4 text-muted-foreground" />
-                      Your Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Photo + Name Row */}
-                    <div className="flex gap-4">
-                      <div className="flex-shrink-0">
-                        <Label className="text-sm mb-2 block">Photo</Label>
-                        <div className="w-16 h-16 relative rounded-lg border-2 border-dashed overflow-hidden bg-muted/30 hover:bg-muted/50 transition-colors">
-                          {formData.rep_photo_url ? (
-                            <img
-                              src={formData.rep_photo_url}
-                              alt="Profile"
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                              <User className="w-6 h-6" />
-                            </div>
-                          )}
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="absolute inset-0 opacity-0 cursor-pointer"
-                            onChange={async (e) => {
-                              const file = e.target.files?.[0]
-                              if (!file) return
-                              const formDataUpload = new FormData()
-                              formDataUpload.append("file", file)
-                              formDataUpload.append("asset_type", "headshot")
-                              try {
-                                const res = await fetch("/api/proxy/v1/assets/upload", {
-                                  method: "POST",
-                                  body: formDataUpload,
-                                })
-                                if (res.ok) {
-                                  const data = await res.json()
-                                  setFormData({ ...formData, rep_photo_url: data.url })
-                                }
-                              } catch (err) {
-                                console.error("Upload failed:", err)
-                              }
-                            }}
-                          />
-                        </div>
-                      </div>
-                      <div className="flex-1 grid gap-3">
-                        <div className="space-y-1">
-                          <Label htmlFor="rep_name">Name</Label>
-                          <Input
-                            id="rep_name"
-                            value={formData.rep_name}
-                            onChange={(e) => setFormData({ ...formData, rep_name: e.target.value })}
-                            placeholder="John Doe"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label htmlFor="rep_title">Title</Label>
-                          <Input
-                            id="rep_title"
-                            value={formData.rep_title}
-                            onChange={(e) => setFormData({ ...formData, rep_title: e.target.value })}
-                            placeholder="Senior Title Rep"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Contact Details */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label htmlFor="rep_email" className="flex items-center gap-1">
-                          <Mail className="w-3 h-3" /> Email
-                        </Label>
-                        <Input
-                          id="rep_email"
-                          type="email"
-                          value={formData.rep_email}
-                          onChange={(e) => setFormData({ ...formData, rep_email: e.target.value })}
-                          placeholder="john@company.com"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="rep_phone" className="flex items-center gap-1">
-                          <Phone className="w-3 h-3" /> Phone
-                        </Label>
-                        <Input
-                          id="rep_phone"
-                          type="tel"
-                          value={formData.rep_phone}
-                          onChange={(e) => setFormData({ ...formData, rep_phone: e.target.value })}
-                          placeholder="(555) 123-4567"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="website" className="flex items-center gap-1">
-                        <Globe className="w-3 h-3" /> Website
-                      </Label>
-                      <Input
-                        id="website"
-                        value={formData.website_url || ""}
-                        onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
-                        placeholder="https://www.yourcompany.com"
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
-
-            {/* Colors Tab (Non-affiliates) */}
-            {!isAffiliate && (
-              <TabsContent value="colors" className="mt-4 space-y-4">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Palette className="w-4 h-4 text-muted-foreground" />
-                      Brand Colors
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Primary</Label>
-                        <div className="flex gap-2">
-                          <div 
-                            className="w-12 h-11 rounded-lg border-2 overflow-hidden cursor-pointer relative"
-                            style={{ backgroundColor: primaryColor }}
-                          >
-                            <input
-                              type="color"
-                              value={primaryColor}
-                              onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                            />
-                          </div>
-                          <Input
-                            value={primaryColor}
-                            onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
-                            className="flex-1 font-mono text-sm uppercase"
-                            maxLength={7}
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Accent</Label>
-                        <div className="flex gap-2">
-                          <div 
-                            className="w-12 h-11 rounded-lg border-2 overflow-hidden cursor-pointer relative"
-                            style={{ backgroundColor: accentColor }}
-                          >
-                            <input
-                              type="color"
-                              value={accentColor}
-                              onChange={(e) => setFormData({ ...formData, accent_color: e.target.value })}
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                            />
-                          </div>
-                          <Input
-                            value={accentColor}
-                            onChange={(e) => setFormData({ ...formData, accent_color: e.target.value })}
-                            className="flex-1 font-mono text-sm uppercase"
-                            maxLength={7}
-                          />
-                        </div>
-                      </div>
-                    </div>
+                  {/* Gradient Preview Bar */}
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Gradient Preview</Label>
                     <div 
-                      className="h-10 rounded-lg"
+                      className="h-10 rounded-lg shadow-inner"
                       style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
                     />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
-          </Tabs>
-        </div>
-
-        {/* RIGHT: Preview & Test */}
-        <div className="space-y-6">
-          {/* Test Your Branding - PROMINENT */}
-          <Card className="border-2 border-primary/20 bg-primary/5">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <FileText className="w-4 h-4 text-primary" />
-                Test Your Branding
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Report Type Selector - PROMINENT */}
-              <div className="space-y-2">
-                <Label className="font-medium">Select Report Type</Label>
-                <Select value={reportType} onValueChange={(v) => setReportType(v as ReportType)}>
-                  <SelectTrigger className="w-full h-12 text-base">
-                    <SelectValue placeholder="Select report type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {REPORT_TYPE_OPTIONS.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        <div className="flex flex-col py-1">
-                          <span className="font-medium">{type.label}</span>
-                          <span className="text-xs text-muted-foreground">{type.description}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  onClick={handleDownloadPdf}
-                  disabled={isDownloading}
-                  className={cn(
-                    "h-12 gap-2",
-                    downloadSuccess && "bg-green-600 hover:bg-green-600"
-                  )}
-                >
-                  {isDownloading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Generating...
-                    </>
-                  ) : downloadSuccess ? (
-                    <>
-                      <Check className="w-4 h-4" />
-                      Downloaded!
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4" />
-                      Download PDF
-                    </>
-                  )}
-                </Button>
-                <div className="space-y-1.5">
-                  <div className="flex gap-2">
-                    <Input
-                      type="email"
-                      placeholder="your@email.com"
-                      value={testEmail}
-                      onChange={(e) => setTestEmail(e.target.value)}
-                      className="h-12 flex-1"
-                    />
-                    <Button
-                      onClick={handleSendTestEmail}
-                      disabled={isSending || !testEmail}
-                      variant="outline"
-                      className={cn(
-                        "h-12 px-4",
-                        sendSuccess && "border-green-600 text-green-600"
-                      )}
-                    >
-                      {isSending ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : sendSuccess ? (
-                        <Check className="w-4 h-4" />
-                      ) : (
-                        <Mail className="w-4 h-4" />
-                      )}
-                    </Button>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
+            </div>
 
-              {/* Errors */}
-              {(downloadError || sendError) && (
-                <div className="flex items-center gap-2 text-sm text-destructive">
-                  <AlertCircle className="w-4 h-4" />
-                  {downloadError || sendError}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Live Preview */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Eye className="w-4 h-4 text-muted-foreground" />
+            {/* Right: Live Preview */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
+                <Eye className="w-4 h-4" />
                 Live Preview
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+              </div>
+              
               {/* Report Header Preview */}
-              <div className="rounded-lg overflow-hidden border">
+              <div className="rounded-xl overflow-hidden border shadow-lg">
                 <div
-                  className="p-4"
+                  className="p-5"
                   style={{
                     background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)`,
                   }}
@@ -770,92 +489,447 @@ export default function BrandingPage() {
                       {formData.logo_url ? (
                         <img
                           src={formData.logo_url}
-                          className="h-8 w-auto max-w-[80px] object-contain brightness-0 invert"
+                          className="h-10 w-auto max-w-[100px] object-contain brightness-0 invert"
                           alt={formData.brand_display_name}
                         />
                       ) : (
-                        <div className="h-8 w-8 rounded bg-white/20 flex items-center justify-center text-white font-bold text-sm">
+                        <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center text-white font-bold">
                           {(formData.brand_display_name || "B")[0].toUpperCase()}
                         </div>
                       )}
                       <div className="text-white">
-                        <div className="font-semibold text-sm">{REPORT_TYPE_OPTIONS.find(t => t.value === reportType)?.label}</div>
-                        <div className="text-xs opacity-80">Beverly Hills, CA</div>
+                        <div className="font-semibold">Market Snapshot</div>
+                        <div className="text-sm opacity-80">Beverly Hills, CA</div>
                       </div>
                     </div>
-                    <div className="text-right text-white text-xs opacity-80">
+                    <div className="text-right text-white text-sm opacity-80">
                       <div>{formData.brand_display_name || "Your Brand"}</div>
                     </div>
                   </div>
                 </div>
-                <div className="p-3 bg-white dark:bg-zinc-900">
-                  <div className="grid grid-cols-3 gap-2">
+                <div className="p-4 bg-white dark:bg-zinc-900">
+                  <div className="grid grid-cols-3 gap-3">
                     {[
-                      { label: "Median", value: "$1.85M" },
+                      { label: "Median Price", value: "$1.85M" },
                       { label: "Sales", value: "42" },
-                      { label: "DOM", value: "28" },
+                      { label: "Avg DOM", value: "28" },
                     ].map((stat, i) => (
                       <div 
                         key={i}
-                        className="p-2 rounded text-center text-white text-xs"
+                        className="p-3 rounded-lg text-center text-white"
                         style={{ 
                           background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)` 
                         }}
                       >
-                        <div className="opacity-70 text-[10px]">{stat.label}</div>
-                        <div className="font-bold">{stat.value}</div>
+                        <div className="opacity-70 text-xs">{stat.label}</div>
+                        <div className="font-bold text-lg">{stat.value}</div>
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </TabsContent>
 
-              {/* Footer Preview (Affiliates only) */}
-              {isAffiliate && (
-                <div className="rounded-lg overflow-hidden border">
-                  <div className="p-3 bg-slate-50 dark:bg-zinc-900">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2 min-w-0">
+        {/* ===== CONTACT INFO TAB (Affiliates only) ===== */}
+        {isAffiliate && (
+          <TabsContent value="contact" className="mt-6">
+            <div className="grid lg:grid-cols-2 gap-6">
+              {/* Left: Form */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <User className="w-4 h-4 text-primary" />
+                    Your Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  {/* Photo + Name Row */}
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0">
+                      <Label className="text-sm mb-2 block">Photo</Label>
+                      <div className="w-20 h-20 relative rounded-xl border-2 border-dashed overflow-hidden bg-muted/30 hover:bg-muted/50 transition-colors">
                         {formData.rep_photo_url ? (
                           <img
                             src={formData.rep_photo_url}
-                            className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-                            style={{ border: `2px solid ${primaryColor}` }}
+                            alt="Profile"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                            <User className="w-8 h-8" />
+                          </div>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            const formDataUpload = new FormData()
+                            formDataUpload.append("file", file)
+                            formDataUpload.append("asset_type", "headshot")
+                            try {
+                              const res = await fetch("/api/proxy/v1/assets/upload", {
+                                method: "POST",
+                                body: formDataUpload,
+                              })
+                              if (res.ok) {
+                                const data = await res.json()
+                                setFormData({ ...formData, rep_photo_url: data.url })
+                              }
+                            } catch (err) {
+                              console.error("Upload failed:", err)
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex-1 space-y-3">
+                      <div className="space-y-1">
+                        <Label htmlFor="rep_name">Full Name</Label>
+                        <Input
+                          id="rep_name"
+                          value={formData.rep_name}
+                          onChange={(e) => setFormData({ ...formData, rep_name: e.target.value })}
+                          placeholder="John Doe"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="rep_title">Job Title</Label>
+                        <Input
+                          id="rep_title"
+                          value={formData.rep_title}
+                          onChange={(e) => setFormData({ ...formData, rep_title: e.target.value })}
+                          placeholder="Senior Title Rep"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contact Details */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="rep_email" className="flex items-center gap-1.5">
+                        <Mail className="w-3.5 h-3.5 text-muted-foreground" /> Email
+                      </Label>
+                      <Input
+                        id="rep_email"
+                        type="email"
+                        value={formData.rep_email}
+                        onChange={(e) => setFormData({ ...formData, rep_email: e.target.value })}
+                        placeholder="john@company.com"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="rep_phone" className="flex items-center gap-1.5">
+                        <Phone className="w-3.5 h-3.5 text-muted-foreground" /> Phone
+                      </Label>
+                      <Input
+                        id="rep_phone"
+                        type="tel"
+                        value={formData.rep_phone}
+                        onChange={(e) => setFormData({ ...formData, rep_phone: e.target.value })}
+                        placeholder="(555) 123-4567"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="website" className="flex items-center gap-1.5">
+                      <Globe className="w-3.5 h-3.5 text-muted-foreground" /> Website
+                    </Label>
+                    <Input
+                      id="website"
+                      value={formData.website_url || ""}
+                      onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
+                      placeholder="https://www.yourcompany.com"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Right: Footer Preview */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
+                  <Eye className="w-4 h-4" />
+                  Report Footer Preview
+                </div>
+                
+                <div className="rounded-xl overflow-hidden border shadow-lg">
+                  <div className="p-4 bg-slate-50 dark:bg-zinc-900">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {formData.rep_photo_url ? (
+                          <img
+                            src={formData.rep_photo_url}
+                            className="w-14 h-14 rounded-full object-cover flex-shrink-0 shadow-md"
+                            style={{ border: `3px solid ${primaryColor}` }}
                             alt="Rep"
                           />
                         ) : (
                           <div 
-                            className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
+                            className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0 shadow-md"
                             style={{ backgroundColor: primaryColor }}
                           >
                             {(formData.rep_name || "Y")[0].toUpperCase()}
                           </div>
                         )}
-                        <div className="min-w-0 text-xs">
-                          <div className="font-medium truncate">
+                        <div className="min-w-0">
+                          <div className="font-semibold text-base">
                             {formData.rep_name || "Your Name"}
-                            {formData.rep_title && <span className="text-muted-foreground"> • {formData.rep_title}</span>}
                           </div>
-                          <div className="text-muted-foreground truncate">
-                            {formData.rep_phone || formData.rep_email || "Contact info"}
+                          {formData.rep_title && (
+                            <div className="text-sm text-muted-foreground">{formData.rep_title}</div>
+                          )}
+                          <div className="text-sm text-muted-foreground mt-0.5">
+                            {formData.rep_phone && <span>{formData.rep_phone}</span>}
+                            {formData.rep_phone && formData.rep_email && <span> • </span>}
+                            {formData.rep_email && <span>{formData.rep_email}</span>}
                           </div>
                         </div>
                       </div>
                       {formData.logo_url && (
                         <img
                           src={formData.logo_url}
-                          className="h-7 w-auto max-w-[60px] object-contain flex-shrink-0"
+                          className="h-10 w-auto max-w-[80px] object-contain flex-shrink-0"
                           alt={formData.brand_display_name}
                         />
                       )}
                     </div>
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+
+                <p className="text-xs text-muted-foreground text-center mt-4">
+                  This is how your contact information appears at the bottom of every report.
+                </p>
+              </div>
+            </div>
+          </TabsContent>
+        )}
+
+        {/* ===== TEST TAB ===== */}
+        <TabsContent value="test" className="mt-6">
+          <div className="space-y-8">
+            {/* Report Type Selector */}
+            <div className="max-w-md">
+              <Label className="text-base font-medium mb-2 block">Select Report Type to Preview</Label>
+              <Select value={reportType} onValueChange={(v) => setReportType(v as ReportType)}>
+                <SelectTrigger className="w-full h-12 text-base">
+                  <SelectValue placeholder="Select report type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {REPORT_TYPE_OPTIONS.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      <div className="flex flex-col py-1">
+                        <span className="font-medium">{type.label}</span>
+                        <span className="text-xs text-muted-foreground">{type.description}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Two Column Layout: PDF | Email */}
+            <div className="grid lg:grid-cols-2 gap-8">
+              {/* ===== PDF SECTION ===== */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                    <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">PDF Report</h3>
+                    <p className="text-sm text-muted-foreground">Download a sample PDF with your branding</p>
+                  </div>
+                </div>
+
+                {/* PDF Preview */}
+                <div className="rounded-xl border overflow-hidden shadow-lg bg-white dark:bg-zinc-900">
+                  {/* Mini PDF Preview */}
+                  <div className="aspect-[8.5/5] relative bg-gradient-to-b from-slate-100 to-white dark:from-zinc-800 dark:to-zinc-900">
+                    {/* Header bar */}
+                    <div 
+                      className="h-16 flex items-center justify-between px-4"
+                      style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
+                    >
+                      <div className="flex items-center gap-2">
+                        {formData.logo_url ? (
+                          <img src={formData.logo_url} className="h-6 w-auto brightness-0 invert" alt="" />
+                        ) : (
+                          <div className="h-6 w-6 rounded bg-white/20" />
+                        )}
+                        <div className="text-white text-xs font-medium">{currentReportLabel}</div>
+                      </div>
+                      <div className="text-white/80 text-[10px]">{formData.brand_display_name || "Your Brand"}</div>
+                    </div>
+                    
+                    {/* Content placeholder */}
+                    <div className="p-4 space-y-2">
+                      <div className="h-2 bg-slate-200 dark:bg-zinc-700 rounded w-3/4" />
+                      <div className="h-2 bg-slate-200 dark:bg-zinc-700 rounded w-1/2" />
+                      <div className="grid grid-cols-3 gap-2 mt-4">
+                        {[1, 2, 3].map((i) => (
+                          <div 
+                            key={i}
+                            className="h-10 rounded text-white flex flex-col items-center justify-center text-[8px]"
+                            style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
+                          >
+                            <span className="opacity-70">Stat {i}</span>
+                            <span className="font-bold">$1.2M</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* PDF badge */}
+                    <div className="absolute top-3 right-3 px-2 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded">
+                      PDF
+                    </div>
+                  </div>
+
+                  {/* Download Action */}
+                  <div className="p-4 border-t bg-slate-50 dark:bg-zinc-800/50">
+                    <Button
+                      onClick={handleDownloadPdf}
+                      disabled={isDownloading}
+                      className={cn(
+                        "w-full h-12 gap-2 text-base",
+                        downloadSuccess && "bg-green-600 hover:bg-green-600"
+                      )}
+                    >
+                      {isDownloading ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Generating PDF...
+                        </>
+                      ) : downloadSuccess ? (
+                        <>
+                          <Check className="w-5 h-5" />
+                          Downloaded!
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-5 h-5" />
+                          Download Sample PDF
+                        </>
+                      )}
+                    </Button>
+                    {downloadError && (
+                      <div className="flex items-center gap-2 text-sm text-destructive mt-2">
+                        <AlertCircle className="w-4 h-4" />
+                        {downloadError}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* ===== EMAIL SECTION ===== */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                    <Mail className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Email Report</h3>
+                    <p className="text-sm text-muted-foreground">Send a test email to preview your branding</p>
+                  </div>
+                </div>
+
+                {/* Email Preview */}
+                <div className="rounded-xl border overflow-hidden shadow-lg bg-white dark:bg-zinc-900">
+                  {/* Mini Email Preview */}
+                  <div className="aspect-[8.5/5] relative bg-gradient-to-b from-slate-100 to-white dark:from-zinc-800 dark:to-zinc-900 p-4">
+                    {/* Email header */}
+                    <div className="rounded-lg border bg-white dark:bg-zinc-800 p-3 shadow-sm">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div 
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                          style={{ backgroundColor: primaryColor }}
+                        >
+                          {(formData.brand_display_name || "B")[0].toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-medium truncate">{formData.brand_display_name || "Your Brand"}</div>
+                          <div className="text-[10px] text-muted-foreground">Your {currentReportLabel} is ready!</div>
+                        </div>
+                      </div>
+                      {/* Email body placeholder */}
+                      <div className="mt-3 p-2 rounded border bg-slate-50 dark:bg-zinc-700/50">
+                        <div 
+                          className="h-8 rounded-md flex items-center justify-center text-white text-[10px] font-medium mb-2"
+                          style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
+                        >
+                          {currentReportLabel}
+                        </div>
+                        <div className="space-y-1">
+                          <div className="h-1.5 bg-slate-200 dark:bg-zinc-600 rounded w-full" />
+                          <div className="h-1.5 bg-slate-200 dark:bg-zinc-600 rounded w-3/4" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Email badge */}
+                    <div className="absolute top-3 right-3 px-2 py-0.5 bg-purple-500 text-white text-[10px] font-bold rounded">
+                      EMAIL
+                    </div>
+                  </div>
+
+                  {/* Send Action */}
+                  <div className="p-4 border-t bg-slate-50 dark:bg-zinc-800/50 space-y-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="test-email" className="text-sm">Send test to:</Label>
+                      <Input
+                        id="test-email"
+                        type="email"
+                        placeholder="your@email.com"
+                        value={testEmail}
+                        onChange={(e) => setTestEmail(e.target.value)}
+                        className="h-11"
+                      />
+                    </div>
+                    <Button
+                      onClick={handleSendTestEmail}
+                      disabled={isSending || !testEmail}
+                      variant="outline"
+                      className={cn(
+                        "w-full h-12 gap-2 text-base",
+                        sendSuccess && "border-green-600 text-green-600 bg-green-50 dark:bg-green-900/20"
+                      )}
+                    >
+                      {isSending ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Sending...
+                        </>
+                      ) : sendSuccess ? (
+                        <>
+                          <Check className="w-5 h-5" />
+                          Email Sent!
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-5 h-5" />
+                          Send Test Email
+                        </>
+                      )}
+                    </Button>
+                    {sendError && (
+                      <div className="flex items-center gap-2 text-sm text-destructive">
+                        <AlertCircle className="w-4 h-4" />
+                        {sendError}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
