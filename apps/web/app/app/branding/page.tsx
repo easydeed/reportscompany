@@ -349,20 +349,29 @@ export default function BrandingPage() {
       {/* Main Tabs */}
       <Tabs defaultValue="logo-colors" className="w-full">
         <TabsList className={cn(
-          "grid w-full",
+          "grid w-full h-14 p-1.5 bg-muted/60 border border-border/50 rounded-xl shadow-sm",
           isAffiliate ? "grid-cols-3" : "grid-cols-2"
         )}>
-          <TabsTrigger value="logo-colors" className="gap-2">
+          <TabsTrigger 
+            value="logo-colors" 
+            className="gap-2 h-full rounded-lg text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-md data-[state=active]:border-border/80 transition-all duration-200"
+          >
             <Palette className="w-4 h-4" />
             Logo and Colors
           </TabsTrigger>
           {isAffiliate && (
-            <TabsTrigger value="contact" className="gap-2">
+            <TabsTrigger 
+              value="contact" 
+              className="gap-2 h-full rounded-lg text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-md data-[state=active]:border-border/80 transition-all duration-200"
+            >
               <User className="w-4 h-4" />
               Contact Info
             </TabsTrigger>
           )}
-          <TabsTrigger value="test" className="gap-2">
+          <TabsTrigger 
+            value="test" 
+            className="gap-2 h-full rounded-lg text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-md data-[state=active]:border-border/80 transition-all duration-200"
+          >
             <FlaskConical className="w-4 h-4" />
             Test
           </TabsTrigger>
