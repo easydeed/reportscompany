@@ -60,6 +60,7 @@ def get_branding_for_account(cur, account_id: str) -> dict:
             SELECT 
                 brand_display_name,
                 logo_url,
+                email_logo_url,
                 primary_color,
                 accent_color,
                 rep_photo_url,
@@ -75,12 +76,13 @@ def get_branding_for_account(cur, account_id: str) -> dict:
             return {
                 "brand_display_name": brand_row[0],
                 "logo_url": brand_row[1],
-                "primary_color": brand_row[2] or "#7C3AED",
-                "accent_color": brand_row[3] or "#F26B2B",
-                "rep_photo_url": brand_row[4],
-                "contact_line1": brand_row[5],
-                "contact_line2": brand_row[6],
-                "website_url": brand_row[7],
+                "email_logo_url": brand_row[2],  # Light version for email headers
+                "primary_color": brand_row[3] or "#7C3AED",
+                "accent_color": brand_row[4] or "#F26B2B",
+                "rep_photo_url": brand_row[5],
+                "contact_line1": brand_row[6],
+                "contact_line2": brand_row[7],
+                "website_url": brand_row[8],
             }
     
     # Get account name as fallback
@@ -93,6 +95,7 @@ def get_branding_for_account(cur, account_id: str) -> dict:
     return {
         "brand_display_name": acc_row[0] if acc_row else "Your Brand",
         "logo_url": acc_row[1] if acc_row else None,
+        "email_logo_url": None,
         "primary_color": acc_row[2] if acc_row else "#7C3AED",
         "accent_color": "#F26B2B",
         "rep_photo_url": None,
@@ -231,6 +234,7 @@ async def send_test_email(
     
     brand_name = branding.get("brand_display_name") or "Your Brand"
     logo_url = branding.get("logo_url")
+    email_logo_url = branding.get("email_logo_url")  # Light version for email headers
     primary_color = branding.get("primary_color") or "#7C3AED"
     accent_color = branding.get("accent_color") or "#F26B2B"
     rep_photo_url = branding.get("rep_photo_url")
@@ -241,9 +245,10 @@ async def send_test_email(
     # Build sample email HTML using V0-style email-safe template
     report_type_display = body.report_type.replace("_", " ").title()
     
-    # Build logo HTML (conditional)
-    if logo_url:
-        logo_html = f'<img src="{logo_url}" alt="{brand_name}" width="180" height="50" style="display: block; max-width: 180px; height: auto;" />'
+    # Build logo HTML (conditional) - prefer email_logo_url for header, fall back to logo_url
+    header_logo = email_logo_url or logo_url
+    if header_logo:
+        logo_html = f'<img src="{header_logo}" alt="{brand_name}" width="180" height="50" style="display: block; max-width: 180px; height: auto;" />'
     else:
         logo_html = f'<p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 24px; font-weight: 700; color: #ffffff;">{brand_name}</p>'
     
