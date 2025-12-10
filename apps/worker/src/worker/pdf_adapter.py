@@ -133,6 +133,14 @@ def _generate_via_api(url: str, output_path: str) -> bool:
         
         # use_print: Use the @media print stylesheet
         payload["use_print"] = True
+        
+        # wait_for: Wait for network requests to complete (helps with external images)
+        # "network_idle" waits until there are no pending network requests for 500ms
+        payload["wait_for"] = "network_idle"
+        
+        # delay: Additional wait time (ms) after page load to ensure images render
+        # MLS photo URLs sometimes have redirects that need time to resolve
+        payload["delay"] = 2000  # 2 seconds
     else:
         # Non-PDFShift services: use margins (they may not support @page CSS)
         payload["margin"] = {
@@ -145,7 +153,8 @@ def _generate_via_api(url: str, output_path: str) -> bool:
     # PDFShift uses Basic Auth with API key as username, empty password
     auth = (PDF_API_KEY, "") if is_pdfshift else None
     
-    with httpx.Client(timeout=60.0) as client:
+    # Increased timeout to 120s to allow for network_idle wait + image loading
+    with httpx.Client(timeout=120.0) as client:
         response = client.post(
             PDF_API_URL,
             json=payload,
