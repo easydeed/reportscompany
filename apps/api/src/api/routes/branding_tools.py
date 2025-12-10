@@ -247,41 +247,57 @@ async def send_test_email(
     else:
         logo_html = f'<p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 24px; font-weight: 700; color: #ffffff;">{brand_name}</p>'
     
-    # Build footer HTML (conditional based on available data)
+    # Build V2 footer HTML with circular photo border
     if rep_photo_url and (contact_line1 or contact_line2):
         footer_html = f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
-                  <td width="80" valign="top" style="padding-right: 20px;">
-                    <img src="{rep_photo_url}" alt="Agent Photo" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
-                  </td>
-                  <td valign="middle">
-                    {f'<p style="margin: 0 0 4px 0; font-family: Arial, Helvetica, sans-serif; font-size: 15px; font-weight: 600; color: #1f2937; line-height: 1.4;">{contact_line1}</p>' if contact_line1 else ''}
-                    {f'<p style="margin: 0 0 8px 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #6b7280; line-height: 1.4;">{contact_line2}</p>' if contact_line2 else ''}
-                    {f'<a href="{website_url}" target="_blank" style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: {primary_color}; text-decoration: none; font-weight: 500;">{website_url.replace("https://", "").replace("http://", "")}</a>' if website_url else ''}
+                  <td align="center">
+                    <table role="presentation" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="vertical-align: middle; padding-right: 20px;">
+                          <!--[if mso]>
+                          <v:oval xmlns:v="urn:schemas-microsoft-com:vml" style="width:70px;height:70px;" stroke="f">
+                            <v:fill type="frame" src="{rep_photo_url}"/>
+                          </v:oval>
+                          <![endif]-->
+                          <!--[if !mso]><!-->
+                          <img src="{rep_photo_url}" alt="{contact_line1}" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid {primary_color}20;">
+                          <!--<![endif]-->
+                        </td>
+                        <td style="vertical-align: middle;">
+                          <p style="margin: 0 0 2px 0; font-size: 17px; font-weight: 600; color: #1a1a2e;">{contact_line1}</p>
+                          {f'<p style="margin: 0 0 8px 0; font-size: 13px; color: #6b7280;">{contact_line2}</p>' if contact_line2 else ''}
+                          {f'<a href="{website_url}" style="color: {primary_color}; text-decoration: none; font-size: 13px;">{website_url.replace("https://", "").replace("http://", "")}</a>' if website_url else ''}
+                        </td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>'''
     else:
         footer_html = f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
                   <td align="center">
-                    <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 15px; font-weight: 600; color: #1f2937; line-height: 1.4;">{brand_name}</p>
-                    {f'<p style="margin: 4px 0 0 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #6b7280;">{contact_line1}</p>' if contact_line1 else ''}
-                    {f'<p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #6b7280;">{contact_line2}</p>' if contact_line2 else ''}
-                    {f'<a href="{website_url}" target="_blank" style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: {primary_color}; text-decoration: none; font-weight: 500;">{website_url.replace("https://", "").replace("http://", "")}</a>' if website_url else ''}
+                    <p style="margin: 0 0 4px 0; font-size: 16px; font-weight: 600; color: #1a1a2e;">{brand_name}</p>
+                    {f'<p style="margin: 0 0 4px 0; font-size: 14px; color: #6b7280;">{contact_line1}</p>' if contact_line1 else ''}
+                    {f'<p style="margin: 0 0 8px 0; font-size: 14px; color: #6b7280;">{contact_line2}</p>' if contact_line2 else ''}
+                    {f'<a href="{website_url}" style="color: {primary_color}; text-decoration: none; font-size: 14px; font-weight: 500;">{website_url.replace("https://", "").replace("http://", "")}</a>' if website_url else ''}
                   </td>
                 </tr>
               </table>'''
     
+    # Build V2 email template with gradient header
     email_html = f'''<!DOCTYPE html>
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="x-apple-disable-message-reformatting">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <title>{brand_name} - {report_type_display} (Test)</title>
   <!--[if mso]>
   <noscript>
@@ -293,210 +309,222 @@ async def send_test_email(
     </xml>
   </noscript>
   <![endif]-->
+  <style>
+    body, table, td, p, a, li {{ -webkit-text-size-adjust: 100%; -ms-text-adjust: 100%; }}
+    table, td {{ mso-table-lspace: 0pt; mso-table-rspace: 0pt; }}
+    img {{ -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }}
+    body {{ margin: 0 !important; padding: 0 !important; width: 100% !important; }}
+    @media (prefers-color-scheme: dark) {{
+      .dark-bg {{ background-color: #1a1a2e !important; }}
+      .dark-text {{ color: #e5e5e5 !important; }}
+      .dark-card {{ background-color: #262640 !important; }}
+    }}
+    @media only screen and (max-width: 600px) {{
+      .wrapper {{ width: 100% !important; }}
+      .mobile-padding {{ padding: 20px !important; }}
+      .metric-card {{ display: block !important; width: 100% !important; margin-bottom: 12px !important; }}
+    }}
+  </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+<body style="margin: 0; padding: 0; background-color: #f4f4f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
   
-  <!-- Wrapper Table -->
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f4f4f4;" bgcolor="#f4f4f4">
+  <!-- Preheader -->
+  <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">
+    🧪 Test email preview - See how your branding appears in scheduled reports &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+  </div>
+  
+  <!-- Email Container -->
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f7;" class="dark-bg">
     <tr>
-      <td align="center" style="padding: 20px 10px;">
+      <td align="center" style="padding: 40px 20px;">
         
-        <!-- Main Container -->
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" bgcolor="#ffffff">
+        <!-- Email Wrapper -->
+        <table role="presentation" cellpadding="0" cellspacing="0" width="600" class="wrapper" style="max-width: 600px; width: 100%;">
           
-          <!-- Header Section -->
+          <!-- ========== GRADIENT HEADER ========== -->
           <tr>
-            <td align="center" style="background-color: {primary_color}; padding: 30px 40px;" bgcolor="{primary_color}">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <td>
+              <!--[if mso]>
+              <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;height:180px;">
+                <v:fill type="gradient" color="{primary_color}" color2="{accent_color}" angle="135"/>
+                <v:textbox inset="0,0,0,0" style="mso-fit-shape-to-text:true">
+              <![endif]-->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%); border-radius: 12px 12px 0 0;">
                 <tr>
-                  <td align="center" style="padding-bottom: 20px;">
+                  <td align="center" style="padding: 28px 40px;">
                     {logo_html}
                   </td>
                 </tr>
                 <tr>
-                  <td align="center">
-                    <h1 style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 28px; font-weight: 700; color: #ffffff; line-height: 1.3;">
+                  <td align="center" style="padding: 0 40px 8px 40px;">
+                    <span style="display: inline-block; background-color: rgba(255,255,255,0.2); color: #ffffff; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; padding: 6px 14px; border-radius: 20px;">
                       {report_type_display}
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding: 0 40px;">
+                    <h1 style="margin: 0; font-size: 26px; font-weight: 700; color: #ffffff; line-height: 1.3;">
+                      Sample Report Preview
                     </h1>
                   </td>
                 </tr>
                 <tr>
-                  <td align="center" style="padding-top: 10px;">
-                    <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: rgba(255,255,255,0.9); line-height: 1.5;">
+                  <td align="center" style="padding: 10px 40px 28px 40px;">
+                    <p style="margin: 0; font-size: 15px; color: rgba(255,255,255,0.9);">
                       Beverly Hills &bull; Last 30 Days
                     </p>
                   </td>
                 </tr>
               </table>
+              <!--[if mso]>
+                </v:textbox>
+              </v:rect>
+              <![endif]-->
             </td>
           </tr>
           
-          <!-- Test Email Notice -->
+          <!-- ========== MAIN CONTENT ========== -->
           <tr>
-            <td style="padding: 25px 30px 0 30px; background-color: #ffffff;" bgcolor="#ffffff">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #fef3c7; border-radius: 8px;">
+            <td style="background-color: #ffffff; padding: 40px;" class="dark-card mobile-padding">
+              
+              <!-- Test Email Notice -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
-                  <td style="padding: 15px 20px;">
-                    <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #92400e; line-height: 1.5;">
-                      <strong>🧪 This is a test email</strong> — It shows how your branding appears in scheduled report emails sent to your agents' clients.
+                  <td style="background-color: #fef3c7; border-radius: 10px; padding: 16px 20px;">
+                    <p style="margin: 0; font-size: 14px; color: #92400e; line-height: 1.5;">
+                      <strong>🧪 This is a test email</strong> — It shows how your branding appears in scheduled report emails.
                     </p>
                   </td>
                 </tr>
               </table>
-            </td>
-          </tr>
-          
-          <!-- Metrics Section -->
-          <tr>
-            <td style="padding: 30px 30px 40px 30px; background-color: #ffffff;" bgcolor="#ffffff">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+              
+              <!-- Section Label -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
                   <td align="center" style="padding-bottom: 20px;">
-                    <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: 600; color: {accent_color}; text-transform: uppercase; letter-spacing: 1px;">
+                    <p style="margin: 0; font-size: 12px; font-weight: 600; color: {accent_color}; text-transform: uppercase; letter-spacing: 1px;">
                       Sample Metrics
                     </p>
                   </td>
                 </tr>
+              </table>
+              
+              <!-- ========== 3-COLUMN METRICS ========== -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
-                  <td>
-                    <!-- 3-Column Metrics Table -->
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                  <!-- Metric 1 -->
+                  <td width="33%" class="metric-card" style="padding: 0 6px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;">
                       <tr>
-                        <!-- Metric 1 -->
-                        <td width="32%" align="center" valign="top" style="padding: 20px 10px; background-color: #f9fafb; border-radius: 8px;" bgcolor="#f9fafb">
-                          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                            <tr>
-                              <td align="center">
-                                <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 32px; font-weight: 700; color: {primary_color}; line-height: 1.2;">
-                                  127
-                                </p>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td align="center" style="padding-top: 8px;">
-                                <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #6b7280; line-height: 1.4;">
-                                  Active Listings
-                                </p>
-                              </td>
-                            </tr>
-                          </table>
+                        <td align="center" style="padding: 20px 12px;">
+                          <p style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700; color: {primary_color};">
+                            127
+                          </p>
+                          <p style="margin: 0; font-size: 12px; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">
+                            Active Listings
+                          </p>
                         </td>
-                        
-                        <!-- Spacer -->
-                        <td width="2%">&nbsp;</td>
-                        
-                        <!-- Metric 2 -->
-                        <td width="32%" align="center" valign="top" style="padding: 20px 10px; background-color: #f9fafb; border-radius: 8px;" bgcolor="#f9fafb">
-                          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                            <tr>
-                              <td align="center">
-                                <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 32px; font-weight: 700; color: {primary_color}; line-height: 1.2;">
-                                  $4.2M
-                                </p>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td align="center" style="padding-top: 8px;">
-                                <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #6b7280; line-height: 1.4;">
-                                  Median Price
-                                </p>
-                              </td>
-                            </tr>
-                          </table>
+                      </tr>
+                    </table>
+                  </td>
+                  <!-- Metric 2 -->
+                  <td width="33%" class="metric-card" style="padding: 0 6px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;">
+                      <tr>
+                        <td align="center" style="padding: 20px 12px;">
+                          <p style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700; color: {accent_color};">
+                            $4.2M
+                          </p>
+                          <p style="margin: 0; font-size: 12px; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">
+                            Median Price
+                          </p>
                         </td>
-                        
-                        <!-- Spacer -->
-                        <td width="2%">&nbsp;</td>
-                        
-                        <!-- Metric 3 -->
-                        <td width="32%" align="center" valign="top" style="padding: 20px 10px; background-color: #f9fafb; border-radius: 8px;" bgcolor="#f9fafb">
-                          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                            <tr>
-                              <td align="center">
-                                <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 32px; font-weight: 700; color: {primary_color}; line-height: 1.2;">
-                                  42
-                                </p>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td align="center" style="padding-top: 8px;">
-                                <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #6b7280; line-height: 1.4;">
-                                  Avg. DOM
-                                </p>
-                              </td>
-                            </tr>
-                          </table>
+                      </tr>
+                    </table>
+                  </td>
+                  <!-- Metric 3 -->
+                  <td width="33%" class="metric-card" style="padding: 0 6px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;">
+                      <tr>
+                        <td align="center" style="padding: 20px 12px;">
+                          <p style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700; color: #10b981;">
+                            42 days
+                          </p>
+                          <p style="margin: 0; font-size: 12px; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">
+                            Avg DOM
+                          </p>
                         </td>
                       </tr>
                     </table>
                   </td>
                 </tr>
               </table>
-            </td>
-          </tr>
-          
-          <!-- CTA Section -->
-          <tr>
-            <td align="center" style="padding: 0 40px 40px 40px; background-color: #ffffff;" bgcolor="#ffffff">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              
+              <!-- ========== CTA BUTTON ========== -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
-                  <td align="center" style="background-color: {accent_color}; border-radius: 8px;" bgcolor="{accent_color}">
+                  <td align="center" style="padding: 8px 0 24px 0;">
                     <!--[if mso]>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="#" style="height:50px;v-text-anchor:middle;width:220px;" arcsize="16%" stroke="f" fillcolor="{accent_color}">
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="#" style="height:50px;v-text-anchor:middle;width:220px;" arcsize="50%" stroke="f" fillcolor="{primary_color}">
                       <w:anchorlock/>
-                      <center>
-                    <![endif]-->
-                    <a href="#" style="display: inline-block; padding: 16px 40px; font-family: Arial, Helvetica, sans-serif; font-size: 16px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px; background-color: {accent_color};">
-                      View Full Report
-                    </a>
-                    <!--[if mso]>
-                      </center>
+                      <center style="color:#ffffff;font-family:sans-serif;font-size:16px;font-weight:600;">View Full Report</center>
                     </v:roundrect>
                     <![endif]-->
+                    <!--[if !mso]><!-->
+                    <a href="#" style="display: inline-block; background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%); color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 36px; border-radius: 50px; box-shadow: 0 4px 14px {primary_color}40;">
+                      View Full Report
+                    </a>
+                    <!--<![endif]-->
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding-bottom: 24px;">
+                    <p style="margin: 0; font-size: 13px; color: #9ca3af;">
+                      (In real emails, this links to the PDF report)
+                    </p>
                   </td>
                 </tr>
               </table>
-              <p style="margin: 15px 0 0 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #9ca3af;">
-                (In real emails, this button links to the PDF report)
-              </p>
-            </td>
-          </tr>
-          
-          <!-- Divider -->
-          <tr>
-            <td style="padding: 0 40px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+              
+              <!-- Divider -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
-                  <td style="border-top: 1px solid #e5e7eb; height: 1px; font-size: 1px; line-height: 1px;">&nbsp;</td>
+                  <td style="border-top: 1px solid #e5e7eb; padding-top: 32px;"></td>
                 </tr>
               </table>
-            </td>
-          </tr>
-          
-          <!-- Footer Section -->
-          <tr>
-            <td style="padding: 40px; background-color: #ffffff;" bgcolor="#ffffff">
+              
+              <!-- Agent Footer -->
               {footer_html}
+              
             </td>
           </tr>
           
-          <!-- Unsubscribe Footer -->
+          <!-- ========== FOOTER ========== -->
           <tr>
-            <td align="center" style="padding: 20px 40px; background-color: #f9fafb;" bgcolor="#f9fafb">
-              <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #9ca3af; line-height: 1.6;">
-                This is a test email from {brand_name}.<br />
-                In production, recipients can <span style="color: #6b7280; text-decoration: underline;">unsubscribe</span> from these notifications.
-              </p>
+            <td style="background-color: #f9fafb; padding: 24px 40px; border-radius: 0 0 12px 12px; border-top: 1px solid #e5e7eb;" class="mobile-padding">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 8px 0; font-size: 13px; color: #9ca3af;">
+                      Test email from <span style="color: {primary_color}; font-weight: 500;">{brand_name}</span>
+                    </p>
+                    <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                      In production, recipients can <span style="text-decoration: underline;">unsubscribe</span> from notifications
+                    </p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
           
         </table>
-        <!-- End Main Container -->
+        <!-- End Wrapper -->
         
       </td>
     </tr>
   </table>
-  <!-- End Wrapper Table -->
+  <!-- End Container -->
   
 </body>
 </html>'''
