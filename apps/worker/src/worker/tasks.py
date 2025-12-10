@@ -406,7 +406,7 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
             print(f"🔍 REPORT RUN {run_id}: step=build_context")
             # Use report builder dispatcher to create result_json
             result = build_result_json(report_type, clean, context)
-            cache_set("report", cache_payload, result, ttl_s=3600)
+            cache_set("report", cache_payload, result, ttl_s=900)  # 15 minutes
             print(f"✅ REPORT RUN {run_id}: data_fetch complete (from SimplyRETS)")
         else:
             print(f"✅ REPORT RUN {run_id}: data_fetch complete (from cache)")
