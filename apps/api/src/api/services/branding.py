@@ -13,6 +13,7 @@ class Brand(TypedDict, total=False):
     """Brand configuration for white-label output."""
     display_name: str
     logo_url: Optional[str]
+    email_logo_url: Optional[str]  # Separate logo for email headers (light version)
     primary_color: Optional[str]
     accent_color: Optional[str]
     rep_photo_url: Optional[str]
@@ -80,6 +81,7 @@ def get_brand_for_account(cur, account_id: str) -> Brand:
             SELECT
                 brand_display_name,
                 logo_url,
+                email_logo_url,
                 primary_color,
                 accent_color,
                 rep_photo_url,
@@ -100,12 +102,13 @@ def get_brand_for_account(cur, account_id: str) -> Brand:
         return Brand(
             display_name=branding_row[0],
             logo_url=branding_row[1],
-            primary_color=branding_row[2] or DEFAULT_PRIMARY,
-            accent_color=branding_row[3] or DEFAULT_ACCENT,
-            rep_photo_url=branding_row[4],
-            contact_line1=branding_row[5],
-            contact_line2=branding_row[6],
-            website_url=branding_row[7],
+            email_logo_url=branding_row[2],  # email_logo_url for light version
+            primary_color=branding_row[3] or DEFAULT_PRIMARY,
+            accent_color=branding_row[4] or DEFAULT_ACCENT,
+            rep_photo_url=branding_row[5],
+            contact_line1=branding_row[6],
+            contact_line2=branding_row[7],
+            website_url=branding_row[8],
         )
     
     # No branding configured
@@ -123,6 +126,7 @@ def get_brand_for_account(cur, account_id: str) -> Brand:
             return Brand(
                 display_name=sponsor_name,
                 logo_url=None,
+                email_logo_url=None,
                 primary_color=DEFAULT_PRIMARY,
                 accent_color=DEFAULT_ACCENT,
                 rep_photo_url=None,
@@ -135,6 +139,7 @@ def get_brand_for_account(cur, account_id: str) -> Brand:
             return Brand(
                 display_name=acc_name,
                 logo_url=None,
+                email_logo_url=None,
                 primary_color=DEFAULT_PRIMARY,
                 accent_color=DEFAULT_ACCENT,
                 rep_photo_url=None,
@@ -152,6 +157,7 @@ def _get_default_brand() -> Brand:
     return Brand(
         display_name="TrendyReports",
         logo_url=None,  # Could add TrendyReports logo URL here if hosted
+        email_logo_url=None,
         primary_color=DEFAULT_PRIMARY,
         accent_color=DEFAULT_ACCENT,
         rep_photo_url=None,

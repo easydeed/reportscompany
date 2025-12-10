@@ -233,6 +233,7 @@ class BrandingInput(BaseModel):
     """Input model for branding configuration."""
     brand_display_name: str
     logo_url: str | None = None
+    email_logo_url: str | None = None  # Separate logo for email headers (light version)
     primary_color: str | None = None
     accent_color: str | None = None
     rep_photo_url: str | None = None
@@ -267,6 +268,7 @@ def get_branding(request: Request, account_id: str = Depends(require_account_id)
             SELECT
                 brand_display_name,
                 logo_url,
+                email_logo_url,
                 primary_color,
                 accent_color,
                 rep_photo_url,
@@ -284,12 +286,13 @@ def get_branding(request: Request, account_id: str = Depends(require_account_id)
             return {
                 "brand_display_name": row[0],
                 "logo_url": row[1],
-                "primary_color": row[2],
-                "accent_color": row[3],
-                "rep_photo_url": row[4],
-                "contact_line1": row[5],
-                "contact_line2": row[6],
-                "website_url": row[7],
+                "email_logo_url": row[2],
+                "primary_color": row[3],
+                "accent_color": row[4],
+                "rep_photo_url": row[5],
+                "contact_line1": row[6],
+                "contact_line2": row[7],
+                "website_url": row[8],
             }
         
         # No branding configured - return account name as default
@@ -303,6 +306,7 @@ def get_branding(request: Request, account_id: str = Depends(require_account_id)
         return {
             "brand_display_name": account_name,
             "logo_url": None,
+            "email_logo_url": None,
             "primary_color": "#7C3AED",  # Default Trendy violet
             "accent_color": "#F26B2B",   # Default Trendy coral
             "rep_photo_url": None,
@@ -355,6 +359,7 @@ def save_branding(
                 account_id,
                 brand_display_name,
                 logo_url,
+                email_logo_url,
                 primary_color,
                 accent_color,
                 rep_photo_url,
@@ -363,12 +368,13 @@ def save_branding(
                 website_url,
                 updated_at
             ) VALUES (
-                %s::uuid, %s, %s, %s, %s, %s, %s, %s, %s, NOW()
+                %s::uuid, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW()
             )
             ON CONFLICT (account_id)
             DO UPDATE SET
                 brand_display_name = EXCLUDED.brand_display_name,
                 logo_url = EXCLUDED.logo_url,
+                email_logo_url = EXCLUDED.email_logo_url,
                 primary_color = EXCLUDED.primary_color,
                 accent_color = EXCLUDED.accent_color,
                 rep_photo_url = EXCLUDED.rep_photo_url,
@@ -379,6 +385,7 @@ def save_branding(
             RETURNING
                 brand_display_name,
                 logo_url,
+                email_logo_url,
                 primary_color,
                 accent_color,
                 rep_photo_url,
@@ -389,6 +396,7 @@ def save_branding(
             account_id,
             body.brand_display_name,
             body.logo_url,
+            body.email_logo_url,
             body.primary_color,
             body.accent_color,
             body.rep_photo_url,
@@ -404,12 +412,13 @@ def save_branding(
             "ok": True,
             "brand_display_name": row[0],
             "logo_url": row[1],
-            "primary_color": row[2],
-            "accent_color": row[3],
-            "rep_photo_url": row[4],
-            "contact_line1": row[5],
-            "contact_line2": row[6],
-            "website_url": row[7],
+            "email_logo_url": row[2],
+            "primary_color": row[3],
+            "accent_color": row[4],
+            "rep_photo_url": row[5],
+            "contact_line1": row[6],
+            "contact_line2": row[7],
+            "website_url": row[8],
         }
 
 
@@ -418,6 +427,7 @@ def save_branding(
 class BrandingRequest(BaseModel):
     brand_display_name: str
     logo_url: str | None = None
+    email_logo_url: str | None = None  # Separate logo for email headers (light version)
     primary_color: str | None = None
     accent_color: str | None = None
     rep_photo_url: str | None = None
@@ -451,6 +461,7 @@ def get_branding(request: Request, account_id: str = Depends(require_account_id)
             SELECT 
                 brand_display_name,
                 logo_url,
+                email_logo_url,
                 primary_color,
                 accent_color,
                 rep_photo_url,
@@ -468,12 +479,13 @@ def get_branding(request: Request, account_id: str = Depends(require_account_id)
             return {
                 "brand_display_name": row[0],
                 "logo_url": row[1],
-                "primary_color": row[2],
-                "accent_color": row[3],
-                "rep_photo_url": row[4],
-                "contact_line1": row[5],
-                "contact_line2": row[6],
-                "website_url": row[7],
+                "email_logo_url": row[2],
+                "primary_color": row[3],
+                "accent_color": row[4],
+                "rep_photo_url": row[5],
+                "contact_line1": row[6],
+                "contact_line2": row[7],
+                "website_url": row[8],
             }
         else:
             # No branding row yet, use account name as default
@@ -486,6 +498,7 @@ def get_branding(request: Request, account_id: str = Depends(require_account_id)
             return {
                 "brand_display_name": account_name,
                 "logo_url": None,
+                "email_logo_url": None,
                 "primary_color": None,
                 "accent_color": None,
                 "rep_photo_url": None,
@@ -530,6 +543,7 @@ def save_branding(
                 account_id,
                 brand_display_name,
                 logo_url,
+                email_logo_url,
                 primary_color,
                 accent_color,
                 rep_photo_url,
@@ -538,12 +552,13 @@ def save_branding(
                 website_url,
                 updated_at
             ) VALUES (
-                %s::uuid, %s, %s, %s, %s, %s, %s, %s, %s, NOW()
+                %s::uuid, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW()
             )
             ON CONFLICT (account_id)
             DO UPDATE SET
                 brand_display_name = EXCLUDED.brand_display_name,
                 logo_url = EXCLUDED.logo_url,
+                email_logo_url = EXCLUDED.email_logo_url,
                 primary_color = EXCLUDED.primary_color,
                 accent_color = EXCLUDED.accent_color,
                 rep_photo_url = EXCLUDED.rep_photo_url,
@@ -554,6 +569,7 @@ def save_branding(
             RETURNING 
                 brand_display_name,
                 logo_url,
+                email_logo_url,
                 primary_color,
                 accent_color,
                 rep_photo_url,
@@ -564,6 +580,7 @@ def save_branding(
             account_id,
             body.brand_display_name,
             body.logo_url,
+            body.email_logo_url,
             body.primary_color,
             body.accent_color,
             body.rep_photo_url,
@@ -578,12 +595,13 @@ def save_branding(
         return {
             "brand_display_name": row[0],
             "logo_url": row[1],
-            "primary_color": row[2],
-            "accent_color": row[3],
-            "rep_photo_url": row[4],
-            "contact_line1": row[5],
-            "contact_line2": row[6],
-            "website_url": row[7],
+            "email_logo_url": row[2],
+            "primary_color": row[3],
+            "accent_color": row[4],
+            "rep_photo_url": row[5],
+            "contact_line1": row[6],
+            "contact_line2": row[7],
+            "website_url": row[8],
         }
 
 

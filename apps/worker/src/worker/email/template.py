@@ -16,6 +16,7 @@ class Brand(TypedDict, total=False):
     """Brand configuration for white-label emails."""
     display_name: str
     logo_url: Optional[str]
+    email_logo_url: Optional[str]  # Separate logo for email headers (light version)
     primary_color: Optional[str]
     accent_color: Optional[str]
     rep_name: Optional[str]
@@ -361,6 +362,7 @@ def schedule_email_html(
     brand = brand or {}
     brand_name = brand.get("display_name") or account_name or "Market Reports"
     logo_url = brand.get("logo_url")
+    email_logo_url = brand.get("email_logo_url")  # Separate logo for email headers
     primary_color = brand.get("primary_color") or "#6366f1"  # Indigo
     accent_color = brand.get("accent_color") or "#8b5cf6"    # Purple
     rep_name = brand.get("rep_name")
@@ -413,9 +415,12 @@ def schedule_email_html(
     # Build preheader
     preheader = _build_preheader(report_type, area_display, metrics)
     
-    # Build logo HTML
-    if logo_url:
-        logo_html = f'<img src="{logo_url}" alt="{brand_name}" width="160" style="display: block; max-width: 160px; height: auto;">'
+    # Build logo HTML for email header
+    # Use email_logo_url if available (light version for gradient headers)
+    # Otherwise, use logo_url (will be displayed on gradient, may need inversion via CSS)
+    header_logo = email_logo_url or logo_url
+    if header_logo:
+        logo_html = f'<img src="{header_logo}" alt="{brand_name}" width="160" style="display: block; max-width: 160px; height: auto;">'
     else:
         logo_html = f'<span style="font-size: 24px; font-weight: 700; color: #ffffff;">{brand_name}</span>'
     

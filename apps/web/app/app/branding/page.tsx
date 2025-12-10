@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils"
 type BrandingData = {
   brand_display_name: string
   logo_url: string | null
+  email_logo_url: string | null  // Separate logo for email headers (light version)
   primary_color: string | null
   accent_color: string | null
   rep_photo_url: string | null
@@ -105,6 +106,7 @@ export default function BrandingPage() {
   const [formData, setFormData] = useState<FormData>({
     brand_display_name: "",
     logo_url: null,
+    email_logo_url: null,
     primary_color: "#7C3AED",
     accent_color: "#F26B2B",
     rep_photo_url: null,
@@ -141,6 +143,7 @@ export default function BrandingPage() {
           setFormData({
             brand_display_name: data.brand_display_name || "",
             logo_url: data.logo_url || null,
+            email_logo_url: data.email_logo_url || null,
             primary_color: data.primary_color || "#7C3AED",
             accent_color: data.accent_color || "#F26B2B",
             rep_photo_url: data.rep_photo_url || null,
@@ -157,6 +160,7 @@ export default function BrandingPage() {
           setFormData({
             brand_display_name: data.name || "",
             logo_url: data.logo_url || null,
+            email_logo_url: data.email_logo_url || null,
             primary_color: data.primary_color || "#7C3AED",
             accent_color: data.secondary_color || "#F26B2B",
             rep_photo_url: null,
@@ -193,6 +197,7 @@ export default function BrandingPage() {
         ? {
             brand_display_name: formData.brand_display_name,
             logo_url: formData.logo_url,
+            email_logo_url: formData.email_logo_url,
             primary_color: formData.primary_color,
             accent_color: formData.accent_color,
             rep_photo_url: formData.rep_photo_url,
@@ -202,6 +207,7 @@ export default function BrandingPage() {
           }
         : {
             logo_url: formData.logo_url,
+            email_logo_url: formData.email_logo_url,
             primary_color: formData.primary_color,
             secondary_color: formData.accent_color,
           }
@@ -387,18 +393,46 @@ export default function BrandingPage() {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-primary" />
-                    Company Logo
+                    Company Logos
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <ImageUpload
-                    label=""
-                    value={formData.logo_url}
-                    onChange={(url) => setFormData({ ...formData, logo_url: url })}
-                    assetType="logo"
-                    aspectRatio="wide"
-                    helpText="PNG with transparency • 400×150px recommended"
-                  />
+                <CardContent className="space-y-6">
+                  {/* Main Logo (for PDFs, light backgrounds) */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                      PDF Logo <span className="text-xs text-muted-foreground">(for reports & light backgrounds)</span>
+                    </Label>
+                    <ImageUpload
+                      label=""
+                      value={formData.logo_url}
+                      onChange={(url) => setFormData({ ...formData, logo_url: url })}
+                      assetType="logo"
+                      aspectRatio="wide"
+                      helpText="PNG with transparency • 400×150px • Dark logo works best"
+                    />
+                  </div>
+                  
+                  {/* Email Logo (for emails with colored headers) */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Mail className="w-3.5 h-3.5 text-muted-foreground" />
+                      Email Logo <span className="text-xs text-muted-foreground">(for colored email headers)</span>
+                    </Label>
+                    <ImageUpload
+                      label=""
+                      value={formData.email_logo_url}
+                      onChange={(url) => setFormData({ ...formData, email_logo_url: url })}
+                      assetType="logo"
+                      aspectRatio="wide"
+                      helpText="PNG with transparency • 400×150px • Light/white logo recommended"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Tip: Upload a white or light-colored version of your logo for better visibility on gradient email headers.
+                      {!formData.email_logo_url && " If not set, the PDF logo will be inverted automatically."}
+                    </p>
+                  </div>
+                  
                   <div className="space-y-2">
                     <Label htmlFor="brand_name">Brand Display Name</Label>
                     <Input
@@ -854,26 +888,23 @@ export default function BrandingPage() {
                   <div className="aspect-[8.5/5] relative bg-gradient-to-b from-slate-100 to-white dark:from-zinc-800 dark:to-zinc-900 p-4">
                     {/* Email header */}
                     <div className="rounded-lg border bg-white dark:bg-zinc-800 p-3 shadow-sm">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div 
-                          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                          style={{ backgroundColor: primaryColor }}
-                        >
-                          {(formData.brand_display_name || "B")[0].toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs font-medium truncate">{formData.brand_display_name || "Your Brand"}</div>
-                          <div className="text-[10px] text-muted-foreground">Your {currentReportLabel} is ready!</div>
-                        </div>
+                      {/* Gradient header with logo */}
+                      <div 
+                        className="rounded-t-md p-2 flex items-center gap-2"
+                        style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
+                      >
+                        {formData.email_logo_url ? (
+                          <img src={formData.email_logo_url} className="h-5 w-auto" alt="" />
+                        ) : formData.logo_url ? (
+                          <img src={formData.logo_url} className="h-5 w-auto brightness-0 invert" alt="" />
+                        ) : (
+                          <div className="h-5 w-5 rounded bg-white/20" />
+                        )}
+                        <div className="text-white text-[10px] font-medium">{formData.brand_display_name || "Your Brand"}</div>
                       </div>
-                      {/* Email body placeholder */}
-                      <div className="mt-3 p-2 rounded border bg-slate-50 dark:bg-zinc-700/50">
-                        <div 
-                          className="h-8 rounded-md flex items-center justify-center text-white text-[10px] font-medium mb-2"
-                          style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
-                        >
-                          {currentReportLabel}
-                        </div>
+                      {/* Email content */}
+                      <div className="p-2 bg-slate-50 dark:bg-zinc-700/50 rounded-b-md">
+                        <div className="text-[10px] text-slate-600 dark:text-slate-300 mb-1">Your {currentReportLabel} is ready!</div>
                         <div className="space-y-1">
                           <div className="h-1.5 bg-slate-200 dark:bg-zinc-600 rounded w-full" />
                           <div className="h-1.5 bg-slate-200 dark:bg-zinc-600 rounded w-3/4" />
