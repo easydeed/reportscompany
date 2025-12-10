@@ -293,7 +293,7 @@ async def send_test_email(
                 </tr>
               </table>'''
     
-    # Build V2 email template with gradient header
+    # Build V3 email template with professional styling
     email_html = f'''<!DOCTYPE html>
 <html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
@@ -331,7 +331,7 @@ async def send_test_email(
     }}
   </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f4f4f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
   
   <!-- Preheader -->
   <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">
@@ -339,7 +339,7 @@ async def send_test_email(
   </div>
   
   <!-- Email Container -->
-  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f7;" class="dark-bg">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc;" class="dark-bg">
     <tr>
       <td align="center" style="padding: 40px 20px;">
         
@@ -369,7 +369,7 @@ async def send_test_email(
                 </tr>
                 <tr>
                   <td align="center" style="padding: 0 40px;">
-                    <h1 style="margin: 0; font-size: 26px; font-weight: 700; color: #ffffff; line-height: 1.3;">
+                    <h1 style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: 400; color: #ffffff; line-height: 1.3; letter-spacing: -0.5px;">
                       Sample Report Preview
                     </h1>
                   </td>
@@ -396,7 +396,7 @@ async def send_test_email(
               <!-- Test Email Notice -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
-                  <td style="background-color: #fef3c7; border-radius: 10px; padding: 16px 20px;">
+                  <td style="background-color: #fef3c7; border-radius: 10px; padding: 16px 20px; border: 1px solid #fde68a;">
                     <p style="margin: 0; font-size: 14px; color: #92400e; line-height: 1.5;">
                       <strong>🧪 This is a test email</strong> — It shows how your branding appears in scheduled report emails.
                     </p>
@@ -408,7 +408,7 @@ async def send_test_email(
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
                   <td align="center" style="padding-bottom: 20px;">
-                    <p style="margin: 0; font-size: 12px; font-weight: 600; color: {accent_color}; text-transform: uppercase; letter-spacing: 1px;">
+                    <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px;">
                       Sample Metrics
                     </p>
                   </td>
@@ -420,13 +420,13 @@ async def send_test_email(
                 <tr>
                   <!-- Metric 1 -->
                   <td width="33%" class="metric-card" style="padding: 0 6px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
                       <tr>
                         <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700; color: {primary_color};">
+                          <p style="margin: 0 0 6px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: 400; color: {primary_color};">
                             127
                           </p>
-                          <p style="margin: 0; font-size: 12px; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
                             Active Listings
                           </p>
                         </td>
@@ -435,13 +435,13 @@ async def send_test_email(
                   </td>
                   <!-- Metric 2 -->
                   <td width="33%" class="metric-card" style="padding: 0 6px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
                       <tr>
                         <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700; color: {accent_color};">
+                          <p style="margin: 0 0 6px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: 400; color: {accent_color};">
                             $4.2M
                           </p>
-                          <p style="margin: 0; font-size: 12px; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
                             Median Price
                           </p>
                         </td>
@@ -450,13 +450,13 @@ async def send_test_email(
                   </td>
                   <!-- Metric 3 -->
                   <td width="33%" class="metric-card" style="padding: 0 6px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
                       <tr>
                         <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700; color: #10b981;">
+                          <p style="margin: 0 0 6px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: 400; color: #0d9488;">
                             42 days
                           </p>
-                          <p style="margin: 0; font-size: 12px; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
                             Avg DOM
                           </p>
                         </td>
@@ -471,21 +471,21 @@ async def send_test_email(
                 <tr>
                   <td align="center" style="padding: 8px 0 24px 0;">
                     <!--[if mso]>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="#" style="height:50px;v-text-anchor:middle;width:220px;" arcsize="50%" stroke="f" fillcolor="{primary_color}">
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="#" style="height:52px;v-text-anchor:middle;width:200px;" arcsize="10%" stroke="f" fillcolor="{primary_color}">
                       <w:anchorlock/>
-                      <center style="color:#ffffff;font-family:sans-serif;font-size:16px;font-weight:600;">View Full Report</center>
+                      <center style="color:#ffffff;font-family:Georgia,serif;font-size:15px;font-weight:normal;">View Full Report</center>
                     </v:roundrect>
                     <![endif]-->
                     <!--[if !mso]><!-->
-                    <a href="#" style="display: inline-block; background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%); color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 36px; border-radius: 50px; box-shadow: 0 4px 14px {primary_color}40;">
-                      View Full Report
+                    <a href="#" style="display: inline-block; background-color: {primary_color}; color: #ffffff; font-family: Georgia, 'Times New Roman', serif; font-size: 15px; font-weight: 400; text-decoration: none; padding: 14px 32px; border-radius: 6px; box-shadow: 0 2px 8px {primary_color}30; letter-spacing: 0.3px;">
+                      View Full Report →
                     </a>
                     <!--<![endif]-->
                   </td>
                 </tr>
                 <tr>
                   <td align="center" style="padding-bottom: 24px;">
-                    <p style="margin: 0; font-size: 13px; color: #9ca3af;">
+                    <p style="margin: 0; font-size: 13px; color: #94a3b8;">
                       (In real emails, this links to the PDF report)
                     </p>
                   </td>
@@ -495,7 +495,7 @@ async def send_test_email(
               <!-- Divider -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
-                  <td style="border-top: 1px solid #e5e7eb; padding-top: 32px;"></td>
+                  <td style="border-top: 1px solid #e2e8f0; padding-top: 32px;"></td>
                 </tr>
               </table>
               
@@ -507,14 +507,14 @@ async def send_test_email(
           
           <!-- ========== FOOTER ========== -->
           <tr>
-            <td style="background-color: #f9fafb; padding: 24px 40px; border-radius: 0 0 12px 12px; border-top: 1px solid #e5e7eb;" class="mobile-padding">
+            <td style="background-color: #f8fafc; padding: 24px 40px; border-radius: 0 0 12px 12px; border-top: 1px solid #e2e8f0;" class="mobile-padding">
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
                   <td align="center">
-                    <p style="margin: 0 0 8px 0; font-size: 13px; color: #9ca3af;">
+                    <p style="margin: 0 0 8px 0; font-size: 13px; color: #94a3b8;">
                       Test email from <span style="color: {primary_color}; font-weight: 500;">{brand_name}</span>
                     </p>
-                    <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                    <p style="margin: 0; font-size: 12px; color: #94a3b8;">
                       In production, recipients can <span style="text-decoration: underline;">unsubscribe</span> from notifications
                     </p>
                   </td>

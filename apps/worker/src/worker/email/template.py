@@ -1,6 +1,6 @@
 """HTML email template for scheduled report notifications.
 
-V2: Complete redesign with V0-generated email-safe HTML template.
+V3: Professional styling refresh with enhanced Market Snapshot data.
 - Table-based layout for maximum email client compatibility
 - MSO/Outlook conditional comments for rounded buttons and circular photos
 - VML fallback for Outlook gradient headers
@@ -8,6 +8,9 @@ V2: Complete redesign with V0-generated email-safe HTML template.
 - Mobile responsive (metrics stack on mobile)
 - Full white-label branding support
 - Report-specific extra stats and price bands sections
+- Market Snapshot: Property type breakdown, price tier breakdown, MOI & CTL
+- Professional fonts (Georgia/serif for headings, system sans-serif for body)
+- Refined, muted color palette for sophistication
 """
 from typing import Dict, Optional, TypedDict, Tuple, List
 
@@ -34,8 +37,10 @@ REPORT_CONFIG = {
     "market_snapshot": {
         "label": "Market Snapshot",
         "tagline": "Your Complete Market Overview",
-        "section": "Market Snapshot",
+        "section": "Market Insights",
         "has_extra_stats": True,
+        "has_property_types": True,  # Show property type breakdown
+        "has_price_tiers": True,      # Show price tier breakdown
     },
     "new_listings": {
         "label": "New Listings",
@@ -296,6 +301,65 @@ def _get_price_bands(metrics: Dict) -> Optional[List[Dict]]:
     return None
 
 
+def _get_property_type_breakdown(metrics: Dict) -> Optional[List[Dict]]:
+    """
+    Get property type breakdown for Market Snapshot.
+    Returns list of {name, count, icon} or None
+    """
+    # Try to get from metrics
+    property_types = metrics.get("property_types", {})
+    
+    # Also check for individual fields
+    sfr_count = property_types.get("sfr") or metrics.get("sfr_count", 0)
+    condo_count = property_types.get("condo") or metrics.get("condo_count", 0)
+    townhome_count = property_types.get("townhome") or metrics.get("townhome_count", 0)
+    other_count = property_types.get("other") or metrics.get("other_type_count", 0)
+    
+    # If we have any counts, return the breakdown
+    if sfr_count or condo_count or townhome_count or other_count:
+        result = []
+        if sfr_count:
+            result.append({"name": "Single Family", "count": sfr_count, "icon": "🏠"})
+        if condo_count:
+            result.append({"name": "Condos", "count": condo_count, "icon": "🏢"})
+        if townhome_count:
+            result.append({"name": "Townhomes", "count": townhome_count, "icon": "🏘️"})
+        if other_count:
+            result.append({"name": "Other", "count": other_count, "icon": "🏛️"})
+        return result if result else None
+    
+    return None
+
+
+def _get_price_tier_breakdown(metrics: Dict) -> Optional[List[Dict]]:
+    """
+    Get price tier breakdown for Market Snapshot.
+    Returns list of {name, count, range, color} or None
+    """
+    # Try to get from metrics
+    price_tiers = metrics.get("price_tiers", {})
+    
+    # Also check for individual fields
+    entry_count = price_tiers.get("entry") or metrics.get("entry_tier_count", 0)
+    moveup_count = price_tiers.get("moveup") or metrics.get("moveup_tier_count", 0)
+    luxury_count = price_tiers.get("luxury") or metrics.get("luxury_tier_count", 0)
+    
+    # Get ranges if available
+    entry_range = price_tiers.get("entry_range") or metrics.get("entry_tier_range", "Under $500K")
+    moveup_range = price_tiers.get("moveup_range") or metrics.get("moveup_tier_range", "$500K - $1M")
+    luxury_range = price_tiers.get("luxury_range") or metrics.get("luxury_tier_range", "$1M+")
+    
+    # If we have any counts, return the breakdown
+    if entry_count or moveup_count or luxury_count:
+        return [
+            {"name": "Entry Level", "count": entry_count, "range": entry_range, "color": "#059669"},
+            {"name": "Move-Up", "count": moveup_count, "range": moveup_range, "color": "PRIMARY"},
+            {"name": "Luxury", "count": luxury_count, "range": luxury_range, "color": "ACCENT"},
+        ]
+    
+    return None
+
+
 def _build_preheader(report_type: str, area: str, metrics: Dict) -> str:
     """Build preheader text for email preview."""
     config = REPORT_CONFIG.get(report_type, {})
@@ -385,6 +449,8 @@ def schedule_email_html(
     section_label = config.get("section")
     has_extra_stats = config.get("has_extra_stats", False)
     has_price_bands = config.get("has_price_bands", False)
+    has_property_types = config.get("has_property_types", False)
+    has_price_tiers = config.get("has_price_tiers", False)
     
     # Format area for display
     if city:
@@ -412,6 +478,12 @@ def schedule_email_html(
     # Get price bands if applicable
     price_bands = _get_price_bands(metrics) if has_price_bands else None
     
+    # Get property type breakdown if applicable (Market Snapshot)
+    property_types = _get_property_type_breakdown(metrics) if has_property_types else None
+    
+    # Get price tier breakdown if applicable (Market Snapshot)
+    price_tiers = _get_price_tier_breakdown(metrics) if has_price_tiers else None
+    
     # Build preheader
     preheader = _build_preheader(report_type, area_display, metrics)
     
@@ -430,13 +502,15 @@ def schedule_email_html(
         (es1_value, es1_label), (es2_value, es2_label) = extra_stats
         extra_stats_html = f'''
               <!-- Extra Stats Row -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px; background-color: {primary_color}08; border-radius: 10px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px; background-color: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0;">
                 <tr>
-                  <td align="center" style="padding: 16px 20px;">
-                    <span style="font-size: 14px; color: #4b5563;">
-                      <strong style="color: {primary_color};">{es1_value}</strong> {es1_label}
-                      &nbsp;&nbsp;|&nbsp;&nbsp;
-                      <strong style="color: {accent_color};">{es2_value}</strong> {es2_label}
+                  <td align="center" style="padding: 16px 24px;">
+                    <span style="font-size: 14px; color: #475569;">
+                      <strong style="font-family: Georgia, 'Times New Roman', serif; font-size: 16px; color: {primary_color};">{es1_value}</strong>
+                      <span style="color: #64748b;"> {es1_label}</span>
+                      &nbsp;&nbsp;<span style="color: #cbd5e1;">|</span>&nbsp;&nbsp;
+                      <strong style="font-family: Georgia, 'Times New Roman', serif; font-size: 16px; color: {accent_color};">{es2_value}</strong>
+                      <span style="color: #64748b;"> {es2_label}</span>
                     </span>
                   </td>
                 </tr>
@@ -465,8 +539,8 @@ def schedule_email_html(
                           <div style="width: 10px; height: 10px; background-color: {color}; border-radius: 50%;"></div>
                         </td>
                         <td style="padding-left: 12px; vertical-align: middle;">
-                          <span style="font-size: 15px; font-weight: 600; color: #1f2937;">{band["name"]}</span>
-                          <span style="font-size: 14px; color: #6b7280; margin-left: 8px;">{band["range"]}</span>
+                          <span style="font-family: Georgia, 'Times New Roman', serif; font-size: 15px; font-weight: 600; color: #1f2937;">{band["name"]}</span>
+                          <span style="font-size: 13px; color: #6b7280; margin-left: 8px;">{band["range"]}</span>
                         </td>
                         <td align="right" style="vertical-align: middle;">
                           <span style="font-size: 15px; font-weight: 600; color: {primary_color};">{band["count"]} listings</span>
@@ -482,12 +556,77 @@ def schedule_email_html(
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
                   <td style="padding-bottom: 12px;">
-                    <p style="margin: 0; font-size: 14px; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.5px;">
+                    <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 13px; font-weight: 600; color: #4b5563; text-transform: uppercase; letter-spacing: 1px;">
                       Price Tiers
                     </p>
                   </td>
                 </tr>
                 {bands_rows}
+              </table>
+'''
+    
+    # Build property type breakdown HTML (Market Snapshot)
+    property_types_html = ""
+    if property_types:
+        type_items = ""
+        for i, ptype in enumerate(property_types):
+            separator = "&nbsp;&nbsp;•&nbsp;&nbsp;" if i < len(property_types) - 1 else ""
+            type_items += f'''<span style="color: #374151;">{ptype["icon"]} <strong>{ptype["count"]}</strong> {ptype["name"]}</span>{separator}'''
+        
+        property_types_html = f'''
+              <!-- Property Type Breakdown -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
+                <tr>
+                  <td align="center" style="padding: 16px 20px; background-color: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0;">
+                    <p style="margin: 0 0 8px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px;">
+                      Property Types
+                    </p>
+                    <p style="margin: 0; font-size: 14px; line-height: 1.6;">
+                      {type_items}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+'''
+    
+    # Build price tier breakdown HTML (Market Snapshot)
+    price_tiers_html = ""
+    if price_tiers:
+        tier_items = ""
+        for i, tier in enumerate(price_tiers):
+            color = tier["color"]
+            if color == "PRIMARY":
+                color = primary_color
+            elif color == "ACCENT":
+                color = accent_color
+            
+            tier_items += f'''
+                  <td width="33%" class="metric-card" style="padding: 0 4px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td align="center" style="padding: 12px 8px; background-color: #ffffff; border-radius: 8px; border-left: 3px solid {color};">
+                          <p style="margin: 0 0 2px 0; font-size: 20px; font-weight: 700; color: {color};">{tier["count"]}</p>
+                          <p style="margin: 0 0 2px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 12px; font-weight: 600; color: #374151;">{tier["name"]}</p>
+                          <p style="margin: 0; font-size: 10px; color: #9ca3af;">{tier["range"]}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+'''
+        
+        price_tiers_html = f'''
+              <!-- Price Tier Breakdown -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px; background-color: #f8fafc; border-radius: 10px; padding: 16px; border: 1px solid #e2e8f0;">
+                <tr>
+                  <td style="padding-bottom: 12px;">
+                    <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; text-align: center;">
+                      Price Tier Distribution
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  {tier_items}
+                </tr>
               </table>
 '''
     
@@ -618,7 +757,7 @@ def schedule_email_html(
     }}
   </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f4f4f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
   
   <!-- Preheader Text (hidden preview text) -->
   <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">
@@ -626,7 +765,7 @@ def schedule_email_html(
   </div>
   
   <!-- Email Container -->
-  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f7;" class="dark-bg">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc;" class="dark-bg">
     <tr>
       <td align="center" style="padding: 40px 20px;">
         
@@ -656,7 +795,7 @@ def schedule_email_html(
                 </tr>
                 <tr>
                   <td align="center" style="padding: 0 40px;">
-                    <h1 style="margin: 0; font-size: 26px; font-weight: 700; color: #ffffff; line-height: 1.3;">
+                    <h1 style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: 400; color: #ffffff; line-height: 1.3; letter-spacing: -0.5px;">
                       {tagline}
                     </h1>
                   </td>
@@ -684,7 +823,7 @@ def schedule_email_html(
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
                   <td align="center" style="padding-bottom: 20px;">
-                    <p style="margin: 0; font-size: 12px; font-weight: 600; color: {accent_color}; text-transform: uppercase; letter-spacing: 1px;">
+                    <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px;">
                       {section_label}
                     </p>
                   </td>
@@ -696,13 +835,13 @@ def schedule_email_html(
                 <tr>
                   <!-- Metric 1 -->
                   <td width="33%" class="metric-card" style="padding: 0 6px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;" class="dark-card dark-border">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" class="dark-card dark-border">
                       <tr>
                         <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700; color: {primary_color};">
+                          <p style="margin: 0 0 6px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: 400; color: {primary_color};">
                             {m1_value}
                           </p>
-                          <p style="margin: 0; font-size: 12px; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
                             {m1_label}
                           </p>
                         </td>
@@ -711,13 +850,13 @@ def schedule_email_html(
                   </td>
                   <!-- Metric 2 -->
                   <td width="33%" class="metric-card" style="padding: 0 6px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;" class="dark-card dark-border">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" class="dark-card dark-border">
                       <tr>
                         <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700; color: {accent_color};">
+                          <p style="margin: 0 0 6px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: 400; color: {accent_color};">
                             {m2_value}
                           </p>
-                          <p style="margin: 0; font-size: 12px; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
                             {m2_label}
                           </p>
                         </td>
@@ -726,13 +865,13 @@ def schedule_email_html(
                   </td>
                   <!-- Metric 3 -->
                   <td width="33%" class="metric-card" style="padding: 0 6px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;" class="dark-card dark-border">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" class="dark-card dark-border">
                       <tr>
                         <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700; color: #10b981;">
+                          <p style="margin: 0 0 6px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: 400; color: #0d9488;">
                             {m3_value}
                           </p>
-                          <p style="margin: 0; font-size: 12px; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
                             {m3_label}
                           </p>
                         </td>
@@ -742,20 +881,20 @@ def schedule_email_html(
                 </tr>
               </table>
               
-{extra_stats_html}{price_bands_html}
+{extra_stats_html}{property_types_html}{price_tiers_html}{price_bands_html}
               <!-- ========== CTA BUTTON ========== -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
                   <td align="center" style="padding: 8px 0 32px 0;">
                     <!--[if mso]>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{pdf_url}" style="height:50px;v-text-anchor:middle;width:220px;" arcsize="50%" stroke="f" fillcolor="{primary_color}">
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{pdf_url}" style="height:52px;v-text-anchor:middle;width:200px;" arcsize="10%" stroke="f" fillcolor="{primary_color}">
                       <w:anchorlock/>
-                      <center style="color:#ffffff;font-family:sans-serif;font-size:16px;font-weight:600;">View Full Report</center>
+                      <center style="color:#ffffff;font-family:Georgia,serif;font-size:15px;font-weight:normal;">View Full Report</center>
                     </v:roundrect>
                     <![endif]-->
                     <!--[if !mso]><!-->
-                    <a href="{pdf_url}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%); color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 36px; border-radius: 50px; box-shadow: 0 4px 14px {primary_color}40;">
-                      View Full Report
+                    <a href="{pdf_url}" target="_blank" style="display: inline-block; background-color: {primary_color}; color: #ffffff; font-family: Georgia, 'Times New Roman', serif; font-size: 15px; font-weight: 400; text-decoration: none; padding: 14px 32px; border-radius: 6px; box-shadow: 0 2px 8px {primary_color}30; letter-spacing: 0.3px;">
+                      View Full Report →
                     </a>
                     <!--<![endif]-->
                   </td>
