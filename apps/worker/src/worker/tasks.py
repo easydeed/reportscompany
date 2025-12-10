@@ -342,11 +342,14 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
         # Fix: Properly extract city from params - don't default to Houston
         _params = params or {}
         city = _params.get("city")
-        if not city and _params.get("zips"):
-            city = _params.get("zips")[0]  # Use first ZIP as fallback
+        zips = _params.get("zips")
+        if not city and zips:
+            # For ZIP-based reports, use ZIP code(s) as the "city" label
+            # The _filter_by_city function knows to skip filtering when city is a ZIP
+            city = ", ".join(zips[:3]) + ("..." if len(zips) > 3 else "")
         if not city:
             city = "Unknown"  # Don't default to Houston - this indicates a problem
-        print(f"🔍 REPORT RUN {run_id}: city={city}")
+        print(f"🔍 REPORT RUN {run_id}: city={city}, zips={zips}")
         lookback = int(_params.get("lookback_days") or 30)
         cache_payload = {"type": report_type, "params": params}
         result = cache_get("report", cache_payload)

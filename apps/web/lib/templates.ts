@@ -852,11 +852,13 @@ export function buildNewListingsGalleryHtml(
   `;
 
   // Build card HTML helper
+  // Note: onerror handler provides fallback if MLS photo URL fails to load (common in PDF rendering)
+  const fallbackImg = "https://via.placeholder.com/400x300/e5e7eb/9ca3af?text=No+Image";
   const buildCard = (listing: any) => {
-    const photoUrl = listing.hero_photo_url || "https://via.placeholder.com/400x300/e5e7eb/9ca3af?text=No+Image";
+    const photoUrl = listing.hero_photo_url || fallbackImg;
     return `
       <div class="property-card avoid-break">
-        <img src="${photoUrl}" alt="${listing.street_address || 'Property'}" class="photo" />
+        <img src="${photoUrl}" alt="${listing.street_address || 'Property'}" class="photo" onerror="this.onerror=null; this.src='${fallbackImg}';" />
         <div class="info">
           <div class="address">${listing.street_address || "Address not available"}</div>
           <div class="city">${listing.city || r.city || ""}, ${listing.zip_code || ""}</div>
@@ -958,13 +960,15 @@ export function buildFeaturedListingsHtml(
   }
   
   // Build featured cards
+  // Note: onerror handler provides fallback if MLS photo URL fails to load (common in PDF rendering)
+  const fallbackImgFeatured = "https://via.placeholder.com/600x400/e5e7eb/9ca3af?text=No+Image";
   const listings = r.listings || [];
   const cards = listings.map((listing: any) => {
-    const photoUrl = listing.hero_photo_url || "https://via.placeholder.com/600x400/e5e7eb/9ca3af?text=No+Image";
+    const photoUrl = listing.hero_photo_url || fallbackImgFeatured;
     
     return `
       <div class="featured-card avoid-break">
-        <img src="${photoUrl}" alt="${listing.street_address || 'Property'}" class="photo" />
+        <img src="${photoUrl}" alt="${listing.street_address || 'Property'}" class="photo" onerror="this.onerror=null; this.src='${fallbackImgFeatured}';" />
         <div class="info">
           <div class="address">${listing.street_address || "Address not available"}</div>
           <div class="city">${listing.city || r.city || ""}, ${listing.zip_code || ""}</div>

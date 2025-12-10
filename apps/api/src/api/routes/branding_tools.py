@@ -238,96 +238,268 @@ async def send_test_email(
     contact_line2 = branding.get("contact_line2")
     website_url = branding.get("website_url")
     
-    # Build sample email HTML
+    # Build sample email HTML using V0-style email-safe template
     report_type_display = body.report_type.replace("_", " ").title()
     
-    email_html = f"""
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{report_type_display} Report - Sample</title>
-    </head>
-    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb;">
-        <table role="presentation" style="width: 100%; border-collapse: collapse;">
-            <tr>
-                <td align="center" style="padding: 40px 0;">
-                    <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-                        
-                        <!-- Header -->
-                        <tr>
-                            <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%); border-radius: 8px 8px 0 0;">
-                                {f'<img src="{logo_url}" alt="{brand_name}" style="height: 50px; margin-bottom: 20px; object-fit: contain;" />' if logo_url else f'<div style="font-size: 32px; font-weight: 700; color: white; margin-bottom: 20px;">{brand_name[0]}</div>'}
-                                <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">📊 Sample {report_type_display} Report</h1>
-                                <p style="margin: 10px 0 0; color: #e0e7ff; font-size: 14px;">Beverly Hills • Last 30 days</p>
-                                <p style="margin: 15px 0 0; color: #ffffff; font-size: 14px; font-weight: 500;">{brand_name}</p>
-                            </td>
-                        </tr>
-                        
-                        <!-- Body -->
-                        <tr>
-                            <td style="padding: 30px 40px;">
-                                <p style="margin: 0; font-size: 16px; color: #374151; line-height: 1.6;">
-                                    Hi there,
+    # Build logo HTML (conditional)
+    if logo_url:
+        logo_html = f'<img src="{logo_url}" alt="{brand_name}" width="180" height="50" style="display: block; max-width: 180px; height: auto;" />'
+    else:
+        logo_html = f'<p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 24px; font-weight: 700; color: #ffffff;">{brand_name}</p>'
+    
+    # Build footer HTML (conditional based on available data)
+    if rep_photo_url and (contact_line1 or contact_line2):
+        footer_html = f'''
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td width="80" valign="top" style="padding-right: 20px;">
+                    <img src="{rep_photo_url}" alt="Agent Photo" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
+                  </td>
+                  <td valign="middle">
+                    {f'<p style="margin: 0 0 4px 0; font-family: Arial, Helvetica, sans-serif; font-size: 15px; font-weight: 600; color: #1f2937; line-height: 1.4;">{contact_line1}</p>' if contact_line1 else ''}
+                    {f'<p style="margin: 0 0 8px 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #6b7280; line-height: 1.4;">{contact_line2}</p>' if contact_line2 else ''}
+                    {f'<a href="{website_url}" target="_blank" style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: {primary_color}; text-decoration: none; font-weight: 500;">{website_url.replace("https://", "").replace("http://", "")}</a>' if website_url else ''}
+                  </td>
+                </tr>
+              </table>'''
+    else:
+        footer_html = f'''
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 15px; font-weight: 600; color: #1f2937; line-height: 1.4;">{brand_name}</p>
+                    {f'<p style="margin: 4px 0 0 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #6b7280;">{contact_line1}</p>' if contact_line1 else ''}
+                    {f'<p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #6b7280;">{contact_line2}</p>' if contact_line2 else ''}
+                    {f'<a href="{website_url}" target="_blank" style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: {primary_color}; text-decoration: none; font-weight: 500;">{website_url.replace("https://", "").replace("http://", "")}</a>' if website_url else ''}
+                  </td>
+                </tr>
+              </table>'''
+    
+    email_html = f'''<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>{brand_name} - {report_type_display} (Test)</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:AllowPNG/>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+  
+  <!-- Wrapper Table -->
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f4f4f4;" bgcolor="#f4f4f4">
+    <tr>
+      <td align="center" style="padding: 20px 10px;">
+        
+        <!-- Main Container -->
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" bgcolor="#ffffff">
+          
+          <!-- Header Section -->
+          <tr>
+            <td align="center" style="background-color: {primary_color}; padding: 30px 40px;" bgcolor="{primary_color}">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td align="center" style="padding-bottom: 20px;">
+                    {logo_html}
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">
+                    <h1 style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 28px; font-weight: 700; color: #ffffff; line-height: 1.3;">
+                      {report_type_display}
+                    </h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding-top: 10px;">
+                    <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: rgba(255,255,255,0.9); line-height: 1.5;">
+                      Beverly Hills &bull; Last 30 Days
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Test Email Notice -->
+          <tr>
+            <td style="padding: 25px 30px 0 30px; background-color: #ffffff;" bgcolor="#ffffff">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #fef3c7; border-radius: 8px;">
+                <tr>
+                  <td style="padding: 15px 20px;">
+                    <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #92400e; line-height: 1.5;">
+                      <strong>🧪 This is a test email</strong> — It shows how your branding appears in scheduled report emails sent to your agents' clients.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Metrics Section -->
+          <tr>
+            <td style="padding: 30px 30px 40px 30px; background-color: #ffffff;" bgcolor="#ffffff">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td align="center" style="padding-bottom: 20px;">
+                    <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: 600; color: {accent_color}; text-transform: uppercase; letter-spacing: 1px;">
+                      Sample Metrics
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <!-- 3-Column Metrics Table -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <tr>
+                        <!-- Metric 1 -->
+                        <td width="32%" align="center" valign="top" style="padding: 20px 10px; background-color: #f9fafb; border-radius: 8px;" bgcolor="#f9fafb">
+                          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td align="center">
+                                <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 32px; font-weight: 700; color: {primary_color}; line-height: 1.2;">
+                                  127
                                 </p>
-                                <p style="margin: 15px 0 0; font-size: 16px; color: #374151; line-height: 1.6;">
-                                    This is a <strong>test email</strong> showing how your branding appears in scheduled report emails. When your sponsored agents receive their market reports, they'll see your branding just like this!
+                              </td>
+                            </tr>
+                            <tr>
+                              <td align="center" style="padding-top: 8px;">
+                                <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #6b7280; line-height: 1.4;">
+                                  Active Listings
                                 </p>
-                                
-                                <div style="margin: 25px 0; padding: 20px; background-color: #f3f4f6; border-radius: 8px;">
-                                    <h3 style="margin: 0 0 15px 0; font-size: 16px; color: #374151;">Sample Metrics</h3>
-                                    <table style="width: 100%; border-collapse: collapse;">
-                                        <tr>
-                                            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280; font-size: 14px;">Median Price</td>
-                                            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">$4,150,000</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280; font-size: 14px;">Active Listings</td>
-                                            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">127</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="padding: 10px 0; color: #6b7280; font-size: 14px;">Days on Market</td>
-                                            <td style="padding: 10px 0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">42</td>
-                                        </tr>
-                                    </table>
-                                </div>
-                                
-                                <p style="margin: 20px 0; font-size: 14px; color: #6b7280; text-align: center;">
-                                    In a real report, there would be a button here to download the full PDF report.
-                                </p>
-                            </td>
-                        </tr>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
                         
-                        <!-- Footer -->
-                        <tr>
-                            <td style="padding: 30px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px;">
-                                <table role="presentation" style="width: 100%; border-collapse: collapse;">
-                                    <tr>
-                                        {f'''<td style="width: 60px; vertical-align: top; padding-right: 15px;">
-                                            <img src="{rep_photo_url}" alt="Representative" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid {primary_color};" />
-                                        </td>''' if rep_photo_url else ''}
-                                        <td style="vertical-align: top;">
-                                            <p style="margin: 0; font-size: 14px; color: #374151; font-weight: 600;">{brand_name}</p>
-                                            {f'<p style="margin: 3px 0 0; font-size: 12px; color: #6b7280;">{contact_line1}</p>' if contact_line1 else ''}
-                                            {f'<p style="margin: 0; font-size: 12px; color: #6b7280;">{contact_line2}</p>' if contact_line2 else ''}
-                                            {f'<p style="margin: 5px 0 0; font-size: 12px;"><a href="{website_url}" style="color: {primary_color}; text-decoration: none;">{website_url.replace("https://", "").replace("http://", "")}</a></p>' if website_url else ''}
-                                        </td>
-                                    </tr>
-                                </table>
-                                <p style="margin: 20px 0 0; font-size: 11px; color: #9ca3af; text-align: center;">
-                                    This is a test email from {brand_name}. In production, recipients can unsubscribe from scheduled reports.
-                                </p>
-                            </td>
-                        </tr>
+                        <!-- Spacer -->
+                        <td width="2%">&nbsp;</td>
                         
+                        <!-- Metric 2 -->
+                        <td width="32%" align="center" valign="top" style="padding: 20px 10px; background-color: #f9fafb; border-radius: 8px;" bgcolor="#f9fafb">
+                          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td align="center">
+                                <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 32px; font-weight: 700; color: {primary_color}; line-height: 1.2;">
+                                  $4.2M
+                                </p>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td align="center" style="padding-top: 8px;">
+                                <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #6b7280; line-height: 1.4;">
+                                  Median Price
+                                </p>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                        
+                        <!-- Spacer -->
+                        <td width="2%">&nbsp;</td>
+                        
+                        <!-- Metric 3 -->
+                        <td width="32%" align="center" valign="top" style="padding: 20px 10px; background-color: #f9fafb; border-radius: 8px;" bgcolor="#f9fafb">
+                          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td align="center">
+                                <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 32px; font-weight: 700; color: {primary_color}; line-height: 1.2;">
+                                  42
+                                </p>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td align="center" style="padding-top: 8px;">
+                                <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #6b7280; line-height: 1.4;">
+                                  Avg. DOM
+                                </p>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
                     </table>
-                </td>
-            </tr>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- CTA Section -->
+          <tr>
+            <td align="center" style="padding: 0 40px 40px 40px; background-color: #ffffff;" bgcolor="#ffffff">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="background-color: {accent_color}; border-radius: 8px;" bgcolor="{accent_color}">
+                    <!--[if mso]>
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="#" style="height:50px;v-text-anchor:middle;width:220px;" arcsize="16%" stroke="f" fillcolor="{accent_color}">
+                      <w:anchorlock/>
+                      <center>
+                    <![endif]-->
+                    <a href="#" style="display: inline-block; padding: 16px 40px; font-family: Arial, Helvetica, sans-serif; font-size: 16px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px; background-color: {accent_color};">
+                      View Full Report
+                    </a>
+                    <!--[if mso]>
+                      </center>
+                    </v:roundrect>
+                    <![endif]-->
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 15px 0 0 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #9ca3af;">
+                (In real emails, this button links to the PDF report)
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Divider -->
+          <tr>
+            <td style="padding: 0 40px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td style="border-top: 1px solid #e5e7eb; height: 1px; font-size: 1px; line-height: 1px;">&nbsp;</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Footer Section -->
+          <tr>
+            <td style="padding: 40px; background-color: #ffffff;" bgcolor="#ffffff">
+              {footer_html}
+            </td>
+          </tr>
+          
+          <!-- Unsubscribe Footer -->
+          <tr>
+            <td align="center" style="padding: 20px 40px; background-color: #f9fafb;" bgcolor="#f9fafb">
+              <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #9ca3af; line-height: 1.6;">
+                This is a test email from {brand_name}.<br />
+                In production, recipients can <span style="color: #6b7280; text-decoration: underline;">unsubscribe</span> from these notifications.
+              </p>
+            </td>
+          </tr>
+          
         </table>
-    </body>
-    </html>
-    """
+        <!-- End Main Container -->
+        
+      </td>
+    </tr>
+  </table>
+  <!-- End Wrapper Table -->
+  
+</body>
+</html>'''
     
     # Send via SendGrid
     payload = {

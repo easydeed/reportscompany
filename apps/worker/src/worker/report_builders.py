@@ -271,8 +271,16 @@ def _filter_by_city(listings: List[Dict], city: str) -> List[Dict]:
     This function ensures we only include listings from the exact city requested.
     
     Comparison is case-insensitive and handles common variations.
+    
+    NOTE: When searching by ZIP code, city may be set to the ZIP itself (e.g., "91750").
+    In this case, we skip city filtering since the API already filtered by postalCodes.
     """
-    if not city or city == "Market":
+    if not city or city == "Market" or city == "Unknown":
+        return listings
+    
+    # Skip filtering if "city" is actually a ZIP code (all digits)
+    # The API already filtered by postalCodes parameter
+    if city.isdigit():
         return listings
     
     city_lower = city.lower().strip()

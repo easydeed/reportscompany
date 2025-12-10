@@ -1,9 +1,16 @@
-"""HTML email template for scheduled report notifications."""
-from typing import Dict, Optional, TypedDict
+"""HTML email template for scheduled report notifications.
+
+V2: Redesigned with V0-generated email-safe HTML template.
+- Table-based layout for maximum email client compatibility
+- MSO/Outlook conditional comments for rounded buttons
+- VML fallback for Outlook
+- Full white-label branding support
+"""
+from typing import Dict, Optional, TypedDict, Tuple
 
 
 class Brand(TypedDict, total=False):
-    """Brand configuration for white-label emails (Phase 30)."""
+    """Brand configuration for white-label emails."""
     display_name: str
     logo_url: Optional[str]
     primary_color: Optional[str]
@@ -12,6 +19,143 @@ class Brand(TypedDict, total=False):
     contact_line1: Optional[str]
     contact_line2: Optional[str]
     website_url: Optional[str]
+
+
+# Report type display names - keep in sync with:
+# - Frontend: apps/web/app/lib/reportTypes.ts
+# - Backend: apps/api/src/api/routes/schedules.py
+# - Worker: apps/worker/src/worker/report_builders.py
+REPORT_TYPE_DISPLAY = {
+    "market_snapshot": "Market Snapshot",
+    "new_listings": "New Listings",
+    "inventory": "Inventory Report",
+    "closed": "Closed Sales",
+    "price_bands": "Price Bands Analysis",
+    "open_houses": "Open Houses",
+    "new_listings_gallery": "New Listings Gallery",
+    "featured_listings": "Featured Listings",
+}
+
+
+def _format_price(price: Optional[float]) -> str:
+    """Format price for display."""
+    if price is None:
+        return "N/A"
+    if price >= 1_000_000:
+        return f"${price / 1_000_000:.1f}M"
+    if price >= 1_000:
+        return f"${price / 1_000:.0f}K"
+    return f"${price:,.0f}"
+
+
+def _format_number(value: Optional[int]) -> str:
+    """Format number for display."""
+    if value is None:
+        return "N/A"
+    return f"{value:,}"
+
+
+def _get_metrics_for_report_type(
+    report_type: str, 
+    metrics: Dict
+) -> Tuple[Tuple[str, str], Tuple[str, str], Tuple[str, str]]:
+    """
+    Get the 3 metrics to display based on report type.
+    Returns: ((label1, value1), (label2, value2), (label3, value3))
+    """
+    # Extract common metrics with defaults
+    total_active = metrics.get("total_active", 0)
+    total_pending = metrics.get("total_pending", 0)
+    total_closed = metrics.get("total_closed", 0)
+    total_listings = metrics.get("total_listings", total_active)
+    median_list_price = metrics.get("median_list_price")
+    median_close_price = metrics.get("median_close_price")
+    avg_dom = metrics.get("avg_dom")
+    months_of_inventory = metrics.get("months_of_inventory")
+    sale_to_list_ratio = metrics.get("sale_to_list_ratio")
+    
+    # Format DOM
+    dom_display = f"{avg_dom:.0f}" if avg_dom else "N/A"
+    
+    if report_type == "market_snapshot":
+        return (
+            ("Active Listings", _format_number(total_active)),
+            ("Pending", _format_number(total_pending)),
+            ("Closed Sales", _format_number(total_closed)),
+        )
+    
+    elif report_type == "new_listings":
+        return (
+            ("New Listings", _format_number(total_active)),
+            ("Median Price", _format_price(median_list_price)),
+            ("Avg. DOM", dom_display),
+        )
+    
+    elif report_type == "closed":
+        return (
+            ("Closed Sales", _format_number(total_closed)),
+            ("Median Price", _format_price(median_close_price)),
+            ("Avg. DOM", dom_display),
+        )
+    
+    elif report_type == "new_listings_gallery":
+        return (
+            ("📸 Properties", _format_number(total_listings)),
+            ("Median Price", _format_price(median_list_price)),
+            ("Avg. DOM", dom_display),
+        )
+    
+    elif report_type == "featured_listings":
+        return (
+            ("✨ Featured", _format_number(total_listings)),
+            ("Median Price", _format_price(median_list_price)),
+            ("Avg. DOM", dom_display),
+        )
+    
+    elif report_type == "inventory":
+        moi_display = f"{months_of_inventory:.1f}" if months_of_inventory else "N/A"
+        return (
+            ("Active Inventory", _format_number(total_active)),
+            ("Median Price", _format_price(median_list_price)),
+            ("Months Supply", moi_display),
+        )
+    
+    elif report_type == "price_bands":
+        return (
+            ("Total Listings", _format_number(total_active)),
+            ("Median Price", _format_price(median_list_price)),
+            ("Avg. DOM", dom_display),
+        )
+    
+    elif report_type == "open_houses":
+        return (
+            ("Open Houses", _format_number(total_active)),
+            ("Median Price", _format_price(median_list_price)),
+            ("This Weekend", _format_number(metrics.get("weekend_count", 0))),
+        )
+    
+    else:
+        # Generic fallback
+        return (
+            ("Properties", _format_number(total_active)),
+            ("Median Price", _format_price(median_list_price)),
+            ("Avg. DOM", dom_display),
+        )
+
+
+def _get_section_label(report_type: str) -> str:
+    """Get the section label above metrics based on report type."""
+    labels = {
+        "market_snapshot": "Market Snapshot",
+        "new_listings": "New on Market",
+        "closed": "Recently Sold",
+        "new_listings_gallery": "Photo Gallery",
+        "featured_listings": "Featured Properties",
+        "inventory": "Current Inventory",
+        "price_bands": "Price Analysis",
+        "open_houses": "Open Houses",
+    }
+    return labels.get(report_type, "Market Overview")
 
 
 def schedule_email_html(
@@ -28,7 +172,7 @@ def schedule_email_html(
     """
     Generate HTML email for a scheduled report notification.
     
-    Phase 30: Now supports white-label branding for affiliate accounts.
+    V2: Complete redesign with V0-generated email-safe template.
     
     Args:
         account_name: Name of the account (for personalization)
@@ -44,30 +188,21 @@ def schedule_email_html(
     Returns:
         HTML string for the email body
     """
-    # Phase 30: Extract brand values
+    # Extract brand values with defaults
     brand_name = (brand.get("display_name") if brand else None) or account_name or "Market Reports"
     logo_url = brand.get("logo_url") if brand else None
-    primary_color = (brand.get("primary_color") if brand else None) or "#667eea"
-    accent_color = (brand.get("accent_color") if brand else None) or "#764ba2"
-    rep_photo_url = (brand.get("rep_photo_url") if brand else None)  # Pass B5: Headshot
-    contact_line1 = (brand.get("contact_line1") if brand else None)
-    contact_line2 = (brand.get("contact_line2") if brand else None)
-    website_url = (brand.get("website_url") if brand else None)
+    primary_color = (brand.get("primary_color") if brand else None) or "#7C3AED"
+    accent_color = (brand.get("accent_color") if brand else None) or "#F97316"
+    rep_photo_url = brand.get("rep_photo_url") if brand else None
+    contact_line1 = brand.get("contact_line1") if brand else None
+    contact_line2 = brand.get("contact_line2") if brand else None
+    website_url = brand.get("website_url") if brand else None
+    
     # Format report type for display
-    # IMPORTANT: Keep this map in sync with:
-    # - Frontend: apps/web/app/lib/reportTypes.ts (reportTypes array)
-    # - Backend: apps/api/src/api/routes/schedules.py (report_type Literal)
-    # - Worker: apps/worker/src/worker/report_builders.py (builders dict)
-    report_type_display = {
-        "market_snapshot": "Market Snapshot",
-        "new_listings": "New Listings",
-        "inventory": "Inventory Report",
-        "closed": "Closed Sales",
-        "price_bands": "Price Bands Analysis",
-        "open_houses": "Open Houses",
-        "new_listings_gallery": "New Listings Gallery",
-        "featured_listings": "Featured Listings",
-    }.get(report_type, report_type.replace("_", " ").title())
+    report_type_display = REPORT_TYPE_DISPLAY.get(
+        report_type, 
+        report_type.replace("_", " ").title()
+    )
     
     # Format area for display
     if city:
@@ -80,244 +215,290 @@ def schedule_email_html(
         else:
             area_display = f"{len(zip_codes)} ZIP codes"
     else:
-        area_display = "your area"
+        area_display = "Your Area"
     
-    # Extract key metrics
-    total_active = metrics.get("total_active", 0)
-    total_pending = metrics.get("total_pending", 0)
-    total_closed = metrics.get("total_closed", 0)
-    median_list_price = metrics.get("median_list_price")
-    median_close_price = metrics.get("median_close_price")
-    avg_dom = metrics.get("avg_dom")
+    # Get metrics for this report type
+    (m1_label, m1_value), (m2_label, m2_value), (m3_label, m3_value) = \
+        _get_metrics_for_report_type(report_type, metrics)
     
-    # Format prices
-    def format_price(price):
-        if price is None:
-            return "N/A"
-        return f"${price:,.0f}"
+    # Get section label
+    section_label = _get_section_label(report_type)
     
-    # Build metrics HTML based on report type
-    metrics_html = ""
-    
-    if report_type == "market_snapshot":
-        metrics_html = f"""
-        <tr>
-          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
-            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">Active Listings</div>
-            <div style="font-size: 24px; font-weight: 600; color: #111827;">{total_active:,}</div>
-          </td>
-          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
-            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">Pending</div>
-            <div style="font-size: 24px; font-weight: 600; color: #111827;">{total_pending:,}</div>
-          </td>
-          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
-            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">Closed</div>
-            <div style="font-size: 24px; font-weight: 600; color: #111827;">{total_closed:,}</div>
-          </td>
-        </tr>
-        """
-    elif report_type == "new_listings":
-        metrics_html = f"""
-        <tr>
-          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
-            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">New Listings</div>
-            <div style="font-size: 24px; font-weight: 600; color: #111827;">{total_active:,}</div>
-          </td>
-          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
-            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">Median Price</div>
-            <div style="font-size: 24px; font-weight: 600; color: #111827;">{format_price(median_list_price)}</div>
-          </td>
-          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
-            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">Avg. DOM</div>
-            <div style="font-size: 24px; font-weight: 600; color: #111827;">{avg_dom or 'N/A'}</div>
-          </td>
-        </tr>
-        """
-    elif report_type == "closed":
-        metrics_html = f"""
-        <tr>
-          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
-            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">Closed Sales</div>
-            <div style="font-size: 24px; font-weight: 600; color: #111827;">{total_closed:,}</div>
-          </td>
-          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
-            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">Median Price</div>
-            <div style="font-size: 24px; font-weight: 600; color: #111827;">{format_price(median_close_price)}</div>
-          </td>
-          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
-            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">Avg. DOM</div>
-            <div style="font-size: 24px; font-weight: 600; color: #111827;">{avg_dom or 'N/A'}</div>
-          </td>
-        </tr>
-        """
-    elif report_type == "new_listings_gallery":
-        # Phase P3: Gallery email with photo grid emphasis
-        total_listings = metrics.get("total_listings", total_active)
-        metrics_html = f"""
-        <tr>
-          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
-            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">📸 New Properties</div>
-            <div style="font-size: 24px; font-weight: 600; color: #111827;">{total_listings:,}</div>
-          </td>
-          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
-            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">Median Price</div>
-            <div style="font-size: 24px; font-weight: 600; color: #111827;">{format_price(median_list_price)}</div>
-          </td>
-          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
-            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">Avg. DOM</div>
-            <div style="font-size: 24px; font-weight: 600; color: #111827;">{avg_dom or 'N/A'}</div>
-          </td>
-        </tr>
-        """
-    elif report_type == "featured_listings":
-        # Phase P3: Featured listings with premium feel
-        total_listings = metrics.get("total_listings", 4)
-        metrics_html = f"""
-        <tr>
-          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
-            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">✨ Featured Properties</div>
-            <div style="font-size: 24px; font-weight: 600; color: #111827;">{total_listings:,}</div>
-          </td>
-          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
-            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">Median Price</div>
-            <div style="font-size: 24px; font-weight: 600; color: #111827;">{format_price(median_list_price)}</div>
-          </td>
-          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
-            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">Avg. DOM</div>
-            <div style="font-size: 24px; font-weight: 600; color: #111827;">{avg_dom or 'N/A'}</div>
-          </td>
-        </tr>
-        """
+    # Build logo HTML (conditional)
+    if logo_url:
+        logo_html = f'''<img src="{logo_url}" alt="{brand_name}" width="180" height="50" style="display: block; max-width: 180px; height: auto;" />'''
     else:
-        # Generic metrics for other report types
-        metrics_html = f"""
-        <tr>
-          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
-            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">Properties</div>
-            <div style="font-size: 24px; font-weight: 600; color: #111827;">{total_active:,}</div>
-          </td>
-          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
-            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">Median Price</div>
-            <div style="font-size: 24px; font-weight: 600; color: #111827;">{format_price(median_list_price)}</div>
-          </td>
-          <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
-            <div style="font-size: 14px; color: #6b7280; margin-bottom: 5px;">Days on Market</div>
-            <div style="font-size: 24px; font-weight: 600; color: #111827;">{avg_dom or 'N/A'}</div>
-          </td>
-        </tr>
-        """
+        # Text fallback when no logo
+        logo_html = f'''<p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 24px; font-weight: 700; color: #ffffff;">{brand_name}</p>'''
+    
+    # Build footer section (conditional based on available data)
+    if rep_photo_url and (contact_line1 or contact_line2):
+        # Full footer with photo
+        footer_html = f'''
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td width="80" valign="top" style="padding-right: 20px;">
+                    <img src="{rep_photo_url}" alt="Agent Photo" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover;" />
+                  </td>
+                  <td valign="middle">
+                    {f'<p style="margin: 0 0 4px 0; font-family: Arial, Helvetica, sans-serif; font-size: 15px; font-weight: 600; color: #1f2937; line-height: 1.4;">{contact_line1}</p>' if contact_line1 else ''}
+                    {f'<p style="margin: 0 0 8px 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #6b7280; line-height: 1.4;">{contact_line2}</p>' if contact_line2 else ''}
+                    {f'<a href="{website_url}" target="_blank" style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: {primary_color}; text-decoration: none; font-weight: 500;">{website_url.replace("https://", "").replace("http://", "")}</a>' if website_url else ''}
+                  </td>
+                </tr>
+              </table>'''
+    elif contact_line1 or contact_line2 or website_url:
+        # Contact info without photo
+        footer_html = f'''
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td align="center">
+                    {f'<p style="margin: 0 0 4px 0; font-family: Arial, Helvetica, sans-serif; font-size: 15px; font-weight: 600; color: #1f2937; line-height: 1.4;">{contact_line1}</p>' if contact_line1 else ''}
+                    {f'<p style="margin: 0 0 8px 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #6b7280; line-height: 1.4;">{contact_line2}</p>' if contact_line2 else ''}
+                    {f'<a href="{website_url}" target="_blank" style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: {primary_color}; text-decoration: none; font-weight: 500;">{website_url.replace("https://", "").replace("http://", "")}</a>' if website_url else ''}
+                  </td>
+                </tr>
+              </table>'''
+    else:
+        # Minimal footer - just brand name
+        footer_html = f'''
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 15px; font-weight: 600; color: #1f2937; line-height: 1.4;">{brand_name}</p>
+                  </td>
+                </tr>
+              </table>'''
+    
+    # Build powered by text (only show if not branded)
+    powered_by = '' if brand else '''
+                <p style="margin: 10px 0 0 0; font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #d1d5db;">
+                  Powered by TrendyReports
+                </p>'''
     
     # Build the complete HTML email
-    html = f"""
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{report_type_display} Report</title>
-    </head>
-    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb;">
-        <table role="presentation" style="width: 100%; border-collapse: collapse;">
-            <tr>
-                <td align="center" style="padding: 40px 0;">
-                    <!-- Main Container -->
-                    <table role="presentation" style="width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-                        
-                        <!-- Header (Phase 30: White-label branding) -->
-                        <tr>
-                            <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%); border-radius: 8px 8px 0 0;">
-                                {f'<img src="{logo_url}" alt="{brand_name}" style="height: 40px; margin-bottom: 20px; object-fit: contain;" />' if logo_url else ''}
-                                <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">📊 Your {report_type_display} Report</h1>
-                                <p style="margin: 10px 0 0; color: #e0e7ff; font-size: 16px;">{area_display} • Last {lookback_days} days</p>
-                                {f'<p style="margin: 15px 0 0; color: #ffffff; font-size: 14px; font-weight: 500;">{brand_name}</p>' if brand else ''}
-                            </td>
-                        </tr>
-                        
-                        <!-- Greeting -->
-                        <tr>
-                            <td style="padding: 30px 40px 20px;">
-                                <p style="margin: 0; font-size: 16px; color: #374151; line-height: 1.6;">
-                                    Hi{f' {account_name}' if account_name else ''},
+    html = f'''<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>{brand_name} - {report_type_display}</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:AllowPNG/>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+  
+  <!-- Wrapper Table -->
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f4f4f4;" bgcolor="#f4f4f4">
+    <tr>
+      <td align="center" style="padding: 20px 10px;">
+        
+        <!-- Main Container -->
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" bgcolor="#ffffff">
+          
+          <!-- Header Section -->
+          <tr>
+            <td align="center" style="background-color: {primary_color}; padding: 30px 40px;" bgcolor="{primary_color}">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td align="center" style="padding-bottom: 20px;">
+                    {logo_html}
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">
+                    <h1 style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 28px; font-weight: 700; color: #ffffff; line-height: 1.3;">
+                      {report_type_display}
+                    </h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding-top: 10px;">
+                    <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: rgba(255,255,255,0.9); line-height: 1.5;">
+                      {area_display} &bull; Last {lookback_days} Days
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Metrics Section -->
+          <tr>
+            <td style="padding: 40px 30px; background-color: #ffffff;" bgcolor="#ffffff">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td align="center" style="padding-bottom: 20px;">
+                    <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: 600; color: {accent_color}; text-transform: uppercase; letter-spacing: 1px;">
+                      {section_label}
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <!-- 3-Column Metrics Table -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <tr>
+                        <!-- Metric 1 -->
+                        <td width="32%" align="center" valign="top" style="padding: 20px 10px; background-color: #f9fafb; border-radius: 8px;" bgcolor="#f9fafb">
+                          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td align="center">
+                                <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 32px; font-weight: 700; color: {primary_color}; line-height: 1.2;">
+                                  {m1_value}
                                 </p>
-                                <p style="margin: 15px 0 0; font-size: 16px; color: #374151; line-height: 1.6;">
-                                    Your scheduled <strong>{report_type_display}</strong> report for {area_display} is ready!
+                              </td>
+                            </tr>
+                            <tr>
+                              <td align="center" style="padding-top: 8px;">
+                                <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #6b7280; line-height: 1.4;">
+                                  {m1_label}
                                 </p>
-                            </td>
-                        </tr>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
                         
-                        <!-- Key Metrics -->
-                        <tr>
-                            <td style="padding: 0 40px 30px;">
-                                <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f9fafb; border-radius: 8px; overflow: hidden;">
-                                    {metrics_html}
-                                </table>
-                            </td>
-                        </tr>
+                        <!-- Spacer -->
+                        <td width="2%">&nbsp;</td>
                         
-                        <!-- CTA Button (Phase 30: Uses brand accent color) -->
-                        <tr>
-                            <td style="padding: 0 40px 40px; text-align: center;">
-                                <a href="{pdf_url}" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                                    📄 View Full Report (PDF)
-                                </a>
-                                <p style="margin: 15px 0 0; font-size: 14px; color: #6b7280;">
-                                    This link will expire in 7 days
+                        <!-- Metric 2 -->
+                        <td width="32%" align="center" valign="top" style="padding: 20px 10px; background-color: #f9fafb; border-radius: 8px;" bgcolor="#f9fafb">
+                          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td align="center">
+                                <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 32px; font-weight: 700; color: {primary_color}; line-height: 1.2;">
+                                  {m2_value}
                                 </p>
-                            </td>
-                        </tr>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td align="center" style="padding-top: 8px;">
+                                <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #6b7280; line-height: 1.4;">
+                                  {m2_label}
+                                </p>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
                         
-                        <!-- Footer (Phase 30: White-label contact info + Pass B5: Headshot) -->
-                        <tr>
-                            <td style="padding: 30px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb;">
-                                {f'''
-                                <table role="presentation" style="width: 100%; margin-bottom: 20px;">
-                                    <tr>
-                                        <td style="text-align: center;">
-                                            <img src="{rep_photo_url}" alt="Representative" style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 3px solid {primary_color};" />
-                                        </td>
-                                    </tr>
-                                </table>
-                                ''' if rep_photo_url else ''}
-                                {f'<p style="margin: 0; font-size: 14px; color: #374151; text-align: center; font-weight: 500;">{contact_line1}</p>' if contact_line1 else ''}
-                                {f'<p style="margin: 5px 0 0; font-size: 14px; color: #6b7280; text-align: center;">{contact_line2}</p>' if contact_line2 else ''}
-                                {f'<p style="margin: 10px 0 0; font-size: 14px; color: #6b7280; text-align: center;"><a href="{website_url}" style="color: {primary_color}; text-decoration: none;">{website_url.replace("https://", "").replace("http://", "")}</a></p>' if website_url else ''}
-                                <p style="margin: {'20px' if (contact_line1 or contact_line2 or website_url) else '0'} 0 0; font-size: 14px; color: #6b7280; text-align: center;">
-                                    You're receiving this because you have an active schedule for {area_display}.
-                                </p>
-                                <p style="margin: 10px 0 0; font-size: 14px; color: #6b7280; text-align: center;">
-                                    <a href="{unsubscribe_url}" style="color: #6b7280; text-decoration: underline;">Unsubscribe</a> from these automated reports
-                                </p>
-                                <p style="margin: 15px 0 0; font-size: 12px; color: #9ca3af; text-align: center;">
-                                    © {brand_name}. All rights reserved.
-                                </p>
-                                {'' if brand else '<p style="margin: 5px 0 0; font-size: 10px; color: #d1d5db; text-align: center;">Powered by TrendyReports</p>'}
-                            </td>
-                        </tr>
+                        <!-- Spacer -->
+                        <td width="2%">&nbsp;</td>
                         
+                        <!-- Metric 3 -->
+                        <td width="32%" align="center" valign="top" style="padding: 20px 10px; background-color: #f9fafb; border-radius: 8px;" bgcolor="#f9fafb">
+                          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td align="center">
+                                <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 32px; font-weight: 700; color: {primary_color}; line-height: 1.2;">
+                                  {m3_value}
+                                </p>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td align="center" style="padding-top: 8px;">
+                                <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #6b7280; line-height: 1.4;">
+                                  {m3_label}
+                                </p>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
                     </table>
-                </td>
-            </tr>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- CTA Section -->
+          <tr>
+            <td align="center" style="padding: 10px 40px 40px 40px; background-color: #ffffff;" bgcolor="#ffffff">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="background-color: {accent_color}; border-radius: 8px;" bgcolor="{accent_color}">
+                    <!--[if mso]>
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{pdf_url}" style="height:50px;v-text-anchor:middle;width:220px;" arcsize="16%" stroke="f" fillcolor="{accent_color}">
+                      <w:anchorlock/>
+                      <center>
+                    <![endif]-->
+                    <a href="{pdf_url}" target="_blank" style="display: inline-block; padding: 16px 40px; font-family: Arial, Helvetica, sans-serif; font-size: 16px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px; background-color: {accent_color};">
+                      View Full Report
+                    </a>
+                    <!--[if mso]>
+                      </center>
+                    </v:roundrect>
+                    <![endif]-->
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Divider -->
+          <tr>
+            <td style="padding: 0 40px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td style="border-top: 1px solid #e5e7eb; height: 1px; font-size: 1px; line-height: 1px;">&nbsp;</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Footer Section -->
+          <tr>
+            <td style="padding: 40px; background-color: #ffffff;" bgcolor="#ffffff">
+              {footer_html}
+            </td>
+          </tr>
+          
+          <!-- Unsubscribe Footer -->
+          <tr>
+            <td align="center" style="padding: 20px 40px; background-color: #f9fafb;" bgcolor="#f9fafb">
+              <p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #9ca3af; line-height: 1.6;">
+                You're receiving this email because you subscribed to market updates.<br />
+                <a href="{unsubscribe_url}" target="_blank" style="color: #6b7280; text-decoration: underline;">Unsubscribe</a> from these notifications.
+              </p>{powered_by}
+            </td>
+          </tr>
+          
         </table>
-    </body>
-    </html>
-    """
+        <!-- End Main Container -->
+        
+      </td>
+    </tr>
+  </table>
+  <!-- End Wrapper Table -->
+  
+</body>
+</html>'''
     
     return html
 
 
-def schedule_email_subject(report_type: str, city: Optional[str], zip_codes: Optional[list]) -> str:
+def schedule_email_subject(
+    report_type: str, 
+    city: Optional[str], 
+    zip_codes: Optional[list]
+) -> str:
     """Generate email subject line for a scheduled report."""
     # Format report type
-    report_type_display = {
-        "market_snapshot": "Market Snapshot",
-        "new_listings": "New Listings",
-        "inventory": "Inventory Report",
-        "closed": "Closed Sales",
-        "price_bands": "Price Bands Analysis",
-        "open_houses": "Open Houses",
-        "new_listings_gallery": "New Listings Gallery",
-        "featured_listings": "Featured Listings",
-    }.get(report_type, report_type.replace("_", " ").title())
+    report_type_display = REPORT_TYPE_DISPLAY.get(
+        report_type, 
+        report_type.replace("_", " ").title()
+    )
     
     # Format area
     if city:
@@ -331,4 +512,3 @@ def schedule_email_subject(report_type: str, city: Optional[str], zip_codes: Opt
         area = "Your Area"
     
     return f"📊 Your {report_type_display} Report for {area} is Ready!"
-

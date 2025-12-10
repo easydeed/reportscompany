@@ -254,17 +254,24 @@ def build_closed(params: dict) -> Dict:
 
 def build_inventory_by_zip(params: dict) -> Dict:
     """
-    Listing Inventory: All currently active listings (no date window).
+    Listing Inventory: Active listings that became active within the date window.
     
-    Per ReportsQueries.md:
+    Per user request: Only show listings that were listed within the selected
+    date range (e.g., last 30 days), not all current active inventory.
+    
+    Parameters:
     - status: Active
+    - mindate/maxdate: lookback window (filters by listDate)
     - sort: daysOnMarket (lowest DOM first = freshest) - only in production
-    - No date filter (current inventory snapshot)
+    - limit: 1000
     """
+    start, end = _date_window(params.get("lookback_days") or 30)
     q = {
         **_common_params(),
         "status": "Active",
-        "limit": 500,
+        "mindate": start,
+        "maxdate": end,
+        "limit": 1000,
         "offset": 0,
     }
     if ALLOW_SORTING:
