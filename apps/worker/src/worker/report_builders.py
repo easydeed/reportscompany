@@ -302,6 +302,9 @@ def build_new_listings_result(listings: List[Dict], context: Dict) -> Dict:
     Template expects:
     - Hero KPIs: total_new, median_price, avg_dom, avg_ppsf
     - listings array sorted by list_date desc
+    
+    IMPORTANT: SimplyRETS API does NOT reliably filter Active listings by mindate/maxdate.
+    We MUST filter by list_date client-side to ensure accurate results.
     """
     city = context.get("city", "Market")
     lookback_days = context.get("lookback_days", 30)
@@ -310,14 +313,31 @@ def build_new_listings_result(listings: List[Dict], context: Dict) -> Dict:
     # (SimplyRETS q parameter may return nearby cities)
     city_filtered = _filter_by_city(listings, city)
     
-    # Filter to active listings only
-    # NOTE: Don't re-filter by date here! The API query already filtered by mindate/maxdate.
-    # Re-filtering causes timezone mismatches (API returns UTC, datetime.now() is local time)
-    # which can incorrectly exclude valid listings.
-    new_listings = [
-        l for l in city_filtered 
-        if l.get("status") == "Active"
-    ]
+    # Calculate date cutoff for filtering
+    cutoff_date = datetime.now() - timedelta(days=lookback_days)
+    
+    # Filter to active listings WITH DATE FILTERING
+    # SimplyRETS API does NOT filter Active listings by mindate/maxdate reliably
+    # We must filter client-side by list_date
+    new_listings = []
+    for l in city_filtered:
+        if l.get("status") != "Active":
+            continue
+        list_date = l.get("list_date")
+        if list_date:
+            try:
+                # Handle both timezone-aware and timezone-naive datetimes
+                if hasattr(list_date, 'tzinfo') and list_date.tzinfo is not None:
+                    list_date = list_date.replace(tzinfo=None)
+                if list_date >= cutoff_date:
+                    new_listings.append(l)
+            except Exception as e:
+                print(f"📊 NEW_LISTINGS DEBUG: Error comparing dates: {e}")
+        else:
+            # No list_date - skip (shouldn't happen)
+            pass
+    
+    print(f"📊 NEW_LISTINGS DEBUG: {len(new_listings)} listings after date filter (cutoff={cutoff_date.date()})")
     
     # Sort by list date descending
     new_listings.sort(key=lambda x: x.get("list_date") or datetime.min, reverse=True)
@@ -649,6 +669,9 @@ def build_new_listings_gallery_result(listings: List[Dict], context: Dict) -> Di
     
     Phase P2: Photo-first template for new listings.
     Shows newest 9 active listings with images, address, price, beds/baths.
+    
+    IMPORTANT: SimplyRETS API does NOT reliably filter Active listings by mindate/maxdate.
+    We MUST filter by list_date client-side to ensure accurate results.
     """
     city = context.get("city", "Market")
     lookback_days = context.get("lookback_days", 30)
@@ -656,11 +679,26 @@ def build_new_listings_gallery_result(listings: List[Dict], context: Dict) -> Di
     # Filter to only include listings from the requested city
     listings = _filter_by_city(listings, city)
     
-    # Get active listings only
-    # NOTE: Don't re-filter by date here! The API query already filtered by mindate/maxdate.
-    # Re-filtering causes timezone mismatches (API returns UTC, datetime.now() is local time)
-    # which can incorrectly exclude valid listings.
-    new_listings = [l for l in listings if l.get("status") == "Active"]
+    # Calculate date cutoff for filtering
+    cutoff_date = datetime.now() - timedelta(days=lookback_days)
+    
+    # Get active listings WITH DATE FILTERING
+    # SimplyRETS API does NOT filter Active listings by mindate/maxdate reliably
+    new_listings = []
+    for l in listings:
+        if l.get("status") != "Active":
+            continue
+        list_date = l.get("list_date")
+        if list_date:
+            try:
+                if hasattr(list_date, 'tzinfo') and list_date.tzinfo is not None:
+                    list_date = list_date.replace(tzinfo=None)
+                if list_date >= cutoff_date:
+                    new_listings.append(l)
+            except:
+                pass
+    
+    print(f"📊 GALLERY DEBUG: {len(new_listings)} listings after date filter (cutoff={cutoff_date.date()})")
     
     # Sort by list date desc (newest first), limit to 9
     new_listings_sorted = sorted(new_listings, key=lambda x: x.get("list_date") or datetime.min, reverse=True)[:9]
