@@ -100,12 +100,14 @@
   .brand img{ height: 44px; width: auto; display:block; }
   .title-block h1{
     font-size: 22px; line-height:1.2; margin:0; color: var(--ink);
-    letter-spacing: .2px;
+    letter-spacing: .2px; font-weight: 900;
   }
   .title-block .sub{ margin-top: 2px; font-size: 12px; color: var(--muted); }
   .badge{
     background: var(--pct-blue); color: #fff; 
-    padding: 8px 12px; border-radius: 999px; font-weight: 600; font-size: 12px;
+    padding: 8px 16px; border-radius: 999px; font-weight: 600; font-size: 11px;
+    white-space: nowrap; min-width: 100px; text-align: center;
+    max-width: 180px; overflow: hidden; text-overflow: ellipsis;
   }
 
   .ribbon{
@@ -311,10 +313,6 @@
     <div class="page-content">
     <header class="header avoid-break">
       <div class="brand">
-        <svg width="44" height="44" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-          <rect width="100" height="100" rx="20" fill="#7C3AED"/>
-          <text x="50" y="65" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">T</text>
-        </svg>
         <div class="title-block">
           <h1>Price Bands Analysis — {{market_name}}</h1>
           <div class="sub">Period: {{period_label}} • Source: Live MLS Data • Report Date: {{report_date}}</div>

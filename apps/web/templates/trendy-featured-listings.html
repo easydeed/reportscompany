@@ -82,7 +82,7 @@
     margin:0; 
     color: var(--ink);
     letter-spacing: -0.3px;
-    font-weight: 700;
+    font-weight: 900;
   }
   .title-block .sub{ 
     margin-top: 4px; 
@@ -93,13 +93,14 @@
   .badge{
     background: linear-gradient(135deg, var(--pct-blue), #9333ea);
     color: #fff; 
-    padding: 9px 16px; 
+    padding: 8px 16px; 
     border-radius: 999px; 
-    font-weight: 700; 
-    font-size: 11.5px;
+    font-weight: 600; 
+    font-size: 11px;
     letter-spacing: 0.3px;
-    text-transform: uppercase;
     box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+    white-space: nowrap; min-width: 100px; text-align: center;
+    max-width: 180px; overflow: hidden; text-overflow: ellipsis;
   }
 
   /* Refined ribbon with better visual hierarchy */
@@ -285,10 +286,6 @@
   <div class="page">
     <header class="header avoid-break">
       <div class="brand">
-        <svg width="44" height="44" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-          <rect width="100" height="100" rx="20" fill="#7C3AED"/>
-          <text x="50" y="65" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">T</text>
-        </svg>
         <div class="title-block">
           <h1>Featured Listings — {{market_name}}</h1>
           <div class="sub">Premium properties • Source: Live MLS Data • Report Date: {{report_date}}</div>

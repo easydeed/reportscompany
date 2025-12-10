@@ -519,20 +519,28 @@ def build_price_bands_result(listings: List[Dict], context: Dict) -> Dict:
     # Define bands (use quartiles for dynamic banding)
     sorted_prices = sorted(prices)
     n = len(sorted_prices)
+    
+    def _format_band_price(val: float) -> str:
+        """Format price for band labels: $500K, $1.2M, etc."""
+        if val >= 1_000_000:
+            return f"${val/1_000_000:.1f}M".replace('.0M', 'M')
+        else:
+            return f"${int(val/1000):,}K"
+    
     if n >= 4:
         p25 = sorted_prices[n // 4]
         p50 = sorted_prices[n // 2]
         p75 = sorted_prices[(3 * n) // 4]
         
         band_defs = [
-            ("$0–$" + f"{int(p50/1000)}K", 0, p50),
-            ("$" + f"{int(p50/1000)}K–$" + f"{int(p75/1000)}K", p50, p75),
-            ("$" + f"{int(p75/1000)}K–$" + f"{int(max_price/1000)}K", p75, max_price + 1),
+            (f"Under {_format_band_price(p50)}", 0, p50),
+            (f"{_format_band_price(p50)} – {_format_band_price(p75)}", p50, p75),
+            (f"{_format_band_price(p75)}+", p75, max_price + 1),
         ]
     else:
         # Fallback for small datasets
         band_defs = [
-            ("$0–$" + f"{int(max_price/1000)}K", 0, max_price + 1)
+            (f"All ({_format_band_price(max_price)})", 0, max_price + 1)
         ]
     
     # Build bands

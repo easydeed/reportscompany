@@ -331,10 +331,6 @@ export function buildNewListingsHtml(
       headerHtml = `
         <header class="header avoid-break">
           <div class="brand">
-            <svg width="44" height="44" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <rect width="100" height="100" rx="20" fill="#7C3AED"/>
-              <text x="50" y="65" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">T</text>
-            </svg>
             <div class="title-block">
               <h1>New Listings — ${marketName}</h1>
               <div class="sub">Period: ${periodLabel} • Source: Live MLS Data • Report Date: ${reportDate}</div>
@@ -500,10 +496,6 @@ export function buildInventoryHtml(
       headerHtml = `
         <header class="header avoid-break">
           <div class="brand">
-            <svg width="44" height="44" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <rect width="100" height="100" rx="20" fill="#7C3AED"/>
-              <text x="50" y="65" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">T</text>
-            </svg>
             <div class="title-block">
               <h1>Listing Inventory — ${marketName}</h1>
               <div class="sub">Period: ${periodLabel} • Source: Live MLS Data • Report Date: ${reportDate}</div>
@@ -669,10 +661,6 @@ export function buildClosedHtml(
       headerHtml = `
         <header class="header avoid-break">
           <div class="brand">
-            <svg width="44" height="44" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <rect width="100" height="100" rx="20" fill="#7C3AED"/>
-              <text x="50" y="65" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">T</text>
-            </svg>
             <div class="title-block">
               <h1>Closed Listings — ${marketName}</h1>
               <div class="sub">Period: ${periodLabel} • Source: Live MLS Data • Report Date: ${reportDate}</div>
@@ -897,10 +885,6 @@ export function buildNewListingsGalleryHtml(
       headerHtml = `
         <header class="header avoid-break">
           <div class="brand">
-            <svg width="44" height="44" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <rect width="100" height="100" rx="20" fill="#7C3AED"/>
-              <text x="50" y="65" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">T</text>
-            </svg>
             <div class="title-block">
               <h1>New Listings Gallery — ${marketName}</h1>
               <div class="sub">Period: ${periodLabel} • Source: Live MLS Data • Report Date: ${reportDate}</div>
