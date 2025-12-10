@@ -355,11 +355,15 @@ def build_new_listings_result(listings: List[Dict], context: Dict) -> Dict:
 
 def build_inventory_result(listings: List[Dict], context: Dict) -> Dict:
     """
-    Inventory - Current active listings snapshot
+    Inventory - Active listings that became active within the lookback period
     
     Template expects:
     - Hero KPIs: total_active, new_this_month, median_dom, moi
     - listings array sorted by DOM desc
+    
+    IMPORTANT: The SimplyRETS API's mindate/maxdate may not filter Active listings
+    as expected. We must filter by list_date client-side to ensure only listings
+    that were listed within the selected lookback period are shown.
     """
     city = context.get("city", "Market")
     lookback_days = context.get("lookback_days", 30)
@@ -367,8 +371,32 @@ def build_inventory_result(listings: List[Dict], context: Dict) -> Dict:
     # Filter to only include listings from the requested city
     listings = _filter_by_city(listings, city)
     
-    # Active listings only
-    active = [l for l in listings if l.get("status") == "Active"]
+    # Calculate date cutoff for filtering
+    cutoff_date = datetime.now() - timedelta(days=lookback_days)
+    
+    # Active listings only - WITH DATE FILTERING
+    # Only include listings that were listed within the lookback period
+    active = []
+    for l in listings:
+        if l.get("status") != "Active":
+            continue
+        list_date = l.get("list_date")
+        if list_date:
+            try:
+                # Handle both timezone-aware and timezone-naive datetimes
+                if hasattr(list_date, 'tzinfo') and list_date.tzinfo is not None:
+                    list_date = list_date.replace(tzinfo=None)
+                if list_date >= cutoff_date:
+                    active.append(l)
+            except Exception as e:
+                print(f"📊 INVENTORY DEBUG: Error comparing dates: {e}")
+                # Include listing if we can't compare dates (fail-safe)
+                active.append(l)
+        else:
+            # No list_date - include anyway (shouldn't happen, but fail-safe)
+            active.append(l)
+    
+    print(f"📊 INVENTORY DEBUG: {len(active)} Active listings after date filter (cutoff={cutoff_date})")
     
     # New this month
     month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
