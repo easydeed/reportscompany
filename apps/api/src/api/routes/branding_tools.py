@@ -496,6 +496,81 @@ async def send_test_email(
                 </tr>
               </table>
               
+              <!-- ========== EXTRA STATS ROW ========== -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px; background-color: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0;">
+                <tr>
+                  <td align="center" style="padding: 16px 24px;">
+                    <span style="font-size: 14px; color: #475569;">
+                      <strong style="font-family: Georgia, 'Times New Roman', serif; font-size: 16px; color: {primary_color};">2.8</strong>
+                      <span style="color: #64748b;"> Months of Inventory</span>
+                      &nbsp;&nbsp;<span style="color: #cbd5e1;">|</span>&nbsp;&nbsp;
+                      <strong style="font-family: Georgia, 'Times New Roman', serif; font-size: 16px; color: {accent_color};">98.5%</strong>
+                      <span style="color: #64748b;"> Close-to-List Ratio</span>
+                    </span>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- ========== PROPERTY TYPE BREAKDOWN ========== -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
+                <tr>
+                  <td align="center" style="padding: 16px 20px; background-color: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0;">
+                    <p style="margin: 0 0 8px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px;">
+                      Property Types
+                    </p>
+                    <p style="margin: 0; font-size: 14px; line-height: 1.6;">
+                      <span style="color: #374151;">🏠 <strong>89</strong> Single Family</span>&nbsp;&nbsp;•&nbsp;&nbsp;<span style="color: #374151;">🏢 <strong>28</strong> Condos</span>&nbsp;&nbsp;•&nbsp;&nbsp;<span style="color: #374151;">🏘️ <strong>10</strong> Townhomes</span>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- ========== PRICE TIER BREAKDOWN ========== -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px; background-color: #f8fafc; border-radius: 10px; padding: 16px; border: 1px solid #e2e8f0;">
+                <tr>
+                  <td style="padding-bottom: 12px;">
+                    <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; text-align: center;">
+                      Price Tier Distribution
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td width="33%" class="metric-card" style="padding: 0 4px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td align="center" style="padding: 12px 8px; background-color: #ffffff; border-radius: 8px; border-left: 3px solid #059669;">
+                          <p style="margin: 0 0 2px 0; font-size: 20px; font-weight: 700; color: #059669;">45</p>
+                          <p style="margin: 0 0 2px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 12px; font-weight: 600; color: #374151;">Entry Level</p>
+                          <p style="margin: 0; font-size: 10px; color: #9ca3af;">Under $1M</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td width="33%" class="metric-card" style="padding: 0 4px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td align="center" style="padding: 12px 8px; background-color: #ffffff; border-radius: 8px; border-left: 3px solid {primary_color};">
+                          <p style="margin: 0 0 2px 0; font-size: 20px; font-weight: 700; color: {primary_color};">52</p>
+                          <p style="margin: 0 0 2px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 12px; font-weight: 600; color: #374151;">Move-Up</p>
+                          <p style="margin: 0; font-size: 10px; color: #9ca3af;">$1M - $3M</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td width="33%" class="metric-card" style="padding: 0 4px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td align="center" style="padding: 12px 8px; background-color: #ffffff; border-radius: 8px; border-left: 3px solid {accent_color};">
+                          <p style="margin: 0 0 2px 0; font-size: 20px; font-weight: 700; color: {accent_color};">30</p>
+                          <p style="margin: 0 0 2px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 12px; font-weight: 600; color: #374151;">Luxury</p>
+                          <p style="margin: 0; font-size: 10px; color: #9ca3af;">$3M+</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              
               <!-- ========== CTA BUTTON ========== -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
