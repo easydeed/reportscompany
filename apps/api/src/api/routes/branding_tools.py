@@ -55,35 +55,65 @@ def get_branding_for_account(cur, account_id: str) -> dict:
     row = cur.fetchone()
     
     if row and row[0] == "INDUSTRY_AFFILIATE":
-        # Get affiliate branding
-        cur.execute("""
-            SELECT 
-                brand_display_name,
-                logo_url,
-                email_logo_url,
-                primary_color,
-                accent_color,
-                rep_photo_url,
-                contact_line1,
-                contact_line2,
-                website_url
-            FROM affiliate_branding
-            WHERE account_id = %s::uuid
-        """, (account_id,))
-        brand_row = cur.fetchone()
-        
-        if brand_row:
-            return {
-                "brand_display_name": brand_row[0],
-                "logo_url": brand_row[1],
-                "email_logo_url": brand_row[2],  # Light version for email headers
-                "primary_color": brand_row[3] or "#7C3AED",
-                "accent_color": brand_row[4] or "#F26B2B",
-                "rep_photo_url": brand_row[5],
-                "contact_line1": brand_row[6],
-                "contact_line2": brand_row[7],
-                "website_url": brand_row[8],
-            }
+        # Get affiliate branding - try with email_logo_url first, fall back if column doesn't exist
+        try:
+            cur.execute("""
+                SELECT 
+                    brand_display_name,
+                    logo_url,
+                    email_logo_url,
+                    primary_color,
+                    accent_color,
+                    rep_photo_url,
+                    contact_line1,
+                    contact_line2,
+                    website_url
+                FROM affiliate_branding
+                WHERE account_id = %s::uuid
+            """, (account_id,))
+            brand_row = cur.fetchone()
+            
+            if brand_row:
+                return {
+                    "brand_display_name": brand_row[0],
+                    "logo_url": brand_row[1],
+                    "email_logo_url": brand_row[2],  # Light version for email headers
+                    "primary_color": brand_row[3] or "#7C3AED",
+                    "accent_color": brand_row[4] or "#F26B2B",
+                    "rep_photo_url": brand_row[5],
+                    "contact_line1": brand_row[6],
+                    "contact_line2": brand_row[7],
+                    "website_url": brand_row[8],
+                }
+        except Exception:
+            # Fallback if email_logo_url column doesn't exist yet
+            cur.execute("""
+                SELECT 
+                    brand_display_name,
+                    logo_url,
+                    primary_color,
+                    accent_color,
+                    rep_photo_url,
+                    contact_line1,
+                    contact_line2,
+                    website_url
+                FROM affiliate_branding
+                WHERE account_id = %s::uuid
+            """, (account_id,))
+            brand_row = cur.fetchone()
+            
+            if brand_row:
+                return {
+                    "brand_display_name": brand_row[0],
+                    "logo_url": brand_row[1],
+                    "email_logo_url": None,  # Column doesn't exist yet
+                    "primary_color": brand_row[2] or "#7C3AED",
+                    "accent_color": brand_row[3] or "#F26B2B",
+                    "rep_photo_url": brand_row[4],
+                    "contact_line1": brand_row[5],
+                    "contact_line2": brand_row[6],
+                    "website_url": brand_row[7],
+                }
     
     # Get account name as fallback
     cur.execute("""

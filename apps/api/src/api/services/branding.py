@@ -75,7 +75,9 @@ def get_brand_for_account(cur, account_id: str) -> Brand:
     
     # Look up branding configuration
     # Note: affiliate_branding table may not exist in all environments
+    # Also handle case where email_logo_url column doesn't exist yet
     branding_row = None
+    has_email_logo_col = True
     try:
         cur.execute("""
             SELECT
@@ -93,23 +95,54 @@ def get_brand_for_account(cur, account_id: str) -> Brand:
         """, (branding_account_id,))
         
         branding_row = cur.fetchone()
-    except Exception:
-        # Table may not exist yet - fall through to defaults
-        pass
+    except Exception as e:
+        # Table may not exist or email_logo_url column missing - try without it
+        if "email_logo_url" in str(e):
+            has_email_logo_col = False
+            try:
+                cur.execute("""
+                    SELECT
+                        brand_display_name,
+                        logo_url,
+                        primary_color,
+                        accent_color,
+                        rep_photo_url,
+                        contact_line1,
+                        contact_line2,
+                        website_url
+                    FROM affiliate_branding
+                    WHERE account_id = %s::uuid
+                """, (branding_account_id,))
+                branding_row = cur.fetchone()
+            except Exception:
+                pass
     
     if branding_row:
         # Branding configured - use it
-        return Brand(
-            display_name=branding_row[0],
-            logo_url=branding_row[1],
-            email_logo_url=branding_row[2],  # email_logo_url for light version
-            primary_color=branding_row[3] or DEFAULT_PRIMARY,
-            accent_color=branding_row[4] or DEFAULT_ACCENT,
-            rep_photo_url=branding_row[5],
-            contact_line1=branding_row[6],
-            contact_line2=branding_row[7],
-            website_url=branding_row[8],
-        )
+        if has_email_logo_col:
+            return Brand(
+                display_name=branding_row[0],
+                logo_url=branding_row[1],
+                email_logo_url=branding_row[2],  # email_logo_url for light version
+                primary_color=branding_row[3] or DEFAULT_PRIMARY,
+                accent_color=branding_row[4] or DEFAULT_ACCENT,
+                rep_photo_url=branding_row[5],
+                contact_line1=branding_row[6],
+                contact_line2=branding_row[7],
+                website_url=branding_row[8],
+            )
+        else:
+            return Brand(
+                display_name=branding_row[0],
+                logo_url=branding_row[1],
+                email_logo_url=None,  # Column doesn't exist yet
+                primary_color=branding_row[2] or DEFAULT_PRIMARY,
+                accent_color=branding_row[3] or DEFAULT_ACCENT,
+                rep_photo_url=branding_row[4],
+                contact_line1=branding_row[5],
+                contact_line2=branding_row[6],
+                website_url=branding_row[7],
+            )
     
     # No branding configured
     if acc_type == 'INDUSTRY_AFFILIATE' or sponsor_id:
