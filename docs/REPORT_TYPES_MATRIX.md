@@ -3,7 +3,58 @@
 > **Single Source of Truth** for all report types, their parameters, filtering logic, and expected outputs.
 
 **Last Updated:** December 10, 2024  
-**Version:** 1.0
+**Version:** 1.1
+
+---
+
+## ⚠️ CRITICAL: SimplyRETS API Filtering Limitation
+
+### The Problem
+
+**SimplyRETS API does NOT reliably filter Active listings by `mindate`/`maxdate` parameters.**
+
+When we send a query like:
+```
+status: Active
+mindate: 2025-11-10
+maxdate: 2025-12-10
+```
+
+The API returns **ALL active listings** regardless of their `listDate`. In testing:
+- Query requested: Last 30 days
+- API returned: 38 properties
+- Actually within 30 days: **8** ✅
+- Outside 30 days: **30** ❌ (some 286 days old!)
+
+### The Solution
+
+**We MUST filter client-side in our report builders.** All date filtering happens in `apps/worker/src/worker/report_builders.py` after receiving API data.
+
+| Report Type | Date Field | Client-Side Filter |
+|-------------|------------|-------------------|
+| New Listings | `list_date` | `list_date >= cutoff_date` |
+| Inventory | `list_date` | `list_date >= cutoff_date` |
+| Closed Sales | `close_date` | `close_date >= cutoff_date` |
+| Market Snapshot | `close_date` (for Closed) | `close_date >= cutoff_date` |
+| Price Bands | None | No filtering (all active) |
+| Featured Listings | None | Top 4 by price |
+
+### Testing Locally
+
+Use the local testing script to verify filtering without deploying:
+
+```bash
+cd apps/worker
+python ../../scripts/test_all_reports.py --city "La Verne" --lookback 30 --all
+```
+
+This shows exactly what the API returns vs. what our filters produce.
+
+### Reference
+
+- SimplyRETS Docs: https://docs.simplyrets.com/
+- Our API Docs: `docs/SIMPLYRETS_API.md`
+- Test Script: `scripts/test_all_reports.py`
 
 ---
 
@@ -431,10 +482,11 @@ Each scheduled report email includes:
 | File | Purpose |
 |------|---------|
 | `apps/worker/src/worker/query_builders.py` | Build SimplyRETS API queries |
-| `apps/worker/src/worker/report_builders.py` | Process data, apply date filters, calculate metrics |
+| `apps/worker/src/worker/report_builders.py` | **Process data, apply CLIENT-SIDE date filters**, calculate metrics |
 | `apps/worker/src/worker/compute/extract.py` | Normalize API responses |
 | `apps/worker/src/worker/email/template.py` | Generate email HTML |
 | `apps/web/lib/sample-report-data.ts` | Frontend report type definitions |
+| `scripts/test_all_reports.py` | **Local testing script** - test without deploying |
 
 ### Report Builder Functions
 
@@ -466,6 +518,7 @@ Each scheduled report email includes:
 
 | Date | Version | Changes |
 |------|---------|---------|
+| Dec 10, 2024 | 1.1 | Added SimplyRETS API filtering limitation warning, local testing instructions |
 | Dec 10, 2024 | 1.0 | Initial version |
 
 ---
