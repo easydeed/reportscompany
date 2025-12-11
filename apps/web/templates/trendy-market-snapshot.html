@@ -36,7 +36,17 @@
     }
     
     /* Slightly reduce spacing for print to fit on one page */
-    .header { margin-bottom: 8px !important; }
+    .hero-header { 
+      margin: calc(var(--page-padding) * -1) !important;
+      margin-bottom: 0 !important;
+      padding: 16px 20px !important;
+      min-height: 70px !important;
+    }
+    .title-bar { 
+      padding: 12px 0 10px !important; 
+      margin-bottom: 12px !important;
+    }
+    .title-bar h1 { font-size: 20px !important; }
     h2 { margin: 8px 0 !important; font-size: 13px !important; }
     h3 { margin: 6px 0 !important; font-size: 12px !important; }
     p { 
@@ -100,27 +110,92 @@
     flex-direction: column;
   }
 
-  /* ====== Header ====== */
-  .header{
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: 16px;
+  /* ====== Hero Header (Full-Bleed Gradient) ====== */
+  .hero-header{
+    background: linear-gradient(90deg, var(--pct-blue), var(--pct-accent));
+    margin: calc(var(--page-padding) * -1);  /* Negative margin to bleed to edges */
+    margin-bottom: 0;
+    padding: 20px 24px;
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    margin-bottom: 14px;
+    min-height: 80px;
   }
-  .brand{
-    display:flex; align-items:center; gap:12px;
+  .hero-left{
+    display: flex;
+    align-items: center;
+    gap: 16px;
   }
-  .brand img{
-    height: 44px; width: auto; display:block;
+  .hero-logo{
+    height: 48px;
+    width: auto;
+    max-width: 120px;
+    object-fit: contain;
   }
-  .title-block h1{
-    font-size: 22px; line-height:1.2; margin:0; color: var(--ink);
-    letter-spacing: .2px; font-weight: 900;
+  .hero-text{
+    color: #fff;
   }
-  .title-block .sub{
-    margin-top: 2px; font-size: 12px; color: var(--muted);
+  .hero-brand-name{
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 2px;
+    opacity: 0.95;
   }
+  .hero-report-type{
+    font-size: 13px;
+    font-weight: 500;
+    margin: 0;
+    opacity: 0.85;
+  }
+  .hero-right{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+  .pdf-badge{
+    background: #ef4444;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+  }
+  .affiliate-pill{
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 999px;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  /* ====== Title Bar (Below Hero) ====== */
+  .title-bar{
+    padding: 16px 0 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .title-bar h1{
+    font-size: 22px;
+    line-height: 1.2;
+    margin: 0 0 4px;
+    color: var(--ink);
+    font-weight: 900;
+    letter-spacing: 0.2px;
+  }
+  .title-bar .sub{
+    font-size: 12px;
+    color: var(--muted);
+    margin: 0;
+  }
+  
+  /* Legacy badge (kept for backwards compat) */
   .badge{
     background: var(--pct-blue); color: #fff; 
     padding: 8px 16px; border-radius: 999px; font-weight: 600; font-size: 11px;
@@ -265,21 +340,34 @@
 </head>
 <body>
   <div class="page">
-    <!-- Main content wrapper for flexbox footer positioning -->
-    <div class="page-content">
-    <!-- Header -->
-    <header class="header avoid-break">
-      <div class="brand">
-        <div class="title-block">
-          <h1>Market Snapshot — {{market_name}}</h1>
-          <div class="sub">Period: {{period_label}} &nbsp;•&nbsp; Source: Live MLS Data &nbsp;•&nbsp; Report Date: {{report_date}}</div>
+    <!-- ====== HERO HEADER (Full-Bleed Gradient) ====== -->
+    <header class="hero-header avoid-break">
+      <div class="hero-left">
+        {{#if logo_url}}
+        <img src="{{logo_url}}" alt="{{brand_name}}" class="hero-logo" />
+        {{/if}}
+        <div class="hero-text">
+          <p class="hero-brand-name">{{brand_name}}</p>
+          <p class="hero-report-type">Market Snapshot</p>
         </div>
       </div>
-      <div class="badge">{{brand_badge}}</div>
+      <div class="hero-right">
+        <span class="pdf-badge">PDF</span>
+        <span class="affiliate-pill">{{brand_badge}}</span>
+      </div>
     </header>
+    
+    <!-- Main content wrapper for flexbox footer positioning -->
+    <div class="page-content">
+    
+    <!-- Title Bar (Below Hero) -->
+    <div class="title-bar avoid-break">
+      <h1>Market Snapshot — {{market_name}}</h1>
+      <p class="sub">Period: {{period_label}} &nbsp;•&nbsp; Source: Live MLS Data &nbsp;•&nbsp; Report Date: {{report_date}}</p>
+    </div>
 
     <!-- Market Overview -->
-    <p style="margin: 12px 0 16px; font-size: 13px; line-height: 1.6; color: #6b7280;">
+    <p style="margin: 0 0 16px; font-size: 13px; line-height: 1.6; color: #6b7280;">
       This snapshot provides key market indicators for <strong>{{market_name}}</strong> based on the most recent <strong>{{lookback_days}} days</strong> of MLS activity. 
       These metrics help you understand current market conditions, pricing trends, and inventory levels to make informed decisions.
     </p>
