@@ -399,6 +399,7 @@ async def send_test_email(
     # Use unified template if available
     if UNIFIED_TEMPLATE_AVAILABLE and schedule_email_html:
         logger.info("[Test Email] Using unified template from worker")
+        logger.info(f"[Test Email] Report type: {body.report_type}")
         email_html = schedule_email_html(
             account_name=brand_name,
             report_type=body.report_type,
@@ -426,20 +427,28 @@ async def send_test_email(
 '''
         # Insert test notice after "MAIN CONTENT" comment
         # V4 templates may not have "Section Label" so try multiple insertion points
-        if '<!-- V4: Insight Paragraph -->' in email_html:
+        has_v4_insight = '<!-- V4: Insight Paragraph -->' in email_html
+        has_v4_hero = '<!-- V4: 4-Metric Hero Row' in email_html
+        has_v4_core = '<!-- V4: Core Indicators' in email_html
+        logger.info(f"[Test Email] V4 markers - Insight: {has_v4_insight}, Hero: {has_v4_hero}, Core: {has_v4_core}")
+        
+        if has_v4_insight:
             # V4: Insert before the insight paragraph
+            logger.info("[Test Email] Using V4 template layout")
             email_html = email_html.replace(
                 '<!-- V4: Insight Paragraph -->',
                 test_notice + '\n              <!-- V4: Insight Paragraph -->'
             )
         elif '<!-- Section Label' in email_html:
             # V3 fallback: Insert before Section Label
+            logger.info("[Test Email] Using V3 template layout (Section Label found)")
             email_html = email_html.replace(
                 '<!-- Section Label',
                 test_notice + '\n              <!-- Section Label'
             )
         else:
             # Ultimate fallback: Insert after MAIN CONTENT start
+            logger.info("[Test Email] Using fallback insertion point")
             email_html = email_html.replace(
                 'class="dark-card mobile-padding">',
                 'class="dark-card mobile-padding">' + test_notice
