@@ -322,6 +322,8 @@ def _get_property_type_breakdown(metrics: Dict) -> Optional[List[Dict]]:
     """
     Get property type breakdown for Market Snapshot.
     Returns list of {name, count, icon} or None
+    
+    V4.1: Updated to modern, minimal icons
     """
     # Try to get from metrics
     property_types = metrics.get("property_types", {})
@@ -333,16 +335,17 @@ def _get_property_type_breakdown(metrics: Dict) -> Optional[List[Dict]]:
     other_count = property_types.get("other") or metrics.get("other_type_count", 0)
     
     # If we have any counts, return the breakdown
+    # V4.1: Modern icons - ◼ squares with labels
     if sfr_count or condo_count or townhome_count or other_count:
         result = []
         if sfr_count:
-            result.append({"name": "Single Family", "count": sfr_count, "icon": "🏠"})
+            result.append({"name": "Single Family", "count": sfr_count, "icon": "▪"})
         if condo_count:
-            result.append({"name": "Condos", "count": condo_count, "icon": "🏢"})
+            result.append({"name": "Condos", "count": condo_count, "icon": "▪"})
         if townhome_count:
-            result.append({"name": "Townhomes", "count": townhome_count, "icon": "🏘️"})
+            result.append({"name": "Townhomes", "count": townhome_count, "icon": "▪"})
         if other_count:
-            result.append({"name": "Other", "count": other_count, "icon": "🏛️"})
+            result.append({"name": "Other", "count": other_count, "icon": "▪"})
         return result if result else None
     
     return None
@@ -644,10 +647,10 @@ def schedule_email_html(
                 <tr>
                   <td align="center" style="padding: 16px 24px;">
                     <span style="font-size: 14px; color: #475569;">
-                      <strong style="font-family: Georgia, 'Times New Roman', serif; font-size: 16px; color: #1e293b;">{es1_value}</strong>
+                      <strong style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 16px; color: #1e293b;">{es1_value}</strong>
                       <span style="color: #64748b;"> {es1_label}</span>
                       &nbsp;&nbsp;<span style="color: #cbd5e1;">|</span>&nbsp;&nbsp;
-                      <strong style="font-family: Georgia, 'Times New Roman', serif; font-size: 16px; color: #1e293b;">{es2_value}</strong>
+                      <strong style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 16px; color: #1e293b;">{es2_value}</strong>
                       <span style="color: #64748b;"> {es2_label}</span>
                     </span>
                   </td>
@@ -687,7 +690,7 @@ def schedule_email_html(
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0;" class="dark-card dark-border">
                       <tr>
                         <td align="center" style="padding: 16px 8px;">
-                          <p style="margin: 0 0 4px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: 400; color: {primary_color};">
+                          <p style="margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 24px; font-weight: 400; color: {primary_color};">
                             {h1_value}
                           </p>
                           <p style="margin: 0; font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
@@ -702,7 +705,7 @@ def schedule_email_html(
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0;" class="dark-card dark-border">
                       <tr>
                         <td align="center" style="padding: 16px 8px;">
-                          <p style="margin: 0 0 4px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: 400; color: {primary_color};">
+                          <p style="margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 24px; font-weight: 400; color: {primary_color};">
                             {h2_value}
                           </p>
                           <p style="margin: 0; font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
@@ -717,7 +720,7 @@ def schedule_email_html(
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0;" class="dark-card dark-border">
                       <tr>
                         <td align="center" style="padding: 16px 8px;">
-                          <p style="margin: 0 0 4px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: 400; color: {primary_color};">
+                          <p style="margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 24px; font-weight: 400; color: {primary_color};">
                             {h3_value}
                           </p>
                           <p style="margin: 0; font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
@@ -732,7 +735,7 @@ def schedule_email_html(
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0;" class="dark-card dark-border">
                       <tr>
                         <td align="center" style="padding: 16px 8px;">
-                          <p style="margin: 0 0 4px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: 400; color: {primary_color};">
+                          <p style="margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 24px; font-weight: 400; color: {primary_color};">
                             {h4_value}
                           </p>
                           <p style="margin: 0; font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
@@ -754,7 +757,7 @@ def schedule_email_html(
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
                   <td style="padding-bottom: 12px;">
-                    <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px;">
+                    <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px;">
                       Core Indicators
                     </p>
                   </td>
@@ -828,7 +831,7 @@ def schedule_email_html(
                           <div style="width: 10px; height: 10px; background-color: {color}; border-radius: 50%;"></div>
                         </td>
                         <td style="padding-left: 12px; vertical-align: middle;">
-                          <span style="font-family: Georgia, 'Times New Roman', serif; font-size: 15px; font-weight: 600; color: #1f2937;">{band["name"]}</span>
+                          <span style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 15px; font-weight: 600; color: #1f2937;">{band["name"]}</span>
                           <span style="font-size: 13px; color: #6b7280; margin-left: 8px;">{band["range"]}</span>
                         </td>
                         <td align="right" style="vertical-align: middle;">
@@ -845,7 +848,7 @@ def schedule_email_html(
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
                   <td style="padding-bottom: 12px;">
-                    <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 13px; font-weight: 600; color: #4b5563; text-transform: uppercase; letter-spacing: 1px;">
+                    <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 13px; font-weight: 600; color: #4b5563; text-transform: uppercase; letter-spacing: 1px;">
                       Price Tiers
                     </p>
                   </td>
@@ -855,51 +858,65 @@ def schedule_email_html(
 '''
     
     # Build property type breakdown HTML (Market Snapshot)
+    # V4.1: Modern styling with colored dots instead of emoji
     property_types_html = ""
     if property_types:
-        type_items = ""
+        # Build individual type cards with colored indicators
+        type_cards = ""
+        type_colors = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b"]  # Blue, Purple, Pink, Amber
+        
         for i, ptype in enumerate(property_types):
-            separator = "&nbsp;&nbsp;•&nbsp;&nbsp;" if i < len(property_types) - 1 else ""
-            type_items += f'''<span style="color: #374151;">{ptype["icon"]} <strong>{ptype["count"]}</strong> {ptype["name"]}</span>{separator}'''
+            color = type_colors[i % len(type_colors)]
+            type_cards += f'''
+                  <td align="center" style="padding: 8px 12px;">
+                    <span style="display: inline-block; width: 8px; height: 8px; background-color: {color}; border-radius: 50%; margin-right: 6px; vertical-align: middle;"></span>
+                    <span style="font-size: 14px; color: #374151;">
+                      <strong style="color: {primary_color};">{ptype["count"]}</strong> {ptype["name"]}
+                    </span>
+                  </td>'''
         
         property_types_html = f'''
               <!-- Property Type Breakdown -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
                 <tr>
-                  <td align="center" style="padding: 16px 20px; background-color: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0;">
-                    <p style="margin: 0 0 8px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px;">
+                  <td style="padding: 16px 20px; background-color: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0;">
+                    <p style="margin: 0 0 12px 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; text-align: center;">
                       Property Types
                     </p>
-                    <p style="margin: 0; font-size: 14px; line-height: 1.6;">
-                      {type_items}
-                    </p>
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        {type_cards}
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>
 '''
     
     # Build price tier breakdown HTML (Market Snapshot)
-    # Uses monochromatic primary color with opacity variations for sophistication
+    # V4.1: Added icons, centered text, modern styling
     price_tiers_html = ""
     if price_tiers:
+        # Icons for each tier level
+        tier_icons = {"Entry Level": "◇", "Move-Up": "◈", "Luxury": "◆"}
+        
         tier_items = ""
         for i, tier in enumerate(price_tiers):
             # All tiers use primary_color - opacity creates visual hierarchy
-            color = primary_color
             opacity = tier.get("opacity", "100")
-            
-            # Convert hex opacity to actual hex suffix for border color
-            # 40% = 66, 70% = B3, 100% = FF
             opacity_hex = {"40": "66", "70": "B3", "100": ""}.get(opacity, "")
             border_color = f"{primary_color}{opacity_hex}"
+            icon = tier_icons.get(tier["name"], "▪")
             
             tier_items += f'''
                   <td width="33%" class="metric-card" style="padding: 0 4px;">
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                       <tr>
-                        <td align="center" style="padding: 12px 8px; background-color: #ffffff; border-radius: 8px; border-left: 3px solid {border_color};">
-                          <p style="margin: 0 0 2px 0; font-size: 20px; font-weight: 700; color: {primary_color};">{tier["count"]}</p>
-                          <p style="margin: 0 0 2px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 12px; font-weight: 600; color: #374151;">{tier["name"]}</p>
+                        <td align="center" style="padding: 14px 8px; background-color: #ffffff; border-radius: 8px; border-top: 3px solid {border_color};">
+                          <p style="margin: 0 0 4px 0; font-size: 22px; font-weight: 700; color: {primary_color};">{tier["count"]}</p>
+                          <p style="margin: 0 0 2px 0; font-size: 12px; font-weight: 600; color: #374151;">
+                            <span style="color: {border_color};">{icon}</span> {tier["name"]}
+                          </p>
                           <p style="margin: 0; font-size: 10px; color: #9ca3af;">{tier["range"]}</p>
                         </td>
                       </tr>
@@ -911,8 +928,8 @@ def schedule_email_html(
               <!-- Price Tier Breakdown -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px; background-color: #f8fafc; border-radius: 10px; padding: 16px; border: 1px solid #e2e8f0;">
                 <tr>
-                  <td style="padding-bottom: 12px;">
-                    <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; text-align: center;">
+                  <td style="padding-bottom: 12px;" colspan="3">
+                    <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; text-align: center;">
                       Price Tier Distribution
                     </p>
                   </td>
@@ -1090,7 +1107,7 @@ def schedule_email_html(
                 <tr>
                   <td align="center" style="padding: 0 40px;">
                     <!-- V4: "Market Snapshot – [Area]" title format for Market Snapshot -->
-                    <h1 style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: 400; color: #ffffff; line-height: 1.3; letter-spacing: -0.5px;">
+                    <h1 style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 28px; font-weight: 400; color: #ffffff; line-height: 1.3; letter-spacing: -0.5px;">
                       {f"{report_label} – {area_display}" if has_hero_4 else (tagline or report_label)}
                     </h1>
                   </td>
@@ -1119,7 +1136,7 @@ def schedule_email_html(
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
                   <td align="center" style="padding-bottom: 20px;">
-                    <p style="margin: 0; font-family: Georgia, serif; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px;">
+                    <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px;">
                       {section_label}
                     </p>
                   </td>
@@ -1134,7 +1151,7 @@ def schedule_email_html(
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" class="dark-card dark-border">
                       <tr>
                         <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 6px 0; font-family: Georgia, serif; font-size: 30px; font-weight: 400; color: {primary_color};">
+                          <p style="margin: 0 0 6px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 30px; font-weight: 400; color: {primary_color};">
                             {m1_value}
                           </p>
                           <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
@@ -1149,7 +1166,7 @@ def schedule_email_html(
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" class="dark-card dark-border">
                       <tr>
                         <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 6px 0; font-family: Georgia, serif; font-size: 30px; font-weight: 400; color: {primary_color};">
+                          <p style="margin: 0 0 6px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 30px; font-weight: 400; color: {primary_color};">
                             {m2_value}
                           </p>
                           <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
@@ -1164,7 +1181,7 @@ def schedule_email_html(
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" class="dark-card dark-border">
                       <tr>
                         <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 6px 0; font-family: Georgia, serif; font-size: 30px; font-weight: 400; color: {primary_color};">
+                          <p style="margin: 0 0 6px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 30px; font-weight: 400; color: {primary_color};">
                             {m3_value}
                           </p>
                           <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
@@ -1188,7 +1205,7 @@ def schedule_email_html(
                     </v:roundrect>
                     <![endif]-->
                     <!--[if !mso]><!-->
-                    <a href="{pdf_url}" target="_blank" style="display: inline-block; background-color: {primary_color}; color: #ffffff; font-family: Georgia, 'Times New Roman', serif; font-size: 15px; font-weight: 400; text-decoration: none; padding: 14px 32px; border-radius: 6px; box-shadow: 0 2px 8px {primary_color}30; letter-spacing: 0.3px;">
+                    <a href="{pdf_url}" target="_blank" style="display: inline-block; background-color: {primary_color}; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 15px; font-weight: 400; text-decoration: none; padding: 14px 32px; border-radius: 6px; box-shadow: 0 2px 8px {primary_color}30; letter-spacing: 0.3px;">
                       View Full Report →
                     </a>
                     <!--<![endif]-->
