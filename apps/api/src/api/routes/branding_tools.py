@@ -352,20 +352,29 @@ async def send_test_email(
     report_type_display = body.report_type.replace("_", " ").title()
     
     # Build sample metrics for test email
+    # V4: Includes all metrics needed for PDF-aligned email structure
     sample_metrics = {
+        # Hero metrics (V4: 4-metric row)
+        "median_close_price": 4150000,  # Median Sale Price
+        "total_closed": 42,             # Closed Sales
+        "avg_dom": 42,                  # Avg Days on Market
+        "months_of_inventory": 2.8,     # Months of Inventory
+        
+        # Core indicators (V4: 3-card section)
+        "new_listings_7d": 23,          # New Listings
+        "total_pending": 18,            # Pending Sales
+        "sale_to_list_ratio": 98.5,     # Sale-to-List Ratio
+        
+        # Additional metrics
         "total_active": 127,
-        "total_closed": 42,
-        "total_pending": 18,
         "median_list_price": 4200000,
-        "median_close_price": 4150000,
-        "avg_dom": 42,
-        "months_of_inventory": 2.8,
-        "sale_to_list_ratio": 98.5,
-        # Property type breakdown
+        
+        # Property type breakdown (segmentation)
         "sfr_count": 89,
         "condo_count": 28,
         "townhome_count": 10,
-        # Price tier breakdown
+        
+        # Price tier breakdown (segmentation)
         "entry_tier_count": 45,
         "entry_tier_range": "Under $1M",
         "moveup_tier_count": 52,
@@ -404,22 +413,37 @@ async def send_test_email(
         
         # Add test email notice banner after the preheader
         test_notice = '''
-          <!-- Test Email Notice -->
-          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
-            <tr>
-              <td style="background-color: #fef3c7; border-radius: 10px; padding: 16px 20px; border: 1px solid #fde68a;">
-                <p style="margin: 0; font-size: 14px; color: #92400e; line-height: 1.5;">
-                  <strong>🧪 This is a test email</strong> — It shows how your branding appears in scheduled report emails.
-                </p>
-              </td>
-            </tr>
-          </table>
+              <!-- Test Email Notice -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="background-color: #fef3c7; border-radius: 10px; padding: 16px 20px; border: 1px solid #fde68a;">
+                    <p style="margin: 0; font-size: 14px; color: #92400e; line-height: 1.5;">
+                      <strong>🧪 This is a test email</strong> — It shows how your branding appears in scheduled report emails.
+                    </p>
+                  </td>
+                </tr>
+              </table>
 '''
         # Insert test notice after "MAIN CONTENT" comment
-        email_html = email_html.replace(
-            '<!-- Section Label -->',
-            test_notice + '\n              <!-- Section Label -->'
-        )
+        # V4 templates may not have "Section Label" so try multiple insertion points
+        if '<!-- V4: Insight Paragraph -->' in email_html:
+            # V4: Insert before the insight paragraph
+            email_html = email_html.replace(
+                '<!-- V4: Insight Paragraph -->',
+                test_notice + '\n              <!-- V4: Insight Paragraph -->'
+            )
+        elif '<!-- Section Label' in email_html:
+            # V3 fallback: Insert before Section Label
+            email_html = email_html.replace(
+                '<!-- Section Label',
+                test_notice + '\n              <!-- Section Label'
+            )
+        else:
+            # Ultimate fallback: Insert after MAIN CONTENT start
+            email_html = email_html.replace(
+                'class="dark-card mobile-padding">',
+                'class="dark-card mobile-padding">' + test_notice
+            )
     else:
         # Fallback to inline template if import failed
         logger.warning("[Test Email] Using fallback inline template")

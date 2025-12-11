@@ -354,23 +354,68 @@ The test email uses the **same template function** as production scheduled email
 
 | Version | Date | Changes |
 |---------|------|---------|
-| **V3.1** | Dec 11, 2025 | **Monochromatic refinement** - unified colors, template consolidation |
+| **V4** | Dec 11, 2025 | **PDF-aligned redesign** - email mirrors PDF structure exactly |
+| V3.1 | Dec 11, 2025 | Monochromatic refinement - unified colors, template consolidation |
 | V3 | Dec 11, 2024 | Professional styling, Market Snapshot breakdowns |
 | V2 | Nov 25, 2024 | Gradient headers, dark mode, responsive |
 | V1 | Nov 2024 | Initial template |
 
-### 6.1.1 V3.1 Monochromatic Design (Current)
+### 6.1.1 V4 PDF-Aligned Design (Current - Market Snapshot)
 
-V3.1 introduces a **mature, sophisticated color approach**:
+V4 redesigns the Market Snapshot email to **feel like the cover page of the PDF**:
 
-| Change | Before (V3) | After (V3.1) |
-|--------|-------------|--------------|
-| **3 Metric Values** | 3 different colors (primary, accent, teal) | All use `primary_color` |
-| **Extra Stats** | Colored values (primary, accent) | Neutral dark gray (`#1e293b`) |
-| **Price Tiers** | 3 colors (green, primary, accent) | `primary_color` with opacity variations |
-| **Accent Color Usage** | Throughout email | Reserved for header gradient only |
+| Component | V3 (Old) | V4 (New) |
+|-----------|----------|----------|
+| **Header Title** | Generic tagline "Your Complete Market Overview" | "Market Snapshot – [Area]" |
+| **Header Subline** | "[Area] • Last X Days" | "Period: Last X days • Source: Live MLS Data" |
+| **Hero Metrics** | 3 cards (Active, Median, DOM) | **4 cards** (Median Sale Price, Closed Sales, DOM, MOI) |
+| **Core Indicators** | N/A | **NEW: 3 cards** (New Listings, Pending, Sale-to-List) |
+| **Insight Paragraph** | N/A | **NEW:** 1-2 sentence market summary |
+| **Segmentation** | Single-line text | Structured Property Type + Price Tier sections |
 
-**Rationale:** Too many competing colors made emails look cluttered and immature. The monochromatic approach creates visual cohesion while still respecting brand identity through the header gradient.
+**V4 Structure Matches PDF:**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Header: Market Snapshot – Beverly Hills                    │
+│  Subline: Period: Last 30 days • Source: Live MLS Data      │
+│  Brand Pill: [Pacific Coast Title]                          │
+├─────────────────────────────────────────────────────────────┤
+│  INSIGHT PARAGRAPH                                          │
+│  "This snapshot provides key market indicators for..."      │
+├─────────────────────────────────────────────────────────────┤
+│  HERO ROW (4 metrics - same as PDF header)                  │
+│  ┌────────┬────────┬────────┬────────┐                      │
+│  │ $4.2M  │   42   │   42   │  2.8   │                      │
+│  │ Median │ Closed │  DOM   │  MOI   │                      │
+│  └────────┴────────┴────────┴────────┘                      │
+├─────────────────────────────────────────────────────────────┤
+│  CORE INDICATORS (3 cards - same as PDF)                    │
+│  ┌──────────┬──────────┬──────────┐                         │
+│  │    23    │    18    │  98.5%   │                         │
+│  │ New List │ Pending  │   CTL    │                         │
+│  └──────────┴──────────┴──────────┘                         │
+├─────────────────────────────────────────────────────────────┤
+│  SEGMENTATION PREVIEW                                       │
+│  Property Types: 🏠 89 SFR • 🏢 28 Condos • 🏘️ 10 Townhomes │
+│  Price Tiers: [Entry] 45 | [Move-Up] 52 | [Luxury] 30       │
+├─────────────────────────────────────────────────────────────┤
+│  [View Full Report →]                                       │
+│  Rep Footer                                                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Rationale:** The V3 email felt like a "teaser" with random numbers. V4 creates a **condensed cover page** that mirrors the PDF's section structure, making the email feel like part of the same product.
+
+### 6.1.2 V3.1 Monochromatic Design (Preserved in V4)
+
+V3.1 color philosophy is preserved in V4:
+
+| Color Usage | Where |
+|-------------|-------|
+| `primary_color` | All data values (hero metrics, indicators, tier counts) |
+| `accent_color` | Header gradient only |
+| Neutral gray | Labels, supporting text |
 
 ### 6.2 Scheduled Report Template (V3.1)
 

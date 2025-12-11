@@ -1,5 +1,14 @@
 """HTML email template for scheduled report notifications.
 
+V4: PDF-aligned redesign - email now mirrors the PDF report structure.
+- NEW: Title format "Market Snapshot – [Area]" (matches PDF header)
+- NEW: Subline "Period: Last X days • Source: Live MLS Data"  
+- NEW: Insight paragraph with 1-2 sentence market summary
+- NEW: 4-metric Hero Row (Median Price, Closed Sales, DOM, MOI)
+- NEW: Core Indicators section (New Listings, Pending, Sale-to-List)
+- IMPROVED: Structured segmentation sections (Property Type, Price Tier)
+- Goal: Email feels like the cover page of the PDF report
+
 V3.1: Monochromatic color refinement for mature, sophisticated design.
 - UNIFIED metric colors: All 3 metrics use primary_color only
 - REMOVED hardcoded teal (#0d9488) - now uses brand primary_color
@@ -14,10 +23,6 @@ V3: Professional styling refresh with enhanced Market Snapshot data.
 - Dark mode support
 - Mobile responsive (metrics stack on mobile)
 - Full white-label branding support
-- Report-specific extra stats and price bands sections
-- Market Snapshot: Property type breakdown, price tier breakdown, MOI & CTL
-- Professional fonts (Georgia/serif for headings, system sans-serif for body)
-- Refined, muted color palette for sophistication
 """
 from typing import Dict, Optional, TypedDict, Tuple, List
 
@@ -40,14 +45,18 @@ class Brand(TypedDict, total=False):
 
 
 # Report type display names and taglines
+# V4: market_snapshot uses PDF-aligned structure with 4-metric hero + core indicators
 REPORT_CONFIG = {
     "market_snapshot": {
         "label": "Market Snapshot",
-        "tagline": "Your Complete Market Overview",
-        "section": "Market Insights",
-        "has_extra_stats": True,
-        "has_property_types": True,  # Show property type breakdown
-        "has_price_tiers": True,      # Show price tier breakdown
+        "tagline": None,  # V4: Uses "Market Snapshot – [Area]" instead of generic tagline
+        "section": None,  # V4: No section label - structured sections instead
+        "has_extra_stats": False,  # V4: MOI now in hero row
+        "has_property_types": True,
+        "has_price_tiers": True,
+        "has_hero_4": True,  # V4: 4-metric hero row (Median, Closed, DOM, MOI)
+        "has_core_indicators": True,  # V4: Core indicators section (New, Pending, CTL)
+        "has_insight": True,  # V4: Insight paragraph
     },
     "new_listings": {
         "label": "New Listings",
@@ -369,6 +378,108 @@ def _get_price_tier_breakdown(metrics: Dict) -> Optional[List[Dict]]:
     return None
 
 
+# ============================================================================
+# V4 FUNCTIONS: PDF-aligned email structure for Market Snapshot
+# ============================================================================
+
+def _get_hero_4_metrics(metrics: Dict) -> Tuple[
+    Tuple[str, str], Tuple[str, str], Tuple[str, str], Tuple[str, str]
+]:
+    """
+    V4: Get 4 hero metrics that match the PDF report header.
+    Returns: ((label1, value1), (label2, value2), (label3, value3), (label4, value4))
+    
+    PDF Hero Row:
+    1. Median Sale Price
+    2. Closed Sales
+    3. Avg Days on Market
+    4. Months of Inventory
+    """
+    # Extract metrics
+    median_close_price = metrics.get("median_close_price")
+    median_list_price = metrics.get("median_list_price")
+    total_closed = metrics.get("total_closed", 0)
+    avg_dom = metrics.get("avg_dom")
+    moi = metrics.get("months_of_inventory")
+    
+    # Format values
+    price_val = _format_price_clean(median_close_price or median_list_price)
+    closed_val = _format_number(total_closed)
+    dom_val = f"{avg_dom:.0f}" if avg_dom else "N/A"
+    moi_val = f"{moi:.1f}" if moi else "N/A"
+    
+    return (
+        ("Median Sale Price", price_val),
+        ("Closed Sales", closed_val),
+        ("Avg Days on Market", dom_val),
+        ("Months of Inventory", moi_val),
+    )
+
+
+def _get_core_indicators(metrics: Dict) -> Tuple[
+    Tuple[str, str], Tuple[str, str], Tuple[str, str]
+]:
+    """
+    V4: Get 3 core indicator metrics that match the PDF report.
+    Returns: ((label1, value1), (label2, value2), (label3, value3))
+    
+    PDF Core Indicators:
+    1. New Listings (or Active Listings if new not available)
+    2. Pending Sales
+    3. Sale-to-List Ratio
+    """
+    # Extract metrics
+    new_listings = metrics.get("new_listings_7d") or metrics.get("total_active", 0)
+    total_pending = metrics.get("total_pending", 0)
+    ctl = metrics.get("sale_to_list_ratio") or metrics.get("close_to_list_ratio")
+    
+    # Format values
+    new_val = _format_number(new_listings)
+    pending_val = _format_number(total_pending)
+    ctl_val = f"{ctl:.1f}%" if ctl else "N/A"
+    
+    return (
+        ("New Listings", new_val),
+        ("Pending Sales", pending_val),
+        ("Sale-to-List Ratio", ctl_val),
+    )
+
+
+def _get_insight_paragraph(report_type: str, area: str, metrics: Dict, lookback_days: int) -> str:
+    """
+    V4: Generate insight paragraph for Market Snapshot.
+    This mirrors the PDF's introductory narrative paragraph.
+    
+    Can be enhanced with AI later, but starts with template-based text.
+    """
+    # Extract key metrics for narrative
+    total_active = metrics.get("total_active", 0)
+    total_closed = metrics.get("total_closed", 0)
+    median_price = metrics.get("median_close_price") or metrics.get("median_list_price")
+    avg_dom = metrics.get("avg_dom")
+    moi = metrics.get("months_of_inventory")
+    
+    # Build insight text
+    price_str = _format_price_clean(median_price) if median_price else "varying prices"
+    dom_str = f"{avg_dom:.0f} days" if avg_dom else "average time"
+    
+    # Market condition based on MOI
+    if moi and moi < 3:
+        market_condition = "a seller's market with limited inventory"
+    elif moi and moi > 6:
+        market_condition = "a buyer's market with ample inventory"
+    else:
+        market_condition = "a balanced market"
+    
+    insight = (
+        f"This snapshot provides key market indicators for {area} over the last {lookback_days} days. "
+        f"With {total_closed} closed sales at a median of {price_str} and homes averaging {dom_str} on market, "
+        f"the data suggests {market_condition}."
+    )
+    
+    return insight
+
+
 def _build_preheader(report_type: str, area: str, metrics: Dict) -> str:
     """Build preheader text for email preview."""
     config = REPORT_CONFIG.get(report_type, {})
@@ -461,6 +572,11 @@ def schedule_email_html(
     has_property_types = config.get("has_property_types", False)
     has_price_tiers = config.get("has_price_tiers", False)
     
+    # V4 features
+    has_hero_4 = config.get("has_hero_4", False)
+    has_core_indicators = config.get("has_core_indicators", False)
+    has_insight = config.get("has_insight", False)
+    
     # Format area for display
     if city:
         area_display = city
@@ -477,11 +593,24 @@ def schedule_email_html(
     # Date range display
     date_range = f"Last {lookback_days} Days"
     
-    # Get metrics
+    # V4: Get 4-metric hero row for Market Snapshot
+    if has_hero_4:
+        (h1_label, h1_value), (h2_label, h2_value), (h3_label, h3_value), (h4_label, h4_value) = \
+            _get_hero_4_metrics(metrics)
+    
+    # V4: Get core indicators for Market Snapshot
+    if has_core_indicators:
+        (ci1_label, ci1_value), (ci2_label, ci2_value), (ci3_label, ci3_value) = \
+            _get_core_indicators(metrics)
+    
+    # V4: Get insight paragraph
+    insight_text = _get_insight_paragraph(report_type, area_display, metrics, lookback_days) if has_insight else None
+    
+    # Legacy: Get 3 metrics for non-V4 reports
     (m1_label, m1_value), (m2_label, m2_value), (m3_label, m3_value) = \
         _get_metrics_for_report_type(report_type, metrics)
     
-    # Get extra stats if applicable
+    # Get extra stats if applicable (not used in V4 Market Snapshot)
     extra_stats = _get_extra_stats(report_type, metrics) if has_extra_stats else None
     
     # Get price bands if applicable
@@ -505,7 +634,7 @@ def schedule_email_html(
     else:
         logo_html = f'<span style="font-size: 24px; font-weight: 700; color: #ffffff;">{brand_name}</span>'
     
-    # Build extra stats HTML
+    # Build extra stats HTML (legacy V3)
     extra_stats_html = ""
     if extra_stats:
         (es1_value, es1_label), (es2_value, es2_label) = extra_stats
@@ -521,6 +650,160 @@ def schedule_email_html(
                       <strong style="font-family: Georgia, 'Times New Roman', serif; font-size: 16px; color: #1e293b;">{es2_value}</strong>
                       <span style="color: #64748b;"> {es2_label}</span>
                     </span>
+                  </td>
+                </tr>
+              </table>
+'''
+    
+    # ============================================================================
+    # V4 HTML SECTIONS (Market Snapshot)
+    # ============================================================================
+    
+    # V4: Insight Paragraph
+    insight_html = ""
+    if insight_text:
+        insight_html = f'''
+              <!-- V4: Insight Paragraph -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 16px 20px; background-color: #f8fafc; border-radius: 8px; border-left: 3px solid {primary_color};">
+                    <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #475569; font-style: italic;">
+                      {insight_text}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+'''
+    
+    # V4: 4-Metric Hero Row
+    hero_4_html = ""
+    if has_hero_4:
+        hero_4_html = f'''
+              <!-- V4: 4-Metric Hero Row (matches PDF) -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <!-- Hero Metric 1: Median Sale Price -->
+                  <td width="25%" class="metric-card" style="padding: 0 4px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0;" class="dark-card dark-border">
+                      <tr>
+                        <td align="center" style="padding: 16px 8px;">
+                          <p style="margin: 0 0 4px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: 400; color: {primary_color};">
+                            {h1_value}
+                          </p>
+                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
+                            {h1_label}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <!-- Hero Metric 2: Closed Sales -->
+                  <td width="25%" class="metric-card" style="padding: 0 4px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0;" class="dark-card dark-border">
+                      <tr>
+                        <td align="center" style="padding: 16px 8px;">
+                          <p style="margin: 0 0 4px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: 400; color: {primary_color};">
+                            {h2_value}
+                          </p>
+                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
+                            {h2_label}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <!-- Hero Metric 3: Avg DOM -->
+                  <td width="25%" class="metric-card" style="padding: 0 4px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0;" class="dark-card dark-border">
+                      <tr>
+                        <td align="center" style="padding: 16px 8px;">
+                          <p style="margin: 0 0 4px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: 400; color: {primary_color};">
+                            {h3_value}
+                          </p>
+                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
+                            {h3_label}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <!-- Hero Metric 4: MOI -->
+                  <td width="25%" class="metric-card" style="padding: 0 4px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0;" class="dark-card dark-border">
+                      <tr>
+                        <td align="center" style="padding: 16px 8px;">
+                          <p style="margin: 0 0 4px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: 400; color: {primary_color};">
+                            {h4_value}
+                          </p>
+                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
+                            {h4_label}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+'''
+    
+    # V4: Core Indicators Section
+    core_indicators_html = ""
+    if has_core_indicators:
+        core_indicators_html = f'''
+              <!-- V4: Core Indicators Section (matches PDF) -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="padding-bottom: 12px;">
+                    <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px;">
+                      Core Indicators
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <!-- Indicator 1: New Listings -->
+                  <td width="33%" class="metric-card" style="padding: 0 4px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                      <tr>
+                        <td align="center" style="padding: 14px 8px;">
+                          <p style="margin: 0 0 2px 0; font-size: 20px; font-weight: 700; color: {primary_color};">
+                            {ci1_value}
+                          </p>
+                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase;">
+                            {ci1_label}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <!-- Indicator 2: Pending Sales -->
+                  <td width="33%" class="metric-card" style="padding: 0 4px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                      <tr>
+                        <td align="center" style="padding: 14px 8px;">
+                          <p style="margin: 0 0 2px 0; font-size: 20px; font-weight: 700; color: {primary_color};">
+                            {ci2_value}
+                          </p>
+                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase;">
+                            {ci2_label}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <!-- Indicator 3: Sale-to-List -->
+                  <td width="33%" class="metric-card" style="padding: 0 4px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                      <tr>
+                        <td align="center" style="padding: 14px 8px;">
+                          <p style="margin: 0 0 2px 0; font-size: 20px; font-weight: 700; color: {primary_color};">
+                            {ci3_value}
+                          </p>
+                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase;">
+                            {ci3_label}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>
@@ -792,28 +1075,31 @@ def schedule_email_html(
               <![endif]-->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%); border-radius: 12px 12px 0 0;">
                 <tr>
-                  <td align="center" style="padding: 28px 40px;">
+                  <td align="center" style="padding: 28px 40px 16px 40px;">
                     {logo_html}
                   </td>
                 </tr>
                 <tr>
                   <td align="center" style="padding: 0 40px 8px 40px;">
+                    <!-- V4: Brand pill for Market Snapshot, Report label for others -->
                     <span style="display: inline-block; background-color: rgba(255,255,255,0.2); color: #ffffff; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; padding: 6px 14px; border-radius: 20px;">
-                      {report_label}
+                      {brand_name if has_hero_4 else report_label}
                     </span>
                   </td>
                 </tr>
                 <tr>
                   <td align="center" style="padding: 0 40px;">
+                    <!-- V4: "Market Snapshot – [Area]" title format for Market Snapshot -->
                     <h1 style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: 400; color: #ffffff; line-height: 1.3; letter-spacing: -0.5px;">
-                      {tagline}
+                      {f"{report_label} – {area_display}" if has_hero_4 else (tagline or report_label)}
                     </h1>
                   </td>
                 </tr>
                 <tr>
                   <td align="center" style="padding: 10px 40px 28px 40px;">
-                    <p style="margin: 0; font-size: 15px; color: rgba(255,255,255,0.9);">
-                      {area_display} &bull; {date_range}
+                    <!-- V4: "Period: Last X days • Source: Live MLS Data" for Market Snapshot -->
+                    <p style="margin: 0; font-size: 14px; color: rgba(255,255,255,0.9);">
+                      {"Period: " + date_range + " • Source: Live MLS Data" if has_hero_4 else (area_display + " • " + date_range)}
                     </p>
                   </td>
                 </tr>
@@ -829,18 +1115,18 @@ def schedule_email_html(
           <tr>
             <td style="background-color: #ffffff; padding: 40px;" class="dark-card mobile-padding">
               
-              <!-- Section Label -->
+              {"" if has_hero_4 else f'''<!-- Section Label (V3 style) -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
                   <td align="center" style="padding-bottom: 20px;">
-                    <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px;">
+                    <p style="margin: 0; font-family: Georgia, serif; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px;">
                       {section_label}
                     </p>
                   </td>
                 </tr>
               </table>
-              
-              <!-- ========== 3-COLUMN METRICS ========== -->
+'''}
+{insight_html if has_hero_4 else ""}{hero_4_html if has_hero_4 else f'''              <!-- ========== 3-COLUMN METRICS (V3 style) ========== -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
                   <!-- Metric 1 -->
@@ -848,7 +1134,7 @@ def schedule_email_html(
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" class="dark-card dark-border">
                       <tr>
                         <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 6px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: 400; color: {primary_color};">
+                          <p style="margin: 0 0 6px 0; font-family: Georgia, serif; font-size: 30px; font-weight: 400; color: {primary_color};">
                             {m1_value}
                           </p>
                           <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
@@ -863,7 +1149,7 @@ def schedule_email_html(
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" class="dark-card dark-border">
                       <tr>
                         <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 6px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: 400; color: {primary_color};">
+                          <p style="margin: 0 0 6px 0; font-family: Georgia, serif; font-size: 30px; font-weight: 400; color: {primary_color};">
                             {m2_value}
                           </p>
                           <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
@@ -878,7 +1164,7 @@ def schedule_email_html(
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" class="dark-card dark-border">
                       <tr>
                         <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 6px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: 400; color: {primary_color};">
+                          <p style="margin: 0 0 6px 0; font-family: Georgia, serif; font-size: 30px; font-weight: 400; color: {primary_color};">
                             {m3_value}
                           </p>
                           <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
@@ -890,8 +1176,7 @@ def schedule_email_html(
                   </td>
                 </tr>
               </table>
-              
-{extra_stats_html}{property_types_html}{price_tiers_html}{price_bands_html}
+'''}{core_indicators_html if has_hero_4 else ""}{extra_stats_html}{property_types_html}{price_tiers_html}{price_bands_html}
               <!-- ========== CTA BUTTON ========== -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
