@@ -2,6 +2,8 @@
 Branding tools routes - Sample PDF generation and test email.
 
 Pass B4: Download & Test Send
+
+V3.1: Unified with worker email template for single source of truth.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -13,11 +15,31 @@ import io
 import os
 import httpx
 import logging
+import sys
 
 from .reports import require_account_id
 from ..db import db_conn
 from ..services.affiliates import verify_affiliate_account
-# Note: get_branding_for_account is defined locally in this module (not imported)
+
+# Import the unified email template from worker
+# This ensures test emails match production emails exactly
+try:
+    # Add worker path to allow importing
+    import importlib.util
+    worker_template_path = os.path.join(
+        os.path.dirname(__file__), 
+        "../../../../worker/src/worker/email/template.py"
+    )
+    spec = importlib.util.spec_from_file_location("email_template", worker_template_path)
+    email_template_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(email_template_module)
+    schedule_email_html = email_template_module.schedule_email_html
+    UNIFIED_TEMPLATE_AVAILABLE = True
+except Exception as e:
+    # Fallback if import fails (e.g., in certain deployment scenarios)
+    UNIFIED_TEMPLATE_AVAILABLE = False
+    schedule_email_html = None
+    print(f"[Branding Tools] Could not import unified email template: {e}")
 
 logger = logging.getLogger(__name__)
 
@@ -236,6 +258,66 @@ async def generate_sample_pdf(
     )
 
 
+def _build_fallback_test_email(report_type: str, branding: dict, metrics: dict) -> str:
+    """
+    Fallback test email template if unified template import fails.
+    This is a simplified version - prefer the unified template.
+    """
+    brand_name = branding.get("brand_display_name") or "Your Brand"
+    primary_color = branding.get("primary_color") or "#7C3AED"
+    accent_color = branding.get("accent_color") or "#F26B2B"
+    report_type_display = report_type.replace("_", " ").title()
+    
+    return f'''<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>{brand_name} - {report_type_display} (Test)</title>
+</head>
+<body style="margin: 0; padding: 40px; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+  <table width="600" style="margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden;">
+    <tr>
+      <td style="background: linear-gradient(135deg, {primary_color}, {accent_color}); padding: 40px; text-align: center;">
+        <h1 style="color: #fff; margin: 0; font-family: Georgia, serif;">{brand_name}</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0;">{report_type_display}</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 40px;">
+        <div style="background: #fef3c7; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
+          <p style="margin: 0; color: #92400e;"><strong>🧪 This is a test email</strong> — It shows how your branding appears.</p>
+        </div>
+        <table width="100%">
+          <tr>
+            <td style="text-align: center; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+              <p style="font-size: 30px; color: {primary_color}; margin: 0; font-family: Georgia, serif;">{metrics.get("total_active", 127)}</p>
+              <p style="font-size: 11px; color: #64748b; margin: 8px 0 0; text-transform: uppercase;">Active Listings</p>
+            </td>
+            <td style="text-align: center; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+              <p style="font-size: 30px; color: {primary_color}; margin: 0; font-family: Georgia, serif;">$4.2M</p>
+              <p style="font-size: 11px; color: #64748b; margin: 8px 0 0; text-transform: uppercase;">Median Price</p>
+            </td>
+            <td style="text-align: center; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+              <p style="font-size: 30px; color: {primary_color}; margin: 0; font-family: Georgia, serif;">{metrics.get("avg_dom", 42)} days</p>
+              <p style="font-size: 11px; color: #64748b; margin: 8px 0 0; text-transform: uppercase;">Avg DOM</p>
+            </td>
+          </tr>
+        </table>
+        <p style="text-align: center; margin-top: 24px;">
+          <a href="#" style="display: inline-block; background: {primary_color}; color: #fff; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-family: Georgia, serif;">View Full Report →</a>
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 24px; background: #f9fafb; text-align: center; border-top: 1px solid #e5e7eb;">
+        <p style="margin: 0; font-size: 13px; color: #94a3b8;">Test email from <span style="color: {primary_color};">{brand_name}</span></p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>'''
+
+
 @router.post("/test-email")
 async def send_test_email(
     body: TestEmailRequest,
@@ -246,6 +328,9 @@ async def send_test_email(
     Send a test branded email to the specified address.
     
     Uses sample data (not real MLS data) to show how branding appears in emails.
+    
+    V3.1: Now uses the UNIFIED template from worker/email/template.py
+    This ensures test emails match production emails exactly.
     
     Pass B4.2: Test Email
     """
@@ -263,381 +348,82 @@ async def send_test_email(
         branding = get_branding_for_account(cur, account_id)
     
     brand_name = branding.get("brand_display_name") or "Your Brand"
-    logo_url = branding.get("logo_url")
-    email_logo_url = branding.get("email_logo_url")  # Light version for email headers
     primary_color = branding.get("primary_color") or "#7C3AED"
-    accent_color = branding.get("accent_color") or "#F26B2B"
-    rep_photo_url = branding.get("rep_photo_url")
-    contact_line1 = branding.get("contact_line1")
-    contact_line2 = branding.get("contact_line2")
-    website_url = branding.get("website_url")
-    
-    # Build sample email HTML using V0-style email-safe template
     report_type_display = body.report_type.replace("_", " ").title()
     
-    # Build logo HTML (conditional) - prefer email_logo_url for header, fall back to logo_url
-    header_logo = email_logo_url or logo_url
-    if header_logo:
-        logo_html = f'<img src="{header_logo}" alt="{brand_name}" width="180" height="50" style="display: block; max-width: 180px; height: auto;" />'
-    else:
-        logo_html = f'<p style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 24px; font-weight: 700; color: #ffffff;">{brand_name}</p>'
+    # Build sample metrics for test email
+    sample_metrics = {
+        "total_active": 127,
+        "total_closed": 42,
+        "total_pending": 18,
+        "median_list_price": 4200000,
+        "median_close_price": 4150000,
+        "avg_dom": 42,
+        "months_of_inventory": 2.8,
+        "sale_to_list_ratio": 98.5,
+        # Property type breakdown
+        "sfr_count": 89,
+        "condo_count": 28,
+        "townhome_count": 10,
+        # Price tier breakdown
+        "entry_tier_count": 45,
+        "entry_tier_range": "Under $1M",
+        "moveup_tier_count": 52,
+        "moveup_tier_range": "$1M - $3M",
+        "luxury_tier_count": 30,
+        "luxury_tier_range": "$3M+",
+    }
     
-    # Build V2 footer HTML with circular photo border
-    if rep_photo_url and (contact_line1 or contact_line2):
-        footer_html = f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center">
-                    <table role="presentation" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="vertical-align: middle; padding-right: 20px;">
-                          <!--[if mso]>
-                          <v:oval xmlns:v="urn:schemas-microsoft-com:vml" style="width:70px;height:70px;" stroke="f">
-                            <v:fill type="frame" src="{rep_photo_url}"/>
-                          </v:oval>
-                          <![endif]-->
-                          <!--[if !mso]><!-->
-                          <img src="{rep_photo_url}" alt="{contact_line1}" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid {primary_color}20;">
-                          <!--<![endif]-->
-                        </td>
-                        <td style="vertical-align: middle;">
-                          <p style="margin: 0 0 2px 0; font-size: 17px; font-weight: 600; color: #1a1a2e;">{contact_line1}</p>
-                          {f'<p style="margin: 0 0 8px 0; font-size: 13px; color: #6b7280;">{contact_line2}</p>' if contact_line2 else ''}
-                          {f'<a href="{website_url}" style="color: {primary_color}; text-decoration: none; font-size: 13px;">{website_url.replace("https://", "").replace("http://", "")}</a>' if website_url else ''}
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>'''
-    else:
-        footer_html = f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center">
-                    <p style="margin: 0 0 4px 0; font-size: 16px; font-weight: 600; color: #1a1a2e;">{brand_name}</p>
-                    {f'<p style="margin: 0 0 4px 0; font-size: 14px; color: #6b7280;">{contact_line1}</p>' if contact_line1 else ''}
-                    {f'<p style="margin: 0 0 8px 0; font-size: 14px; color: #6b7280;">{contact_line2}</p>' if contact_line2 else ''}
-                    {f'<a href="{website_url}" style="color: {primary_color}; text-decoration: none; font-size: 14px; font-weight: 500;">{website_url.replace("https://", "").replace("http://", "")}</a>' if website_url else ''}
-                  </td>
-                </tr>
-              </table>'''
+    # Build brand dict for template
+    brand_dict = {
+        "display_name": branding.get("brand_display_name"),
+        "logo_url": branding.get("logo_url"),
+        "email_logo_url": branding.get("email_logo_url"),
+        "primary_color": branding.get("primary_color") or "#7C3AED",
+        "accent_color": branding.get("accent_color") or "#F26B2B",
+        "rep_photo_url": branding.get("rep_photo_url"),
+        "contact_line1": branding.get("contact_line1"),
+        "contact_line2": branding.get("contact_line2"),
+        "website_url": branding.get("website_url"),
+    }
     
-    # Build V3 email template with professional styling
-    email_html = f'''<!DOCTYPE html>
-<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="x-apple-disable-message-reformatting">
-  <meta name="color-scheme" content="light dark">
-  <meta name="supported-color-schemes" content="light dark">
-  <title>{brand_name} - {report_type_display} (Test)</title>
-  <!--[if mso]>
-  <noscript>
-    <xml>
-      <o:OfficeDocumentSettings>
-        <o:AllowPNG/>
-        <o:PixelsPerInch>96</o:PixelsPerInch>
-      </o:OfficeDocumentSettings>
-    </xml>
-  </noscript>
-  <![endif]-->
-  <style>
-    body, table, td, p, a, li {{ -webkit-text-size-adjust: 100%; -ms-text-adjust: 100%; }}
-    table, td {{ mso-table-lspace: 0pt; mso-table-rspace: 0pt; }}
-    img {{ -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }}
-    body {{ margin: 0 !important; padding: 0 !important; width: 100% !important; }}
-    @media (prefers-color-scheme: dark) {{
-      .dark-bg {{ background-color: #1a1a2e !important; }}
-      .dark-text {{ color: #e5e5e5 !important; }}
-      .dark-card {{ background-color: #262640 !important; }}
-    }}
-    @media only screen and (max-width: 600px) {{
-      .wrapper {{ width: 100% !important; }}
-      .mobile-padding {{ padding: 20px !important; }}
-      .metric-card {{ display: block !important; width: 100% !important; margin-bottom: 12px !important; }}
-    }}
-  </style>
-</head>
-<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  
-  <!-- Preheader -->
-  <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">
-    🧪 Test email preview - See how your branding appears in scheduled reports &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
-  </div>
-  
-  <!-- Email Container -->
-  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc;" class="dark-bg">
-    <tr>
-      <td align="center" style="padding: 40px 20px;">
+    # Use unified template if available
+    if UNIFIED_TEMPLATE_AVAILABLE and schedule_email_html:
+        logger.info("[Test Email] Using unified template from worker")
+        email_html = schedule_email_html(
+            account_name=brand_name,
+            report_type=body.report_type,
+            city="Beverly Hills",  # Sample city
+            zip_codes=None,
+            lookback_days=30,
+            metrics=sample_metrics,
+            pdf_url="#",  # Placeholder for test
+            unsubscribe_url="#",  # Placeholder for test
+            brand=brand_dict,
+        )
         
-        <!-- Email Wrapper -->
-        <table role="presentation" cellpadding="0" cellspacing="0" width="600" class="wrapper" style="max-width: 600px; width: 100%;">
-          
-          <!-- ========== GRADIENT HEADER ========== -->
-          <tr>
-            <td>
-              <!--[if mso]>
-              <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;height:180px;">
-                <v:fill type="gradient" color="{primary_color}" color2="{accent_color}" angle="135"/>
-                <v:textbox inset="0,0,0,0" style="mso-fit-shape-to-text:true">
-              <![endif]-->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%); border-radius: 12px 12px 0 0;">
-                <tr>
-                  <td align="center" style="padding: 28px 40px;">
-                    {logo_html}
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center" style="padding: 0 40px 8px 40px;">
-                    <span style="display: inline-block; background-color: rgba(255,255,255,0.2); color: #ffffff; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; padding: 6px 14px; border-radius: 20px;">
-                      {report_type_display}
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center" style="padding: 0 40px;">
-                    <h1 style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: 400; color: #ffffff; line-height: 1.3; letter-spacing: -0.5px;">
-                      Sample Report Preview
-                    </h1>
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center" style="padding: 10px 40px 28px 40px;">
-                    <p style="margin: 0; font-size: 15px; color: rgba(255,255,255,0.9);">
-                      Beverly Hills &bull; Last 30 Days
-                    </p>
-                  </td>
-                </tr>
-              </table>
-              <!--[if mso]>
-                </v:textbox>
-              </v:rect>
-              <![endif]-->
-            </td>
-          </tr>
-          
-          <!-- ========== MAIN CONTENT ========== -->
-          <tr>
-            <td style="background-color: #ffffff; padding: 40px;" class="dark-card mobile-padding">
-              
-              <!-- Test Email Notice -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
-                <tr>
-                  <td style="background-color: #fef3c7; border-radius: 10px; padding: 16px 20px; border: 1px solid #fde68a;">
-                    <p style="margin: 0; font-size: 14px; color: #92400e; line-height: 1.5;">
-                      <strong>🧪 This is a test email</strong> — It shows how your branding appears in scheduled report emails.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-              
-              <!-- Section Label -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center" style="padding-bottom: 20px;">
-                    <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px;">
-                      Sample Metrics
-                    </p>
-                  </td>
-                </tr>
-              </table>
-              
-              <!-- ========== 3-COLUMN METRICS ========== -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
-                <tr>
-                  <!-- Metric 1 -->
-                  <td width="33%" class="metric-card" style="padding: 0 6px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-                      <tr>
-                        <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 6px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: 400; color: {primary_color};">
-                            127
-                          </p>
-                          <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
-                            Active Listings
-                          </p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                  <!-- Metric 2 -->
-                  <td width="33%" class="metric-card" style="padding: 0 6px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-                      <tr>
-                        <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 6px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: 400; color: {accent_color};">
-                            $4.2M
-                          </p>
-                          <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
-                            Median Price
-                          </p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                  <!-- Metric 3 -->
-                  <td width="33%" class="metric-card" style="padding: 0 6px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-                      <tr>
-                        <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 6px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: 400; color: #0d9488;">
-                            42 days
-                          </p>
-                          <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
-                            Avg DOM
-                          </p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-              
-              <!-- ========== EXTRA STATS ROW ========== -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px; background-color: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0;">
-                <tr>
-                  <td align="center" style="padding: 16px 24px;">
-                    <span style="font-size: 14px; color: #475569;">
-                      <strong style="font-family: Georgia, 'Times New Roman', serif; font-size: 16px; color: {primary_color};">2.8</strong>
-                      <span style="color: #64748b;"> Months of Inventory</span>
-                      &nbsp;&nbsp;<span style="color: #cbd5e1;">|</span>&nbsp;&nbsp;
-                      <strong style="font-family: Georgia, 'Times New Roman', serif; font-size: 16px; color: {accent_color};">98.5%</strong>
-                      <span style="color: #64748b;"> Close-to-List Ratio</span>
-                    </span>
-                  </td>
-                </tr>
-              </table>
-              
-              <!-- ========== PROPERTY TYPE BREAKDOWN ========== -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
-                <tr>
-                  <td align="center" style="padding: 16px 20px; background-color: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0;">
-                    <p style="margin: 0 0 8px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px;">
-                      Property Types
-                    </p>
-                    <p style="margin: 0; font-size: 14px; line-height: 1.6;">
-                      <span style="color: #374151;">🏠 <strong>89</strong> Single Family</span>&nbsp;&nbsp;•&nbsp;&nbsp;<span style="color: #374151;">🏢 <strong>28</strong> Condos</span>&nbsp;&nbsp;•&nbsp;&nbsp;<span style="color: #374151;">🏘️ <strong>10</strong> Townhomes</span>
-                    </p>
-                  </td>
-                </tr>
-              </table>
-              
-              <!-- ========== PRICE TIER BREAKDOWN ========== -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px; background-color: #f8fafc; border-radius: 10px; padding: 16px; border: 1px solid #e2e8f0;">
-                <tr>
-                  <td style="padding-bottom: 12px;">
-                    <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; text-align: center;">
-                      Price Tier Distribution
-                    </p>
-                  </td>
-                </tr>
-                <tr>
-                  <td width="33%" class="metric-card" style="padding: 0 4px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                      <tr>
-                        <td align="center" style="padding: 12px 8px; background-color: #ffffff; border-radius: 8px; border-left: 3px solid #059669;">
-                          <p style="margin: 0 0 2px 0; font-size: 20px; font-weight: 700; color: #059669;">45</p>
-                          <p style="margin: 0 0 2px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 12px; font-weight: 600; color: #374151;">Entry Level</p>
-                          <p style="margin: 0; font-size: 10px; color: #9ca3af;">Under $1M</p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                  <td width="33%" class="metric-card" style="padding: 0 4px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                      <tr>
-                        <td align="center" style="padding: 12px 8px; background-color: #ffffff; border-radius: 8px; border-left: 3px solid {primary_color};">
-                          <p style="margin: 0 0 2px 0; font-size: 20px; font-weight: 700; color: {primary_color};">52</p>
-                          <p style="margin: 0 0 2px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 12px; font-weight: 600; color: #374151;">Move-Up</p>
-                          <p style="margin: 0; font-size: 10px; color: #9ca3af;">$1M - $3M</p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                  <td width="33%" class="metric-card" style="padding: 0 4px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                      <tr>
-                        <td align="center" style="padding: 12px 8px; background-color: #ffffff; border-radius: 8px; border-left: 3px solid {accent_color};">
-                          <p style="margin: 0 0 2px 0; font-size: 20px; font-weight: 700; color: {accent_color};">30</p>
-                          <p style="margin: 0 0 2px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 12px; font-weight: 600; color: #374151;">Luxury</p>
-                          <p style="margin: 0; font-size: 10px; color: #9ca3af;">$3M+</p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-              
-              <!-- ========== CTA BUTTON ========== -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center" style="padding: 8px 0 24px 0;">
-                    <!--[if mso]>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="#" style="height:52px;v-text-anchor:middle;width:200px;" arcsize="10%" stroke="f" fillcolor="{primary_color}">
-                      <w:anchorlock/>
-                      <center style="color:#ffffff;font-family:Georgia,serif;font-size:15px;font-weight:normal;">View Full Report</center>
-                    </v:roundrect>
-                    <![endif]-->
-                    <!--[if !mso]><!-->
-                    <a href="#" style="display: inline-block; background-color: {primary_color}; color: #ffffff; font-family: Georgia, 'Times New Roman', serif; font-size: 15px; font-weight: 400; text-decoration: none; padding: 14px 32px; border-radius: 6px; box-shadow: 0 2px 8px {primary_color}30; letter-spacing: 0.3px;">
-                      View Full Report →
-                    </a>
-                    <!--<![endif]-->
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center" style="padding-bottom: 24px;">
-                    <p style="margin: 0; font-size: 13px; color: #94a3b8;">
-                      (In real emails, this links to the PDF report)
-                    </p>
-                  </td>
-                </tr>
-              </table>
-              
-              <!-- Divider -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td style="border-top: 1px solid #e2e8f0; padding-top: 32px;"></td>
-                </tr>
-              </table>
-              
-              <!-- Agent Footer -->
-              {footer_html}
-              
-            </td>
-          </tr>
-          
-          <!-- ========== FOOTER ========== -->
-          <tr>
-            <td style="background-color: #f8fafc; padding: 24px 40px; border-radius: 0 0 12px 12px; border-top: 1px solid #e2e8f0;" class="mobile-padding">
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center">
-                    <p style="margin: 0 0 8px 0; font-size: 13px; color: #94a3b8;">
-                      Test email from <span style="color: {primary_color}; font-weight: 500;">{brand_name}</span>
-                    </p>
-                    <p style="margin: 0; font-size: 12px; color: #94a3b8;">
-                      In production, recipients can <span style="text-decoration: underline;">unsubscribe</span> from notifications
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          
-        </table>
-        <!-- End Wrapper -->
-        
-      </td>
-    </tr>
-  </table>
-  <!-- End Container -->
-  
-</body>
-</html>'''
+        # Add test email notice banner after the preheader
+        test_notice = '''
+          <!-- Test Email Notice -->
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+            <tr>
+              <td style="background-color: #fef3c7; border-radius: 10px; padding: 16px 20px; border: 1px solid #fde68a;">
+                <p style="margin: 0; font-size: 14px; color: #92400e; line-height: 1.5;">
+                  <strong>🧪 This is a test email</strong> — It shows how your branding appears in scheduled report emails.
+                </p>
+              </td>
+            </tr>
+          </table>
+'''
+        # Insert test notice after "MAIN CONTENT" comment
+        email_html = email_html.replace(
+            '<!-- Section Label -->',
+            test_notice + '\n              <!-- Section Label -->'
+        )
+    else:
+        # Fallback to inline template if import failed
+        logger.warning("[Test Email] Using fallback inline template")
+        email_html = _build_fallback_test_email(body.report_type, branding, sample_metrics)
     
     # Send via SendGrid
     payload = {

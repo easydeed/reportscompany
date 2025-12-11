@@ -2,7 +2,7 @@
 
 > Complete technical documentation for the email infrastructure, templates, and delivery pipeline.
 
-**Last Updated:** December 11, 2024
+**Last Updated:** December 11, 2025
 
 ---
 
@@ -66,10 +66,12 @@ TrendyReports sends emails through two distinct pathways:
 | Component | Location | Responsibility |
 |-----------|----------|----------------|
 | SendGrid Provider | `apps/worker/src/worker/email/providers/sendgrid.py` | Low-level email sending |
-| Email Template | `apps/worker/src/worker/email/template.py` | HTML generation for scheduled emails |
+| **Email Template (V3.1)** | `apps/worker/src/worker/email/template.py` | **Unified** HTML generation for ALL emails |
 | Email Orchestrator | `apps/worker/src/worker/email/send.py` | Suppression filtering, template rendering |
-| Branding Test | `apps/api/src/api/routes/branding_tools.py` | Test email endpoint |
+| Branding Test | `apps/api/src/api/routes/branding_tools.py` | Test email endpoint (uses unified template) |
 | Unsubscribe API | `apps/api/src/api/routes/unsubscribe.py` | Handle unsubscribe requests |
+
+> 📦 **V3.1 Architecture:** A single template file (`template.py`) now serves both scheduled reports and test emails, ensuring consistency.
 
 ---
 
@@ -324,19 +326,25 @@ POST /v1/branding/test-email
 4. Backend:
    a. Verify affiliate account
    b. Get branding from affiliate_branding
-   c. Build sample email HTML with branding
-   d. Send via SendGrid (directly, not via worker)
-   e. Return success/failure
+   c. Import schedule_email_html from worker template (V3.1 unified)
+   d. Generate HTML using same template as production
+   e. Inject "[Test]" banner at top
+   f. Send via SendGrid (directly, not via worker)
+   g. Return success/failure
 ```
 
 ### 5.4 Test Email Content
 
-The test email includes:
-- Branded header (logo, colors, brand name)
+The test email uses the **same template function** as production scheduled emails (V3.1 unified architecture):
+
+- Branded header with gradient (`primary_color` → `accent_color`)
 - Sample metrics (hardcoded Beverly Hills data)
-- Sample metric table
+- All metrics styled identically to production emails
 - Branded footer with contact info
 - "[Test]" prefix in subject line
+- Yellow test banner at top of email body
+
+> 💡 **V3.1 Change:** Test emails now **exactly match** production emails because they use the same `schedule_email_html()` function from `apps/worker/src/worker/email/template.py`.
 
 ---
 
@@ -346,13 +354,29 @@ The test email includes:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| **V3.1** | Dec 11, 2025 | **Monochromatic refinement** - unified colors, template consolidation |
 | V3 | Dec 11, 2024 | Professional styling, Market Snapshot breakdowns |
 | V2 | Nov 25, 2024 | Gradient headers, dark mode, responsive |
 | V1 | Nov 2024 | Initial template |
 
-### 6.2 Scheduled Report Template (V3)
+### 6.1.1 V3.1 Monochromatic Design (Current)
+
+V3.1 introduces a **mature, sophisticated color approach**:
+
+| Change | Before (V3) | After (V3.1) |
+|--------|-------------|--------------|
+| **3 Metric Values** | 3 different colors (primary, accent, teal) | All use `primary_color` |
+| **Extra Stats** | Colored values (primary, accent) | Neutral dark gray (`#1e293b`) |
+| **Price Tiers** | 3 colors (green, primary, accent) | `primary_color` with opacity variations |
+| **Accent Color Usage** | Throughout email | Reserved for header gradient only |
+
+**Rationale:** Too many competing colors made emails look cluttered and immature. The monochromatic approach creates visual cohesion while still respecting brand identity through the header gradient.
+
+### 6.2 Scheduled Report Template (V3.1)
 
 **File:** `apps/worker/src/worker/email/template.py`
+
+> ⚠️ **Single Source of Truth**: This template is used by BOTH scheduled emails (worker) AND test emails (API). See [Template Unification](#64-unified-template-architecture).
 
 ```python
 def schedule_email_html(
@@ -368,77 +392,71 @@ def schedule_email_html(
 ) -> str:
 ```
 
-**V3 Features:**
+**V3.1 Features:**
 
 | Feature | Description |
 |---------|-------------|
+| **Monochromatic Metrics** | All 3 metric values use `primary_color` only |
+| **Neutral Extra Stats** | Values use dark gray (`#1e293b`) instead of colors |
+| **Unified Price Tiers** | `primary_color` with opacity variations (40%, 70%, 100%) |
 | **Professional Typography** | Georgia serif for headings, system sans-serif for body |
-| **Muted Color Palette** | Refined tones (#64748b, #94a3b8) for sophistication |
 | **Email Logo Support** | Separate `email_logo_url` for light logos on gradient headers |
 | **Property Type Breakdown** | SFR, Condo, Townhome counts (Market Snapshot) |
-| **Price Tier Distribution** | Entry, Move-Up, Luxury with counts and ranges |
-| **Extra Stats Row** | Months of Inventory, Close-to-List Ratio |
 
-**Template Structure:**
+**Template Structure (V3.1):**
 
 ```html
 <!DOCTYPE html>
 <html>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
   
-  <!-- Gradient Header -->
+  <!-- Gradient Header (only place accent_color is used) -->
   <table style="background: linear-gradient(135deg, {primary_color}, {accent_color});">
-    <!-- Logo (email_logo_url or logo_url) -->
     <img src="{email_logo_url}" />
-    <!-- Report label badge -->
     <span>{report_type}</span>
-    <!-- Tagline in Georgia serif -->
     <h1 style="font-family: Georgia, serif;">{tagline}</h1>
     <p>{area} • Last {lookback_days} days</p>
   </table>
   
-  <!-- 3-Column Metrics (Georgia serif numbers) -->
+  <!-- 3-Column Metrics (ALL use primary_color) -->
   <table>
     <tr>
-      <td style="font-family: Georgia, serif; font-size: 30px;">{metric1_value}</td>
-      <td style="font-family: Georgia, serif; font-size: 30px;">{metric2_value}</td>
-      <td style="font-family: Georgia, serif; font-size: 30px;">{metric3_value}</td>
+      <td style="color: {primary_color};">{metric1_value}</td>
+      <td style="color: {primary_color};">{metric2_value}</td>
+      <td style="color: {primary_color};">{metric3_value}</td>
     </tr>
   </table>
   
-  <!-- Extra Stats Row (Market Snapshot & Closed Sales) -->
+  <!-- Extra Stats Row (NEUTRAL gray values) -->
   <table style="background: #f8fafc;">
-    <td>{moi} Months of Inventory | {ctl}% Close-to-List</td>
+    <td>
+      <strong style="color: #1e293b;">{moi}</strong> Months of Inventory |
+      <strong style="color: #1e293b;">{ctl}%</strong> Close-to-List
+    </td>
   </table>
   
-  <!-- Property Type Breakdown (Market Snapshot) -->
+  <!-- Property Type Breakdown -->
   <table style="background: #f8fafc;">
     <td>🏠 {sfr} Single Family • 🏢 {condo} Condos • 🏘️ {townhome} Townhomes</td>
   </table>
   
-  <!-- Price Tier Distribution (Market Snapshot) -->
+  <!-- Price Tier Distribution (primary_color with opacity) -->
   <table>
     <tr>
-      <td style="border-left: 3px solid #059669;">{entry_count} Entry Level</td>
-      <td style="border-left: 3px solid {primary_color};">{moveup_count} Move-Up</td>
-      <td style="border-left: 3px solid {accent_color};">{luxury_count} Luxury</td>
+      <td style="border-left: 3px solid {primary_color}66;">{entry_count} Entry Level</td>
+      <td style="border-left: 3px solid {primary_color}B3;">{moveup_count} Move-Up</td>
+      <td style="border-left: 3px solid {primary_color};">{luxury_count} Luxury</td>
     </tr>
   </table>
   
-  <!-- CTA Button (solid color, subtle shadow) -->
-  <a href="{pdf_url}" style="background: {primary_color}; font-family: Georgia, serif;">
-    View Full Report →
-  </a>
+  <!-- CTA Button -->
+  <a href="{pdf_url}" style="background: {primary_color};">View Full Report →</a>
   
-  <!-- Agent Footer with circular photo -->
+  <!-- Agent Footer -->
   <table>
     <tr>
       <td><img src="{rep_photo_url}" style="border-radius: 50%;" /></td>
-      <td>
-        <p>{contact_line1}</p>
-        <p>{contact_line2}</p>
-        <a href="{website_url}">{website_url}</a>
-      </td>
+      <td>{contact_line1}<br/>{contact_line2}</td>
     </tr>
   </table>
   
@@ -466,11 +484,43 @@ def schedule_email_subject(
     """
 ```
 
-### 6.4 Test Email Template
+### 6.4 Unified Template Architecture
 
-**File:** `apps/api/src/api/routes/branding_tools.py`
+**V3.1 introduces template unification** - test emails and production emails now use the **same template function**.
 
-The test email sent from the branding page mirrors the V3 scheduled report template with sample data:
+#### Before V3.1 (❌ Dual Maintenance)
+```
+apps/worker/src/worker/email/template.py    ← Production scheduled emails
+apps/api/src/api/routes/branding_tools.py   ← Test emails (separate 300+ line template)
+```
+
+Every template change required updating **two files** - error-prone and time-consuming.
+
+#### After V3.1 (✅ Single Source of Truth)
+```
+apps/worker/src/worker/email/template.py    ← THE template (used by both)
+apps/api/src/api/routes/branding_tools.py   ← Imports and calls the same function
+```
+
+**How it works:**
+
+```python
+# branding_tools.py imports the worker template
+from worker.email.template import schedule_email_html
+
+# Then calls it with sample data for testing
+email_html = schedule_email_html(
+    account_name=brand_name,
+    report_type=body.report_type,
+    city="Beverly Hills",          # Sample city
+    metrics=sample_metrics,        # Hardcoded sample data
+    pdf_url="#",                   # Placeholder
+    unsubscribe_url="#",           # Placeholder
+    brand=brand_dict,
+)
+```
+
+**Sample Data for Test Emails:**
 
 | Section | Sample Values |
 |---------|---------------|
@@ -478,6 +528,12 @@ The test email sent from the branding page mirrors the V3 scheduled report templ
 | Extra Stats | 2.8 MOI, 98.5% CTL |
 | Property Types | 89 SFR, 28 Condos, 10 Townhomes |
 | Price Tiers | 45 Entry, 52 Move-Up, 30 Luxury |
+
+**Benefits:**
+- ✅ Change template once, both pathways update
+- ✅ Test emails **exactly match** production emails
+- ✅ No risk of template drift
+- ✅ Reduced maintenance burden
 
 ---
 
@@ -515,18 +571,32 @@ def get_branding_for_account(cur, account_id: str) -> dict:
 }
 ```
 
-### 7.3 How Branding Appears in Emails
+### 7.3 How Branding Appears in Emails (V3.1)
 
 | Element | Branding Field | Notes |
 |---------|----------------|-------|
-| Header background | `primary_color` → `accent_color` | 135° gradient |
+| Header gradient | `primary_color` → `accent_color` | 135° gradient (**only use of accent**) |
 | Logo in header | `email_logo_url` or `logo_url` | Light version preferred |
 | Brand name | `brand_display_name` | |
-| CTA button | `primary_color` | Subtle shadow |
-| Metric values | `primary_color`, `accent_color` | Georgia serif |
+| CTA button | `primary_color` | Solid background |
+| **All 3 metric values** | `primary_color` | Georgia serif (unified V3.1) |
+| **Price tier borders** | `primary_color` with opacity | 40%, 70%, 100% for hierarchy |
+| **Extra stats values** | Neutral (`#1e293b`) | Not branded (V3.1) |
 | Footer photo | `rep_photo_url` | Circular, border |
 | Footer contact | `contact_line1`, `contact_line2` | |
 | Footer link | `website_url` | |
+
+#### V3.1 Color Philosophy
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  accent_color: ONLY in header gradient                      │
+│  primary_color: All data elements (metrics, tiers, CTA)     │
+│  Neutral gray: Supporting text (extra stats, labels)        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+This creates a **cohesive, professional appearance** regardless of brand colors.
 
 ---
 
@@ -852,10 +922,10 @@ async def handle_sendgrid_webhook(events: List[SendGridEvent]):
 | File | Purpose |
 |------|---------|
 | `apps/worker/src/worker/email/providers/sendgrid.py` | SendGrid API client |
-| `apps/worker/src/worker/email/template.py` | HTML template generation |
+| `apps/worker/src/worker/email/template.py` | **Unified HTML template** (used by both scheduled & test emails) |
 | `apps/worker/src/worker/email/send.py` | Email orchestration |
 | `apps/worker/src/worker/tasks.py` | Celery task with email hook |
-| `apps/api/src/api/routes/branding_tools.py` | Test email endpoint |
+| `apps/api/src/api/routes/branding_tools.py` | Test email endpoint (imports from template.py) |
 | `apps/api/src/api/routes/unsubscribe.py` | Unsubscribe endpoint |
 
 ### Key Tables

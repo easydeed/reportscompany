@@ -1,5 +1,12 @@
 """HTML email template for scheduled report notifications.
 
+V3.1: Monochromatic color refinement for mature, sophisticated design.
+- UNIFIED metric colors: All 3 metrics use primary_color only
+- REMOVED hardcoded teal (#0d9488) - now uses brand primary_color
+- NEUTRAL extra stats: Values use dark gray (#1e293b) instead of colored text
+- MONOCHROMATIC price tiers: All use primary_color with opacity variations
+- Accent color reserved for header gradient only
+
 V3: Professional styling refresh with enhanced Market Snapshot data.
 - Table-based layout for maximum email client compatibility
 - MSO/Outlook conditional comments for rounded buttons and circular photos
@@ -258,6 +265,8 @@ def _get_price_bands(metrics: Dict) -> Optional[List[Dict]]:
     """
     Get price bands for price_bands report.
     Returns list of {name, range, count, color} or None
+    
+    V3.1: Uses monochromatic PRIMARY color for all bands for visual cohesion.
     """
     bands = metrics.get("bands", [])
     if not bands:
@@ -269,31 +278,30 @@ def _get_price_bands(metrics: Dict) -> Optional[List[Dict]]:
                     "name": "Entry Level",
                     "range": metrics.get("entry_range", "$0 - Median"),
                     "count": entry_count,
-                    "color": "#10b981",  # Green
+                    "color": "PRIMARY",  # Monochromatic
                 },
                 {
                     "name": "Move-Up",
                     "range": metrics.get("moveup_range", "Median - 75th"),
                     "count": metrics.get("moveup_count", 0),
-                    "color": "PRIMARY",  # Will be replaced
+                    "color": "PRIMARY",  # Monochromatic
                 },
                 {
                     "name": "Luxury",
                     "range": metrics.get("luxury_range", "75th+"),
                     "count": metrics.get("luxury_count", 0),
-                    "color": "ACCENT",  # Will be replaced
+                    "color": "PRIMARY",  # Monochromatic
                 },
             ]
     
-    # Map bands from metrics
+    # Map bands from metrics - all use PRIMARY for monochromatic design
     if bands:
-        colors = ["#10b981", "PRIMARY", "ACCENT", "#f59e0b", "#ef4444"]
         return [
             {
                 "name": b.get("name", f"Band {i+1}"),
                 "range": b.get("range", ""),
                 "count": b.get("count", 0),
-                "color": colors[i % len(colors)],
+                "color": "PRIMARY",  # Monochromatic
             }
             for i, b in enumerate(bands)
         ]
@@ -350,11 +358,12 @@ def _get_price_tier_breakdown(metrics: Dict) -> Optional[List[Dict]]:
     luxury_range = price_tiers.get("luxury_range") or metrics.get("luxury_tier_range", "$1M+")
     
     # If we have any counts, return the breakdown
+    # Using PRIMARY for all tiers - opacity variations applied in template
     if entry_count or moveup_count or luxury_count:
         return [
-            {"name": "Entry Level", "count": entry_count, "range": entry_range, "color": "#059669"},
-            {"name": "Move-Up", "count": moveup_count, "range": moveup_range, "color": "PRIMARY"},
-            {"name": "Luxury", "count": luxury_count, "range": luxury_range, "color": "ACCENT"},
+            {"name": "Entry Level", "count": entry_count, "range": entry_range, "color": "PRIMARY", "opacity": "40"},
+            {"name": "Move-Up", "count": moveup_count, "range": moveup_range, "color": "PRIMARY", "opacity": "70"},
+            {"name": "Luxury", "count": luxury_count, "range": luxury_range, "color": "PRIMARY", "opacity": "100"},
         ]
     
     return None
@@ -506,10 +515,10 @@ def schedule_email_html(
                 <tr>
                   <td align="center" style="padding: 16px 24px;">
                     <span style="font-size: 14px; color: #475569;">
-                      <strong style="font-family: Georgia, 'Times New Roman', serif; font-size: 16px; color: {primary_color};">{es1_value}</strong>
+                      <strong style="font-family: Georgia, 'Times New Roman', serif; font-size: 16px; color: #1e293b;">{es1_value}</strong>
                       <span style="color: #64748b;"> {es1_label}</span>
                       &nbsp;&nbsp;<span style="color: #cbd5e1;">|</span>&nbsp;&nbsp;
-                      <strong style="font-family: Georgia, 'Times New Roman', serif; font-size: 16px; color: {accent_color};">{es2_value}</strong>
+                      <strong style="font-family: Georgia, 'Times New Roman', serif; font-size: 16px; color: #1e293b;">{es2_value}</strong>
                       <span style="color: #64748b;"> {es2_label}</span>
                     </span>
                   </td>
@@ -517,16 +526,13 @@ def schedule_email_html(
               </table>
 '''
     
-    # Build price bands HTML
+    # Build price bands HTML - monochromatic design using primary_color only
     price_bands_html = ""
     if price_bands:
         bands_rows = ""
         for i, band in enumerate(price_bands):
-            color = band["color"]
-            if color == "PRIMARY":
-                color = primary_color
-            elif color == "ACCENT":
-                color = accent_color
+            # All bands use primary_color for monochromatic design
+            color = primary_color
             
             border = 'border-bottom: 1px solid #e5e7eb;' if i < len(price_bands) - 1 else ''
             bands_rows += f'''
@@ -590,22 +596,26 @@ def schedule_email_html(
 '''
     
     # Build price tier breakdown HTML (Market Snapshot)
+    # Uses monochromatic primary color with opacity variations for sophistication
     price_tiers_html = ""
     if price_tiers:
         tier_items = ""
         for i, tier in enumerate(price_tiers):
-            color = tier["color"]
-            if color == "PRIMARY":
-                color = primary_color
-            elif color == "ACCENT":
-                color = accent_color
+            # All tiers use primary_color - opacity creates visual hierarchy
+            color = primary_color
+            opacity = tier.get("opacity", "100")
+            
+            # Convert hex opacity to actual hex suffix for border color
+            # 40% = 66, 70% = B3, 100% = FF
+            opacity_hex = {"40": "66", "70": "B3", "100": ""}.get(opacity, "")
+            border_color = f"{primary_color}{opacity_hex}"
             
             tier_items += f'''
                   <td width="33%" class="metric-card" style="padding: 0 4px;">
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                       <tr>
-                        <td align="center" style="padding: 12px 8px; background-color: #ffffff; border-radius: 8px; border-left: 3px solid {color};">
-                          <p style="margin: 0 0 2px 0; font-size: 20px; font-weight: 700; color: {color};">{tier["count"]}</p>
+                        <td align="center" style="padding: 12px 8px; background-color: #ffffff; border-radius: 8px; border-left: 3px solid {border_color};">
+                          <p style="margin: 0 0 2px 0; font-size: 20px; font-weight: 700; color: {primary_color};">{tier["count"]}</p>
                           <p style="margin: 0 0 2px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 12px; font-weight: 600; color: #374151;">{tier["name"]}</p>
                           <p style="margin: 0; font-size: 10px; color: #9ca3af;">{tier["range"]}</p>
                         </td>
@@ -853,7 +863,7 @@ def schedule_email_html(
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" class="dark-card dark-border">
                       <tr>
                         <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 6px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: 400; color: {accent_color};">
+                          <p style="margin: 0 0 6px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: 400; color: {primary_color};">
                             {m2_value}
                           </p>
                           <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
@@ -868,7 +878,7 @@ def schedule_email_html(
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" class="dark-card dark-border">
                       <tr>
                         <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 6px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: 400; color: #0d9488;">
+                          <p style="margin: 0 0 6px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: 400; color: {primary_color};">
                             {m3_value}
                           </p>
                           <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
