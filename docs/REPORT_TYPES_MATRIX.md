@@ -158,15 +158,31 @@ These options are available for **ALL** report types:
 | `months_of_inventory` | Active / Monthly Closed Rate | Market health indicator |
 | `close_to_list_ratio` | Date-filtered Closed | Sale price vs asking |
 
-#### Email Metrics
+#### Email Content (V3 Template)
 
+**Main Metrics Row:**
 ```
-📊 Your Market Snapshot Report
-- Active Listings: {active_count}
-- Median Price: {median_close_price}
-- Avg DOM: {avg_dom} days
-- Months of Inventory: {moi}
+Active Listings: {active_count}
+Median Price: {median_close_price}
+Avg DOM: {avg_dom} days
 ```
+
+**Extra Stats Row:**
+```
+{months_of_inventory} Months of Inventory | {close_to_list_ratio}% Close-to-List
+```
+
+**Property Type Breakdown:**
+```
+🏠 {sfr_count} Single Family • 🏢 {condo_count} Condos • 🏘️ {townhome_count} Townhomes
+```
+
+**Price Tier Distribution:**
+| Tier | Range | Color |
+|------|-------|-------|
+| Entry Level | Under median | Green (#059669) |
+| Move-Up | Median to 75th | Primary color |
+| Luxury | Above 75th | Accent color |
 
 ---
 

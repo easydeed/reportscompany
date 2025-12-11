@@ -2,7 +2,7 @@
 
 > Complete technical documentation for the email infrastructure, templates, and delivery pipeline.
 
-**Last Updated:** November 25, 2025
+**Last Updated:** December 11, 2024
 
 ---
 
@@ -19,7 +19,8 @@
 9. [Environment Variables](#9-environment-variables)
 10. [Email Flow Diagrams](#10-email-flow-diagrams)
 11. [Troubleshooting](#11-troubleshooting)
-12. [Future Enhancements](#12-future-enhancements)
+12. [Database Schema Changes](#12-database-schema-changes)
+13. [Future Enhancements](#13-future-enhancements)
 
 ---
 
@@ -341,7 +342,15 @@ The test email includes:
 
 ## 6. Email Templates
 
-### 6.1 Scheduled Report Template
+### 6.1 Template Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| V3 | Dec 11, 2024 | Professional styling, Market Snapshot breakdowns |
+| V2 | Nov 25, 2024 | Gradient headers, dark mode, responsive |
+| V1 | Nov 2024 | Initial template |
+
+### 6.2 Scheduled Report Template (V3)
 
 **File:** `apps/worker/src/worker/email/template.py`
 
@@ -359,50 +368,73 @@ def schedule_email_html(
 ) -> str:
 ```
 
+**V3 Features:**
+
+| Feature | Description |
+|---------|-------------|
+| **Professional Typography** | Georgia serif for headings, system sans-serif for body |
+| **Muted Color Palette** | Refined tones (#64748b, #94a3b8) for sophistication |
+| **Email Logo Support** | Separate `email_logo_url` for light logos on gradient headers |
+| **Property Type Breakdown** | SFR, Condo, Townhome counts (Market Snapshot) |
+| **Price Tier Distribution** | Entry, Move-Up, Luxury with counts and ranges |
+| **Extra Stats Row** | Months of Inventory, Close-to-List Ratio |
+
 **Template Structure:**
 
 ```html
 <!DOCTYPE html>
 <html>
-<body>
-  <!-- Header with gradient background -->
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+  
+  <!-- Gradient Header -->
+  <table style="background: linear-gradient(135deg, {primary_color}, {accent_color});">
+    <!-- Logo (email_logo_url or logo_url) -->
+    <img src="{email_logo_url}" />
+    <!-- Report label badge -->
+    <span>{report_type}</span>
+    <!-- Tagline in Georgia serif -->
+    <h1 style="font-family: Georgia, serif;">{tagline}</h1>
+    <p>{area} • Last {lookback_days} days</p>
+  </table>
+  
+  <!-- 3-Column Metrics (Georgia serif numbers) -->
   <table>
     <tr>
-      <td style="background: linear-gradient(primary_color, accent_color)">
-        <!-- Logo (if provided) -->
-        <img src="{logo_url}" />
-        
-        <!-- Report title -->
-        <h1>📊 Your {report_type} Report</h1>
-        <p>{area} • Last {lookback_days} days</p>
-        <p>{brand_name}</p>
-      </td>
+      <td style="font-family: Georgia, serif; font-size: 30px;">{metric1_value}</td>
+      <td style="font-family: Georgia, serif; font-size: 30px;">{metric2_value}</td>
+      <td style="font-family: Georgia, serif; font-size: 30px;">{metric3_value}</td>
     </tr>
   </table>
   
-  <!-- Greeting -->
-  <p>Hi {account_name},</p>
-  <p>Your scheduled report is ready!</p>
-  
-  <!-- Metrics table -->
-  <table>
-    <tr><td>Active Listings</td><td>{active_count}</td></tr>
-    <tr><td>Median Price</td><td>{median_price}</td></tr>
-    <tr><td>Days on Market</td><td>{avg_dom}</td></tr>
+  <!-- Extra Stats Row (Market Snapshot & Closed Sales) -->
+  <table style="background: #f8fafc;">
+    <td>{moi} Months of Inventory | {ctl}% Close-to-List</td>
   </table>
   
-  <!-- CTA Button -->
-  <a href="{pdf_url}" style="background: {primary_color}">
-    📄 View Full Report (PDF)
-  </a>
+  <!-- Property Type Breakdown (Market Snapshot) -->
+  <table style="background: #f8fafc;">
+    <td>🏠 {sfr} Single Family • 🏢 {condo} Condos • 🏘️ {townhome} Townhomes</td>
+  </table>
   
-  <!-- Footer -->
+  <!-- Price Tier Distribution (Market Snapshot) -->
   <table>
     <tr>
-      <!-- Rep photo (if provided) -->
-      <td><img src="{rep_photo_url}" /></td>
+      <td style="border-left: 3px solid #059669;">{entry_count} Entry Level</td>
+      <td style="border-left: 3px solid {primary_color};">{moveup_count} Move-Up</td>
+      <td style="border-left: 3px solid {accent_color};">{luxury_count} Luxury</td>
+    </tr>
+  </table>
+  
+  <!-- CTA Button (solid color, subtle shadow) -->
+  <a href="{pdf_url}" style="background: {primary_color}; font-family: Georgia, serif;">
+    View Full Report →
+  </a>
+  
+  <!-- Agent Footer with circular photo -->
+  <table>
+    <tr>
+      <td><img src="{rep_photo_url}" style="border-radius: 50%;" /></td>
       <td>
-        <p>{brand_name}</p>
         <p>{contact_line1}</p>
         <p>{contact_line2}</p>
         <a href="{website_url}">{website_url}</a>
@@ -416,7 +448,7 @@ def schedule_email_html(
 </html>
 ```
 
-### 6.2 Subject Line Generation
+### 6.3 Subject Line Generation
 
 ```python
 def schedule_email_subject(
@@ -428,11 +460,24 @@ def schedule_email_subject(
     Generate email subject line.
     
     Examples:
-    - "📊 Market Snapshot: Beverly Hills"
-    - "📊 New Listings: 90210, 90211"
-    - "📊 Closed Sales Report"
+    - "📊 Your Market Snapshot for Beverly Hills is Ready!"
+    - "📊 Your New Listings for 90210, 90211 is Ready!"
+    - "📊 Your Closed Sales for Your Area is Ready!"
     """
 ```
+
+### 6.4 Test Email Template
+
+**File:** `apps/api/src/api/routes/branding_tools.py`
+
+The test email sent from the branding page mirrors the V3 scheduled report template with sample data:
+
+| Section | Sample Values |
+|---------|---------------|
+| Main Metrics | 127 Active, $4.2M Median, 42 days DOM |
+| Extra Stats | 2.8 MOI, 98.5% CTL |
+| Property Types | 89 SFR, 28 Condos, 10 Townhomes |
+| Price Tiers | 45 Entry, 52 Move-Up, 30 Luxury |
 
 ---
 
@@ -460,6 +505,7 @@ def get_branding_for_account(cur, account_id: str) -> dict:
 {
     "brand_display_name": "Pacific Coast Title Company",
     "logo_url": "https://r2.../branding/logo.png",
+    "email_logo_url": "https://r2.../branding/logo-light.png",  # Optional: light version for email headers
     "primary_color": "#0061bd",
     "accent_color": "#f26b2b",
     "rep_photo_url": "https://r2.../branding/headshot.png",
@@ -471,15 +517,16 @@ def get_branding_for_account(cur, account_id: str) -> dict:
 
 ### 7.3 How Branding Appears in Emails
 
-| Element | Branding Field |
-|---------|----------------|
-| Header background | `primary_color` → `accent_color` gradient |
-| Logo in header | `logo_url` |
-| Brand name | `brand_display_name` |
-| CTA button | `primary_color` background |
-| Footer photo | `rep_photo_url` |
-| Footer contact | `contact_line1`, `contact_line2` |
-| Footer link | `website_url` |
+| Element | Branding Field | Notes |
+|---------|----------------|-------|
+| Header background | `primary_color` → `accent_color` | 135° gradient |
+| Logo in header | `email_logo_url` or `logo_url` | Light version preferred |
+| Brand name | `brand_display_name` | |
+| CTA button | `primary_color` | Subtle shadow |
+| Metric values | `primary_color`, `accent_color` | Georgia serif |
+| Footer photo | `rep_photo_url` | Circular, border |
+| Footer contact | `contact_line1`, `contact_line2` | |
+| Footer link | `website_url` | |
 
 ---
 
@@ -710,9 +757,50 @@ print(f'Status: {status}, Message: {msg}')
 
 ---
 
-## 12. Future Enhancements
+## 12. Database Schema Changes
 
-### 12.1 Planned Features
+### 12.1 Email Logo URL (Migration 0019)
+
+**File:** `db/migrations/0019_add_email_logo_url.sql`
+
+```sql
+ALTER TABLE affiliate_branding
+ADD COLUMN email_logo_url TEXT;
+```
+
+**Purpose:** Support a separate light-colored logo for email headers where the gradient background may clash with dark logos.
+
+**Usage:**
+- If `email_logo_url` is set → Use in email header
+- If `email_logo_url` is null → Fall back to `logo_url`
+
+**Defensive Code:** API queries handle the case where this column doesn't exist (rolling deployment compatibility).
+
+### 12.2 affiliate_branding Table Schema
+
+```sql
+CREATE TABLE affiliate_branding (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    affiliate_account_id TEXT NOT NULL UNIQUE REFERENCES accounts(id),
+    brand_display_name TEXT NOT NULL,
+    logo_url TEXT,
+    email_logo_url TEXT,           -- Added in migration 0019
+    primary_color TEXT NOT NULL DEFAULT '#0ea5e9',
+    accent_color TEXT NOT NULL DEFAULT '#2563eb',
+    rep_photo_url TEXT,
+    contact_line1 TEXT,
+    contact_line2 TEXT,
+    website_url TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+---
+
+## 13. Future Enhancements
+
+### 13.1 Planned Features
 
 | Feature | Description | Priority |
 |---------|-------------|----------|
@@ -723,7 +811,7 @@ print(f'Status: {status}, Message: {msg}')
 | **Template Variants** | Different templates for different report types | Medium |
 | **A/B Testing** | Test subject lines and layouts | Low |
 
-### 12.2 Email Events Table (Planned)
+### 13.2 Email Events Table (Planned)
 
 ```sql
 CREATE TABLE email_events (
@@ -737,7 +825,7 @@ CREATE TABLE email_events (
 );
 ```
 
-### 12.3 Webhook Handler (Planned)
+### 13.3 Webhook Handler (Planned)
 
 ```python
 @router.post("/v1/webhooks/sendgrid")
@@ -792,3 +880,4 @@ async def handle_sendgrid_webhook(events: List[SendGridEvent]):
 ---
 
 *This document is the single source of truth for TrendyReports email system implementation.*
+
