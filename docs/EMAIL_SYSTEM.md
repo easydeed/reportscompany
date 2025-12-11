@@ -66,12 +66,12 @@ TrendyReports sends emails through two distinct pathways:
 | Component | Location | Responsibility |
 |-----------|----------|----------------|
 | SendGrid Provider | `apps/worker/src/worker/email/providers/sendgrid.py` | Low-level email sending |
-| **Email Template (V3.1)** | `apps/worker/src/worker/email/template.py` | **Unified** HTML generation for ALL emails |
+| **Email Template (V4.1)** | `apps/worker/src/worker/email/template.py` | **Unified** HTML generation for ALL emails |
 | Email Orchestrator | `apps/worker/src/worker/email/send.py` | Suppression filtering, template rendering |
 | Branding Test | `apps/api/src/api/routes/branding_tools.py` | Test email endpoint (uses unified template) |
 | Unsubscribe API | `apps/api/src/api/routes/unsubscribe.py` | Handle unsubscribe requests |
 
-> 📦 **V3.1 Architecture:** A single template file (`template.py`) now serves both scheduled reports and test emails, ensuring consistency.
+> 📦 **V4 Architecture:** A single template file (`template.py`) serves both scheduled reports and test emails, with PDF-aligned structure for Market Snapshot.
 
 ---
 
@@ -354,7 +354,8 @@ The test email uses the **same template function** as production scheduled email
 
 | Version | Date | Changes |
 |---------|------|---------|
-| **V4** | Dec 11, 2025 | **PDF-aligned redesign** - email mirrors PDF structure exactly |
+| **V4.1** | Dec 11, 2025 | **Modern styling** - system fonts, colored dots for property types, diamond icons for price tiers |
+| V4 | Dec 11, 2025 | **PDF-aligned redesign** - email mirrors PDF structure (4-metric hero, core indicators, insight) |
 | V3.1 | Dec 11, 2025 | Monochromatic refinement - unified colors, template consolidation |
 | V3 | Dec 11, 2024 | Professional styling, Market Snapshot breakdowns |
 | V2 | Nov 25, 2024 | Gradient headers, dark mode, responsive |
@@ -407,9 +408,20 @@ V4 redesigns the Market Snapshot email to **feel like the cover page of the PDF*
 
 **Rationale:** The V3 email felt like a "teaser" with random numbers. V4 creates a **condensed cover page** that mirrors the PDF's section structure, making the email feel like part of the same product.
 
-### 6.1.2 V3.1 Monochromatic Design (Preserved in V4)
+### 6.1.2 V4.1 Modern Styling Refinements
 
-V3.1 color philosophy is preserved in V4:
+V4.1 updates visual elements for a cleaner, more modern look:
+
+| Element | V4 | V4.1 |
+|---------|-----|------|
+| **Typography** | Georgia serif | System font stack (`-apple-system, BlinkMacSystemFont, Segoe UI...`) |
+| **Property Types** | Emoji icons (🏠🏢🏘️) | Colored dots (●) with blue/purple/pink/amber |
+| **Price Tiers** | Left border accent | Top border + diamond icons (◇ Entry, ◈ Move-Up, ◆ Luxury) |
+| **Text alignment** | Left-aligned in cards | Centered in price tier cards |
+
+### 6.1.3 V3.1 Monochromatic Design (Preserved in V4/V4.1)
+
+V3.1 color philosophy is preserved:
 
 | Color Usage | Where |
 |-------------|-------|
