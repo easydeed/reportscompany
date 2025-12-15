@@ -94,14 +94,29 @@ PDF_ENGINE = os.getenv("PDF_ENGINE", "playwright")  # or "pdfshift"
 
 | Version | Date | Changes |
 |---------|------|---------|
-| **V2** | Dec 11, 2025 | **Hero Header Revamp** - full-bleed gradient banner |
+| **V2.1** | Dec 15, 2025 | **All templates hero headers** - uniform hero header across all report types |
+| V2 | Dec 11, 2025 | **Hero Header Revamp** - full-bleed gradient banner (Market Snapshot) |
 | V1 | Nov 2024 | Initial template with ribbon metrics |
 
-### 3.2 Market Snapshot Template (Current - V2)
+### 3.2 Hero Header (All Templates - V2.1)
+
+All PDF templates now share a consistent hero header structure:
+
+| Template | Hero Header |
+|----------|:-----------:|
+| `trendy-market-snapshot.html` | ✅ |
+| `trendy-new-listings.html` | ✅ |
+| `trendy-closed.html` | ✅ |
+| `trendy-inventory.html` | ✅ |
+| `trendy-price-bands.html` | ✅ |
+| `trendy-featured-listings.html` | ✅ |
+| `trendy-new-listings-gallery.html` | ✅ |
+
+### 3.3 Market Snapshot Template
 
 **File:** `apps/web/templates/trendy-market-snapshot.html`
 
-#### V2 Header Structure
+#### Hero Header Structure (shared across all templates)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐

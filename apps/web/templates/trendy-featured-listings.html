@@ -64,6 +64,91 @@
     border-radius: 2px;
   }
 
+  /* ====== Hero Header (Full-Bleed Gradient) ====== */
+  .hero-header{
+    background: linear-gradient(90deg, var(--pct-blue), var(--pct-accent));
+    margin: -0.5in;
+    margin-bottom: 0;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 70px;
+  }
+  .hero-left{
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .hero-logo{
+    height: 44px;
+    width: auto;
+    max-width: 100px;
+    object-fit: contain;
+  }
+  .hero-text{
+    color: #fff;
+  }
+  .hero-brand-name{
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 2px;
+    opacity: 0.95;
+  }
+  .hero-report-type{
+    font-size: 12px;
+    font-weight: 500;
+    margin: 0;
+    opacity: 0.85;
+  }
+  .hero-right{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+  }
+  .pdf-badge{
+    background: #ef4444;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+  }
+  .affiliate-pill{
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 999px;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  /* ====== Title Bar (Below Hero) ====== */
+  .title-bar{
+    padding: 12px 0 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .title-bar h1{
+    font-size: 20px;
+    line-height: 1.2;
+    margin: 0 0 3px;
+    color: var(--ink);
+    font-weight: 900;
+    letter-spacing: 0.2px;
+  }
+  .title-bar .sub{
+    font-size: 11px;
+    color: var(--muted);
+    margin: 0;
+  }
+
   /* Enhanced header with better spacing and hierarchy */
   .header{
     display: grid;
@@ -284,15 +369,28 @@
 </head>
 <body>
   <div class="page">
-    <header class="header avoid-break">
-      <div class="brand">
-        <div class="title-block">
-          <h1>Featured Listings — {{market_name}}</h1>
-          <div class="sub">Premium properties • Source: Live MLS Data • Report Date: {{report_date}}</div>
+    <!-- V2: Hero Header -->
+    <div class="hero-header">
+      <div class="hero-left">
+        {{#if logo_url}}
+        <img src="{{logo_url}}" alt="{{brand_name}}" class="hero-logo" />
+        {{/if}}
+        <div class="hero-text">
+          <div class="hero-brand-name">{{brand_name}}</div>
+          <div class="hero-report-type">Featured Listings</div>
         </div>
       </div>
-      <div class="badge">{{brand_badge}}</div>
-    </header>
+      <div class="hero-right">
+        <span class="pdf-badge">PDF</span>
+        <span class="affiliate-pill">{{brand_badge}}</span>
+      </div>
+    </div>
+
+    <!-- Title Bar -->
+    <div class="title-bar">
+      <h1>Featured Listings — {{market_name}}</h1>
+      <p class="sub">Premium properties • Source: Live MLS Data • Report Date: {{report_date}}</p>
+    </div>
 
     <section class="ribbon avoid-break">
       <div class="count">{{total_listings}}</div>

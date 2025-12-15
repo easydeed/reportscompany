@@ -119,6 +119,63 @@ function formatPercent(val: number | null | undefined): string {
 }
 
 /**
+ * Build hero header HTML (V2 - Full-bleed gradient)
+ * Used across all report types for consistent branding
+ */
+function buildHeroHeader(
+  reportType: string,
+  brandName: string,
+  brandBadge: string,
+  logoUrl?: string
+): string {
+  const reportLabels: Record<string, string> = {
+    new_listings: "New Listings",
+    inventory: "Inventory Report",
+    closed: "Closed Sales",
+    price_bands: "Price Analysis",
+    new_listings_gallery: "New Listings Gallery",
+    featured_listings: "Featured Listings",
+  };
+  const reportLabel = reportLabels[reportType] || "Market Report";
+  
+  return `
+    <div class="hero-header">
+      <div class="hero-left">
+        ${logoUrl 
+          ? `<img src="${logoUrl}" alt="${brandName}" class="hero-logo" />`
+          : ''
+        }
+        <div class="hero-text">
+          <div class="hero-brand-name">${brandName}</div>
+          <div class="hero-report-type">${reportLabel}</div>
+        </div>
+      </div>
+      <div class="hero-right">
+        <span class="pdf-badge">PDF</span>
+        <span class="affiliate-pill">${brandBadge}</span>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Build title bar HTML (below hero header)
+ */
+function buildTitleBar(
+  title: string,
+  marketName: string,
+  periodLabel: string,
+  reportDate: string
+): string {
+  return `
+    <div class="title-bar">
+      <h1>${title} — ${marketName}</h1>
+      <p class="sub">Period: ${periodLabel} • Source: Live MLS Data • Report Date: ${reportDate}</p>
+    </div>
+  `;
+}
+
+/**
  * Build Market Snapshot HTML from template + data
  */
 export function buildMarketSnapshotHtml(
@@ -327,17 +384,11 @@ export function buildNewListingsHtml(
 
     let headerHtml: string;
     if (pageNum === 1) {
-      // Full header for first page
+      // V2: Hero header for first page
+      const logoUrl = data.brand?.logo_url || "";
       headerHtml = `
-        <header class="header avoid-break">
-          <div class="brand">
-            <div class="title-block">
-              <h1>New Listings — ${marketName}</h1>
-              <div class="sub">Period: ${periodLabel} • Source: Live MLS Data • Report Date: ${reportDate}</div>
-            </div>
-          </div>
-          <div class="badge">${brandBadge}</div>
-        </header>
+        ${buildHeroHeader("new_listings", brandName, brandBadge, logoUrl)}
+        ${buildTitleBar("New Listings", marketName, periodLabel, reportDate)}
         <section class="ribbon avoid-break">
           <div class="kpi">
             <div class="item"><div class="lbl">Total New Listings</div><div class="val">${formatNumber(counts.Active || 0)}</div></div>
@@ -492,17 +543,11 @@ export function buildInventoryHtml(
 
     let headerHtml: string;
     if (pageNum === 1) {
-      // Full header for first page
+      // V2: Hero header for first page
+      const logoUrl = data.brand?.logo_url || "";
       headerHtml = `
-        <header class="header avoid-break">
-          <div class="brand">
-            <div class="title-block">
-              <h1>Listing Inventory — ${marketName}</h1>
-              <div class="sub">Period: ${periodLabel} • Source: Live MLS Data • Report Date: ${reportDate}</div>
-            </div>
-          </div>
-          <div class="badge">${brandBadge}</div>
-        </header>
+        ${buildHeroHeader("inventory", brandName, brandBadge, logoUrl)}
+        ${buildTitleBar("Listing Inventory", marketName, periodLabel, reportDate)}
         <section class="ribbon avoid-break">
           <div class="kpi">
             <div class="item"><div class="lbl">Total Active Listings</div><div class="val">${formatNumber(activeCount)}</div></div>
@@ -657,17 +702,11 @@ export function buildClosedHtml(
 
     let headerHtml: string;
     if (pageNum === 1) {
-      // Full header for first page
+      // V2: Hero header for first page
+      const logoUrl = data.brand?.logo_url || "";
       headerHtml = `
-        <header class="header avoid-break">
-          <div class="brand">
-            <div class="title-block">
-              <h1>Closed Listings — ${marketName}</h1>
-              <div class="sub">Period: ${periodLabel} • Source: Live MLS Data • Report Date: ${reportDate}</div>
-            </div>
-          </div>
-          <div class="badge">${brandBadge}</div>
-        </header>
+        ${buildHeroHeader("closed", brandName, brandBadge, logoUrl)}
+        ${buildTitleBar("Closed Sales", marketName, periodLabel, reportDate)}
         <section class="ribbon avoid-break">
           <div class="kpi">
             <div class="item"><div class="lbl">Total Closed</div><div class="val">${formatNumber(counts.Closed || 0)}</div></div>
@@ -682,7 +721,7 @@ export function buildClosedHtml(
       // Condensed header for continuation pages
       headerHtml = `
         <div class="header-continuation">
-          <div class="title">Closed Listings — ${marketName} (continued)</div>
+          <div class="title">Closed Sales — ${marketName} (continued)</div>
           <div class="page-info">Page ${pageNum} of ${totalPages}</div>
         </div>
       `;
@@ -883,17 +922,11 @@ export function buildNewListingsGalleryHtml(
 
     let headerHtml: string;
     if (pageNum === 1) {
-      // Full header for first page
+      // V2: Hero header for first page
+      const logoUrl = data.brand?.logo_url || "";
       headerHtml = `
-        <header class="header avoid-break">
-          <div class="brand">
-            <div class="title-block">
-              <h1>New Listings Gallery — ${marketName}</h1>
-              <div class="sub">Period: ${periodLabel} • Source: Live MLS Data • Report Date: ${reportDate}</div>
-            </div>
-          </div>
-          <div class="badge">${brandBadge}</div>
-        </header>
+        ${buildHeroHeader("new_listings_gallery", brandName, brandBadge, logoUrl)}
+        ${buildTitleBar("New Listings Gallery", marketName, periodLabel, reportDate)}
         <section class="ribbon avoid-break">
           <div class="count">${formatNumber(r.total_listings || listings.length)}</div>
           <div class="label">NEW LISTINGS — LAST ${lookback} DAYS</div>

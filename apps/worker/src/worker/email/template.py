@@ -60,28 +60,36 @@ REPORT_CONFIG = {
     },
     "new_listings": {
         "label": "New Listings",
-        "tagline": "Fresh Properties Just Listed",
-        "section": "New on Market",
+        "tagline": None,  # V4: Uses PDF-aligned title
+        "section": None,
         "has_extra_stats": False,
+        "has_hero_4": True,  # V4: 4-metric hero row
+        "has_insight": True,  # V4: Insight paragraph
     },
     "inventory": {
         "label": "Inventory Report",
-        "tagline": "Current Market Availability",
-        "section": "Current Inventory",
+        "tagline": None,  # V4: Uses PDF-aligned title
+        "section": None,
         "has_extra_stats": False,
+        "has_hero_4": True,  # V4: 4-metric hero row
+        "has_insight": True,  # V4: Insight paragraph
     },
     "closed": {
         "label": "Closed Sales",
-        "tagline": "Recent Sales Activity",
-        "section": "Recently Sold",
-        "has_extra_stats": True,
+        "tagline": None,  # V4: Uses PDF-aligned title
+        "section": None,
+        "has_extra_stats": False,  # V4: Integrated into hero row
+        "has_hero_4": True,  # V4: 4-metric hero row
+        "has_insight": True,  # V4: Insight paragraph
     },
     "price_bands": {
         "label": "Price Analysis",
-        "tagline": "Market by Price Tier",
-        "section": "Price Analysis",
+        "tagline": None,  # V4: Uses PDF-aligned title
+        "section": None,
         "has_extra_stats": False,
         "has_price_bands": True,
+        "has_hero_4": True,  # V4: 4-metric hero row
+        "has_insight": True,  # V4: Insight paragraph
     },
     "open_houses": {
         "label": "Open Houses",
@@ -385,38 +393,82 @@ def _get_price_tier_breakdown(metrics: Dict) -> Optional[List[Dict]]:
 # V4 FUNCTIONS: PDF-aligned email structure for Market Snapshot
 # ============================================================================
 
-def _get_hero_4_metrics(metrics: Dict) -> Tuple[
+def _get_hero_4_metrics(report_type: str, metrics: Dict) -> Tuple[
     Tuple[str, str], Tuple[str, str], Tuple[str, str], Tuple[str, str]
 ]:
     """
     V4: Get 4 hero metrics that match the PDF report header.
     Returns: ((label1, value1), (label2, value2), (label3, value3), (label4, value4))
     
-    PDF Hero Row:
-    1. Median Sale Price
-    2. Closed Sales
-    3. Avg Days on Market
-    4. Months of Inventory
+    Each report type has its own relevant metrics matching the PDF ribbon.
     """
-    # Extract metrics
+    # Extract common metrics
     median_close_price = metrics.get("median_close_price")
     median_list_price = metrics.get("median_list_price")
+    total_active = metrics.get("total_active", 0)
     total_closed = metrics.get("total_closed", 0)
     avg_dom = metrics.get("avg_dom")
     moi = metrics.get("months_of_inventory")
+    avg_ppsf = metrics.get("avg_ppsf")
+    ctl = metrics.get("sale_to_list_ratio") or metrics.get("close_to_list_ratio")
+    new_this_month = metrics.get("new_this_month", total_active)
     
-    # Format values
-    price_val = _format_price_clean(median_close_price or median_list_price)
-    closed_val = _format_number(total_closed)
-    dom_val = f"{avg_dom:.0f}" if avg_dom else "N/A"
-    moi_val = f"{moi:.1f}" if moi else "N/A"
+    if report_type == "market_snapshot":
+        # Matches PDF: Median Sale Price, Closed Sales, Avg DOM, MOI
+        return (
+            ("Median Sale Price", _format_price_clean(median_close_price or median_list_price)),
+            ("Closed Sales", _format_number(total_closed)),
+            ("Avg Days on Market", f"{avg_dom:.0f}" if avg_dom else "N/A"),
+            ("Months of Inventory", f"{moi:.1f}" if moi else "N/A"),
+        )
     
-    return (
-        ("Median Sale Price", price_val),
-        ("Closed Sales", closed_val),
-        ("Avg Days on Market", dom_val),
-        ("Months of Inventory", moi_val),
-    )
+    elif report_type == "new_listings":
+        # Matches PDF: Total Listings, Median List Price, Avg DOM, Avg $/SqFt
+        return (
+            ("New Listings", _format_number(total_active)),
+            ("Median Price", _format_price_clean(median_list_price)),
+            ("Avg DOM", f"{avg_dom:.0f}" if avg_dom else "N/A"),
+            ("Avg $/SqFt", _format_price_clean(avg_ppsf) if avg_ppsf else "N/A"),
+        )
+    
+    elif report_type == "inventory":
+        # Matches PDF: Active Listings, New This Month, Median DOM, MOI
+        return (
+            ("Active Listings", _format_number(total_active)),
+            ("New This Month", _format_number(new_this_month)),
+            ("Median DOM", f"{avg_dom:.0f}" if avg_dom else "N/A"),
+            ("Months of Inventory", f"{moi:.1f}" if moi else "N/A"),
+        )
+    
+    elif report_type == "closed":
+        # Matches PDF: Total Closed, Median Close Price, Avg DOM, Close-to-List
+        return (
+            ("Total Closed", _format_number(total_closed)),
+            ("Median Price", _format_price_clean(median_close_price)),
+            ("Avg DOM", f"{avg_dom:.0f}" if avg_dom else "N/A"),
+            ("Close-to-List", f"{ctl:.1f}%" if ctl else "N/A"),
+        )
+    
+    elif report_type == "price_bands":
+        # Matches PDF: Total Listings, Median Price, Avg DOM, Price Range
+        min_price = metrics.get("min_price")
+        max_price = metrics.get("max_price")
+        price_range = f"{_format_price_clean(min_price)}-{_format_price_clean(max_price)}" if min_price and max_price else "N/A"
+        return (
+            ("Total Listings", _format_number(total_active)),
+            ("Median Price", _format_price_clean(median_list_price)),
+            ("Avg DOM", f"{avg_dom:.0f}" if avg_dom else "N/A"),
+            ("Price Range", price_range),
+        )
+    
+    else:
+        # Generic fallback
+        return (
+            ("Properties", _format_number(total_active)),
+            ("Median Price", _format_price_clean(median_list_price or median_close_price)),
+            ("Avg DOM", f"{avg_dom:.0f}" if avg_dom else "N/A"),
+            ("MOI", f"{moi:.1f}" if moi else "N/A"),
+        )
 
 
 def _get_core_indicators(metrics: Dict) -> Tuple[
@@ -450,7 +502,7 @@ def _get_core_indicators(metrics: Dict) -> Tuple[
 
 def _get_insight_paragraph(report_type: str, area: str, metrics: Dict, lookback_days: int) -> str:
     """
-    V4: Generate insight paragraph for Market Snapshot.
+    V4: Generate insight paragraph for reports.
     This mirrors the PDF's introductory narrative paragraph.
     
     Can be enhanced with AI later, but starts with template-based text.
@@ -461,26 +513,70 @@ def _get_insight_paragraph(report_type: str, area: str, metrics: Dict, lookback_
     median_price = metrics.get("median_close_price") or metrics.get("median_list_price")
     avg_dom = metrics.get("avg_dom")
     moi = metrics.get("months_of_inventory")
+    avg_ppsf = metrics.get("avg_ppsf")
+    ctl = metrics.get("sale_to_list_ratio") or metrics.get("close_to_list_ratio")
     
-    # Build insight text
+    # Build insight text based on report type
     price_str = _format_price_clean(median_price) if median_price else "varying prices"
     dom_str = f"{avg_dom:.0f} days" if avg_dom else "average time"
     
-    # Market condition based on MOI
-    if moi and moi < 3:
-        market_condition = "a seller's market with limited inventory"
-    elif moi and moi > 6:
-        market_condition = "a buyer's market with ample inventory"
+    if report_type == "market_snapshot":
+        # Market condition based on MOI
+        if moi and moi < 3:
+            market_condition = "a seller's market with limited inventory"
+        elif moi and moi > 6:
+            market_condition = "a buyer's market with ample inventory"
+        else:
+            market_condition = "a balanced market"
+        
+        return (
+            f"This snapshot provides key market indicators for {area} over the last {lookback_days} days. "
+            f"With {total_closed} closed sales at a median of {price_str} and homes averaging {dom_str} on market, "
+            f"the data suggests {market_condition}."
+        )
+    
+    elif report_type == "new_listings":
+        ppsf_str = _format_price_clean(avg_ppsf) if avg_ppsf else "competitive"
+        return (
+            f"Discover the newest properties listed in {area} over the last {lookback_days} days. "
+            f"With {total_active} fresh listings at a median of {price_str} and {ppsf_str} per square foot, "
+            f"there are opportunities across all price points."
+        )
+    
+    elif report_type == "inventory":
+        if moi and moi < 3:
+            supply_condition = "supply is tight and competition may be high"
+        elif moi and moi > 6:
+            supply_condition = "buyers have plenty of options to choose from"
+        else:
+            supply_condition = "there's a healthy balance of supply and demand"
+        
+        return (
+            f"Current inventory snapshot for {area}. "
+            f"With {total_active} active listings at a median of {price_str} and homes averaging {dom_str} on market, "
+            f"{supply_condition}."
+        )
+    
+    elif report_type == "closed":
+        ctl_str = f"{ctl:.1f}%" if ctl else "competitive"
+        return (
+            f"Recent sales activity in {area} over the last {lookback_days} days. "
+            f"{total_closed} homes sold at a median of {price_str}, averaging {dom_str} to close. "
+            f"The close-to-list ratio of {ctl_str} indicates market strength."
+        )
+    
+    elif report_type == "price_bands":
+        return (
+            f"Price analysis for {area} over the last {lookback_days} days. "
+            f"This report segments the market into price ranges to identify where inventory and buyer activity "
+            f"are concentrated. Faster-moving bands indicate stronger demand."
+        )
+    
     else:
-        market_condition = "a balanced market"
-    
-    insight = (
-        f"This snapshot provides key market indicators for {area} over the last {lookback_days} days. "
-        f"With {total_closed} closed sales at a median of {price_str} and homes averaging {dom_str} on market, "
-        f"the data suggests {market_condition}."
-    )
-    
-    return insight
+        return (
+            f"Market report for {area} covering the last {lookback_days} days. "
+            f"Median price: {price_str}. Average days on market: {dom_str}."
+        )
 
 
 def _build_preheader(report_type: str, area: str, metrics: Dict) -> str:
@@ -596,10 +692,10 @@ def schedule_email_html(
     # Date range display
     date_range = f"Last {lookback_days} Days"
     
-    # V4: Get 4-metric hero row for Market Snapshot
+    # V4: Get 4-metric hero row (for all V4 report types)
     if has_hero_4:
         (h1_label, h1_value), (h2_label, h2_value), (h3_label, h3_value), (h4_label, h4_value) = \
-            _get_hero_4_metrics(metrics)
+            _get_hero_4_metrics(report_type, metrics)
     
     # V4: Get core indicators for Market Snapshot
     if has_core_indicators:

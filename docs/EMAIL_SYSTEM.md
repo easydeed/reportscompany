@@ -354,14 +354,33 @@ The test email uses the **same template function** as production scheduled email
 
 | Version | Date | Changes |
 |---------|------|---------|
-| **V4.1** | Dec 11, 2025 | **Modern styling** - system fonts, colored dots for property types, diamond icons for price tiers |
-| V4 | Dec 11, 2025 | **PDF-aligned redesign** - email mirrors PDF structure (4-metric hero, core indicators, insight) |
+| **V4.2** | Dec 15, 2025 | **All reports PDF-aligned** - new_listings, closed, inventory, price_bands now have V4 layout |
+| V4.1 | Dec 11, 2025 | **Modern styling** - system fonts, colored dots for property types, diamond icons for price tiers |
+| V4 | Dec 11, 2025 | **PDF-aligned redesign** - Market Snapshot email mirrors PDF structure (4-metric hero, core indicators, insight) |
 | V3.1 | Dec 11, 2025 | Monochromatic refinement - unified colors, template consolidation |
 | V3 | Dec 11, 2024 | Professional styling, Market Snapshot breakdowns |
 | V2 | Nov 25, 2024 | Gradient headers, dark mode, responsive |
 | V1 | Nov 2024 | Initial template |
 
-### 6.1.1 V4 PDF-Aligned Design (Current - Market Snapshot)
+### 6.1.1 V4.2 PDF-Aligned Design (Current - All Reports)
+
+V4.2 extends the PDF-aligned design to **all major report types**:
+
+| Report Type | 4-Metric Hero Row | Insight Paragraph |
+|-------------|:-----------------:|:-----------------:|
+| `market_snapshot` | ✅ Median Price, Closed, DOM, MOI | ✅ Market condition summary |
+| `new_listings` | ✅ Total, Median Price, DOM, $/SqFt | ✅ New listings overview |
+| `closed` | ✅ Total, Median Price, DOM, CTL% | ✅ Sales activity summary |
+| `inventory` | ✅ Active, New, DOM, MOI | ✅ Inventory condition |
+| `price_bands` | ✅ Total, Median, DOM, Range | ✅ Price segmentation intro |
+
+Each email now features:
+- **PDF-style title**: `{Report Type} – {Area}` format
+- **Subline**: `Period: Last X days • Source: Live MLS Data`
+- **4-metric hero row**: Report-specific key metrics
+- **Insight paragraph**: 1-2 sentence contextual summary
+
+### 6.1.2 V4 Market Snapshot Specifics
 
 V4 redesigns the Market Snapshot email to **feel like the cover page of the PDF**:
 
