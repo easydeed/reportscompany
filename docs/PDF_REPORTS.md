@@ -2,7 +2,7 @@
 
 > Technical documentation for PDF report generation, templates, and white-label branding.
 
-**Last Updated:** December 15, 2025
+**Last Updated:** December 16, 2025
 
 ---
 
@@ -57,6 +57,7 @@ PDF reports are generated from HTML templates, rendered via headless browser or 
 | Print Page | `apps/web/app/print/[runId]/page.tsx` | Server-side HTML generation |
 | Templates | `apps/web/templates/*.html` | HTML template files |
 | Template Lib | `apps/web/lib/templates.ts` | Template loading and variable injection |
+| Branding Preview | `apps/web/app/branding-preview/[reportType]/page.tsx` | Sample PDF preview |
 
 ---
 
@@ -76,7 +77,24 @@ TrendyReports supports two PDF engines:
 PDF_ENGINE = os.getenv("PDF_ENGINE", "playwright")  # or "pdfshift"
 ```
 
-### 2.2 Generation Process
+### 2.2 PDFShift Configuration
+
+```python
+base_payload = {
+    "sandbox": False,
+    "use_print": True,
+    "format": "Letter",
+    "margin": {
+        "top": "0",      # ZERO - CSS handles margins
+        "right": "0",
+        "bottom": "0",
+        "left": "0"
+    },
+    "remove_blank": True,  # Remove blank trailing pages
+}
+```
+
+### 2.3 Generation Process
 
 1. **Worker receives job** with `run_id`, `account_id`, `report_type`, `params`
 2. **Fetch MLS data** from SimplyRETS API
@@ -94,11 +112,12 @@ PDF_ENGINE = os.getenv("PDF_ENGINE", "playwright")  # or "pdfshift"
 
 | Version | Date | Changes |
 |---------|------|---------|
-| **V2.1** | Dec 15, 2025 | **All templates hero headers** - uniform hero header across all report types |
+| **V2.2** | Dec 16, 2025 | **Refinements** - Increased header height (90px), centered metric text, larger logos (52px) |
+| V2.1 | Dec 15, 2025 | **All templates hero headers** - uniform hero header across all report types |
 | V2 | Dec 11, 2025 | **Hero Header Revamp** - full-bleed gradient banner (Market Snapshot) |
 | V1 | Nov 2024 | Initial template with ribbon metrics |
 
-### 3.2 Hero Header (All Templates - V2.1)
+### 3.2 Hero Header (All Templates - V2.2)
 
 All PDF templates now share a consistent hero header structure:
 
@@ -112,21 +131,17 @@ All PDF templates now share a consistent hero header structure:
 | `trendy-featured-listings.html` | ✅ |
 | `trendy-new-listings-gallery.html` | ✅ |
 
-### 3.3 Market Snapshot Template
-
-**File:** `apps/web/templates/trendy-market-snapshot.html`
-
-#### Hero Header Structure (shared across all templates)
+### 3.3 Hero Header Structure
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ HERO HEADER ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│
-│▓  [Logo]  Brand Name                        [PDF] ▓▓▓▓▓▓▓▓│
-│▓          Market Snapshot            [Affiliate Name] ▓▓▓▓│
+│▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ HERO HEADER (90px) ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│
+│▓  [Logo 52px]  Brand Name (16px)            [PDF] ▓▓▓▓▓▓▓▓▓│
+│▓               Report Type (13px)     [Affiliate Name] ▓▓▓▓│
 │▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│
 ├─────────────────────────────────────────────────────────────┤
 │ Market Snapshot — {{market_name}}                           │
-│ Period: Last 30 days • Source: Live MLS Data • Dec 11       │
+│ Period: Last 30 days • Source: Live MLS Data • Dec 16       │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │  (Rest of report content - metrics, tables, etc.)           │
@@ -134,23 +149,23 @@ All PDF templates now share a consistent hero header structure:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-#### Header Elements
+#### Header Elements (V2.2)
 
-| Element | CSS Class | Description |
-|---------|-----------|-------------|
-| Hero Header | `.hero-header` | Full-width gradient band (primary → accent) |
-| Logo | `.hero-logo` | Brand logo on left (max 120px height) |
-| Brand Name | `.hero-brand-name` | White text, 16px |
-| Report Type | `.hero-report-type` | "Market Snapshot" label |
-| PDF Badge | `.pdf-badge` | Red badge top-right |
-| Affiliate Pill | `.affiliate-pill` | Semi-transparent pill with account name |
-| Title Bar | `.title-bar` | White area below hero with H1 + subline |
+| Element | CSS Class | Description | Size |
+|---------|-----------|-------------|------|
+| Hero Header | `.hero-header` | Full-width gradient band | `min-height: 90px`, `padding: 24px 28px` |
+| Logo | `.hero-logo` | Brand logo on left | `height: 52px`, `max-width: 140px` |
+| Brand Name | `.hero-brand-name` | White text | `font-size: 16px` |
+| Report Type | `.hero-report-type` | Report label | `font-size: 13px` |
+| PDF Badge | `.pdf-badge` | Red badge top-right | `9px bold` |
+| Affiliate Pill | `.affiliate-pill` | Semi-transparent pill | `max-width: 180px` |
+| Title Bar | `.title-bar` | White area below hero | H1 + subline |
 
-#### Content Sections
+### 3.4 Content Sections
 
 | Section | Description |
 |---------|-------------|
-| **Hero Ribbon** | 4-metric gradient bar (Median, Closed, DOM, MOI) |
+| **Hero Ribbon** | 4-metric gradient bar (centered text) |
 | **Core Indicators** | 3-card section (New Listings, Pending, Sale-to-List) |
 | **By Property Type** | Table with SFR, Condo, Townhome breakdown |
 | **By Price Tier** | Table with Entry, Move-Up, Luxury tiers |
@@ -181,6 +196,16 @@ Templates receive these brand variables:
 | `{{contact_line1}}` | Name or title |
 | `{{contact_line2}}` | Phone/email |
 | `{{website_url}}` | Company website |
+
+### 4.3 Branding Preview
+
+The sample PDF generator in affiliate branding uses a dedicated preview page:
+
+**File:** `apps/web/app/branding-preview/[reportType]/page.tsx`
+
+This page mirrors the PDF templates exactly and is used for:
+- Sample PDF downloads in the branding dashboard
+- Testing branding changes before applying to real reports
 
 ---
 
@@ -247,14 +272,64 @@ Templates receive these brand variables:
 }
 ```
 
-### 6.3 Key Classes
+### 6.3 Hero Header CSS (V2.2)
+
+```css
+.hero-header {
+  background: linear-gradient(90deg, var(--pct-blue), var(--pct-accent));
+  margin: calc(var(--page-padding) * -1);
+  margin-bottom: 0;
+  padding: 24px 28px;           /* Increased from 16px 20px */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 90px;             /* Increased from 70px */
+}
+
+.hero-logo {
+  height: 52px;                 /* Increased from 44px */
+  width: auto;
+  max-width: 140px;             /* Increased from 100px */
+  object-fit: contain;
+}
+
+.hero-brand-name {
+  font-size: 16px;              /* Increased from 15px */
+  font-weight: 600;
+}
+
+.hero-report-type {
+  font-size: 13px;              /* Increased from 12px */
+  font-weight: 500;
+}
+```
+
+### 6.4 Centered Metric Cards
+
+```css
+.ribbon .kpi .item {
+  min-width: 120px;
+  text-align: center;           /* V2.2: Centered text */
+}
+
+.ribbon .kpi .lbl {
+  text-align: center;
+}
+
+.ribbon .kpi .val {
+  text-align: center;
+}
+```
+
+### 6.5 Key Classes
 
 | Class | Purpose |
 |-------|---------|
 | `.page` | Main page container (exact letter size) |
 | `.page-content` | Flex container for content flow |
-| `.hero-header` | Full-bleed gradient header |
-| `.ribbon` | Gradient metric bar |
+| `.page-footer` | Footer container with `margin-top: auto` |
+| `.hero-header` | Full-bleed gradient header (90px) |
+| `.ribbon` | Gradient metric bar (centered text) |
 | `.card` | White card with border |
 | `.mini` | Small stat box |
 | `.avoid-break` | Prevent page breaks within element |
@@ -272,15 +347,53 @@ Templates receive these brand variables:
 }
 ```
 
-### 7.2 Print Adjustments
+### 7.2 Page Container (Blank Page Prevention)
 
-The template includes `@media print` rules that:
-- Reduce spacing to fit content on one page
-- Remove box shadows
-- Ensure colors print correctly (`print-color-adjust: exact`)
-- Hide non-print elements (`.no-print`)
+```css
+.page {
+  width: var(--page-width);
+  min-height: var(--page-height);
+  max-height: var(--page-height);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  overflow: hidden;               /* CRITICAL: Clip overflow */
+  page-break-after: avoid;        /* Prevent blank pages */
+  page-break-inside: avoid;
+}
+```
 
-### 7.3 Avoiding Page Breaks
+### 7.3 Print Media Query
+
+```css
+@media print {
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+  
+  .page {
+    box-shadow: none !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    page-break-after: avoid !important;
+  }
+  
+  .hero-header {
+    min-height: 90px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  /* Hide watermark in print */
+  .sample-watermark {
+    display: none !important;
+  }
+}
+```
+
+### 7.4 Avoiding Page Breaks
 
 ```css
 .avoid-break {
@@ -289,11 +402,14 @@ The template includes `@media print` rules that:
 }
 ```
 
-### 7.4 Content Overflow
+### 7.5 PDFShift Settings for Single Page
 
-```css
-.page {
-  overflow: hidden;  /* Clip overflow to prevent blank pages */
+The PDF engine is configured to prevent blank pages:
+
+```python
+base_payload = {
+    "margin": {"top": "0", "right": "0", "bottom": "0", "left": "0"},
+    "remove_blank": True,  # Remove blank trailing pages
 }
 ```
 
@@ -305,10 +421,22 @@ The template includes `@media print` rules that:
 
 | File | Purpose |
 |------|---------|
-| `apps/web/templates/trendy-market-snapshot.html` | Market Snapshot PDF template |
+| `apps/web/templates/trendy-*.html` | PDF template files (7 templates) |
+| `apps/web/app/branding-preview/[reportType]/page.tsx` | Sample PDF preview |
 | `apps/worker/src/worker/pdf_engine.py` | PDF generation engine |
 | `apps/web/app/print/[runId]/page.tsx` | Print page route |
 | `apps/web/lib/templates.ts` | Template loading utilities |
+
+### Template Dimensions (V2.2)
+
+| Element | Size |
+|---------|------|
+| Hero Header Height | `90px` |
+| Hero Padding | `24px 28px` |
+| Logo Height | `52px` |
+| Logo Max Width | `140px` |
+| Brand Name Font | `16px` |
+| Report Type Font | `13px` |
 
 ### Environment Variables
 
@@ -322,4 +450,3 @@ The template includes `@media print` rules that:
 ---
 
 *This document is the source of truth for TrendyReports PDF report generation.*
-
