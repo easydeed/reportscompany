@@ -2,7 +2,7 @@
 
 > **Single Source of Truth** for all report types, their parameters, filtering logic, and expected outputs.
 
-**Last Updated:** December 10, 2024  
+**Last Updated:** December 15, 2024  
 **Version:** 1.1
 
 ---

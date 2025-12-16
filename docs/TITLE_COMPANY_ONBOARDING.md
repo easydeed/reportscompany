@@ -1,6 +1,6 @@
 # Title Company Onboarding Guide
 
-**Last Updated**: December 2, 2025  
+**Last Updated**: December 2, 2024  
 **Purpose**: Scalable process for onboarding title companies and their representatives  
 **Admin Dashboard**: `/app/admin/affiliates`
 

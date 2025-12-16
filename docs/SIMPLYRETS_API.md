@@ -1,6 +1,6 @@
 # SimplyRETS API - Complete Technical Guide
 
-**Last Updated**: December 2, 2025 (v2)  
+**Last Updated**: December 2, 2024 (v2)  
 **Status**: ✅ Production Ready  
 **Test Scripts**: `scripts/test_simplyrets.py`, `scripts/test_report_flow.py`
 
@@ -480,7 +480,7 @@ SIMPLYRETS_PASSWORD=lm0182gh3pu6f827
 
 ---
 
-## 10. Verified Test Results (December 2, 2025)
+## 10. Verified Test Results (December 2, 2024)
 
 ### Irvine, CA - 30 Day Lookback
 
@@ -505,7 +505,7 @@ SIMPLYRETS_PASSWORD=lm0182gh3pu6f827
 
 ## 11. Changelog
 
-### December 2, 2025 (v2) - Data & PDF Fixes
+### December 2, 2024 (v2) - Data & PDF Fixes
 - ✅ **Fixed field mapping in templates**: `address`→`street_address`, `beds`→`bedrooms`, `baths`→`bathrooms`
 - ✅ **Fixed price/sqft formatting**: Now displays as `$540` instead of `540`
 - ✅ **Added city filtering**: Filter listings to exact city match (API `q` param returns nearby cities)
@@ -513,7 +513,7 @@ SIMPLYRETS_PASSWORD=lm0182gh3pu6f827
 - ✅ **Fixed PDF footer positioning**: Removed CSS flexbox `flex:1` that caused overflow to blank pages
 - ✅ **Updated all HTML templates**: Consistent page break handling across all report types
 
-### December 2, 2025 - Major Fixes
+### December 2, 2024 - Major Fixes
 - ✅ **Fixed rental pollution**: Default all queries to `type=RES`
 - ✅ **Fixed DOM calculation**: Calculate from `listDate` to `closeDate` for Closed
 - ✅ **Fixed date filtering**: Client-side filter by `closeDate` (API uses `listDate`)

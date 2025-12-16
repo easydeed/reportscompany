@@ -2,7 +2,7 @@
 
 > Technical documentation for PDF report generation, templates, and white-label branding.
 
-**Last Updated:** December 11, 2025
+**Last Updated:** December 15, 2024
 
 ---
 
@@ -94,8 +94,8 @@ PDF_ENGINE = os.getenv("PDF_ENGINE", "playwright")  # or "pdfshift"
 
 | Version | Date | Changes |
 |---------|------|---------|
-| **V2.1** | Dec 15, 2025 | **All templates hero headers** - uniform hero header across all report types |
-| V2 | Dec 11, 2025 | **Hero Header Revamp** - full-bleed gradient banner (Market Snapshot) |
+| **V2.1** | Dec 15, 2024 | **All templates hero headers** - uniform hero header across all report types |
+| V2 | Dec 11, 2024 | **Hero Header Revamp** - full-bleed gradient banner (Market Snapshot) |
 | V1 | Nov 2024 | Initial template with ribbon metrics |
 
 ### 3.2 Hero Header (All Templates - V2.1)

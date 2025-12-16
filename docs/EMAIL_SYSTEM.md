@@ -2,7 +2,7 @@
 
 > Complete technical documentation for the email infrastructure, templates, and delivery pipeline.
 
-**Last Updated:** December 11, 2025
+**Last Updated:** December 15, 2024
 
 ---
 
@@ -354,10 +354,10 @@ The test email uses the **same template function** as production scheduled email
 
 | Version | Date | Changes |
 |---------|------|---------|
-| **V4.2** | Dec 15, 2025 | **All reports PDF-aligned** - new_listings, closed, inventory, price_bands now have V4 layout |
-| V4.1 | Dec 11, 2025 | **Modern styling** - system fonts, colored dots for property types, diamond icons for price tiers |
-| V4 | Dec 11, 2025 | **PDF-aligned redesign** - Market Snapshot email mirrors PDF structure (4-metric hero, core indicators, insight) |
-| V3.1 | Dec 11, 2025 | Monochromatic refinement - unified colors, template consolidation |
+| **V4.2** | Dec 15, 2024 | **All reports PDF-aligned** - new_listings, closed, inventory, price_bands now have V4 layout |
+| V4.1 | Dec 11, 2024 | **Modern styling** - system fonts, colored dots for property types, diamond icons for price tiers |
+| V4 | Dec 11, 2024 | **PDF-aligned redesign** - Market Snapshot email mirrors PDF structure (4-metric hero, core indicators, insight) |
+| V3.1 | Dec 11, 2024 | Monochromatic refinement - unified colors, template consolidation |
 | V3 | Dec 11, 2024 | Professional styling, Market Snapshot breakdowns |
 | V2 | Nov 25, 2024 | Gradient headers, dark mode, responsive |
 | V1 | Nov 2024 | Initial template |

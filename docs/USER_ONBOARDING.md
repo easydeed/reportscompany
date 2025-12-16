@@ -364,7 +364,7 @@ import { EmptyState } from "@/components/onboarding"
 - [x] Empty states show appropriate CTAs
 - [x] Progress percentage calculates correctly
 
-**Tested**: December 1, 2025 - Agent and sponsored agent flows verified working.
+**Tested**: December 1, 2024 - Agent and sponsored agent flows verified working.
 
 ---
 
