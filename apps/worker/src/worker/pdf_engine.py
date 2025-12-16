@@ -128,6 +128,12 @@ def render_pdf_pdfshift(run_id: str, account_id: str, html_content: Optional[str
         "remove_blank": True,  # Remove blank trailing pages
     }
     
+    # PDFShift options to improve reliability with pages that load images/data after initial HTML.
+    # - delay: give the page time to render
+    # - wait_for_network: wait for network to go idle (default true per docs)
+    # - lazy_load_images: scroll to trigger lazy-loading (helps some frameworks)
+    # - timeout: let PDFShift keep loading the page longer before forcing conversion
+    # Ref: https://docs.pdfshift.io/api-reference/convert-to-jpeg#convert-to-jpeg
     if html_content:
         payload = {
             **base_payload,
@@ -138,7 +144,10 @@ def render_pdf_pdfshift(run_id: str, account_id: str, html_content: Optional[str
         payload = {
             **base_payload,
             "source": print_url,
-            "delay": 5000,  # 5 second delay for page to render
+            "delay": 8000,            # max 10s per docs
+            "wait_for_network": True, # no network requests for 500ms
+            "lazy_load_images": True, # scroll to trigger lazy-loaded images
+            "timeout": 300,           # seconds; allow longer page loading (0..900)
         }
         print(f"☁️  Rendering PDF with PDFShift: {print_url}")
     
@@ -156,7 +165,7 @@ def render_pdf_pdfshift(run_id: str, account_id: str, html_content: Optional[str
         PDFSHIFT_API_URL,
         json=payload,
         headers=headers,
-        timeout=60.0  # 60 second timeout
+        timeout=120.0  # HTTP timeout for the API call itself
     )
     
     print(f"📊 PDFShift response: {response.status_code}")
