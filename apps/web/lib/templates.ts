@@ -930,7 +930,7 @@ export function buildNewListingsGalleryHtml(
   for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
     const startIdx = (pageNum - 1) * CARDS_PER_PAGE;
     const pageListings = listings.slice(startIdx, startIdx + CARDS_PER_PAGE);
-    const cardsHtml = pageListings.map((listing) => buildCard(listing)).join('');
+    const cardsHtml = pageListings.map((listing: any) => buildCard(listing)).join('');
 
     let pageHtml: string;
     if (pageNum === 1) {
