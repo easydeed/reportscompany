@@ -37,7 +37,8 @@ export function Logo({ className, variant = "full", showText = true }: LogoProps
         alt="TrendyReports"
         width={160}
         height={48}
-        className="h-8 w-auto"
+        className="w-auto"
+        style={{ height: "calc(var(--spacing) * 11)" }}
         priority
       />
     </div>
