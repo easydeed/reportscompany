@@ -501,43 +501,237 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
           </div>
 
           <div className="content">
+            {/* Report-type specific intro */}
             <p className="intro">
-              This {getReportTitle(reportType).toLowerCase()} provides key market
-              indicators for <strong>{city}</strong> based on the most recent{" "}
-              <strong>{(data as any).lookback_days || 30} days</strong> of MLS activity.
+              {reportType === "market_snapshot" && (
+                <>This market snapshot provides key indicators for <strong>{city}</strong> based on the most recent <strong>{(data as any).lookback_days || 30} days</strong> of MLS activity, including pricing trends, inventory levels, and days on market.</>
+              )}
+              {reportType === "new_listings" && (
+                <>Discover <strong>{formatNumber(counts.Active)}</strong> new properties listed in <strong>{city}</strong> over the past <strong>{(data as any).lookback_days || 14} days</strong>. Fresh opportunities for buyers and investors.</>
+              )}
+              {reportType === "inventory" && (
+                <>Current inventory analysis for <strong>{city}</strong> showing <strong>{formatNumber(counts.Active)}</strong> active listings with an average of <strong>{metrics.avg_dom || 0} days</strong> on market.</>
+              )}
+              {reportType === "closed" && (
+                <><strong>{formatNumber(counts.Closed)}</strong> properties closed in <strong>{city}</strong> over the past <strong>{(data as any).lookback_days || 30} days</strong> with a median sale price of <strong>{formatCurrency(metrics.median_close_price)}</strong>.</>
+              )}
+              {reportType === "price_bands" && (
+                <>Market breakdown by price range for <strong>{city}</strong> showing activity across different market segments over the past <strong>{(data as any).lookback_days || 30} days</strong>.</>
+              )}
+              {reportType === "new_listings_gallery" && (
+                <>Photo gallery showcasing <strong>{(data as any).total_listings || (data as any).listings?.length || 0}</strong> newly listed properties in <strong>{city}</strong> from the past <strong>{(data as any).lookback_days || 14} days</strong>.</>
+              )}
+              {reportType === "featured_listings" && (
+                <>Curated selection of <strong>{(data as any).total_listings || (data as any).listings?.length || 0}</strong> premium properties featured in <strong>{city}</strong>. Each property has been selected for its exceptional value or features.</>
+              )}
+              {reportType === "open_houses" && (
+                <>Upcoming open houses in <strong>{city}</strong> this weekend. <strong>{formatNumber(counts.Active)}</strong> properties available for viewing.</>
+              )}
             </p>
 
-            {/* Metrics Grid */}
-            <div className="metrics-grid">
-              <div className="metric-card">
-                <div className="metric-label">Median Price</div>
-                <div className="metric-value">
-                  {formatCurrency(metrics.median_close_price || metrics.median_list_price)}
+            {/* Report-type specific metrics */}
+            {reportType === "market_snapshot" && (
+              <div className="metrics-grid">
+                <div className="metric-card">
+                  <div className="metric-label">Median Sale Price</div>
+                  <div className="metric-value">{formatCurrency(metrics.median_close_price)}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Closed Sales</div>
+                  <div className="metric-value">{formatNumber(counts.Closed)}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Avg. Days on Market</div>
+                  <div className="metric-value">{metrics.avg_dom || 0}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Months of Inventory</div>
+                  <div className="metric-value">{metrics.months_of_inventory?.toFixed(1) || "—"}</div>
                 </div>
               </div>
-              <div className="metric-card">
-                <div className="metric-label">Active Listings</div>
-                <div className="metric-value">{formatNumber(counts.Active)}</div>
-              </div>
-              <div className="metric-card">
-                <div className="metric-label">Closed Sales</div>
-                <div className="metric-value">{formatNumber(counts.Closed)}</div>
-              </div>
-              <div className="metric-card">
-                <div className="metric-label">Avg. DOM</div>
-                <div className="metric-value">{metrics.avg_dom || 0}</div>
-              </div>
-            </div>
+            )}
 
-            {/* Listings Table */}
-            {(data as any).listings_sample && (data as any).listings_sample.length > 0 && (
+            {reportType === "new_listings" && (
+              <div className="metrics-grid">
+                <div className="metric-card">
+                  <div className="metric-label">New Listings</div>
+                  <div className="metric-value">{formatNumber(counts.Active)}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Median List Price</div>
+                  <div className="metric-value">{formatCurrency(metrics.median_list_price)}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Avg. Price/SqFt</div>
+                  <div className="metric-value">${formatNumber(metrics.avg_ppsf || 0)}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Pending</div>
+                  <div className="metric-value">{formatNumber(counts.Pending)}</div>
+                </div>
+              </div>
+            )}
+
+            {reportType === "inventory" && (
+              <div className="metrics-grid">
+                <div className="metric-card">
+                  <div className="metric-label">Active Listings</div>
+                  <div className="metric-value">{formatNumber(counts.Active)}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Pending Sales</div>
+                  <div className="metric-value">{formatNumber(counts.Pending)}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Avg. DOM</div>
+                  <div className="metric-value">{metrics.avg_dom || 0}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Median DOM</div>
+                  <div className="metric-value">{metrics.median_dom || 0}</div>
+                </div>
+              </div>
+            )}
+
+            {reportType === "closed" && (
+              <div className="metrics-grid">
+                <div className="metric-card">
+                  <div className="metric-label">Closed Sales</div>
+                  <div className="metric-value">{formatNumber(counts.Closed)}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Median Close Price</div>
+                  <div className="metric-value">{formatCurrency(metrics.median_close_price)}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Median List Price</div>
+                  <div className="metric-value">{formatCurrency(metrics.median_list_price)}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Avg. DOM</div>
+                  <div className="metric-value">{metrics.avg_dom || 0}</div>
+                </div>
+              </div>
+            )}
+
+            {reportType === "price_bands" && (
+              <div className="metrics-grid">
+                <div className="metric-card">
+                  <div className="metric-label">Total Listings</div>
+                  <div className="metric-value">{formatNumber((data as any).price_bands?.reduce((s: number, b: any) => s + b.count, 0) || 0)}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Median Price</div>
+                  <div className="metric-value">{formatCurrency(metrics.median_list_price)}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Price Bands</div>
+                  <div className="metric-value">{(data as any).price_bands?.length || 0}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Avg. DOM</div>
+                  <div className="metric-value">{metrics.avg_dom || 0}</div>
+                </div>
+              </div>
+            )}
+
+            {(reportType === "new_listings_gallery" || reportType === "featured_listings") && (
+              <div className="metrics-grid">
+                <div className="metric-card">
+                  <div className="metric-label">Properties</div>
+                  <div className="metric-value">{(data as any).total_listings || (data as any).listings?.length || 0}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Avg. Price</div>
+                  <div className="metric-value">
+                    {formatCurrency(
+                      (data as any).listings?.length > 0
+                        ? (data as any).listings.reduce((s: number, l: any) => s + l.list_price, 0) / (data as any).listings.length
+                        : 0
+                    )}
+                  </div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Avg. Beds</div>
+                  <div className="metric-value">
+                    {(data as any).listings?.length > 0
+                      ? ((data as any).listings.reduce((s: number, l: any) => s + l.bedrooms, 0) / (data as any).listings.length).toFixed(1)
+                      : "—"}
+                  </div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Avg. SqFt</div>
+                  <div className="metric-value">
+                    {formatNumber(
+                      (data as any).listings?.length > 0
+                        ? Math.round((data as any).listings.reduce((s: number, l: any) => s + l.sqft, 0) / (data as any).listings.length)
+                        : 0
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {reportType === "open_houses" && (
+              <div className="metrics-grid">
+                <div className="metric-card">
+                  <div className="metric-label">Open Houses</div>
+                  <div className="metric-value">{formatNumber(counts.Active)}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">This Weekend</div>
+                  <div className="metric-value">{formatNumber(counts.Active)}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">Avg. DOM</div>
+                  <div className="metric-value">{metrics.avg_dom || 0}</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-label">View Period</div>
+                  <div className="metric-value">{(data as any).lookback_days || 7} days</div>
+                </div>
+              </div>
+            )}
+
+            {/* Price Bands Table for price_bands report */}
+            {reportType === "price_bands" && (data as any).price_bands && (
               <div className="section">
-                <h3>Recent Activity</h3>
+                <h3>Price Band Analysis</h3>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Price Range</th>
+                      <th className="text-right">Count</th>
+                      <th className="text-right">Median Price</th>
+                      <th className="text-right">Avg DOM</th>
+                      <th className="text-right">Avg $/SqFt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(data as any).price_bands.map((band: any, i: number) => (
+                      <tr key={i}>
+                        <td>{band.label}</td>
+                        <td className="text-right">{band.count}</td>
+                        <td className="text-right">{formatCurrency(band.median_price)}</td>
+                        <td className="text-right">{band.avg_dom}</td>
+                        <td className="text-right">${formatNumber(band.avg_ppsf)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Listings Table for reports with sample listings */}
+            {(reportType === "market_snapshot" || reportType === "new_listings" || reportType === "closed") &&
+              (data as any).listings_sample && (data as any).listings_sample.length > 0 && (
+              <div className="section">
+                <h3>{reportType === "closed" ? "Recent Closings" : reportType === "new_listings" ? "New Listings" : "Recent Activity"}</h3>
                 <table className="data-table">
                   <thead>
                     <tr>
                       <th>Address</th>
-                      <th className="text-right">Price</th>
+                      <th className="text-right">{reportType === "closed" ? "Close Price" : "List Price"}</th>
                       <th className="text-right">Beds</th>
                       <th className="text-right">Baths</th>
                       <th className="text-right">SqFt</th>
@@ -545,10 +739,10 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
                     </tr>
                   </thead>
                   <tbody>
-                    {(data as any).listings_sample.slice(0, 6).map((l: any, i: number) => (
+                    {(data as any).listings_sample.slice(0, 5).map((l: any, i: number) => (
                       <tr key={i}>
                         <td>{l.address}</td>
-                        <td className="text-right">{formatCurrency(l.list_price)}</td>
+                        <td className="text-right">{formatCurrency(reportType === "closed" ? (l.close_price || l.list_price) : l.list_price)}</td>
                         <td className="text-right">{l.beds}</td>
                         <td className="text-right">{l.baths}</td>
                         <td className="text-right">{formatNumber(l.sqft)}</td>
@@ -561,9 +755,10 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
             )}
 
             {/* Gallery for gallery reports */}
-            {(data as any).listings && (data as any).listings.length > 0 && (
+            {(reportType === "new_listings_gallery" || reportType === "featured_listings") && 
+              (data as any).listings && (data as any).listings.length > 0 && (
               <div className="section">
-                <h3>Featured Properties</h3>
+                <h3>{reportType === "featured_listings" ? "Featured Properties" : "New Properties"}</h3>
                 <div className="gallery-grid">
                   {(data as any).listings.slice(0, 6).map((l: any, i: number) => (
                     <div key={i} className="property-card">
