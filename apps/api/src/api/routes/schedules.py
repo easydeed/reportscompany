@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field, EmailStr, constr
 from typing import List, Optional, Dict, Any, Literal, Union
 from datetime import datetime
 import json
+import traceback
 from ..db import db_conn, set_rls, fetchone_dict, fetchall_dicts
 
 router = APIRouter(prefix="/v1")
@@ -242,77 +243,91 @@ def create_schedule(
     Validates cadence-specific parameters and stores with RLS.
     Supports typed recipients (contact, sponsored_agent, manual_email).
     """
-    # Validate cadence params
-    validate_schedule_params(payload.cadence, payload.weekly_dow, payload.monthly_dom)
+    try:
+        # Validate cadence params
+        validate_schedule_params(payload.cadence, payload.weekly_dow, payload.monthly_dom)
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Schedule validation error: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=400, detail=f"Invalid schedule parameters: {str(e)}")
     
-    with db_conn() as conn:
-        set_rls(conn, account_id)
-        cur = conn.cursor()
-        
-        # Encode recipients to JSON strings (with ownership validation)
-        encoded_recipients = encode_recipients(payload.recipients, cur=cur, account_id=account_id)
-        
-        if not encoded_recipients:
-            raise HTTPException(
-                status_code=400,
-                detail="No valid recipients provided"
-            )
-        
-        # Convert recipients list to PostgreSQL array
-        # Escape quotes and format for Postgres TEXT[] literal
-        recipients_escaped = [r.replace('"', '\\"') for r in encoded_recipients]
-        recipients_array = "{\"" + "\",\"".join(recipients_escaped) + "\"}"
-        
-        zip_codes_array = None
-        if payload.zip_codes:
-            zip_codes_array = "{" + ",".join(payload.zip_codes) + "}"
-        
-        cur.execute("""
-            INSERT INTO schedules (
-                account_id, name, report_type, city, zip_codes, lookback_days,
-                cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone,
-                recipients, include_attachment, active
-            ) VALUES (
-                %s, %s, %s, %s, %s, %s,
-                %s, %s, %s, %s, %s, %s,
-                %s, %s, %s
-            )
-            RETURNING id::text, name, report_type, city, zip_codes, lookback_days,
-                      cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone,
-                      recipients, include_attachment, active,
-                      last_run_at, next_run_at, created_at
-        """, (
-            account_id, payload.name, payload.report_type, payload.city, zip_codes_array,
-            payload.lookback_days, payload.cadence, payload.weekly_dow, payload.monthly_dom,
-            payload.send_hour, payload.send_minute, payload.timezone, recipients_array,
-            payload.include_attachment, payload.active
-        ))
-        
-        row = cur.fetchone()
-        conn.commit()
-        
-        recipients_raw = row[12]  # Shifted by 1 due to timezone
-        return {
-            "id": row[0],
-            "name": row[1],
-            "report_type": row[2],
-            "city": row[3],
-            "zip_codes": row[4],
-            "lookback_days": row[5],
-            "cadence": row[6],
-            "weekly_dow": row[7],
-            "monthly_dom": row[8],
-            "send_hour": row[9],
-            "send_minute": row[10],
-            "timezone": row[11],  # PASS S2
-            "recipients": recipients_raw,  # Raw for backwards compat
-            "resolved_recipients": decode_recipients(recipients_raw),  # Decoded for frontend
-            "include_attachment": row[13],
-            "active": row[14],
-            "last_run_at": row[15].isoformat() if row[15] else None,
-            "next_run_at": row[16].isoformat() if row[16] else None,
-            "created_at": row[17].isoformat()
-        }
+    try:
+        with db_conn() as conn:
+            set_rls(conn, account_id)
+            cur = conn.cursor()
+            
+            # Encode recipients to JSON strings (with ownership validation)
+            encoded_recipients = encode_recipients(payload.recipients, cur=cur, account_id=account_id)
+            
+            if not encoded_recipients:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No valid recipients provided"
+                )
+            
+            # Convert recipients list to PostgreSQL array
+            # Escape quotes and format for Postgres TEXT[] literal
+            recipients_escaped = [r.replace('"', '\\"') for r in encoded_recipients]
+            recipients_array = "{\"" + "\",\"".join(recipients_escaped) + "\"}"
+            
+            zip_codes_array = None
+            if payload.zip_codes:
+                zip_codes_array = "{" + ",".join(payload.zip_codes) + "}"
+            
+            cur.execute("""
+                INSERT INTO schedules (
+                    account_id, name, report_type, city, zip_codes, lookback_days,
+                    cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone,
+                    recipients, include_attachment, active
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s
+                )
+                RETURNING id::text, name, report_type, city, zip_codes, lookback_days,
+                          cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone,
+                          recipients, include_attachment, active,
+                          last_run_at, next_run_at, created_at
+            """, (
+                account_id, payload.name, payload.report_type, payload.city, zip_codes_array,
+                payload.lookback_days, payload.cadence, payload.weekly_dow, payload.monthly_dom,
+                payload.send_hour, payload.send_minute, payload.timezone, recipients_array,
+                payload.include_attachment, payload.active
+            ))
+            
+            row = cur.fetchone()
+            conn.commit()
+            
+            recipients_raw = row[12]  # Shifted by 1 due to timezone
+            return {
+                "id": row[0],
+                "name": row[1],
+                "report_type": row[2],
+                "city": row[3],
+                "zip_codes": row[4],
+                "lookback_days": row[5],
+                "cadence": row[6],
+                "weekly_dow": row[7],
+                "monthly_dom": row[8],
+                "send_hour": row[9],
+                "send_minute": row[10],
+                "timezone": row[11],  # PASS S2
+                "recipients": recipients_raw,  # Raw for backwards compat
+                "resolved_recipients": decode_recipients(recipients_raw),  # Decoded for frontend
+                "include_attachment": row[13],
+                "active": row[14],
+                "last_run_at": row[15].isoformat() if row[15] else None,
+                "next_run_at": row[16].isoformat() if row[16] else None,
+                "created_at": row[17].isoformat()
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Schedule creation error: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to create schedule: {str(e)}")
 
 
 @router.get("/schedules")
