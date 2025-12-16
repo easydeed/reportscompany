@@ -138,8 +138,7 @@ def render_pdf_pdfshift(run_id: str, account_id: str, html_content: Optional[str
         payload = {
             **base_payload,
             "source": print_url,
-            "delay": 2000,  # Wait 2s for dynamic content
-            "wait_for": "network_idle",  # Wait for images to load
+            "delay": 3000,  # Wait 3s for dynamic content and images to load
         }
         print(f"☁️  Rendering PDF with PDFShift: {print_url}")
     
