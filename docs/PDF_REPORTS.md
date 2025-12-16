@@ -98,10 +98,13 @@ base_payload = {
 
 When rendering from a URL (`source: https://.../print/<runId>`), PDFShift runs a Chromium instance remotely. Some pages (especially listing galleries) require extra time for images/layout to settle.
 
+**Important mental model:** seeing images in the HTML preview does *not* guarantee they will render in PDFShift. The preview runs in the user’s browser (their IP, cookies/session, network), while PDFShift renders from its own cloud. MLS/CDN hosts may block PDFShift (hotlink protection, referrer checks, IP restrictions, auth/cookies).
+
 We use these options to improve reliability:
 
 - **`delay`**: wait a fixed time before capture (max 10s)
 - **`wait_for_network`**: wait until there are no network requests for 500ms
+- **`ignore_long_polling`**: do not wait for long-polling/websocket-style requests (prevents “never idle” pages)
 - **`lazy_load_images`**: scroll to trigger lazy-loaded images
 - **`timeout`**: allow the page to keep loading before PDFShift forcibly proceeds (seconds)
 
@@ -442,6 +445,8 @@ It’s common for listing photos to **show in the browser preview** but **fail i
 
 - **Don’t hard-fail conversions on image load**
   - Use `delay`, `wait_for_network`, `lazy_load_images`, and `timeout` to give the page a fair chance to load.
+  - Use `ignore_long_polling` to prevent “network never goes idle” situations.
+  - **Note:** PDFShift plan limits can cap `timeout` (we observed a hard cap of **100 seconds** returning a 400 when exceeded).
 - **Avoid broken-image icons in PDFs**
   - For gallery cards, render photos as **CSS `background-image`** on `.photo-container` with a visible “No Image” placeholder behind it.
   - If the image is blocked/unreachable, the PDF still looks clean (no broken `<img>` icon).
