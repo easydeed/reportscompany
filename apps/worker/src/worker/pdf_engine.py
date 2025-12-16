@@ -146,6 +146,7 @@ def render_pdf_pdfshift(run_id: str, account_id: str, html_content: Optional[str
             "source": print_url,
             "delay": 8000,            # max 10s per docs
             "wait_for_network": True, # no network requests for 500ms
+            "ignore_long_polling": True,  # don't get stuck waiting on long-polling/websockets
             "lazy_load_images": True, # scroll to trigger lazy-loaded images
             # NOTE: PDFShift plan limit enforces max 100s timeout (400 if higher)
             "timeout": 100,           # seconds
