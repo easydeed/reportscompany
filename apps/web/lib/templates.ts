@@ -899,21 +899,23 @@ export function buildNewListingsGalleryHtml(
   `;
 
   // Build card HTML helper
-  // Note: onerror handler provides fallback if MLS photo URL fails to load (common in PDF rendering)
-  const fallbackImg = "https://via.placeholder.com/400x300/e5e7eb/9ca3af?text=No+Image";
+  // Uses photo-container with CSS fallback for broken MLS images in PDF rendering
   const buildCard = (listing: any) => {
-    const photoUrl = listing.hero_photo_url || fallbackImg;
+    const photoUrl = listing.hero_photo_url || "";
     return `
       <div class="property-card avoid-break">
-        <img src="${photoUrl}" alt="${listing.street_address || 'Property'}" class="photo" onerror="this.onerror=null; this.src='${fallbackImg}';" />
+        <div class="photo-container">
+          <div class="photo-placeholder">No Image</div>
+          ${photoUrl ? `<img src="${photoUrl}" alt="${listing.street_address || 'Property'}" class="photo" />` : ''}
+        </div>
         <div class="info">
           <div class="address">${listing.street_address || "Address not available"}</div>
           <div class="city">${listing.city || r.city || ""}, ${listing.zip_code || ""}</div>
           <div class="price">${formatCurrency(listing.list_price)}</div>
           <div class="details">
-            <div class="detail">🛏 ${formatNumber(listing.bedrooms)} bd</div>
-            <div class="detail">🛁 ${formatDecimal(listing.bathrooms, 1)} ba</div>
-            <div class="detail">📐 ${formatNumber(listing.sqft)} sqft</div>
+            <div class="detail">${formatNumber(listing.bedrooms)} bd</div>
+            <div class="detail">${formatDecimal(listing.bathrooms, 1)} ba</div>
+            <div class="detail">${formatNumber(listing.sqft)} sf</div>
           </div>
         </div>
       </div>
@@ -928,39 +930,43 @@ export function buildNewListingsGalleryHtml(
     const pageListings = listings.slice(startIdx, startIdx + CARDS_PER_PAGE);
     const cardsHtml = pageListings.map(buildCard).join('');
 
-    let headerHtml: string;
+    let pageHtml: string;
     if (pageNum === 1) {
-      // V2: Hero header for first page
+      // V2.3: Hero header OUTSIDE page-content for full-bleed
       const logoUrl = data.brand?.logo_url || "";
-      headerHtml = `
-        ${buildHeroHeader("new_listings_gallery", brandName, brandBadge, logoUrl)}
-        ${buildTitleBar("New Listings Gallery", marketName, periodLabel, reportDate)}
-        <section class="ribbon avoid-break">
-          <div class="count">${formatNumber(r.total_listings || listings.length)}</div>
-          <div class="label">NEW LISTINGS — LAST ${lookback} DAYS</div>
-        </section>
-      `;
-    } else {
-      // Condensed header for continuation pages
-      headerHtml = `
-        <div class="header-continuation">
-          <div class="title">New Listings Gallery — ${marketName} (continued)</div>
-          <div class="page-info">Page ${pageNum} of ${totalPages}</div>
-        </div>
-      `;
-    }
-
-    const pageHtml = `
+      pageHtml = `
       <div class="page">
+        ${buildHeroHeader("new_listings_gallery", brandName, brandBadge, logoUrl)}
         <div class="page-content">
-          ${headerHtml}
+          ${buildTitleBar("New Listings Gallery", marketName, periodLabel, reportDate)}
+          <section class="ribbon avoid-break">
+            <div class="count">${formatNumber(r.total_listings || listings.length)}</div>
+            <div class="label">NEW LISTINGS — LAST ${lookback} DAYS</div>
+          </section>
           <section class="gallery-grid">
             ${cardsHtml}
           </section>
         </div>
         ${footerHtml}
       </div>
-    `;
+      `;
+    } else {
+      // Condensed header for continuation pages
+      pageHtml = `
+      <div class="page">
+        <div class="page-content" style="padding-top: 0.4in;">
+          <div class="header-continuation">
+            <div class="title">New Listings Gallery — ${marketName} (continued)</div>
+            <div class="page-info">Page ${pageNum} of ${totalPages}</div>
+          </div>
+          <section class="gallery-grid">
+            ${cardsHtml}
+          </section>
+        </div>
+        ${footerHtml}
+      </div>
+      `;
+    }
 
     pages.push(pageHtml);
   }
