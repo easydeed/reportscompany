@@ -112,23 +112,34 @@ def render_pdf_pdfshift(run_id: str, account_id: str, html_content: Optional[str
     pdf_path = os.path.join(PDF_DIR, f"{run_id}.pdf")
     
     # Prepare request payload
+    # CRITICAL: Set margin to 0 - our HTML templates handle all margins via CSS
+    # Templates use @page { margin: 0 } and .page { padding: 0.25in }
+    # Adding PDFShift margins ON TOP of CSS causes content overflow to blank pages
+    base_payload = {
+        "sandbox": False,
+        "use_print": True,  # Use @media print stylesheet
+        "format": "Letter",  # US Letter: 8.5" x 11"
+        "margin": {          # ZERO margins - CSS handles this
+            "top": "0",
+            "right": "0",
+            "bottom": "0",
+            "left": "0"
+        },
+        "remove_blank": True,  # Remove blank trailing pages
+    }
+    
     if html_content:
         payload = {
+            **base_payload,
             "source": html_content,
-            "sandbox": False,
-            "use_print": True,
-            "format": "Letter",
-            "margin": "0.5in"
         }
         print(f"☁️  Rendering PDF with PDFShift (HTML string, {len(html_content)} chars)")
     else:
         payload = {
+            **base_payload,
             "source": print_url,
-            "sandbox": False,
-            "use_print": True,
-            "format": "Letter",
-            "margin": "0.5in",
-            "delay": 2000  # Wait 2s for dynamic content (PDFShift uses 'delay', not 'wait')
+            "delay": 2000,  # Wait 2s for dynamic content
+            "wait_for": "network_idle",  # Wait for images to load
         }
         print(f"☁️  Rendering PDF with PDFShift: {print_url}")
     

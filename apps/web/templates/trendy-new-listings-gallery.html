@@ -74,21 +74,26 @@
     border-radius: 2px;
     page-break-after: always;
     
-    /* Fixed layout: header at top, footer at bottom, content in between */
     display: flex;
     flex-direction: column;
-    overflow: hidden;  /* Prevent content overflow causing blank pages */
+    justify-content: flex-start;
+    overflow: hidden;
   }
   .page:last-child {
     page-break-after: avoid;
   }
 
-  /* Main content area - takes remaining space */
   .page-content{
     flex: 1;
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    justify-content: flex-start;
+  }
+  
+  .page-footer{
+    margin-top: auto;
+    flex-shrink: 0;
   }
   
   .gallery-grid {

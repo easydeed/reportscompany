@@ -84,7 +84,8 @@
 
   .page{
     width: var(--page-width);
-    height: var(--page-height);  /* EXACT page height - no min-height */
+    min-height: var(--page-height);  /* Minimum page height */
+    max-height: var(--page-height);  /* Cap to prevent overflow */
     box-sizing: border-box;
     margin: 0 auto;
     background: white;
@@ -92,21 +93,29 @@
     padding: var(--page-padding);
     page-break-after: always;
     
-    /* Fixed layout: header at top, footer at bottom, content in between */
+    /* Fixed layout: content pinned to top */
     display: flex;
     flex-direction: column;
-    overflow: hidden;  /* Prevent content overflow causing blank pages */
+    justify-content: flex-start;
+    overflow: hidden;
   }
   .page:last-child {
     page-break-after: avoid;
   }
 
-  /* Main content area - takes remaining space between header and footer */
+  /* Main content area - pins content to top */
   .page-content{
     flex: 1;
-    overflow: hidden;  /* Clip any overflow - prevents blank page */
+    overflow: hidden;
     display: flex;
     flex-direction: column;
+    justify-content: flex-start;
+  }
+  
+  /* Footer container */
+  .page-footer{
+    margin-top: auto;
+    flex-shrink: 0;
   }
   
   /* Data section fills available space */

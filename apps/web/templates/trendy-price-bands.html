@@ -68,25 +68,31 @@
 
   .page{
     width: var(--page-width);
-    height: var(--page-height);  /* EXACT page height */
+    min-height: var(--page-height);
+    max-height: var(--page-height);
     box-sizing: border-box;
     margin: 0 auto;
     background: white;
     box-shadow: 0 2px 24px rgba(0,0,0,.06);
     padding: var(--page-padding);
     
-    /* Fixed layout: header at top, footer at bottom, content in between */
     display: flex;
     flex-direction: column;
-    overflow: hidden;  /* Prevent content overflow causing blank pages */
+    justify-content: flex-start;
+    overflow: hidden;
   }
 
-  /* Main content area - takes remaining space */
   .page-content{
     flex: 1;
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    justify-content: flex-start;
+  }
+  
+  .page-footer{
+    margin-top: auto;
+    flex-shrink: 0;
   }
 
   /* ====== Hero Header (Full-Bleed Gradient) ====== */
