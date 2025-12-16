@@ -20,6 +20,7 @@ type Props = {
  * Renders a sample report with branding for PDF generation.
  * Used by the backend to generate sample PDFs.
  * 
+ * V2: Updated to match PDF template hero header design
  * Pass B4.4: Branding Preview Page
  */
 export default async function BrandingPreviewPage({ params, searchParams }: Props) {
@@ -110,66 +111,119 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
               .page {
                 width: 8.5in;
                 min-height: 11in;
+                max-height: 11in;
                 padding: 0;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-start;
                 page-break-after: always;
               }
               
-              .header {
+              /* V2 Hero Header - Full bleed gradient */
+              .hero-header {
                 background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
                 color: white;
-                padding: 24px 32px;
-              }
-              
-              .header-content {
+                padding: 16px 32px;
                 display: flex;
-                align-items: center;
                 justify-content: space-between;
-                gap: 16px;
+                align-items: center;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
               }
               
-              .header-left {
+              .hero-left {
                 display: flex;
                 align-items: center;
                 gap: 16px;
               }
               
-              .logo {
-                height: 48px;
+              .hero-logo {
+                height: 40px;
                 width: auto;
-                max-width: 160px;
+                max-width: 120px;
                 object-fit: contain;
                 filter: brightness(0) invert(1);
               }
               
-              .logo-placeholder {
-                width: 48px;
-                height: 48px;
+              .hero-logo-placeholder {
+                width: 40px;
+                height: 40px;
                 background: rgba(255,255,255,0.2);
-                border-radius: 12px;
+                border-radius: 10px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 24px;
+                font-size: 20px;
                 font-weight: bold;
               }
               
-              .header-title {
-                font-size: 24px;
-                font-weight: 700;
+              .hero-text {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
               }
               
-              .header-subtitle {
+              .hero-brand-name {
                 font-size: 14px;
-                opacity: 0.9;
+                font-weight: 600;
+                opacity: 0.95;
               }
               
-              .header-right {
-                text-align: right;
+              .hero-report-type {
+                font-size: 11px;
+                opacity: 0.8;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+              
+              .hero-right {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+              }
+              
+              .pdf-badge {
+                background: rgba(255,255,255,0.2);
+                color: white;
+                padding: 4px 10px;
+                border-radius: 4px;
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 0.5px;
+              }
+              
+              .affiliate-pill {
+                background: rgba(255,255,255,0.15);
+                color: white;
+                padding: 6px 14px;
+                border-radius: 20px;
+                font-size: 12px;
+                font-weight: 500;
+              }
+              
+              /* Title Bar - Below hero */
+              .title-bar {
+                padding: 20px 32px;
+                border-bottom: 1px solid #e5e7eb;
+                background: white;
+              }
+              
+              .title-bar h1 {
+                font-size: 22px;
+                font-weight: 700;
+                color: #0f172a;
+                margin: 0 0 4px 0;
+              }
+              
+              .title-bar .subline {
                 font-size: 13px;
+                color: #64748b;
+                margin: 0;
               }
               
               .content {
-                padding: 32px;
+                padding: 24px 32px;
+                flex: 1;
               }
               
               .intro {
@@ -190,6 +244,8 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
                 color: white;
                 padding: 20px;
                 border-radius: 12px;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
               }
               
               .metric-label {
@@ -288,7 +344,7 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
               
               /* Branded Footer (above gray footer) */
               .branded-footer {
-                margin: 24px 32px 0;
+                margin: auto 32px 0;
                 padding: 16px 20px;
                 background: #f8fafc;
                 border-radius: 12px;
@@ -353,6 +409,11 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
                 color: var(--primary);
               }
 
+              /* Page Footer */
+              .page-footer {
+                margin-top: auto;
+              }
+
               /* Gray Footer (bottom) */
               .footer {
                 margin-top: 16px;
@@ -374,6 +435,18 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
                 pointer-events: none;
                 z-index: 1000;
               }
+              
+              @media print {
+                .hero-header {
+                  margin: 0 !important;
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
+                }
+                .metric-card {
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
+                }
+              }
             `,
           }}
         />
@@ -381,28 +454,30 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
       <body>
         <div className="sample-watermark">SAMPLE</div>
         
-        <div className="page" style={{ position: "relative" }}>
-          <div className="header">
-            <div className="header-content">
-              <div className="header-left">
-                {logoUrl ? (
-                  <img src={logoUrl} alt={brandName} className="logo" />
-                ) : (
-                  <div className="logo-placeholder">{brandName[0]}</div>
-                )}
-                <div>
-                  <div className="header-title">
-                    {getReportTitle(reportType)} — {city}
-                  </div>
-                  <div className="header-subtitle">
-                    {periodLabel} • {reportDate}
-                  </div>
-                </div>
-              </div>
-              <div className="header-right">
-                <div>{brandName} Insights</div>
+        <div className="page">
+          {/* V2 Hero Header */}
+          <div className="hero-header">
+            <div className="hero-left">
+              {logoUrl ? (
+                <img src={logoUrl} alt={brandName} className="hero-logo" />
+              ) : (
+                <div className="hero-logo-placeholder">{brandName[0]}</div>
+              )}
+              <div className="hero-text">
+                <div className="hero-brand-name">{brandName}</div>
+                <div className="hero-report-type">{getReportTitle(reportType)}</div>
               </div>
             </div>
+            <div className="hero-right">
+              <span className="pdf-badge">PDF</span>
+              <span className="affiliate-pill">{brandName}</span>
+            </div>
+          </div>
+
+          {/* Title Bar */}
+          <div className="title-bar">
+            <h1>{getReportTitle(reportType)} — {city}</h1>
+            <p className="subline">{periodLabel} • {reportDate} • Source: Live MLS Data</p>
           </div>
 
           <div className="content">
@@ -496,34 +571,37 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
             )}
           </div>
 
-          {/* Branded Footer */}
-          <div className="branded-footer">
-            <div className="branded-footer-contact">
-              {repPhotoUrl && (
-                <img src={repPhotoUrl} alt="Representative" className="branded-footer-photo" />
-              )}
-              <div className="branded-footer-info">
-                {contactLine1 && <div className="branded-footer-name">{contactLine1}</div>}
-                {contactLine2 && <div className="branded-footer-details">{contactLine2}</div>}
-                {websiteUrl && (
-                  <div className="branded-footer-website">
-                    {websiteUrl.replace("https://", "").replace("http://", "")}
-                  </div>
+          {/* Page Footer */}
+          <div className="page-footer">
+            {/* Branded Footer */}
+            <div className="branded-footer">
+              <div className="branded-footer-contact">
+                {repPhotoUrl && (
+                  <img src={repPhotoUrl} alt="Representative" className="branded-footer-photo" />
+                )}
+                <div className="branded-footer-info">
+                  {contactLine1 && <div className="branded-footer-name">{contactLine1}</div>}
+                  {contactLine2 && <div className="branded-footer-details">{contactLine2}</div>}
+                  {websiteUrl && (
+                    <div className="branded-footer-website">
+                      {websiteUrl.replace("https://", "").replace("http://", "")}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="branded-footer-logo">
+                {logoUrl ? (
+                  <img src={logoUrl} alt={brandName} />
+                ) : (
+                  <div className="branded-footer-logo-text">{brandName}</div>
                 )}
               </div>
             </div>
-            <div className="branded-footer-logo">
-              {logoUrl ? (
-                <img src={logoUrl} alt={brandName} />
-              ) : (
-                <div className="branded-footer-logo-text">{brandName}</div>
-              )}
-            </div>
-          </div>
 
-          {/* Gray Footer */}
-          <div className="footer">
-            Report generated by {brandName} • Data source: MLS • Sample Data
+            {/* Gray Footer */}
+            <div className="footer">
+              Report generated by {brandName} • Data source: MLS • Sample Data
+            </div>
           </div>
         </div>
       </body>
@@ -535,4 +613,3 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
 export const metadata = {
   title: "Branding Preview",
 };
-
