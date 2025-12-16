@@ -417,25 +417,16 @@ function StepRecipients({
   state: ScheduleWizardState
   setState: (s: ScheduleWizardState) => void
 }) {
-  const [emailInput, setEmailInput] = useState("")
-  const [emailError, setEmailError] = useState("")
   const [people, setPeople] = useState<any[]>([])
   const [loadingPeople, setLoadingPeople] = useState(true)
-  const [isAffiliate, setIsAffiliate] = useState(false)
   const [groups, setGroups] = useState<any[]>([])
   const [loadingGroups, setLoadingGroups] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   
-  // Fetch people (contacts + sponsored agents) on mount
+  // Fetch contacts and groups on mount
   useEffect(() => {
-    async function loadPeople() {
+    async function loadData() {
       try {
-        // Check if user is affiliate
-        const meRes = await fetch('/api/proxy/v1/me', { cache: 'no-store' })
-        const me = meRes.ok ? await meRes.json() : {}
-        const isAff = me.account_type === 'INDUSTRY_AFFILIATE'
-        setIsAffiliate(isAff)
-        
         const peopleList: any[] = []
 
         // Fetch contacts
@@ -459,13 +450,13 @@ function StepRecipients({
 
         setPeople(peopleList.filter(p => p.email)) // Only show people with emails
       } catch (error) {
-        console.error('Failed to load people:', error)
+        console.error('Failed to load contacts:', error)
       } finally {
         setLoadingPeople(false)
         setLoadingGroups(false)
       }
     }
-    loadPeople()
+    loadData()
   }, [])
 
   // Filter people by search query
@@ -524,72 +515,48 @@ function StepRecipients({
     }
   }
 
-  const addEmail = () => {
-    const email = emailInput.trim().toLowerCase()
-    setEmailError("")
-
-    if (!email) return
-
-    if (!validateEmail(email)) {
-      setEmailError("Please enter a valid email address")
-      return
-    }
-
-    if (!validateEmailDomain(email)) {
-      setEmailError("Invalid email domain")
-      return
-    }
-
-    // Check if already added (in recipients or typedRecipients)
-    if (state.recipients.includes(email) || 
-        (state.typedRecipients || []).some(r => r.email === email)) {
-      setEmailError("This email is already added")
-      return
-    }
-
-    // Add to both recipients (display) and typedRecipients (API submission)
-    const typedRecipient = { type: "manual_email" as const, email }
-    setState({ 
-      ...state, 
-      recipients: [...state.recipients, email],
-      typedRecipients: [...(state.typedRecipients || []), typedRecipient]
-    })
-    setEmailInput("")
-  }
-
-  // Remove a manual email
-  const removeManualEmail = (email: string) => {
-    setState({
-      ...state,
-      recipients: state.recipients.filter(e => e !== email),
-      typedRecipients: (state.typedRecipients || []).filter(r => 
-        !(r.type === "manual_email" && r.email === email)
-      )
-    })
-  }
-
   // Get selected counts
   const selectedContactsCount = (state.typedRecipients || []).filter(r => r.type === "contact").length
   const selectedGroupsCount = (state.typedRecipients || []).filter(r => r.type === "group").length
-  const manualEmailsCount = (state.typedRecipients || []).filter(r => r.type === "manual_email").length
-  const totalSelected = selectedContactsCount + selectedGroupsCount + manualEmailsCount
+  const totalSelected = selectedContactsCount + selectedGroupsCount
 
-  // Get manual emails for display
-  const manualEmails = (state.typedRecipients || [])
-    .filter(r => r.type === "manual_email")
-    .map(r => r.email!)
+  // Loading state
+  const isLoading = loadingPeople || loadingGroups
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="font-display font-semibold text-xl mb-1">Email Recipients</h2>
         <p className="text-sm text-muted-foreground">
-          Choose who will receive this report. Select contacts, groups, or add emails manually.
+          Select contacts or groups to receive this report.
         </p>
       </div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-3">
+              <div className="h-5 w-32 bg-muted rounded animate-pulse" />
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 border rounded-lg">
+                    <div className="w-5 h-5 bg-muted rounded animate-pulse" />
+                    <div className="w-8 h-8 bg-muted rounded-full animate-pulse" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+                      <div className="h-3 w-48 bg-muted rounded animate-pulse" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Selection Summary */}
-      {totalSelected > 0 && (
+      {!isLoading && totalSelected > 0 && (
         <div className="flex flex-wrap gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
           <span className="text-sm font-medium text-primary">
             {totalSelected} recipient{totalSelected !== 1 ? 's' : ''} selected:
@@ -604,16 +571,11 @@ function StepRecipients({
               {selectedGroupsCount} group{selectedGroupsCount !== 1 ? 's' : ''}
             </Badge>
           )}
-          {manualEmailsCount > 0 && (
-            <Badge variant="secondary" className="bg-cyan-100 text-cyan-700">
-              {manualEmailsCount} email{manualEmailsCount !== 1 ? 's' : ''}
-            </Badge>
-          )}
         </div>
       )}
 
       {/* Contacts Section */}
-      {!loadingPeople && people.length > 0 && (
+      {!isLoading && people.length > 0 && (
         <Card>
           <CardContent className="pt-6 space-y-3">
             <div className="flex items-center justify-between">
@@ -675,7 +637,7 @@ function StepRecipients({
       )}
 
       {/* Groups Section */}
-      {!loadingGroups && groups.length > 0 && (
+      {!isLoading && groups.length > 0 && (
         <Card>
           <CardContent className="pt-6 space-y-3">
             <Label className="text-sm flex items-center gap-2">
@@ -716,82 +678,24 @@ function StepRecipients({
         </Card>
       )}
 
-      {/* Manual Email Entry */}
-      <Card>
-        <CardContent className="pt-6 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email-input" className="flex items-center gap-2">
-              <Mail className="w-4 h-4 text-cyan-600" />
-              Add email manually
-            </Label>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Input
-                  id="email-input"
-                  type="email"
-                  placeholder="name@example.com"
-                  value={emailInput}
-                  onChange={(e) => {
-                    setEmailInput(e.target.value)
-                    setEmailError("")
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      addEmail()
-                    }
-                  }}
-                  className="h-10"
-                  aria-invalid={!!emailError}
-                  aria-describedby={emailError ? "email-error" : undefined}
-                />
-                {emailError && (
-                  <p id="email-error" className="text-xs text-destructive mt-1">
-                    {emailError}
-                  </p>
-                )}
-              </div>
-              <Button type="button" onClick={addEmail} size="sm" className="h-10">
-                Add
-              </Button>
-            </div>
-          </div>
-
-          {/* Manual Emails List */}
-          {manualEmails.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">
-                {manualEmails.length} manual email{manualEmails.length !== 1 ? 's' : ''} added
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {manualEmails.map((email) => (
-                  <Badge
-                    key={email}
-                    variant="secondary"
-                    className="gap-1.5 pl-3 pr-1.5 py-1.5 bg-cyan-50 text-cyan-700 hover:bg-cyan-100"
-                  >
-                    {email}
-                    <button
-                      type="button"
-                      onClick={() => removeManualEmail(email)}
-                      className="hover:bg-cyan-200 rounded-sm p-0.5"
-                      aria-label={`Remove ${email}`}
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* No recipients hint */}
-      {totalSelected === 0 && (
+      {!isLoading && totalSelected === 0 && (
         <p className="text-sm text-muted-foreground text-center py-2">
-          Select at least one recipient from contacts, groups, or add an email manually
+          Select at least one contact or group to receive this report
         </p>
+      )}
+
+      {/* Empty state - no contacts or groups */}
+      {!isLoading && people.length === 0 && groups.length === 0 && (
+        <Card>
+          <CardContent className="pt-6 text-center">
+            <Users className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
+            <p className="font-medium text-muted-foreground">No contacts or groups found</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Add contacts in the Contacts section to send reports
+            </p>
+          </CardContent>
+        </Card>
       )}
     </div>
   )
@@ -855,28 +759,17 @@ function StepReview({ state }: { state: ScheduleWizardState }) {
             </p>
             <div className="flex flex-wrap gap-2">
               {(state.typedRecipients || []).map((recipient, idx) => {
-                if (recipient.type === "manual_email") {
-                  return (
-                    <Badge key={`email-${idx}`} variant="secondary" className="bg-cyan-50 text-cyan-700">
-                      {recipient.email}
-                    </Badge>
-                  )
-                } else if (recipient.type === "contact") {
-                  // Find contact name from recipients (email list)
-                  const email = state.recipients.find((_, i) => {
-                    const contactRecipients = (state.typedRecipients || [])
-                      .filter(r => r.type === "contact")
-                    return contactRecipients[i]?.id === recipient.id
-                  })
+                if (recipient.type === "contact") {
+                  const contactEmail = state.recipients[idx] || recipient.id
                   return (
                     <Badge key={`contact-${idx}`} variant="secondary" className="bg-primary/10 text-primary">
-                      Contact: {email || recipient.id}
+                      {contactEmail}
                     </Badge>
                   )
                 } else if (recipient.type === "group") {
                   return (
                     <Badge key={`group-${idx}`} variant="secondary" className="bg-purple-50 text-purple-700">
-                      Group: {recipient.id}
+                      Group
                     </Badge>
                   )
                 }
