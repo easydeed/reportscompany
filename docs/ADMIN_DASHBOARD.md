@@ -1,6 +1,6 @@
 # Admin Dashboard Documentation
 
-**Last Updated**: December 2, 2024 (v2)
+**Last Updated**: December 2, 2025 (v2)
 **Purpose**: Comprehensive guide to the admin console for platform operators
 
 ---
@@ -659,7 +659,7 @@ Error: A <Select.Item /> must have a value prop that is not an empty string.
 
 ## Changelog
 
-### December 2, 2024
+### December 2, 2025
 - **Fixed**: Select component empty value error on Accounts and Users pages
 - **Added**: Quick navigation cards on Admin Overview
 - **Added**: Bulk CSV import for agents
