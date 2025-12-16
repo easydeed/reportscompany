@@ -128,24 +128,6 @@ def render_pdf_pdfshift(run_id: str, account_id: str, html_content: Optional[str
         "remove_blank": True,  # Remove blank trailing pages
     }
     
-    # JavaScript function to wait for all images to load
-    # PDFShift will call this function repeatedly until it returns true
-    wait_for_images_js = """
-    function isPDFShiftReady() {
-        // Scroll to bottom to trigger any lazy-loaded images
-        window.scrollTo(0, document.body.scrollHeight);
-        
-        // Check if all images are loaded
-        var images = document.querySelectorAll('img');
-        for (var i = 0; i < images.length; i++) {
-            if (!images[i].complete || images[i].naturalHeight === 0) {
-                return false;
-            }
-        }
-        return true;
-    }
-    """
-    
     if html_content:
         payload = {
             **base_payload,
@@ -156,9 +138,7 @@ def render_pdf_pdfshift(run_id: str, account_id: str, html_content: Optional[str
         payload = {
             **base_payload,
             "source": print_url,
-            "delay": 2000,  # Initial delay before checking
-            "javascript": wait_for_images_js,  # Inject JS function
-            "wait_for": "isPDFShiftReady",  # Wait for this function to return true
+            "delay": 5000,  # 5 second delay for page to render
         }
         print(f"☁️  Rendering PDF with PDFShift: {print_url}")
     
@@ -176,7 +156,7 @@ def render_pdf_pdfshift(run_id: str, account_id: str, html_content: Optional[str
         PDFSHIFT_API_URL,
         json=payload,
         headers=headers,
-        timeout=120.0  # Increased timeout for image loading
+        timeout=60.0  # 60 second timeout
     )
     
     print(f"📊 PDFShift response: {response.status_code}")
