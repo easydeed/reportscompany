@@ -646,7 +646,7 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
                   <div className="metric-value">
                     {formatCurrency(
                       (data as any).listings?.length > 0
-                        ? (data as any).listings.reduce((s: number, l: any) => s + l.list_price, 0) / (data as any).listings.length
+                        ? Math.round((data as any).listings.reduce((s: number, l: any) => s + l.list_price, 0) / (data as any).listings.length)
                         : 0
                     )}
                   </div>
@@ -655,7 +655,7 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
                   <div className="metric-label">Avg. Beds</div>
                   <div className="metric-value">
                     {(data as any).listings?.length > 0
-                      ? ((data as any).listings.reduce((s: number, l: any) => s + l.bedrooms, 0) / (data as any).listings.length).toFixed(1)
+                      ? Math.round((data as any).listings.reduce((s: number, l: any) => s + l.bedrooms, 0) / (data as any).listings.length)
                       : "—"}
                   </div>
                 </div>
