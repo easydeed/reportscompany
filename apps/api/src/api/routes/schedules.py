@@ -254,9 +254,8 @@ def create_schedule(
         raise HTTPException(status_code=400, detail=f"Invalid schedule parameters: {str(e)}")
     
     try:
-        with db_conn() as conn:
+        with db_conn() as (conn, cur):
             set_rls(conn, account_id)
-            cur = conn.cursor()
             
             # Encode recipients to JSON strings (with ownership validation)
             encoded_recipients = encode_recipients(payload.recipients, cur=cur, account_id=account_id)
@@ -339,9 +338,8 @@ def list_schedules(
     """
     List all schedules for the account.
     """
-    with db_conn() as conn:
+    with db_conn() as (conn, cur):
         set_rls(conn, account_id)
-        cur = conn.cursor()
         
         query = """
             SELECT id::text, name, report_type, city, zip_codes, lookback_days,
@@ -396,9 +394,8 @@ def get_schedule(
     """
     Get a single schedule by ID.
     """
-    with db_conn() as conn:
+    with db_conn() as (conn, cur):
         set_rls(conn, account_id)
-        cur = conn.cursor()
         
         cur.execute("""
             SELECT id::text, name, report_type, city, zip_codes, lookback_days,
@@ -507,9 +504,8 @@ def update_schedule(
     if not updates and recipients_to_update is None:
         raise HTTPException(status_code=400, detail="No fields to update")
     
-    with db_conn() as conn:
+    with db_conn() as (conn, cur):
         set_rls(conn, account_id)
-        cur = conn.cursor()
         
         # Handle recipients separately to validate ownership
         if recipients_to_update is not None:
@@ -560,9 +556,8 @@ def delete_schedule(
     Delete a schedule.
     Cascade deletes schedule_runs via foreign key.
     """
-    with db_conn() as conn:
+    with db_conn() as (conn, cur):
         set_rls(conn, account_id)
-        cur = conn.cursor()
         
         cur.execute("""
             DELETE FROM schedules
@@ -589,9 +584,8 @@ def list_schedule_runs(
     """
     List execution history for a schedule.
     """
-    with db_conn() as conn:
+    with db_conn() as (conn, cur):
         set_rls(conn, account_id)
-        cur = conn.cursor()
         
         # Verify schedule exists and belongs to account (via RLS)
         cur.execute("""
