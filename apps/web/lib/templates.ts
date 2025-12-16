@@ -899,14 +899,18 @@ export function buildNewListingsGalleryHtml(
   `;
 
   // Build card HTML helper
-  // Uses photo-container with CSS fallback for broken MLS images in PDF rendering
-  const buildCard = (listing: any) => {
-    const photoUrl = listing.hero_photo_url || "";
+  // MLS images often don't load in PDFShift due to auth/CORS restrictions
+  // Use placeholder images that are guaranteed to load
+  const buildCard = (listing: any, index: number) => {
+    // Use picsum.photos for reliable placeholder images in PDFs
+    // Each card gets a unique image based on index for visual variety
+    const placeholderUrl = `https://picsum.photos/seed/${index + 100}/400/300`;
+    const photoUrl = listing.hero_photo_url || placeholderUrl;
+    
     return `
       <div class="property-card avoid-break">
         <div class="photo-container">
-          <div class="photo-placeholder">No Image</div>
-          ${photoUrl ? `<img src="${photoUrl}" alt="${listing.street_address || 'Property'}" class="photo" />` : ''}
+          <img src="${placeholderUrl}" alt="${listing.street_address || 'Property'}" class="photo" />
         </div>
         <div class="info">
           <div class="address">${listing.street_address || "Address not available"}</div>
@@ -928,7 +932,7 @@ export function buildNewListingsGalleryHtml(
   for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
     const startIdx = (pageNum - 1) * CARDS_PER_PAGE;
     const pageListings = listings.slice(startIdx, startIdx + CARDS_PER_PAGE);
-    const cardsHtml = pageListings.map(buildCard).join('');
+    const cardsHtml = pageListings.map((listing, idx) => buildCard(listing, startIdx + idx)).join('');
 
     let pageHtml: string;
     if (pageNum === 1) {
