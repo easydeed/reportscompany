@@ -1,6 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import Image from "next/image"
 
 interface LogoProps {
   className?: string
@@ -10,94 +11,35 @@ interface LogoProps {
 
 export function Logo({ className, variant = "full", showText = true }: LogoProps) {
   if (variant === "icon") {
+    // Icon-only version - just the lightning bolt "T"
     return (
       <div className={cn("flex items-center justify-center", className)}>
         <svg
-          width="48"
-          height="48"
-          viewBox="0 0 48 48"
+          viewBox="0 0 230 290"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           className="w-full h-full"
         >
-          {/* Main geometric shape - hexagon base */}
           <path
-            d="M24 4 L38 12 L38 28 L24 36 L10 28 L10 12 Z"
-            fill="url(#mainGradient)"
-            className="drop-shadow-lg"
+            d="M94.2,152.3l-21.5,42.7h43.9l-16,46.5,46-63.8h-37.6l24.5-49.7h-27l-12.3,24.4h0ZM88.9,127.9H28.6l27.6-56.1h174.5l-27.6,56.1h-52.1l-16.7,34h43.1l-92.2,127.9c-2.5,3.5-7.1,4.5-10.8,2.6-3.8-2-5.5-6.3-4.1-10.3l24.5-71.4h-47.3l29.4-58.4,12.3-24.4h0ZM193.4,112.2l12.1-24.6H66l-12.1,24.6h139.5Z"
+            fill="#f26a21"
           />
-          
-          {/* Inner trend line - dynamic upward movement */}
-          <path
-            d="M14 28 L18 24 L22 26 L26 20 L30 22 L34 16"
-            stroke="#F26B2B"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-            className="drop-shadow-md"
-          />
-          
-          {/* Accent dots on trend line */}
-          <circle cx="14" cy="28" r="2" fill="#F26B2B" />
-          <circle cx="22" cy="26" r="2.5" fill="#F26B2B" />
-          <circle cx="30" cy="22" r="2" fill="#F26B2B" />
-          <circle cx="34" cy="16" r="3" fill="#F26B2B" className="animate-pulse" />
-          
-          {/* Geometric accent lines */}
-          <path
-            d="M24 10 L24 16"
-            stroke="white"
-            strokeWidth="2"
-            strokeLinecap="round"
-            opacity="0.6"
-          />
-          
-          {/* Inner glow effect */}
-          <circle 
-            cx="24" 
-            cy="24" 
-            r="16" 
-            fill="url(#glowGradient)"
-            opacity="0.15"
-          />
-          
-          <defs>
-            {/* Main gradient for hexagon */}
-            <linearGradient id="mainGradient" x1="10" y1="4" x2="38" y2="36" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor="#9333EA" />
-              <stop offset="50%" stopColor="#7C3AED" />
-              <stop offset="100%" stopColor="#6D28D9" />
-            </linearGradient>
-            
-            {/* Glow gradient */}
-            <radialGradient id="glowGradient" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#F26B2B" />
-              <stop offset="100%" stopColor="transparent" />
-            </radialGradient>
-          </defs>
         </svg>
       </div>
     )
   }
 
+  // Full logo with text
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      {/* Icon */}
-      <Logo variant="icon" className="w-10 h-10" showText={false} />
-      
-      {/* Wordmark */}
-      {showText && (
-        <div className="flex flex-col leading-none">
-          <span className="text-xl font-display font-semibold bg-gradient-to-r from-purple-600 via-purple-700 to-purple-800 bg-clip-text text-transparent tracking-tight">
-            TrendyReports
-          </span>
-          <span className="text-[9px] text-muted-foreground/70 tracking-[0.2em] uppercase font-normal mt-0.5">
-            Market Intelligence
-          </span>
-        </div>
-      )}
+    <div className={cn("flex items-center", className)}>
+      <Image
+        src="/logo.svg"
+        alt="TrendyReports"
+        width={160}
+        height={48}
+        className="h-8 w-auto"
+        priority
+      />
     </div>
   )
 }
-

@@ -48,6 +48,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import NavAuth from "@/components/NavAuth"
 import { AccountSwitcher } from "@/components/account-switcher"
+import { Logo } from "@/components/logo"
 
 function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffiliate: boolean }) {
   const pathname = usePathname()
@@ -87,15 +88,9 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-4">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <FileText className="w-5 h-5 text-primary-foreground" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-semibold text-sm">Market Reports</span>
-            <span className="text-xs text-muted-foreground">Real Estate SaaS</span>
-          </div>
-        </div>
+        <Link href="/app" className="flex items-center px-2 py-4">
+          <Logo className="h-8" />
+        </Link>
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
