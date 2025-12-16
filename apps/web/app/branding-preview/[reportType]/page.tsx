@@ -116,14 +116,17 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
                 display: flex;
                 flex-direction: column;
                 justify-content: flex-start;
-                page-break-after: always;
+                overflow: hidden;
+                page-break-after: avoid;
+                page-break-inside: avoid;
               }
               
               /* V2 Hero Header - Full bleed gradient */
               .hero-header {
                 background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
                 color: white;
-                padding: 16px 32px;
+                padding: 24px 32px;
+                min-height: 90px;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
@@ -138,22 +141,22 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
               }
               
               .hero-logo {
-                height: 40px;
+                height: 52px;
                 width: auto;
-                max-width: 120px;
+                max-width: 140px;
                 object-fit: contain;
                 filter: brightness(0) invert(1);
               }
               
               .hero-logo-placeholder {
-                width: 40px;
-                height: 40px;
+                width: 52px;
+                height: 52px;
                 background: rgba(255,255,255,0.2);
-                border-radius: 10px;
+                border-radius: 12px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 20px;
+                font-size: 24px;
                 font-weight: bold;
               }
               
@@ -164,13 +167,13 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
               }
               
               .hero-brand-name {
-                font-size: 14px;
+                font-size: 16px;
                 font-weight: 600;
                 opacity: 0.95;
               }
               
               .hero-report-type {
-                font-size: 11px;
+                font-size: 12px;
                 opacity: 0.8;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
@@ -244,6 +247,7 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
                 color: white;
                 padding: 20px;
                 border-radius: 12px;
+                text-align: center;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
               }
@@ -254,11 +258,13 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
                 margin-bottom: 4px;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
+                text-align: center;
               }
               
               .metric-value {
                 font-size: 24px;
                 font-weight: 700;
+                text-align: center;
               }
               
               .section {
@@ -437,6 +443,17 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
               }
               
               @media print {
+                html, body {
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  background: white !important;
+                }
+                .page {
+                  box-shadow: none !important;
+                  margin: 0 !important;
+                  overflow: hidden !important;
+                  page-break-after: avoid !important;
+                }
                 .hero-header {
                   margin: 0 !important;
                   -webkit-print-color-adjust: exact !important;
@@ -445,6 +462,9 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
                 .metric-card {
                   -webkit-print-color-adjust: exact !important;
                   print-color-adjust: exact !important;
+                }
+                .sample-watermark {
+                  display: none !important;
                 }
               }
             `,
