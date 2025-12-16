@@ -332,6 +332,8 @@ def build_params(report_type: str, params: dict) -> Dict:
     Supported report types:
     - market_snapshot, snapshot: Active + Pending + Closed overview
     - new_listings, new-listings, newlistings: Recent Active listings
+    - new_listings_gallery: Photo gallery of new listings (uses new_listings query)
+    - featured_listings: Premium listings gallery (uses new_listings query)
     - closed, closed_listings, sold: Recent closings
     - inventory_by_zip, inventory-by-zip, inventory: Active inventory by ZIP
     - open_houses, open-houses, openhouses: Upcoming/recent open houses
@@ -341,7 +343,8 @@ def build_params(report_type: str, params: dict) -> Dict:
     
     if rt in ("market-snapshot", "snapshot"):
         return build_market_snapshot(params)
-    if rt in ("new-listings", "newlistings"):
+    if rt in ("new-listings", "newlistings", "new-listings-gallery", "featured-listings"):
+        # Gallery reports use the same query as new_listings (Active listings)
         return build_new_listings(params)
     if rt in ("closed", "closed-listings", "sold"):
         return build_closed(params)
