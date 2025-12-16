@@ -352,36 +352,77 @@ async def send_test_email(
     report_type_display = body.report_type.replace("_", " ").title()
     
     # Build sample metrics for test email
-    # V4: Includes all metrics needed for PDF-aligned email structure
-    sample_metrics = {
-        # Hero metrics (V4: 4-metric row)
-        "median_close_price": 4150000,  # Median Sale Price
-        "total_closed": 42,             # Closed Sales
-        "avg_dom": 42,                  # Avg Days on Market
-        "months_of_inventory": 2.8,     # Months of Inventory
-        
-        # Core indicators (V4: 3-card section)
-        "new_listings_7d": 23,          # New Listings
-        "total_pending": 18,            # Pending Sales
-        "sale_to_list_ratio": 98.5,     # Sale-to-List Ratio
-        
-        # Additional metrics
+    # V4.2: Report-type-specific sample data for accurate test previews
+    
+    # Base metrics shared across report types
+    base_metrics = {
         "total_active": 127,
         "median_list_price": 4200000,
-        
-        # Property type breakdown (segmentation)
-        "sfr_count": 89,
-        "condo_count": 28,
-        "townhome_count": 10,
-        
-        # Price tier breakdown (segmentation)
-        "entry_tier_count": 45,
-        "entry_tier_range": "Under $1M",
-        "moveup_tier_count": 52,
-        "moveup_tier_range": "$1M - $3M",
-        "luxury_tier_count": 30,
-        "luxury_tier_range": "$3M+",
+        "median_close_price": 4150000,
+        "avg_dom": 42,
+        "months_of_inventory": 2.8,
+        "sale_to_list_ratio": 98.5,
+        "total_closed": 42,
+        "total_pending": 18,
+        "new_listings_7d": 23,
     }
+    
+    # Report-specific sample data
+    report_specific_metrics = {
+        "market_snapshot": {
+            # Property type breakdown (segmentation)
+            "sfr_count": 89,
+            "condo_count": 28,
+            "townhome_count": 10,
+            # Price tier breakdown (segmentation)
+            "entry_tier_count": 45,
+            "entry_tier_range": "Under $1M",
+            "moveup_tier_count": 52,
+            "moveup_tier_range": "$1M - $3M",
+            "luxury_tier_count": 30,
+            "luxury_tier_range": "$3M+",
+        },
+        "new_listings": {
+            "avg_ppsf": 892,  # Avg price per sq ft
+            "total_active": 47,  # New listings count
+        },
+        "inventory": {
+            "new_this_month": 34,  # New listings this month
+            "total_active": 156,  # Active inventory
+        },
+        "closed": {
+            "total_closed": 38,
+            "total_volume": 158700000,  # Total sales volume
+        },
+        "price_bands": {
+            "min_price": 450000,
+            "max_price": 8500000,
+            "bands": [
+                {"name": "Entry Level", "range": "$450K - $750K", "count": 45},
+                {"name": "Move-Up", "range": "$750K - $1.5M", "count": 62},
+                {"name": "Premium", "range": "$1.5M - $3M", "count": 38},
+                {"name": "Luxury", "range": "$3M+", "count": 22},
+            ],
+        },
+        "open_houses": {
+            "total_active": 24,
+            "saturday_count": 15,
+            "sunday_count": 18,
+        },
+        "new_listings_gallery": {
+            "total_listings": 12,
+            "min_price": 575000,
+            "avg_sqft": 2450,
+        },
+        "featured_listings": {
+            "total_listings": 6,
+            "max_price": 12500000,
+            "avg_sqft": 4200,
+        },
+    }
+    
+    # Merge base with report-specific metrics
+    sample_metrics = {**base_metrics, **report_specific_metrics.get(body.report_type, {})}
     
     # Build brand dict for template
     brand_dict = {
@@ -396,14 +437,27 @@ async def send_test_email(
         "website_url": branding.get("website_url"),
     }
     
+    # Sample cities per report type for visual distinction in test emails
+    sample_cities = {
+        "market_snapshot": "Beverly Hills",
+        "new_listings": "Pasadena",
+        "inventory": "Glendale",
+        "closed": "Burbank",
+        "price_bands": "Santa Monica",
+        "open_houses": "Manhattan Beach",
+        "new_listings_gallery": "Redondo Beach",
+        "featured_listings": "Malibu",
+    }
+    sample_city = sample_cities.get(body.report_type, "Los Angeles")
+    
     # Use unified template if available
     if UNIFIED_TEMPLATE_AVAILABLE and schedule_email_html:
         logger.info("[Test Email] Using unified template from worker")
-        logger.info(f"[Test Email] Report type: {body.report_type}")
+        logger.info(f"[Test Email] Report type: {body.report_type}, City: {sample_city}")
         email_html = schedule_email_html(
             account_name=brand_name,
             report_type=body.report_type,
-            city="Beverly Hills",  # Sample city
+            city=sample_city,  # Report-specific sample city
             zip_codes=None,
             lookback_days=30,
             metrics=sample_metrics,

@@ -2,7 +2,7 @@
 
 > Complete technical documentation for the email infrastructure, templates, and delivery pipeline.
 
-**Last Updated:** December 15, 2025
+**Last Updated:** December 16, 2025
 
 ---
 
@@ -596,14 +596,20 @@ email_html = schedule_email_html(
 )
 ```
 
-**Sample Data for Test Emails:**
+**Sample Data for Test Emails (V4.2 - Report-Specific):**
 
-| Section | Sample Values |
-|---------|---------------|
-| Main Metrics | 127 Active, $4.2M Median, 42 days DOM |
-| Extra Stats | 2.8 MOI, 98.5% CTL |
-| Property Types | 89 SFR, 28 Condos, 10 Townhomes |
-| Price Tiers | 45 Entry, 52 Move-Up, 30 Luxury |
+Each report type now uses its own sample data and sample city for clear visual distinction:
+
+| Report Type | Sample City | Unique Data |
+|-------------|-------------|-------------|
+| `market_snapshot` | Beverly Hills | Property types, price tiers, core indicators |
+| `new_listings` | Pasadena | 47 new listings, $892/sqft |
+| `inventory` | Glendale | 156 active, 34 new this month |
+| `closed` | Burbank | 38 sold, $158.7M volume |
+| `price_bands` | Santa Monica | 4 price bands ($450K-$8.5M) |
+| `open_houses` | Manhattan Beach | 24 open houses (15 Sat, 18 Sun) |
+| `new_listings_gallery` | Redondo Beach | 12 listings, 2,450 avg sqft |
+| `featured_listings` | Malibu | 6 premium listings, $12.5M max |
 
 **Benefits:**
 - ✅ Change template once, both pathways update
