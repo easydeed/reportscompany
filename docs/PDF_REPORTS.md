@@ -94,6 +94,19 @@ base_payload = {
 }
 ```
 
+#### PDFShift “page readiness” settings (recommended defaults)
+
+When rendering from a URL (`source: https://.../print/<runId>`), PDFShift runs a Chromium instance remotely. Some pages (especially listing galleries) require extra time for images/layout to settle.
+
+We use these options to improve reliability:
+
+- **`delay`**: wait a fixed time before capture (max 10s)
+- **`wait_for_network`**: wait until there are no network requests for 500ms
+- **`lazy_load_images`**: scroll to trigger lazy-loaded images
+- **`timeout`**: allow the page to keep loading before PDFShift forcibly proceeds (seconds)
+
+See PDFShift API parameter docs (same parameters apply across convert endpoints): `https://docs.pdfshift.io/api-reference/convert-to-jpeg#convert-to-jpeg`
+
 ### 2.3 Generation Process
 
 1. **Worker receives job** with `run_id`, `account_id`, `report_type`, `params`
@@ -112,6 +125,7 @@ base_payload = {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| **V2.3** | Dec 16, 2025 | **PDFShift reliability** - avoid conversion failures due to image loading; gallery photos render as CSS `background-image` with graceful placeholder |
 | **V2.2** | Dec 16, 2025 | **Refinements** - Increased header height (90px), centered metric text, larger logos (52px) |
 | V2.1 | Dec 15, 2025 | **All templates hero headers** - uniform hero header across all report types |
 | V2 | Dec 11, 2025 | **Hero Header Revamp** - full-bleed gradient banner (Market Snapshot) |
@@ -412,6 +426,32 @@ base_payload = {
     "remove_blank": True,  # Remove blank trailing pages
 }
 ```
+
+### 7.6 PDFShift Image Loading (Why preview works but PDF breaks)
+
+It’s common for listing photos to **show in the browser preview** but **fail in PDFShift**. The reason is simple:
+
+- **Preview** runs in *your browser*, with your network, cookies, IP, and a normal user-agent.
+- **PDFShift** runs in *PDFShift’s cloud*, which may be blocked by MLS/CDN hotlinking rules, referrer checks, IP allowlists/denylists, or slow image hosts.
+
+#### What to avoid
+
+- **Hard “wait until all images load”** (`wait_for` + custom JS) can cause the entire conversion to fail if even 1 image never loads. Per PDFShift docs, `wait_for` will fail the conversion if the function never returns truthy within its allowed window. See: `https://docs.pdfshift.io/api-reference/convert-to-jpeg#convert-to-jpeg`
+
+#### What we do instead (current approach)
+
+- **Don’t hard-fail conversions on image load**
+  - Use `delay`, `wait_for_network`, `lazy_load_images`, and `timeout` to give the page a fair chance to load.
+- **Avoid broken-image icons in PDFs**
+  - For gallery cards, render photos as **CSS `background-image`** on `.photo-container` with a visible “No Image” placeholder behind it.
+  - If the image is blocked/unreachable, the PDF still looks clean (no broken `<img>` icon).
+
+#### Long-term “perfect photos” solution (when needed)
+
+If we need MLS photos to *always* appear in PDFs, we must serve them from a URL we control:
+
+- **Proxy/cache images** on our backend (download, store, and serve from R2 / our domain)
+- Optionally **embed as base64** (larger HTML/PDF, but self-contained)
 
 ---
 
