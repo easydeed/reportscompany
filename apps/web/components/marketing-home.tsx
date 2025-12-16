@@ -50,7 +50,7 @@ export function MarketingHome() {
                   Trusted by 1,200+ real estate professionals
                 </span>
               </div>
-              <h1 className="font-display font-semibold text-5xl sm:text-6xl lg:text-7xl mb-6 text-slate-900 leading-[1.05]">
+              <h1 className="font-display font-bold text-5xl sm:text-6xl lg:text-7xl mb-6 text-slate-900 leading-[1.05]">
                 Stop wasting time on market reports
               </h1>
               <p className="text-xl text-slate-600 mb-8 leading-relaxed max-w-xl">
@@ -164,7 +164,7 @@ export function MarketingHome() {
             <p className="text-purple-400 font-medium uppercase tracking-wider text-sm mb-4">
               Built for top performers
             </p>
-            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4">Why top producers choose us</h2>
+            <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4">Why top producers choose us</h2>
             <p className="text-xl text-slate-400 max-w-2xl mx-auto">
               The tools you need to stay top-of-mind with every client, every week.
             </p>
@@ -177,7 +177,7 @@ export function MarketingHome() {
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mb-6 shadow-lg shadow-purple-500/25">
                   <Clock className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="font-display font-semibold text-2xl text-white mb-3">Set it and forget it</h3>
+                <h3 className="font-display font-bold text-2xl text-white mb-3">Set it and forget it</h3>
                 <p className="text-slate-400 leading-relaxed text-lg">
                   Configure once. Reports generate and deliver automatically every week, month, or on your custom
                   schedule.
@@ -197,7 +197,7 @@ export function MarketingHome() {
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center mb-6 shadow-lg shadow-orange-500/25">
                   <Palette className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="font-display font-semibold text-2xl text-white mb-3">Your brand, everywhere</h3>
+                <h3 className="font-display font-bold text-2xl text-white mb-3">Your brand, everywhere</h3>
                 <p className="text-slate-400 leading-relaxed text-lg">
                   Logo, colors, contact info — every report looks like it came from your design team.
                 </p>
@@ -216,7 +216,7 @@ export function MarketingHome() {
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center mb-6 shadow-lg shadow-emerald-500/25">
                   <TrendingUp className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="font-display font-semibold text-2xl text-white mb-3">Always fresh data</h3>
+                <h3 className="font-display font-bold text-2xl text-white mb-3">Always fresh data</h3>
                 <p className="text-slate-400 leading-relaxed text-lg">
                   Direct MLS integration means your reports show real-time listings, sales, and market stats.
                 </p>
@@ -281,7 +281,7 @@ export function MarketingHome() {
                     <User className="w-8 h-8 text-white" />
                   </div>
 
-                  <h3 className="font-display font-semibold text-2xl text-slate-900 mb-3">For Agents</h3>
+                  <h3 className="font-display font-bold text-2xl text-slate-900 mb-3">For Agents</h3>
                   <p className="text-slate-600 text-lg leading-relaxed mb-6">
                     Grow your business and impress clients with stunning, branded market reports
                   </p>
@@ -316,7 +316,7 @@ export function MarketingHome() {
                     <Building2 className="w-8 h-8 text-white" />
                   </div>
 
-                  <h3 className="font-display font-semibold text-2xl text-slate-900 mb-3">For Affiliates</h3>
+                  <h3 className="font-display font-bold text-2xl text-slate-900 mb-3">For Affiliates</h3>
                   <p className="text-slate-600 text-base leading-relaxed mb-2">
                     (Title Companies, Lenders & Brokerages)
                   </p>
@@ -359,7 +359,7 @@ export function MarketingHome() {
       <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-purple-50 via-white to-orange-50">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-16">
-            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
+            <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4 text-slate-900">
               The real cost of manual reports
             </h2>
             <p className="text-xl text-slate-600 max-w-3xl mx-auto">
@@ -477,7 +477,7 @@ export function MarketingHome() {
       <section id="demo" className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-900 text-white">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-12">
-            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4">From MLS to inbox in 3 clicks</h2>
+            <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4">From MLS to inbox in 3 clicks</h2>
             <p className="text-xl text-slate-400">No spreadsheets. No manual formatting. Just results.</p>
           </div>
 
@@ -512,7 +512,7 @@ export function MarketingHome() {
                   </div>
                   <div className="h-px flex-1 bg-gradient-to-r from-purple-500 to-transparent" />
                 </div>
-                <h3 className="font-display font-semibold text-3xl mb-4">Define your market</h3>
+                <h3 className="font-display font-bold text-3xl mb-4">Define your market</h3>
                 <p className="text-lg text-slate-400 leading-relaxed mb-6">
                   Select ZIP codes, neighborhoods, or draw custom boundaries. Choose the report type that fits your
                   audience.
@@ -566,7 +566,7 @@ export function MarketingHome() {
                   </div>
                   <div className="h-px flex-1 bg-gradient-to-r from-orange-500 to-transparent" />
                 </div>
-                <h3 className="font-display font-semibold text-3xl mb-4">Add your brand & schedule</h3>
+                <h3 className="font-display font-bold text-3xl mb-4">Add your brand & schedule</h3>
                 <p className="text-lg text-slate-400 leading-relaxed mb-6">
                   Upload your logo, pick your colors, set your delivery cadence. Every report reflects your professional
                   brand.
@@ -592,7 +592,7 @@ export function MarketingHome() {
                   </div>
                   <div className="h-px flex-1 bg-gradient-to-r from-green-500 to-transparent" />
                 </div>
-                <h3 className="font-display font-semibold text-3xl mb-4">Deliver and impress</h3>
+                <h3 className="font-display font-bold text-3xl mb-4">Deliver and impress</h3>
                 <p className="text-lg text-slate-400 leading-relaxed mb-6">
                   Reports generate automatically and land in your clients&apos; inboxes. You stay top-of-mind without lifting
                   a finger.
@@ -646,7 +646,7 @@ export function MarketingHome() {
               <div className="inline-flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-full px-4 py-2 mb-6">
                 <span className="text-sm font-semibold text-orange-900">FOR BROKERAGES & TITLE COMPANIES</span>
               </div>
-              <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-6 text-slate-900">
+              <h2 className="font-display font-bold text-4xl sm:text-5xl mb-6 text-slate-900">
                 Sponsor agents. Scale touchpoints. Track ROI.
               </h2>
               <p className="text-xl text-slate-600 mb-8 leading-relaxed">
@@ -713,7 +713,7 @@ export function MarketingHome() {
       <section id="sample-report" className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-16">
-            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
+            <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4 text-slate-900">
               Professional reports. Every time.
             </h2>
             <p className="text-xl text-slate-600">8.5×11 print-ready PDFs with your branding</p>
@@ -762,7 +762,7 @@ export function MarketingHome() {
       <section className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-16">
-            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
+            <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4 text-slate-900">
               Trusted by top-producing agents
             </h2>
             <p className="text-xl text-slate-600">Real results from real estate professionals</p>
@@ -841,7 +841,7 @@ export function MarketingHome() {
       <section className="py-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-16">
-            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
+            <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4 text-slate-900">
               Integrates with your MLS
             </h2>
             <p className="text-xl text-slate-600">Connects to the data sources you already use</p>
@@ -880,7 +880,7 @@ export function MarketingHome() {
       <section id="pricing" className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-16">
-            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
+            <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4 text-slate-900">
               Simple, transparent pricing
             </h2>
             <p className="text-xl text-slate-600">
@@ -892,7 +892,7 @@ export function MarketingHome() {
             {/* Starter */}
             <div className="bg-white rounded-3xl border border-slate-200 p-8 hover:border-purple-200 hover:shadow-lg transition-all">
               <div className="mb-6">
-                <h3 className="font-display font-semibold text-2xl mb-2 text-slate-900">Starter</h3>
+                <h3 className="font-display font-bold text-2xl mb-2 text-slate-900">Starter</h3>
                 <p className="text-slate-600">Try TrendyReports risk-free</p>
               </div>
               <div className="mb-6">
@@ -930,7 +930,7 @@ export function MarketingHome() {
                 MOST POPULAR
               </div>
               <div className="mb-6">
-                <h3 className="font-display font-semibold text-2xl mb-2 text-slate-900">Pro</h3>
+                <h3 className="font-display font-bold text-2xl mb-2 text-slate-900">Pro</h3>
                 <p className="text-slate-700">For individual agents and small teams</p>
               </div>
               <div className="mb-6">
@@ -972,7 +972,7 @@ export function MarketingHome() {
             {/* Team */}
             <div className="bg-white rounded-3xl border border-slate-200 p-8 hover:border-purple-200 hover:shadow-lg transition-all">
               <div className="mb-6">
-                <h3 className="font-display font-semibold text-2xl mb-2 text-slate-900">Team</h3>
+                <h3 className="font-display font-bold text-2xl mb-2 text-slate-900">Team</h3>
                 <p className="text-slate-600">For brokerages, teams & affiliates</p>
               </div>
               <div className="mb-6">
@@ -1043,7 +1043,7 @@ export function MarketingHome() {
       <section className="py-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-16">
-            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
+            <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4 text-slate-900">
               Enterprise-grade security
             </h2>
             <p className="text-xl text-slate-600">Bank-level protection for your data</p>
@@ -1095,7 +1095,7 @@ export function MarketingHome() {
           />
         </div>
         <div className="max-w-[1200px] mx-auto text-center relative z-10">
-          <h2 className="font-display font-semibold text-4xl sm:text-5xl lg:text-6xl mb-6 text-white leading-tight">
+          <h2 className="font-display font-bold text-4xl sm:text-5xl lg:text-6xl mb-6 text-white leading-tight">
             Ready to automate your market reports?
           </h2>
           <p className="text-xl text-purple-100 mb-8 max-w-3xl mx-auto leading-relaxed">
