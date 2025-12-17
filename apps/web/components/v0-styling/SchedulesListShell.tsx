@@ -9,7 +9,7 @@ export type SchedulesListShellProps = {
 }
 
 export function SchedulesListShell(props: SchedulesListShellProps) {
-  const { schedules } = props
+  const list = Array.isArray(props.schedules) ? props.schedules : []
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
@@ -40,7 +40,7 @@ export function SchedulesListShell(props: SchedulesListShellProps) {
                 <div>
                   <p className="text-sm text-slate-600 mb-1">Total Schedules</p>
                   <p className="text-3xl font-display font-bold text-slate-900">
-                    {schedules.length}
+                    {list.length}
                   </p>
                 </div>
                 <div className="w-12 h-12 rounded-xl bg-violet-100 flex items-center justify-center">
@@ -56,7 +56,7 @@ export function SchedulesListShell(props: SchedulesListShellProps) {
                 <div>
                   <p className="text-sm text-slate-600 mb-1">Active</p>
                   <p className="text-3xl font-display font-bold text-green-600">
-                    {schedules.filter((s) => s.active).length}
+                    {list.filter((s) => s?.active).length}
                   </p>
                 </div>
                 <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
@@ -72,7 +72,7 @@ export function SchedulesListShell(props: SchedulesListShellProps) {
                 <div>
                   <p className="text-sm text-slate-600 mb-1">Paused</p>
                   <p className="text-3xl font-display font-bold text-slate-400">
-                    {schedules.filter((s) => !s.active).length}
+                    {list.filter((s) => !s?.active).length}
                   </p>
                 </div>
                 <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
@@ -89,13 +89,13 @@ export function SchedulesListShell(props: SchedulesListShellProps) {
               Your Schedules
             </CardTitle>
             <CardDescription className="text-slate-600">
-              {schedules.length === 0
+              {list.length === 0
                 ? "No schedules configured yet"
-                : `${schedules.length} schedule${schedules.length === 1 ? "" : "s"} configured`}
+                : `${list.length} schedule${list.length === 1 ? "" : "s"} configured`}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            <ScheduleTable schedules={schedules || []} />
+            <ScheduleTable schedules={list} />
           </CardContent>
         </Card>
       </div>
