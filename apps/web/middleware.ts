@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from "next/server"
+import { getApiBase } from "@/lib/get-api-base"
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE!
 const CLOAK = process.env.ADMIN_CLOAK_404 === "1"
 
 export async function middleware(req: NextRequest) {
@@ -19,6 +19,7 @@ export async function middleware(req: NextRequest) {
     // Extra check for admin paths
     if (pathname.startsWith("/app/admin")) {
       try {
+        const API_BASE = getApiBase()
         const res = await fetch(`${API_BASE}/v1/me`, {
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
