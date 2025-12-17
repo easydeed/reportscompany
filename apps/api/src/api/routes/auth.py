@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Request, Response, status, Backgro
 from pydantic import BaseModel, EmailStr
 import psycopg
 import logging
+import uuid
 from datetime import datetime
 from ..settings import settings
 from ..auth import sign_jwt, check_password, hash_password
@@ -148,11 +149,16 @@ def register(body: RegisterIn, response: Response, background_tasks: BackgroundT
                 )
             
             # 2. Create account on free plan
+            # Generate a URL-safe slug from the user's name + short unique suffix
+            base_slug = name.lower().replace(' ', '-').replace('.', '').replace(',', '').replace("'", '')[:40]
+            unique_suffix = uuid.uuid4().hex[:8]
+            account_slug = f"{base_slug}-{unique_suffix}"
+            
             cur.execute("""
-                INSERT INTO accounts (name, account_type, plan_slug)
-                VALUES (%s, 'REGULAR', 'free')
+                INSERT INTO accounts (name, slug, account_type, plan_slug)
+                VALUES (%s, %s, 'REGULAR', 'free')
                 RETURNING id::text
-            """, (f"{name}'s Account",))
+            """, (f"{name}'s Account", account_slug))
             
             account_id = cur.fetchone()[0]
             
