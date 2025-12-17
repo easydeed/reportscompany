@@ -206,14 +206,27 @@ def proxy_photo_url_to_r2(url: str, account_id: str, run_id: str, idx: int) -> s
     Falls back to original URL on any failure.
     """
     if not url:
+        print(f"📷 Photo {idx}: empty URL, skipping")
         return ""
+
+    # Check if already an R2 URL (avoid re-proxying)
+    if "r2.cloudflarestorage.com" in url:
+        print(f"📷 Photo {idx}: already R2 URL, skipping")
+        return url
+
+    # Check if data URI (already embedded)
+    if url.startswith("data:"):
+        print(f"📷 Photo {idx}: data URI, skipping")
+        return url
 
     if not _r2_configured():
         # Not configured in this environment; keep original URL.
+        # Note: _r2_configured() already logs which vars are missing
         return url
 
     fetched = fetch_image_bytes(url)
     if not fetched:
+        print(f"📷 Photo {idx}: fetch failed, keeping original URL")
         return url
 
     content, content_type, ext = fetched
@@ -221,9 +234,11 @@ def proxy_photo_url_to_r2(url: str, account_id: str, run_id: str, idx: int) -> s
     key = f"report-photos/{account_id}/{run_id}/{idx}-{uuid.uuid4().hex}{ext}"
 
     try:
-        return upload_photo_bytes_to_r2(content, content_type, key)
+        r2_url = upload_photo_bytes_to_r2(content, content_type, key)
+        print(f"📷 Photo {idx}: SUCCESS → R2 URL generated")
+        return r2_url
     except Exception as e:
-        print(f"⚠️  R2 upload failed, using original photo URL: {type(e).__name__}: {e}")
+        print(f"⚠️  R2 upload failed for photo {idx}, using original URL: {type(e).__name__}: {e}")
         return url
 
 
@@ -234,26 +249,32 @@ def proxy_report_photos_inplace(result_json: Dict, account_id: str, run_id: str)
     Expected shape (gallery/featured):
       result_json["listings"] = [{ "hero_photo_url": "...", ... }, ...]
     """
+    print(f"📷 proxy_report_photos_inplace called: account={account_id[:8]}..., run={run_id[:8]}...")
+    
     listings: List[Dict] = result_json.get("listings") or []
     if not isinstance(listings, list) or not listings:
-        print(f"📷 No listings to proxy photos for")
+        print(f"📷 No listings found in result_json (keys: {list(result_json.keys())[:5]})")
         return result_json
 
-    # Check R2 config once upfront
+    # Log first listing to verify structure
+    if listings:
+        first = listings[0]
+        print(f"📷 Found {len(listings)} listings. First listing hero_photo_url: {str(first.get('hero_photo_url', ''))[:60]}...")
+
+    # Check R2 config once upfront (logs missing vars if not configured)
     if not _r2_configured():
         print(f"📷 Skipping photo proxy - R2 not configured, keeping {len(listings)} original MLS URLs")
         return result_json
 
-    print(f"📷 Proxying {len(listings)} listing photos to R2...")
+    print(f"📷 R2 configured ✓ - Proxying {len(listings)} listing photos to R2...")
     success_count = 0
     for i, listing in enumerate(listings):
         if not isinstance(listing, dict):
+            print(f"📷 Listing {i}: not a dict, skipping")
             continue
         url = listing.get("hero_photo_url") or ""
-        if not url:
-            continue
         new_url = proxy_photo_url_to_r2(url, account_id=account_id, run_id=run_id, idx=i)
-        if new_url != url and not new_url.startswith("https://media."):
+        if new_url != url and "r2.cloudflarestorage.com" in new_url:
             success_count += 1
         listing["hero_photo_url"] = new_url
 
