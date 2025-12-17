@@ -133,13 +133,12 @@ export default async function AffiliateDashboardPage() {
   };
 
   return (
-    <>
+    <div className="space-y-6">
       <AffiliateOnboarding
-        className="mb-6"
         sponsoredCount={data.overview.sponsored_count}
       />
       <AffiliateDashboardShell {...shellProps} />
-    </>
+    </div>
   );
 }
 

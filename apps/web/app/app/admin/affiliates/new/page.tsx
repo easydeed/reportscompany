@@ -80,8 +80,8 @@ export default function NewAffiliatePage() {
 
   if (success) {
     return (
-      <div>
-        <div className="flex items-center gap-4 mb-6">
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
           <Link href="/app/admin/affiliates">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
@@ -140,8 +140,8 @@ export default function NewAffiliatePage() {
   }
 
   return (
-    <div>
-      <div className="flex items-center gap-4 mb-6">
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
         <Link href="/app/admin/affiliates">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />

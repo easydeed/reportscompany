@@ -103,9 +103,9 @@ export default async function AffiliateDetailPage({
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/app/admin/affiliates">
             <Button variant="ghost" size="icon">

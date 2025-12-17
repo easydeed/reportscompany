@@ -60,14 +60,14 @@ export default async function AdminPage() {
   const { kpis, reportsChartData, emailsChartData, reports, schedules, emailLogs } = await getAdminData()
 
   return (
-    <div>
-      <div className="mb-6">
+    <div className="space-y-6">
+      <div>
         <h1 className="text-3xl font-display font-bold text-foreground">Admin Console</h1>
         <p className="text-muted-foreground mt-2">Monitor system performance and manage all organizations</p>
       </div>
 
       {/* Management Quick Links */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Link href="/app/admin/affiliates" className="group">
           <Card className="h-full transition-colors hover:border-primary/50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

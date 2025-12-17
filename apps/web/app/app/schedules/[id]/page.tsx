@@ -29,7 +29,7 @@ export default async function ScheduleDetailPage({ params }: { params: Promise<{
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       <ScheduleDetail schedule={item} runs={runs || []} />
     </div>
   )
