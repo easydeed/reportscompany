@@ -155,9 +155,11 @@ def render_pdf_pdfshift(run_id: str, account_id: str, html_content: Optional[str
     
     # Make API request
     # PDFShift uses X-API-Key header for authentication (not Basic Auth!)
+    # X-Processor-Version: 142 = new conversion engine (better CSS3, faster, better PDFs)
     headers = {
         "X-API-Key": PDFSHIFT_API_KEY,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "X-Processor-Version": "142"
     }
     
     print(f"🔑 Using API key: {PDFSHIFT_API_KEY[:10]}...{PDFSHIFT_API_KEY[-4:]}")
