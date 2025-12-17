@@ -899,17 +899,14 @@ export function buildNewListingsGalleryHtml(
   `;
 
   // Build card HTML helper
-  // V2.4: Photos are now base64 data URIs (converted in worker) for PDFShift compatibility.
-  // CSS background-image still used for graceful fallback if conversion fails.
+  // Photos use CSS background-image with MLS URLs (or R2 URLs when photo proxy is enabled)
   const buildCard = (listing: any) => {
     const photoUrl = listing.hero_photo_url || "";
     // Handle both base64 data URIs and regular URLs
     const bgStyle = photoUrl ? `background-image:url('${photoUrl.replaceAll("'", "%27")}');` : "";
     return `
       <div class="property-card avoid-break">
-        <div class="photo-container" style="${bgStyle}">
-          <div class="photo-placeholder">No Image</div>
-        </div>
+        <div class="photo-container" style="${bgStyle}"></div>
         <div class="info">
           <div class="address">${listing.street_address || "Address not available"}</div>
           <div class="city">${listing.city || r.city || ""}, ${listing.zip_code || ""}</div>
