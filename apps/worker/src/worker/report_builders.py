@@ -13,8 +13,9 @@ import statistics
 from typing import List, Dict, Any
 from datetime import datetime, timedelta, date
 
-# Image proxy for converting MLS photos to base64 (PDFShift compatibility)
-from .utils.image_proxy import convert_listings_photos_to_base64
+# NOTE:
+# Gallery/featured listing photos are proxied to R2 at runtime in `tasks.generate_report`
+# so cloud renderers (PDFShift) load images from our domain rather than MLS/CDN URLs.
 
 def _format_currency(val: float | None) -> str:
     """Format as $XXX,XXX"""
@@ -721,11 +722,6 @@ def build_new_listings_gallery_result(listings: List[Dict], context: Dict) -> Di
             "list_date": _format_date(l.get("list_date")),
         })
     
-    # Convert MLS photo URLs to base64 for PDFShift compatibility
-    # This ensures images render in the PDF (MLS URLs often block PDFShift)
-    print(f"🖼️  Converting gallery photos to base64 for PDF rendering...")
-    gallery_listings = convert_listings_photos_to_base64(gallery_listings, "hero_photo_url")
-    
     return {
         "report_type": "new_listings_gallery",
         "city": city,
@@ -772,10 +768,6 @@ def build_featured_listings_result(listings: List[Dict], context: Dict) -> Dict:
             "days_on_market": l.get("days_on_market"),
             "list_date": _format_date(l.get("list_date")),
         })
-    
-    # Convert MLS photo URLs to base64 for PDFShift compatibility
-    print(f"🖼️  Converting featured photos to base64 for PDF rendering...")
-    gallery_listings = convert_listings_photos_to_base64(gallery_listings, "hero_photo_url")
     
     return {
         "report_type": "featured_listings",

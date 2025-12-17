@@ -13,6 +13,7 @@ from .pdf_engine import render_pdf
 from .email.send import send_schedule_email
 from .report_builders import build_result_json
 from .limit_checker import check_usage_limit, log_limit_decision_worker
+from .utils.photo_proxy import proxy_report_photos_inplace
 import boto3
 from botocore.client import Config
 
@@ -411,7 +412,23 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
         else:
             print(f"✅ REPORT RUN {run_id}: data_fetch complete (from cache)")
 
-        # 3) Save result_json
+        # 3) Photo proxy (gallery/featured): rewrite MLS photo URLs to R2 presigned URLs.
+        #
+        # IMPORTANT:
+        # - Do this *after* cache_get/cache_set so we don't cache run-specific signed URLs.
+        # - Do this *before* saving result_json so the /print/[runId] page uses proxied photos.
+        rt_norm = (report_type or "").lower()
+        if rt_norm in ("new_listings_gallery", "featured_listings") and isinstance(result, dict):
+            try:
+                print(f"🖼️  Photo proxy to R2: report_type={rt_norm}, run_id={run_id}")
+                # Mutate in place; safe because we only do this on the per-run `result`
+                # and we intentionally avoid caching the mutated/signed URLs.
+                proxy_report_photos_inplace(result, account_id=account_id, run_id=run_id)
+            except Exception as e:
+                # Never fail the report run just because photos couldn't be proxied.
+                print(f"⚠️  Photo proxy failed; continuing with original URLs: {type(e).__name__}: {e}")
+
+        # 4) Save result_json
         print(f"🔍 REPORT RUN {run_id}: step=save_result_json")
         with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
             with conn.cursor() as cur:
@@ -419,7 +436,7 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
                 cur.execute("UPDATE report_generations SET result_json=%s WHERE id=%s", (safe_json_dumps(result), run_id))
         print(f"✅ REPORT RUN {run_id}: save_result_json complete")
 
-        # 4) Generate PDF (via configured engine: playwright or pdfshift)
+        # 5) Generate PDF (via configured engine: playwright or pdfshift)
         print(f"🔍 REPORT RUN {run_id}: step=generate_pdf")
         print(f"🔍 REPORT RUN {run_id}: pdf_backend=<checking pdf_engine module>")
         pdf_path, html_url = render_pdf(
@@ -430,7 +447,7 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
         )
         print(f"✅ REPORT RUN {run_id}: generate_pdf complete (path={pdf_path})")
         
-        # 5) Upload PDF to Cloudflare R2
+        # 6) Upload PDF to Cloudflare R2
         print(f"🔍 REPORT RUN {run_id}: step=upload_pdf")
         # Create descriptive filename: City_ReportType_RunId.pdf
         # Sanitize city name (remove spaces, special chars)
