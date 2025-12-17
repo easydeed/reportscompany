@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import {
   Dialog,
@@ -24,6 +24,7 @@ import {
   Loader2,
   Palette,
   FileText,
+  Camera,
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { ImageUpload } from "@/components/ui/image-upload"
@@ -49,6 +50,19 @@ interface ProfileData {
 interface BrandingData {
   logo_url: string | null
   primary_color: string
+  accent_color: string
+}
+
+// Phone number formatting helper
+function formatPhoneNumber(value: string): string {
+  // Remove all non-digits
+  const digits = value.replace(/\D/g, "")
+  
+  // Format as (XXX) XXX-XXXX
+  if (digits.length === 0) return ""
+  if (digits.length <= 3) return `(${digits}`
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`
 }
 
 export function SetupWizard({ open, onOpenChange, onComplete, isAffiliate = false }: SetupWizardProps) {
@@ -57,6 +71,7 @@ export function SetupWizard({ open, onOpenChange, onComplete, isAffiliate = fals
   const [step, setStep] = useState<WizardStep>("welcome")
   const [saving, setSaving] = useState(false)
   const [accountType, setAccountType] = useState<string | null>(null)
+  const [userName, setUserName] = useState<string>("")
 
   const [profile, setProfile] = useState<ProfileData>({
     first_name: "",
@@ -69,6 +84,7 @@ export function SetupWizard({ open, onOpenChange, onComplete, isAffiliate = fals
   const [branding, setBranding] = useState<BrandingData>({
     logo_url: null,
     primary_color: "#7C3AED",
+    accent_color: "#F26B2B",
   })
 
   // Load existing data when dialog opens
@@ -84,11 +100,34 @@ export function SetupWizard({ open, onOpenChange, onComplete, isAffiliate = fals
       const profileRes = await fetch("/api/proxy/v1/users/me")
       if (profileRes.ok) {
         const data = await profileRes.json()
+        
+        // If we have a name but not first/last name, split it
+        let firstName = data.first_name || ""
+        let lastName = data.last_name || ""
+        
+        if (!firstName && !lastName && data.name) {
+          // Split full name into first and last
+          const nameParts = data.name.trim().split(/\s+/)
+          firstName = nameParts[0] || ""
+          lastName = nameParts.slice(1).join(" ") || ""
+        }
+        
+        // Also try to extract from account name (e.g., "John's Account" -> "John")
+        if (!firstName && data.account_name) {
+          const match = data.account_name.match(/^(.+?)'s Account$/i)
+          if (match) {
+            const nameParts = match[1].trim().split(/\s+/)
+            firstName = nameParts[0] || ""
+            lastName = nameParts.slice(1).join(" ") || ""
+          }
+        }
+        
+        setUserName(firstName || data.name || "there")
         setProfile({
-          first_name: data.first_name || "",
-          last_name: data.last_name || "",
+          first_name: firstName,
+          last_name: lastName,
           company_name: data.company_name || "",
-          phone: data.phone || "",
+          phone: data.phone ? formatPhoneNumber(data.phone) : "",
           avatar_url: data.avatar_url,
         })
       }
@@ -100,13 +139,28 @@ export function SetupWizard({ open, onOpenChange, onComplete, isAffiliate = fals
         setBranding({
           logo_url: data.logo_url || null,
           primary_color: data.primary_color || "#7C3AED",
+          accent_color: data.secondary_color || "#F26B2B",
         })
         setAccountType(data.account_type || null)
+        
+        // Try to extract name from account name if not set
+        if (!userName && data.name) {
+          const match = data.name.match(/^(.+?)'s Account$/i)
+          if (match) {
+            setUserName(match[1].split(/\s+/)[0] || "there")
+          }
+        }
       }
     } catch (error) {
       console.error("Failed to load existing data:", error)
     }
   }
+  
+  // Handle phone number formatting
+  const handlePhoneChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value)
+    setProfile(prev => ({ ...prev, phone: formatted }))
+  }, [])
 
   // Check if user is an affiliate
   const isAffiliateAccount = isAffiliate || accountType === "INDUSTRY_AFFILIATE"
@@ -114,10 +168,19 @@ export function SetupWizard({ open, onOpenChange, onComplete, isAffiliate = fals
   async function saveProfile() {
     setSaving(true)
     try {
+      // Strip phone formatting for storage
+      const cleanPhone = profile.phone.replace(/\D/g, "")
+      
       const res = await fetch("/api/proxy/v1/users/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(profile),
+        body: JSON.stringify({
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          company_name: profile.company_name,
+          phone: cleanPhone,
+          avatar_url: profile.avatar_url,
+        }),
       })
 
       if (!res.ok) {
@@ -153,6 +216,7 @@ export function SetupWizard({ open, onOpenChange, onComplete, isAffiliate = fals
         body: JSON.stringify({
           logo_url: branding.logo_url,
           primary_color: branding.primary_color,
+          secondary_color: branding.accent_color,
         }),
       })
 
@@ -233,7 +297,9 @@ export function SetupWizard({ open, onOpenChange, onComplete, isAffiliate = fals
               <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center mb-4">
                 <Sparkles className="w-8 h-8 text-white" />
               </div>
-              <DialogTitle className="text-2xl">Welcome to Market Reports!</DialogTitle>
+              <DialogTitle className="text-2xl">
+                Welcome{userName ? `, ${userName}` : ""}!
+              </DialogTitle>
               <DialogDescription className="text-base mt-2">
                 Let's get your account set up in just a few steps. This will only take about 2 minutes.
               </DialogDescription>
@@ -299,7 +365,20 @@ export function SetupWizard({ open, onOpenChange, onComplete, isAffiliate = fals
                 Tell us a bit about yourself so we can personalize your experience.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="space-y-5 py-4">
+              {/* Headshot Upload */}
+              <div className="flex justify-center">
+                <ImageUpload
+                  label="Your Headshot"
+                  value={profile.avatar_url}
+                  onChange={(url) => setProfile({ ...profile, avatar_url: url })}
+                  assetType="headshot"
+                  aspectRatio="square"
+                  helpText="Optional • Makes your reports more personal"
+                  className="w-full max-w-[200px]"
+                />
+              </div>
+              
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="first_name">First Name</Label>
@@ -323,7 +402,7 @@ export function SetupWizard({ open, onOpenChange, onComplete, isAffiliate = fals
 
               <div className="space-y-2">
                 <Label htmlFor="company_name" className="flex items-center gap-2">
-                  <Building className="w-4 h-4" />
+                  <Building className="w-4 h-4 text-muted-foreground" />
                   Company Name
                 </Label>
                 <Input
@@ -336,15 +415,16 @@ export function SetupWizard({ open, onOpenChange, onComplete, isAffiliate = fals
 
               <div className="space-y-2">
                 <Label htmlFor="phone" className="flex items-center gap-2">
-                  <Phone className="w-4 h-4" />
+                  <Phone className="w-4 h-4 text-muted-foreground" />
                   Phone Number
                 </Label>
                 <Input
                   id="phone"
                   type="tel"
                   value={profile.phone}
-                  onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                  onChange={handlePhoneChange}
                   placeholder="(555) 123-4567"
+                  maxLength={14}
                 />
               </div>
             </div>
@@ -378,10 +458,10 @@ export function SetupWizard({ open, onOpenChange, onComplete, isAffiliate = fals
             <DialogHeader>
               <DialogTitle>Set up your branding</DialogTitle>
               <DialogDescription>
-                Add your logo to personalize your reports. You can customize more later.
+                Add your logo and brand colors to personalize your reports.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="space-y-5 py-4">
               <ImageUpload
                 label="Company Logo"
                 value={branding.logo_url}
@@ -391,26 +471,82 @@ export function SetupWizard({ open, onOpenChange, onComplete, isAffiliate = fals
                 helpText="Recommended: 400x150px, PNG with transparency"
               />
 
-              <div className="space-y-2">
-                <Label>Primary Color</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="color"
-                    value={branding.primary_color}
-                    onChange={(e) => setBranding({ ...branding, primary_color: e.target.value })}
-                    className="w-14 h-10 p-1 cursor-pointer"
-                  />
-                  <Input
-                    type="text"
-                    value={branding.primary_color}
-                    onChange={(e) => setBranding({ ...branding, primary_color: e.target.value })}
-                    className="flex-1 font-mono text-sm"
-                    placeholder="#7C3AED"
-                  />
+              {/* Color Pickers - Side by Side */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Primary Color</Label>
+                  <div className="flex items-center gap-2 p-3 rounded-lg border bg-muted/30">
+                    <div className="relative">
+                      <input
+                        type="color"
+                        value={branding.primary_color}
+                        onChange={(e) => setBranding({ ...branding, primary_color: e.target.value })}
+                        className="w-10 h-10 rounded-lg cursor-pointer border-0 p-0"
+                        style={{ backgroundColor: branding.primary_color }}
+                      />
+                      <div 
+                        className="absolute inset-0 rounded-lg pointer-events-none ring-1 ring-inset ring-black/10"
+                        style={{ backgroundColor: branding.primary_color }}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <Input
+                        type="text"
+                        value={branding.primary_color}
+                        onChange={(e) => setBranding({ ...branding, primary_color: e.target.value })}
+                        className="font-mono text-xs h-8"
+                        placeholder="#7C3AED"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Headers & buttons
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Used for headers and accents on your reports
-                </p>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Accent Color</Label>
+                  <div className="flex items-center gap-2 p-3 rounded-lg border bg-muted/30">
+                    <div className="relative">
+                      <input
+                        type="color"
+                        value={branding.accent_color}
+                        onChange={(e) => setBranding({ ...branding, accent_color: e.target.value })}
+                        className="w-10 h-10 rounded-lg cursor-pointer border-0 p-0"
+                        style={{ backgroundColor: branding.accent_color }}
+                      />
+                      <div 
+                        className="absolute inset-0 rounded-lg pointer-events-none ring-1 ring-inset ring-black/10"
+                        style={{ backgroundColor: branding.accent_color }}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <Input
+                        type="text"
+                        value={branding.accent_color}
+                        onChange={(e) => setBranding({ ...branding, accent_color: e.target.value })}
+                        className="font-mono text-xs h-8"
+                        placeholder="#F26B2B"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Highlights & gradients
+                  </p>
+                </div>
+              </div>
+
+              {/* Live Preview */}
+              <div className="rounded-lg border p-3 bg-muted/20">
+                <p className="text-xs text-muted-foreground mb-2">Preview</p>
+                <div 
+                  className="h-8 rounded-md flex items-center justify-center text-white text-xs font-medium"
+                  style={{ 
+                    background: `linear-gradient(90deg, ${branding.primary_color}, ${branding.accent_color})` 
+                  }}
+                >
+                  Your Report Header
+                </div>
               </div>
             </div>
             <div className="flex justify-between">
