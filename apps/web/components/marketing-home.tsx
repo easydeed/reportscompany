@@ -174,11 +174,11 @@ export function MarketingHome() {
         <div className="max-w-[1200px] mx-auto relative z-10">
           <div className="text-center mb-16">
             <p className="text-purple-400 font-medium uppercase tracking-wider text-sm mb-4">
-              Built for top performers
+              Your time back
             </p>
-            <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4">Why top producers choose us</h2>
+            <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4">More time closing. Less time formatting.</h2>
             <p className="text-xl text-slate-400 max-w-2xl mx-auto">
-              The tools you need to stay top-of-mind with every client, every week.
+              Stay top-of-mind with every client, every week — without the busywork.
             </p>
           </div>
 
@@ -266,40 +266,35 @@ export function MarketingHome() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          4. INTEGRATIONS - MLS & Tools
+          4. WHAT YOU GET - Benefits/Selling Points
       ═══════════════════════════════════════════════════════════════════ */}
-      <section id="integrations" className="py-24 px-4 sm:px-6 lg:px-8">
+      <section id="integrations" className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-50 border-y border-slate-200">
         <div className="max-w-[1200px] mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4 text-slate-900">
-              Integrates with your MLS
+          <div className="text-center mb-10">
+            <h2 className="font-display font-bold text-2xl sm:text-3xl text-slate-900">
+              Everything you need to stay top-of-mind
             </h2>
-            <p className="text-xl text-slate-600">Connects to the data sources you already use</p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {["MLS Grid", "Zillow", "Realtor.com", "ListHub", "Zapier", "Mailchimp", "Salesforce", "HubSpot"].map(
-              (integration, idx) => (
-                <div
-                  key={idx}
-                  className="bg-white rounded-xl border border-slate-200 p-6 text-center hover:border-purple-300 hover:shadow-lg transition-all"
-                >
-                  <div className="font-semibold text-slate-900">{integration}</div>
-                </div>
-              )
-            )}
-          </div>
-
-          <div className="mt-12 text-center">
-            <p className="text-slate-600">
-              Need a custom integration?{" "}
-              <a
-                href="mailto:integrations@trendyreports.com"
-                className="text-purple-600 hover:text-purple-700 font-semibold underline"
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { label: "Real-time MLS data", icon: "📊" },
+              { label: "10+ report templates", icon: "📄" },
+              { label: "Automated scheduling", icon: "🔄" },
+              { label: "Email & PDF delivery", icon: "✉️" },
+              { label: "Full white-label", icon: "🎨" },
+              { label: "Photo galleries", icon: "🖼️" },
+              { label: "Client contact lists", icon: "👥" },
+              { label: "Mobile-ready reports", icon: "📱" },
+            ].map((item, idx) => (
+              <div
+                key={idx}
+                className="bg-white rounded-xl border border-slate-200 p-4 text-center hover:border-purple-300 hover:shadow-md transition-all"
               >
-                Contact our team
-              </a>
-            </p>
+                <div className="text-2xl mb-2">{item.icon}</div>
+                <div className="font-medium text-slate-900 text-sm">{item.label}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
