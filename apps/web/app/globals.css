@@ -2,6 +2,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
 :root {
   /* Updated to vibrant TrendyReports palette - light-first, trend-focused */
   /* Primary: Purple/Violet for modern, trendy feel */
