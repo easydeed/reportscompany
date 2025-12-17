@@ -12,6 +12,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+import json
 from ..db import db_conn
 
 router = APIRouter(prefix="/v1")
@@ -309,16 +310,18 @@ def complete_onboarding_step(body: CompleteStepRequest, request: Request):
         raise HTTPException(status_code=400, detail=f"Invalid step key: {body.step_key}")
 
     with db_conn() as (conn, cur):
+        # Serialize metadata dict to JSON string for Postgres jsonb
+        metadata_json = json.dumps(body.metadata or {})
         cur.execute("""
             INSERT INTO onboarding_progress (user_id, step_key, completed_at, metadata)
-            VALUES (%s::uuid, %s, NOW(), %s)
+            VALUES (%s::uuid, %s, NOW(), %s::jsonb)
             ON CONFLICT (user_id, step_key)
             DO UPDATE SET
                 completed_at = NOW(),
                 skipped_at = NULL,
-                metadata = COALESCE(onboarding_progress.metadata, '{}') || %s,
+                metadata = COALESCE(onboarding_progress.metadata, '{}') || %s::jsonb,
                 updated_at = NOW()
-        """, (user_id, body.step_key, body.metadata or {}, body.metadata or {}))
+        """, (user_id, body.step_key, metadata_json, metadata_json))
 
         # Update user's current step
         cur.execute("""
