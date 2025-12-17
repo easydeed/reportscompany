@@ -266,7 +266,46 @@ export function MarketingHome() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          4. FOR AGENTS - Full width section (Image left, text right)
+          4. INTEGRATIONS - MLS & Tools
+      ═══════════════════════════════════════════════════════════════════ */}
+      <section id="integrations" className="py-24 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4 text-slate-900">
+              Integrates with your MLS
+            </h2>
+            <p className="text-xl text-slate-600">Connects to the data sources you already use</p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {["MLS Grid", "Zillow", "Realtor.com", "ListHub", "Zapier", "Mailchimp", "Salesforce", "HubSpot"].map(
+              (integration, idx) => (
+                <div
+                  key={idx}
+                  className="bg-white rounded-xl border border-slate-200 p-6 text-center hover:border-purple-300 hover:shadow-lg transition-all"
+                >
+                  <div className="font-semibold text-slate-900">{integration}</div>
+                </div>
+              )
+            )}
+          </div>
+
+          <div className="mt-12 text-center">
+            <p className="text-slate-600">
+              Need a custom integration?{" "}
+              <a
+                href="mailto:integrations@trendyreports.com"
+                className="text-purple-600 hover:text-purple-700 font-semibold underline"
+              >
+                Contact our team
+              </a>
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          5. FOR AGENTS - Full width section (Image left, text right)
       ═══════════════════════════════════════════════════════════════════ */}
       <section id="for-agents" className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-purple-50/50 via-white to-white">
         <div className="max-w-[1200px] mx-auto">
@@ -341,7 +380,78 @@ export function MarketingHome() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          5. HOW IT WORKS - 3 step process with video
+          6. FOR BROKERAGES / TITLE COMPANIES (Expanded Affiliates Section)
+      ═══════════════════════════════════════════════════════════════════ */}
+      <section id="for-affiliates" className="py-24 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-full px-4 py-2 mb-6">
+                <span className="text-sm font-semibold text-orange-900">FOR BROKERAGES & TITLE COMPANIES</span>
+              </div>
+              <h2 className="font-display font-bold text-4xl sm:text-5xl mb-6 text-slate-900">
+                Sponsor agents. Scale touchpoints. Track ROI.
+              </h2>
+              <p className="text-xl text-slate-600 mb-8 leading-relaxed">
+                Provide unlimited report access to your entire agent roster under your brand. One flat rate. No per-seat
+                fees. Full usage analytics.
+              </p>
+
+              <div className="space-y-6 mb-8">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
+                    <Check className="w-6 h-6 text-orange-600" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-lg text-slate-900 mb-1">Co-branded reports</div>
+                    <div className="text-slate-600">
+                      Your logo, colors, and contact info on every report. TrendyReports stays invisible.
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
+                    <Check className="w-6 h-6 text-orange-600" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-lg text-slate-900 mb-1">Unlimited agent seats</div>
+                    <div className="text-slate-600">Sponsor 10 agents or 1,000. Same price. No per-user charges.</div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
+                    <Check className="w-6 h-6 text-orange-600" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-lg text-slate-900 mb-1">Usage dashboard</div>
+                    <div className="text-slate-600">
+                      See which agents are active, reports generated, and engagement metrics.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Button size="lg" className="bg-orange-600 hover:bg-orange-700 text-white h-14 px-8" asChild>
+                <a href="mailto:enterprise@trendyreports.com">
+                  Request Enterprise Demo
+                  <ChevronRight className="w-5 h-5 ml-2" />
+                </a>
+              </Button>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xl">
+              <img
+                src="/placeholder.svg?height=600&width=800&text=Admin+Dashboard+Screenshot"
+                alt="Enterprise admin dashboard showing agent activity and report analytics"
+                className="w-full"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          7. HOW IT WORKS - 3 step process with video
       ═══════════════════════════════════════════════════════════════════ */}
       <section id="demo" className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-900 text-white">
         <div className="max-w-[1200px] mx-auto">
@@ -506,77 +616,6 @@ export function MarketingHome() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          7. FOR BROKERAGES / TITLE COMPANIES (Expanded Affiliates Section)
-      ═══════════════════════════════════════════════════════════════════ */}
-      <section id="for-affiliates" className="py-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-[1200px] mx-auto">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-full px-4 py-2 mb-6">
-                <span className="text-sm font-semibold text-orange-900">FOR BROKERAGES & TITLE COMPANIES</span>
-              </div>
-              <h2 className="font-display font-bold text-4xl sm:text-5xl mb-6 text-slate-900">
-                Sponsor agents. Scale touchpoints. Track ROI.
-              </h2>
-              <p className="text-xl text-slate-600 mb-8 leading-relaxed">
-                Provide unlimited report access to your entire agent roster under your brand. One flat rate. No per-seat
-                fees. Full usage analytics.
-              </p>
-
-              <div className="space-y-6 mb-8">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
-                    <Check className="w-6 h-6 text-orange-600" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-lg text-slate-900 mb-1">Co-branded reports</div>
-                    <div className="text-slate-600">
-                      Your logo, colors, and contact info on every report. TrendyReports stays invisible.
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
-                    <Check className="w-6 h-6 text-orange-600" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-lg text-slate-900 mb-1">Unlimited agent seats</div>
-                    <div className="text-slate-600">Sponsor 10 agents or 1,000. Same price. No per-user charges.</div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
-                    <Check className="w-6 h-6 text-orange-600" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-lg text-slate-900 mb-1">Usage dashboard</div>
-                    <div className="text-slate-600">
-                      See which agents are active, reports generated, and engagement metrics.
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Button size="lg" className="bg-orange-600 hover:bg-orange-700 text-white h-14 px-8" asChild>
-                <a href="mailto:enterprise@trendyreports.com">
-                  Request Enterprise Demo
-                  <ChevronRight className="w-5 h-5 ml-2" />
-                </a>
-              </Button>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xl">
-              <img
-                src="/placeholder.svg?height=600&width=800&text=Admin+Dashboard+Screenshot"
-                alt="Enterprise admin dashboard showing agent activity and report analytics"
-                className="w-full"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════════
           8. SAMPLE REPORTS CAROUSEL
       ═══════════════════════════════════════════════════════════════════ */}
       <section id="samples" className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50">
@@ -705,46 +744,7 @@ export function MarketingHome() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          10. INTEGRATIONS
-      ═══════════════════════════════════════════════════════════════════ */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-[1200px] mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4 text-slate-900">
-              Integrates with your MLS
-            </h2>
-            <p className="text-xl text-slate-600">Connects to the data sources you already use</p>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {["MLS Grid", "Zillow", "Realtor.com", "ListHub", "Zapier", "Mailchimp", "Salesforce", "HubSpot"].map(
-              (integration, idx) => (
-                <div
-                  key={idx}
-                  className="bg-white rounded-xl border border-slate-200 p-6 text-center hover:border-purple-300 hover:shadow-lg transition-all"
-                >
-                  <div className="font-semibold text-slate-900">{integration}</div>
-                </div>
-              )
-            )}
-          </div>
-
-          <div className="mt-12 text-center">
-            <p className="text-slate-600">
-              Need a custom integration?{" "}
-              <a
-                href="mailto:integrations@trendyreports.com"
-                className="text-purple-600 hover:text-purple-700 font-semibold underline"
-              >
-                Contact our team
-              </a>
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════════
-          11. PRICING
+          10. PRICING
       ═══════════════════════════════════════════════════════════════════ */}
       <section id="pricing" className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50">
         <div className="max-w-[1200px] mx-auto">
