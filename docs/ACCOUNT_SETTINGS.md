@@ -14,8 +14,14 @@ The Account Settings page allows users to:
 - First Name
 - Last Name
 - Company Name
-- Phone Number
+- Phone Number (with input masking)
 - Profile Picture/Avatar (uploaded via R2 storage)
+
+**Option A Integration (December 2025):**
+The user's avatar (`users.avatar_url`) is automatically used as their headshot on reports and emails. This means:
+- Regular agents set their photo once (in Account Settings or during onboarding)
+- It automatically appears on their branded reports
+- No need to upload the same photo in multiple places
 
 ### Security Features
 - **Password Change**

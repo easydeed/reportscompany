@@ -621,21 +621,30 @@ Each report type now uses its own sample data and sample city for clear visual d
 
 ## 7. White-Label Branding
 
-### 7.1 Brand Resolution
+### 7.1 Brand Resolution (December 2025 - Option A)
 
 **File:** `apps/api/src/api/services/branding.py`
 
 ```python
-def get_branding_for_account(cur, account_id: str) -> dict:
+def get_brand_for_account(cur, account_id: str) -> Brand:
     """
     Resolve branding for an account.
     
     Logic:
-    1. If account is INDUSTRY_AFFILIATE → use their affiliate_branding
-    2. If account has sponsor_account_id → use sponsor's branding
-    3. Otherwise → return TrendyReports default branding
+    1. If account is REGULAR with sponsor_account_id → use sponsor's affiliate_branding
+    2. If account is INDUSTRY_AFFILIATE → use their affiliate_branding
+    3. If account is un-sponsored REGULAR → use accounts table + users.avatar_url
+    4. Otherwise → return TrendyReports default branding
     """
 ```
+
+**Option A Implementation:**
+
+For un-sponsored regular users, the system automatically uses:
+- Branding fields from the `accounts` table (logos, colors, contact info)
+- User's `avatar_url` from the `users` table as their headshot
+
+This means regular agents set their headshot once (during onboarding or Account Settings) and it automatically appears on their reports and emails.
 
 ### 7.2 Branding Data Structure
 

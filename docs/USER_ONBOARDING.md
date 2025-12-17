@@ -21,10 +21,17 @@ A multi-step modal that guides new users through initial setup:
 
 | Step | Description |
 |------|-------------|
-| Welcome | Overview of what's coming |
-| Profile | First name, last name, company, phone |
-| Branding | Logo upload, primary color |
+| Welcome | Personalized greeting with user's name |
+| Profile | Headshot upload, first name, last name, company, phone (with masking) |
+| Branding | Logo upload, primary color + accent color with live preview |
 | Complete | Success message + CTA to create first report |
+
+**V2 Enhancements (December 2025):**
+- **Personalized Welcome**: User's name from registration carries over to welcome modal
+- **Headshot Upload**: Optional profile photo upload during onboarding (used on reports - Option A)
+- **Phone Masking**: Phone number input auto-formats to `(555) 123-4567`
+- **Dual Color Pickers**: Both primary and accent colors with hex input + picker + live gradient preview
+- **Continue Button Fixed**: JSON serialization for metadata field resolved
 
 **Behavior:**
 - Automatically shown on first visit (if no onboarding progress)
@@ -439,8 +446,28 @@ Links are configured in the backend response.
 
 ---
 
+---
+
+## Photo Handling (Option A - December 2025)
+
+For regular users, the headshot uploaded during onboarding is stored in `users.avatar_url` and automatically used on reports:
+
+| User Type | Headshot Source | Editable In |
+|-----------|-----------------|-------------|
+| Regular Agent | `users.avatar_url` | Account Settings or Onboarding |
+| Sponsored Agent | Sponsor's `rep_photo_url` | N/A (inherits sponsor branding) |
+| Affiliate | `affiliate_branding.rep_photo_url` | Branding Page |
+
+**Key Points:**
+- Regular users set their headshot once (during onboarding or in Account Settings)
+- It automatically appears on their reports - no duplicate upload needed
+- The Branding page shows the profile photo with a link to edit in Account Settings
+
+---
+
 ## Related Documentation
 
 - [ACCOUNT_SETTINGS.md](./ACCOUNT_SETTINGS.md) - Profile settings
 - [AUTH_ARCHITECTURE_V1.md](./AUTH_ARCHITECTURE_V1.md) - Authentication
-- [EMAIL_SYSTEM.md](./EMAIL_SYSTEM.md) - Email configuration (if exists)
+- [EMAIL_SYSTEM.md](./EMAIL_SYSTEM.md) - Email configuration
+- [BRANDING.md](./BRANDING.md) - White-label branding system

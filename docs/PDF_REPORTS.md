@@ -208,26 +208,58 @@ All PDF templates now share a consistent hero header structure:
 
 ## 4. White-Label Branding
 
-### 4.1 Brand Variables
+### 4.1 Brand Resolution (December 2025 - Option A)
+
+Branding is resolved differently based on user type:
+
+| User Type | Branding Source | Headshot Source |
+|-----------|-----------------|-----------------|
+| **Sponsored Agent** | Sponsor's `affiliate_branding` | Sponsor's `rep_photo_url` |
+| **Affiliate** | Own `affiliate_branding` | Own `rep_photo_url` |
+| **Regular Agent** | Own `accounts` table | Own `users.avatar_url` |
+
+**File:** `apps/api/src/api/services/branding.py`
+
+```python
+def get_brand_for_account(cur, account_id: str) -> Brand:
+    """
+    Brand Resolution Logic:
+    1. Sponsored REGULAR → Use sponsor's affiliate_branding
+    2. INDUSTRY_AFFILIATE → Use own affiliate_branding
+    3. Un-sponsored REGULAR → Use accounts table + users.avatar_url (Option A)
+    """
+```
+
+### 4.2 Brand Variables
 
 Templates receive these brand variables:
 
 | Variable | Source | Fallback |
 |----------|--------|----------|
-| `{{brand_name}}` | `affiliate_branding.brand_display_name` | "TrendyReports" |
-| `{{logo_url}}` | `affiliate_branding.logo_url` | None (text fallback) |
+| `{{brand_name}}` | `brand_display_name` or account name | "TrendyReports" |
+| `{{logo_url}}` | `logo_url` | None (text fallback) |
+| `{{footer_logo_url}}` | `footer_logo_url` | Falls back to `logo_url` |
 | `{{brand_badge}}` | Account name or brand display name | "TrendyReports" |
-| `{{pct-blue}}` | `affiliate_branding.primary_color` | `#7C3AED` |
-| `{{pct-accent}}` | `affiliate_branding.accent_color` | `#F26B2B` |
+| `{{pct-blue}}` | `primary_color` | `#7C3AED` |
+| `{{pct-accent}}` | `accent_color` / `secondary_color` | `#F26B2B` |
 
-### 4.2 Footer Branding
+### 4.3 Footer Branding
 
 | Variable | Description |
 |----------|-------------|
-| `{{rep_photo_url}}` | Circular headshot (52px) |
+| `{{rep_photo_url}}` | Circular headshot (52px) - see Option A for source |
 | `{{contact_line1}}` | Name or title |
 | `{{contact_line2}}` | Phone/email |
 | `{{website_url}}` | Company website |
+
+### 4.4 Logo Types (PDF vs Email)
+
+| Logo Field | Used In | Background | Recommended |
+|------------|---------|------------|-------------|
+| `logo_url` | PDF header | Gradient (dark) | Light/white logo |
+| `footer_logo_url` | PDF footer | Gray (#f8fafc) | Dark/colored logo |
+| `email_logo_url` | Email header | Gradient (dark) | Light/white logo |
+| `email_footer_logo_url` | Email footer | White | Dark/colored logo |
 
 ### 4.3 Branding Preview
 
