@@ -45,9 +45,7 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
   const { overview, planSummary, sponsoredAccounts } = props;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        
+    <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">
@@ -211,7 +209,6 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
             )}
           </CardContent>
         </Card>
-      </div>
     </div>
   );
 }

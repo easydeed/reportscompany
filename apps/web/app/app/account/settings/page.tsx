@@ -1,12 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -24,6 +21,9 @@ import {
   CreditCard,
   Check,
   Shield,
+  Settings,
+  Sparkles,
+  Camera,
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { ImageUpload } from "@/components/ui/image-upload"
@@ -86,6 +86,15 @@ type PlanUsageData = {
   } | null
 }
 
+// Phone number formatting helper
+function formatPhoneNumber(value: string): string {
+  const digits = value.replace(/\D/g, '')
+  if (digits.length === 0) return ''
+  if (digits.length <= 3) return `(${digits}`
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`
+}
+
 // Available plans for upgrade
 const plans = [
   {
@@ -107,14 +116,6 @@ const plans = [
   },
 ]
 
-/**
- * Account Settings Page
- *
- * Tabs:
- * - Profile: Edit personal information (name, company, phone, avatar)
- * - Security: Change password, update email
- * - Plan & Billing: View and manage subscription
- */
 export default function AccountSettingsPage() {
   const [loading, setLoading] = useState(true)
   const [savingProfile, setSavingProfile] = useState(false)
@@ -154,6 +155,12 @@ export default function AccountSettingsPage() {
   // Billing state
   const [billingData, setBillingData] = useState<PlanUsageData | null>(null)
 
+  // Phone formatting handler
+  const handlePhoneChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value)
+    setProfileForm(prev => ({ ...prev, phone: formatted }))
+  }, [])
+
   useEffect(() => {
     loadProfile()
     loadBillingData()
@@ -171,7 +178,7 @@ export default function AccountSettingsPage() {
           first_name: data.first_name || "",
           last_name: data.last_name || "",
           company_name: data.company_name || "",
-          phone: data.phone || "",
+          phone: data.phone ? formatPhoneNumber(data.phone) : "",
           avatar_url: data.avatar_url,
         })
         setEmailForm((prev) => ({ ...prev, newEmail: data.email }))
@@ -256,7 +263,6 @@ export default function AccountSettingsPage() {
     }
   }
 
-  // Helper to format price display from Stripe billing data
   function getPlanDisplay() {
     if (!billingData) return { planName: "Loading...", priceDisplay: "" }
     const sb = billingData.stripe_billing
@@ -275,6 +281,9 @@ export default function AccountSettingsPage() {
   async function saveProfile() {
     setSavingProfile(true)
     try {
+      // Clean phone number for storage
+      const cleanPhone = profileForm.phone.replace(/\D/g, '')
+      
       const res = await fetch("/api/proxy/v1/users/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -282,7 +291,7 @@ export default function AccountSettingsPage() {
           first_name: profileForm.first_name || null,
           last_name: profileForm.last_name || null,
           company_name: profileForm.company_name || null,
-          phone: profileForm.phone || null,
+          phone: cleanPhone || null,
           avatar_url: profileForm.avatar_url,
         }),
       })
@@ -311,31 +320,16 @@ export default function AccountSettingsPage() {
   }
 
   async function changePassword() {
-    // Validation
     if (!passwordForm.currentPassword) {
-      toast({
-        title: "Error",
-        description: "Please enter your current password",
-        variant: "destructive",
-      })
+      toast({ title: "Error", description: "Please enter your current password", variant: "destructive" })
       return
     }
-
     if (passwordForm.newPassword.length < 8) {
-      toast({
-        title: "Error",
-        description: "New password must be at least 8 characters",
-        variant: "destructive",
-      })
+      toast({ title: "Error", description: "New password must be at least 8 characters", variant: "destructive" })
       return
     }
-
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast({
-        title: "Error",
-        description: "New passwords do not match",
-        variant: "destructive",
-      })
+      toast({ title: "Error", description: "New passwords do not match", variant: "destructive" })
       return
     }
 
@@ -355,13 +349,7 @@ export default function AccountSettingsPage() {
         throw new Error(error.detail || "Failed to change password")
       }
 
-      // Clear form
-      setPasswordForm({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      })
-
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" })
       toast({
         title: "Password Changed",
         description: "Your password has been updated. Other sessions have been logged out.",
@@ -378,31 +366,16 @@ export default function AccountSettingsPage() {
   }
 
   async function changeEmail() {
-    // Validation
     if (!emailForm.newEmail) {
-      toast({
-        title: "Error",
-        description: "Please enter a new email address",
-        variant: "destructive",
-      })
+      toast({ title: "Error", description: "Please enter a new email address", variant: "destructive" })
       return
     }
-
     if (!emailForm.currentPassword) {
-      toast({
-        title: "Error",
-        description: "Please enter your current password",
-        variant: "destructive",
-      })
+      toast({ title: "Error", description: "Please enter your current password", variant: "destructive" })
       return
     }
-
     if (emailForm.newEmail === profile?.email) {
-      toast({
-        title: "Error",
-        description: "New email must be different from current email",
-        variant: "destructive",
-      })
+      toast({ title: "Error", description: "New email must be different from current email", variant: "destructive" })
       return
     }
 
@@ -423,17 +396,10 @@ export default function AccountSettingsPage() {
       }
 
       const data = await res.json()
-
-      // Clear password field and update profile
       setEmailForm((prev) => ({ ...prev, currentPassword: "" }))
-      if (profile) {
-        setProfile({ ...profile, email: data.email })
-      }
+      if (profile) setProfile({ ...profile, email: data.email })
 
-      toast({
-        title: "Email Updated",
-        description: "Your email address has been updated successfully.",
-      })
+      toast({ title: "Email Updated", description: "Your email address has been updated successfully." })
     } catch (error) {
       toast({
         title: "Error",
@@ -445,17 +411,12 @@ export default function AccountSettingsPage() {
     }
   }
 
-  // Get user initials for avatar fallback
   function getInitials(): string {
     if (profileForm.first_name && profileForm.last_name) {
       return `${profileForm.first_name[0]}${profileForm.last_name[0]}`.toUpperCase()
     }
-    if (profileForm.first_name) {
-      return profileForm.first_name[0].toUpperCase()
-    }
-    if (profile?.email) {
-      return profile.email[0].toUpperCase()
-    }
+    if (profileForm.first_name) return profileForm.first_name[0].toUpperCase()
+    if (profile?.email) return profile.email[0].toUpperCase()
     return "U"
   }
 
@@ -472,488 +433,374 @@ export default function AccountSettingsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Account Settings</h1>
-        <p className="text-muted-foreground mt-1">
-          Manage your account information and security settings
-        </p>
+      {/* ========== HEADER ========== */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Account Settings</h1>
+          <p className="text-muted-foreground mt-1">
+            Manage your profile, security, and subscription
+          </p>
+        </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 max-w-lg h-14 p-1.5 bg-muted/60 border border-border/50 rounded-xl shadow-sm">
-          <TabsTrigger value="profile" className="gap-2 h-full rounded-lg text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-md transition-all duration-200">
-            <User className="w-4 h-4" />
-            <span>Profile</span>
-          </TabsTrigger>
-          <TabsTrigger value="security" className="gap-2 h-full rounded-lg text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-md transition-all duration-200">
-            <Lock className="w-4 h-4" />
-            <span>Security</span>
-          </TabsTrigger>
-          <TabsTrigger value="billing" className="gap-2 h-full rounded-lg text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-md transition-all duration-200">
-            <CreditCard className="w-4 h-4" />
-            <span>Plan & Billing</span>
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Profile Tab */}
-        <TabsContent value="profile" className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-3">
-            {/* Avatar Section */}
-            <Card className="lg:col-span-1">
-              <CardHeader>
-                <CardTitle>Profile Picture</CardTitle>
-                <CardDescription>
-                  Upload a photo to personalize your account
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center gap-4">
-                <Avatar className="w-32 h-32">
-                  <AvatarImage src={profileForm.avatar_url || undefined} />
-                  <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
-                    {getInitials()}
-                  </AvatarFallback>
-                </Avatar>
-                <ImageUpload
-                  label=""
-                  value={profileForm.avatar_url}
-                  onChange={(url) => setProfileForm({ ...profileForm, avatar_url: url })}
-                  assetType="headshot"
-                  aspectRatio="square"
-                  helpText="Square format recommended (e.g., 400x400px)"
-                />
-              </CardContent>
-            </Card>
-
-            {/* Profile Form */}
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Personal Information</CardTitle>
-                <CardDescription>
-                  Update your personal details
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="first_name">First Name</Label>
-                    <Input
-                      id="first_name"
-                      value={profileForm.first_name}
-                      onChange={(e) =>
-                        setProfileForm({ ...profileForm, first_name: e.target.value })
-                      }
-                      placeholder="John"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="last_name">Last Name</Label>
-                    <Input
-                      id="last_name"
-                      value={profileForm.last_name}
-                      onChange={(e) =>
-                        setProfileForm({ ...profileForm, last_name: e.target.value })
-                      }
-                      placeholder="Doe"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="company_name" className="flex items-center gap-2">
-                    <Building className="w-4 h-4" />
-                    Company Name
-                  </Label>
-                  <Input
-                    id="company_name"
-                    value={profileForm.company_name}
-                    onChange={(e) =>
-                      setProfileForm({ ...profileForm, company_name: e.target.value })
-                    }
-                    placeholder="Acme Real Estate"
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* ========== LEFT COLUMN: PROFILE & SECURITY ========== */}
+        <div className="lg:col-span-2 space-y-6">
+          
+          {/* SECTION 1: Profile */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-1.5 rounded-lg bg-violet-100 dark:bg-violet-900/30">
+                <User className="w-4 h-4 text-violet-600" />
+              </div>
+              <h2 className="font-semibold text-lg">Profile Information</h2>
+              <span className="text-xs text-muted-foreground ml-auto">Used on your reports</span>
+            </div>
+            
+            <div className="bg-card border rounded-xl p-5 space-y-5">
+              {/* Avatar Section */}
+              <div className="flex items-start gap-5">
+                <div className="flex flex-col items-center gap-2">
+                  <Avatar className="w-24 h-24 border-4 border-background shadow-lg">
+                    <AvatarImage src={profileForm.avatar_url || undefined} />
+                    <AvatarFallback className="text-2xl bg-gradient-to-br from-violet-500 to-violet-600 text-white">
+                      {getInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <ImageUpload
+                    label=""
+                    value={profileForm.avatar_url}
+                    onChange={(url) => setProfileForm({ ...profileForm, avatar_url: url })}
+                    assetType="headshot"
+                    aspectRatio="square"
+                    helpText=""
+                    className="w-24"
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone" className="flex items-center gap-2">
-                    <Phone className="w-4 h-4" />
-                    Phone Number
-                  </Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={profileForm.phone}
-                    onChange={(e) =>
-                      setProfileForm({ ...profileForm, phone: e.target.value })
-                    }
-                    placeholder="(555) 123-4567"
-                  />
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Mail className="w-4 h-4" />
-                  <span>Email: {profile?.email}</span>
-                  {profile?.email_verified && (
-                    <span className="flex items-center gap-1 text-green-600">
-                      <CheckCircle2 className="w-3 h-3" />
-                      Verified
-                    </span>
-                  )}
-                </div>
-
-                <Button
-                  onClick={saveProfile}
-                  disabled={savingProfile}
-                  className="w-full gap-2"
-                >
-                  {savingProfile ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4" />
-                  )}
-                  {savingProfile ? "Saving..." : "Save Changes"}
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Security Tab */}
-        <TabsContent value="security" className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Password Change */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Lock className="w-5 h-5" />
-                  Change Password
-                </CardTitle>
-                <CardDescription>
-                  Update your password to keep your account secure. Other sessions will be logged out.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Current Password</Label>
-                  <div className="relative">
+                
+                <div className="flex-1 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="first_name" className="text-sm">First Name</Label>
+                      <Input
+                        id="first_name"
+                        value={profileForm.first_name}
+                        onChange={(e) => setProfileForm({ ...profileForm, first_name: e.target.value })}
+                        placeholder="John"
+                        className="mt-1.5 h-10"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="last_name" className="text-sm">Last Name</Label>
+                      <Input
+                        id="last_name"
+                        value={profileForm.last_name}
+                        onChange={(e) => setProfileForm({ ...profileForm, last_name: e.target.value })}
+                        placeholder="Doe"
+                        className="mt-1.5 h-10"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="company_name" className="text-sm flex items-center gap-1.5">
+                      <Building className="w-3.5 h-3.5 text-muted-foreground" /> Company
+                    </Label>
                     <Input
-                      id="currentPassword"
-                      type={showCurrentPassword ? "text" : "password"}
-                      value={passwordForm.currentPassword}
-                      onChange={(e) =>
-                        setPasswordForm({ ...passwordForm, currentPassword: e.target.value })
-                      }
-                      placeholder="Enter current password"
+                      id="company_name"
+                      value={profileForm.company_name}
+                      onChange={(e) => setProfileForm({ ...profileForm, company_name: e.target.value })}
+                      placeholder="Acme Real Estate"
+                      className="mt-1.5 h-10"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showCurrentPassword ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </button>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="phone" className="text-sm flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-muted-foreground" /> Phone
+                    </Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={profileForm.phone}
+                      onChange={handlePhoneChange}
+                      placeholder="(555) 123-4567"
+                      maxLength={14}
+                      className="mt-1.5 h-10"
+                    />
                   </div>
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="newPassword">New Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="newPassword"
-                      type={showNewPassword ? "text" : "password"}
-                      value={passwordForm.newPassword}
-                      onChange={(e) =>
-                        setPasswordForm({ ...passwordForm, newPassword: e.target.value })
-                      }
-                      placeholder="Enter new password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showNewPassword ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Minimum 8 characters
-                  </p>
+              {/* Email Display */}
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                <Mail className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm">{profile?.email}</span>
+                {profile?.email_verified && (
+                  <Badge variant="secondary" className="ml-auto text-green-600 bg-green-50 border-green-200">
+                    <CheckCircle2 className="w-3 h-3 mr-1" /> Verified
+                  </Badge>
+                )}
+              </div>
+
+              <Button onClick={saveProfile} disabled={savingProfile} className="w-full h-11">
+                {savingProfile ? (
+                  <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Saving...</>
+                ) : (
+                  <><Save className="w-4 h-4 mr-2" /> Save Profile</>
+                )}
+              </Button>
+            </div>
+          </section>
+
+          {/* SECTION 2: Security */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                <Shield className="w-4 h-4 text-amber-600" />
+              </div>
+              <h2 className="font-semibold text-lg">Security</h2>
+            </div>
+            
+            <div className="grid sm:grid-cols-2 gap-4">
+              {/* Password Change */}
+              <div className="bg-card border rounded-xl p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-muted-foreground" />
+                  <h3 className="font-medium">Change Password</h3>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="confirmPassword"
-                      type={showConfirmPassword ? "text" : "password"}
-                      value={passwordForm.confirmPassword}
-                      onChange={(e) =>
-                        setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })
-                      }
-                      placeholder="Confirm new password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </button>
+                
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm">Current Password</Label>
+                    <div className="relative mt-1">
+                      <Input
+                        type={showCurrentPassword ? "text" : "password"}
+                        value={passwordForm.currentPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                        placeholder="••••••••"
+                        className="h-10 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
-                  {passwordForm.newPassword &&
-                    passwordForm.confirmPassword &&
-                    passwordForm.newPassword !== passwordForm.confirmPassword && (
-                      <p className="text-xs text-destructive flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        Passwords do not match
+                  
+                  <div>
+                    <Label className="text-sm">New Password</Label>
+                    <div className="relative mt-1">
+                      <Input
+                        type={showNewPassword ? "text" : "password"}
+                        value={passwordForm.newPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                        placeholder="••••••••"
+                        className="h-10 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">Min. 8 characters</p>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-sm">Confirm Password</Label>
+                    <div className="relative mt-1">
+                      <Input
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                        placeholder="••••••••"
+                        className="h-10 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    {passwordForm.newPassword && passwordForm.confirmPassword && 
+                     passwordForm.newPassword !== passwordForm.confirmPassword && (
+                      <p className="text-xs text-destructive flex items-center gap-1 mt-1">
+                        <AlertCircle className="w-3 h-3" /> Passwords don't match
                       </p>
                     )}
+                  </div>
                 </div>
-
-                <Button
-                  onClick={changePassword}
-                  disabled={savingPassword}
-                  className="w-full gap-2"
-                >
-                  {savingPassword ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Lock className="w-4 h-4" />
-                  )}
+                
+                <Button onClick={changePassword} disabled={savingPassword} variant="outline" className="w-full h-10">
+                  {savingPassword ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Lock className="w-4 h-4 mr-2" />}
                   {savingPassword ? "Updating..." : "Update Password"}
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
 
-            {/* Email Change */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Mail className="w-5 h-5" />
-                  Change Email
-                </CardTitle>
-                <CardDescription>
-                  Update your email address. You will need to enter your current password to confirm.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Current Email</Label>
-                  <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
-                    <Mail className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">{profile?.email}</span>
-                    {profile?.email_verified && (
-                      <span className="flex items-center gap-1 text-xs text-green-600 ml-auto">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Verified
-                      </span>
-                    )}
+              {/* Email Change */}
+              <div className="bg-card border rounded-xl p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-muted-foreground" />
+                  <h3 className="font-medium">Change Email</h3>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="p-2.5 bg-muted/50 rounded-lg text-sm">
+                    <span className="text-muted-foreground">Current:</span> {profile?.email}
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="newEmail">New Email Address</Label>
-                  <Input
-                    id="newEmail"
-                    type="email"
-                    value={emailForm.newEmail}
-                    onChange={(e) =>
-                      setEmailForm({ ...emailForm, newEmail: e.target.value })
-                    }
-                    placeholder="newemail@example.com"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="emailPassword">Current Password</Label>
-                  <div className="relative">
+                  
+                  <div>
+                    <Label className="text-sm">New Email</Label>
                     <Input
-                      id="emailPassword"
-                      type={showEmailPassword ? "text" : "password"}
-                      value={emailForm.currentPassword}
-                      onChange={(e) =>
-                        setEmailForm({ ...emailForm, currentPassword: e.target.value })
-                      }
-                      placeholder="Enter your password to confirm"
+                      type="email"
+                      value={emailForm.newEmail}
+                      onChange={(e) => setEmailForm({ ...emailForm, newEmail: e.target.value })}
+                      placeholder="newemail@example.com"
+                      className="mt-1 h-10"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowEmailPassword(!showEmailPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showEmailPassword ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </button>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-sm">Your Password</Label>
+                    <div className="relative mt-1">
+                      <Input
+                        type={showEmailPassword ? "text" : "password"}
+                        value={emailForm.currentPassword}
+                        onChange={(e) => setEmailForm({ ...emailForm, currentPassword: e.target.value })}
+                        placeholder="Confirm with password"
+                        className="h-10 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowEmailPassword(!showEmailPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showEmailPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
-
-                <Button
-                  onClick={changeEmail}
-                  disabled={savingEmail}
-                  className="w-full gap-2"
-                >
-                  {savingEmail ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Mail className="w-4 h-4" />
-                  )}
+                
+                <Button onClick={changeEmail} disabled={savingEmail} variant="outline" className="w-full h-10">
+                  {savingEmail ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Mail className="w-4 h-4 mr-2" />}
                   {savingEmail ? "Updating..." : "Update Email"}
                 </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Plan & Billing Tab */}
-        <TabsContent value="billing" className="space-y-6">
-          {!billingData ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
             </div>
-          ) : billingData.account.account_type === "INDUSTRY_AFFILIATE" ? (
-            // Affiliate billing UI
-            <Card className="border-purple-200 bg-purple-50/30 dark:bg-purple-950/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-purple-600" />
-                  Your Affiliate Plan
-                </CardTitle>
-                <CardDescription>
-                  Manage or cancel your affiliate subscription in the billing portal.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+          </section>
+        </div>
+
+        {/* ========== RIGHT COLUMN: PLAN & BILLING ========== */}
+        <div className="lg:col-span-1 space-y-6">
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
+                <CreditCard className="w-4 h-4 text-emerald-600" />
+              </div>
+              <h2 className="font-semibold text-lg">Plan & Billing</h2>
+            </div>
+
+            {!billingData ? (
+              <div className="bg-card border rounded-xl p-8 flex items-center justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : billingData.account.account_type === "INDUSTRY_AFFILIATE" ? (
+              <div className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/30 dark:to-purple-950/30 border border-violet-200 dark:border-violet-800 rounded-xl p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-violet-600" />
+                  <span className="font-semibold text-violet-900 dark:text-violet-100">Affiliate Plan</span>
+                </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Current plan</p>
-                  <p className="text-lg font-semibold">{getPlanDisplay().planName}</p>
+                  <p className="text-2xl font-bold">{getPlanDisplay().planName}</p>
                   {getPlanDisplay().priceDisplay && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Billing: <strong>{getPlanDisplay().priceDisplay}</strong>
-                    </p>
-                  )}
-                  {billingData.account.billing_status && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Status: <span className="capitalize">{billingData.account.billing_status}</span>
-                    </p>
+                    <p className="text-sm text-muted-foreground">{getPlanDisplay().priceDisplay}</p>
                   )}
                 </div>
-                <Separator />
-                <Button onClick={openBillingPortal} disabled={billingLoading} className="gap-2">
-                  <CreditCard className="w-4 h-4" />
+                <Button onClick={openBillingPortal} disabled={billingLoading} className="w-full">
+                  <CreditCard className="w-4 h-4 mr-2" />
                   {billingLoading ? "Loading..." : "Manage Billing"}
                 </Button>
-                <p className="text-xs text-muted-foreground">
-                  Update payment method or cancel subscription via Stripe.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            // Agent billing UI
-            <div className="space-y-6">
-              {/* Current Plan Card */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="w-5 h-5" />
-                    Current Plan
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-6">
-                    <div className="flex-1">
-                      <p className="text-sm text-muted-foreground">Plan</p>
-                      <p className="text-lg font-semibold">{getPlanDisplay().planName}</p>
-                      {getPlanDisplay().priceDisplay && (
-                        <p className="text-sm text-muted-foreground">{getPlanDisplay().priceDisplay}</p>
-                      )}
-                      {billingData.account.billing_status && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Status: <span className="capitalize">{billingData.account.billing_status}</span>
-                        </p>
-                      )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Current Plan */}
+                <div className="bg-card border rounded-xl p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Current Plan</span>
+                    <Badge variant="secondary">{getPlanDisplay().planName}</Badge>
+                  </div>
+                  
+                  <div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-bold">{billingData.usage.report_count}</span>
+                      <span className="text-muted-foreground">/ {billingData.plan.monthly_report_limit}</span>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-muted-foreground">Usage</p>
-                      <p className="text-lg font-semibold">
-                        {billingData.usage.report_count} / {billingData.plan.monthly_report_limit} reports
-                      </p>
-                      <p className="text-xs text-muted-foreground">This month</p>
+                    <p className="text-xs text-muted-foreground">Reports this month</p>
+                    
+                    {/* Usage bar */}
+                    <div className="mt-3 h-2 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-violet-500 to-violet-600 rounded-full transition-all"
+                        style={{ width: `${Math.min(100, (billingData.usage.report_count / billingData.plan.monthly_report_limit) * 100)}%` }}
+                      />
                     </div>
                   </div>
+                  
                   {billingData.stripe_billing && (
-                    <Button onClick={openBillingPortal} variant="outline" disabled={billingLoading} className="gap-2">
-                      <CreditCard className="w-4 h-4" />
+                    <Button onClick={openBillingPortal} variant="outline" disabled={billingLoading} className="w-full">
+                      <CreditCard className="w-4 h-4 mr-2" />
                       {billingLoading ? "Loading..." : "Manage Billing"}
                     </Button>
                   )}
-                </CardContent>
-              </Card>
+                </div>
 
-              {/* Available Plans */}
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Available Plans</h3>
-                <div className="grid gap-4 md:grid-cols-2">
+                {/* Available Plans */}
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-muted-foreground">Available Plans</p>
                   {plans.map((plan) => (
-                    <Card key={plan.slug} className={plan.popular ? "border-primary shadow-md" : ""}>
-                      <CardHeader className="pb-3">
-                        {plan.popular && (
-                          <Badge className="w-fit mb-2" variant="default">
-                            Most Popular
-                          </Badge>
-                        )}
-                        <CardTitle className="text-lg">{plan.name}</CardTitle>
-                        <CardDescription>{plan.description}</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div>
-                          <span className="text-3xl font-bold">{plan.price}</span>
-                          <span className="text-muted-foreground">{plan.period}</span>
-                        </div>
-
-                        <ul className="space-y-2">
-                          {plan.features.map((feature, i) => (
-                            <li key={i} className="flex items-start gap-2 text-sm">
-                              <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                              <span>{feature}</span>
-                            </li>
-                          ))}
-                        </ul>
-
-                        <Button
-                          onClick={() => checkout(plan.slug)}
-                          disabled={billingLoading || billingData?.account.plan_slug === plan.slug}
-                          className="w-full"
-                          variant={plan.popular ? "default" : "outline"}
-                        >
-                          {billingData?.account.plan_slug === plan.slug ? "Current Plan" : "Choose " + plan.name}
-                        </Button>
-                      </CardContent>
-                    </Card>
+                    <div 
+                      key={plan.slug} 
+                      className={`bg-card border rounded-xl p-4 ${plan.popular ? 'border-violet-300 ring-1 ring-violet-200' : ''}`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-semibold">{plan.name}</span>
+                        {plan.popular && <Badge className="bg-violet-100 text-violet-700 border-0">Popular</Badge>}
+                      </div>
+                      <div className="mb-3">
+                        <span className="text-2xl font-bold">{plan.price}</span>
+                        <span className="text-muted-foreground text-sm">{plan.period}</span>
+                      </div>
+                      <ul className="space-y-1.5 mb-4">
+                        {plan.features.slice(0, 2).map((f, i) => (
+                          <li key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Check className="w-3 h-3 text-emerald-500" /> {f}
+                          </li>
+                        ))}
+                      </ul>
+                      <Button
+                        onClick={() => checkout(plan.slug)}
+                        disabled={billingLoading || billingData?.account.plan_slug === plan.slug}
+                        variant={billingData?.account.plan_slug === plan.slug ? "secondary" : plan.popular ? "default" : "outline"}
+                        className="w-full h-9 text-sm"
+                      >
+                        {billingData?.account.plan_slug === plan.slug ? "Current Plan" : "Upgrade"}
+                      </Button>
+                    </div>
                   ))}
                 </div>
               </div>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+            )}
+          </section>
+        </div>
+      </div>
     </div>
   )
 }
