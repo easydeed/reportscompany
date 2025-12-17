@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>{{subject_line}}</title>
+  
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:AllowPNG/>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+  
+  <style>
+    /* Reset */
+    body, table, td, p, a, li { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    body { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+    
+    /* Dark Mode */
+    @media (prefers-color-scheme: dark) {
+      .dark-bg { background-color: #1a1a2e !important; }
+      .dark-text { color: #e5e5e5 !important; }
+      .dark-card { background-color: #262640 !important; }
+      .dark-border { border-color: #3d3d5c !important; }
+    }
+    
+    /* Mobile */
+    @media only screen and (max-width: 600px) {
+      .wrapper { width: 100% !important; }
+      .mobile-padding { padding: 20px !important; }
+      .mobile-stack { display: block !important; width: 100% !important; }
+      .mobile-center { text-align: center !important; }
+      .mobile-hide { display: none !important; }
+      .metric-card { display: block !important; width: 100% !important; margin-bottom: 12px !important; }
+      .band-row { display: block !important; width: 100% !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  
+  <!-- Preheader Text -->
+  <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">
+    {{preheader_text}} &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+  </div>
+  
+  <!-- Email Container -->
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f7;" class="dark-bg">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        
+        <!-- Email Wrapper -->
+        <table role="presentation" cellpadding="0" cellspacing="0" width="600" class="wrapper" style="max-width: 600px; width: 100%;">
+          
+          <!-- ========== HEADER ========== -->
+          <tr>
+            <td>
+              <!--[if mso]>
+              <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;height:100px;">
+                <v:fill type="gradient" color="{{primary_color}}" color2="{{accent_color}}" angle="90"/>
+                <v:textbox inset="0,0,0,0">
+              <![endif]-->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, {{primary_color}} 0%, {{accent_color}} 100%); border-radius: 12px 12px 0 0;">
+                <tr>
+                  <td align="center" style="padding: 28px 40px;">
+                    <img src="{{logo_url}}" alt="{{brand_name}}" width="160" style="display: block; max-width: 160px; height: auto;">
+                  </td>
+                </tr>
+              </table>
+              <!--[if mso]>
+                </v:textbox>
+              </v:rect>
+              <![endif]-->
+            </td>
+          </tr>
+          
+          <!-- ========== MAIN CONTENT ========== -->
+          <tr>
+            <td style="background-color: #ffffff; padding: 40px;" class="dark-card mobile-padding">
+              
+              <!-- Report Title Section -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="center" style="padding-bottom: 8px;">
+                    <span style="display: inline-block; background-color: {{primary_color}}15; color: {{primary_color}}; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 6px 14px; border-radius: 20px;">
+                      {{report_type_label}}
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding-bottom: 6px;">
+                    <h1 style="margin: 0; font-size: 26px; font-weight: 700; color: #1a1a2e; line-height: 1.3;" class="dark-text">
+                      {{tagline}}
+                    </h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding-bottom: 32px;">
+                    <p style="margin: 0; font-size: 15px; color: #6b7280;" class="dark-text">
+                      {{location}} &bull; {{date_range}}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- ========== METRICS SECTION ========== -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <!-- Metric 1 -->
+                  <td width="33%" class="metric-card" style="padding: 0 6px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;" class="dark-card dark-border">
+                      <tr>
+                        <td align="center" style="padding: 20px 12px;">
+                          <p style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700; color: {{primary_color}};">
+                            {{metric_1_value}}
+                          </p>
+                          <p style="margin: 0; font-size: 12px; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">
+                            {{metric_1_label}}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <!-- Metric 2 -->
+                  <td width="33%" class="metric-card" style="padding: 0 6px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;" class="dark-card dark-border">
+                      <tr>
+                        <td align="center" style="padding: 20px 12px;">
+                          <p style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700; color: {{accent_color}};">
+                            {{metric_2_value}}
+                          </p>
+                          <p style="margin: 0; font-size: 12px; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">
+                            {{metric_2_label}}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <!-- Metric 3 -->
+                  <td width="33%" class="metric-card" style="padding: 0 6px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;" class="dark-card dark-border">
+                      <tr>
+                        <td align="center" style="padding: 20px 12px;">
+                          <p style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700; color: #10b981;">
+                            {{metric_3_value}}
+                          </p>
+                          <p style="margin: 0; font-size: 12px; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">
+                            {{metric_3_label}}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- ========== EXTRA STATS ROW (Market Snapshot, Closed Sales) ========== -->
+              <!-- {{#if extra_stats}} -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px; background-color: {{primary_color}}08; border-radius: 10px;">
+                <tr>
+                  <td align="center" style="padding: 16px 20px;">
+                    <span style="font-size: 14px; color: #4b5563;">
+                      <strong style="color: {{primary_color}};">{{extra_stat_1_value}}</strong> {{extra_stat_1_label}}
+                      &nbsp;&nbsp;|&nbsp;&nbsp;
+                      <strong style="color: {{accent_color}};">{{extra_stat_2_value}}</strong> {{extra_stat_2_label}}
+                    </span>
+                  </td>
+                </tr>
+              </table>
+              <!-- {{/if}} -->
+              
+              <!-- ========== PRICE BANDS SECTION (Price Bands report only) ========== -->
+              <!-- {{#if price_bands}} -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="padding-bottom: 12px;">
+                    <p style="margin: 0; font-size: 14px; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.5px;">
+                      Price Tiers
+                    </p>
+                  </td>
+                </tr>
+                <!-- Entry Level -->
+                <tr>
+                  <td class="band-row" style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td width="12" style="vertical-align: middle;">
+                          <div style="width: 10px; height: 10px; background-color: #10b981; border-radius: 50%;"></div>
+                        </td>
+                        <td style="padding-left: 12px; vertical-align: middle;">
+                          <span style="font-size: 15px; font-weight: 600; color: #1f2937;">Entry Level</span>
+                          <span style="font-size: 14px; color: #6b7280; margin-left: 8px;">{{entry_range}}</span>
+                        </td>
+                        <td align="right" style="vertical-align: middle;">
+                          <span style="font-size: 15px; font-weight: 600; color: {{primary_color}};">{{entry_count}} listings</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <!-- Move-Up -->
+                <tr>
+                  <td class="band-row" style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td width="12" style="vertical-align: middle;">
+                          <div style="width: 10px; height: 10px; background-color: {{primary_color}}; border-radius: 50%;"></div>
+                        </td>
+                        <td style="padding-left: 12px; vertical-align: middle;">
+                          <span style="font-size: 15px; font-weight: 600; color: #1f2937;">Move-Up</span>
+                          <span style="font-size: 14px; color: #6b7280; margin-left: 8px;">{{moveup_range}}</span>
+                        </td>
+                        <td align="right" style="vertical-align: middle;">
+                          <span style="font-size: 15px; font-weight: 600; color: {{primary_color}};">{{moveup_count}} listings</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <!-- Luxury -->
+                <tr>
+                  <td class="band-row" style="padding: 10px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td width="12" style="vertical-align: middle;">
+                          <div style="width: 10px; height: 10px; background-color: {{accent_color}}; border-radius: 50%;"></div>
+                        </td>
+                        <td style="padding-left: 12px; vertical-align: middle;">
+                          <span style="font-size: 15px; font-weight: 600; color: #1f2937;">Luxury</span>
+                          <span style="font-size: 14px; color: #6b7280; margin-left: 8px;">{{luxury_range}}</span>
+                        </td>
+                        <td align="right" style="vertical-align: middle;">
+                          <span style="font-size: 15px; font-weight: 600; color: {{primary_color}};">{{luxury_count}} listings</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <!-- {{/if}} -->
+              
+              <!-- ========== CTA BUTTON ========== -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="center" style="padding: 8px 0 32px 0;">
+                    <!--[if mso]>
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{pdf_url}}" style="height:50px;v-text-anchor:middle;width:220px;" arcsize="50%" stroke="f" fillcolor="{{primary_color}}">
+                      <w:anchorlock/>
+                      <center style="color:#ffffff;font-family:sans-serif;font-size:16px;font-weight:600;">View Full Report</center>
+                    </v:roundrect>
+                    <![endif]-->
+                    <!--[if !mso]><!-->
+                    <a href="{{pdf_url}}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, {{primary_color}} 0%, {{accent_color}} 100%); color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 36px; border-radius: 50px; box-shadow: 0 4px 14px {{primary_color}}40;">
+                      View Full Report
+                    </a>
+                    <!--<![endif]-->
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Divider -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td style="border-top: 1px solid #e5e7eb; padding-top: 32px;" class="dark-border"></td>
+                </tr>
+              </table>
+              
+              <!-- ========== AGENT/REP FOOTER ========== -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <table role="presentation" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <!-- Agent Photo -->
+                        <td style="vertical-align: middle; padding-right: 20px;">
+                          <!--[if mso]>
+                          <v:oval xmlns:v="urn:schemas-microsoft-com:vml" style="width:70px;height:70px;" stroke="f">
+                            <v:fill type="frame" src="{{rep_photo_url}}"/>
+                          </v:oval>
+                          <![endif]-->
+                          <!--[if !mso]><!-->
+                          <img src="{{rep_photo_url}}" alt="{{rep_name}}" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid {{primary_color}}20;">
+                          <!--<![endif]-->
+                        </td>
+                        <!-- Agent Info -->
+                        <td style="vertical-align: middle;">
+                          <p style="margin: 0 0 2px 0; font-size: 17px; font-weight: 600; color: #1a1a2e;" class="dark-text">
+                            {{rep_name}}
+                          </p>
+                          <p style="margin: 0 0 8px 0; font-size: 13px; color: #6b7280;">
+                            {{rep_title}}
+                          </p>
+                          <p style="margin: 0; font-size: 13px;">
+                            <a href="tel:{{rep_phone}}" style="color: {{primary_color}}; text-decoration: none;">{{rep_phone}}</a>
+                            &nbsp;&bull;&nbsp;
+                            <a href="mailto:{{rep_email}}" style="color: {{primary_color}}; text-decoration: none;">{{rep_email}}</a>
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              
+            </td>
+          </tr>
+          
+          <!-- ========== FOOTER ========== -->
+          <tr>
+            <td style="background-color: #f9fafb; padding: 24px 40px; border-radius: 0 0 12px 12px; border-top: 1px solid #e5e7eb;" class="dark-card dark-border mobile-padding">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 8px 0; font-size: 13px; color: #9ca3af;">
+                      Powered by <a href="{{website_url}}" style="color: {{primary_color}}; text-decoration: none; font-weight: 500;">{{brand_name}}</a>
+                    </p>
+                    <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                      <a href="{{unsubscribe_url}}" style="color: #9ca3af; text-decoration: underline;">Unsubscribe</a>
+                      &nbsp;&bull;&nbsp;
+                      <a href="{{preferences_url}}" style="color: #9ca3af; text-decoration: underline;">Email Preferences</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+        </table>
+        
+      </td>
+    </tr>
+  </table>
+  
+</body>
+</html>
+
+<!--
+========================================
+REPORT TYPE CONFIGURATION GUIDE
+========================================
+
+Use the following values for each report type:
+
+1. MARKET SNAPSHOT (market_snapshot)
+   - report_type_label: "Market Snapshot"
+   - tagline: "Your Complete Market Overview"
+   - metric_1: {{active_count}} | "Active Listings"
+   - metric_2: {{median_price}} | "Median Price"
+   - metric_3: {{avg_dom}} days | "Avg Days on Market"
+   - extra_stats: true
+   - extra_stat_1: {{moi}} | "Months of Inventory"
+   - extra_stat_2: {{ctl}}% | "Close-to-List Ratio"
+
+2. NEW LISTINGS (new_listings)
+   - report_type_label: "New Listings"
+   - tagline: "Fresh Properties Just Listed"
+   - metric_1: {{new_count}} | "New Listings"
+   - metric_2: {{median_price}} | "Median Price"
+   - metric_3: {{avg_dom}} days | "Avg DOM"
+
+3. INVENTORY (inventory)
+   - report_type_label: "Inventory Report"
+   - tagline: "Current Market Availability"
+   - metric_1: {{total_active}} | "Active Listings"
+   - metric_2: {{new_this_month}} | "New This Month"
+   - metric_3: {{median_dom}} days | "Median DOM"
+
+4. CLOSED SALES (closed)
+   - report_type_label: "Closed Sales"
+   - tagline: "Recent Sales Activity"
+   - metric_1: {{closed_count}} | "Homes Sold"
+   - metric_2: {{median_price}} | "Median Sale Price"
+   - metric_3: {{avg_dom}} days | "Avg Days to Sell"
+   - extra_stats: true
+   - extra_stat_1: {{ctl}}% | "Close-to-List Ratio"
+   - extra_stat_2: {{volume}} | "Total Volume"
+
+5. PRICE BANDS (price_bands)
+   - report_type_label: "Price Analysis"
+   - tagline: "Market by Price Tier"
+   - metric_1: {{total_listings}} | "Total Listings"
+   - metric_2: {{median_price}} | "Median Price"
+   - metric_3: {{band_count}} | "Price Tiers"
+   - price_bands: true
+   - entry_range, entry_count
+   - moveup_range, moveup_count
+   - luxury_range, luxury_count
+
+6. NEW LISTINGS GALLERY (new_listings_gallery)
+   - report_type_label: "New Listings Gallery"
+   - tagline: "The Newest Properties"
+   - metric_1: {{gallery_count}} | "New Listings"
+   - metric_2: {{median_price}} | "Median Price"
+   - metric_3: {{lowest_price}} | "Starting At"
+
+7. FEATURED LISTINGS (featured_listings)
+   - report_type_label: "Featured Listings"
+   - tagline: "Premium Properties"
+   - metric_1: {{featured_count}} | "Featured Homes"
+   - metric_2: {{highest_price}} | "Highest Price"
+   - metric_3: {{avg_sqft}} | "Avg Sq Ft"
+
+8. OPEN HOUSES (open_houses)
+   - report_type_label: "Open Houses"
+   - tagline: "Open This Weekend"
+   - metric_1: {{open_house_count}} | "Open Houses"
+   - metric_2: {{saturday_count}} | "Saturday"
+   - metric_3: {{sunday_count}} | "Sunday"
+
+========================================
+-->

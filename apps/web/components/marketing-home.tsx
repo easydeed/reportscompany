@@ -17,6 +17,12 @@ import {
   Palette,
   User,
   Building2,
+  RefreshCw,
+  Zap,
+  CalendarCheck,
+  MapPin,
+  Rocket,
+  Sparkles,
 } from "lucide-react"
 import { useState } from "react"
 import Link from "next/link"
@@ -266,35 +272,87 @@ export function MarketingHome() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          4. WHAT YOU GET - Benefits/Selling Points
+          4. YOUR DATA, ALWAYS CURRENT (from Latest.zip)
       ═══════════════════════════════════════════════════════════════════ */}
-      <section id="integrations" className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-50 border-y border-slate-200">
+      <section id="integrations" className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50 border-y border-slate-200">
         <div className="max-w-[1200px] mx-auto">
-          <div className="text-center mb-10">
-            <h2 className="font-display font-bold text-2xl sm:text-3xl text-slate-900">
-              Everything you need to stay top-of-mind
+          <div className="text-center mb-16">
+            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
+              Your data, always current
             </h2>
+            <p className="text-xl text-slate-600">Reports update automatically with the latest market information</p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { label: "Real-time MLS data", icon: "📊" },
-              { label: "10+ report templates", icon: "📄" },
-              { label: "Automated scheduling", icon: "🔄" },
-              { label: "Email & PDF delivery", icon: "✉️" },
-              { label: "Full white-label", icon: "🎨" },
-              { label: "Photo galleries", icon: "🖼️" },
-              { label: "Client contact lists", icon: "👥" },
-              { label: "Mobile-ready reports", icon: "📱" },
-            ].map((item, idx) => (
-              <div
-                key={idx}
-                className="bg-white rounded-xl border border-slate-200 p-4 text-center hover:border-purple-300 hover:shadow-md transition-all"
-              >
-                <div className="text-2xl mb-2">{item.icon}</div>
-                <div className="font-medium text-slate-900 text-sm">{item.label}</div>
-              </div>
-            ))}
+              {
+                title: "Always Up-to-Date",
+                description: "Reports reflect current market data—no manual updates required",
+                icon: RefreshCw,
+                color: "text-purple-600",
+                bgColor: "bg-purple-100",
+              },
+              {
+                title: "No Data Entry",
+                description: "Zero copy-paste. Zero spreadsheets. Just accurate reports",
+                icon: Zap,
+                color: "text-orange-600",
+                bgColor: "bg-orange-100",
+              },
+              {
+                title: "Schedule & Forget",
+                description: "Set it once, reports deliver automatically to your clients",
+                icon: CalendarCheck,
+                color: "text-emerald-600",
+                bgColor: "bg-emerald-100",
+              },
+              {
+                title: "Multi-Market Coverage",
+                description: "Track listings across neighborhoods, cities, or entire regions",
+                icon: MapPin,
+                color: "text-blue-600",
+                bgColor: "bg-blue-100",
+              },
+              {
+                title: "Instant Delivery",
+                description: "Reports ready in under 30 seconds—faster than coffee",
+                icon: Rocket,
+                color: "text-violet-600",
+                bgColor: "bg-violet-100",
+              },
+              {
+                title: "Your Brand, Your Style",
+                description: "Every report shows your logo and colors, not ours",
+                icon: Sparkles,
+                color: "text-pink-600",
+                bgColor: "bg-pink-100",
+              },
+            ].map((benefit, idx) => {
+              const IconComponent = benefit.icon
+              return (
+                <div
+                  key={idx}
+                  className="bg-white rounded-xl border border-slate-200 p-8 hover:border-purple-300 hover:shadow-lg transition-all group"
+                >
+                  <div
+                    className={`w-12 h-12 rounded-lg ${benefit.bgColor} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}
+                  >
+                    <IconComponent className={`w-6 h-6 ${benefit.color}`} />
+                  </div>
+                  <div className="font-semibold text-lg text-slate-900 mb-2">{benefit.title}</div>
+                  <p className="text-slate-600">{benefit.description}</p>
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="mt-12 text-center">
+            <p className="text-slate-600">
+              Questions about your specific market or MLS?{" "}
+              <a href="mailto:support@trendyreports.com" className="text-purple-600 hover:text-purple-700 font-semibold underline">
+                Let's talk
+              </a>
+            </p>
           </div>
         </div>
       </section>
