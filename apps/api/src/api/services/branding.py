@@ -196,49 +196,47 @@ def get_brand_for_account(cur, account_id: str) -> Brand:
                 website_url=branding_row[7],
             )
     
-    # No branding configured
-    if acc_type == 'INDUSTRY_AFFILIATE' or sponsor_id:
-        # Affiliate without branding config, or sponsored agent
-        # Use account name as brand
-        if sponsor_id and branding_account_id == sponsor_id:
-            # Get sponsor account name
-            cur.execute("""
-                SELECT name FROM accounts WHERE id = %s::uuid
-            """, (sponsor_id,))
-            sponsor_row = cur.fetchone()
-            sponsor_name = sponsor_row[0] if sponsor_row else acc_name
-            
-            return Brand(
-                display_name=sponsor_name,
-                logo_url=None,
-                email_logo_url=None,
-                footer_logo_url=None,
-                email_footer_logo_url=None,
-                primary_color=DEFAULT_PRIMARY,
-                accent_color=DEFAULT_ACCENT,
-                rep_photo_url=None,
-                contact_line1=None,
-                contact_line2=None,
-                website_url=None,
-            )
-        else:
-            # Affiliate using own name
-            return Brand(
-                display_name=acc_name,
-                logo_url=None,
-                email_logo_url=None,
-                footer_logo_url=None,
-                email_footer_logo_url=None,
-                primary_color=DEFAULT_PRIMARY,
-                accent_color=DEFAULT_ACCENT,
-                rep_photo_url=None,
-                contact_line1=None,
-                contact_line2=None,
-                website_url=None,
-            )
+    # No affiliate_branding row found
+    if acc_type == 'INDUSTRY_AFFILIATE':
+        # Affiliate without branding config - use account name as brand
+        return Brand(
+            display_name=acc_name,
+            logo_url=None,
+            email_logo_url=None,
+            footer_logo_url=None,
+            email_footer_logo_url=None,
+            primary_color=DEFAULT_PRIMARY,
+            accent_color=DEFAULT_ACCENT,
+            rep_photo_url=None,
+            contact_line1=None,
+            contact_line2=None,
+            website_url=None,
+        )
     
-    # Unsponsored REGULAR account → TrendyReports default
-    return _get_default_brand()
+    if sponsor_id:
+        # Sponsored agent without sponsor branding - get sponsor name
+        cur.execute("""
+            SELECT name FROM accounts WHERE id = %s::uuid
+        """, (sponsor_id,))
+        sponsor_row = cur.fetchone()
+        sponsor_name = sponsor_row[0] if sponsor_row else acc_name
+        
+        return Brand(
+            display_name=sponsor_name,
+            logo_url=None,
+            email_logo_url=None,
+            footer_logo_url=None,
+            email_footer_logo_url=None,
+            primary_color=DEFAULT_PRIMARY,
+            accent_color=DEFAULT_ACCENT,
+            rep_photo_url=None,
+            contact_line1=None,
+            contact_line2=None,
+            website_url=None,
+        )
+    
+    # Unsponsored REGULAR account → Use accounts table branding + user avatar (Option A)
+    return _get_regular_user_brand(cur, acc_id, acc_name)
 
 
 def _get_default_brand() -> Brand:
@@ -256,6 +254,57 @@ def _get_default_brand() -> Brand:
         contact_line2=None,
         website_url=None,
     )
+
+
+def _get_regular_user_brand(cur, account_id: str, account_name: str) -> Brand:
+    """
+    Returns branding for un-sponsored regular users (Option A).
+    
+    Uses:
+    - Branding fields from accounts table (logos, colors, contact info)
+    - User's avatar_url as their headshot (rep_photo_url)
+    """
+    # Get branding from accounts table + user's avatar
+    try:
+        cur.execute("""
+            SELECT 
+                a.name,
+                a.logo_url,
+                a.footer_logo_url,
+                a.email_logo_url,
+                a.email_footer_logo_url,
+                a.primary_color,
+                a.secondary_color,
+                a.contact_line1,
+                a.contact_line2,
+                a.website_url,
+                u.avatar_url
+            FROM accounts a
+            LEFT JOIN users u ON u.active_account_id = a.id
+            WHERE a.id = %s::uuid
+            LIMIT 1
+        """, (account_id,))
+        row = cur.fetchone()
+        
+        if row:
+            return Brand(
+                display_name=row[0] or account_name,
+                logo_url=row[1],
+                footer_logo_url=row[2],
+                email_logo_url=row[3],
+                email_footer_logo_url=row[4],
+                primary_color=row[5] or DEFAULT_PRIMARY,
+                accent_color=row[6] or DEFAULT_ACCENT,
+                contact_line1=row[7],
+                contact_line2=row[8],
+                website_url=row[9],
+                rep_photo_url=row[10],  # User's avatar_url as headshot
+            )
+    except Exception as e:
+        print(f"⚠️  Error loading regular user brand: {e}")
+    
+    # Fallback to default
+    return _get_default_brand()
 
 
 def validate_brand_input(data: dict) -> tuple[bool, Optional[str]]:

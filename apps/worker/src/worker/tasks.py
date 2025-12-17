@@ -527,35 +527,84 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
                                 
                                 if acc_row:
                                     acc_type, sponsor_id = acc_row
-                                    branding_account_id = sponsor_id if (acc_type == 'REGULAR' and sponsor_id) else account_id
                                     
-                                    # Load branding config
-                                    cur.execute("""
-                                        SELECT
-                                            brand_display_name,
-                                            logo_url,
-                                            primary_color,
-                                            accent_color,
-                                            rep_photo_url,
-                                            contact_line1,
-                                            contact_line2,
-                                            website_url
-                                        FROM affiliate_branding
-                                        WHERE account_id = %s::uuid
-                                    """, (branding_account_id,))
-                                    
-                                    brand_row = cur.fetchone()
-                                    if brand_row:
-                                        brand = {
-                                            "display_name": brand_row[0],
-                                            "logo_url": brand_row[1],
-                                            "primary_color": brand_row[2],
-                                            "accent_color": brand_row[3],
-                                            "rep_photo_url": brand_row[4],
-                                            "contact_line1": brand_row[5],
-                                            "contact_line2": brand_row[6],
-                                            "website_url": brand_row[7],
-                                        }
+                                    if acc_type == 'REGULAR' and sponsor_id:
+                                        # Sponsored regular user: use sponsor's branding from affiliate_branding
+                                        cur.execute("""
+                                            SELECT
+                                                brand_display_name,
+                                                logo_url,
+                                                primary_color,
+                                                accent_color,
+                                                rep_photo_url,
+                                                contact_line1,
+                                                contact_line2,
+                                                website_url
+                                            FROM affiliate_branding
+                                            WHERE account_id = %s::uuid
+                                        """, (sponsor_id,))
+                                        brand_row = cur.fetchone()
+                                        if brand_row:
+                                            brand = {
+                                                "display_name": brand_row[0],
+                                                "logo_url": brand_row[1],
+                                                "primary_color": brand_row[2],
+                                                "accent_color": brand_row[3],
+                                                "rep_photo_url": brand_row[4],
+                                                "contact_line1": brand_row[5],
+                                                "contact_line2": brand_row[6],
+                                                "website_url": brand_row[7],
+                                            }
+                                    elif acc_type == 'INDUSTRY_AFFILIATE':
+                                        # Affiliate: use their own branding from affiliate_branding
+                                        cur.execute("""
+                                            SELECT
+                                                brand_display_name,
+                                                logo_url,
+                                                primary_color,
+                                                accent_color,
+                                                rep_photo_url,
+                                                contact_line1,
+                                                contact_line2,
+                                                website_url
+                                            FROM affiliate_branding
+                                            WHERE account_id = %s::uuid
+                                        """, (account_id,))
+                                        brand_row = cur.fetchone()
+                                        if brand_row:
+                                            brand = {
+                                                "display_name": brand_row[0],
+                                                "logo_url": brand_row[1],
+                                                "primary_color": brand_row[2],
+                                                "accent_color": brand_row[3],
+                                                "rep_photo_url": brand_row[4],
+                                                "contact_line1": brand_row[5],
+                                                "contact_line2": brand_row[6],
+                                                "website_url": brand_row[7],
+                                            }
+                                    else:
+                                        # Un-sponsored regular user: use accounts table branding + user avatar
+                                        # Get user_id for this schedule to fetch their avatar
+                                        cur.execute("""
+                                            SELECT u.avatar_url, a.name, a.logo_url, a.primary_color, 
+                                                   a.secondary_color, a.contact_line1, a.contact_line2, a.website_url
+                                            FROM accounts a
+                                            LEFT JOIN users u ON u.active_account_id = a.id
+                                            WHERE a.id = %s::uuid
+                                            LIMIT 1
+                                        """, (account_id,))
+                                        acc_brand_row = cur.fetchone()
+                                        if acc_brand_row:
+                                            brand = {
+                                                "display_name": acc_brand_row[1],
+                                                "logo_url": acc_brand_row[2],
+                                                "primary_color": acc_brand_row[3],
+                                                "accent_color": acc_brand_row[4],
+                                                "rep_photo_url": acc_brand_row[0],  # user's avatar_url
+                                                "contact_line1": acc_brand_row[5],
+                                                "contact_line2": acc_brand_row[6],
+                                                "website_url": acc_brand_row[7],
+                                            }
                             except Exception as e:
                                 print(f"⚠️  Error loading brand for email: {e}")
                                 # Continue without brand (will use default branding)

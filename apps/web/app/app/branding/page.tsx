@@ -95,6 +95,9 @@ export default function BrandingPage() {
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
 
+  // For regular users, we use their profile avatar automatically
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null)
+
   const [reportType, setReportType] = useState<ReportType>("market_snapshot")
   const [isDownloading, setIsDownloading] = useState(false)
   const [downloadSuccess, setDownloadSuccess] = useState(false)
@@ -133,6 +136,11 @@ export default function BrandingPage() {
       const me = meRes.ok ? await meRes.json() : {}
       const isAff = me.account_type === "INDUSTRY_AFFILIATE"
       setIsAffiliate(isAff)
+      
+      // For regular users, capture their profile avatar
+      if (!isAff && me.avatar_url) {
+        setUserAvatarUrl(me.avatar_url)
+      }
 
       const endpoint = isAff ? "/api/proxy/v1/affiliate/branding" : "/api/proxy/v1/account"
       const res = await fetch(endpoint, { cache: "no-store" })
@@ -163,6 +171,7 @@ export default function BrandingPage() {
           setTestEmail(repEmail || me.email || "")
         } else {
           // Regular user - load all branding fields including contact info
+          // Option A: Use their profile avatar_url as rep_photo automatically
           const { name: repName, title: repTitle } = parseContactLine1(data.contact_line1)
           const { phone: repPhone, email: repEmail } = parseContactLine2(data.contact_line2)
           
@@ -174,7 +183,7 @@ export default function BrandingPage() {
             email_footer_logo_url: data.email_footer_logo_url || null,
             primary_color: data.primary_color || "#7C3AED",
             accent_color: data.secondary_color || "#F26B2B",
-            rep_photo_url: data.rep_photo_url || null,
+            rep_photo_url: me.avatar_url || null, // Use profile avatar for regular users
             contact_line1: data.contact_line1 || null,
             contact_line2: data.contact_line2 || null,
             website_url: data.website_url || null,
@@ -220,14 +229,14 @@ export default function BrandingPage() {
             website_url: formData.website_url,
           }
         : {
-            // Regular users now get all branding fields
+            // Regular users - headshot comes from profile (users.avatar_url)
             logo_url: formData.logo_url,
             footer_logo_url: formData.footer_logo_url,
             email_logo_url: formData.email_logo_url,
             email_footer_logo_url: formData.email_footer_logo_url,
             primary_color: formData.primary_color,
             secondary_color: formData.accent_color,
-            rep_photo_url: formData.rep_photo_url,
+            // Note: rep_photo_url not saved - regular users use their profile avatar_url
             contact_line1,
             contact_line2,
             website_url: formData.website_url,
@@ -570,34 +579,63 @@ export default function BrandingPage() {
               <div className="bg-card border rounded-xl p-5 space-y-5">
                 <div className="flex gap-4">
                   <div className="flex-shrink-0">
-                    <Label className="text-sm font-medium mb-2 block">Photo</Label>
-                    <div className="w-20 h-20 relative rounded-xl border-2 border-dashed overflow-hidden bg-muted/30 hover:bg-muted/50 transition-colors">
-                      {formData.rep_photo_url ? (
-                        <img src={formData.rep_photo_url} alt="Profile" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                          <User className="w-8 h-8" />
+                    <Label className="text-sm font-medium mb-2 block">
+                      {isAffiliate ? "Rep Photo" : "Your Headshot"}
+                    </Label>
+                    
+                    {isAffiliate ? (
+                      // Affiliates can upload a rep photo
+                      <div className="w-20 h-20 relative rounded-xl border-2 border-dashed overflow-hidden bg-muted/30 hover:bg-muted/50 transition-colors">
+                        {formData.rep_photo_url ? (
+                          <img src={formData.rep_photo_url} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                            <User className="w-8 h-8" />
+                          </div>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            const fd = new FormData()
+                            fd.append("file", file)
+                            try {
+                              const res = await fetch("/api/proxy/v1/upload/branding/headshot", { method: "POST", body: fd })
+                              if (res.ok) {
+                                const data = await res.json()
+                                setFormData({ ...formData, rep_photo_url: data.url })
+                              }
+                            } catch (err) { console.error("Upload failed:", err) }
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      // Regular users see their profile photo (from Account Settings)
+                      <div className="space-y-2">
+                        <div className="w-20 h-20 rounded-xl border overflow-hidden bg-muted/30">
+                          {userAvatarUrl || formData.rep_photo_url ? (
+                            <img 
+                              src={userAvatarUrl || formData.rep_photo_url || ""} 
+                              alt="Profile" 
+                              className="w-full h-full object-cover" 
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                              <User className="w-8 h-8" />
+                            </div>
+                          )}
                         </div>
-                      )}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0]
-                          if (!file) return
-                          const fd = new FormData()
-                          fd.append("file", file)
-                          try {
-                            const res = await fetch("/api/proxy/v1/upload/branding/headshot", { method: "POST", body: fd })
-                            if (res.ok) {
-                              const data = await res.json()
-                              setFormData({ ...formData, rep_photo_url: data.url })
-                            }
-                          } catch (err) { console.error("Upload failed:", err) }
-                        }}
-                      />
-                    </div>
+                        <a 
+                          href="/app/account/settings" 
+                          className="text-xs text-primary hover:underline block"
+                        >
+                          Edit in Profile →
+                        </a>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex-1 space-y-3">
