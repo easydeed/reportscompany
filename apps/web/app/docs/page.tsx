@@ -328,7 +328,7 @@ export default function DocsPage() {
                 {"    "}<span className="text-purple-400">"created_at"</span>:{" "}
                 <span className="text-green-400">"2025-12-17T..."</span>
                 <br />
-                {"  }{"}"}
+                {"  }"}
                 <br />
                 {"}"}
               </div>
