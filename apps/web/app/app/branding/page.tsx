@@ -39,6 +39,7 @@ type BrandingData = {
   brand_display_name: string
   logo_url: string | null
   email_logo_url: string | null  // Separate logo for email headers (light version)
+  footer_logo_url: string | null // Separate logo for PDF footers (dark/colored version)
   primary_color: string | null
   accent_color: string | null
   rep_photo_url: string | null
@@ -107,6 +108,7 @@ export default function BrandingPage() {
     brand_display_name: "",
     logo_url: null,
     email_logo_url: null,
+    footer_logo_url: null,
     primary_color: "#7C3AED",
     accent_color: "#F26B2B",
     rep_photo_url: null,
@@ -144,6 +146,7 @@ export default function BrandingPage() {
             brand_display_name: data.brand_display_name || "",
             logo_url: data.logo_url || null,
             email_logo_url: data.email_logo_url || null,
+            footer_logo_url: data.footer_logo_url || null,
             primary_color: data.primary_color || "#7C3AED",
             accent_color: data.accent_color || "#F26B2B",
             rep_photo_url: data.rep_photo_url || null,
@@ -161,6 +164,7 @@ export default function BrandingPage() {
             brand_display_name: data.name || "",
             logo_url: data.logo_url || null,
             email_logo_url: data.email_logo_url || null,
+            footer_logo_url: data.footer_logo_url || null,
             primary_color: data.primary_color || "#7C3AED",
             accent_color: data.secondary_color || "#F26B2B",
             rep_photo_url: null,
@@ -198,6 +202,7 @@ export default function BrandingPage() {
             brand_display_name: formData.brand_display_name,
             logo_url: formData.logo_url,
             email_logo_url: formData.email_logo_url,
+            footer_logo_url: formData.footer_logo_url,
             primary_color: formData.primary_color,
             accent_color: formData.accent_color,
             rep_photo_url: formData.rep_photo_url,
@@ -208,6 +213,7 @@ export default function BrandingPage() {
         : {
             logo_url: formData.logo_url,
             email_logo_url: formData.email_logo_url,
+            footer_logo_url: formData.footer_logo_url,
             primary_color: formData.primary_color,
             secondary_color: formData.accent_color,
           }
@@ -430,6 +436,26 @@ export default function BrandingPage() {
                     <p className="text-xs text-muted-foreground">
                       Tip: Upload a white or light-colored version of your logo for better visibility on gradient email headers.
                       {!formData.email_logo_url && " If not set, the PDF logo will be inverted automatically."}
+                    </p>
+                  </div>
+
+                  {/* Footer Logo (for PDF footers with gray background) */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                      Footer Logo <span className="text-xs text-muted-foreground">(for PDF footer on gray background)</span>
+                    </Label>
+                    <ImageUpload
+                      label=""
+                      value={formData.footer_logo_url}
+                      onChange={(url) => setFormData({ ...formData, footer_logo_url: url })}
+                      assetType="logo"
+                      aspectRatio="wide"
+                      helpText="PNG with transparency • 400×150px • Dark/colored logo recommended"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Tip: Upload a dark or full-color version of your logo for visibility on the light gray PDF footer.
+                      {!formData.footer_logo_url && " If not set, the PDF logo will be used."}
                     </p>
                   </div>
                   
@@ -733,9 +759,9 @@ export default function BrandingPage() {
                           </div>
                         </div>
                       </div>
-                      {formData.logo_url && (
+                      {(formData.footer_logo_url || formData.logo_url) && (
                         <img
-                          src={formData.logo_url}
+                          src={formData.footer_logo_url || formData.logo_url || ""}
                           className="h-10 w-auto max-w-[80px] object-contain flex-shrink-0"
                           alt={formData.brand_display_name}
                         />
@@ -746,6 +772,7 @@ export default function BrandingPage() {
 
                 <p className="text-xs text-muted-foreground text-center mt-4">
                   This is how your contact information appears at the bottom of every report.
+                  {formData.footer_logo_url ? " Using your footer logo." : formData.logo_url ? " Using your PDF logo." : ""}
                 </p>
               </div>
             </div>
