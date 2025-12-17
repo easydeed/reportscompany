@@ -1,0 +1,906 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Button } from "../ui/button"
+import { Card, CardContent } from "../ui/card"
+import { Input } from "../ui/input"
+import { Label } from "../ui/label"
+import { Badge } from "../ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
+import { Checkbox } from "../ui/checkbox"
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group"
+import { ScrollArea } from "../ui/scroll-area"
+import { HorizontalStepper } from "../horizontal-stepper"
+import { TagInput } from "../tag-input"
+import { TimePicker } from "../time-picker"
+import { CadencePicker } from "../cadence-picker"
+import {
+  FileText,
+  TrendingUp,
+  Home,
+  DollarSign,
+  BarChart3,
+  Calendar,
+  MapPin,
+  Hash,
+  X,
+  ArrowRight,
+  ArrowLeft,
+  Clock,
+  Mail,
+  Image,
+  Star,
+  Users,
+} from "lucide-react"
+import { type ScheduleWizardState, type ReportType, type Weekday, weekdayLabels } from "./types"
+import { cn } from "../../lib/utils"
+
+const steps = [
+  { id: "basics", label: "Basics" },
+  { id: "area", label: "Area" },
+  { id: "cadence", label: "Cadence" },
+  { id: "recipients", label: "Recipients" },
+  { id: "review", label: "Review" },
+]
+
+const reportTypes = [
+  { id: "market_snapshot" as ReportType, name: "Market Snapshot", icon: TrendingUp },
+  { id: "new_listings" as ReportType, name: "New Listings", icon: Home },
+  { id: "inventory" as ReportType, name: "Inventory Report", icon: BarChart3 },
+  { id: "closed" as ReportType, name: "Closed Sales", icon: DollarSign },
+  { id: "price_bands" as ReportType, name: "Price Bands", icon: BarChart3 },
+  { id: "new_listings_gallery" as ReportType, name: "New Listings (Photo Gallery)", icon: Image },
+  { id: "featured_listings" as ReportType, name: "Featured Listings (Photo Grid)", icon: Star },
+]
+
+const lookbackOptions = [7, 14, 30, 60, 90]
+
+const weekdays: Weekday[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+
+const monthlyDays = Array.from({ length: 28 }, (_, i) => i + 1)
+
+export interface ScheduleWizardProps {
+  onSubmit: (data: ScheduleWizardState) => void
+  onCancel: () => void
+}
+
+function validateEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+function validateEmailDomain(email: string): boolean {
+  const domain = email.split("@")[1]
+  // Basic domain validation - ensure it has at least one dot
+  return !!(domain && domain.includes("."))
+}
+
+// Step 1: Basics
+function StepBasics({ state, setState }: { state: ScheduleWizardState; setState: (s: ScheduleWizardState) => void }) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-display font-semibold text-xl mb-1">Schedule Basics</h2>
+        <p className="text-sm text-muted-foreground">Give your schedule a name and choose the report type</p>
+      </div>
+
+      <Card>
+        <CardContent className="pt-6 space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="schedule-name">
+              Schedule Name <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="schedule-name"
+              type="text"
+              placeholder="e.g., Weekly Market Update"
+              value={state.name}
+              onChange={(e) => setState({ ...state, name: e.target.value })}
+              aria-required="true"
+              className="h-11"
+            />
+            <p className="text-xs text-muted-foreground">Choose a descriptive name for this schedule</p>
+          </div>
+
+          <div className="space-y-3">
+            <Label>
+              Report Type <span className="text-destructive">*</span>
+            </Label>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {reportTypes.map((type) => {
+                const Icon = type.icon
+                return (
+                  <button
+                    key={type.id}
+                    type="button"
+                    onClick={() => setState({ ...state, report_type: type.id })}
+                    className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left ${
+                      state.report_type === type.id
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                    aria-pressed={state.report_type === type.id}
+                  >
+                    <div
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                        state.report_type === type.id
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-primary/10 text-primary"
+                      }`}
+                    >
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <span className="font-medium text-sm">{type.name}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <Label>
+              Lookback Period <span className="text-destructive">*</span>
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {lookbackOptions.map((days) => (
+                <button
+                  key={days}
+                  type="button"
+                  onClick={() => setState({ ...state, lookback_days: days })}
+                  className={`px-4 py-2.5 rounded-lg border-2 font-medium transition-all ${
+                    state.lookback_days === days
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                  aria-pressed={state.lookback_days === days}
+                >
+                  {days} days
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">How far back to include data in each report</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// Step 2: Area
+function StepArea({ state, setState }: { state: ScheduleWizardState; setState: (s: ScheduleWizardState) => void }) {
+  const [zipInput, setZipInput] = useState("")
+
+  const addZip = () => {
+    const zip = zipInput.trim()
+    if (zip && /^\d{5}$/.test(zip) && !state.zips.includes(zip)) {
+      setState({ ...state, zips: [...state.zips, zip] })
+      setZipInput("")
+    }
+  }
+
+  const removeZip = (zip: string) => {
+    setState({ ...state, zips: state.zips.filter((z) => z !== zip) })
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-display font-semibold text-xl mb-1">Select Area</h2>
+        <p className="text-sm text-muted-foreground">Define the geographic area for your scheduled reports</p>
+      </div>
+
+      <Card>
+        <CardContent className="pt-6 space-y-6">
+          <div className="space-y-3">
+            <Label>Area Type</Label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setState({ ...state, area_mode: "city" })}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all ${
+                  state.area_mode === "city"
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-border hover:border-primary/50"
+                }`}
+                aria-pressed={state.area_mode === "city"}
+              >
+                <MapPin className="w-4 h-4" />
+                <span className="font-medium">City</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setState({ ...state, area_mode: "zips" })}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all ${
+                  state.area_mode === "zips"
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-border hover:border-primary/50"
+                }`}
+                aria-pressed={state.area_mode === "zips"}
+              >
+                <Hash className="w-4 h-4" />
+                <span className="font-medium">ZIP Codes</span>
+              </button>
+            </div>
+          </div>
+
+          {state.area_mode === "city" && (
+            <div className="space-y-2">
+              <Label htmlFor="city">
+                City Name <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="city"
+                type="text"
+                placeholder="e.g., San Francisco"
+                value={state.city}
+                onChange={(e) => setState({ ...state, city: e.target.value })}
+                aria-required="true"
+                className="h-11"
+              />
+            </div>
+          )}
+
+          {state.area_mode === "zips" && (
+            <div className="space-y-3">
+              <Label htmlFor="zip-input">
+                ZIP Codes <span className="text-destructive">*</span>
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  id="zip-input"
+                  type="text"
+                  placeholder="Enter 5-digit ZIP"
+                  value={zipInput}
+                  onChange={(e) => setZipInput(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      addZip()
+                    }
+                  }}
+                  maxLength={5}
+                  className="h-11"
+                />
+                <Button type="button" onClick={addZip} disabled={!zipInput || zipInput.length !== 5}>
+                  Add
+                </Button>
+              </div>
+              {state.zips.length > 0 && (
+                <div className="flex flex-wrap gap-2 p-3 rounded-lg bg-muted/50 border border-border">
+                  {state.zips.map((zip) => (
+                    <Badge key={zip} variant="secondary" className="gap-1.5 pl-3 pr-2 py-1.5">
+                      {zip}
+                      <button
+                        type="button"
+                        onClick={() => removeZip(zip)}
+                        className="hover:bg-background/50 rounded-sm p-0.5"
+                        aria-label={`Remove ZIP ${zip}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// Step 3: Cadence
+function StepCadence({ state, setState }: { state: ScheduleWizardState; setState: (s: ScheduleWizardState) => void }) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-display font-semibold text-xl mb-1">Schedule Cadence</h2>
+        <p className="text-sm text-muted-foreground">Set how often this report should be generated</p>
+      </div>
+
+      <Card>
+        <CardContent className="pt-6 space-y-6">
+          <div className="space-y-3">
+            <Label>
+              Frequency <span className="text-destructive">*</span>
+            </Label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setState({ ...state, cadence: "weekly" })}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all ${
+                  state.cadence === "weekly"
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-border hover:border-primary/50"
+                }`}
+                aria-pressed={state.cadence === "weekly"}
+              >
+                <Calendar className="w-4 h-4" />
+                <span className="font-medium">Weekly</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setState({ ...state, cadence: "monthly" })}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all ${
+                  state.cadence === "monthly"
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-border hover:border-primary/50"
+                }`}
+                aria-pressed={state.cadence === "monthly"}
+              >
+                <Calendar className="w-4 h-4" />
+                <span className="font-medium">Monthly</span>
+              </button>
+            </div>
+          </div>
+
+          {state.cadence === "weekly" && (
+            <div className="space-y-3">
+              <Label>
+                Day of Week <span className="text-destructive">*</span>
+              </Label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {weekdays.map((day) => (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => setState({ ...state, weekday: day })}
+                    className={`px-4 py-2.5 rounded-lg border-2 font-medium transition-all ${
+                      state.weekday === day
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                    aria-pressed={state.weekday === day}
+                  >
+                    {weekdayLabels[day]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {state.cadence === "monthly" && (
+            <div className="space-y-3">
+              <Label>
+                Day of Month <span className="text-destructive">*</span>
+              </Label>
+              <div className="grid grid-cols-7 gap-2">
+                {monthlyDays.map((day) => (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => setState({ ...state, monthly_day: day })}
+                    className={`aspect-square rounded-lg border-2 font-medium transition-all ${
+                      state.monthly_day === day
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                    aria-pressed={state.monthly_day === day}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">Days 1-28 are available to ensure reliable scheduling</p>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="schedule-time">
+              Time <span className="text-destructive">*</span>
+            </Label>
+            <div className="flex items-center gap-3">
+              <Clock className="w-5 h-5 text-muted-foreground" />
+              <Input
+                id="schedule-time"
+                type="time"
+                value={state.time}
+                onChange={(e) => setState({ ...state, time: e.target.value })}
+                className="h-11 max-w-[200px]"
+                aria-required="true"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">Time zone: UTC (will be converted to your local time)</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// Step 4: Recipients
+function StepRecipients({
+  state,
+  setState,
+}: {
+  state: ScheduleWizardState
+  setState: (s: ScheduleWizardState) => void
+}) {
+  const [people, setPeople] = useState<any[]>([])
+  const [loadingPeople, setLoadingPeople] = useState(true)
+  const [groups, setGroups] = useState<any[]>([])
+  const [loadingGroups, setLoadingGroups] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+  
+  // Fetch contacts and groups on mount
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const peopleList: any[] = []
+
+        // Fetch contacts
+        const contactsRes = await fetch('/api/proxy/v1/contacts', { cache: 'no-store' })
+        if (contactsRes.ok) {
+          const contactsData = await contactsRes.json()
+          peopleList.push(...(contactsData.contacts || []).map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            email: c.email,
+            type: c.type === 'client' ? 'Client' : c.type === 'list' ? 'List' : 'Agent',
+          })))
+        }
+
+        // Fetch groups
+        const groupsRes = await fetch('/api/proxy/v1/contact-groups', { cache: 'no-store' })
+        if (groupsRes.ok) {
+          const groupsData = await groupsRes.json()
+          setGroups(groupsData.groups || [])
+        }
+
+        setPeople(peopleList.filter(p => p.email)) // Only show people with emails
+      } catch (error) {
+        console.error('Failed to load contacts:', error)
+      } finally {
+        setLoadingPeople(false)
+        setLoadingGroups(false)
+      }
+    }
+    loadData()
+  }, [])
+
+  // Filter people by search query
+  const filteredPeople = people.filter(person => 
+    searchQuery === "" ||
+    person.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    person.email.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  // Check if a person is selected
+  const isPersonSelected = (personId: string) => {
+    return (state.typedRecipients || []).some(r => r.type === "contact" && r.id === personId)
+  }
+
+  // Toggle person selection
+  const togglePerson = (person: any) => {
+    const current = state.typedRecipients || []
+    const currentRecipients = state.recipients
+    
+    if (isPersonSelected(person.id)) {
+      // Remove
+      setState({
+        ...state,
+        recipients: currentRecipients.filter(e => e !== person.email),
+        typedRecipients: current.filter(r => !(r.type === "contact" && r.id === person.id))
+      })
+    } else {
+      // Add
+      setState({
+        ...state,
+        recipients: [...currentRecipients, person.email],
+        typedRecipients: [...current, { type: "contact" as const, id: person.id }]
+      })
+    }
+  }
+
+  // Check if a group is selected
+  const isGroupSelected = (groupId: string) => {
+    return (state.typedRecipients || []).some(r => r.type === "group" && r.id === groupId)
+  }
+
+  // Toggle group selection
+  const toggleGroup = (group: any) => {
+    const current = state.typedRecipients || []
+    
+    if (isGroupSelected(group.id)) {
+      setState({
+        ...state,
+        typedRecipients: current.filter(r => !(r.type === "group" && r.id === group.id))
+      })
+    } else {
+      setState({
+        ...state,
+        typedRecipients: [...current, { type: "group" as const, id: group.id }]
+      })
+    }
+  }
+
+  // Get selected counts
+  const selectedContactsCount = (state.typedRecipients || []).filter(r => r.type === "contact").length
+  const selectedGroupsCount = (state.typedRecipients || []).filter(r => r.type === "group").length
+  const totalSelected = selectedContactsCount + selectedGroupsCount
+
+  // Loading state
+  const isLoading = loadingPeople || loadingGroups
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-display font-semibold text-xl mb-1">Email Recipients</h2>
+        <p className="text-sm text-muted-foreground">
+          Select contacts or groups to receive this report.
+        </p>
+      </div>
+
+      {/* Loading State */}
+      {isLoading && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-3">
+              <div className="h-5 w-32 bg-muted rounded animate-pulse" />
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 border rounded-lg">
+                    <div className="w-5 h-5 bg-muted rounded animate-pulse" />
+                    <div className="w-8 h-8 bg-muted rounded-full animate-pulse" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+                      <div className="h-3 w-48 bg-muted rounded animate-pulse" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Selection Summary */}
+      {!isLoading && totalSelected > 0 && (
+        <div className="flex flex-wrap gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+          <span className="text-sm font-medium text-primary">
+            {totalSelected} recipient{totalSelected !== 1 ? 's' : ''} selected:
+          </span>
+          {selectedContactsCount > 0 && (
+            <Badge variant="secondary" className="bg-primary/10 text-primary">
+              {selectedContactsCount} contact{selectedContactsCount !== 1 ? 's' : ''}
+            </Badge>
+          )}
+          {selectedGroupsCount > 0 && (
+            <Badge variant="secondary" className="bg-purple-100 text-purple-700">
+              {selectedGroupsCount} group{selectedGroupsCount !== 1 ? 's' : ''}
+            </Badge>
+          )}
+        </div>
+      )}
+
+      {/* Contacts Section */}
+      {!isLoading && people.length > 0 && (
+        <Card>
+          <CardContent className="pt-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm flex items-center gap-2">
+                <Mail className="w-4 h-4 text-primary" />
+                Contacts ({selectedContactsCount}/{people.length})
+              </Label>
+              {people.length > 5 && (
+                <Input
+                  type="text"
+                  placeholder="Search contacts..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-8 w-48 text-sm"
+                />
+              )}
+            </div>
+            <div className="max-h-[200px] overflow-y-auto border rounded-lg divide-y">
+              {filteredPeople.map((person) => {
+                const selected = isPersonSelected(person.id)
+                return (
+                  <label
+                    key={person.id}
+                    className={cn(
+                      "flex items-center gap-3 p-3 cursor-pointer transition-colors",
+                      selected ? "bg-primary/5" : "hover:bg-muted/50"
+                    )}
+                  >
+                    <Checkbox
+                      checked={selected}
+                      onCheckedChange={() => togglePerson(person)}
+                      className="shrink-0"
+                    />
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <span className="text-xs font-semibold text-primary">
+                        {person.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{person.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {person.email}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="shrink-0 text-xs">
+                      {person.type}
+                    </Badge>
+                  </label>
+                )
+              })}
+              {filteredPeople.length === 0 && (
+                <p className="p-4 text-sm text-muted-foreground text-center">
+                  No contacts match your search
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Groups Section */}
+      {!isLoading && groups.length > 0 && (
+        <Card>
+          <CardContent className="pt-6 space-y-3">
+            <Label className="text-sm flex items-center gap-2">
+              <Users className="w-4 h-4 text-purple-600" />
+              Groups ({selectedGroupsCount}/{groups.length})
+            </Label>
+            <div className="max-h-[160px] overflow-y-auto border rounded-lg divide-y">
+              {groups.map((group: any) => {
+                const selected = isGroupSelected(group.id)
+                return (
+                  <label
+                    key={group.id}
+                    className={cn(
+                      "flex items-center gap-3 p-3 cursor-pointer transition-colors",
+                      selected ? "bg-purple-50" : "hover:bg-muted/50"
+                    )}
+                  >
+                    <Checkbox
+                      checked={selected}
+                      onCheckedChange={() => toggleGroup(group)}
+                      className="shrink-0"
+                    />
+                    <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
+                      <Users className="w-4 h-4 text-purple-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{group.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {group.member_count ?? 0} member{(group.member_count ?? 0) !== 1 ? 's' : ''}
+                        {group.description && ` • ${group.description}`}
+                      </p>
+                    </div>
+                  </label>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* No recipients hint */}
+      {!isLoading && totalSelected === 0 && (
+        <p className="text-sm text-muted-foreground text-center py-2">
+          Select at least one contact or group to receive this report
+        </p>
+      )}
+
+      {/* Empty state - no contacts or groups */}
+      {!isLoading && people.length === 0 && groups.length === 0 && (
+        <Card>
+          <CardContent className="pt-6 text-center">
+            <Users className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
+            <p className="font-medium text-muted-foreground">No contacts or groups found</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Add contacts in the Contacts section to send reports
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}
+
+// Step 5: Review
+function StepReview({ state }: { state: ScheduleWizardState }) {
+  const selectedType = reportTypes.find((t) => t.id === state.report_type)
+
+  const formatArea = () => {
+    if (state.area_mode === "city") return state.city
+    return `${state.zips.length} ZIP code${state.zips.length !== 1 ? "s" : ""}`
+  }
+
+  const formatCadence = () => {
+    if (state.cadence === "weekly") {
+      return `Weekly on ${weekdayLabels[state.weekday]}`
+    }
+    return `Monthly on day ${state.monthly_day}`
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-display font-semibold text-xl mb-1">Review Schedule</h2>
+        <p className="text-sm text-muted-foreground">Verify all details before creating your schedule</p>
+      </div>
+
+      <Card>
+        <CardContent className="pt-6 space-y-4">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Schedule Name</p>
+              <p className="font-medium">{state.name}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Report Type</p>
+              <p className="font-medium">{selectedType?.name}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Area</p>
+              <p className="font-medium">{formatArea()}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Lookback Period</p>
+              <p className="font-medium">{state.lookback_days} days</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Cadence</p>
+              <p className="font-medium">{formatCadence()}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Time</p>
+              <p className="font-medium">{state.time}</p>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">
+              Recipients ({(state.typedRecipients || []).length})
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {(state.typedRecipients || []).map((recipient, idx) => {
+                if (recipient.type === "contact") {
+                  const contactEmail = state.recipients[idx] || recipient.id
+                  return (
+                    <Badge key={`contact-${idx}`} variant="secondary" className="bg-primary/10 text-primary">
+                      {contactEmail}
+                    </Badge>
+                  )
+                } else if (recipient.type === "group") {
+                  return (
+                    <Badge key={`group-${idx}`} variant="secondary" className="bg-purple-50 text-purple-700">
+                      Group
+                    </Badge>
+                  )
+                }
+                return null
+              })}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+export function ScheduleWizard({ onSubmit, onCancel }: ScheduleWizardProps) {
+  const [currentStep, setCurrentStep] = useState(0)
+  const [error, setError] = useState<string | null>(null)
+  const [state, setState] = useState<ScheduleWizardState>({
+    name: "",
+    report_type: null,
+    lookback_days: 30,
+    area_mode: "city",
+    city: "",
+    zips: [],
+    cadence: "weekly",
+    weekday: "monday",
+    monthly_day: 1,
+    time: "09:00",
+    recipients: [],
+  })
+
+  const validateCurrentStep = (): boolean => {
+    setError(null)
+
+    switch (currentStep) {
+      case 0:
+        if (!state.name.trim()) {
+          setError("Please enter a schedule name")
+          return false
+        }
+        if (!state.report_type) {
+          setError("Please select a report type")
+          return false
+        }
+        return true
+      case 1:
+        if (state.area_mode === "city" && !state.city.trim()) {
+          setError("Please enter a city name")
+          return false
+        }
+        if (state.area_mode === "zips" && state.zips.length === 0) {
+          setError("Please add at least one ZIP code")
+          return false
+        }
+        return true
+      case 2:
+        if (!state.time) {
+          setError("Please select a time")
+          return false
+        }
+        return true
+      case 3:
+        if (!state.typedRecipients || state.typedRecipients.length === 0) {
+          setError("Please add at least one recipient")
+          return false
+        }
+        return true
+      default:
+        return true
+    }
+  }
+
+  const handleNext = () => {
+    if (!validateCurrentStep()) return
+    setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1))
+  }
+
+  const handleBack = () => {
+    setError(null)
+    setCurrentStep((prev) => Math.max(prev - 1, 0))
+  }
+
+  const handleSubmit = () => {
+    if (!validateCurrentStep()) return
+    onSubmit(state)
+  }
+
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-display font-bold text-3xl mb-2">New Schedule</h1>
+          <p className="text-muted-foreground">Automate report generation on a recurring schedule</p>
+        </div>
+        <Button variant="ghost" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+
+      <HorizontalStepper steps={steps} currentStep={currentStep} />
+
+      {error && (
+        <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive" role="alert">
+          <p className="font-medium text-sm">{error}</p>
+        </div>
+      )}
+
+      <div className="min-h-[400px]">
+        {currentStep === 0 && <StepBasics state={state} setState={setState} />}
+        {currentStep === 1 && <StepArea state={state} setState={setState} />}
+        {currentStep === 2 && <StepCadence state={state} setState={setState} />}
+        {currentStep === 3 && <StepRecipients state={state} setState={setState} />}
+        {currentStep === 4 && <StepReview state={state} />}
+      </div>
+
+      <div className="flex justify-between pt-4 border-t border-border">
+        <Button variant="outline" onClick={handleBack} disabled={currentStep === 0} className="gap-2 h-11 bg-transparent">
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </Button>
+        {currentStep < steps.length - 1 ? (
+          <Button onClick={handleNext} className="gap-2 h-11">
+            Next
+            <ArrowRight className="w-4 h-4" />
+          </Button>
+        ) : (
+          <Button onClick={handleSubmit} className="gap-2 h-11">
+            <FileText className="w-4 h-4" />
+            Create Schedule
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}

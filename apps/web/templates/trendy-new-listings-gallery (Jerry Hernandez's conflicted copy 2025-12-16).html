@@ -252,27 +252,27 @@
     max-width: 180px; overflow: hidden; text-overflow: ellipsis;
   }
 
-  /* Ribbon for gallery pages - uses brand gradient (V2.4) */
+  /* Compact ribbon for gallery pages */
   .ribbon{
-    background: linear-gradient(90deg, var(--pct-blue), var(--pct-accent));
+    background: linear-gradient(135deg, var(--pct-blue), #9333ea);
     color: #fff; 
     border-radius: 10px;
-    padding: 14px 20px;  /* Increased padding */
-    margin: 8px 0 12px;  /* Slightly more margin */
+    padding: 10px 16px;  /* Reduced padding */
+    margin: 6px 0 10px;  /* Reduced margins */
     text-align: center;
     box-shadow: 0 2px 8px rgba(124, 58, 237, 0.15);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 14px;
+    gap: 12px;
   }
   .ribbon .count{ 
-    font-size: 28px;  /* Increased from 24px */
+    font-size: 24px;  /* Reduced font */
     font-weight: 800; 
     line-height: 1;
   }
   .ribbon .label{ 
-    font-size: 12px;  /* Increased from 11px */
+    font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -324,16 +324,16 @@
     z-index: 0;
   }
 
-  /* Card info section - ENLARGED text, REDUCED whitespace (V2.4) */
+  /* Card info section - ENLARGED text (V2.4) */
   .property-card .info{
-    padding: 10px 14px 8px;  /* Less bottom padding */
+    padding: 12px 14px;  /* Increased from 10px 12px */
   }
 
   .property-card .address{
     font-size: 13px;  /* Increased from 11px */
     font-weight: 700;
     color: var(--ink);
-    margin: 0 0 2px;  /* Reduced */
+    margin: 0 0 4px;
     line-height: 1.3;
     white-space: nowrap;
     overflow: hidden;
@@ -343,22 +343,22 @@
   .property-card .city{
     font-size: 11px;  /* Increased from 10px */
     color: var(--muted);
-    margin: 0 0 6px;  /* Reduced from 8px */
+    margin: 0 0 8px;
   }
 
   .property-card .price{
     font-size: 17px;  /* Increased from 14px */
     font-weight: 800;
     color: var(--pct-blue);
-    margin: 0 0 6px;  /* Reduced from 8px */
+    margin: 0 0 10px;
   }
 
   .property-card .details{
     display: flex;
-    gap: 12px;
+    gap: 12px;  /* Increased from 10px */
     font-size: 11px;  /* Increased from 10px */
     color: var(--muted);
-    padding-top: 6px;  /* Reduced from 8px */
+    padding-top: 10px;
     border-top: 1px solid var(--pct-gray);
   }
 
