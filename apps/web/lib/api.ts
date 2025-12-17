@@ -1,20 +1,30 @@
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
-export const DEMO_ACC = process.env.NEXT_PUBLIC_DEMO_ACCOUNT_ID!;
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+/**
+ * Client-side API fetch utility.
+ * 
+ * IMPORTANT: Always includes credentials to send auth cookies (mr_token).
+ * Do NOT use X-Demo-Account header in production - it bypasses real auth.
+ */
 export async function apiFetch(path: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers);
   headers.set("Content-Type", "application/json");
-  if (DEMO_ACC) headers.set("X-Demo-Account", DEMO_ACC);
+  
   const url = `${API_BASE}${path}`;
 
   let lastErr: any = null;
   for (let i = 0; i < 3; i++) {
     try {
-      const res = await fetch(url, { ...init, headers, cache: "no-store" });
+      const res = await fetch(url, { 
+        ...init, 
+        headers, 
+        credentials: 'include', // CRITICAL: Send cookies for authentication
+        cache: "no-store" 
+      });
       if (!res.ok) {
         const t = await res.text().catch(() => "");
         throw new Error(`API ${res.status} ${res.statusText}: ${t}`);
