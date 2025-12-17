@@ -52,7 +52,20 @@ USER_AGENTS = [
 
 
 def _r2_configured() -> bool:
-    return bool(R2_ACCOUNT_ID and R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY and R2_BUCKET_NAME)
+    configured = bool(R2_ACCOUNT_ID and R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY and R2_BUCKET_NAME)
+    if not configured:
+        # Log which vars are missing (without exposing secrets)
+        missing = []
+        if not R2_ACCOUNT_ID:
+            missing.append("R2_ACCOUNT_ID")
+        if not R2_ACCESS_KEY_ID:
+            missing.append("R2_ACCESS_KEY_ID")
+        if not R2_SECRET_ACCESS_KEY:
+            missing.append("R2_SECRET_ACCESS_KEY")
+        if not R2_BUCKET_NAME:
+            missing.append("R2_BUCKET_NAME")
+        print(f"⚠️  R2 photo proxy not configured. Missing: {', '.join(missing)}")
+    return configured
 
 
 def _get_r2_client():
@@ -146,6 +159,7 @@ def fetch_image_bytes(url: str, retry_count: int = 0) -> Optional[Tuple[bytes, s
             return None
 
         ext, normalized_ct = _guess_ext_and_content_type(resp)
+        print(f"✅ Photo fetched ({len(resp.content) // 1024}KB): {url[:60]}...")
         return resp.content, normalized_ct, ext
 
     except httpx.TimeoutException:
@@ -168,6 +182,7 @@ def upload_photo_bytes_to_r2(content: bytes, content_type: str, key: str) -> str
     if not _r2_configured():
         raise RuntimeError("R2 not configured")
 
+    print(f"☁️  Uploading photo to R2: {key} ({len(content) // 1024}KB)")
     s3_client = _get_r2_client()
     s3_client.upload_fileobj(
         Fileobj=BytesIO(content),
@@ -176,11 +191,13 @@ def upload_photo_bytes_to_r2(content: bytes, content_type: str, key: str) -> str
         ExtraArgs={"ContentType": content_type},
     )
 
-    return s3_client.generate_presigned_url(
+    presigned_url = s3_client.generate_presigned_url(
         "get_object",
         Params={"Bucket": R2_BUCKET_NAME, "Key": key},
         ExpiresIn=PRESIGN_EXPIRES_S,
     )
+    print(f"✅ Photo uploaded to R2: {key}")
+    return presigned_url
 
 
 def proxy_photo_url_to_r2(url: str, account_id: str, run_id: str, idx: int) -> str:
@@ -219,13 +236,27 @@ def proxy_report_photos_inplace(result_json: Dict, account_id: str, run_id: str)
     """
     listings: List[Dict] = result_json.get("listings") or []
     if not isinstance(listings, list) or not listings:
+        print(f"📷 No listings to proxy photos for")
         return result_json
 
+    # Check R2 config once upfront
+    if not _r2_configured():
+        print(f"📷 Skipping photo proxy - R2 not configured, keeping {len(listings)} original MLS URLs")
+        return result_json
+
+    print(f"📷 Proxying {len(listings)} listing photos to R2...")
+    success_count = 0
     for i, listing in enumerate(listings):
         if not isinstance(listing, dict):
             continue
         url = listing.get("hero_photo_url") or ""
-        listing["hero_photo_url"] = proxy_photo_url_to_r2(url, account_id=account_id, run_id=run_id, idx=i)
+        if not url:
+            continue
+        new_url = proxy_photo_url_to_r2(url, account_id=account_id, run_id=run_id, idx=i)
+        if new_url != url and not new_url.startswith("https://media."):
+            success_count += 1
+        listing["hero_photo_url"] = new_url
 
+    print(f"📷 Photo proxy complete: {success_count}/{len(listings)} uploaded to R2")
     return result_json
 
