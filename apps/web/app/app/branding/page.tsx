@@ -17,7 +17,6 @@ import {
   Check,
   AlertCircle,
   Send,
-  ImageIcon,
   Sparkles,
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
@@ -34,11 +33,16 @@ import { cn } from "@/lib/utils"
 
 type BrandingData = {
   brand_display_name: string
+  // PDF logos
   logo_url: string | null
-  email_logo_url: string | null
   footer_logo_url: string | null
+  // Email logos
+  email_logo_url: string | null
+  email_footer_logo_url: string | null
+  // Colors
   primary_color: string | null
   accent_color: string | null
+  // Contact
   rep_photo_url: string | null
   contact_line1: string | null
   contact_line2: string | null
@@ -103,8 +107,9 @@ export default function BrandingPage() {
   const [formData, setFormData] = useState<FormData>({
     brand_display_name: "",
     logo_url: null,
-    email_logo_url: null,
     footer_logo_url: null,
+    email_logo_url: null,
+    email_footer_logo_url: null,
     primary_color: "#7C3AED",
     accent_color: "#F26B2B",
     rep_photo_url: null,
@@ -141,8 +146,9 @@ export default function BrandingPage() {
           setFormData({
             brand_display_name: data.brand_display_name || "",
             logo_url: data.logo_url || null,
-            email_logo_url: data.email_logo_url || null,
             footer_logo_url: data.footer_logo_url || null,
+            email_logo_url: data.email_logo_url || null,
+            email_footer_logo_url: data.email_footer_logo_url || null,
             primary_color: data.primary_color || "#7C3AED",
             accent_color: data.accent_color || "#F26B2B",
             rep_photo_url: data.rep_photo_url || null,
@@ -159,8 +165,9 @@ export default function BrandingPage() {
           setFormData({
             brand_display_name: data.name || "",
             logo_url: data.logo_url || null,
-            email_logo_url: data.email_logo_url || null,
             footer_logo_url: data.footer_logo_url || null,
+            email_logo_url: data.email_logo_url || null,
+            email_footer_logo_url: data.email_footer_logo_url || null,
             primary_color: data.primary_color || "#7C3AED",
             accent_color: data.secondary_color || "#F26B2B",
             rep_photo_url: null,
@@ -197,8 +204,9 @@ export default function BrandingPage() {
         ? {
             brand_display_name: formData.brand_display_name,
             logo_url: formData.logo_url,
-            email_logo_url: formData.email_logo_url,
             footer_logo_url: formData.footer_logo_url,
+            email_logo_url: formData.email_logo_url,
+            email_footer_logo_url: formData.email_footer_logo_url,
             primary_color: formData.primary_color,
             accent_color: formData.accent_color,
             rep_photo_url: formData.rep_photo_url,
@@ -208,8 +216,9 @@ export default function BrandingPage() {
           }
         : {
             logo_url: formData.logo_url,
-            email_logo_url: formData.email_logo_url,
             footer_logo_url: formData.footer_logo_url,
+            email_logo_url: formData.email_logo_url,
+            email_footer_logo_url: formData.email_footer_logo_url,
             primary_color: formData.primary_color,
             secondary_color: formData.accent_color,
           }
@@ -365,11 +374,11 @@ export default function BrandingPage() {
           {/* ========== LEFT COLUMN: FORM ========== */}
           <div className="lg:col-span-3 space-y-8">
             
-            {/* SECTION 1: Brand Identity */}
+            {/* SECTION 1: Company Name + Colors */}
             <section>
               <div className="flex items-center gap-2 mb-4">
                 <div className="p-1.5 rounded-lg bg-violet-100 dark:bg-violet-900/30">
-                  <ImageIcon className="w-4 h-4 text-violet-600" />
+                  <Palette className="w-4 h-4 text-violet-600" />
                 </div>
                 <h2 className="font-semibold text-lg">Brand Identity</h2>
               </div>
@@ -386,48 +395,6 @@ export default function BrandingPage() {
                   />
                 </div>
 
-                <div className="grid sm:grid-cols-2 gap-5">
-                  {/* Header Logo */}
-                  <div>
-                    <Label className="text-sm font-medium">Header Logo</Label>
-                    <p className="text-xs text-muted-foreground mb-2">For colored backgrounds • white/light version</p>
-                    <ImageUpload
-                      label=""
-                      value={formData.logo_url}
-                      onChange={(url) => setFormData({ ...formData, logo_url: url })}
-                      assetType="logo"
-                      aspectRatio="wide"
-                      helpText=""
-                    />
-                  </div>
-                  
-                  {/* Footer Logo */}
-                  <div>
-                    <Label className="text-sm font-medium">Footer Logo</Label>
-                    <p className="text-xs text-muted-foreground mb-2">For light backgrounds • dark/colored version</p>
-                    <ImageUpload
-                      label=""
-                      value={formData.footer_logo_url}
-                      onChange={(url) => setFormData({ ...formData, footer_logo_url: url })}
-                      assetType="logo"
-                      aspectRatio="wide"
-                      helpText=""
-                    />
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* SECTION 2: Brand Colors */}
-            <section>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-900/30">
-                  <Palette className="w-4 h-4 text-orange-600" />
-                </div>
-                <h2 className="font-semibold text-lg">Brand Colors</h2>
-              </div>
-              
-              <div className="bg-card border rounded-xl p-5">
                 <div className="grid sm:grid-cols-2 gap-5">
                   <div>
                     <Label className="text-sm font-medium">Primary Color</Label>
@@ -479,7 +446,103 @@ export default function BrandingPage() {
               </div>
             </section>
 
-            {/* SECTION 3: Contact Info (Affiliates only) */}
+            {/* SECTION 2: PDF Logos */}
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-1.5 rounded-lg bg-red-100 dark:bg-red-900/30">
+                  <FileText className="w-4 h-4 text-red-600" />
+                </div>
+                <h2 className="font-semibold text-lg">PDF Report Logos</h2>
+                <span className="text-xs text-muted-foreground ml-auto">For downloadable PDF reports</span>
+              </div>
+              
+              <div className="bg-card border rounded-xl p-5">
+                <div className="grid sm:grid-cols-2 gap-5">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold"
+                           style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }}>H</div>
+                      <Label className="text-sm font-medium">Header Logo</Label>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-2">Appears on gradient header • use light/white version</p>
+                    <ImageUpload
+                      label=""
+                      value={formData.logo_url}
+                      onChange={(url) => setFormData({ ...formData, logo_url: url })}
+                      assetType="logo"
+                      aspectRatio="wide"
+                      helpText=""
+                    />
+                  </div>
+                  
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-6 h-6 rounded flex items-center justify-center bg-slate-200 text-slate-600 text-xs font-bold">F</div>
+                      <Label className="text-sm font-medium">Footer Logo</Label>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-2">Appears on gray footer • use dark/colored version</p>
+                    <ImageUpload
+                      label=""
+                      value={formData.footer_logo_url}
+                      onChange={(url) => setFormData({ ...formData, footer_logo_url: url })}
+                      assetType="logo"
+                      aspectRatio="wide"
+                      helpText=""
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* SECTION 3: Email Logos */}
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                  <Mail className="w-4 h-4 text-purple-600" />
+                </div>
+                <h2 className="font-semibold text-lg">Email Logos</h2>
+                <span className="text-xs text-muted-foreground ml-auto">For report delivery emails</span>
+              </div>
+              
+              <div className="bg-card border rounded-xl p-5">
+                <div className="grid sm:grid-cols-2 gap-5">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold"
+                           style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }}>H</div>
+                      <Label className="text-sm font-medium">Header Logo</Label>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-2">Appears on gradient header • use light/white version</p>
+                    <ImageUpload
+                      label=""
+                      value={formData.email_logo_url}
+                      onChange={(url) => setFormData({ ...formData, email_logo_url: url })}
+                      assetType="logo"
+                      aspectRatio="wide"
+                      helpText=""
+                    />
+                  </div>
+                  
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-6 h-6 rounded flex items-center justify-center bg-white border text-slate-600 text-xs font-bold">F</div>
+                      <Label className="text-sm font-medium">Footer Logo</Label>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-2">Appears on white footer • use dark/colored version</p>
+                    <ImageUpload
+                      label=""
+                      value={formData.email_footer_logo_url}
+                      onChange={(url) => setFormData({ ...formData, email_footer_logo_url: url })}
+                      assetType="logo"
+                      aspectRatio="wide"
+                      helpText=""
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* SECTION 4: Contact Info (Affiliates only) */}
             {isAffiliate && (
               <section>
                 <div className="flex items-center gap-2 mb-4">
@@ -491,7 +554,6 @@ export default function BrandingPage() {
                 
                 <div className="bg-card border rounded-xl p-5 space-y-5">
                   <div className="flex gap-4">
-                    {/* Photo Upload */}
                     <div className="flex-shrink-0">
                       <Label className="text-sm font-medium mb-2 block">Photo</Label>
                       <div className="w-20 h-20 relative rounded-xl border-2 border-dashed overflow-hidden bg-muted/30 hover:bg-muted/50 transition-colors">
@@ -524,7 +586,6 @@ export default function BrandingPage() {
                       </div>
                     </div>
                     
-                    {/* Name & Title */}
                     <div className="flex-1 space-y-3">
                       <div>
                         <Label htmlFor="rep_name" className="text-sm">Full Name</Label>
@@ -594,11 +655,11 @@ export default function BrandingPage() {
               </section>
             )}
 
-            {/* SECTION 4: Test Your Branding */}
+            {/* SECTION 5: Test Your Branding */}
             <section>
               <div className="flex items-center gap-2 mb-4">
                 <div className="p-1.5 rounded-lg bg-green-100 dark:bg-green-900/30">
-                  <FileText className="w-4 h-4 text-green-600" />
+                  <Download className="w-4 h-4 text-green-600" />
                 </div>
                 <h2 className="font-semibold text-lg">Test Your Branding</h2>
               </div>
@@ -621,11 +682,10 @@ export default function BrandingPage() {
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-4">
-                  {/* Download PDF */}
-                  <div className="p-4 rounded-lg border bg-muted/30">
+                  <div className="p-4 rounded-lg border bg-red-50 dark:bg-red-900/10">
                     <div className="flex items-center gap-2 mb-3">
-                      <FileText className="w-4 h-4 text-blue-600" />
-                      <span className="font-medium text-sm">Download PDF</span>
+                      <FileText className="w-4 h-4 text-red-600" />
+                      <span className="font-medium text-sm">Download Sample PDF</span>
                     </div>
                     <Button
                       onClick={handleDownloadPdf}
@@ -638,7 +698,7 @@ export default function BrandingPage() {
                       ) : downloadSuccess ? (
                         <><Check className="w-4 h-4 mr-2" /> Downloaded!</>
                       ) : (
-                        <><Download className="w-4 h-4 mr-2" /> Download Sample</>
+                        <><Download className="w-4 h-4 mr-2" /> Download PDF</>
                       )}
                     </Button>
                     {downloadError && (
@@ -648,8 +708,7 @@ export default function BrandingPage() {
                     )}
                   </div>
 
-                  {/* Send Test Email */}
-                  <div className="p-4 rounded-lg border bg-muted/30">
+                  <div className="p-4 rounded-lg border bg-purple-50 dark:bg-purple-900/10">
                     <div className="flex items-center gap-2 mb-3">
                       <Mail className="w-4 h-4 text-purple-600" />
                       <span className="font-medium text-sm">Send Test Email</span>
@@ -686,107 +745,51 @@ export default function BrandingPage() {
 
           {/* ========== RIGHT COLUMN: LIVE PREVIEW ========== */}
           <div className="lg:col-span-2">
-            <div className="lg:sticky lg:top-6 space-y-4">
+            <div className="lg:sticky lg:top-6 space-y-6">
               <div className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                 Live Preview
               </div>
 
-              {/* Report Preview Card */}
-              <div className="rounded-xl border shadow-xl overflow-hidden bg-white dark:bg-zinc-900">
-                {/* Header */}
-                <div 
-                  className="p-4"
-                  style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+              {/* PDF Preview */}
+              <div>
+                <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
+                  <FileText className="w-3.5 h-3.5 text-red-500" />
+                  PDF Report
+                </div>
+                <div className="rounded-xl border shadow-lg overflow-hidden bg-white dark:bg-zinc-900">
+                  {/* Header */}
+                  <div 
+                    className="p-3"
+                    style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
+                  >
+                    <div className="flex items-center gap-2">
                       {formData.logo_url ? (
-                        <img
-                          src={formData.logo_url}
-                          className="h-8 w-auto max-w-[80px] object-contain brightness-0 invert"
-                          alt=""
-                        />
+                        <img src={formData.logo_url} className="h-6 w-auto max-w-[60px] object-contain brightness-0 invert" alt="" />
                       ) : (
-                        <div className="h-8 w-8 rounded bg-white/20 flex items-center justify-center text-white font-bold text-sm">
+                        <div className="h-6 w-6 rounded bg-white/20 flex items-center justify-center text-white font-bold text-xs">
                           {(formData.brand_display_name || "B")[0].toUpperCase()}
                         </div>
                       )}
-                      <div className="text-white">
-                        <div className="font-semibold text-sm">Market Snapshot</div>
-                        <div className="text-xs opacity-80">Beverly Hills, CA</div>
+                      <div className="text-white text-xs">
+                        <div className="font-semibold">Market Snapshot</div>
                       </div>
                     </div>
                   </div>
-                </div>
-
-                {/* Stats */}
-                <div className="p-4 space-y-3">
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { label: "Median", value: "$1.85M" },
-                      { label: "Sales", value: "42" },
-                      { label: "DOM", value: "28" },
-                    ].map((stat, i) => (
-                      <div 
-                        key={i}
-                        className="p-2 rounded-lg text-center text-white text-xs"
-                        style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
-                      >
-                        <div className="opacity-70">{stat.label}</div>
-                        <div className="font-bold">{stat.value}</div>
-                      </div>
-                    ))}
+                  {/* Content */}
+                  <div className="p-3 space-y-2">
+                    <div className="h-1.5 bg-slate-100 rounded w-full" />
+                    <div className="h-1.5 bg-slate-100 rounded w-3/4" />
                   </div>
-
-                  {/* Content placeholder */}
-                  <div className="space-y-2 py-2">
-                    <div className="h-2 bg-slate-100 dark:bg-zinc-800 rounded w-full" />
-                    <div className="h-2 bg-slate-100 dark:bg-zinc-800 rounded w-4/5" />
-                    <div className="h-2 bg-slate-100 dark:bg-zinc-800 rounded w-3/5" />
-                  </div>
-                </div>
-
-                {/* Footer */}
-                <div className="p-4 bg-slate-50 dark:bg-zinc-800 border-t">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      {isAffiliate && (
-                        <>
-                          {formData.rep_photo_url ? (
-                            <img
-                              src={formData.rep_photo_url}
-                              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                              style={{ border: `2px solid ${primaryColor}` }}
-                              alt=""
-                            />
-                          ) : (
-                            <div 
-                              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-                              style={{ backgroundColor: primaryColor }}
-                            >
-                              {(formData.rep_name || "Y")[0].toUpperCase()}
-                            </div>
-                          )}
-                          <div className="min-w-0 text-xs">
-                            <div className="font-semibold truncate">
-                              {formData.rep_name || "Your Name"}
-                            </div>
-                            {formData.rep_title && (
-                              <div className="text-muted-foreground truncate">{formData.rep_title}</div>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </div>
+                  {/* Footer */}
+                  <div className="p-3 bg-slate-50 border-t flex items-center justify-between">
+                    {isAffiliate && formData.rep_name && (
+                      <div className="text-[10px] text-slate-600 truncate">{formData.rep_name}</div>
+                    )}
                     {(formData.footer_logo_url || formData.logo_url) ? (
-                      <img
-                        src={formData.footer_logo_url || formData.logo_url || ""}
-                        className="h-8 w-auto max-w-[60px] object-contain flex-shrink-0"
-                        alt=""
-                      />
+                      <img src={formData.footer_logo_url || formData.logo_url || ""} className="h-5 w-auto max-w-[50px] object-contain ml-auto" alt="" />
                     ) : (
-                      <div className="text-xs font-semibold" style={{ color: primaryColor }}>
+                      <div className="text-[10px] font-semibold ml-auto" style={{ color: primaryColor }}>
                         {formData.brand_display_name || "Your Brand"}
                       </div>
                     )}
@@ -794,11 +797,60 @@ export default function BrandingPage() {
                 </div>
               </div>
 
-              {/* Tips */}
-              <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+              {/* Email Preview */}
+              <div>
+                <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
+                  <Mail className="w-3.5 h-3.5 text-purple-500" />
+                  Email
+                </div>
+                <div className="rounded-xl border shadow-lg overflow-hidden bg-white dark:bg-zinc-900">
+                  {/* Header */}
+                  <div 
+                    className="p-3"
+                    style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
+                  >
+                    <div className="flex items-center gap-2">
+                      {formData.email_logo_url ? (
+                        <img src={formData.email_logo_url} className="h-6 w-auto max-w-[60px] object-contain" alt="" />
+                      ) : formData.logo_url ? (
+                        <img src={formData.logo_url} className="h-6 w-auto max-w-[60px] object-contain brightness-0 invert" alt="" />
+                      ) : (
+                        <div className="h-6 w-6 rounded bg-white/20 flex items-center justify-center text-white font-bold text-xs">
+                          {(formData.brand_display_name || "B")[0].toUpperCase()}
+                        </div>
+                      )}
+                      <div className="text-white text-xs font-semibold">
+                        {formData.brand_display_name || "Your Brand"}
+                      </div>
+                    </div>
+                  </div>
+                  {/* Content */}
+                  <div className="p-3 space-y-2">
+                    <div className="text-[10px] text-slate-600">Your report is ready!</div>
+                    <div className="h-1.5 bg-slate-100 rounded w-full" />
+                    <div className="h-1.5 bg-slate-100 rounded w-2/3" />
+                  </div>
+                  {/* Footer */}
+                  <div className="p-3 bg-white border-t flex items-center justify-between">
+                    {isAffiliate && formData.rep_name && (
+                      <div className="text-[10px] text-slate-600 truncate">{formData.rep_name}</div>
+                    )}
+                    {(formData.email_footer_logo_url || formData.footer_logo_url || formData.logo_url) ? (
+                      <img src={formData.email_footer_logo_url || formData.footer_logo_url || formData.logo_url || ""} className="h-5 w-auto max-w-[50px] object-contain ml-auto" alt="" />
+                    ) : (
+                      <div className="text-[10px] font-semibold ml-auto" style={{ color: primaryColor }}>
+                        {formData.brand_display_name || "Your Brand"}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Tip */}
+              <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
                 <p className="text-xs text-amber-800 dark:text-amber-200">
-                  <strong>Tip:</strong> Use a light/white logo for the header (colored background) 
-                  and a dark/colored logo for the footer (gray background).
+                  <strong>Tip:</strong> Header logos appear on your brand gradient — use light/white versions. 
+                  Footer logos appear on light backgrounds — use dark/colored versions.
                 </p>
               </div>
             </div>

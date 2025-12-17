@@ -232,11 +232,16 @@ def invite_agent(
 class BrandingInput(BaseModel):
     """Input model for branding configuration."""
     brand_display_name: str
-    logo_url: str | None = None           # Hero header logo (on gradient - white/light works best)
-    email_logo_url: str | None = None     # Email header logo (light version)
-    footer_logo_url: str | None = None    # PDF footer logo (on gray - dark/colored works best)
+    # PDF logos
+    logo_url: str | None = None              # PDF header (gradient bg - light/white logo)
+    footer_logo_url: str | None = None       # PDF footer (gray bg - dark/colored logo)
+    # Email logos
+    email_logo_url: str | None = None        # Email header (gradient bg - light/white logo)
+    email_footer_logo_url: str | None = None # Email footer (light bg - dark/colored logo)
+    # Colors
     primary_color: str | None = None
     accent_color: str | None = None
+    # Contact
     rep_photo_url: str | None = None
     contact_line1: str | None = None
     contact_line2: str | None = None
@@ -272,6 +277,7 @@ def get_branding(request: Request, account_id: str = Depends(require_account_id)
                     logo_url,
                     email_logo_url,
                     footer_logo_url,
+                    email_footer_logo_url,
                     primary_color,
                     accent_color,
                     rep_photo_url,
@@ -289,44 +295,50 @@ def get_branding(request: Request, account_id: str = Depends(require_account_id)
                     "logo_url": row[1],
                     "email_logo_url": row[2],
                     "footer_logo_url": row[3],
-                    "primary_color": row[4],
-                    "accent_color": row[5],
-                    "rep_photo_url": row[6],
-                    "contact_line1": row[7],
-                    "contact_line2": row[8],
-                    "website_url": row[9],
+                    "email_footer_logo_url": row[4],
+                    "primary_color": row[5],
+                    "accent_color": row[6],
+                    "rep_photo_url": row[7],
+                    "contact_line1": row[8],
+                    "contact_line2": row[9],
+                    "website_url": row[10],
                 }
         except Exception:
-            # Column may not exist yet - try without footer_logo_url
-            cur.execute("""
-                SELECT
-                    brand_display_name,
-                    logo_url,
-                    email_logo_url,
-                    primary_color,
-                    accent_color,
-                    rep_photo_url,
-                    contact_line1,
-                    contact_line2,
-                    website_url
-                FROM affiliate_branding
-                WHERE account_id = %s::uuid
-            """, (account_id,))
-            row = cur.fetchone()
-            
-            if row:
-                return {
-                    "brand_display_name": row[0],
-                    "logo_url": row[1],
-                    "email_logo_url": row[2],
-                    "footer_logo_url": None,
-                    "primary_color": row[3],
-                    "accent_color": row[4],
-                    "rep_photo_url": row[5],
-                    "contact_line1": row[6],
-                    "contact_line2": row[7],
-                    "website_url": row[8],
-                }
+            # Column may not exist yet - try legacy query
+            try:
+                cur.execute("""
+                    SELECT
+                        brand_display_name,
+                        logo_url,
+                        email_logo_url,
+                        footer_logo_url,
+                        primary_color,
+                        accent_color,
+                        rep_photo_url,
+                        contact_line1,
+                        contact_line2,
+                        website_url
+                    FROM affiliate_branding
+                    WHERE account_id = %s::uuid
+                """, (account_id,))
+                row = cur.fetchone()
+                
+                if row:
+                    return {
+                        "brand_display_name": row[0],
+                        "logo_url": row[1],
+                        "email_logo_url": row[2],
+                        "footer_logo_url": row[3],
+                        "email_footer_logo_url": None,
+                        "primary_color": row[4],
+                        "accent_color": row[5],
+                        "rep_photo_url": row[6],
+                        "contact_line1": row[7],
+                        "contact_line2": row[8],
+                        "website_url": row[9],
+                    }
+            except Exception:
+                pass
         
         # No branding configured - return account name as default
         cur.execute("""
@@ -341,6 +353,7 @@ def get_branding(request: Request, account_id: str = Depends(require_account_id)
             "logo_url": None,
             "email_logo_url": None,
             "footer_logo_url": None,
+            "email_footer_logo_url": None,
             "primary_color": "#7C3AED",
             "accent_color": "#F26B2B",
             "rep_photo_url": None,
@@ -387,7 +400,7 @@ def save_branding(
                 }
             )
         
-        # Upsert branding (with footer_logo_url)
+        # Upsert branding (with all logo fields)
         cur.execute("""
             INSERT INTO affiliate_branding (
                 account_id,
@@ -395,6 +408,7 @@ def save_branding(
                 logo_url,
                 email_logo_url,
                 footer_logo_url,
+                email_footer_logo_url,
                 primary_color,
                 accent_color,
                 rep_photo_url,
@@ -403,7 +417,7 @@ def save_branding(
                 website_url,
                 updated_at
             ) VALUES (
-                %s::uuid, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW()
+                %s::uuid, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW()
             )
             ON CONFLICT (account_id)
             DO UPDATE SET
@@ -411,6 +425,7 @@ def save_branding(
                 logo_url = EXCLUDED.logo_url,
                 email_logo_url = EXCLUDED.email_logo_url,
                 footer_logo_url = EXCLUDED.footer_logo_url,
+                email_footer_logo_url = EXCLUDED.email_footer_logo_url,
                 primary_color = EXCLUDED.primary_color,
                 accent_color = EXCLUDED.accent_color,
                 rep_photo_url = EXCLUDED.rep_photo_url,
@@ -423,6 +438,7 @@ def save_branding(
                 logo_url,
                 email_logo_url,
                 footer_logo_url,
+                email_footer_logo_url,
                 primary_color,
                 accent_color,
                 rep_photo_url,
@@ -435,6 +451,7 @@ def save_branding(
             body.logo_url,
             body.email_logo_url,
             getattr(body, 'footer_logo_url', None),
+            getattr(body, 'email_footer_logo_url', None),
             body.primary_color,
             body.accent_color,
             body.rep_photo_url,
@@ -452,12 +469,13 @@ def save_branding(
             "logo_url": row[1],
             "email_logo_url": row[2],
             "footer_logo_url": row[3],
-            "primary_color": row[4],
-            "accent_color": row[5],
-            "rep_photo_url": row[6],
-            "contact_line1": row[7],
-            "contact_line2": row[8],
-            "website_url": row[9],
+            "email_footer_logo_url": row[4],
+            "primary_color": row[5],
+            "accent_color": row[6],
+            "rep_photo_url": row[7],
+            "contact_line1": row[8],
+            "contact_line2": row[9],
+            "website_url": row[10],
         }
 
 
@@ -465,11 +483,16 @@ def save_branding(
 
 class BrandingRequest(BaseModel):
     brand_display_name: str
-    logo_url: str | None = None           # Hero header logo (on gradient - white/light works best)
-    email_logo_url: str | None = None     # Email header logo (light version)
-    footer_logo_url: str | None = None    # PDF footer logo (on gray - dark/colored works best)
+    # PDF logos
+    logo_url: str | None = None              # PDF header (gradient bg - light/white logo)
+    footer_logo_url: str | None = None       # PDF footer (gray bg - dark/colored logo)
+    # Email logos
+    email_logo_url: str | None = None        # Email header (gradient bg - light/white logo)
+    email_footer_logo_url: str | None = None # Email footer (light bg - dark/colored logo)
+    # Colors
     primary_color: str | None = None
     accent_color: str | None = None
+    # Contact
     rep_photo_url: str | None = None
     contact_line1: str | None = None
     contact_line2: str | None = None
@@ -504,6 +527,7 @@ def get_branding(request: Request, account_id: str = Depends(require_account_id)
                     logo_url,
                     email_logo_url,
                     footer_logo_url,
+                    email_footer_logo_url,
                     primary_color,
                     accent_color,
                     rep_photo_url,
@@ -521,12 +545,13 @@ def get_branding(request: Request, account_id: str = Depends(require_account_id)
                     "logo_url": row[1],
                     "email_logo_url": row[2],
                     "footer_logo_url": row[3],
-                    "primary_color": row[4],
-                    "accent_color": row[5],
-                    "rep_photo_url": row[6],
-                    "contact_line1": row[7],
-                    "contact_line2": row[8],
-                    "website_url": row[9],
+                    "email_footer_logo_url": row[4],
+                    "primary_color": row[5],
+                    "accent_color": row[6],
+                    "rep_photo_url": row[7],
+                    "contact_line1": row[8],
+                    "contact_line2": row[9],
+                    "website_url": row[10],
                 }
         except Exception:
             # Column may not exist - fallback
@@ -544,6 +569,7 @@ def get_branding(request: Request, account_id: str = Depends(require_account_id)
             "logo_url": None,
             "email_logo_url": None,
             "footer_logo_url": None,
+            "email_footer_logo_url": None,
             "primary_color": None,
             "accent_color": None,
             "rep_photo_url": None,
@@ -582,7 +608,7 @@ def save_branding(
         if not is_valid:
             raise HTTPException(status_code=400, detail={"error": "validation_error", "message": error_msg})
         
-        # Upsert branding (with footer_logo_url)
+        # Upsert branding (with all logo fields)
         cur.execute("""
             INSERT INTO affiliate_branding (
                 account_id,
@@ -590,6 +616,7 @@ def save_branding(
                 logo_url,
                 email_logo_url,
                 footer_logo_url,
+                email_footer_logo_url,
                 primary_color,
                 accent_color,
                 rep_photo_url,
@@ -598,7 +625,7 @@ def save_branding(
                 website_url,
                 updated_at
             ) VALUES (
-                %s::uuid, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW()
+                %s::uuid, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW()
             )
             ON CONFLICT (account_id)
             DO UPDATE SET
@@ -606,6 +633,7 @@ def save_branding(
                 logo_url = EXCLUDED.logo_url,
                 email_logo_url = EXCLUDED.email_logo_url,
                 footer_logo_url = EXCLUDED.footer_logo_url,
+                email_footer_logo_url = EXCLUDED.email_footer_logo_url,
                 primary_color = EXCLUDED.primary_color,
                 accent_color = EXCLUDED.accent_color,
                 rep_photo_url = EXCLUDED.rep_photo_url,
@@ -618,6 +646,7 @@ def save_branding(
                 logo_url,
                 email_logo_url,
                 footer_logo_url,
+                email_footer_logo_url,
                 primary_color,
                 accent_color,
                 rep_photo_url,
@@ -630,6 +659,7 @@ def save_branding(
             body.logo_url,
             body.email_logo_url,
             getattr(body, 'footer_logo_url', None),
+            getattr(body, 'email_footer_logo_url', None),
             body.primary_color,
             body.accent_color,
             body.rep_photo_url,
@@ -646,12 +676,13 @@ def save_branding(
             "logo_url": row[1],
             "email_logo_url": row[2],
             "footer_logo_url": row[3],
-            "primary_color": row[4],
-            "accent_color": row[5],
-            "rep_photo_url": row[6],
-            "contact_line1": row[7],
-            "contact_line2": row[8],
-            "website_url": row[9],
+            "email_footer_logo_url": row[4],
+            "primary_color": row[5],
+            "accent_color": row[6],
+            "rep_photo_url": row[7],
+            "contact_line1": row[8],
+            "contact_line2": row[9],
+            "website_url": row[10],
         }
 
 

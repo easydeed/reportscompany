@@ -12,11 +12,16 @@ from typing import Optional, TypedDict
 class Brand(TypedDict, total=False):
     """Brand configuration for white-label output."""
     display_name: str
-    logo_url: Optional[str]           # Hero header logo (on gradient - white/light works best)
-    email_logo_url: Optional[str]     # Email header logo (light version)
-    footer_logo_url: Optional[str]    # PDF footer logo (on gray - dark/colored works best)
+    # PDF logos
+    logo_url: Optional[str]              # PDF header (gradient bg - light/white logo)
+    footer_logo_url: Optional[str]       # PDF footer (gray bg - dark/colored logo)
+    # Email logos
+    email_logo_url: Optional[str]        # Email header (gradient bg - light/white logo)
+    email_footer_logo_url: Optional[str] # Email footer (light bg - dark/colored logo)
+    # Colors
     primary_color: Optional[str]
     accent_color: Optional[str]
+    # Contact
     rep_photo_url: Optional[str]
     contact_line1: Optional[str]
     contact_line2: Optional[str]
@@ -76,18 +81,19 @@ def get_brand_for_account(cur, account_id: str) -> Brand:
     
     # Look up branding configuration
     # Note: affiliate_branding table may not exist in all environments
-    # Gracefully handle missing columns (email_logo_url, footer_logo_url)
+    # Gracefully handle missing columns
     branding_row = None
-    query_version = "full"  # full, no_footer, minimal
+    query_version = "full"  # full, legacy, minimal
     
     try:
-        # Try full query with all columns
+        # Try full query with all columns (including email_footer_logo_url)
         cur.execute("""
             SELECT
                 brand_display_name,
                 logo_url,
                 email_logo_url,
                 footer_logo_url,
+                email_footer_logo_url,
                 primary_color,
                 accent_color,
                 rep_photo_url,
@@ -100,18 +106,19 @@ def get_brand_for_account(cur, account_id: str) -> Brand:
         branding_row = cur.fetchone()
     except Exception as e:
         err_str = str(e).lower()
-        if "footer_logo_url" in err_str:
-            query_version = "no_footer"
-        elif "email_logo_url" in err_str:
+        if "email_footer_logo_url" in err_str:
+            query_version = "legacy"
+        elif "footer_logo_url" in err_str or "email_logo_url" in err_str:
             query_version = "minimal"
         
-        if query_version == "no_footer":
+        if query_version == "legacy":
             try:
                 cur.execute("""
                     SELECT
                         brand_display_name,
                         logo_url,
                         email_logo_url,
+                        footer_logo_url,
                         primary_color,
                         accent_color,
                         rep_photo_url,
@@ -152,6 +159,21 @@ def get_brand_for_account(cur, account_id: str) -> Brand:
                 logo_url=branding_row[1],
                 email_logo_url=branding_row[2],
                 footer_logo_url=branding_row[3],
+                email_footer_logo_url=branding_row[4],
+                primary_color=branding_row[5] or DEFAULT_PRIMARY,
+                accent_color=branding_row[6] or DEFAULT_ACCENT,
+                rep_photo_url=branding_row[7],
+                contact_line1=branding_row[8],
+                contact_line2=branding_row[9],
+                website_url=branding_row[10],
+            )
+        elif query_version == "legacy":
+            return Brand(
+                display_name=branding_row[0],
+                logo_url=branding_row[1],
+                email_logo_url=branding_row[2],
+                footer_logo_url=branding_row[3],
+                email_footer_logo_url=None,
                 primary_color=branding_row[4] or DEFAULT_PRIMARY,
                 accent_color=branding_row[5] or DEFAULT_ACCENT,
                 rep_photo_url=branding_row[6],
@@ -159,25 +181,13 @@ def get_brand_for_account(cur, account_id: str) -> Brand:
                 contact_line2=branding_row[8],
                 website_url=branding_row[9],
             )
-        elif query_version == "no_footer":
-            return Brand(
-                display_name=branding_row[0],
-                logo_url=branding_row[1],
-                email_logo_url=branding_row[2],
-                footer_logo_url=None,
-                primary_color=branding_row[3] or DEFAULT_PRIMARY,
-                accent_color=branding_row[4] or DEFAULT_ACCENT,
-                rep_photo_url=branding_row[5],
-                contact_line1=branding_row[6],
-                contact_line2=branding_row[7],
-                website_url=branding_row[8],
-            )
         else:  # minimal
             return Brand(
                 display_name=branding_row[0],
                 logo_url=branding_row[1],
                 email_logo_url=None,
                 footer_logo_url=None,
+                email_footer_logo_url=None,
                 primary_color=branding_row[2] or DEFAULT_PRIMARY,
                 accent_color=branding_row[3] or DEFAULT_ACCENT,
                 rep_photo_url=branding_row[4],
@@ -203,6 +213,7 @@ def get_brand_for_account(cur, account_id: str) -> Brand:
                 logo_url=None,
                 email_logo_url=None,
                 footer_logo_url=None,
+                email_footer_logo_url=None,
                 primary_color=DEFAULT_PRIMARY,
                 accent_color=DEFAULT_ACCENT,
                 rep_photo_url=None,
@@ -217,6 +228,7 @@ def get_brand_for_account(cur, account_id: str) -> Brand:
                 logo_url=None,
                 email_logo_url=None,
                 footer_logo_url=None,
+                email_footer_logo_url=None,
                 primary_color=DEFAULT_PRIMARY,
                 accent_color=DEFAULT_ACCENT,
                 rep_photo_url=None,
@@ -236,6 +248,7 @@ def _get_default_brand() -> Brand:
         logo_url=None,
         email_logo_url=None,
         footer_logo_url=None,
+        email_footer_logo_url=None,
         primary_color=DEFAULT_PRIMARY,
         accent_color=DEFAULT_ACCENT,
         rep_photo_url=None,
