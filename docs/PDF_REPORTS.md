@@ -2,7 +2,7 @@
 
 > Technical documentation for PDF report generation, templates, and white-label branding.
 
-**Last Updated:** December 17, 2025
+**Last Updated:** December 17, 2025 (R2 Photo Proxy Solution)
 
 ---
 
@@ -26,28 +26,34 @@ PDF reports are generated from HTML templates, rendered via headless browser or 
 ### Generation Flow
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     PDF Generation Pipeline                      │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐     │
-│  │   Worker     │────▶│  HTML Render │────▶│ PDF Engine   │     │
-│  │   (task)     │     │  (Next.js)   │     │              │     │
-│  └──────────────┘     └──────────────┘     └──────────────┘     │
-│         │                    │                    │              │
-│         ▼                    ▼                    ▼              │
-│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐     │
-│  │  SimplyRETS  │     │   Template   │     │  Playwright  │     │
-│  │  (MLS data)  │     │   (HTML)     │     │  or PDFShift │     │
-│  └──────────────┘     └──────────────┘     └──────────────┘     │
-│                                                   │              │
-│                                                   ▼              │
-│                                            ┌──────────────┐     │
-│                                            │ Cloudflare   │     │
-│                                            │     R2       │     │
-│                                            └──────────────┘     │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                      PDF Generation Pipeline                         │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐         │
+│  │   Worker     │────▶│ Photo Proxy  │────▶│  HTML Render │         │
+│  │   (task)     │     │  (R2 Upload) │     │  (Next.js)   │         │
+│  └──────────────┘     └──────────────┘     └──────────────┘         │
+│         │                    │                    │                  │
+│         ▼                    ▼                    ▼                  │
+│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐         │
+│  │  SimplyRETS  │     │ Cloudflare   │     │   Template   │         │
+│  │  (MLS data)  │     │     R2       │     │   (HTML)     │         │
+│  └──────────────┘     │ (photos)     │     └──────────────┘         │
+│                       └──────────────┘            │                  │
+│                                                   ▼                  │
+│                                            ┌──────────────┐         │
+│                                            │ PDF Engine   │         │
+│                                            │  (PDFShift)  │         │
+│                                            └──────────────┘         │
+│                                                   │                  │
+│                                                   ▼                  │
+│                                            ┌──────────────┐         │
+│                                            │ Cloudflare   │         │
+│                                            │  R2 (PDFs)   │         │
+│                                            └──────────────┘         │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Key Components
@@ -55,6 +61,7 @@ PDF reports are generated from HTML templates, rendered via headless browser or 
 | Component | Location | Responsibility |
 |-----------|----------|----------------|
 | PDF Engine | `apps/worker/src/worker/pdf_engine.py` | Playwright or PDFShift rendering |
+| **Photo Proxy** | `apps/worker/src/worker/utils/photo_proxy.py` | Fetch MLS photos → upload to R2 → presigned URLs |
 | Print Page | `apps/web/app/print/[runId]/page.tsx` | Server-side HTML generation |
 | Templates | `apps/web/templates/*.html` | HTML template files |
 | Template Lib | `apps/web/lib/templates.ts` | Template loading and variable injection |
@@ -116,10 +123,15 @@ See PDFShift API parameter docs (same parameters apply across convert endpoints)
 1. **Worker receives job** with `run_id`, `account_id`, `report_type`, `params`
 2. **Fetch MLS data** from SimplyRETS API
 3. **Calculate metrics** (median prices, DOM, MOI, etc.)
-4. **Build print URL** → `{PRINT_BASE}/print/{run_id}`
-5. **Render PDF** via Playwright or PDFShift
-6. **Upload to R2** and return presigned URL
-7. **Send email** with PDF link (if scheduled)
+4. **Photo Proxy** (gallery/featured reports only):
+   - Fetch MLS photos server-side
+   - Upload to Cloudflare R2
+   - Replace MLS URLs with R2 presigned URLs in `result_json`
+5. **Save result_json** to database (with R2 photo URLs)
+6. **Build print URL** → `{PRINT_BASE}/print/{run_id}`
+7. **Render PDF** via Playwright or PDFShift (loads R2 images, not MLS)
+8. **Upload PDF to R2** and return presigned URL
+9. **Send email** with PDF link (if scheduled)
 
 ---
 
@@ -129,7 +141,8 @@ See PDFShift API parameter docs (same parameters apply across convert endpoints)
 
 | Version | Date | Changes |
 |---------|------|---------|
-| **V2.4** | Dec 17, 2025 | **PDFShift image loading options** - Added `delay`, `wait_for_network`, `lazy_load_images` to HTML content payloads; enabled X-Processor-Version 142; enhanced image proxy with retry logic (MLS photo issue ongoing) |
+| **V2.5** | Dec 17, 2025 | **R2 Photo Proxy** - MLS photos now proxied through Cloudflare R2 for PDFShift compatibility; removed "No Image" placeholder; `PHOTO_PROXY_ENABLED` feature flag |
+| **V2.4** | Dec 17, 2025 | **PDFShift image loading options** - Added `delay`, `wait_for_network`, `lazy_load_images` to HTML content payloads; enabled X-Processor-Version 142 |
 | **V2.3** | Dec 16, 2025 | **PDFShift reliability** - avoid conversion failures due to image loading; gallery photos render as CSS `background-image` with graceful placeholder |
 | **V2.2** | Dec 16, 2025 | **Refinements** - Increased header height (90px), centered metric text, larger logos (52px) |
 | V2.1 | Dec 15, 2025 | **All templates hero headers** - uniform hero header across all report types |
@@ -464,51 +477,49 @@ If we need MLS photos to *always* appear in PDFs, we must serve them from a URL 
 
 ## 8. Known Issues & Ongoing Work
 
-### 8.1 MLS Photo Loading in PDFShift (ONGOING - Dec 17, 2025)
+### 8.1 MLS Photo Loading in PDFShift (✅ RESOLVED - Dec 17, 2025)
 
-**Status:** Unresolved. MLS photos do not appear in gallery PDFs generated via PDFShift. They render as gray placeholders.
+**Status:** RESOLVED via R2 Photo Proxy.
 
-**Context:** The user confirmed MLS photos work fine with other PDF libraries. This is specifically a PDFShift limitation or configuration issue.
+**Problem:** MLS/CDN photo URLs work in browser preview but fail in PDFShift because:
+- PDFShift renders from their cloud servers
+- MLS/CDN hosts block requests from unknown IPs (hotlink protection, referrer checks)
+- The browser preview works because it uses the user's IP/cookies
 
-**What has been tried:**
+**Solution: R2 Photo Proxy**
 
-1. **Base64 Image Proxy** (`apps/worker/src/worker/utils/image_proxy.py`)
-   - Fetches MLS image URLs server-side and converts to base64 data URIs
-   - Embeds images directly in HTML to bypass hotlink protection
-   - Added retry logic, browser-like headers, rate limit handling
-   - Result: Still seeing placeholders (may need investigation into whether this code path is being executed)
+For gallery/featured reports, the worker now:
+1. Fetches MLS photos server-side (worker IP is not blocked)
+2. Uploads photos to Cloudflare R2
+3. Replaces MLS URLs with R2 presigned URLs in `result_json`
+4. PDFShift loads images from R2 (our domain) instead of MLS
 
-2. **PDFShift Image Loading Options** (`apps/worker/src/worker/pdf_engine.py`)
-   - Added `delay: 5000` (5 seconds) for HTML content
-   - Added `wait_for_network: True` to wait for network idle
-   - Added `lazy_load_images: True` to trigger lazy loading
-   - Added `timeout: 100` for extended loading time
-   - Result: Still not loading images
+**Implementation:**
 
-3. **New Conversion Engine** (X-Processor-Version: 142)
-   - Enabled via header per PDFShift announcement
-   - Better CSS3 support, faster rendering
-   - Result: No improvement for images
+| File | Purpose |
+|------|---------|
+| `apps/worker/src/worker/utils/photo_proxy.py` | Fetch MLS → Upload R2 → Return presigned URL |
+| `apps/worker/src/worker/tasks.py` | Calls `proxy_report_photos_inplace()` for gallery reports |
 
-4. **CSS Background-Image Approach** (`trendy-new-listings-gallery.html`)
-   - Render photos as CSS `background-image` instead of `<img>` tags
-   - Provides graceful fallback (shows "No Image" placeholder)
-   - Result: Prevents broken image icons but images still don't load
+**Configuration:**
 
-**Potential next steps:**
+```bash
+# Environment variable to enable (Worker service only)
+PHOTO_PROXY_ENABLED=true
 
-1. **Verify base64 conversion is executing** - Check Render logs to confirm `image_proxy.py` is being called and images are being fetched
-2. **Test with known-good image URLs** - Use Unsplash URLs (which work in sample data) with real reports to isolate if it's MLS URL specific
-3. **Self-hosted image proxy** - Upload MLS images to R2 and serve from our domain
-4. **Alternative PDF engine** - Consider switching to a different PDF service that handles external images better
-5. **Contact PDFShift support** - Ask about MLS image loading specifically
+# R2 bucket must have CORS configured:
+# AllowedOrigins: ["*"]
+# AllowedMethods: ["GET"]
+```
 
-**Files involved:**
-- `apps/worker/src/worker/utils/image_proxy.py` - Base64 conversion utility
-- `apps/worker/src/worker/report_builders.py` - Calls image proxy for gallery reports
-- `apps/worker/src/worker/pdf_engine.py` - PDFShift configuration
-- `apps/api/src/api/routes/branding_tools.py` - Sample PDF generation
-- `apps/web/templates/trendy-new-listings-gallery.html` - Gallery template
+**What was tried before (for historical reference):**
+
+1. ❌ **Base64 embedding** - PDFShift doesn't reliably support base64 in CSS `background-image`
+2. ❌ **PDFShift timing options** (`delay`, `wait_for_network`, etc.) - Can't bypass MLS blocking
+3. ❌ **X-Processor-Version: 142** - No improvement for blocked images
+4. ❌ **CSS background-image fallback** - Graceful but images still blocked
+
+**Key insight:** The issue was never about *timing* or *lazy loading*—it was about **which IP makes the request**. The R2 proxy solution ensures all image requests come from our controlled infrastructure.
 
 ---
 
@@ -537,12 +548,16 @@ If we need MLS photos to *always* appear in PDFs, we must serve them from a URL 
 
 ### Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `PDF_ENGINE` | `playwright` or `pdfshift` |
-| `PDFSHIFT_API_KEY` | PDFShift API key |
-| `PRINT_BASE` | Base URL for print pages |
-| `R2_*` | Cloudflare R2 credentials |
+| Variable | Service | Description |
+|----------|---------|-------------|
+| `PDF_ENGINE` | Worker | `playwright` or `pdfshift` |
+| `PDFSHIFT_API_KEY` | Worker | PDFShift API key |
+| `PRINT_BASE` | Worker | Base URL for print pages |
+| `PHOTO_PROXY_ENABLED` | Worker | `true` to enable R2 photo proxy for gallery PDFs |
+| `R2_ACCOUNT_ID` | Worker | Cloudflare R2 account ID |
+| `R2_ACCESS_KEY_ID` | Worker | Cloudflare R2 access key |
+| `R2_SECRET_ACCESS_KEY` | Worker | Cloudflare R2 secret key |
+| `R2_BUCKET_NAME` | Worker | R2 bucket name (default: `market-reports`) |
 
 ---
 
