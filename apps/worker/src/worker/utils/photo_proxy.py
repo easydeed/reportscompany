@@ -28,6 +28,9 @@ import httpx
 from botocore.client import Config
 
 
+# Feature flag to enable/disable photo proxy (disabled by default until debugged)
+PHOTO_PROXY_ENABLED = os.getenv("PHOTO_PROXY_ENABLED", "false").lower() == "true"
+
 # Cloudflare R2 Configuration (same env vars as worker/tasks.py)
 R2_ACCOUNT_ID = os.getenv("R2_ACCOUNT_ID", "")
 R2_ACCESS_KEY_ID = os.getenv("R2_ACCESS_KEY_ID", "")
@@ -249,6 +252,11 @@ def proxy_report_photos_inplace(result_json: Dict, account_id: str, run_id: str)
     Expected shape (gallery/featured):
       result_json["listings"] = [{ "hero_photo_url": "...", ... }, ...]
     """
+    # Feature flag check - disabled by default until photo proxy is debugged
+    if not PHOTO_PROXY_ENABLED:
+        print(f"📷 Photo proxy DISABLED (set PHOTO_PROXY_ENABLED=true to enable)")
+        return result_json
+    
     print(f"📷 proxy_report_photos_inplace called: account={account_id[:8]}..., run={run_id[:8]}...")
     
     listings: List[Dict] = result_json.get("listings") or []
