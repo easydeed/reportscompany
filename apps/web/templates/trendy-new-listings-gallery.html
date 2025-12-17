@@ -4,6 +4,10 @@
 <meta charset="utf-8" />
 <title>{{brand_name}} • New Listings Gallery</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- V2.5: Load Inter font for consistent PDF rendering -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   /* ====== Print Setup ====== */
   @page {
@@ -255,10 +259,10 @@
   /* Ribbon for gallery pages - uses brand gradient (V2.4) */
   .ribbon{
     background: linear-gradient(90deg, var(--pct-blue), var(--pct-accent));
-    color: #fff; 
+    color: #fff;
     border-radius: 10px;
-    padding: 14px 20px;  /* Increased padding */
-    margin: 8px 0 12px;  /* Slightly more margin */
+    padding: 18px 24px;  /* V2.5: Increased padding */
+    margin: 10px 0 14px;  /* V2.5: More margin */
     text-align: center;
     box-shadow: 0 2px 8px rgba(124, 58, 237, 0.15);
     display: flex;
@@ -324,42 +328,48 @@
     z-index: 0;
   }
 
-  /* Card info section - ENLARGED text, REDUCED whitespace (V2.4) */
+  /* Card info section - V2.5: Larger text, tighter spacing */
   .property-card .info{
-    padding: 10px 14px 8px;  /* Less bottom padding */
+    padding: 10px 14px 4px;  /* Reduced bottom padding */
   }
 
   .property-card .address{
-    font-size: 13px;  /* Increased from 11px */
+    font-size: 14px;  /* V2.5: Increased from 13px */
     font-weight: 700;
     color: var(--ink);
-    margin: 0 0 2px;  /* Reduced */
-    line-height: 1.3;
+    margin: 0 0 1px;
+    line-height: 1.25;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
 
   .property-card .city{
-    font-size: 11px;  /* Increased from 10px */
+    font-size: 12px;  /* V2.5: Increased from 11px */
     color: var(--muted);
-    margin: 0 0 6px;  /* Reduced from 8px */
+    margin: 0 0 5px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
 
   .property-card .price{
-    font-size: 17px;  /* Increased from 14px */
+    font-size: 19px;  /* V2.5: Increased from 17px */
     font-weight: 800;
-    color: var(--pct-blue);
-    margin: 0 0 6px;  /* Reduced from 8px */
+    color: #000;  /* V2.5: Black instead of brand color */
+    letter-spacing: 0.5px;  /* V2.5: Added letter spacing */
+    margin: 0 0 5px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
 
   .property-card .details{
     display: flex;
-    gap: 12px;
-    font-size: 11px;  /* Increased from 10px */
-    color: var(--muted);
-    padding-top: 6px;  /* Reduced from 8px */
+    gap: 10px;
+    font-size: 12px;  /* V2.5: Increased from 11px */
+    color: var(--ink);  /* V2.5: Darker text */
+    padding-top: 5px;
+    padding-bottom: 0;  /* V2.5: Removed bottom padding */
     border-top: 1px solid var(--pct-gray);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
 
   .property-card .details .detail{
@@ -367,6 +377,12 @@
     align-items: center;
     gap: 4px;
     font-weight: 600;
+  }
+
+  .property-card .details .detail-icon{
+    width: 14px;
+    height: 14px;
+    opacity: 0.7;
   }
 
   /* Branded Footer (above gray footer) - Compact for gallery pages */

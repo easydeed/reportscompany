@@ -900,6 +900,11 @@ export function buildNewListingsGalleryHtml(
 
   // Build card HTML helper
   // Photos use CSS background-image with MLS URLs (or R2 URLs when photo proxy is enabled)
+  // V2.5: Added icons for beds/baths/sqft, increased text sizes
+  const bedIcon = `<svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v11m0-4h18m0 4v-8a2 2 0 0 0-2-2H5m14 0V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v4"/></svg>`;
+  const bathIcon = `<svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16a1 1 0 0 1 1 1v3a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4v-3a1 1 0 0 1 1-1zM6 12V5a2 2 0 0 1 2-2h1"/><circle cx="9" cy="5" r="1"/></svg>`;
+  const sqftIcon = `<svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg>`;
+  
   const buildCard = (listing: any) => {
     const photoUrl = listing.hero_photo_url || "";
     // Handle both base64 data URIs and regular URLs
@@ -912,9 +917,9 @@ export function buildNewListingsGalleryHtml(
           <div class="city">${listing.city || r.city || ""}, ${listing.zip_code || ""}</div>
           <div class="price">${formatCurrency(listing.list_price)}</div>
           <div class="details">
-            <div class="detail">${formatNumber(listing.bedrooms)} bd</div>
-            <div class="detail">${formatDecimal(listing.bathrooms, 1)} ba</div>
-            <div class="detail">${formatNumber(listing.sqft)} sf</div>
+            <div class="detail">${bedIcon} ${formatNumber(listing.bedrooms)} bd</div>
+            <div class="detail">${bathIcon} ${formatDecimal(listing.bathrooms, 1)} ba</div>
+            <div class="detail">${sqftIcon} ${formatNumber(listing.sqft)} sf</div>
           </div>
         </div>
       </div>
