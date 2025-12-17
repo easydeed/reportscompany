@@ -1,13 +1,14 @@
 import { cookies } from 'next/headers';
 import { BrandingForm } from '@/components/branding-form';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, Palette, Image, Mail } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { AlertCircle, Sparkles } from 'lucide-react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
 interface BrandingData {
   brand_display_name: string;
   logo_url: string | null;
+  footer_logo_url: string | null;
   primary_color: string | null;
   accent_color: string | null;
   rep_photo_url: string | null;
@@ -86,54 +87,25 @@ export default async function AffiliateBrandingPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">White-Label Branding</h1>
-          <p className="text-muted-foreground mt-1">
-            Customize how your brand appears on client reports and emails
-          </p>
+    <div className="space-y-8">
+      {/* Hero Header */}
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-violet-600 to-orange-500 p-8 text-white">
+        <div className="absolute inset-0 bg-black/10" />
+        <div className="relative flex items-center gap-4">
+          <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+            <Sparkles className="h-8 w-8" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">White-Label Branding</h1>
+            <p className="text-white/80 mt-1 max-w-xl">
+              Create a professional, branded experience for your clients. Your logo and colors 
+              appear on all PDF reports and emails — TrendyReports stays behind the scenes.
+            </p>
+          </div>
         </div>
-      </div>
-
-      {/* Info Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Reports</CardTitle>
-            <Palette className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xs text-muted-foreground">
-              Your brand appears on all PDF reports for your sponsored agents
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Emails</CardTitle>
-            <Mail className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xs text-muted-foreground">
-              Scheduled report emails sent to clients display your branding
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">White Label</CardTitle>
-            <Image className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xs text-muted-foreground">
-              TrendyReports remains invisible to your clients
-            </div>
-          </CardContent>
-        </Card>
+        {/* Decorative elements */}
+        <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-xl" />
+        <div className="absolute -right-16 -top-8 w-24 h-24 bg-white/10 rounded-full blur-lg" />
       </div>
 
       {/* Branding Form with Live Preview */}

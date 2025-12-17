@@ -22,6 +22,8 @@ function injectBrand(html: string, brand: any): string {
   const accentColor = brand.accent_color || DEFAULT_ACCENT_COLOR;
   const brandName = brand.display_name || "TrendyReports";
   const logoUrl = brand.logo_url || "";
+  // V2.5: Footer logo (for gray background) - falls back to logo_url if not set
+  const footerLogoUrl = brand.footer_logo_url || logoUrl;
   const repPhotoUrl = brand.rep_photo_url || "";
   const contactLine1 = brand.contact_line1 || "";
   const contactLine2 = brand.contact_line2 || "";
@@ -46,6 +48,7 @@ function injectBrand(html: string, brand: any): string {
   
   // Replace contact/branding placeholders
   result = result.replaceAll("{{logo_url}}", logoUrl);
+  result = result.replaceAll("{{footer_logo_url}}", footerLogoUrl);
   result = result.replaceAll("{{rep_photo_url}}", repPhotoUrl);
   result = result.replaceAll("{{contact_line1}}", contactLine1);
   result = result.replaceAll("{{contact_line2}}", contactLine2);
@@ -329,8 +332,8 @@ export function buildNewListingsHtml(
           </div>
         </div>
         <div class="branded-footer-logo">
-          ${data.brand?.logo_url
-            ? `<img src="${data.brand.logo_url}" alt="${brandName}" class="logo-img" />`
+          ${(data.brand?.footer_logo_url || data.brand?.logo_url)
+            ? `<img src="${data.brand?.footer_logo_url || data.brand?.logo_url}" alt="${brandName}" class="logo-img" />`
             : `<div style="font-size: 14px; font-weight: 600; color: var(--pct-blue);">${brandName}</div>`
           }
         </div>
@@ -491,8 +494,8 @@ export function buildInventoryHtml(
           </div>
         </div>
         <div class="branded-footer-logo">
-          ${data.brand?.logo_url
-            ? `<img src="${data.brand.logo_url}" alt="${brandName}" class="logo-img" />`
+          ${(data.brand?.footer_logo_url || data.brand?.logo_url)
+            ? `<img src="${data.brand?.footer_logo_url || data.brand?.logo_url}" alt="${brandName}" class="logo-img" />`
             : `<div style="font-size: 14px; font-weight: 600; color: var(--pct-blue);">${brandName}</div>`
           }
         </div>
@@ -652,8 +655,8 @@ export function buildClosedHtml(
           </div>
         </div>
         <div class="branded-footer-logo">
-          ${data.brand?.logo_url
-            ? `<img src="${data.brand.logo_url}" alt="${brandName}" class="logo-img" />`
+          ${(data.brand?.footer_logo_url || data.brand?.logo_url)
+            ? `<img src="${data.brand?.footer_logo_url || data.brand?.logo_url}" alt="${brandName}" class="logo-img" />`
             : `<div style="font-size: 14px; font-weight: 600; color: var(--pct-blue);">${brandName}</div>`
           }
         </div>
@@ -886,8 +889,8 @@ export function buildNewListingsGalleryHtml(
           </div>
         </div>
         <div class="branded-footer-logo">
-          ${data.brand?.logo_url
-            ? `<img src="${data.brand.logo_url}" alt="${brandName}" class="logo-img" />`
+          ${(data.brand?.footer_logo_url || data.brand?.logo_url)
+            ? `<img src="${data.brand?.footer_logo_url || data.brand?.logo_url}" alt="${brandName}" class="logo-img" />`
             : `<div style="font-size: 14px; font-weight: 600; color: var(--pct-blue);">${brandName}</div>`
           }
         </div>

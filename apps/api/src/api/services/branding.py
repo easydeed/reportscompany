@@ -12,8 +12,9 @@ from typing import Optional, TypedDict
 class Brand(TypedDict, total=False):
     """Brand configuration for white-label output."""
     display_name: str
-    logo_url: Optional[str]
-    email_logo_url: Optional[str]  # Separate logo for email headers (light version)
+    logo_url: Optional[str]           # Hero header logo (on gradient - white/light works best)
+    email_logo_url: Optional[str]     # Email header logo (light version)
+    footer_logo_url: Optional[str]    # PDF footer logo (on gray - dark/colored works best)
     primary_color: Optional[str]
     accent_color: Optional[str]
     rep_photo_url: Optional[str]
@@ -75,15 +76,18 @@ def get_brand_for_account(cur, account_id: str) -> Brand:
     
     # Look up branding configuration
     # Note: affiliate_branding table may not exist in all environments
-    # Also handle case where email_logo_url column doesn't exist yet
+    # Gracefully handle missing columns (email_logo_url, footer_logo_url)
     branding_row = None
-    has_email_logo_col = True
+    query_version = "full"  # full, no_footer, minimal
+    
     try:
+        # Try full query with all columns
         cur.execute("""
             SELECT
                 brand_display_name,
                 logo_url,
                 email_logo_url,
+                footer_logo_url,
                 primary_color,
                 accent_color,
                 rep_photo_url,
@@ -93,12 +97,35 @@ def get_brand_for_account(cur, account_id: str) -> Brand:
             FROM affiliate_branding
             WHERE account_id = %s::uuid
         """, (branding_account_id,))
-        
         branding_row = cur.fetchone()
     except Exception as e:
-        # Table may not exist or email_logo_url column missing - try without it
-        if "email_logo_url" in str(e):
-            has_email_logo_col = False
+        err_str = str(e).lower()
+        if "footer_logo_url" in err_str:
+            query_version = "no_footer"
+        elif "email_logo_url" in err_str:
+            query_version = "minimal"
+        
+        if query_version == "no_footer":
+            try:
+                cur.execute("""
+                    SELECT
+                        brand_display_name,
+                        logo_url,
+                        email_logo_url,
+                        primary_color,
+                        accent_color,
+                        rep_photo_url,
+                        contact_line1,
+                        contact_line2,
+                        website_url
+                    FROM affiliate_branding
+                    WHERE account_id = %s::uuid
+                """, (branding_account_id,))
+                branding_row = cur.fetchone()
+            except Exception:
+                query_version = "minimal"
+        
+        if query_version == "minimal":
             try:
                 cur.execute("""
                     SELECT
@@ -119,11 +146,25 @@ def get_brand_for_account(cur, account_id: str) -> Brand:
     
     if branding_row:
         # Branding configured - use it
-        if has_email_logo_col:
+        if query_version == "full":
             return Brand(
                 display_name=branding_row[0],
                 logo_url=branding_row[1],
-                email_logo_url=branding_row[2],  # email_logo_url for light version
+                email_logo_url=branding_row[2],
+                footer_logo_url=branding_row[3],
+                primary_color=branding_row[4] or DEFAULT_PRIMARY,
+                accent_color=branding_row[5] or DEFAULT_ACCENT,
+                rep_photo_url=branding_row[6],
+                contact_line1=branding_row[7],
+                contact_line2=branding_row[8],
+                website_url=branding_row[9],
+            )
+        elif query_version == "no_footer":
+            return Brand(
+                display_name=branding_row[0],
+                logo_url=branding_row[1],
+                email_logo_url=branding_row[2],
+                footer_logo_url=None,
                 primary_color=branding_row[3] or DEFAULT_PRIMARY,
                 accent_color=branding_row[4] or DEFAULT_ACCENT,
                 rep_photo_url=branding_row[5],
@@ -131,11 +172,12 @@ def get_brand_for_account(cur, account_id: str) -> Brand:
                 contact_line2=branding_row[7],
                 website_url=branding_row[8],
             )
-        else:
+        else:  # minimal
             return Brand(
                 display_name=branding_row[0],
                 logo_url=branding_row[1],
-                email_logo_url=None,  # Column doesn't exist yet
+                email_logo_url=None,
+                footer_logo_url=None,
                 primary_color=branding_row[2] or DEFAULT_PRIMARY,
                 accent_color=branding_row[3] or DEFAULT_ACCENT,
                 rep_photo_url=branding_row[4],
@@ -160,6 +202,7 @@ def get_brand_for_account(cur, account_id: str) -> Brand:
                 display_name=sponsor_name,
                 logo_url=None,
                 email_logo_url=None,
+                footer_logo_url=None,
                 primary_color=DEFAULT_PRIMARY,
                 accent_color=DEFAULT_ACCENT,
                 rep_photo_url=None,
@@ -173,6 +216,7 @@ def get_brand_for_account(cur, account_id: str) -> Brand:
                 display_name=acc_name,
                 logo_url=None,
                 email_logo_url=None,
+                footer_logo_url=None,
                 primary_color=DEFAULT_PRIMARY,
                 accent_color=DEFAULT_ACCENT,
                 rep_photo_url=None,
@@ -189,8 +233,9 @@ def _get_default_brand() -> Brand:
     """Returns default TrendyReports branding."""
     return Brand(
         display_name="TrendyReports",
-        logo_url=None,  # Could add TrendyReports logo URL here if hosted
+        logo_url=None,
         email_logo_url=None,
+        footer_logo_url=None,
         primary_color=DEFAULT_PRIMARY,
         accent_color=DEFAULT_ACCENT,
         rep_photo_url=None,
