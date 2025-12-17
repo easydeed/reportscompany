@@ -266,100 +266,75 @@ export function MarketingHome() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          4. TWO AUDIENCES SPLIT - For Agents vs For Affiliates (NEW from V0)
+          4. FOR AGENTS - Full width section (Image left, text right)
       ═══════════════════════════════════════════════════════════════════ */}
-      <section id="for-agents" className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        {/* Split background */}
-        <div className="absolute inset-0 flex">
-          <div className="w-1/2 bg-gradient-to-br from-purple-50 via-white to-purple-50/30" />
-          <div className="w-1/2 bg-gradient-to-bl from-orange-50 via-white to-orange-50/30" />
-        </div>
+      <section id="for-agents" className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-purple-50/50 via-white to-white">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            {/* Image - Left side */}
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xl">
+              <img
+                src="/placeholder.svg?height=600&width=800&text=Agent+Dashboard+Screenshot"
+                alt="Agent dashboard showing market reports and scheduling"
+                className="w-full"
+              />
+            </div>
 
-        {/* Diagonal divider line */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="h-full w-px bg-gradient-to-b from-transparent via-slate-200 to-transparent" />
-        </div>
+            {/* Content - Right side */}
+            <div>
+              <div className="inline-flex items-center gap-2 bg-purple-50 border border-purple-200 rounded-full px-4 py-2 mb-6">
+                <span className="text-sm font-semibold text-purple-900">FOR REAL ESTATE AGENTS</span>
+              </div>
+              <h2 className="font-display font-bold text-4xl sm:text-5xl mb-6 text-slate-900">
+                Win more listings. Stay top of mind.
+              </h2>
+              <p className="text-xl text-slate-600 mb-8 leading-relaxed">
+                Generate beautiful, branded market reports in 30 seconds. Schedule automated delivery to your sphere. 
+                Spend less time on busywork, more time closing deals.
+              </p>
 
-        <div className="relative max-w-[1200px] mx-auto">
-          <div className="grid md:grid-cols-2 gap-8 items-center">
-            {/* For Agents - Left side */}
-            <div className="group">
-              <div className="relative p-8 rounded-3xl bg-white shadow-lg border border-purple-100 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300">
-                {/* Decorative corner accent */}
-                <div className="absolute -top-3 -right-3 w-24 h-24 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl opacity-10 blur-2xl group-hover:opacity-20 transition-opacity" />
-
-                <div className="relative">
-                  <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 mb-6 shadow-lg shadow-purple-500/20">
-                    <User className="w-8 h-8 text-white" />
+              <div className="space-y-6 mb-8">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
+                    <Check className="w-6 h-6 text-purple-600" />
                   </div>
-
-                  <h3 className="font-display font-bold text-2xl text-slate-900 mb-3">For Agents</h3>
-                  <p className="text-slate-600 text-lg leading-relaxed mb-6">
-                    Grow your business and impress clients with stunning, branded market reports
-                  </p>
-
-                  {/* Key features mini-list */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-slate-700">
-                      <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-                      <span>Automated MLS data pulls</span>
+                  <div>
+                    <div className="font-semibold text-lg text-slate-900 mb-1">Real-time MLS data</div>
+                    <div className="text-slate-600">
+                      Fresh listings, sales, and market stats pulled directly from your MLS. Always accurate.
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-slate-700">
-                      <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-                      <span>Custom branding & logos</span>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
+                    <Check className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-lg text-slate-900 mb-1">Your brand, your reports</div>
+                    <div className="text-slate-600">
+                      Logo, colors, contact info — every report looks like it came from your own design team.
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-slate-700">
-                      <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-                      <span>Share in seconds</span>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
+                    <Check className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-lg text-slate-900 mb-1">Set it and forget it</div>
+                    <div className="text-slate-600">
+                      Schedule weekly or monthly reports. They generate and send automatically while you focus on clients.
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* For Affiliates - Right side */}
-            <div className="group">
-              <div className="relative p-8 rounded-3xl bg-white shadow-lg border border-orange-100 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300">
-                {/* Decorative corner accent */}
-                <div className="absolute -top-3 -left-3 w-24 h-24 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl opacity-10 blur-2xl group-hover:opacity-20 transition-opacity" />
-
-                <div className="relative">
-                  <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 mb-6 shadow-lg shadow-orange-500/20">
-                    <Building2 className="w-8 h-8 text-white" />
-                  </div>
-
-                  <h3 className="font-display font-bold text-2xl text-slate-900 mb-3">For Affiliates</h3>
-                  <p className="text-slate-600 text-base leading-relaxed mb-2">
-                    (Title Companies, Lenders & Brokerages)
-                  </p>
-                  <p className="text-slate-600 text-lg leading-relaxed mb-6">
-                    Sponsor agents and strengthen relationships with co-branded reports
-                  </p>
-
-                  {/* Key features mini-list */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-slate-700">
-                      <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-                      <span>Co-branded reports with your logo</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-slate-700">
-                      <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-                      <span>Sponsor unlimited agents</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-slate-700">
-                      <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-                      <span>Track engagement & usage</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Center connecting element */}
-          <div className="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 items-center justify-center">
-            <div className="w-16 h-16 rounded-full bg-white border-4 border-slate-100 shadow-xl flex items-center justify-center">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 via-violet-500 to-orange-500 animate-pulse" />
+              <Button size="lg" className="bg-purple-600 hover:bg-purple-700 text-white h-14 px-8" asChild>
+                <Link href="/register">
+                  Start Free — No Credit Card
+                  <ChevronRight className="w-5 h-5 ml-2" />
+                </Link>
+              </Button>
             </div>
           </div>
         </div>
