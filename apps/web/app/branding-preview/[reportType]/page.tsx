@@ -5,6 +5,7 @@ type Props = {
   searchParams: Promise<{
     brand_name?: string;
     logo_url?: string;
+    footer_logo_url?: string;
     primary_color?: string;
     accent_color?: string;
     rep_photo_url?: string;
@@ -37,6 +38,8 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
   // Get branding from query params
   const brandName = query.brand_name || "Your Brand";
   const logoUrl = query.logo_url ? decodeURIComponent(query.logo_url) : null;
+  // Footer logo - use separate footer_logo_url if provided, otherwise fall back to logo_url
+  const footerLogoUrl = query.footer_logo_url ? decodeURIComponent(query.footer_logo_url) : logoUrl;
   const primaryColor = query.primary_color ? `#${query.primary_color}` : "#7C3AED";
   const accentColor = query.accent_color ? `#${query.accent_color}` : "#F26B2B";
   // Footer branding
@@ -805,8 +808,8 @@ export default async function BrandingPreviewPage({ params, searchParams }: Prop
                 </div>
               </div>
               <div className="branded-footer-logo">
-                {logoUrl ? (
-                  <img src={logoUrl} alt={brandName} />
+                {footerLogoUrl ? (
+                  <img src={footerLogoUrl} alt={brandName} />
                 ) : (
                   <div className="branded-footer-logo-text">{brandName}</div>
                 )}

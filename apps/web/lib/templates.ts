@@ -88,6 +88,15 @@ function injectBrand(html: string, brand: any): string {
     result = result.replace(/\{\{#if logo_url\}\}[\s\S]*?\{\{\/if\}\}/g, '');
   }
   
+  // Handle footer_logo_url conditionals (separate from header logo)
+  if (footerLogoUrl) {
+    result = result.replace(/\{\{#if footer_logo_url\}\}([\s\S]*?)\{\{else\}\}[\s\S]*?\{\{\/if\}\}/g, '$1');
+    result = result.replace(/\{\{#if footer_logo_url\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+  } else {
+    result = result.replace(/\{\{#if footer_logo_url\}\}[\s\S]*?\{\{else\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+    result = result.replace(/\{\{#if footer_logo_url\}\}[\s\S]*?\{\{\/if\}\}/g, '');
+  }
+  
   // Tagline for footer
   const tagline = brand.display_name 
     ? `${brandName} • Market Intelligence`
