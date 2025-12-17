@@ -1,5 +1,6 @@
-from fastapi import Request, HTTPException
+from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 from typing import Optional
 import redis, time
 import logging
@@ -94,7 +95,12 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
                 acct = demo
 
         if not acct:
-            raise HTTPException(status_code=401, detail="Unauthorized")
+            # IMPORTANT:
+            # This middleware is implemented via Starlette's BaseHTTPMiddleware.
+            # Raising HTTPException here can bypass FastAPI's exception handlers
+            # (especially under newer Python/Starlette exception-group handling),
+            # resulting in a 500 instead of a 401 response.
+            return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
 
         request.state.account_id = acct
         
