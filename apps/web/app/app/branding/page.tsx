@@ -344,45 +344,50 @@ export default function BrandingPage() {
   const accentColor = formData.accent_color || "#F26B2B"
 
   return (
-    <div className="min-h-screen">
-      {/* ========== HERO HEADER ========== */}
-      <div 
-        className="relative -mx-4 -mt-4 lg:-mx-8 lg:-mt-6 px-4 lg:px-8 py-8 mb-8"
-        style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
-      >
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                <Sparkles className="h-7 w-7 text-white" />
-              </div>
-              <div className="text-white">
-                <h1 className="text-2xl lg:text-3xl font-bold">Brand Studio</h1>
-                <p className="text-white/80 text-sm lg:text-base">
-                  Design how your brand appears to clients
-                </p>
-              </div>
-            </div>
-            <Button 
-              onClick={save} 
-              disabled={saving} 
-              size="lg"
-              className="bg-white text-slate-900 hover:bg-white/90 shadow-lg"
-            >
-              {saving ? (
-                <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Saving...</>
-              ) : (
-                <><Save className="w-4 h-4 mr-2" /> Save Changes</>
-              )}
-            </Button>
-          </div>
+    <div className="space-y-6">
+      {/* ========== HEADER ========== */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Brand Studio</h1>
+          <p className="text-muted-foreground mt-1">
+            Design how your brand appears on reports and emails
+          </p>
         </div>
+        <Button 
+          onClick={save} 
+          disabled={saving} 
+          size="lg"
+        >
+          {saving ? (
+            <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Saving...</>
+          ) : (
+            <><Save className="w-4 h-4 mr-2" /> Save Changes</>
+          )}
+        </Button>
       </div>
 
-      <div className="max-w-6xl mx-auto">
-        <div className="grid lg:grid-cols-5 gap-8">
+      {/* Color Preview Bar */}
+      <div 
+        className="rounded-xl p-4 flex items-center justify-between"
+        style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+            <Sparkles className="h-5 w-5 text-white" />
+          </div>
+          <div className="text-white">
+            <p className="font-semibold text-sm">Live Color Preview</p>
+            <p className="text-white/70 text-xs">This is how your brand gradient looks</p>
+          </div>
+        </div>
+        {formData.logo_url && (
+          <img src={formData.logo_url} alt="Logo" className="h-8 w-auto brightness-0 invert" />
+        )}
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-6">
           {/* ========== LEFT COLUMN: FORM ========== */}
-          <div className="lg:col-span-3 space-y-8">
+          <div className="lg:col-span-2 space-y-6">
             
             {/* SECTION 1: Company Name + Colors */}
             <section>
@@ -752,8 +757,8 @@ export default function BrandingPage() {
           </div>
 
           {/* ========== RIGHT COLUMN: LIVE PREVIEW ========== */}
-          <div className="lg:col-span-2">
-            <div className="lg:sticky lg:top-6 space-y-6">
+          <div className="lg:col-span-1">
+            <div className="lg:sticky lg:top-6 space-y-4">
               <div className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                 Live Preview
@@ -864,7 +869,6 @@ export default function BrandingPage() {
             </div>
           </div>
         </div>
-      </div>
     </div>
   )
 }
