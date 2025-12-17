@@ -899,11 +899,11 @@ export function buildNewListingsGalleryHtml(
   `;
 
   // Build card HTML helper
-  // Important: in PDFShift, some MLS photo URLs can fail to load (hotlink/auth/timeouts).
-  // To avoid "broken image" icons in the PDF, we render the photo as a CSS background-image.
-  // If it fails to load, the user sees a clean placeholder (no broken icon).
+  // V2.4: Photos are now base64 data URIs (converted in worker) for PDFShift compatibility.
+  // CSS background-image still used for graceful fallback if conversion fails.
   const buildCard = (listing: any) => {
     const photoUrl = listing.hero_photo_url || "";
+    // Handle both base64 data URIs and regular URLs
     const bgStyle = photoUrl ? `background-image:url('${photoUrl.replaceAll("'", "%27")}');` : "";
     return `
       <div class="property-card avoid-break">
