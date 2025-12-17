@@ -2,7 +2,7 @@
 
 > Technical documentation for PDF report generation, templates, and white-label branding.
 
-**Last Updated:** December 16, 2025
+**Last Updated:** December 17, 2025
 
 ---
 
@@ -15,6 +15,7 @@
 5. [Template Variables](#5-template-variables)
 6. [Styling Guidelines](#6-styling-guidelines)
 7. [Print Optimization](#7-print-optimization)
+8. [Known Issues & Ongoing Work](#8-known-issues--ongoing-work)
 
 ---
 
@@ -128,6 +129,7 @@ See PDFShift API parameter docs (same parameters apply across convert endpoints)
 
 | Version | Date | Changes |
 |---------|------|---------|
+| **V2.4** | Dec 17, 2025 | **PDFShift image loading options** - Added `delay`, `wait_for_network`, `lazy_load_images` to HTML content payloads; enabled X-Processor-Version 142; enhanced image proxy with retry logic (MLS photo issue ongoing) |
 | **V2.3** | Dec 16, 2025 | **PDFShift reliability** - avoid conversion failures due to image loading; gallery photos render as CSS `background-image` with graceful placeholder |
 | **V2.2** | Dec 16, 2025 | **Refinements** - Increased header height (90px), centered metric text, larger logos (52px) |
 | V2.1 | Dec 15, 2025 | **All templates hero headers** - uniform hero header across all report types |
@@ -451,12 +453,62 @@ It’s common for listing photos to **show in the browser preview** but **fail i
   - For gallery cards, render photos as **CSS `background-image`** on `.photo-container` with a visible “No Image” placeholder behind it.
   - If the image is blocked/unreachable, the PDF still looks clean (no broken `<img>` icon).
 
-#### Long-term “perfect photos” solution (when needed)
+#### Long-term "perfect photos" solution (when needed)
 
 If we need MLS photos to *always* appear in PDFs, we must serve them from a URL we control:
 
 - **Proxy/cache images** on our backend (download, store, and serve from R2 / our domain)
 - Optionally **embed as base64** (larger HTML/PDF, but self-contained)
+
+---
+
+## 8. Known Issues & Ongoing Work
+
+### 8.1 MLS Photo Loading in PDFShift (ONGOING - Dec 17, 2025)
+
+**Status:** Unresolved. MLS photos do not appear in gallery PDFs generated via PDFShift. They render as gray placeholders.
+
+**Context:** The user confirmed MLS photos work fine with other PDF libraries. This is specifically a PDFShift limitation or configuration issue.
+
+**What has been tried:**
+
+1. **Base64 Image Proxy** (`apps/worker/src/worker/utils/image_proxy.py`)
+   - Fetches MLS image URLs server-side and converts to base64 data URIs
+   - Embeds images directly in HTML to bypass hotlink protection
+   - Added retry logic, browser-like headers, rate limit handling
+   - Result: Still seeing placeholders (may need investigation into whether this code path is being executed)
+
+2. **PDFShift Image Loading Options** (`apps/worker/src/worker/pdf_engine.py`)
+   - Added `delay: 5000` (5 seconds) for HTML content
+   - Added `wait_for_network: True` to wait for network idle
+   - Added `lazy_load_images: True` to trigger lazy loading
+   - Added `timeout: 100` for extended loading time
+   - Result: Still not loading images
+
+3. **New Conversion Engine** (X-Processor-Version: 142)
+   - Enabled via header per PDFShift announcement
+   - Better CSS3 support, faster rendering
+   - Result: No improvement for images
+
+4. **CSS Background-Image Approach** (`trendy-new-listings-gallery.html`)
+   - Render photos as CSS `background-image` instead of `<img>` tags
+   - Provides graceful fallback (shows "No Image" placeholder)
+   - Result: Prevents broken image icons but images still don't load
+
+**Potential next steps:**
+
+1. **Verify base64 conversion is executing** - Check Render logs to confirm `image_proxy.py` is being called and images are being fetched
+2. **Test with known-good image URLs** - Use Unsplash URLs (which work in sample data) with real reports to isolate if it's MLS URL specific
+3. **Self-hosted image proxy** - Upload MLS images to R2 and serve from our domain
+4. **Alternative PDF engine** - Consider switching to a different PDF service that handles external images better
+5. **Contact PDFShift support** - Ask about MLS image loading specifically
+
+**Files involved:**
+- `apps/worker/src/worker/utils/image_proxy.py` - Base64 conversion utility
+- `apps/worker/src/worker/report_builders.py` - Calls image proxy for gallery reports
+- `apps/worker/src/worker/pdf_engine.py` - PDFShift configuration
+- `apps/api/src/api/routes/branding_tools.py` - Sample PDF generation
+- `apps/web/templates/trendy-new-listings-gallery.html` - Gallery template
 
 ---
 
