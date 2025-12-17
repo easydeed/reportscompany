@@ -162,6 +162,10 @@ export default function BrandingPage() {
           })
           setTestEmail(repEmail || me.email || "")
         } else {
+          // Regular user - load all branding fields including contact info
+          const { name: repName, title: repTitle } = parseContactLine1(data.contact_line1)
+          const { phone: repPhone, email: repEmail } = parseContactLine2(data.contact_line2)
+          
           setFormData({
             brand_display_name: data.name || "",
             logo_url: data.logo_url || null,
@@ -170,15 +174,16 @@ export default function BrandingPage() {
             email_footer_logo_url: data.email_footer_logo_url || null,
             primary_color: data.primary_color || "#7C3AED",
             accent_color: data.secondary_color || "#F26B2B",
-            rep_photo_url: null,
-            contact_line1: null,
-            contact_line2: null,
-            website_url: null,
-            rep_name: "",
-            rep_title: "",
-            rep_email: "",
-            rep_phone: "",
+            rep_photo_url: data.rep_photo_url || null,
+            contact_line1: data.contact_line1 || null,
+            contact_line2: data.contact_line2 || null,
+            website_url: data.website_url || null,
+            rep_name: repName || me.name || "",
+            rep_title: repTitle || "",
+            rep_email: repEmail || me.email || "",
+            rep_phone: repPhone || "",
           })
+          setTestEmail(repEmail || me.email || "")
         }
       }
     } catch (error) {
@@ -215,12 +220,17 @@ export default function BrandingPage() {
             website_url: formData.website_url,
           }
         : {
+            // Regular users now get all branding fields
             logo_url: formData.logo_url,
             footer_logo_url: formData.footer_logo_url,
             email_logo_url: formData.email_logo_url,
             email_footer_logo_url: formData.email_footer_logo_url,
             primary_color: formData.primary_color,
             secondary_color: formData.accent_color,
+            rep_photo_url: formData.rep_photo_url,
+            contact_line1,
+            contact_line2,
+            website_url: formData.website_url,
           }
 
       const res = await fetch(endpoint, {
@@ -542,118 +552,116 @@ export default function BrandingPage() {
               </div>
             </section>
 
-            {/* SECTION 4: Contact Info (Affiliates only) */}
-            {isAffiliate && (
-              <section>
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                    <User className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <h2 className="font-semibold text-lg">Contact Information</h2>
+            {/* SECTION 4: Contact Info (All users) */}
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                  <User className="w-4 h-4 text-blue-600" />
                 </div>
-                
-                <div className="bg-card border rounded-xl p-5 space-y-5">
-                  <div className="flex gap-4">
-                    <div className="flex-shrink-0">
-                      <Label className="text-sm font-medium mb-2 block">Photo</Label>
-                      <div className="w-20 h-20 relative rounded-xl border-2 border-dashed overflow-hidden bg-muted/30 hover:bg-muted/50 transition-colors">
-                        {formData.rep_photo_url ? (
-                          <img src={formData.rep_photo_url} alt="Profile" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                            <User className="w-8 h-8" />
-                          </div>
-                        )}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="absolute inset-0 opacity-0 cursor-pointer"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0]
-                            if (!file) return
-                            const fd = new FormData()
-                            fd.append("file", file)
-                            fd.append("asset_type", "headshot")
-                            try {
-                              const res = await fetch("/api/proxy/v1/assets/upload", { method: "POST", body: fd })
-                              if (res.ok) {
-                                const data = await res.json()
-                                setFormData({ ...formData, rep_photo_url: data.url })
-                              }
-                            } catch (err) { console.error("Upload failed:", err) }
-                          }}
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="flex-1 space-y-3">
-                      <div>
-                        <Label htmlFor="rep_name" className="text-sm">Full Name</Label>
-                        <Input
-                          id="rep_name"
-                          value={formData.rep_name}
-                          onChange={(e) => setFormData({ ...formData, rep_name: e.target.value })}
-                          placeholder="John Doe"
-                          className="mt-1 h-10"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="rep_title" className="text-sm">Job Title</Label>
-                        <Input
-                          id="rep_title"
-                          value={formData.rep_title}
-                          onChange={(e) => setFormData({ ...formData, rep_title: e.target.value })}
-                          placeholder="Senior Title Rep"
-                          className="mt-1 h-10"
-                        />
-                      </div>
+                <h2 className="font-semibold text-lg">Contact Information</h2>
+                <span className="text-xs text-muted-foreground ml-auto">Appears on report footers</span>
+              </div>
+              
+              <div className="bg-card border rounded-xl p-5 space-y-5">
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0">
+                    <Label className="text-sm font-medium mb-2 block">Photo</Label>
+                    <div className="w-20 h-20 relative rounded-xl border-2 border-dashed overflow-hidden bg-muted/30 hover:bg-muted/50 transition-colors">
+                      {formData.rep_photo_url ? (
+                        <img src={formData.rep_photo_url} alt="Profile" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                          <User className="w-8 h-8" />
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          const fd = new FormData()
+                          fd.append("file", file)
+                          try {
+                            const res = await fetch("/api/proxy/v1/upload/branding/headshot", { method: "POST", body: fd })
+                            if (res.ok) {
+                              const data = await res.json()
+                              setFormData({ ...formData, rep_photo_url: data.url })
+                            }
+                          } catch (err) { console.error("Upload failed:", err) }
+                        }}
+                      />
                     </div>
                   </div>
-
-                  <div className="grid sm:grid-cols-2 gap-4">
+                  
+                  <div className="flex-1 space-y-3">
                     <div>
-                      <Label htmlFor="rep_email" className="text-sm flex items-center gap-1.5">
-                        <Mail className="w-3.5 h-3.5 text-muted-foreground" /> Email
-                      </Label>
+                      <Label htmlFor="rep_name" className="text-sm">Full Name</Label>
                       <Input
-                        id="rep_email"
-                        type="email"
-                        value={formData.rep_email}
-                        onChange={(e) => setFormData({ ...formData, rep_email: e.target.value })}
-                        placeholder="john@company.com"
+                        id="rep_name"
+                        value={formData.rep_name}
+                        onChange={(e) => setFormData({ ...formData, rep_name: e.target.value })}
+                        placeholder="John Doe"
                         className="mt-1 h-10"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="rep_phone" className="text-sm flex items-center gap-1.5">
-                        <Phone className="w-3.5 h-3.5 text-muted-foreground" /> Phone
-                      </Label>
+                      <Label htmlFor="rep_title" className="text-sm">Job Title</Label>
                       <Input
-                        id="rep_phone"
-                        type="tel"
-                        value={formData.rep_phone}
-                        onChange={(e) => setFormData({ ...formData, rep_phone: e.target.value })}
-                        placeholder="(555) 123-4567"
+                        id="rep_title"
+                        value={formData.rep_title}
+                        onChange={(e) => setFormData({ ...formData, rep_title: e.target.value })}
+                        placeholder={isAffiliate ? "Senior Title Rep" : "Real Estate Agent"}
                         className="mt-1 h-10"
                       />
                     </div>
                   </div>
+                </div>
 
+                <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="website" className="text-sm flex items-center gap-1.5">
-                      <Globe className="w-3.5 h-3.5 text-muted-foreground" /> Website
+                    <Label htmlFor="rep_email" className="text-sm flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5 text-muted-foreground" /> Email
                     </Label>
                     <Input
-                      id="website"
-                      value={formData.website_url || ""}
-                      onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
-                      placeholder="https://www.yourcompany.com"
+                      id="rep_email"
+                      type="email"
+                      value={formData.rep_email}
+                      onChange={(e) => setFormData({ ...formData, rep_email: e.target.value })}
+                      placeholder="john@company.com"
+                      className="mt-1 h-10"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="rep_phone" className="text-sm flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-muted-foreground" /> Phone
+                    </Label>
+                    <Input
+                      id="rep_phone"
+                      type="tel"
+                      value={formData.rep_phone}
+                      onChange={(e) => setFormData({ ...formData, rep_phone: e.target.value })}
+                      placeholder="(555) 123-4567"
                       className="mt-1 h-10"
                     />
                   </div>
                 </div>
-              </section>
-            )}
+
+                <div>
+                  <Label htmlFor="website" className="text-sm flex items-center gap-1.5">
+                    <Globe className="w-3.5 h-3.5 text-muted-foreground" /> Website
+                  </Label>
+                  <Input
+                    id="website"
+                    value={formData.website_url || ""}
+                    onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
+                    placeholder="https://www.yourcompany.com"
+                    className="mt-1 h-10"
+                  />
+                </div>
+              </div>
+            </section>
 
             {/* SECTION 5: Test Your Branding */}
             <section>
@@ -783,7 +791,7 @@ export default function BrandingPage() {
                   </div>
                   {/* Footer */}
                   <div className="p-3 bg-slate-50 border-t flex items-center justify-between">
-                    {isAffiliate && formData.rep_name && (
+                    {formData.rep_name && (
                       <div className="text-[10px] text-slate-600 truncate">{formData.rep_name}</div>
                     )}
                     {(formData.footer_logo_url || formData.logo_url) ? (
@@ -832,7 +840,7 @@ export default function BrandingPage() {
                   </div>
                   {/* Footer */}
                   <div className="p-3 bg-white border-t flex items-center justify-between">
-                    {isAffiliate && formData.rep_name && (
+                    {formData.rep_name && (
                       <div className="text-[10px] text-slate-600 truncate">{formData.rep_name}</div>
                     )}
                     {(formData.email_footer_logo_url || formData.footer_logo_url || formData.logo_url) ? (

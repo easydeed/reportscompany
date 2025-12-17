@@ -21,9 +21,20 @@ class AccountOut(BaseModel):
     id: str
     name: str
     slug: str
+    # Logo fields
     logo_url: Optional[str] = None
+    footer_logo_url: Optional[str] = None
+    email_logo_url: Optional[str] = None
+    email_footer_logo_url: Optional[str] = None
+    # Colors
     primary_color: Optional[str] = None
     secondary_color: Optional[str] = None
+    # Contact info
+    rep_photo_url: Optional[str] = None
+    contact_line1: Optional[str] = None
+    contact_line2: Optional[str] = None
+    website_url: Optional[str] = None
+    # Plan/subscription
     subscription_status: Optional[str] = None
     monthly_report_limit: Optional[int] = None
     api_rate_limit: Optional[int] = None
@@ -32,17 +43,29 @@ class AccountOut(BaseModel):
     stripe_customer_id: Optional[str] = None
 
 class BrandingPatch(BaseModel):
-    logo_url: Optional[str] = Field(None, description="Public URL to a logo")
+    # Logo fields
+    logo_url: Optional[str] = Field(None, description="Header logo URL for PDFs")
+    footer_logo_url: Optional[str] = Field(None, description="Footer logo URL for PDFs")
+    email_logo_url: Optional[str] = Field(None, description="Header logo URL for emails")
+    email_footer_logo_url: Optional[str] = Field(None, description="Footer logo URL for emails")
+    # Colors
     primary_color: Optional[constr(pattern=r'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$')] = None
     secondary_color: Optional[constr(pattern=r'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$')] = None
-    disclaimer: Optional[str] = None  # store in future column if needed
+    # Contact info
+    rep_photo_url: Optional[str] = Field(None, description="Representative headshot URL")
+    contact_line1: Optional[str] = Field(None, description="Primary contact line")
+    contact_line2: Optional[str] = Field(None, description="Secondary contact line")
+    website_url: Optional[str] = Field(None, description="Website URL")
 
 @router.get("/account", response_model=AccountOut)
 def get_account(request: Request, account_id: str = Depends(require_account_id)):
     with db_conn() as (conn, cur):
         set_rls(cur, account_id)
         cur.execute("""
-            SELECT id::text, name, slug, logo_url, primary_color, secondary_color,
+            SELECT id::text, name, slug, 
+                   logo_url, footer_logo_url, email_logo_url, email_footer_logo_url,
+                   primary_color, secondary_color,
+                   rep_photo_url, contact_line1, contact_line2, website_url,
                    subscription_status, monthly_report_limit, api_rate_limit,
                    plan_slug, billing_status, stripe_customer_id
             FROM accounts
@@ -57,13 +80,32 @@ def get_account(request: Request, account_id: str = Depends(require_account_id))
 def patch_branding(payload: BrandingPatch, request: Request, account_id: str = Depends(require_account_id)):
     sets = []
     params = []
+    
+    # Logo fields
     if payload.logo_url is not None:
         sets.append("logo_url = %s"); params.append(payload.logo_url)
+    if payload.footer_logo_url is not None:
+        sets.append("footer_logo_url = %s"); params.append(payload.footer_logo_url)
+    if payload.email_logo_url is not None:
+        sets.append("email_logo_url = %s"); params.append(payload.email_logo_url)
+    if payload.email_footer_logo_url is not None:
+        sets.append("email_footer_logo_url = %s"); params.append(payload.email_footer_logo_url)
+    
+    # Color fields
     if payload.primary_color is not None:
         sets.append("primary_color = %s"); params.append(payload.primary_color)
     if payload.secondary_color is not None:
         sets.append("secondary_color = %s"); params.append(payload.secondary_color)
-    # NOTE: disclaimer column not in base schema; capture later when added.
+    
+    # Contact info fields
+    if payload.rep_photo_url is not None:
+        sets.append("rep_photo_url = %s"); params.append(payload.rep_photo_url)
+    if payload.contact_line1 is not None:
+        sets.append("contact_line1 = %s"); params.append(payload.contact_line1)
+    if payload.contact_line2 is not None:
+        sets.append("contact_line2 = %s"); params.append(payload.contact_line2)
+    if payload.website_url is not None:
+        sets.append("website_url = %s"); params.append(payload.website_url)
 
     if not sets:
         raise HTTPException(status_code=400, detail="No branding fields provided.")
@@ -76,7 +118,10 @@ def patch_branding(payload: BrandingPatch, request: Request, account_id: str = D
             raise HTTPException(status_code=404, detail="Account not found")
 
         cur.execute("""
-            SELECT id::text, name, slug, logo_url, primary_color, secondary_color,
+            SELECT id::text, name, slug, 
+                   logo_url, footer_logo_url, email_logo_url, email_footer_logo_url,
+                   primary_color, secondary_color,
+                   rep_photo_url, contact_line1, contact_line2, website_url,
                    subscription_status, monthly_report_limit, api_rate_limit,
                    plan_slug, billing_status, stripe_customer_id
             FROM accounts WHERE id = %s
