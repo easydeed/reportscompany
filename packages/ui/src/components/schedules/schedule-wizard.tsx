@@ -44,13 +44,12 @@ const steps = [
 ]
 
 const reportTypes = [
-  { id: "market_snapshot" as ReportType, name: "Market Snapshot", icon: TrendingUp },
-  { id: "new_listings" as ReportType, name: "New Listings", icon: Home },
-  { id: "inventory" as ReportType, name: "Inventory Report", icon: BarChart3 },
-  { id: "closed" as ReportType, name: "Closed Sales", icon: DollarSign },
-  { id: "price_bands" as ReportType, name: "Price Bands", icon: BarChart3 },
-  { id: "new_listings_gallery" as ReportType, name: "New Listings (Photo Gallery)", icon: Image },
-  { id: "featured_listings" as ReportType, name: "Featured Listings (Photo Grid)", icon: Star },
+  { id: "market_snapshot" as ReportType, name: "Market Snapshot", icon: TrendingUp, description: "Complete market overview" },
+  { id: "new_listings" as ReportType, name: "New Listings", icon: Home, description: "Recently listed properties" },
+  { id: "inventory" as ReportType, name: "Inventory Report", icon: BarChart3, description: "Active listings analysis" },
+  { id: "closed" as ReportType, name: "Closed Sales", icon: DollarSign, description: "Recent sold properties" },
+  { id: "new_listings_gallery" as ReportType, name: "Photo Gallery", icon: Image, description: "Visual listing showcase" },
+  { id: "featured_listings" as ReportType, name: "Featured Listings", icon: Star, description: "Highlighted properties" },
 ]
 
 const lookbackOptions = [7, 14, 30, 60, 90]
@@ -109,28 +108,37 @@ function StepBasics({ state, setState }: { state: ScheduleWizardState; setState:
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {reportTypes.map((type) => {
                 const Icon = type.icon
+                const isSelected = state.report_type === type.id
                 return (
                   <button
                     key={type.id}
                     type="button"
                     onClick={() => setState({ ...state, report_type: type.id })}
-                    className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left ${
-                      state.report_type === type.id
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
+                    className={`group relative flex flex-col p-4 rounded-xl border-2 transition-all text-left ${
+                      isSelected
+                        ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
+                        : "border-border hover:border-primary/50 hover:shadow-sm"
                     }`}
-                    aria-pressed={state.report_type === type.id}
+                    aria-pressed={isSelected}
                   >
+                    {isSelected && (
+                      <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
                     <div
-                      className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
-                        state.report_type === type.id
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2 transition-colors ${
+                        isSelected
                           ? "bg-primary text-primary-foreground"
-                          : "bg-primary/10 text-primary"
+                          : "bg-primary/10 text-primary group-hover:bg-primary/15"
                       }`}
                     >
                       <Icon className="w-5 h-5" />
                     </div>
-                    <span className="font-medium text-sm">{type.name}</span>
+                    <span className="font-semibold text-sm">{type.name}</span>
+                    <span className="text-xs text-muted-foreground mt-0.5">{type.description}</span>
                   </button>
                 )
               })}
@@ -704,81 +712,116 @@ function StepRecipients({
 // Step 5: Review
 function StepReview({ state }: { state: ScheduleWizardState }) {
   const selectedType = reportTypes.find((t) => t.id === state.report_type)
-
-  const formatArea = () => {
-    if (state.area_mode === "city") return state.city
-    return `${state.zips.length} ZIP code${state.zips.length !== 1 ? "s" : ""}`
-  }
+  const TypeIcon = selectedType?.icon || FileText
 
   const formatCadence = () => {
     if (state.cadence === "weekly") {
-      return `Weekly on ${weekdayLabels[state.weekday]}`
+      return `Every ${weekdayLabels[state.weekday]}`
     }
-    return `Monthly on day ${state.monthly_day}`
+    return `Monthly on the ${state.monthly_day}${state.monthly_day === 1 ? 'st' : state.monthly_day === 2 ? 'nd' : state.monthly_day === 3 ? 'rd' : 'th'}`
   }
+
+  const recipientCount = (state.typedRecipients || []).length
+  const contactCount = (state.typedRecipients || []).filter(r => r.type === "contact").length
+  const groupCount = (state.typedRecipients || []).filter(r => r.type === "group").length
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-display font-semibold text-xl mb-1">Review Schedule</h2>
-        <p className="text-sm text-muted-foreground">Verify all details before creating your schedule</p>
+        <h2 className="font-display font-semibold text-xl mb-1">Ready to schedule!</h2>
+        <p className="text-sm text-muted-foreground">Review your automated report settings</p>
       </div>
 
-      <Card>
-        <CardContent className="pt-6 space-y-4">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Schedule Name</p>
-              <p className="font-medium">{state.name}</p>
+      {/* Main Summary Card */}
+      <div className="relative overflow-hidden rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background">
+        {/* Header with schedule name and report type */}
+        <div className="flex items-center gap-4 p-5 border-b border-primary/10">
+          <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
+            <TypeIcon className="w-7 h-7 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Schedule</p>
+            <h3 className="font-display font-bold text-xl truncate">{state.name}</h3>
+            <p className="text-sm text-muted-foreground">{selectedType?.name}</p>
+          </div>
+        </div>
+
+        {/* Details Grid */}
+        <div className="p-5 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            {/* Location */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-background/80 border border-border/50">
+              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <MapPin className="w-4 h-4 text-blue-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Location</p>
+                <p className="font-semibold text-sm truncate">
+                  {state.area_mode === "city" ? state.city : `${state.zips.length} ZIP codes`}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Report Type</p>
-              <p className="font-medium">{selectedType?.name}</p>
+
+            {/* Time Period */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-background/80 border border-border/50">
+              <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                <BarChart3 className="w-4 h-4 text-green-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Data Range</p>
+                <p className="font-semibold text-sm">Last {state.lookback_days} days</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Area</p>
-              <p className="font-medium">{formatArea()}</p>
+
+            {/* Cadence */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-background/80 border border-border/50">
+              <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                <Calendar className="w-4 h-4 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Frequency</p>
+                <p className="font-semibold text-sm">{formatCadence()}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Lookback Period</p>
-              <p className="font-medium">{state.lookback_days} days</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Cadence</p>
-              <p className="font-medium">{formatCadence()}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Time</p>
-              <p className="font-medium">{state.time}</p>
+
+            {/* Time */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-background/80 border border-border/50">
+              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <Clock className="w-4 h-4 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Send Time</p>
+                <p className="font-semibold text-sm">{state.time}</p>
+              </div>
             </div>
           </div>
 
-          <div>
-            <p className="text-xs text-muted-foreground mb-2">
-              Recipients ({(state.typedRecipients || []).length})
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {(state.typedRecipients || []).map((recipient, idx) => {
-                if (recipient.type === "contact") {
-                  const contactEmail = state.recipients[idx] || recipient.id
-                  return (
-                    <Badge key={`contact-${idx}`} variant="secondary" className="bg-primary/10 text-primary">
-                      {contactEmail}
-                    </Badge>
-                  )
-                } else if (recipient.type === "group") {
-                  return (
-                    <Badge key={`group-${idx}`} variant="secondary" className="bg-purple-50 text-purple-700">
-                      Group
-                    </Badge>
-                  )
-                }
-                return null
-              })}
+          {/* Recipients Summary */}
+          <div className="p-3 rounded-lg bg-background/80 border border-border/50">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-pink-100 flex items-center justify-center flex-shrink-0">
+                <Mail className="w-4 h-4 text-pink-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground">Recipients</p>
+                <p className="font-semibold text-sm">
+                  {recipientCount} recipient{recipientCount !== 1 ? 's' : ''}
+                  {contactCount > 0 && groupCount > 0 && (
+                    <span className="font-normal text-muted-foreground"> ({contactCount} contacts, {groupCount} groups)</span>
+                  )}
+                </p>
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Footer hint */}
+        <div className="px-5 py-3 bg-muted/30 border-t border-border/50">
+          <p className="text-xs text-muted-foreground text-center">
+            Click <strong>Create Schedule</strong> to start automated delivery
+          </p>
+        </div>
+      </div>
     </div>
   )
 }

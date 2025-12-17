@@ -125,14 +125,13 @@ const steps = [
 ]
 
 const reportTypes = [
-  { id: "market_snapshot" as ReportType, name: "Market Snapshot", icon: TrendingUp },
-  { id: "new_listings" as ReportType, name: "New Listings", icon: Home },
-  { id: "inventory" as ReportType, name: "Inventory Report", icon: BarChart3 },
-  { id: "closed" as ReportType, name: "Closed Sales", icon: DollarSign },
-  { id: "price_bands" as ReportType, name: "Price Bands", icon: BarChart3 },
-  { id: "new_listings_gallery" as ReportType, name: "New Listings (Photo Gallery)", icon: Image },
-  { id: "featured_listings" as ReportType, name: "Featured Listings (Photo Grid)", icon: Star },
-  { id: "open_houses" as ReportType, name: "Open Houses", icon: Calendar },
+  { id: "market_snapshot" as ReportType, name: "Market Snapshot", icon: TrendingUp, description: "Complete market overview" },
+  { id: "new_listings" as ReportType, name: "New Listings", icon: Home, description: "Recently listed properties" },
+  { id: "inventory" as ReportType, name: "Inventory Report", icon: BarChart3, description: "Active listings analysis" },
+  { id: "closed" as ReportType, name: "Closed Sales", icon: DollarSign, description: "Recent sold properties" },
+  { id: "new_listings_gallery" as ReportType, name: "Photo Gallery", icon: Image, description: "Visual listing showcase" },
+  { id: "featured_listings" as ReportType, name: "Featured Listings", icon: Star, description: "Highlighted properties" },
+  { id: "open_houses" as ReportType, name: "Open Houses", icon: Calendar, description: "Upcoming showings" },
 ]
 
 const lookbackOptions = [7, 14, 30, 60, 90]
@@ -252,51 +251,51 @@ function Step1ReportType({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-display font-semibold text-xl mb-1">Report Type</h2>
-        <p className="text-sm text-muted-foreground">Choose the type of market analysis you need</p>
+        <h2 className="font-display font-semibold text-xl mb-1">What type of report?</h2>
+        <p className="text-sm text-muted-foreground">Select the analysis that fits your needs</p>
       </div>
 
-      <Card>
-        <CardContent className="pt-6 space-y-6">
-          <div className="space-y-3">
-            <Label>
-              Report Type <span className="text-destructive">*</span>
-            </Label>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {reportTypes.map((type) => {
-                const Icon = type.icon
-                return (
-                  <button
-                    key={type.id}
-                    type="button"
-                    onClick={() => {
-                      setState({ ...state, report_type: type.id })
-                      setError(null)
-                    }}
-                    className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left ${
-                      state.report_type === type.id
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                    aria-pressed={state.report_type === type.id}
-                  >
-                    <div
-                      className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
-                        state.report_type === type.id
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-primary/10 text-primary"
-                      }`}
-                    >
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <span className="font-medium text-sm">{type.name}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        {reportTypes.map((type) => {
+          const Icon = type.icon
+          const isSelected = state.report_type === type.id
+          return (
+            <button
+              key={type.id}
+              type="button"
+              onClick={() => {
+                setState({ ...state, report_type: type.id })
+                setError(null)
+              }}
+              className={`group relative flex flex-col p-4 rounded-xl border-2 transition-all text-left ${
+                isSelected
+                  ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
+                  : "border-border hover:border-primary/50 hover:shadow-sm"
+              }`}
+              aria-pressed={isSelected}
+            >
+              {isSelected && (
+                <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              )}
+              <div
+                className={`w-11 h-11 rounded-xl flex items-center justify-center mb-3 transition-colors ${
+                  isSelected
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-primary/10 text-primary group-hover:bg-primary/15"
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+              </div>
+              <span className="font-semibold text-sm">{type.name}</span>
+              <span className="text-xs text-muted-foreground mt-0.5">{type.description}</span>
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -563,67 +562,109 @@ function Step3Options({
 function Step4Review({ state }: { state: WizardState }) {
   const selectedType = reportTypes.find((t) => t.id === state.report_type)
   const selectedSubtype = propertySubtypes.find((t) => t.id === state.property_subtype)
-
-  const formatArea = () => {
-    if (state.area_mode === "city") return state.city
-    return `${state.zips.length} ZIP code${state.zips.length !== 1 ? "s" : ""}`
-  }
+  const TypeIcon = selectedType?.icon || FileText
 
   const formatPriceRange = () => {
     if (!state.minprice && !state.maxprice) return null
     const min = state.minprice ? `$${Number(state.minprice).toLocaleString()}` : "$0"
     const max = state.maxprice ? `$${Number(state.maxprice).toLocaleString()}` : "No limit"
-    return `${min} - ${max}`
+    return `${min} – ${max}`
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-display font-semibold text-xl mb-1">Review Report</h2>
-        <p className="text-sm text-muted-foreground">Verify all details before generating your report</p>
+        <h2 className="font-display font-semibold text-xl mb-1">Ready to generate!</h2>
+        <p className="text-sm text-muted-foreground">Review your report settings below</p>
       </div>
 
-      <Card>
-        <CardContent className="pt-6 space-y-4">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Report Type</p>
-              <p className="font-medium">{selectedType?.name}</p>
+      {/* Main Summary Card */}
+      <div className="relative overflow-hidden rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background">
+        {/* Header with report type */}
+        <div className="flex items-center gap-4 p-5 border-b border-primary/10">
+          <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
+            <TypeIcon className="w-7 h-7 text-white" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Report Type</p>
+            <h3 className="font-display font-bold text-xl">{selectedType?.name}</h3>
+          </div>
+        </div>
+
+        {/* Details Grid */}
+        <div className="p-5 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            {/* Location */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-background/80 border border-border/50">
+              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <MapPin className="w-4 h-4 text-blue-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Location</p>
+                <p className="font-semibold text-sm truncate">
+                  {state.area_mode === "city" ? state.city : `${state.zips.length} ZIP code${state.zips.length !== 1 ? "s" : ""}`}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Area</p>
-              <p className="font-medium">{formatArea()}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Lookback Period</p>
-              <p className="font-medium">{state.lookback_days} days</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Property Type</p>
-              <p className="font-medium">{selectedSubtype?.name || "All Types"}</p>
-            </div>
-            {formatPriceRange() && (
+
+            {/* Time Period */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-background/80 border border-border/50">
+              <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                <Calendar className="w-4 h-4 text-green-600" />
+              </div>
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Price Range</p>
-                <p className="font-medium">{formatPriceRange()}</p>
+                <p className="text-xs text-muted-foreground">Time Period</p>
+                <p className="font-semibold text-sm">Last {state.lookback_days} days</p>
+              </div>
+            </div>
+
+            {/* Property Type */}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-background/80 border border-border/50">
+              <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                <Home className="w-4 h-4 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Property Type</p>
+                <p className="font-semibold text-sm">{selectedSubtype?.name || "All Types"}</p>
+              </div>
+            </div>
+
+            {/* Price Range (if set) */}
+            {formatPriceRange() && (
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-background/80 border border-border/50">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                  <DollarSign className="w-4 h-4 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Price Range</p>
+                  <p className="font-semibold text-sm">{formatPriceRange()}</p>
+                </div>
               </div>
             )}
           </div>
 
+          {/* ZIP Codes List */}
           {state.area_mode === "zips" && state.zips.length > 0 && (
-            <div>
+            <div className="p-3 rounded-lg bg-background/80 border border-border/50">
               <p className="text-xs text-muted-foreground mb-2">ZIP Codes</p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {state.zips.map((zip) => (
-                  <Badge key={zip} variant="secondary">
+                  <Badge key={zip} variant="secondary" className="bg-primary/10 text-primary font-mono">
                     {zip}
                   </Badge>
                 ))}
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Footer hint */}
+        <div className="px-5 py-3 bg-muted/30 border-t border-border/50">
+          <p className="text-xs text-muted-foreground text-center">
+            Click <strong>Generate Report</strong> to create your PDF
+          </p>
+        </div>
+      </div>
     </div>
   )
 }
