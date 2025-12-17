@@ -134,22 +134,33 @@ def render_pdf_pdfshift(run_id: str, account_id: str, html_content: Optional[str
     # - lazy_load_images: scroll to trigger lazy-loading (helps some frameworks)
     # - timeout: let PDFShift keep loading the page longer before forcing conversion
     # Ref: https://docs.pdfshift.io/api-reference/convert-to-jpeg#convert-to-jpeg
+    #
+    # IMPORTANT: These options are needed for BOTH URL and HTML sources!
+    # When HTML contains external image URLs (like MLS photos), PDFShift still needs
+    # to fetch those images. Without these options, images may show as broken/placeholder.
+    
+    # Common options for image loading (applies to both URL and HTML sources)
+    image_loading_options = {
+        "delay": 5000,             # 5s delay to let images load
+        "wait_for_network": True,  # Wait for network to go idle (no requests for 500ms)
+        "lazy_load_images": True,  # Scroll to trigger lazy-loaded images
+        "timeout": 100,            # Max 100s total (PDFShift plan limit)
+    }
+    
     if html_content:
         payload = {
             **base_payload,
+            **image_loading_options,  # CRITICAL: Include image loading options for HTML too!
             "source": html_content,
         }
         print(f"☁️  Rendering PDF with PDFShift (HTML string, {len(html_content)} chars)")
     else:
         payload = {
             **base_payload,
+            **image_loading_options,
             "source": print_url,
-            "delay": 8000,            # max 10s per docs
-            "wait_for_network": True, # no network requests for 500ms
-            "ignore_long_polling": True,  # don't get stuck waiting on long-polling/websockets
-            "lazy_load_images": True, # scroll to trigger lazy-loaded images
-            # NOTE: PDFShift plan limit enforces max 100s timeout (400 if higher)
-            "timeout": 100,           # seconds
+            "delay": 8000,            # Longer delay for URL-based (page needs to render first)
+            "ignore_long_polling": True,  # Don't get stuck waiting on long-polling/websockets
         }
         print(f"☁️  Rendering PDF with PDFShift: {print_url}")
     

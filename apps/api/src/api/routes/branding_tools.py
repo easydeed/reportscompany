@@ -218,16 +218,25 @@ async def generate_sample_pdf(
         )
     
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
                 PDFSHIFT_URL,
-                auth=("api", PDFSHIFT_API_KEY),
+                headers={
+                    "X-API-Key": PDFSHIFT_API_KEY,
+                    "Content-Type": "application/json",
+                    "X-Processor-Version": "142",  # New conversion engine (better CSS3, faster)
+                },
                 json={
                     "source": preview_url,
                     "landscape": False,
                     "use_print": True,
                     "format": "Letter",
                     "margin": "0",
+                    # Image loading options - CRITICAL for MLS photos!
+                    "delay": 8000,             # 8s delay to let images load
+                    "wait_for_network": True,  # Wait for network to go idle
+                    "lazy_load_images": True,  # Scroll to trigger lazy-loaded images
+                    "timeout": 100,            # Max 100s total
                 },
             )
             
