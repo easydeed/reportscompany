@@ -14,7 +14,7 @@ interface DashboardOnboardingProps {
  */
 export function DashboardOnboarding({ className }: DashboardOnboardingProps) {
   const [showWizard, setShowWizard] = useState(false)
-  const [isFirstVisit, setIsFirstVisit] = useState(false)
+  const [onboardingData, setOnboardingData] = useState<any>(null)
 
   useEffect(() => {
     checkFirstVisit()
@@ -22,20 +22,25 @@ export function DashboardOnboarding({ className }: DashboardOnboardingProps) {
 
   async function checkFirstVisit() {
     try {
-      const res = await fetch("/api/proxy/v1/onboarding", { cache: "no-store" })
+      const res = await fetch("/api/proxy/v1/onboarding", { 
+        cache: "no-store",
+        credentials: "include" 
+      })
       if (res.ok) {
         const data = await res.json()
+        setOnboardingData(data)
 
-        // Show wizard if user hasn't completed any steps and hasn't dismissed
-        const hasNoProgress = data.completed_count === 0
+        // Show wizard if:
+        // - User hasn't dismissed onboarding
+        // - Onboarding is not complete
+        // - Progress is low (less than half completed)
+        // - Wizard hasn't been shown this session
         const notDismissed = !data.is_dismissed
         const notComplete = !data.is_complete
-
-        // Check localStorage to see if wizard was shown this session
+        const lowProgress = data.progress_percent < 50
         const wizardShownThisSession = sessionStorage.getItem("onboarding_wizard_shown")
 
-        if (hasNoProgress && notDismissed && notComplete && !wizardShownThisSession) {
-          setIsFirstVisit(true)
+        if (notDismissed && notComplete && lowProgress && !wizardShownThisSession) {
           setShowWizard(true)
           sessionStorage.setItem("onboarding_wizard_shown", "true")
         }
@@ -51,10 +56,19 @@ export function DashboardOnboarding({ className }: DashboardOnboardingProps) {
     window.location.reload()
   }
 
+  // Allow opening wizard from checklist
+  function handleOpenWizard() {
+    setShowWizard(true)
+  }
+
   return (
     <>
       {/* Onboarding Checklist */}
-      <OnboardingChecklist className={className} variant="card" />
+      <OnboardingChecklist 
+        className={className} 
+        variant="card" 
+        onOpenWizard={handleOpenWizard}
+      />
 
       {/* Setup Wizard Modal */}
       <SetupWizard

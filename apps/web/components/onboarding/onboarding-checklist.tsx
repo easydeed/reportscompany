@@ -55,12 +55,14 @@ interface OnboardingChecklistProps {
   className?: string
   variant?: "card" | "inline" | "minimal"
   onComplete?: () => void
+  onOpenWizard?: () => void
 }
 
 export function OnboardingChecklist({
   className,
   variant = "card",
   onComplete,
+  onOpenWizard,
 }: OnboardingChecklistProps) {
   const [status, setStatus] = useState<OnboardingStatus | null>(null)
   const [loading, setLoading] = useState(true)
@@ -181,19 +183,31 @@ export function OnboardingChecklist({
             <Sparkles className="w-5 h-5 text-primary" />
             <CardTitle className="text-lg">Welcome! Let's get you set up</CardTitle>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-            onClick={dismissOnboarding}
-            disabled={dismissing}
-          >
-            {dismissing ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <X className="w-4 h-4" />
+          <div className="flex items-center gap-2">
+            {onOpenWizard && status.progress_percent < 100 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-7"
+                onClick={onOpenWizard}
+              >
+                Quick Setup
+              </Button>
             )}
-          </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              onClick={dismissOnboarding}
+              disabled={dismissing}
+            >
+              {dismissing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <X className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
         </div>
         <div className="flex items-center gap-3 mt-2">
           <Progress value={status.progress_percent} className="flex-1 h-2" />
