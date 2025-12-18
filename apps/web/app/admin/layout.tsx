@@ -63,7 +63,7 @@ export default async function AdminLayout({
   const token = cookieStore.get('mr_token')?.value
 
   if (!token) {
-    redirect('/login?redirect=/admin')
+    redirect('/login?next=/admin')
   }
 
   const admin = await verifyAdmin(token)

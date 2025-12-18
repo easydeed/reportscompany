@@ -10,7 +10,7 @@ export default function AccessDeniedPage() {
     // Clear the auth cookie by calling logout
     await fetch("/api/proxy/v1/auth/logout", { method: "POST", credentials: "include" })
     // Redirect to login with admin redirect
-    window.location.href = "/login?redirect=/admin"
+    window.location.href = "/login?next=/admin"
   }
 
   return (

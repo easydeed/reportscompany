@@ -52,7 +52,7 @@ export default async function AdminDashboard() {
   const token = cookieStore.get('mr_token')?.value
 
   if (!token) {
-    redirect('/login?redirect=/admin')
+    redirect('/login?next=/admin')
   }
 
   const [metrics, reports, accounts] = await Promise.all([
