@@ -66,8 +66,6 @@ export default async function AdminDashboard() {
           <p className="text-yellow-400 font-medium">⚠️ Unable to load admin data</p>
           <p className="text-yellow-300/70 text-sm mt-1">
             API calls to the backend failed. Check the Vercel logs for details.
-            <br />
-            API Base: {API_BASE}
           </p>
         </div>
       )}
