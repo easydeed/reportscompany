@@ -37,7 +37,6 @@ import {
 } from "lucide-react"
 
 interface Plan {
-  id: number
   plan_slug: string
   plan_name: string
   monthly_report_limit: number
@@ -47,8 +46,8 @@ interface Plan {
   description: string | null
   is_active: boolean
   account_count: number
-  created_at: string
-  updated_at: string
+  created_at: string | null
+  updated_at: string | null
 }
 
 export default function PlansPage() {
@@ -75,7 +74,11 @@ export default function PlansPage() {
       const res = await fetch("/api/v1/admin/plans", { credentials: "include" })
       if (res.ok) {
         const data = await res.json()
-        setPlans(data.plans || [])
+        // Filter out any null/undefined plans and ensure required fields exist
+        const validPlans = (data.plans || data || []).filter(
+          (p: any) => p && typeof p.monthly_report_limit === 'number'
+        )
+        setPlans(validPlans)
       }
     } catch (error) {
       console.error("Failed to fetch plans:", error)
@@ -239,7 +242,7 @@ export default function PlansPage() {
       {/* Plans Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {plans.map((plan) => (
-          <Card key={plan.id} className={`bg-gray-900 border-gray-800 ${!plan.is_active ? 'opacity-50' : ''}`}>
+          <Card key={plan.plan_slug} className={`bg-gray-900 border-gray-800 ${!plan.is_active ? 'opacity-50' : ''}`}>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg text-white">{plan.plan_name}</CardTitle>
@@ -295,7 +298,7 @@ export default function PlansPage() {
             </TableHeader>
             <TableBody>
               {plans.map((plan) => (
-                <TableRow key={plan.id} className="border-gray-800">
+                <TableRow key={plan.plan_slug} className="border-gray-800">
                   <TableCell>
                     <div>
                       <p className="text-white font-medium">{plan.plan_name}</p>
@@ -303,7 +306,7 @@ export default function PlansPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {editingPlan?.id === plan.id ? (
+                    {editingPlan?.plan_slug === plan.plan_slug ? (
                       <Input
                         type="number"
                         value={editingPlan.monthly_report_limit}
@@ -318,7 +321,7 @@ export default function PlansPage() {
                     )}
                   </TableCell>
                   <TableCell>
-                    {editingPlan?.id === plan.id ? (
+                    {editingPlan?.plan_slug === plan.plan_slug ? (
                       <Switch
                         checked={editingPlan.allow_overage}
                         onCheckedChange={(checked) => setEditingPlan({
@@ -335,7 +338,7 @@ export default function PlansPage() {
                     )}
                   </TableCell>
                   <TableCell>
-                    {editingPlan?.id === plan.id ? (
+                    {editingPlan?.plan_slug === plan.plan_slug ? (
                       <Input
                         type="number"
                         value={editingPlan.overage_price_cents}
@@ -357,7 +360,7 @@ export default function PlansPage() {
                     </span>
                   </TableCell>
                   <TableCell>
-                    {editingPlan?.id === plan.id ? (
+                    {editingPlan?.plan_slug === plan.plan_slug ? (
                       <Switch
                         checked={editingPlan.is_active}
                         onCheckedChange={(checked) => setEditingPlan({
@@ -375,7 +378,7 @@ export default function PlansPage() {
                     <span className="text-violet-400 font-medium">{plan.account_count}</span>
                   </TableCell>
                   <TableCell>
-                    {editingPlan?.id === plan.id ? (
+                    {editingPlan?.plan_slug === plan.plan_slug ? (
                       <div className="flex gap-1">
                         <Button
                           size="sm"
