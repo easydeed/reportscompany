@@ -1,10 +1,62 @@
 import { apiFetch } from "@/lib/api"
-import { AdminOverview } from "@repo/ui"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Building2, Building, Users, ChevronRight } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  Building2,
+  Building,
+  Users,
+  ChevronRight,
+  FileText,
+  Calendar,
+  Mail,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Zap,
+  XCircle,
+  TrendingUp,
+  Activity,
+} from "lucide-react"
 
 export const dynamic = 'force-dynamic'
+
+interface Report {
+  id: string
+  account_name: string
+  report_type: string
+  status: string
+  duration_ms: number | null
+  error: string | null
+  created_at: string
+}
+
+interface Schedule {
+  id: string
+  account_name: string
+  name: string
+  cadence: string
+  active: boolean
+  next_run_at: string | null
+  last_run_at: string | null
+}
+
+interface EmailLog {
+  id: string
+  account_name: string
+  subject: string
+  to_count: number
+  status: string
+  created_at: string
+}
 
 async function getAdminData() {
   try {
@@ -16,39 +68,18 @@ async function getAdminData() {
       apiFetch("/v1/admin/emails?limit=10"),
     ])
 
-    // Transform API response to match component expected format
     const metrics = metricsRes || {}
-    const kpis = {
-      activeSchedules: metrics.schedules_active || 0,
-      reportsPerDay: Math.round((metrics.reports_7d || 0) / 7),
-      emailsPerDay: Math.round((metrics.emails_24h || 0)),
-      avgRenderMs: metrics.avg_processing_ms_7d || 0,
-      errorRate: 0, // TODO: Calculate from failed reports if needed
-    }
-
-    // Transform timeseries data for charts
     const timeseries = timeseriesRes || {}
-    const reportsChartData = (timeseries.reports_by_day || []).map((item: { date: string; count: number }) => ({
-      date: item.date,
-      reports: item.count,
-    })).reverse()
+    const reports: Report[] = reportsRes?.reports || []
+    const schedules: Schedule[] = schedulesRes?.schedules || []
+    const emailLogs: EmailLog[] = emailLogsRes?.emails || []
 
-    const emailsChartData = (timeseries.emails_by_day || []).map((item: { date: string; count: number }) => ({
-      date: item.date,
-      emails: item.count,
-    })).reverse()
-
-    const reports = reportsRes?.reports || []
-    const schedules = schedulesRes?.schedules || []
-    const emailLogs = emailLogsRes?.emails || []
-
-    return { kpis, reportsChartData, emailsChartData, reports, schedules, emailLogs }
+    return { metrics, timeseries, reports, schedules, emailLogs }
   } catch (error) {
     console.error("Failed to fetch admin data:", error)
     return {
-      kpis: { activeSchedules: 0, reportsPerDay: 0, emailsPerDay: 0, avgRenderMs: 0, errorRate: 0 },
-      reportsChartData: [],
-      emailsChartData: [],
+      metrics: {},
+      timeseries: {},
       reports: [],
       schedules: [],
       emailLogs: [],
@@ -56,14 +87,170 @@ async function getAdminData() {
   }
 }
 
+function formatTimeAgo(dateString: string | null): string {
+  if (!dateString) return "Never"
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMins / 60)
+  const diffDays = Math.floor(diffHours / 24)
+
+  if (diffMins < 1) return "Just now"
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  return `${diffDays}d ago`
+}
+
 export default async function AdminPage() {
-  const { kpis, reportsChartData, emailsChartData, reports, schedules, emailLogs } = await getAdminData()
+  const { metrics, reports, schedules, emailLogs } = await getAdminData()
+
+  const statusColors: Record<string, string> = {
+    completed: "bg-green-100 text-green-800",
+    processing: "bg-blue-100 text-blue-800",
+    pending: "bg-yellow-100 text-yellow-800",
+    failed: "bg-red-100 text-red-800",
+    success: "bg-green-100 text-green-800",
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-display font-bold text-foreground">Admin Console</h1>
-        <p className="text-muted-foreground mt-2">Monitor system performance and manage all organizations</p>
+        <p className="text-muted-foreground mt-2">System overview and management</p>
+      </div>
+
+      {/* Key Metrics - Row 1 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Accounts</CardTitle>
+            <Building className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.total_accounts || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              {metrics.total_affiliates || 0} affiliates
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.total_users || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              {metrics.active_users_30d || 0} active (30d)
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Reports (7d)</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.reports_7d || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              {metrics.reports_24h || 0} today
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Error Rate</CardTitle>
+            <AlertTriangle className={`h-4 w-4 ${(metrics.error_rate_7d || 0) > 5 ? 'text-red-500' : 'text-green-500'}`} />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${(metrics.error_rate_7d || 0) > 5 ? 'text-red-600' : 'text-green-600'}`}>
+              {metrics.error_rate_7d || 0}%
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {metrics.reports_failed_7d || 0} failed
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Render</CardTitle>
+            <Zap className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold font-mono">
+              {((metrics.avg_processing_ms_7d || 0) / 1000).toFixed(1)}s
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {metrics.avg_processing_ms_7d || 0}ms
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Schedules</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.schedules_active || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              of {metrics.schedules_total || 0} total
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Report Status Breakdown */}
+      <div className="grid grid-cols-4 gap-4">
+        <Card className="bg-green-50 border-green-200">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-green-800">Completed</p>
+                <p className="text-2xl font-bold text-green-900">{metrics.reports_completed_7d || 0}</p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-blue-800">Processing</p>
+                <p className="text-2xl font-bold text-blue-900">{metrics.reports_processing || 0}</p>
+              </div>
+              <Activity className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-yellow-50 border-yellow-200">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-yellow-800">Pending</p>
+                <p className="text-2xl font-bold text-yellow-900">{metrics.reports_pending || 0}</p>
+              </div>
+              <Clock className="h-8 w-8 text-yellow-600" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-red-800">Failed</p>
+                <p className="text-2xl font-bold text-red-900">{metrics.reports_failed_7d || 0}</p>
+              </div>
+              <XCircle className="h-8 w-8 text-red-600" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Management Quick Links */}
@@ -114,11 +301,145 @@ export default async function AdminPage() {
         </Link>
       </div>
 
-      <AdminOverview
-        kpis={kpis}
-        reportsChartData={reportsChartData}
-        emailsChartData={emailsChartData}
-      />
+      {/* Recent Reports */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Recent Reports
+              </CardTitle>
+              <CardDescription>Last 10 report generations</CardDescription>
+            </div>
+            <Link href="/app/admin/reports" className="text-sm text-primary hover:underline">
+              View all
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {reports.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">No reports found</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Account</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead>Time</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {reports.map((report) => (
+                  <TableRow key={report.id}>
+                    <TableCell className="font-medium">{report.account_name}</TableCell>
+                    <TableCell>{report.report_type}</TableCell>
+                    <TableCell>
+                      <Badge className={statusColors[report.status] || "bg-gray-100"}>
+                        {report.status}
+                      </Badge>
+                      {report.error && (
+                        <span className="ml-2 text-xs text-red-600" title={report.error}>
+                          (error)
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {report.duration_ms ? `${(report.duration_ms / 1000).toFixed(1)}s` : '-'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {formatTimeAgo(report.created_at)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Recent Schedules & Emails */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Schedules */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Active Schedules
+                </CardTitle>
+                <CardDescription>Automated report schedules</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {schedules.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">No schedules found</p>
+            ) : (
+              <div className="space-y-3">
+                {schedules.slice(0, 5).map((schedule) => (
+                  <div key={schedule.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div>
+                      <p className="font-medium">{schedule.name}</p>
+                      <p className="text-sm text-muted-foreground">{schedule.account_name}</p>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant={schedule.active ? "default" : "secondary"}>
+                        {schedule.active ? "Active" : "Paused"}
+                      </Badge>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {schedule.cadence}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Emails */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5" />
+                  Recent Emails
+                </CardTitle>
+                <CardDescription>Email delivery log</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {emailLogs.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">No emails found</p>
+            ) : (
+              <div className="space-y-3">
+                {emailLogs.slice(0, 5).map((email) => (
+                  <div key={email.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">{email.subject}</p>
+                      <p className="text-sm text-muted-foreground">{email.account_name}</p>
+                    </div>
+                    <div className="text-right ml-4">
+                      <Badge className={statusColors[email.status] || "bg-gray-100"}>
+                        {email.status}
+                      </Badge>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {email.to_count} recipient{email.to_count !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
