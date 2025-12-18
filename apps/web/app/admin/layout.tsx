@@ -63,7 +63,7 @@ export default async function AdminLayout({
   const admin = await verifyAdmin(token)
 
   if (!admin) {
-    redirect('/app?error=unauthorized')
+    redirect('/admin/access-denied')
   }
 
   return (
