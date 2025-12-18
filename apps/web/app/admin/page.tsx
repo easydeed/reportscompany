@@ -18,6 +18,7 @@ import {
   CheckCircle,
   Clock,
   Activity,
+  TrendingUp,
 } from "lucide-react"
 import { createServerApi } from "@/lib/api-server"
 
