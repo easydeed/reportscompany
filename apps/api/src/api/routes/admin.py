@@ -1731,3 +1731,248 @@ def resend_user_invite(
             "invite_url": f"https://reportscompany-web.vercel.app/welcome?token={token}",
         }
 
+
+# ==================== Plans Management ====================
+
+@router.get("/plans")
+def list_plans(_admin: dict = Depends(get_admin_user)):
+    """
+    List all subscription plans with their limits and pricing.
+    """
+    with db_conn() as conn:
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT
+                id,
+                plan_slug,
+                plan_name,
+                monthly_report_limit,
+                allow_overage,
+                overage_price_cents,
+                stripe_price_id,
+                description,
+                is_active,
+                created_at,
+                updated_at,
+                (SELECT COUNT(*) FROM accounts WHERE plan_slug = plans.plan_slug) as account_count
+            FROM plans
+            ORDER BY monthly_report_limit ASC
+        """)
+
+        plans = []
+        for row in cur.fetchall():
+            plans.append({
+                "id": row[0],
+                "plan_slug": row[1],
+                "plan_name": row[2],
+                "monthly_report_limit": row[3],
+                "allow_overage": row[4],
+                "overage_price_cents": row[5],
+                "stripe_price_id": row[6],
+                "description": row[7],
+                "is_active": row[8],
+                "created_at": row[9].isoformat() if row[9] else None,
+                "updated_at": row[10].isoformat() if row[10] else None,
+                "account_count": row[11] or 0,
+            })
+
+        return {"plans": plans, "count": len(plans)}
+
+
+class UpdatePlanRequest(BaseModel):
+    """Request body for updating a plan."""
+    plan_name: Optional[str] = None
+    monthly_report_limit: Optional[int] = None
+    allow_overage: Optional[bool] = None
+    overage_price_cents: Optional[int] = None
+    stripe_price_id: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+@router.patch("/plans/{plan_slug}")
+def update_plan(
+    plan_slug: str,
+    body: UpdatePlanRequest,
+    _admin: dict = Depends(get_admin_user)
+):
+    """
+    Update a plan's settings.
+    """
+    with db_conn() as conn:
+        cur = conn.cursor()
+
+        updates = []
+        params = []
+
+        if body.plan_name is not None:
+            updates.append("plan_name = %s")
+            params.append(body.plan_name)
+
+        if body.monthly_report_limit is not None:
+            updates.append("monthly_report_limit = %s")
+            params.append(body.monthly_report_limit)
+
+        if body.allow_overage is not None:
+            updates.append("allow_overage = %s")
+            params.append(body.allow_overage)
+
+        if body.overage_price_cents is not None:
+            updates.append("overage_price_cents = %s")
+            params.append(body.overage_price_cents)
+
+        if body.stripe_price_id is not None:
+            updates.append("stripe_price_id = %s")
+            params.append(body.stripe_price_id if body.stripe_price_id else None)
+
+        if body.description is not None:
+            updates.append("description = %s")
+            params.append(body.description if body.description else None)
+
+        if body.is_active is not None:
+            updates.append("is_active = %s")
+            params.append(body.is_active)
+
+        if not updates:
+            raise HTTPException(status_code=400, detail="No updates provided")
+
+        updates.append("updated_at = NOW()")
+        params.append(plan_slug)
+
+        cur.execute(f"""
+            UPDATE plans
+            SET {', '.join(updates)}
+            WHERE plan_slug = %s
+            RETURNING id, plan_slug, plan_name, monthly_report_limit, allow_overage, overage_price_cents, is_active
+        """, params)
+
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Plan not found")
+
+        conn.commit()
+
+        return {
+            "ok": True,
+            "id": row[0],
+            "plan_slug": row[1],
+            "plan_name": row[2],
+            "monthly_report_limit": row[3],
+            "allow_overage": row[4],
+            "overage_price_cents": row[5],
+            "is_active": row[6],
+        }
+
+
+class CreatePlanRequest(BaseModel):
+    """Request body for creating a new plan."""
+    plan_slug: str
+    plan_name: str
+    monthly_report_limit: int
+    allow_overage: bool = False
+    overage_price_cents: int = 0
+    stripe_price_id: Optional[str] = None
+    description: Optional[str] = None
+
+
+@router.post("/plans")
+def create_plan(
+    body: CreatePlanRequest,
+    _admin: dict = Depends(get_admin_user)
+):
+    """
+    Create a new subscription plan.
+    """
+    with db_conn() as conn:
+        cur = conn.cursor()
+
+        # Check if slug already exists
+        cur.execute("SELECT id FROM plans WHERE plan_slug = %s", (body.plan_slug,))
+        if cur.fetchone():
+            raise HTTPException(status_code=400, detail="Plan slug already exists")
+
+        cur.execute("""
+            INSERT INTO plans (
+                plan_slug, plan_name, monthly_report_limit,
+                allow_overage, overage_price_cents, stripe_price_id, description
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING id, plan_slug, plan_name, monthly_report_limit
+        """, (
+            body.plan_slug,
+            body.plan_name,
+            body.monthly_report_limit,
+            body.allow_overage,
+            body.overage_price_cents,
+            body.stripe_price_id,
+            body.description,
+        ))
+
+        row = cur.fetchone()
+        conn.commit()
+
+        return {
+            "ok": True,
+            "id": row[0],
+            "plan_slug": row[1],
+            "plan_name": row[2],
+            "monthly_report_limit": row[3],
+        }
+
+
+# ==================== System Stats ====================
+
+@router.get("/stats/revenue")
+def get_revenue_stats(_admin: dict = Depends(get_admin_user)):
+    """
+    Get revenue and billing statistics.
+    """
+    with db_conn() as conn:
+        cur = conn.cursor()
+
+        # Accounts by plan
+        cur.execute("""
+            SELECT plan_slug, COUNT(*) as count
+            FROM accounts
+            GROUP BY plan_slug
+            ORDER BY count DESC
+        """)
+        accounts_by_plan = [
+            {"plan": row[0], "count": row[1]}
+            for row in cur.fetchall()
+        ]
+
+        # Reports by status this month
+        cur.execute("""
+            SELECT status, COUNT(*) as count
+            FROM report_generations
+            WHERE created_at >= date_trunc('month', CURRENT_DATE)
+            GROUP BY status
+        """)
+        reports_by_status = [
+            {"status": row[0], "count": row[1]}
+            for row in cur.fetchall()
+        ]
+
+        # Growth metrics (new accounts per month, last 6 months)
+        cur.execute("""
+            SELECT
+                date_trunc('month', created_at) as month,
+                COUNT(*) as new_accounts
+            FROM accounts
+            WHERE created_at >= NOW() - INTERVAL '6 months'
+            GROUP BY date_trunc('month', created_at)
+            ORDER BY month DESC
+        """)
+        growth = [
+            {"month": row[0].strftime("%Y-%m"), "new_accounts": row[1]}
+            for row in cur.fetchall()
+        ]
+
+        return {
+            "accounts_by_plan": accounts_by_plan,
+            "reports_by_status": reports_by_status,
+            "growth": growth,
+        }
+
