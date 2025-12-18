@@ -318,14 +318,13 @@ def list_admin_reports(
             a.name as account_name,
             r.report_type,
             r.status,
-            r.params,
+            r.input_params,
             r.result_json,
             r.pdf_url,
             r.error,
-            r.started_at,
-            r.finished_at,
-            r.created_at,
-            EXTRACT(EPOCH FROM (r.finished_at - r.started_at)) * 1000 as duration_ms
+            r.generated_at,
+            r.processing_time_ms,
+            r.created_at
         FROM report_generations r
         JOIN accounts a ON r.account_id = a.id
         WHERE 1=1
@@ -356,14 +355,13 @@ def list_admin_reports(
                 "account_name": row[2],
                 "report_type": row[3],
                 "status": row[4],
-                "params": row[5],
+                "params": row[5],  # input_params column
                 "has_result": bool(row[6]),
                 "pdf_url": row[7],
                 "error": row[8],
-                "started_at": row[9].isoformat() if row[9] else None,
-                "finished_at": row[10].isoformat() if row[10] else None,
+                "generated_at": row[9].isoformat() if row[9] else None,
+                "duration_ms": int(row[10]) if row[10] else None,
                 "created_at": row[11].isoformat() if row[11] else None,
-                "duration_ms": int(row[12]) if row[12] else None
             })
         
         return {"reports": reports, "count": len(reports)}
