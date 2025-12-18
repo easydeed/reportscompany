@@ -17,7 +17,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://reportscompany.onrender.com'
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'https://reportscompany.onrender.com').replace(/\/$/, '')
 
 async function verifyAdmin(token: string) {
   try {
@@ -25,14 +25,20 @@ async function verifyAdmin(token: string) {
       headers: { 'Cookie': `mr_token=${token}` },
       cache: 'no-store',
     })
-    if (!response.ok) return null
+    if (!response.ok) {
+      console.error(`Admin verify failed: /v1/me returned ${response.status}`)
+      return null
+    }
     const data = await response.json()
+    console.log('Admin verify response:', { email: data.email, role: data.role })
     // Check if user has admin role
     if (data.role !== 'admin' && data.role !== 'ADMIN') {
+      console.log(`User ${data.email} does not have ADMIN role, has: ${data.role}`)
       return null
     }
     return data
-  } catch {
+  } catch (error) {
+    console.error('Admin verify error:', error)
     return null
   }
 }

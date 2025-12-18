@@ -28,7 +28,7 @@ import {
 
 export const dynamic = 'force-dynamic'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://reportscompany.onrender.com'
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'https://reportscompany.onrender.com').replace(/\/$/, '')
 
 async function fetchWithAuth(path: string, token: string) {
   try {
@@ -36,9 +36,13 @@ async function fetchWithAuth(path: string, token: string) {
       headers: { 'Cookie': `mr_token=${token}` },
       cache: 'no-store',
     })
-    if (!response.ok) return null
+    if (!response.ok) {
+      console.error(`Admin API error: ${path} returned ${response.status}`, await response.text().catch(() => ''))
+      return null
+    }
     return response.json()
-  } catch {
+  } catch (error) {
+    console.error(`Admin API fetch error: ${path}`, error)
     return null
   }
 }
