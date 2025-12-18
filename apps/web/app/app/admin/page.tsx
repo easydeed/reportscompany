@@ -1,4 +1,5 @@
-import { apiFetch } from "@/lib/api"
+import { cookies } from "next/headers"
+import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -58,14 +59,29 @@ interface EmailLog {
   created_at: string
 }
 
-async function getAdminData() {
+async function fetchWithAuth(path: string, token: string) {
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://reportscompany.onrender.com'
+
+  try {
+    const response = await fetch(`${API_BASE}${path}`, {
+      headers: { 'Cookie': `mr_token=${token}` },
+      cache: 'no-store',
+    })
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
+async function getAdminData(token: string) {
   try {
     const [metricsRes, timeseriesRes, reportsRes, schedulesRes, emailLogsRes] = await Promise.all([
-      apiFetch("/v1/admin/metrics"),
-      apiFetch("/v1/admin/metrics/timeseries"),
-      apiFetch("/v1/admin/reports?limit=10"),
-      apiFetch("/v1/admin/schedules?limit=10"),
-      apiFetch("/v1/admin/emails?limit=10"),
+      fetchWithAuth("/v1/admin/metrics", token),
+      fetchWithAuth("/v1/admin/metrics/timeseries", token),
+      fetchWithAuth("/v1/admin/reports?limit=10", token),
+      fetchWithAuth("/v1/admin/schedules?limit=10", token),
+      fetchWithAuth("/v1/admin/emails?limit=10", token),
     ])
 
     const metrics = metricsRes || {}
@@ -103,7 +119,14 @@ function formatTimeAgo(dateString: string | null): string {
 }
 
 export default async function AdminPage() {
-  const { metrics, reports, schedules, emailLogs } = await getAdminData()
+  const cookieStore = await cookies()
+  const token = cookieStore.get('mr_token')?.value
+
+  if (!token) {
+    redirect('/login')
+  }
+
+  const { metrics, reports, schedules, emailLogs } = await getAdminData(token)
 
   const statusColors: Record<string, string> = {
     completed: "bg-green-100 text-green-800",
