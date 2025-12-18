@@ -1,4 +1,5 @@
-import { apiFetch } from "@/lib/api"
+import { cookies } from "next/headers"
+import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -43,11 +44,26 @@ interface AccountsResponse {
   total: number
 }
 
+async function fetchWithAuth(path: string, token: string) {
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://reportscompany.onrender.com'
+
+  try {
+    const response = await fetch(`${API_BASE}${path}`, {
+      headers: { 'Cookie': `mr_token=${token}` },
+      cache: 'no-store',
+    })
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
+}
+
 async function getAccounts(params: {
   search?: string
   account_type?: string
   plan_slug?: string
-}): Promise<AccountsResponse> {
+}, token: string): Promise<AccountsResponse> {
   try {
     const searchParams = new URLSearchParams()
     if (params.search) searchParams.set("search", params.search)
@@ -55,7 +71,7 @@ async function getAccounts(params: {
     if (params.plan_slug && params.plan_slug !== "all") searchParams.set("plan_slug", params.plan_slug)
 
     const url = `/v1/admin/accounts?${searchParams.toString()}`
-    const data = await apiFetch(url)
+    const data = await fetchWithAuth(url, token)
     return data || { accounts: [], count: 0, total: 0 }
   } catch (error) {
     console.error("Failed to fetch accounts:", error)
@@ -68,8 +84,15 @@ export default async function AdminAccountsPage({
 }: {
   searchParams: Promise<{ search?: string; account_type?: string; plan_slug?: string }>
 }) {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('mr_token')?.value
+
+  if (!token) {
+    redirect('/login')
+  }
+
   const params = await searchParams
-  const { accounts, count, total } = await getAccounts(params)
+  const { accounts, count, total } = await getAccounts(params, token)
 
   return (
     <div className="space-y-6">
