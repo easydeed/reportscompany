@@ -141,29 +141,41 @@ export default function PeoplePage() {
   async function loadData() {
     setLoading(true)
     try {
-      // Fetch user info
-      const meRes = await fetch("/api/proxy/v1/me", { cache: "no-store" })
+      // Fetch ALL data in parallel for faster loading
+      const [meRes, contactsRes, groupsRes] = await Promise.all([
+        fetch("/api/proxy/v1/me", { cache: "no-store", credentials: "include" }),
+        fetch("/api/proxy/v1/contacts", { cache: "no-store", credentials: "include" }),
+        fetch("/api/proxy/v1/contact-groups", { cache: "no-store", credentials: "include" }),
+      ])
+
+      // Process user info
       const me = meRes.ok ? await meRes.json() : {}
       const isAff = me.account_type === "INDUSTRY_AFFILIATE"
       setIsAffiliate(isAff)
 
-      // Fetch contacts
-      const contactsRes = await fetch("/api/proxy/v1/contacts", { cache: "no-store" })
+      // Process contacts
       if (contactsRes.ok) {
         const data = await contactsRes.json()
         setContacts(data.contacts || [])
       }
 
-      // If affiliate, fetch sponsored accounts
+      // Process groups
+      if (groupsRes.ok) {
+        const data = await groupsRes.json()
+        setGroups(data.groups || [])
+      }
+
+      // If affiliate, fetch sponsored accounts (can't be in initial parallel since we need to know if affiliate)
       if (isAff) {
-        const overviewRes = await fetch("/api/proxy/v1/affiliate/overview", { cache: "no-store" })
+        const overviewRes = await fetch("/api/proxy/v1/affiliate/overview", { 
+          cache: "no-store", 
+          credentials: "include" 
+        })
         if (overviewRes.ok) {
           const overview = await overviewRes.json()
           setSponsoredAccounts(overview.sponsored_accounts || [])
         }
       }
-      // Load groups for this account
-      await loadGroups()
     } catch (error) {
       console.error("Failed to load people:", error)
       toast({

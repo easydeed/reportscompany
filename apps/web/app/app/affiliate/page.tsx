@@ -1,5 +1,4 @@
 import { cookies } from 'next/headers';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Building2 } from 'lucide-react';
 import { AffiliateDashboardShell, type AffiliateDashboardShellProps } from '@/components/v0-styling/AffiliateDashboardShell';
@@ -33,68 +32,45 @@ interface AffiliateData {
   sponsored_accounts: SponsoredAccount[];
 }
 
-async function getAffiliateData(): Promise<AffiliateData | { error: string }> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('mr_token')?.value;
-
-  if (!token) {
-    return { error: 'Not authenticated' };
-  }
-
+async function fetchWithAuth(path: string, token: string) {
   try {
-    const response = await fetch(`${API_BASE}/v1/affiliate/overview`, {
-      headers: {
-        'Cookie': `mr_token=${token}`,
-      },
+    const response = await fetch(`${API_BASE}${path}`, {
+      headers: { 'Cookie': `mr_token=${token}` },
       cache: 'no-store',
     });
-
-    if (response.status === 403) {
-      return { error: 'not_affiliate' };
-    }
-
     if (!response.ok) {
-      return { error: 'Failed to load affiliate data' };
+      if (response.status === 403) return { error: 'not_affiliate' };
+      return null;
     }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Failed to fetch affiliate data:', error);
-    return { error: 'Failed to load affiliate data' };
-  }
-}
-
-// Phase 29E: Fetch plan usage for affiliate's own account
-async function getPlanUsage() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('mr_token')?.value;
-
-  if (!token) return null;
-
-  try {
-    const response = await fetch(`${API_BASE}/v1/account/plan-usage`, {
-      headers: {
-        'Cookie': `mr_token=${token}`,
-      },
-      cache: 'no-store',
-    });
-
-    if (!response.ok) return null;
-    return await response.json();
-  } catch (error) {
-    console.error('Failed to fetch plan usage:', error);
+    return response.json();
+  } catch {
     return null;
   }
 }
 
 export default async function AffiliateDashboardPage() {
-  const data = await getAffiliateData();
-  const planUsage = await getPlanUsage(); // Phase 29E
+  const cookieStore = await cookies();
+  const token = cookieStore.get('mr_token')?.value;
+
+  if (!token) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <h1 className="text-2xl font-bold mb-2">Not Authenticated</h1>
+        <Button asChild><a href="/login">Login</a></Button>
+      </div>
+    );
+  }
+
+  // Fetch ALL data in parallel
+  const [affiliateData, planUsage] = await Promise.all([
+    fetchWithAuth("/v1/affiliate/overview", token),
+    fetchWithAuth("/v1/account/plan-usage", token),
+  ]);
 
   // Handle errors
-  if ('error' in data) {
-    if (data.error === 'not_affiliate') {
+  if (!affiliateData || (typeof affiliateData === 'object' && 'error' in affiliateData)) {
+    const errorType = affiliateData && 'error' in affiliateData ? affiliateData.error : 'unknown';
+    if (errorType === 'not_affiliate') {
       return (
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
           <Building2 className="h-16 w-16 text-muted-foreground mb-4" />
@@ -113,13 +89,16 @@ export default async function AffiliateDashboardPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
         <h1 className="text-2xl font-bold mb-2">Error Loading Affiliate Data</h1>
-        <p className="text-muted-foreground max-w-md mb-6">{data.error}</p>
+        <p className="text-muted-foreground max-w-md mb-6">Failed to load affiliate data</p>
         <Button asChild>
           <a href="/app">Back to Dashboard</a>
         </Button>
       </div>
     );
   }
+
+  // Cast to proper type after validation
+  const data = affiliateData as AffiliateData;
 
   // Map fetched data to shell props
   const shellProps: AffiliateDashboardShellProps = {

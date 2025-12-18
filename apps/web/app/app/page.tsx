@@ -9,53 +9,39 @@ import { DashboardOnboarding } from "@/components/onboarding"
 
 export const dynamic = 'force-dynamic'
 
-async function fetchWithAuth(path: string) {
+async function fetchWithAuth(path: string, token: string) {
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://reportscompany.onrender.com'
-  const cookieStore = await cookies()
-  const token = cookieStore.get('mr_token')?.value
   
-  if (!token) return null
-  
-  const response = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      'Cookie': `mr_token=${token}`,
-    },
-    cache: 'no-store',
-  })
-  
-  if (!response.ok) return null
-  return response.json()
+  try {
+    const response = await fetch(`${API_BASE}${path}`, {
+      headers: { 'Cookie': `mr_token=${token}` },
+      cache: 'no-store',
+    })
+    if (!response.ok) return null
+    return response.json()
+  } catch {
+    return null
+  }
 }
 
 export default async function Overview() {
-  // Check if user is an affiliate
-  let isAffiliate = false
-  try {
-    const me = await fetchWithAuth("/v1/me")
-    isAffiliate = me?.account_type === "INDUSTRY_AFFILIATE"
-  } catch (error) {
-    console.error("Failed to fetch user info:", error)
-  }
+  const cookieStore = await cookies()
+  const token = cookieStore.get('mr_token')?.value
   
-  // If affiliate, redirect to the real affiliate dashboard
-  if (isAffiliate) {
-    redirect("/app/affiliate")
-  }
-  
-  // Regular agent dashboard
-  let data: any = null
-  try {
-    data = await fetchWithAuth("/v1/usage")
-  } catch (error) {
-    console.error("Failed to fetch usage data:", error)
+  if (!token) {
+    redirect('/login')
   }
 
-  // Phase 29E: Fetch plan usage for warning banner
-  let planUsage: any = null
-  try {
-    planUsage = await fetchWithAuth("/v1/account/plan-usage")
-  } catch (error) {
-    console.error("Failed to fetch plan usage:", error)
+  // Fetch ALL data in parallel - much faster than sequential
+  const [me, data, planUsage] = await Promise.all([
+    fetchWithAuth("/v1/me", token),
+    fetchWithAuth("/v1/usage", token),
+    fetchWithAuth("/v1/account/plan-usage", token),
+  ])
+  
+  // Check if affiliate and redirect
+  if (me?.account_type === "INDUSTRY_AFFILIATE") {
+    redirect("/app/affiliate")
   }
 
   // Shape props for the component

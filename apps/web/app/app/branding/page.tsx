@@ -132,7 +132,13 @@ export default function BrandingPage() {
   async function loadData() {
     setLoading(true)
     try {
-      const meRes = await fetch("/api/proxy/v1/me", { cache: "no-store" })
+      // Fetch ALL endpoints in parallel - use the right one based on user type
+      const [meRes, affiliateBrandingRes, accountRes] = await Promise.all([
+        fetch("/api/proxy/v1/me", { cache: "no-store", credentials: "include" }),
+        fetch("/api/proxy/v1/affiliate/branding", { cache: "no-store", credentials: "include" }),
+        fetch("/api/proxy/v1/account", { cache: "no-store", credentials: "include" }),
+      ])
+      
       const me = meRes.ok ? await meRes.json() : {}
       const isAff = me.account_type === "INDUSTRY_AFFILIATE"
       setIsAffiliate(isAff)
@@ -142,8 +148,8 @@ export default function BrandingPage() {
         setUserAvatarUrl(me.avatar_url)
       }
 
-      const endpoint = isAff ? "/api/proxy/v1/affiliate/branding" : "/api/proxy/v1/account"
-      const res = await fetch(endpoint, { cache: "no-store" })
+      // Use the appropriate response based on user type
+      const res = isAff ? affiliateBrandingRes : accountRes
 
       if (res.ok) {
         const data = await res.json()

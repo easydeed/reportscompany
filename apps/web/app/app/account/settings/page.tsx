@@ -162,17 +162,21 @@ export default function AccountSettingsPage() {
   }, [])
 
   useEffect(() => {
-    loadProfile()
-    loadBillingData()
+    loadAllData()
   }, [])
 
-  async function loadProfile() {
+  async function loadAllData() {
     setLoading(true)
     try {
-      const res = await fetch("/api/proxy/v1/users/me", { cache: "no-store" })
+      // Fetch profile and billing in parallel
+      const [profileRes, billingRes] = await Promise.all([
+        fetch("/api/proxy/v1/users/me", { cache: "no-store", credentials: "include" }),
+        fetch("/api/proxy/v1/account/plan-usage", { cache: "no-store", credentials: "include" }),
+      ])
 
-      if (res.ok) {
-        const data: UserProfile = await res.json()
+      // Process profile
+      if (profileRes.ok) {
+        const data: UserProfile = await profileRes.json()
         setProfile(data)
         setProfileForm({
           first_name: data.first_name || "",
@@ -182,30 +186,22 @@ export default function AccountSettingsPage() {
           avatar_url: data.avatar_url,
         })
         setEmailForm((prev) => ({ ...prev, newEmail: data.email }))
-      } else {
-        throw new Error("Failed to load profile")
+      }
+
+      // Process billing
+      if (billingRes.ok) {
+        const billingData = await billingRes.json()
+        setBillingData(billingData)
       }
     } catch (error) {
-      console.error("Failed to load profile:", error)
+      console.error("Failed to load data:", error)
       toast({
         title: "Error",
-        description: "Failed to load profile. Please try again.",
+        description: "Failed to load settings. Please try again.",
         variant: "destructive",
       })
     } finally {
       setLoading(false)
-    }
-  }
-
-  async function loadBillingData() {
-    try {
-      const res = await fetch("/api/proxy/v1/account/plan-usage", { cache: "no-store" })
-      if (res.ok) {
-        const data = await res.json()
-        setBillingData(data)
-      }
-    } catch (error) {
-      console.error("Failed to load billing data:", error)
     }
   }
 
