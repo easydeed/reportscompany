@@ -3,41 +3,29 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, AlertTriangle } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { DashboardOnboarding } from "@/components/onboarding"
+import { createServerApi } from "@/lib/api-server"
 
 export const dynamic = 'force-dynamic'
 
-async function fetchWithAuth(path: string, token: string) {
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://reportscompany.onrender.com'
-  
-  try {
-    const response = await fetch(`${API_BASE}${path}`, {
-      headers: { 'Cookie': `mr_token=${token}` },
-      cache: 'no-store',
-    })
-    if (!response.ok) return null
-    return response.json()
-  } catch {
-    return null
-  }
-}
-
 export default async function Overview() {
-  const cookieStore = await cookies()
-  const token = cookieStore.get('mr_token')?.value
+  const api = await createServerApi()
   
-  if (!token) {
+  if (!api.isAuthenticated()) {
     redirect('/login')
   }
 
-  // Fetch ALL data in parallel - much faster than sequential
-  const [me, data, planUsage] = await Promise.all([
-    fetchWithAuth("/v1/me", token),
-    fetchWithAuth("/v1/usage", token),
-    fetchWithAuth("/v1/account/plan-usage", token),
+  // Fetch ALL data in parallel using the shared API utility
+  const [meRes, dataRes, planUsageRes] = await Promise.all([
+    api.get<any>("/v1/me"),
+    api.get<any>("/v1/usage"),
+    api.get<any>("/v1/account/plan-usage"),
   ])
+
+  const me = meRes.data
+  const data = dataRes.data
+  const planUsage = planUsageRes.data
   
   // Check if affiliate and redirect
   if (me?.account_type === "INDUSTRY_AFFILIATE") {

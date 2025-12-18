@@ -46,22 +46,56 @@ Located at `/access-denied` (outside the admin layout), this page:
 ### Frontend Structure
 
 ```
-apps/web/app/
-├── admin/
-│   ├── layout.tsx          # Admin layout with sidebar navigation
-│   ├── page.tsx            # Dashboard with KPIs
-│   ├── accounts/
-│   │   ├── page.tsx        # Accounts list
-│   │   └── [id]/page.tsx   # Account detail
-│   ├── users/page.tsx      # Users management
-│   ├── affiliates/page.tsx # Title companies
-│   ├── plans/page.tsx      # Plans & pricing
-│   ├── reports/page.tsx    # Report monitoring
-│   ├── emails/page.tsx     # Email logs
-│   └── settings/page.tsx   # System settings
-├── access-denied/page.tsx  # Unauthorized access page
-└── api/v1/admin/           # Proxy routes for admin APIs
+apps/web/
+├── lib/
+│   └── api-server.ts       # Shared server-side API utility
+├── app/
+│   ├── admin/
+│   │   ├── layout.tsx          # Admin layout with sidebar navigation
+│   │   ├── page.tsx            # Dashboard with KPIs
+│   │   ├── accounts/
+│   │   │   ├── page.tsx        # Accounts list
+│   │   │   └── [id]/page.tsx   # Account detail
+│   │   ├── users/page.tsx      # Users management
+│   │   ├── affiliates/page.tsx # Title companies
+│   │   ├── plans/page.tsx      # Plans & pricing
+│   │   ├── reports/page.tsx    # Report monitoring
+│   │   ├── emails/page.tsx     # Email logs
+│   │   └── settings/page.tsx   # System settings
+│   ├── access-denied/page.tsx  # Unauthorized access page
+│   └── api/v1/admin/           # Proxy routes for client components
 ```
+
+### Server-Side API Utility
+
+All server components use the shared `api-server.ts` utility for consistent API calls:
+
+```typescript
+import { createServerApi } from "@/lib/api-server"
+
+// In a server component
+const api = await createServerApi()
+
+// Check authentication
+if (!api.isAuthenticated()) {
+  redirect('/login')
+}
+
+// Make API calls
+const { data, error } = await api.get<MyType>('/v1/admin/metrics')
+
+// Parallel calls
+const [metrics, accounts] = await Promise.all([
+  api.get('/v1/admin/metrics'),
+  api.get('/v1/admin/accounts'),
+])
+```
+
+This provides:
+- Centralized API base URL configuration
+- Consistent cookie/auth handling
+- Proper error handling and logging
+- Type-safe responses
 
 ### API Proxy Routes
 
@@ -231,8 +265,17 @@ JWT_SECRET=...
 ### Dashboard shows zeros
 
 1. Check `NEXT_PUBLIC_API_BASE` is set correctly on Vercel
-2. Check Vercel function logs for API errors
-3. Verify backend API is accessible
+2. Verify RLS policies allow admin access (migration 0025):
+   ```sql
+   -- Check if admin RLS bypass is in place
+   SELECT tablename, policyname FROM pg_policies WHERE policyname LIKE '%rls%';
+   ```
+3. Ensure the backend `admin.py` sets admin role for RLS:
+   ```python
+   set_rls(cur, account_id, user_role="ADMIN")
+   ```
+4. Check Vercel function logs for API errors
+5. Verify backend API is accessible
 
 ### API calls failing
 

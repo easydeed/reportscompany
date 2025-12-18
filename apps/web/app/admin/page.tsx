@@ -1,4 +1,3 @@
-import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,51 +14,32 @@ import {
   Building,
   Users,
   FileText,
-  DollarSign,
-  TrendingUp,
-  TrendingDown,
   AlertTriangle,
   CheckCircle,
   Clock,
   Activity,
-  ArrowUpRight,
-  ArrowDownRight,
 } from "lucide-react"
+import { createServerApi } from "@/lib/api-server"
 
 export const dynamic = 'force-dynamic'
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'https://reportscompany.onrender.com').replace(/\/$/, '')
-
-async function fetchWithAuth(path: string, token: string) {
-  try {
-    const response = await fetch(`${API_BASE}${path}`, {
-      headers: { 'Cookie': `mr_token=${token}` },
-      cache: 'no-store',
-    })
-    if (!response.ok) {
-      console.error(`Admin API error: ${path} returned ${response.status}`, await response.text().catch(() => ''))
-      return null
-    }
-    return response.json()
-  } catch (error) {
-    console.error(`Admin API fetch error: ${path}`, error)
-    return null
-  }
-}
-
 export default async function AdminDashboard() {
-  const cookieStore = await cookies()
-  const token = cookieStore.get('mr_token')?.value
+  const api = await createServerApi()
 
-  if (!token) {
+  if (!api.isAuthenticated()) {
     redirect('/login?next=/admin')
   }
 
-  const [metrics, reports, accounts] = await Promise.all([
-    fetchWithAuth("/v1/admin/metrics", token),
-    fetchWithAuth("/v1/admin/reports?limit=5", token),
-    fetchWithAuth("/v1/admin/accounts?limit=5", token),
+  // Fetch all admin data in parallel using the shared API utility
+  const [metricsRes, reportsRes, accountsRes] = await Promise.all([
+    api.get<any>("/v1/admin/metrics"),
+    api.get<any>("/v1/admin/reports?limit=5"),
+    api.get<any>("/v1/admin/accounts?limit=5"),
   ])
+
+  const metrics = metricsRes.data
+  const reports = reportsRes.data
+  const accounts = accountsRes.data
 
   const m = metrics || {}
   const recentReports = reports?.reports || []

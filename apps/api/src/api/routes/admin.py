@@ -40,8 +40,9 @@ def get_admin_metrics(_admin: dict = Depends(get_admin_user)):
         - queue_depth: Current queue depth (optional, returns 0 if not available)
     """
 
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
 
         # Reports in last 24h
         cur.execute("""
@@ -161,8 +162,9 @@ def get_admin_timeseries(
         - emails_by_day: Array of {date, count}
     """
     
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
         
         # Reports by day
         cur.execute("""
@@ -258,8 +260,9 @@ def list_admin_schedules(
     query += " ORDER BY s.created_at DESC LIMIT %s"
     params.append(limit)
     
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
         cur.execute(query, params)
         
         schedules = []
@@ -340,8 +343,9 @@ def list_admin_reports(
     query += " ORDER BY r.created_at DESC LIMIT %s"
     params.append(limit)
     
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
         cur.execute(query, params)
         
         reports = []
@@ -401,8 +405,9 @@ def list_admin_emails(
         LIMIT %s
     """
     
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
         cur.execute(query, (limit,))
         
         emails = []
@@ -445,8 +450,9 @@ def update_admin_schedule(
         Success message
     """
     
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
         
         # Update schedule
         cur.execute("""
@@ -492,8 +498,9 @@ def get_account_plan_usage(
         - info: Additional decision info (ratio, message, etc.)
     """
     
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
         
         # Get basic account info
         cur.execute("""
@@ -596,8 +603,9 @@ def list_affiliates(
     query += " ORDER BY a.created_at DESC LIMIT %s"
     params.append(limit)
 
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
         cur.execute(query, params)
 
         affiliates = []
@@ -629,8 +637,9 @@ def get_affiliate_detail(
 
     Returns affiliate info, branding, and list of sponsored agents.
     """
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
 
         # Get affiliate info
         cur.execute("""
@@ -785,8 +794,9 @@ def create_affiliate(
 
     Returns the new affiliate details.
     """
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
 
         # Check if email already exists
         cur.execute("SELECT id FROM users WHERE email = %s", (body.admin_email,))
@@ -903,8 +913,9 @@ def admin_invite_agent(
 
     Similar to the affiliate's own invite, but done by admin.
     """
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
 
         # Verify affiliate exists
         cur.execute("""
@@ -997,8 +1008,9 @@ def update_affiliate(
     """
     Update an affiliate's status or plan.
     """
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
 
         updates = []
         params = []
@@ -1111,8 +1123,9 @@ def list_accounts(
     query += " ORDER BY a.created_at DESC LIMIT %s OFFSET %s"
     params.extend([limit, offset])
 
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
         cur.execute(query, params)
 
         accounts = []
@@ -1155,8 +1168,9 @@ def update_account(
     """
     Update an account's status, plan, or limits.
     """
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
 
         updates = []
         params = []
@@ -1263,8 +1277,9 @@ def list_users(
     query += " ORDER BY u.created_at DESC LIMIT %s OFFSET %s"
     params.extend([limit, offset])
 
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
         cur.execute(query, params)
 
         users = []
@@ -1305,8 +1320,9 @@ def get_user_detail(
     """
     Get detailed information about a specific user.
     """
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
 
         cur.execute("""
             SELECT
@@ -1377,8 +1393,9 @@ def update_user(
     """
     Update a user's status.
     """
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
 
         updates = []
         params = []
@@ -1453,8 +1470,9 @@ def bulk_import_agents(
     Returns:
         Summary of results with success/failure for each agent
     """
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
 
         # Verify affiliate exists
         cur.execute("""
@@ -1611,8 +1629,9 @@ def update_agent_headshot(
 
     Used for full-service onboarding where admin uploads headshots for agents.
     """
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
 
         # Verify account exists and is a regular account (agent)
         cur.execute("""
@@ -1663,8 +1682,9 @@ def resend_user_invite(
     """
     Resend invite email to a user who hasn't set up their password yet.
     """
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
 
         # Get user info
         cur.execute("""
@@ -1739,8 +1759,9 @@ def list_plans(_admin: dict = Depends(get_admin_user)):
     """
     List all subscription plans with their limits and pricing.
     """
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
 
         cur.execute("""
             SELECT
@@ -1800,8 +1821,9 @@ def update_plan(
     """
     Update a plan's settings.
     """
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
 
         updates = []
         params = []
@@ -1884,8 +1906,9 @@ def create_plan(
     """
     Create a new subscription plan.
     """
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
 
         # Check if slug already exists
         cur.execute("SELECT id FROM plans WHERE plan_slug = %s", (body.plan_slug,))
@@ -1928,8 +1951,9 @@ def get_revenue_stats(_admin: dict = Depends(get_admin_user)):
     """
     Get revenue and billing statistics.
     """
-    with db_conn() as conn:
-        cur = conn.cursor()
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
 
         # Accounts by plan
         cur.execute("""

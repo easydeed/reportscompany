@@ -1,4 +1,3 @@
-import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import {
@@ -10,37 +9,34 @@ import {
   FileText,
   Mail,
   Settings,
-  LogOut,
   Shield,
   ChevronRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { createServerApi } from "@/lib/api-server"
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'https://reportscompany.onrender.com').replace(/\/$/, '')
-
-async function verifyAdmin(token: string) {
-  try {
-    const response = await fetch(`${API_BASE}/v1/me`, {
-      headers: { 'Cookie': `mr_token=${token}` },
-      cache: 'no-store',
-    })
-    if (!response.ok) {
-      console.error(`Admin verify failed: /v1/me returned ${response.status}`)
-      return null
-    }
-    const data = await response.json()
-    console.log('Admin verify response:', { email: data.email, role: data.role })
-    // Check if user has admin role
-    if (data.role !== 'admin' && data.role !== 'ADMIN') {
-      console.log(`User ${data.email} does not have ADMIN role, has: ${data.role}`)
-      return null
-    }
-    return data
-  } catch (error) {
-    console.error('Admin verify error:', error)
+async function verifyAdmin() {
+  const api = await createServerApi()
+  
+  if (!api.isAuthenticated()) {
     return null
   }
+
+  const { data, error } = await api.get<any>('/v1/me')
+  
+  if (error || !data) {
+    console.error('Admin verify failed:', error)
+    return null
+  }
+
+  // Check if user has admin role
+  if (data.role !== 'admin' && data.role !== 'ADMIN') {
+    console.log(`User ${data.email} does not have ADMIN role, has: ${data.role}`)
+    return null
+  }
+  
+  return data
 }
 
 const navItems = [
@@ -59,16 +55,11 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
-  const cookieStore = await cookies()
-  const token = cookieStore.get('mr_token')?.value
-
-  if (!token) {
-    redirect('/login?next=/admin')
-  }
-
-  const admin = await verifyAdmin(token)
+  const admin = await verifyAdmin()
 
   if (!admin) {
+    // verifyAdmin returns null for both unauthenticated and non-admin users
+    // The access-denied page handles showing appropriate message
     redirect('/access-denied')
   }
 
