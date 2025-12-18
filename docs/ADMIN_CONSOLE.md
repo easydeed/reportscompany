@@ -43,7 +43,7 @@ User visits /admin
         │
         ▼
 ┌─────────────────┐
-│  Has mr_token?  │───No───▶ Redirect to /login?next=/admin
+│  Has mr_token?  │───No───▶ Redirect to /admin/login
 └────────┬────────┘
          │ Yes
          ▼
@@ -55,7 +55,14 @@ User visits /admin
     Access Granted
 ```
 
-### 2.3 SQL Reference
+### 2.3 Dedicated Admin Login Page
+
+The admin console has its own login page at `/admin/login` with:
+- **Unique styling**: Dark gradient background with violet/purple accents
+- **Admin-only validation**: After login, checks `is_platform_admin` and rejects non-admins
+- **Separate from main app**: Users don't see the regular login page
+
+### 2.4 SQL Reference
 
 ```sql
 -- Check who has platform admin access
@@ -77,30 +84,42 @@ UPDATE users SET is_platform_admin = FALSE WHERE email = 'former-admin@example.c
 ```
 apps/web/
 ├── lib/
-│   └── api-server.ts           # Shared server-side API utility
+│   └── api-server.ts              # Shared server-side API utility
 ├── app/
 │   ├── admin/
-│   │   ├── layout.tsx          # Admin layout (gates on is_platform_admin)
-│   │   ├── page.tsx            # Dashboard with KPIs
-│   │   ├── accounts/page.tsx   # Account management
-│   │   ├── users/page.tsx      # User management (shows BOTH roles)
-│   │   ├── affiliates/page.tsx # Title company management
-│   │   ├── plans/page.tsx      # Subscription plans
-│   │   ├── reports/page.tsx    # Report monitoring
-│   │   ├── emails/page.tsx     # Email delivery logs
-│   │   └── settings/page.tsx   # System settings
-│   ├── access-denied/page.tsx  # Unauthorized access page
-│   └── api/v1/admin/           # Proxy routes for client components
+│   │   ├── (auth)/                # Public route group (no auth required)
+│   │   │   └── login/
+│   │   │       └── page.tsx       # Dedicated admin login page
+│   │   ├── (dashboard)/           # Protected route group (requires is_platform_admin)
+│   │   │   ├── layout.tsx         # Admin layout with sidebar
+│   │   │   ├── logout-button.tsx  # Client component for logout
+│   │   │   ├── page.tsx           # Dashboard with KPIs
+│   │   │   ├── accounts/
+│   │   │   │   ├── page.tsx       # Account list
+│   │   │   │   └── [id]/page.tsx  # Account detail
+│   │   │   ├── users/page.tsx     # User management (shows BOTH roles)
+│   │   │   ├── affiliates/page.tsx
+│   │   │   ├── plans/page.tsx
+│   │   │   ├── reports/page.tsx
+│   │   │   ├── emails/page.tsx
+│   │   │   └── settings/page.tsx
+│   ├── access-denied/page.tsx     # Unauthorized access page
+│   └── api/v1/admin/              # Proxy routes for client components
 
 apps/api/src/api/
 ├── deps/
-│   └── admin.py                # get_admin_user dependency (checks is_platform_admin)
+│   └── admin.py                   # get_admin_user dependency (checks is_platform_admin)
 ├── middleware/
-│   └── authn.py                # Auth middleware (populates is_platform_admin)
+│   └── authn.py                   # Auth middleware (populates is_platform_admin)
 └── routes/
-    ├── admin.py                # All /v1/admin/* endpoints
-    └── me.py                   # Returns is_platform_admin in response
+    ├── admin.py                   # All /v1/admin/* endpoints
+    └── me.py                      # Returns is_platform_admin in response
 ```
+
+**Route Groups Explained:**
+- `(auth)` — Public routes (login page), no authentication required
+- `(dashboard)` — Protected routes, requires `is_platform_admin = TRUE`
+- URLs remain clean: `/admin/login`, `/admin`, `/admin/users`, etc.
 
 ### 3.2 API Proxy Routes
 
@@ -292,6 +311,7 @@ This prevents confusion between platform and tenant permissions.
 
 | Page | Path | Purpose |
 |------|------|---------|
+| **Login** | `/admin/login` | Dedicated admin login (public) |
 | Dashboard | `/admin` | KPIs and recent activity |
 | Accounts | `/admin/accounts` | All accounts with plans and user counts |
 | Users | `/admin/users` | All users with platform admin + tenant roles |
@@ -300,6 +320,12 @@ This prevents confusion between platform and tenant permissions.
 | Reports | `/admin/reports` | Report generation monitoring |
 | Emails | `/admin/emails` | Email delivery logs |
 | Settings | `/admin/settings` | System status and integrations |
+
+### 7.4 Sidebar Features
+
+- **Navigation**: All protected pages accessible from sidebar
+- **User Info**: Shows admin name and email
+- **Log Out**: Logs out and redirects to `/admin/login`
 
 ---
 
