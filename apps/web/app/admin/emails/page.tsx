@@ -19,7 +19,6 @@ import {
   CheckCircle,
   XCircle,
   Users,
-  Clock,
 } from "lucide-react"
 
 interface EmailLog {
@@ -89,13 +88,13 @@ export default function EmailsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">Email Logs</h1>
-          <p className="text-gray-400 mt-1">Monitor all email deliveries across the platform</p>
+          <h1 className="text-3xl font-bold text-slate-900">Email Logs</h1>
+          <p className="text-slate-500 mt-1">Monitor all email deliveries across the platform</p>
         </div>
         <Button
           variant="outline"
           onClick={fetchEmails}
-          className="border-gray-700 text-gray-300 hover:bg-gray-800"
+          className="border-slate-300 text-slate-600 hover:bg-slate-50"
         >
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
@@ -104,108 +103,108 @@ export default function EmailsPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4">
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Total Emails</p>
-                <p className="text-2xl font-bold text-white">{stats.total}</p>
+                <p className="text-sm text-slate-500">Total Emails</p>
+                <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
               </div>
-              <Mail className="h-6 w-6 text-gray-500" />
+              <Mail className="h-6 w-6 text-slate-300" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Delivered</p>
-                <p className="text-2xl font-bold text-green-400">{stats.success}</p>
+                <p className="text-sm text-slate-500">Delivered</p>
+                <p className="text-2xl font-bold text-emerald-600">{stats.success}</p>
               </div>
-              <CheckCircle className="h-6 w-6 text-green-400/30" />
+              <CheckCircle className="h-6 w-6 text-emerald-200" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Failed</p>
-                <p className="text-2xl font-bold text-red-400">{stats.failed}</p>
+                <p className="text-sm text-slate-500">Failed</p>
+                <p className="text-2xl font-bold text-red-600">{stats.failed}</p>
               </div>
-              <XCircle className="h-6 w-6 text-red-400/30" />
+              <XCircle className="h-6 w-6 text-red-200" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Total Recipients</p>
-                <p className="text-2xl font-bold text-white">{stats.totalRecipients}</p>
+                <p className="text-sm text-slate-500">Total Recipients</p>
+                <p className="text-2xl font-bold text-slate-900">{stats.totalRecipients}</p>
               </div>
-              <Users className="h-6 w-6 text-blue-400/30" />
+              <Users className="h-6 w-6 text-blue-200" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Emails Table */}
-      <Card className="bg-gray-900 border-gray-800">
+      <Card className="bg-white border-slate-200 shadow-sm">
         <CardContent className="pt-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
             </div>
           ) : emails.length === 0 ? (
             <div className="text-center py-12">
-              <Mail className="h-12 w-12 mx-auto text-gray-600 mb-4" />
-              <p className="text-gray-400">No emails sent yet</p>
+              <Mail className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+              <p className="text-slate-500">No emails sent yet</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-gray-800 hover:bg-transparent">
-                  <TableHead className="text-gray-400">Account</TableHead>
-                  <TableHead className="text-gray-400">Subject</TableHead>
-                  <TableHead className="text-gray-400">Recipients</TableHead>
-                  <TableHead className="text-gray-400">Provider</TableHead>
-                  <TableHead className="text-gray-400">Status</TableHead>
-                  <TableHead className="text-gray-400">Sent</TableHead>
+                <TableRow className="border-slate-200 hover:bg-transparent">
+                  <TableHead className="text-slate-500">Account</TableHead>
+                  <TableHead className="text-slate-500">Subject</TableHead>
+                  <TableHead className="text-slate-500">Recipients</TableHead>
+                  <TableHead className="text-slate-500">Provider</TableHead>
+                  <TableHead className="text-slate-500">Status</TableHead>
+                  <TableHead className="text-slate-500">Sent</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {emails.map((email) => (
-                  <TableRow key={email.id} className="border-gray-800">
-                    <TableCell className="text-white font-medium">
+                  <TableRow key={email.id} className="border-slate-100">
+                    <TableCell className="text-slate-900 font-medium">
                       {email.account_name}
                     </TableCell>
                     <TableCell>
-                      <p className="text-gray-300 truncate max-w-xs">{email.subject}</p>
+                      <p className="text-slate-600 truncate max-w-xs">{email.subject}</p>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1 text-gray-400">
+                      <div className="flex items-center gap-1 text-slate-500">
                         <Users className="h-3 w-3" />
                         <span>{email.to_count}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-gray-500 text-sm">
+                    <TableCell className="text-slate-400 text-sm">
                       {email.provider}
                     </TableCell>
                     <TableCell>
                       {email.status === "success" ? (
-                        <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
                           <CheckCircle className="h-3 w-3 mr-1" />
                           Delivered
                         </Badge>
                       ) : (
-                        <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
+                        <Badge className="bg-red-100 text-red-700 border-red-200">
                           <XCircle className="h-3 w-3 mr-1" />
                           Failed
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-gray-500 text-sm">
+                    <TableCell className="text-slate-400 text-sm">
                       {formatTimeAgo(email.created_at)}
                     </TableCell>
                   </TableRow>

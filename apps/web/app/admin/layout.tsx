@@ -58,24 +58,22 @@ export default async function AdminLayout({
   const admin = await verifyAdmin()
 
   if (!admin) {
-    // verifyAdmin returns null for both unauthenticated and non-admin users
-    // The access-denied page handles showing appropriate message
     redirect('/access-denied')
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 flex">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-gray-900 border-r border-gray-800 flex flex-col">
+      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shadow-sm">
         {/* Logo/Brand */}
-        <div className="p-6 border-b border-gray-800">
+        <div className="p-6 border-b border-slate-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center">
               <Shield className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-lg text-white">TrendyReports</h1>
-              <p className="text-xs text-gray-400">Admin Console</p>
+              <h1 className="font-bold text-lg text-slate-900">TrendyReports</h1>
+              <p className="text-xs text-slate-500">Admin Console</p>
             </div>
           </div>
         </div>
@@ -88,7 +86,7 @@ export default async function AdminLayout({
               href={item.href}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                "text-gray-400 hover:text-white hover:bg-gray-800"
+                "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
               )}
             >
               <item.icon className="w-5 h-5" />
@@ -98,20 +96,20 @@ export default async function AdminLayout({
         </nav>
 
         {/* User/Logout */}
-        <div className="p-4 border-t border-gray-800">
+        <div className="p-4 border-t border-slate-200">
           <div className="flex items-center gap-3 px-3 py-2 mb-2">
-            <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center text-sm font-medium">
+            <div className="w-8 h-8 bg-violet-100 text-violet-700 rounded-full flex items-center justify-center text-sm font-medium">
               {admin.first_name?.[0] || admin.email?.[0]?.toUpperCase() || 'A'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">
+              <p className="text-sm font-medium text-slate-900 truncate">
                 {admin.first_name ? `${admin.first_name} ${admin.last_name || ''}` : 'Admin'}
               </p>
-              <p className="text-xs text-gray-500 truncate">{admin.email}</p>
+              <p className="text-xs text-slate-500 truncate">{admin.email}</p>
             </div>
           </div>
           <Link href="/app">
-            <Button variant="ghost" size="sm" className="w-full justify-start text-gray-400 hover:text-white">
+            <Button variant="ghost" size="sm" className="w-full justify-start text-slate-600 hover:text-slate-900 hover:bg-slate-100">
               <ChevronRight className="w-4 h-4 mr-2 rotate-180" />
               Back to App
             </Button>

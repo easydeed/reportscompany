@@ -93,89 +93,89 @@ export default function AccountsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">Accounts</h1>
-          <p className="text-gray-400 mt-1">Manage all accounts and their settings</p>
+          <h1 className="text-3xl font-bold text-slate-900">Accounts</h1>
+          <p className="text-slate-500 mt-1">Manage all accounts and their settings</p>
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Total Accounts</p>
-                <p className="text-2xl font-bold text-white">{total}</p>
+                <p className="text-sm text-slate-500">Total Accounts</p>
+                <p className="text-2xl font-bold text-slate-900">{total}</p>
               </div>
-              <Building className="h-8 w-8 text-violet-400/30" />
+              <Building className="h-8 w-8 text-violet-200" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Total Users</p>
-                <p className="text-2xl font-bold text-white">{totalUsers}</p>
+                <p className="text-sm text-slate-500">Total Users</p>
+                <p className="text-2xl font-bold text-slate-900">{totalUsers}</p>
               </div>
-              <Users className="h-8 w-8 text-blue-400/30" />
+              <Users className="h-8 w-8 text-blue-200" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Reports This Month</p>
-                <p className="text-2xl font-bold text-white">{totalReports}</p>
+                <p className="text-sm text-slate-500">Reports This Month</p>
+                <p className="text-2xl font-bold text-slate-900">{totalReports}</p>
               </div>
-              <FileText className="h-8 w-8 text-green-400/30" />
+              <FileText className="h-8 w-8 text-emerald-200" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Avg Reports/Account</p>
-                <p className="text-2xl font-bold text-white">
+                <p className="text-sm text-slate-500">Avg Reports/Account</p>
+                <p className="text-2xl font-bold text-slate-900">
                   {accounts.length > 0 ? (totalReports / accounts.length).toFixed(1) : 0}
                 </p>
               </div>
-              <TrendingUp className="h-8 w-8 text-orange-400/30" />
+              <TrendingUp className="h-8 w-8 text-orange-200" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters */}
-      <Card className="bg-gray-900 border-gray-800">
+      <Card className="bg-white border-slate-200 shadow-sm">
         <CardContent className="pt-6">
           <div className="flex flex-wrap gap-4">
             <div className="relative flex-1 min-w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by name or slug..."
-                className="pl-10 bg-gray-800 border-gray-700 text-white"
+                className="pl-10 bg-white border-slate-300 text-slate-900"
               />
             </div>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-40 bg-gray-800 border-gray-700 text-white">
+              <SelectTrigger className="w-40 bg-white border-slate-300 text-slate-900">
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700">
+              <SelectContent className="bg-white border-slate-200">
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="REGULAR">Regular</SelectItem>
                 <SelectItem value="INDUSTRY_AFFILIATE">Affiliate</SelectItem>
               </SelectContent>
             </Select>
             <Select value={planFilter} onValueChange={setPlanFilter}>
-              <SelectTrigger className="w-40 bg-gray-800 border-gray-700 text-white">
+              <SelectTrigger className="w-40 bg-white border-slate-300 text-slate-900">
                 <SelectValue placeholder="Plan" />
               </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700">
+              <SelectContent className="bg-white border-slate-200">
                 <SelectItem value="all">All Plans</SelectItem>
                 <SelectItem value="free">Free</SelectItem>
                 <SelectItem value="pro">Pro</SelectItem>
@@ -187,7 +187,7 @@ export default function AccountsPage() {
             <Button
               variant="outline"
               onClick={fetchAccounts}
-              className="border-gray-700 text-gray-300 hover:bg-gray-800"
+              className="border-slate-300 text-slate-600 hover:bg-slate-50"
             >
               <RefreshCw className="h-4 w-4" />
             </Button>
@@ -196,39 +196,39 @@ export default function AccountsPage() {
       </Card>
 
       {/* Accounts Table */}
-      <Card className="bg-gray-900 border-gray-800">
+      <Card className="bg-white border-slate-200 shadow-sm">
         <CardContent className="pt-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
             </div>
           ) : accounts.length === 0 ? (
             <div className="text-center py-12">
-              <Building className="h-12 w-12 mx-auto text-gray-600 mb-4" />
-              <p className="text-gray-400">No accounts found</p>
+              <Building className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+              <p className="text-slate-500">No accounts found</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-gray-800 hover:bg-transparent">
-                  <TableHead className="text-gray-400">Account</TableHead>
-                  <TableHead className="text-gray-400">Type</TableHead>
-                  <TableHead className="text-gray-400">Plan</TableHead>
-                  <TableHead className="text-gray-400">Sponsor</TableHead>
-                  <TableHead className="text-gray-400">Users</TableHead>
-                  <TableHead className="text-gray-400">Reports/Mo</TableHead>
-                  <TableHead className="text-gray-400">Status</TableHead>
-                  <TableHead className="text-gray-400">Created</TableHead>
-                  <TableHead className="text-gray-400 w-16"></TableHead>
+                <TableRow className="border-slate-200 hover:bg-transparent">
+                  <TableHead className="text-slate-500">Account</TableHead>
+                  <TableHead className="text-slate-500">Type</TableHead>
+                  <TableHead className="text-slate-500">Plan</TableHead>
+                  <TableHead className="text-slate-500">Sponsor</TableHead>
+                  <TableHead className="text-slate-500">Users</TableHead>
+                  <TableHead className="text-slate-500">Reports/Mo</TableHead>
+                  <TableHead className="text-slate-500">Status</TableHead>
+                  <TableHead className="text-slate-500">Created</TableHead>
+                  <TableHead className="text-slate-500 w-16"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {accounts.map((account) => (
-                  <TableRow key={account.account_id} className="border-gray-800">
+                  <TableRow key={account.account_id} className="border-slate-100">
                     <TableCell>
                       <div>
-                        <p className="text-white font-medium">{account.name}</p>
-                        <p className="text-xs text-gray-500">{account.slug}</p>
+                        <p className="text-slate-900 font-medium">{account.name}</p>
+                        <p className="text-xs text-slate-400">{account.slug}</p>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -236,8 +236,8 @@ export default function AccountsPage() {
                         variant="outline"
                         className={
                           account.account_type === "INDUSTRY_AFFILIATE"
-                            ? "border-violet-500/50 text-violet-400"
-                            : "border-gray-700 text-gray-400"
+                            ? "border-violet-300 text-violet-700 bg-violet-50"
+                            : "border-slate-300 text-slate-600"
                         }
                       >
                         {account.account_type === "INDUSTRY_AFFILIATE" ? "Affiliate" : "Regular"}
@@ -247,32 +247,32 @@ export default function AccountsPage() {
                       <Badge
                         variant="outline"
                         className={
-                          account.plan_slug === "free" ? "border-gray-600 text-gray-400" :
-                          account.plan_slug === "pro" ? "border-blue-500/50 text-blue-400" :
-                          account.plan_slug === "team" ? "border-green-500/50 text-green-400" :
-                          account.plan_slug === "affiliate" ? "border-violet-500/50 text-violet-400" :
-                          "border-yellow-500/50 text-yellow-400"
+                          account.plan_slug === "free" ? "border-slate-300 text-slate-600" :
+                          account.plan_slug === "pro" ? "border-blue-300 text-blue-700 bg-blue-50" :
+                          account.plan_slug === "team" ? "border-emerald-300 text-emerald-700 bg-emerald-50" :
+                          account.plan_slug === "affiliate" ? "border-violet-300 text-violet-700 bg-violet-50" :
+                          "border-amber-300 text-amber-700 bg-amber-50"
                         }
                       >
                         {account.plan_slug}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-gray-400">
+                    <TableCell className="text-slate-500">
                       {account.sponsor_name || "-"}
                     </TableCell>
-                    <TableCell className="text-gray-300">{account.user_count}</TableCell>
-                    <TableCell className="text-gray-300">{account.reports_this_month}</TableCell>
+                    <TableCell className="text-slate-700">{account.user_count}</TableCell>
+                    <TableCell className="text-slate-700">{account.reports_this_month}</TableCell>
                     <TableCell>
-                      <Badge className={account.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}>
+                      <Badge className={account.is_active ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}>
                         {account.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-gray-500 text-sm">
+                    <TableCell className="text-slate-400 text-sm">
                       {formatDate(account.created_at)}
                     </TableCell>
                     <TableCell>
                       <Link href={`/admin/accounts/${account.account_id}`}>
-                        <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+                        <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-900 hover:bg-slate-100">
                           <Settings className="h-4 w-4" />
                         </Button>
                       </Link>

@@ -57,15 +57,15 @@ export default async function AdminDashboard() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-        <p className="text-gray-400 mt-1">Welcome to TrendyReports Admin Console</p>
+        <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
+        <p className="text-slate-500 mt-1">Welcome to TrendyReports Admin Console</p>
       </div>
 
       {/* API Connection Warning */}
       {apiIssue && (
-        <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-4">
-          <p className="text-yellow-400 font-medium">⚠️ Unable to load admin data</p>
-          <p className="text-yellow-300/70 text-sm mt-1">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <p className="text-amber-800 font-medium">⚠️ Unable to load admin data</p>
+          <p className="text-amber-600 text-sm mt-1">
             API calls to the backend failed. Check the Vercel logs for details.
           </p>
         </div>
@@ -73,56 +73,56 @@ export default async function AdminDashboard() {
 
       {/* Primary KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-400">Total Accounts</CardTitle>
-            <Building className="h-4 w-4 text-violet-400" />
+            <CardTitle className="text-sm font-medium text-slate-500">Total Accounts</CardTitle>
+            <Building className="h-4 w-4 text-violet-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-white">{m.total_accounts || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              <span className="text-violet-400">{m.total_affiliates || 0}</span> affiliates
+            <div className="text-3xl font-bold text-slate-900">{m.total_accounts || 0}</div>
+            <p className="text-xs text-slate-500 mt-1">
+              <span className="text-violet-600 font-medium">{m.total_affiliates || 0}</span> affiliates
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-400">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-blue-400" />
+            <CardTitle className="text-sm font-medium text-slate-500">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-white">{m.total_users || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              <span className="text-green-400">{m.active_users_30d || 0}</span> active (30d)
+            <div className="text-3xl font-bold text-slate-900">{m.total_users || 0}</div>
+            <p className="text-xs text-slate-500 mt-1">
+              <span className="text-emerald-600 font-medium">{m.active_users_30d || 0}</span> active (30d)
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-400">Reports (7d)</CardTitle>
-            <FileText className="h-4 w-4 text-green-400" />
+            <CardTitle className="text-sm font-medium text-slate-500">Reports (7d)</CardTitle>
+            <FileText className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-white">{m.reports_7d || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              <span className="text-green-400">{m.reports_24h || 0}</span> today
+            <div className="text-3xl font-bold text-slate-900">{m.reports_7d || 0}</div>
+            <p className="text-xs text-slate-500 mt-1">
+              <span className="text-emerald-600 font-medium">{m.reports_24h || 0}</span> today
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-400">Error Rate</CardTitle>
-            <AlertTriangle className={`h-4 w-4 ${errorRate > 5 ? 'text-red-400' : 'text-green-400'}`} />
+            <CardTitle className="text-sm font-medium text-slate-500">Error Rate</CardTitle>
+            <AlertTriangle className={`h-4 w-4 ${errorRate > 5 ? 'text-red-500' : 'text-emerald-500'}`} />
           </CardHeader>
           <CardContent>
-            <div className={`text-3xl font-bold ${errorRate > 5 ? 'text-red-400' : 'text-green-400'}`}>
+            <div className={`text-3xl font-bold ${errorRate > 5 ? 'text-red-600' : 'text-emerald-600'}`}>
               {errorRate}%
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              <span className="text-red-400">{m.reports_failed_7d || 0}</span> failed
+            <p className="text-xs text-slate-500 mt-1">
+              <span className="text-red-600 font-medium">{m.reports_failed_7d || 0}</span> failed
             </p>
           </CardContent>
         </Card>
@@ -130,50 +130,50 @@ export default async function AdminDashboard() {
 
       {/* Secondary KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-gray-900/50 border-gray-800">
+        <Card className="bg-emerald-50 border-emerald-200">
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500">Completed</p>
-                <p className="text-xl font-bold text-green-400">{m.reports_completed_7d || 0}</p>
+                <p className="text-xs text-emerald-600">Completed</p>
+                <p className="text-xl font-bold text-emerald-700">{m.reports_completed_7d || 0}</p>
               </div>
-              <CheckCircle className="h-6 w-6 text-green-400/30" />
+              <CheckCircle className="h-6 w-6 text-emerald-300" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-900/50 border-gray-800">
+        <Card className="bg-blue-50 border-blue-200">
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500">Processing</p>
-                <p className="text-xl font-bold text-blue-400">{m.reports_processing || 0}</p>
+                <p className="text-xs text-blue-600">Processing</p>
+                <p className="text-xl font-bold text-blue-700">{m.reports_processing || 0}</p>
               </div>
-              <Activity className="h-6 w-6 text-blue-400/30" />
+              <Activity className="h-6 w-6 text-blue-300" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-900/50 border-gray-800">
+        <Card className="bg-amber-50 border-amber-200">
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500">Pending</p>
-                <p className="text-xl font-bold text-yellow-400">{m.reports_pending || 0}</p>
+                <p className="text-xs text-amber-600">Pending</p>
+                <p className="text-xl font-bold text-amber-700">{m.reports_pending || 0}</p>
               </div>
-              <Clock className="h-6 w-6 text-yellow-400/30" />
+              <Clock className="h-6 w-6 text-amber-300" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-900/50 border-gray-800">
+        <Card className="bg-violet-50 border-violet-200">
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500">Avg Render</p>
-                <p className="text-xl font-bold text-violet-400">{avgRenderSec}s</p>
+                <p className="text-xs text-violet-600">Avg Render</p>
+                <p className="text-xl font-bold text-violet-700">{avgRenderSec}s</p>
               </div>
-              <TrendingUp className="h-6 w-6 text-violet-400/30" />
+              <TrendingUp className="h-6 w-6 text-violet-300" />
             </div>
           </CardContent>
         </Card>
@@ -182,38 +182,38 @@ export default async function AdminDashboard() {
       {/* Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Reports */}
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-white">Recent Reports</CardTitle>
-              <Link href="/admin/reports" className="text-sm text-violet-400 hover:text-violet-300">
+              <CardTitle className="text-slate-900">Recent Reports</CardTitle>
+              <Link href="/admin/reports" className="text-sm text-violet-600 hover:text-violet-700 font-medium">
                 View all →
               </Link>
             </div>
           </CardHeader>
           <CardContent>
             {recentReports.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No reports yet</p>
+              <p className="text-slate-400 text-center py-8">No reports yet</p>
             ) : (
               <Table>
                 <TableHeader>
-                  <TableRow className="border-gray-800 hover:bg-transparent">
-                    <TableHead className="text-gray-400">Account</TableHead>
-                    <TableHead className="text-gray-400">Type</TableHead>
-                    <TableHead className="text-gray-400">Status</TableHead>
+                  <TableRow className="border-slate-200 hover:bg-transparent">
+                    <TableHead className="text-slate-500">Account</TableHead>
+                    <TableHead className="text-slate-500">Type</TableHead>
+                    <TableHead className="text-slate-500">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {recentReports.map((report: any) => (
-                    <TableRow key={report.id} className="border-gray-800">
-                      <TableCell className="text-gray-300">{report.account_name}</TableCell>
-                      <TableCell className="text-gray-400">{report.report_type}</TableCell>
+                    <TableRow key={report.id} className="border-slate-100">
+                      <TableCell className="text-slate-700">{report.account_name}</TableCell>
+                      <TableCell className="text-slate-500">{report.report_type}</TableCell>
                       <TableCell>
                         <Badge className={
-                          report.status === 'completed' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
-                          report.status === 'failed' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
-                          report.status === 'processing' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
-                          'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                          report.status === 'completed' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                          report.status === 'failed' ? 'bg-red-100 text-red-700 border-red-200' :
+                          report.status === 'processing' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                          'bg-amber-100 text-amber-700 border-amber-200'
                         }>
                           {report.status}
                         </Badge>
@@ -227,42 +227,42 @@ export default async function AdminDashboard() {
         </Card>
 
         {/* Recent Accounts */}
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-white">Recent Accounts</CardTitle>
-              <Link href="/admin/accounts" className="text-sm text-violet-400 hover:text-violet-300">
+              <CardTitle className="text-slate-900">Recent Accounts</CardTitle>
+              <Link href="/admin/accounts" className="text-sm text-violet-600 hover:text-violet-700 font-medium">
                 View all →
               </Link>
             </div>
           </CardHeader>
           <CardContent>
             {recentAccounts.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No accounts yet</p>
+              <p className="text-slate-400 text-center py-8">No accounts yet</p>
             ) : (
               <Table>
                 <TableHeader>
-                  <TableRow className="border-gray-800 hover:bg-transparent">
-                    <TableHead className="text-gray-400">Name</TableHead>
-                    <TableHead className="text-gray-400">Plan</TableHead>
-                    <TableHead className="text-gray-400">Reports</TableHead>
+                  <TableRow className="border-slate-200 hover:bg-transparent">
+                    <TableHead className="text-slate-500">Name</TableHead>
+                    <TableHead className="text-slate-500">Plan</TableHead>
+                    <TableHead className="text-slate-500">Reports</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {recentAccounts.map((account: any) => (
-                    <TableRow key={account.account_id} className="border-gray-800">
+                    <TableRow key={account.account_id} className="border-slate-100">
                       <TableCell>
                         <div>
-                          <p className="text-gray-300 font-medium">{account.name}</p>
-                          <p className="text-xs text-gray-500">{account.slug}</p>
+                          <p className="text-slate-700 font-medium">{account.name}</p>
+                          <p className="text-xs text-slate-400">{account.slug}</p>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="border-gray-700 text-gray-400">
+                        <Badge variant="outline" className="border-slate-300 text-slate-600">
                           {account.plan_slug}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-gray-400">{account.reports_this_month}</TableCell>
+                      <TableCell className="text-slate-600">{account.reports_this_month}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -274,35 +274,35 @@ export default async function AdminDashboard() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-violet-600/20 to-purple-600/20 border-violet-500/30">
+        <Card className="bg-gradient-to-br from-violet-500 to-purple-600 border-0 shadow-lg">
           <CardContent className="pt-6">
-            <p className="text-sm text-violet-300">Active Schedules</p>
+            <p className="text-sm text-violet-100">Active Schedules</p>
             <p className="text-2xl font-bold text-white mt-1">{m.schedules_active || 0}</p>
-            <p className="text-xs text-violet-400 mt-1">of {m.schedules_total || 0} total</p>
+            <p className="text-xs text-violet-200 mt-1">of {m.schedules_total || 0} total</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-blue-600/20 to-cyan-600/20 border-blue-500/30">
+        <Card className="bg-gradient-to-br from-blue-500 to-cyan-600 border-0 shadow-lg">
           <CardContent className="pt-6">
-            <p className="text-sm text-blue-300">Emails (24h)</p>
+            <p className="text-sm text-blue-100">Emails (24h)</p>
             <p className="text-2xl font-bold text-white mt-1">{m.emails_24h || 0}</p>
-            <p className="text-xs text-blue-400 mt-1">sent today</p>
+            <p className="text-xs text-blue-200 mt-1">sent today</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-600/20 to-emerald-600/20 border-green-500/30">
+        <Card className="bg-gradient-to-br from-emerald-500 to-teal-600 border-0 shadow-lg">
           <CardContent className="pt-6">
-            <p className="text-sm text-green-300">Queue Depth</p>
+            <p className="text-sm text-emerald-100">Queue Depth</p>
             <p className="text-2xl font-bold text-white mt-1">{m.queue_depth || 0}</p>
-            <p className="text-xs text-green-400 mt-1">pending jobs</p>
+            <p className="text-xs text-emerald-200 mt-1">pending jobs</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-orange-600/20 to-amber-600/20 border-orange-500/30">
+        <Card className="bg-gradient-to-br from-orange-500 to-amber-600 border-0 shadow-lg">
           <CardContent className="pt-6">
-            <p className="text-sm text-orange-300">Avg Processing</p>
+            <p className="text-sm text-orange-100">Avg Processing</p>
             <p className="text-2xl font-bold text-white mt-1">{m.avg_processing_ms_7d || 0}ms</p>
-            <p className="text-xs text-orange-400 mt-1">last 7 days</p>
+            <p className="text-xs text-orange-200 mt-1">last 7 days</p>
           </CardContent>
         </Card>
       </div>

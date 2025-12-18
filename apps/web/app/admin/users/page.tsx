@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -21,24 +21,17 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
   Users,
   Search,
-  MoreHorizontal,
   Mail,
   UserCheck,
   UserX,
-  Shield,
   Loader2,
   RefreshCw,
   CheckCircle,
   XCircle,
+  Shield,
+  Send,
 } from "lucide-react"
 
 interface User {
@@ -149,40 +142,91 @@ export default function UsersPage() {
     return `${Math.floor(days / 30)} months ago`
   }
 
+  // Calculate stats
+  const activeUsers = users.filter(u => u.is_active).length
+  const verifiedUsers = users.filter(u => u.email_verified).length
+  const adminUsers = users.filter(u => u.role === 'ADMIN' || u.role === 'OWNER').length
+
   return (
     <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">Users</h1>
-          <p className="text-gray-400 mt-1">Manage all users across the platform</p>
+          <h1 className="text-3xl font-bold text-slate-900">Users</h1>
+          <p className="text-slate-500 mt-1">Manage all users across the platform</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="border-gray-700 text-gray-300 text-lg px-4 py-2">
-            <Users className="h-4 w-4 mr-2" />
-            {total} total
-          </Badge>
-        </div>
+        <Badge variant="outline" className="border-slate-300 text-slate-700 text-lg px-4 py-2">
+          <Users className="h-4 w-4 mr-2" />
+          {total} total
+        </Badge>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-white border-slate-200 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-500">Total Users</p>
+                <p className="text-2xl font-bold text-slate-900">{total}</p>
+              </div>
+              <Users className="h-8 w-8 text-slate-200" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white border-slate-200 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-500">Active Users</p>
+                <p className="text-2xl font-bold text-emerald-600">{activeUsers}</p>
+              </div>
+              <UserCheck className="h-8 w-8 text-emerald-200" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white border-slate-200 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-500">Verified</p>
+                <p className="text-2xl font-bold text-blue-600">{verifiedUsers}</p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-blue-200" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white border-slate-200 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-500">Admins/Owners</p>
+                <p className="text-2xl font-bold text-violet-600">{adminUsers}</p>
+              </div>
+              <Shield className="h-8 w-8 text-violet-200" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
-      <Card className="bg-gray-900 border-gray-800">
+      <Card className="bg-white border-slate-200 shadow-sm">
         <CardContent className="pt-6">
           <div className="flex flex-wrap gap-4">
             <div className="relative flex-1 min-w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by email or name..."
-                className="pl-10 bg-gray-800 border-gray-700 text-white"
+                className="pl-10 bg-white border-slate-300 text-slate-900"
               />
             </div>
             <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-40 bg-gray-800 border-gray-700 text-white">
+              <SelectTrigger className="w-40 bg-white border-slate-300 text-slate-900">
                 <SelectValue placeholder="Role" />
               </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700">
+              <SelectContent className="bg-white border-slate-200">
                 <SelectItem value="all">All Roles</SelectItem>
                 <SelectItem value="OWNER">Owner</SelectItem>
                 <SelectItem value="ADMIN">Admin</SelectItem>
@@ -190,10 +234,10 @@ export default function UsersPage() {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40 bg-gray-800 border-gray-700 text-white">
+              <SelectTrigger className="w-40 bg-white border-slate-300 text-slate-900">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700">
+              <SelectContent className="bg-white border-slate-200">
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
@@ -202,7 +246,7 @@ export default function UsersPage() {
             <Button
               variant="outline"
               onClick={fetchUsers}
-              className="border-gray-700 text-gray-300 hover:bg-gray-800"
+              className="border-slate-300 text-slate-600 hover:bg-slate-50"
             >
               <RefreshCw className="h-4 w-4" />
             </Button>
@@ -211,48 +255,48 @@ export default function UsersPage() {
       </Card>
 
       {/* Users Table */}
-      <Card className="bg-gray-900 border-gray-800">
+      <Card className="bg-white border-slate-200 shadow-sm">
         <CardContent className="pt-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
             </div>
           ) : users.length === 0 ? (
             <div className="text-center py-12">
-              <Users className="h-12 w-12 mx-auto text-gray-600 mb-4" />
-              <p className="text-gray-400">No users found</p>
+              <Users className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+              <p className="text-slate-500">No users found</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-gray-800 hover:bg-transparent">
-                  <TableHead className="text-gray-400">User</TableHead>
-                  <TableHead className="text-gray-400">Account</TableHead>
-                  <TableHead className="text-gray-400">Role</TableHead>
-                  <TableHead className="text-gray-400">Status</TableHead>
-                  <TableHead className="text-gray-400">Verified</TableHead>
-                  <TableHead className="text-gray-400">Last Login</TableHead>
-                  <TableHead className="text-gray-400">Created</TableHead>
-                  <TableHead className="text-gray-400 w-16"></TableHead>
+                <TableRow className="border-slate-200 hover:bg-transparent">
+                  <TableHead className="text-slate-500">User</TableHead>
+                  <TableHead className="text-slate-500">Account</TableHead>
+                  <TableHead className="text-slate-500">Role</TableHead>
+                  <TableHead className="text-slate-500">Status</TableHead>
+                  <TableHead className="text-slate-500">Verified</TableHead>
+                  <TableHead className="text-slate-500">Last Login</TableHead>
+                  <TableHead className="text-slate-500">Created</TableHead>
+                  <TableHead className="text-slate-500 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.map((user) => (
-                  <TableRow key={user.user_id} className="border-gray-800">
+                  <TableRow key={user.user_id} className="border-slate-100">
                     <TableCell>
                       <div>
-                        <p className="text-white font-medium">
+                        <p className="text-slate-900 font-medium">
                           {user.first_name || user.last_name
                             ? `${user.first_name || ''} ${user.last_name || ''}`.trim()
                             : '-'}
                         </p>
-                        <p className="text-sm text-gray-500">{user.email}</p>
+                        <p className="text-sm text-slate-400">{user.email}</p>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div>
-                        <p className="text-gray-300">{user.account_name}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-slate-700">{user.account_name}</p>
+                        <p className="text-xs text-slate-400">
                           {user.account_type === "INDUSTRY_AFFILIATE" ? "Affiliate" : "Regular"}
                         </p>
                       </div>
@@ -261,88 +305,120 @@ export default function UsersPage() {
                       <Badge
                         variant="outline"
                         className={
-                          user.role === "OWNER" ? "border-violet-500/50 text-violet-400" :
-                          user.role === "ADMIN" ? "border-blue-500/50 text-blue-400" :
-                          "border-gray-700 text-gray-400"
+                          user.role === "OWNER" ? "border-violet-300 text-violet-700 bg-violet-50" :
+                          user.role === "ADMIN" ? "border-blue-300 text-blue-700 bg-blue-50" :
+                          "border-slate-300 text-slate-600"
                         }
                       >
                         {user.role || "Member"}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge className={user.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}>
+                      <Badge className={user.is_active ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}>
                         {user.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       {user.email_verified ? (
-                        <CheckCircle className="h-4 w-4 text-green-400" />
+                        <CheckCircle className="h-5 w-5 text-emerald-500" />
                       ) : (
-                        <XCircle className="h-4 w-4 text-gray-600" />
+                        <XCircle className="h-5 w-5 text-slate-300" />
                       )}
                     </TableCell>
-                    <TableCell className="text-gray-400 text-sm">
+                    <TableCell className="text-slate-500 text-sm">
                       {formatTimeAgo(user.last_login_at)}
                     </TableCell>
-                    <TableCell className="text-gray-500 text-sm">
+                    <TableCell className="text-slate-400 text-sm">
                       {formatDate(user.created_at)}
                     </TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
-                            {actionLoading === user.user_id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
+                      <div className="flex items-center justify-end gap-1">
+                        {actionLoading === user.user_id ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+                        ) : (
+                          <>
+                            {/* Toggle Active/Inactive */}
+                            {user.is_active ? (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => updateUser(user.user_id, { is_active: false })}
+                                className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                title="Deactivate user"
+                              >
+                                <UserX className="h-4 w-4" />
+                              </Button>
                             ) : (
-                              <MoreHorizontal className="h-4 w-4" />
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => updateUser(user.user_id, { is_active: true })}
+                                className="h-8 px-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                title="Activate user"
+                              >
+                                <UserCheck className="h-4 w-4" />
+                              </Button>
                             )}
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700">
-                          {user.is_active ? (
-                            <DropdownMenuItem
-                              onClick={() => updateUser(user.user_id, { is_active: false })}
-                              className="text-red-400 focus:text-red-400"
-                            >
-                              <UserX className="h-4 w-4 mr-2" />
-                              Deactivate
-                            </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem
-                              onClick={() => updateUser(user.user_id, { is_active: true })}
-                              className="text-green-400 focus:text-green-400"
-                            >
-                              <UserCheck className="h-4 w-4 mr-2" />
-                              Activate
-                            </DropdownMenuItem>
-                          )}
-                          {!user.email_verified && (
-                            <>
-                              <DropdownMenuSeparator className="bg-gray-700" />
-                              <DropdownMenuItem
+
+                            {/* Verify Email (only if not verified) */}
+                            {!user.email_verified && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
                                 onClick={() => updateUser(user.user_id, { email_verified: true })}
-                                className="text-gray-300"
+                                className="h-8 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                title="Mark as verified"
                               >
-                                <CheckCircle className="h-4 w-4 mr-2" />
-                                Mark Verified
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
+                                <CheckCircle className="h-4 w-4" />
+                              </Button>
+                            )}
+
+                            {/* Resend Invite (only if not verified) */}
+                            {!user.email_verified && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
                                 onClick={() => resendInvite(user.user_id)}
-                                className="text-gray-300"
+                                className="h-8 px-2 text-slate-600 hover:text-slate-700 hover:bg-slate-100"
+                                title="Resend invite email"
                               >
-                                <Mail className="h-4 w-4 mr-2" />
-                                Resend Invite
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                                <Send className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Legend */}
+      <Card className="bg-slate-50 border-slate-200">
+        <CardContent className="py-4">
+          <p className="text-sm text-slate-500 mb-2 font-medium">Action Legend:</p>
+          <div className="flex flex-wrap gap-6 text-sm">
+            <div className="flex items-center gap-2">
+              <UserCheck className="h-4 w-4 text-emerald-600" />
+              <span className="text-slate-600">Activate User</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <UserX className="h-4 w-4 text-red-600" />
+              <span className="text-slate-600">Deactivate User</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-blue-600" />
+              <span className="text-slate-600">Mark Email Verified</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Send className="h-4 w-4 text-slate-600" />
+              <span className="text-slate-600">Resend Invite</span>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

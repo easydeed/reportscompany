@@ -29,9 +29,6 @@ import {
   Plus,
   Save,
   Loader2,
-  Users,
-  FileText,
-  DollarSign,
   Check,
   X,
 } from "lucide-react"
@@ -138,7 +135,7 @@ export default function PlansPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
       </div>
     )
   }
@@ -148,61 +145,61 @@ export default function PlansPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">Plans & Pricing</h1>
-          <p className="text-gray-400 mt-1">Manage subscription plans and pricing tiers</p>
+          <h1 className="text-3xl font-bold text-slate-900">Plans & Pricing</h1>
+          <p className="text-slate-500 mt-1">Manage subscription plans and pricing tiers</p>
         </div>
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
-            <Button className="bg-violet-600 hover:bg-violet-700">
+            <Button className="bg-violet-600 hover:bg-violet-700 text-white">
               <Plus className="h-4 w-4 mr-2" />
               Create Plan
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-gray-900 border-gray-800">
+          <DialogContent className="bg-white border-slate-200">
             <DialogHeader>
-              <DialogTitle className="text-white">Create New Plan</DialogTitle>
-              <DialogDescription className="text-gray-400">
+              <DialogTitle className="text-slate-900">Create New Plan</DialogTitle>
+              <DialogDescription className="text-slate-500">
                 Add a new subscription plan to your platform
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 mt-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-gray-300">Plan Slug</Label>
+                  <Label className="text-slate-700">Plan Slug</Label>
                   <Input
                     value={newPlan.plan_slug}
                     onChange={(e) => setNewPlan({ ...newPlan, plan_slug: e.target.value })}
                     placeholder="e.g., enterprise"
-                    className="bg-gray-800 border-gray-700 text-white"
+                    className="bg-white border-slate-300 text-slate-900"
                   />
                 </div>
                 <div>
-                  <Label className="text-gray-300">Plan Name</Label>
+                  <Label className="text-slate-700">Plan Name</Label>
                   <Input
                     value={newPlan.plan_name}
                     onChange={(e) => setNewPlan({ ...newPlan, plan_name: e.target.value })}
                     placeholder="e.g., Enterprise"
-                    className="bg-gray-800 border-gray-700 text-white"
+                    className="bg-white border-slate-300 text-slate-900"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-gray-300">Monthly Report Limit</Label>
+                  <Label className="text-slate-700">Monthly Report Limit</Label>
                   <Input
                     type="number"
                     value={newPlan.monthly_report_limit}
                     onChange={(e) => setNewPlan({ ...newPlan, monthly_report_limit: parseInt(e.target.value) || 0 })}
-                    className="bg-gray-800 border-gray-700 text-white"
+                    className="bg-white border-slate-300 text-slate-900"
                   />
                 </div>
                 <div>
-                  <Label className="text-gray-300">Overage Price (cents)</Label>
+                  <Label className="text-slate-700">Overage Price (cents)</Label>
                   <Input
                     type="number"
                     value={newPlan.overage_price_cents}
                     onChange={(e) => setNewPlan({ ...newPlan, overage_price_cents: parseInt(e.target.value) || 0 })}
-                    className="bg-gray-800 border-gray-700 text-white"
+                    className="bg-white border-slate-300 text-slate-900"
                   />
                 </div>
               </div>
@@ -211,21 +208,21 @@ export default function PlansPage() {
                   checked={newPlan.allow_overage}
                   onCheckedChange={(checked) => setNewPlan({ ...newPlan, allow_overage: checked })}
                 />
-                <Label className="text-gray-300">Allow overage (pay per extra report)</Label>
+                <Label className="text-slate-700">Allow overage (pay per extra report)</Label>
               </div>
               <div>
-                <Label className="text-gray-300">Description</Label>
+                <Label className="text-slate-700">Description</Label>
                 <Input
                   value={newPlan.description}
                   onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })}
                   placeholder="Brief description of the plan"
-                  className="bg-gray-800 border-gray-700 text-white"
+                  className="bg-white border-slate-300 text-slate-900"
                 />
               </div>
               <Button
                 onClick={createPlan}
                 disabled={saving === "new" || !newPlan.plan_slug || !newPlan.plan_name}
-                className="w-full bg-violet-600 hover:bg-violet-700"
+                className="w-full bg-violet-600 hover:bg-violet-700 text-white"
               >
                 {saving === "new" ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -242,30 +239,30 @@ export default function PlansPage() {
       {/* Plans Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {plans.map((plan) => (
-          <Card key={plan.plan_slug} className={`bg-gray-900 border-gray-800 ${!plan.is_active ? 'opacity-50' : ''}`}>
+          <Card key={plan.plan_slug} className={`bg-white border-slate-200 shadow-sm ${!plan.is_active ? 'opacity-50' : ''}`}>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg text-white">{plan.plan_name}</CardTitle>
-                <Badge variant={plan.is_active ? "default" : "secondary"} className={plan.is_active ? "bg-green-500/20 text-green-400" : ""}>
+                <CardTitle className="text-lg text-slate-900">{plan.plan_name}</CardTitle>
+                <Badge className={plan.is_active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}>
                   {plan.is_active ? "Active" : "Inactive"}
                 </Badge>
               </div>
-              <CardDescription className="text-gray-500">{plan.plan_slug}</CardDescription>
+              <CardDescription className="text-slate-400">{plan.plan_slug}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400 text-sm">Reports/mo</span>
-                  <span className="text-white font-bold">{plan.monthly_report_limit}</span>
+                  <span className="text-slate-500 text-sm">Reports/mo</span>
+                  <span className="text-slate-900 font-bold">{plan.monthly_report_limit}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400 text-sm">Accounts</span>
-                  <span className="text-violet-400 font-medium">{plan.account_count}</span>
+                  <span className="text-slate-500 text-sm">Accounts</span>
+                  <span className="text-violet-600 font-medium">{plan.account_count}</span>
                 </div>
                 {plan.allow_overage && (
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-400 text-sm">Overage</span>
-                    <span className="text-green-400 font-medium">${(plan.overage_price_cents / 100).toFixed(2)}/ea</span>
+                    <span className="text-slate-500 text-sm">Overage</span>
+                    <span className="text-emerald-600 font-medium">${(plan.overage_price_cents / 100).toFixed(2)}/ea</span>
                   </div>
                 )}
               </div>
@@ -275,34 +272,34 @@ export default function PlansPage() {
       </div>
 
       {/* Plans Table */}
-      <Card className="bg-gray-900 border-gray-800">
+      <Card className="bg-white border-slate-200 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-white">Plan Configuration</CardTitle>
-          <CardDescription className="text-gray-400">
+          <CardTitle className="text-slate-900">Plan Configuration</CardTitle>
+          <CardDescription className="text-slate-500">
             Edit plan limits, pricing, and availability
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow className="border-gray-800 hover:bg-transparent">
-                <TableHead className="text-gray-400">Plan</TableHead>
-                <TableHead className="text-gray-400">Reports/Month</TableHead>
-                <TableHead className="text-gray-400">Overage</TableHead>
-                <TableHead className="text-gray-400">Overage Price</TableHead>
-                <TableHead className="text-gray-400">Stripe ID</TableHead>
-                <TableHead className="text-gray-400">Status</TableHead>
-                <TableHead className="text-gray-400">Accounts</TableHead>
-                <TableHead className="text-gray-400 w-20">Actions</TableHead>
+              <TableRow className="border-slate-200 hover:bg-transparent">
+                <TableHead className="text-slate-500">Plan</TableHead>
+                <TableHead className="text-slate-500">Reports/Month</TableHead>
+                <TableHead className="text-slate-500">Overage</TableHead>
+                <TableHead className="text-slate-500">Overage Price</TableHead>
+                <TableHead className="text-slate-500">Stripe ID</TableHead>
+                <TableHead className="text-slate-500">Status</TableHead>
+                <TableHead className="text-slate-500">Accounts</TableHead>
+                <TableHead className="text-slate-500 w-20">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {plans.map((plan) => (
-                <TableRow key={plan.plan_slug} className="border-gray-800">
+                <TableRow key={plan.plan_slug} className="border-slate-100">
                   <TableCell>
                     <div>
-                      <p className="text-white font-medium">{plan.plan_name}</p>
-                      <p className="text-xs text-gray-500">{plan.plan_slug}</p>
+                      <p className="text-slate-900 font-medium">{plan.plan_name}</p>
+                      <p className="text-xs text-slate-400">{plan.plan_slug}</p>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -314,10 +311,10 @@ export default function PlansPage() {
                           ...editingPlan,
                           monthly_report_limit: parseInt(e.target.value) || 0
                         })}
-                        className="w-24 bg-gray-800 border-gray-700 text-white"
+                        className="w-24 bg-white border-slate-300 text-slate-900"
                       />
                     ) : (
-                      <span className="text-gray-300">{plan.monthly_report_limit}</span>
+                      <span className="text-slate-700">{plan.monthly_report_limit}</span>
                     )}
                   </TableCell>
                   <TableCell>
@@ -331,9 +328,9 @@ export default function PlansPage() {
                       />
                     ) : (
                       plan.allow_overage ? (
-                        <Check className="h-4 w-4 text-green-400" />
+                        <Check className="h-4 w-4 text-emerald-500" />
                       ) : (
-                        <X className="h-4 w-4 text-gray-600" />
+                        <X className="h-4 w-4 text-slate-300" />
                       )
                     )}
                   </TableCell>
@@ -346,16 +343,16 @@ export default function PlansPage() {
                           ...editingPlan,
                           overage_price_cents: parseInt(e.target.value) || 0
                         })}
-                        className="w-24 bg-gray-800 border-gray-700 text-white"
+                        className="w-24 bg-white border-slate-300 text-slate-900"
                       />
                     ) : (
-                      <span className="text-gray-300">
+                      <span className="text-slate-700">
                         {plan.overage_price_cents > 0 ? `$${(plan.overage_price_cents / 100).toFixed(2)}` : '-'}
                       </span>
                     )}
                   </TableCell>
                   <TableCell>
-                    <span className="text-xs text-gray-500 font-mono">
+                    <span className="text-xs text-slate-400 font-mono">
                       {plan.stripe_price_id || '-'}
                     </span>
                   </TableCell>
@@ -369,13 +366,13 @@ export default function PlansPage() {
                         })}
                       />
                     ) : (
-                      <Badge className={plan.is_active ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-gray-500/20 text-gray-400"}>
+                      <Badge className={plan.is_active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}>
                         {plan.is_active ? "Active" : "Inactive"}
                       </Badge>
                     )}
                   </TableCell>
                   <TableCell>
-                    <span className="text-violet-400 font-medium">{plan.account_count}</span>
+                    <span className="text-violet-600 font-medium">{plan.account_count}</span>
                   </TableCell>
                   <TableCell>
                     {editingPlan?.plan_slug === plan.plan_slug ? (
@@ -392,7 +389,7 @@ export default function PlansPage() {
                             })
                           }}
                           disabled={saving === plan.plan_slug}
-                          className="text-green-400 hover:text-green-300"
+                          className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
                         >
                           {saving === plan.plan_slug ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -404,7 +401,7 @@ export default function PlansPage() {
                           size="sm"
                           variant="ghost"
                           onClick={() => setEditingPlan(null)}
-                          className="text-gray-400 hover:text-gray-300"
+                          className="text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                         >
                           <X className="h-4 w-4" />
                         </Button>
@@ -414,7 +411,7 @@ export default function PlansPage() {
                         size="sm"
                         variant="ghost"
                         onClick={() => setEditingPlan(plan)}
-                        className="text-gray-400 hover:text-white"
+                        className="text-slate-500 hover:text-slate-900 hover:bg-slate-100"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>

@@ -32,7 +32,6 @@ import {
   Loader2,
   RefreshCw,
   Settings,
-  ExternalLink,
 } from "lucide-react"
 
 interface Affiliate {
@@ -125,81 +124,81 @@ export default function AffiliatesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">Title Companies</h1>
-          <p className="text-gray-400 mt-1">Manage affiliate title companies and their agents</p>
+          <h1 className="text-3xl font-bold text-slate-900">Title Companies</h1>
+          <p className="text-slate-500 mt-1">Manage affiliate title companies and their agents</p>
         </div>
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
-            <Button className="bg-violet-600 hover:bg-violet-700">
+            <Button className="bg-violet-600 hover:bg-violet-700 text-white">
               <Plus className="h-4 w-4 mr-2" />
               Add Title Company
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-gray-900 border-gray-800">
+          <DialogContent className="bg-white border-slate-200">
             <DialogHeader>
-              <DialogTitle className="text-white">Create Title Company</DialogTitle>
-              <DialogDescription className="text-gray-400">
+              <DialogTitle className="text-slate-900">Create Title Company</DialogTitle>
+              <DialogDescription className="text-slate-500">
                 Add a new affiliate title company to the platform
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 mt-4">
               <div>
-                <Label className="text-gray-300">Company Name</Label>
+                <Label className="text-slate-700">Company Name</Label>
                 <Input
                   value={newAffiliate.company_name}
                   onChange={(e) => setNewAffiliate({ ...newAffiliate, company_name: e.target.value })}
                   placeholder="e.g., Premier Title Services"
-                  className="bg-gray-800 border-gray-700 text-white"
+                  className="bg-white border-slate-300 text-slate-900"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-gray-300">Admin First Name</Label>
+                  <Label className="text-slate-700">Admin First Name</Label>
                   <Input
                     value={newAffiliate.admin_first_name}
                     onChange={(e) => setNewAffiliate({ ...newAffiliate, admin_first_name: e.target.value })}
-                    className="bg-gray-800 border-gray-700 text-white"
+                    className="bg-white border-slate-300 text-slate-900"
                   />
                 </div>
                 <div>
-                  <Label className="text-gray-300">Admin Last Name</Label>
+                  <Label className="text-slate-700">Admin Last Name</Label>
                   <Input
                     value={newAffiliate.admin_last_name}
                     onChange={(e) => setNewAffiliate({ ...newAffiliate, admin_last_name: e.target.value })}
-                    className="bg-gray-800 border-gray-700 text-white"
+                    className="bg-white border-slate-300 text-slate-900"
                   />
                 </div>
               </div>
               <div>
-                <Label className="text-gray-300">Admin Email</Label>
+                <Label className="text-slate-700">Admin Email</Label>
                 <Input
                   type="email"
                   value={newAffiliate.admin_email}
                   onChange={(e) => setNewAffiliate({ ...newAffiliate, admin_email: e.target.value })}
                   placeholder="admin@company.com"
-                  className="bg-gray-800 border-gray-700 text-white"
+                  className="bg-white border-slate-300 text-slate-900"
                 />
               </div>
               <div>
-                <Label className="text-gray-300">Brand Color</Label>
+                <Label className="text-slate-700">Brand Color</Label>
                 <div className="flex items-center gap-2">
                   <Input
                     type="color"
                     value={newAffiliate.primary_color}
                     onChange={(e) => setNewAffiliate({ ...newAffiliate, primary_color: e.target.value })}
-                    className="w-16 h-10 p-1 bg-gray-800 border-gray-700"
+                    className="w-16 h-10 p-1 bg-white border-slate-300"
                   />
                   <Input
                     value={newAffiliate.primary_color}
                     onChange={(e) => setNewAffiliate({ ...newAffiliate, primary_color: e.target.value })}
-                    className="flex-1 bg-gray-800 border-gray-700 text-white"
+                    className="flex-1 bg-white border-slate-300 text-slate-900"
                   />
                 </div>
               </div>
               <Button
                 onClick={createAffiliate}
                 disabled={creating || !newAffiliate.company_name || !newAffiliate.admin_email}
-                className="w-full bg-violet-600 hover:bg-violet-700"
+                className="w-full bg-violet-600 hover:bg-violet-700 text-white"
               >
                 {creating ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -215,45 +214,45 @@ export default function AffiliatesPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Title Companies</p>
-                <p className="text-2xl font-bold text-white">{affiliates.length}</p>
+                <p className="text-sm text-slate-500">Title Companies</p>
+                <p className="text-2xl font-bold text-slate-900">{affiliates.length}</p>
               </div>
-              <Building2 className="h-8 w-8 text-violet-400/30" />
+              <Building2 className="h-8 w-8 text-violet-200" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Total Agents</p>
-                <p className="text-2xl font-bold text-white">{totalAgents}</p>
+                <p className="text-sm text-slate-500">Total Agents</p>
+                <p className="text-2xl font-bold text-slate-900">{totalAgents}</p>
               </div>
-              <Users className="h-8 w-8 text-blue-400/30" />
+              <Users className="h-8 w-8 text-blue-200" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Reports This Month</p>
-                <p className="text-2xl font-bold text-white">{totalReports}</p>
+                <p className="text-sm text-slate-500">Reports This Month</p>
+                <p className="text-2xl font-bold text-slate-900">{totalReports}</p>
               </div>
-              <FileText className="h-8 w-8 text-green-400/30" />
+              <FileText className="h-8 w-8 text-emerald-200" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Avg Agents/Company</p>
-                <p className="text-2xl font-bold text-white">
+                <p className="text-sm text-slate-500">Avg Agents/Company</p>
+                <p className="text-2xl font-bold text-slate-900">
                   {affiliates.length > 0 ? (totalAgents / affiliates.length).toFixed(1) : 0}
                 </p>
               </div>
@@ -263,22 +262,22 @@ export default function AffiliatesPage() {
       </div>
 
       {/* Search */}
-      <Card className="bg-gray-900 border-gray-800">
+      <Card className="bg-white border-slate-200 shadow-sm">
         <CardContent className="pt-6">
           <div className="flex gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by company name..."
-                className="pl-10 bg-gray-800 border-gray-700 text-white"
+                className="pl-10 bg-white border-slate-300 text-slate-900"
               />
             </div>
             <Button
               variant="outline"
               onClick={fetchAffiliates}
-              className="border-gray-700 text-gray-300 hover:bg-gray-800"
+              className="border-slate-300 text-slate-600 hover:bg-slate-50"
             >
               <RefreshCw className="h-4 w-4" />
             </Button>
@@ -287,34 +286,34 @@ export default function AffiliatesPage() {
       </Card>
 
       {/* Affiliates Table */}
-      <Card className="bg-gray-900 border-gray-800">
+      <Card className="bg-white border-slate-200 shadow-sm">
         <CardContent className="pt-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
             </div>
           ) : affiliates.length === 0 ? (
             <div className="text-center py-12">
-              <Building2 className="h-12 w-12 mx-auto text-gray-600 mb-4" />
-              <p className="text-gray-400">No title companies found</p>
+              <Building2 className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+              <p className="text-slate-500">No title companies found</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-gray-800 hover:bg-transparent">
-                  <TableHead className="text-gray-400">Company</TableHead>
-                  <TableHead className="text-gray-400">Brand</TableHead>
-                  <TableHead className="text-gray-400">Plan</TableHead>
-                  <TableHead className="text-gray-400">Agents</TableHead>
-                  <TableHead className="text-gray-400">Reports/Mo</TableHead>
-                  <TableHead className="text-gray-400">Status</TableHead>
-                  <TableHead className="text-gray-400">Created</TableHead>
-                  <TableHead className="text-gray-400 w-16"></TableHead>
+                <TableRow className="border-slate-200 hover:bg-transparent">
+                  <TableHead className="text-slate-500">Company</TableHead>
+                  <TableHead className="text-slate-500">Brand</TableHead>
+                  <TableHead className="text-slate-500">Plan</TableHead>
+                  <TableHead className="text-slate-500">Agents</TableHead>
+                  <TableHead className="text-slate-500">Reports/Mo</TableHead>
+                  <TableHead className="text-slate-500">Status</TableHead>
+                  <TableHead className="text-slate-500">Created</TableHead>
+                  <TableHead className="text-slate-500 w-16"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {affiliates.map((affiliate) => (
-                  <TableRow key={affiliate.account_id} className="border-gray-800">
+                  <TableRow key={affiliate.account_id} className="border-slate-100">
                     <TableCell>
                       <div className="flex items-center gap-3">
                         {affiliate.logo_url ? (
@@ -332,38 +331,38 @@ export default function AffiliatesPage() {
                           </div>
                         )}
                         <div>
-                          <p className="text-white font-medium">{affiliate.name}</p>
-                          <p className="text-xs text-gray-500">{affiliate.slug}</p>
+                          <p className="text-slate-900 font-medium">{affiliate.name}</p>
+                          <p className="text-xs text-slate-400">{affiliate.slug}</p>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div
-                          className="w-4 h-4 rounded-full"
+                          className="w-4 h-4 rounded-full border border-slate-200"
                           style={{ backgroundColor: affiliate.primary_color || "#7C3AED" }}
                         />
-                        <span className="text-xs text-gray-500">{affiliate.primary_color}</span>
+                        <span className="text-xs text-slate-400">{affiliate.primary_color}</span>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="border-violet-500/50 text-violet-400">
+                      <Badge variant="outline" className="border-violet-300 text-violet-700 bg-violet-50">
                         {affiliate.plan_slug}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-gray-300">{affiliate.agent_count}</TableCell>
-                    <TableCell className="text-gray-300">{affiliate.reports_this_month}</TableCell>
+                    <TableCell className="text-slate-700">{affiliate.agent_count}</TableCell>
+                    <TableCell className="text-slate-700">{affiliate.reports_this_month}</TableCell>
                     <TableCell>
-                      <Badge className={affiliate.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}>
+                      <Badge className={affiliate.is_active ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}>
                         {affiliate.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-gray-500 text-sm">
+                    <TableCell className="text-slate-400 text-sm">
                       {formatDate(affiliate.created_at)}
                     </TableCell>
                     <TableCell>
                       <Link href={`/admin/affiliates/${affiliate.account_id}`}>
-                        <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+                        <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-900 hover:bg-slate-100">
                           <Settings className="h-4 w-4" />
                         </Button>
                       </Link>

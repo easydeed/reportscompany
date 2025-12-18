@@ -95,21 +95,21 @@ export default function ReportsPage() {
 
   const statusIcon = (status: string) => {
     switch (status) {
-      case "completed": return <CheckCircle className="h-4 w-4 text-green-400" />
-      case "failed": return <XCircle className="h-4 w-4 text-red-400" />
-      case "processing": return <Activity className="h-4 w-4 text-blue-400" />
-      case "pending": return <Clock className="h-4 w-4 text-yellow-400" />
-      default: return <Clock className="h-4 w-4 text-gray-400" />
+      case "completed": return <CheckCircle className="h-4 w-4 text-emerald-500" />
+      case "failed": return <XCircle className="h-4 w-4 text-red-500" />
+      case "processing": return <Activity className="h-4 w-4 text-blue-500" />
+      case "pending": return <Clock className="h-4 w-4 text-amber-500" />
+      default: return <Clock className="h-4 w-4 text-slate-400" />
     }
   }
 
   const statusColor = (status: string) => {
     switch (status) {
-      case "completed": return "bg-green-500/20 text-green-400 border-green-500/30"
-      case "failed": return "bg-red-500/20 text-red-400 border-red-500/30"
-      case "processing": return "bg-blue-500/20 text-blue-400 border-blue-500/30"
-      case "pending": return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-      default: return "bg-gray-500/20 text-gray-400"
+      case "completed": return "bg-emerald-100 text-emerald-700 border-emerald-200"
+      case "failed": return "bg-red-100 text-red-700 border-red-200"
+      case "processing": return "bg-blue-100 text-blue-700 border-blue-200"
+      case "pending": return "bg-amber-100 text-amber-700 border-amber-200"
+      default: return "bg-slate-100 text-slate-600"
     }
   }
 
@@ -127,13 +127,13 @@ export default function ReportsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">Reports</h1>
-          <p className="text-gray-400 mt-1">Monitor all report generations across the platform</p>
+          <h1 className="text-3xl font-bold text-slate-900">Reports</h1>
+          <p className="text-slate-500 mt-1">Monitor all report generations across the platform</p>
         </div>
         <Button
           variant="outline"
           onClick={fetchReports}
-          className="border-gray-700 text-gray-300 hover:bg-gray-800"
+          className="border-slate-300 text-slate-600 hover:bg-slate-50"
         >
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
@@ -142,72 +142,72 @@ export default function ReportsPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-5 gap-4">
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Total</p>
-                <p className="text-2xl font-bold text-white">{stats.total}</p>
+                <p className="text-sm text-slate-500">Total</p>
+                <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
               </div>
-              <FileText className="h-6 w-6 text-gray-500" />
+              <FileText className="h-6 w-6 text-slate-300" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Completed</p>
-                <p className="text-2xl font-bold text-green-400">{stats.completed}</p>
+                <p className="text-sm text-slate-500">Completed</p>
+                <p className="text-2xl font-bold text-emerald-600">{stats.completed}</p>
               </div>
-              <CheckCircle className="h-6 w-6 text-green-400/30" />
+              <CheckCircle className="h-6 w-6 text-emerald-200" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Processing</p>
-                <p className="text-2xl font-bold text-blue-400">{stats.processing}</p>
+                <p className="text-sm text-slate-500">Processing</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.processing}</p>
               </div>
-              <Activity className="h-6 w-6 text-blue-400/30" />
+              <Activity className="h-6 w-6 text-blue-200" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Pending</p>
-                <p className="text-2xl font-bold text-yellow-400">{stats.pending}</p>
+                <p className="text-sm text-slate-500">Pending</p>
+                <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
               </div>
-              <Clock className="h-6 w-6 text-yellow-400/30" />
+              <Clock className="h-6 w-6 text-amber-200" />
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Failed</p>
-                <p className="text-2xl font-bold text-red-400">{stats.failed}</p>
+                <p className="text-sm text-slate-500">Failed</p>
+                <p className="text-2xl font-bold text-red-600">{stats.failed}</p>
               </div>
-              <XCircle className="h-6 w-6 text-red-400/30" />
+              <XCircle className="h-6 w-6 text-red-200" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters */}
-      <Card className="bg-gray-900 border-gray-800">
+      <Card className="bg-white border-slate-200 shadow-sm">
         <CardContent className="pt-6">
           <div className="flex gap-4">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40 bg-gray-800 border-gray-700 text-white">
+              <SelectTrigger className="w-40 bg-white border-slate-300 text-slate-900">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700">
+              <SelectContent className="bg-white border-slate-200">
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
                 <SelectItem value="processing">Processing</SelectItem>
@@ -216,10 +216,10 @@ export default function ReportsPage() {
               </SelectContent>
             </Select>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-48 bg-gray-800 border-gray-700 text-white">
+              <SelectTrigger className="w-48 bg-white border-slate-300 text-slate-900">
                 <SelectValue placeholder="Report Type" />
               </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700">
+              <SelectContent className="bg-white border-slate-200">
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="market_snapshot">Market Snapshot</SelectItem>
                 <SelectItem value="new_listings">New Listings</SelectItem>
@@ -235,37 +235,37 @@ export default function ReportsPage() {
       </Card>
 
       {/* Reports Table */}
-      <Card className="bg-gray-900 border-gray-800">
+      <Card className="bg-white border-slate-200 shadow-sm">
         <CardContent className="pt-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
             </div>
           ) : reports.length === 0 ? (
             <div className="text-center py-12">
-              <FileText className="h-12 w-12 mx-auto text-gray-600 mb-4" />
-              <p className="text-gray-400">No reports found</p>
+              <FileText className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+              <p className="text-slate-500">No reports found</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-gray-800 hover:bg-transparent">
-                  <TableHead className="text-gray-400">Account</TableHead>
-                  <TableHead className="text-gray-400">Type</TableHead>
-                  <TableHead className="text-gray-400">Status</TableHead>
-                  <TableHead className="text-gray-400">Duration</TableHead>
-                  <TableHead className="text-gray-400">Created</TableHead>
-                  <TableHead className="text-gray-400">Error</TableHead>
-                  <TableHead className="text-gray-400 w-16">PDF</TableHead>
+                <TableRow className="border-slate-200 hover:bg-transparent">
+                  <TableHead className="text-slate-500">Account</TableHead>
+                  <TableHead className="text-slate-500">Type</TableHead>
+                  <TableHead className="text-slate-500">Status</TableHead>
+                  <TableHead className="text-slate-500">Duration</TableHead>
+                  <TableHead className="text-slate-500">Created</TableHead>
+                  <TableHead className="text-slate-500">Error</TableHead>
+                  <TableHead className="text-slate-500 w-16">PDF</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {reports.map((report) => (
-                  <TableRow key={report.id} className="border-gray-800">
+                  <TableRow key={report.id} className="border-slate-100">
                     <TableCell>
-                      <p className="text-white font-medium">{report.account_name}</p>
+                      <p className="text-slate-900 font-medium">{report.account_name}</p>
                     </TableCell>
-                    <TableCell className="text-gray-400">
+                    <TableCell className="text-slate-500">
                       {report.report_type.replace(/_/g, ' ')}
                     </TableCell>
                     <TableCell>
@@ -276,15 +276,15 @@ export default function ReportsPage() {
                         </Badge>
                       </div>
                     </TableCell>
-                    <TableCell className="text-gray-300 font-mono">
+                    <TableCell className="text-slate-600 font-mono">
                       {report.duration_ms ? `${(report.duration_ms / 1000).toFixed(1)}s` : "-"}
                     </TableCell>
-                    <TableCell className="text-gray-500">
+                    <TableCell className="text-slate-400">
                       {formatTimeAgo(report.created_at)}
                     </TableCell>
                     <TableCell>
                       {report.error && (
-                        <div className="flex items-center gap-1 text-red-400" title={report.error}>
+                        <div className="flex items-center gap-1 text-red-600" title={report.error}>
                           <AlertTriangle className="h-4 w-4" />
                           <span className="text-xs truncate max-w-32">{report.error}</span>
                         </div>
@@ -296,7 +296,7 @@ export default function ReportsPage() {
                           href={report.pdf_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-violet-400 hover:text-violet-300"
+                          className="text-violet-600 hover:text-violet-700"
                         >
                           <ExternalLink className="h-4 w-4" />
                         </a>
