@@ -1,3 +1,7 @@
+/**
+ * API Base URL - used for server-side calls only.
+ * Client-side calls go through the proxy to avoid CORS.
+ */
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 function sleep(ms: number) {
@@ -5,16 +9,30 @@ function sleep(ms: number) {
 }
 
 /**
+ * Determines if code is running in browser (client-side).
+ */
+function isBrowser(): boolean {
+  return typeof window !== 'undefined';
+}
+
+/**
  * Client-side API fetch utility.
  * 
- * IMPORTANT: Always includes credentials to send auth cookies (mr_token).
- * Do NOT use X-Demo-Account header in production - it bypasses real auth.
+ * Routes all requests through Next.js proxy routes to avoid CORS issues.
+ * The proxy routes forward requests to the actual API server-side.
+ * 
+ * Path format: /v1/reports -> /api/proxy/v1/reports (browser)
+ *              /v1/reports -> {API_BASE}/v1/reports (server)
  */
 export async function apiFetch(path: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers);
   headers.set("Content-Type", "application/json");
   
-  const url = `${API_BASE}${path}`;
+  // In browser: use proxy routes to avoid CORS
+  // On server: call API directly
+  const url = isBrowser() 
+    ? `/api/proxy${path}`  // Browser: /api/proxy/v1/reports
+    : `${API_BASE}${path}`; // Server: https://api.../v1/reports
 
   let lastErr: any = null;
   for (let i = 0; i < 3; i++) {
@@ -22,7 +40,7 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
       const res = await fetch(url, { 
         ...init, 
         headers, 
-        credentials: 'include', // CRITICAL: Send cookies for authentication
+        credentials: 'include', // Send cookies for authentication
         cache: "no-store" 
       });
       if (!res.ok) {
