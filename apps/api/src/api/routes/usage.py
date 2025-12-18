@@ -27,23 +27,24 @@ def get_usage(
         set_rls(cur, account_id)
 
         # Summary: total reports in period
+        # CRITICAL: Always filter by account_id for data isolation
         cur.execute("""
           SELECT
             COUNT(*) AS total_reports,
             COUNT(*) FILTER (WHERE billable IS TRUE) AS billable_reports
           FROM report_generations
-          WHERE generated_at >= %s AND generated_at < %s
-        """, (start, end))
+          WHERE account_id = %s AND generated_at >= %s AND generated_at < %s
+        """, (account_id, start, end))
         summary = fetchone_dict(cur) or {"total_reports":0,"billable_reports":0}
 
         # By type
         cur.execute("""
           SELECT report_type, COUNT(*) AS c
           FROM report_generations
-          WHERE generated_at >= %s AND generated_at < %s
+          WHERE account_id = %s AND generated_at >= %s AND generated_at < %s
           GROUP BY report_type
           ORDER BY c DESC
-        """, (start, end))
+        """, (account_id, start, end))
         by_type = list(fetchall_dicts(cur))
 
         # Timeline (by day/week/month)
@@ -55,10 +56,10 @@ def get_usage(
         cur.execute(f"""
           SELECT {bucket} AS bucket, COUNT(*) AS c
           FROM report_generations
-          WHERE generated_at >= %s AND generated_at < %s
+          WHERE account_id = %s AND generated_at >= %s AND generated_at < %s
           GROUP BY 1
           ORDER BY 1
-        """, (start, end))
+        """, (account_id, start, end))
         timeline_rows = list(fetchall_dicts(cur))
         timeline = [
           {"date": (r["bucket"].isoformat() if hasattr(r["bucket"], "isoformat") else str(r["bucket"])), "reports": r["c"]}

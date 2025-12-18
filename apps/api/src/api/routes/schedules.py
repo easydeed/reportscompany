@@ -341,20 +341,23 @@ def list_schedules(
     with db_conn() as (conn, cur):
         set_rls(conn, account_id)
         
+        # CRITICAL: Always filter by account_id for data isolation
         query = """
             SELECT id::text, name, report_type, city, zip_codes, lookback_days,
                    cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone,
                    recipients, include_attachment, active,
                    last_run_at, next_run_at, created_at
             FROM schedules
+            WHERE account_id = %s
         """
+        params = [account_id]
         
         if active_only:
-            query += " WHERE active = true"
+            query += " AND active = true"
         
         query += " ORDER BY created_at DESC"
         
-        cur.execute(query)
+        cur.execute(query, params)
         rows = cur.fetchall()
         
         schedules = []
@@ -397,14 +400,15 @@ def get_schedule(
     with db_conn() as (conn, cur):
         set_rls(conn, account_id)
         
+        # CRITICAL: Always filter by account_id for data isolation
         cur.execute("""
             SELECT id::text, name, report_type, city, zip_codes, lookback_days,
                    cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone,
                    recipients, include_attachment, active,
                    last_run_at, next_run_at, created_at
             FROM schedules
-            WHERE id = %s::uuid
-        """, (schedule_id,))
+            WHERE id = %s::uuid AND account_id = %s
+        """, (schedule_id, account_id))
         
         row = cur.fetchone()
         if not row:
@@ -526,13 +530,15 @@ def update_schedule(
         # Always null out next_run_at on updates so ticker recomputes
         updates.append("next_run_at = NULL")
         
-        # Add schedule_id to params
+        # Add schedule_id and account_id to params
+        # CRITICAL: Always filter by account_id for data isolation
         params.append(schedule_id)
+        params.append(account_id)
         
         query = f"""
             UPDATE schedules
             SET {", ".join(updates)}
-            WHERE id = %s::uuid
+            WHERE id = %s::uuid AND account_id = %s
             RETURNING id::text
         """
         
@@ -559,11 +565,12 @@ def delete_schedule(
     with db_conn() as (conn, cur):
         set_rls(conn, account_id)
         
+        # CRITICAL: Always filter by account_id for data isolation
         cur.execute("""
             DELETE FROM schedules
-            WHERE id = %s::uuid
+            WHERE id = %s::uuid AND account_id = %s
             RETURNING id
-        """, (schedule_id,))
+        """, (schedule_id, account_id))
         
         row = cur.fetchone()
         conn.commit()
@@ -587,10 +594,10 @@ def list_schedule_runs(
     with db_conn() as (conn, cur):
         set_rls(conn, account_id)
         
-        # Verify schedule exists and belongs to account (via RLS)
+        # CRITICAL: Always filter by account_id for data isolation
         cur.execute("""
-            SELECT id FROM schedules WHERE id = %s::uuid
-        """, (schedule_id,))
+            SELECT id FROM schedules WHERE id = %s::uuid AND account_id = %s
+        """, (schedule_id, account_id))
         
         if not cur.fetchone():
             raise HTTPException(status_code=404, detail="Schedule not found")

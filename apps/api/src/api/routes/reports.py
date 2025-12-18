@@ -113,14 +113,15 @@ def create_report(
 def get_report(report_id: str, request: Request, account_id: str = Depends(require_account_id)):
     with db_conn() as (conn, cur):
         set_rls(cur, account_id)
+        # CRITICAL: Always filter by account_id for data isolation
         cur.execute(
             """
             SELECT id::text, report_type, status, html_url, json_url, csv_url, pdf_url,
                    generated_at::text
             FROM report_generations
-            WHERE id = %s
+            WHERE id = %s AND account_id = %s
             """,
-            (report_id,),
+            (report_id, account_id),
         )
         row = fetchone_dict(cur)
         if not row:
@@ -139,8 +140,10 @@ def list_reports(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
-    where = ["1=1"]
-    params = []
+    # CRITICAL: Always filter by account_id for data isolation
+    where = ["account_id = %s"]
+    params = [account_id]
+    
     if type:
         where.append("report_type = %s")
         params.append(type)
