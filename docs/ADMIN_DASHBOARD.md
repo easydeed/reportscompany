@@ -262,26 +262,89 @@ JWT_SECRET=...
 
 2. User may need to log out and log back in to refresh their JWT
 
+3. Check that the JWT contains the correct `user_id`:
+   - The auth middleware looks up the user by `user_id` AND `account_id`
+   - If either doesn't match, user defaults to `role = 'USER'`
+
 ### Dashboard shows zeros
 
-1. Check `NEXT_PUBLIC_API_BASE` is set correctly on Vercel
-2. Verify RLS policies allow admin access (migration 0025):
+1. **Check `NEXT_PUBLIC_API_BASE`** is set correctly on Vercel
+
+2. **Check Render logs** for database errors:
+   ```bash
+   # Look for errors like:
+   psycopg.errors.UndefinedColumn: column X does not exist
+   ```
+
+3. **Verify RLS policies** allow admin access (migration 0025):
    ```sql
    -- Check if admin RLS bypass is in place
-   SELECT tablename, policyname FROM pg_policies WHERE policyname LIKE '%rls%';
+   SELECT tablename, policyname FROM pg_policies 
+   WHERE policyname LIKE '%rls%' OR policyname LIKE '%admin%';
    ```
-3. Ensure the backend `admin.py` sets admin role for RLS:
+
+4. **Ensure admin.py sets admin role** for RLS bypass:
    ```python
-   set_rls(cur, account_id, user_role="ADMIN")
+   with db_conn() as (conn, cur):
+       set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+       # ... queries
    ```
-4. Check Vercel function logs for API errors
-5. Verify backend API is accessible
 
-### API calls failing
+5. **Verify database schema matches code**:
+   ```sql
+   -- Check for is_active column
+   SELECT column_name FROM information_schema.columns 
+   WHERE table_name = 'accounts' AND column_name = 'is_active';
+   
+   -- Check report_generations columns
+   SELECT column_name FROM information_schema.columns 
+   WHERE table_name = 'report_generations';
+   ```
 
-1. Check browser console for errors
-2. Verify proxy routes exist in `/api/v1/admin/`
-3. Check backend logs on Render for 401/403 errors
+### API calls failing with 500
+
+1. **Check Render logs** immediately - they show the exact error:
+   - `UndefinedColumn` = SQL query references non-existent column
+   - `SyntaxError` = SQL syntax issue
+   - `UniqueViolation` = Duplicate key
+
+2. **Common column mismatches**:
+   | Code References | Actual Column |
+   |-----------------|---------------|
+   | `r.params` | `r.input_params` |
+   | `created_at` (report_generations) | `generated_at` |
+   | `started_at`, `finished_at` | `processing_time_ms` |
+   | `u.last_login_at` | *(doesn't exist)* |
+   | `plans.id` | `plans.plan_slug` |
+
+3. **Verify db_conn() usage** - must unpack tuple:
+   ```python
+   # CORRECT
+   with db_conn() as (conn, cur):
+       cur.execute(...)
+   
+   # WRONG - will cause AttributeError
+   with db_conn() as cur:
+       cur.execute(...)
+   ```
+
+### API calls failing with 401/403
+
+1. Check `mr_token` cookie is being forwarded
+2. Verify JWT hasn't expired (default 1 hour)
+3. Ensure user still has ADMIN role in database
+
+### Specific endpoint issues
+
+**`/v1/admin/accounts` failing**:
+- Ensure `accounts.is_active` column exists
+
+**`/v1/admin/affiliates` returning empty**:
+- Check `account_type = 'AFFILIATE'` accounts exist
+- Verify date_trunc syntax in query
+
+**`/v1/admin/plans` failing**:
+- Plans table uses `plan_slug` as PK, not `id`
 
 ## Security Considerations
 
@@ -290,6 +353,119 @@ JWT_SECRET=...
 3. **API protection**: All backend admin endpoints require ADMIN role
 4. **Cookie-based auth**: JWT stored in httpOnly cookie, passed via proxy routes
 5. **No client-side secrets**: All sensitive operations go through backend
+
+## Changelog & Fixes (December 2024)
+
+### Issue: Admin Dashboard Showing All Zeros
+
+**Symptoms**: All stats (accounts, users, reports) showing 0 despite having data in database.
+
+**Root Causes Discovered**:
+
+1. **Row Level Security (RLS) blocking admin queries**
+   - RLS policies on tables like `report_generations`, `schedules`, `email_log` were filtering out all data
+   - Admin endpoints weren't setting the `ADMIN` role context properly
+
+2. **Incorrect column references in SQL queries**
+   - `r.params` → Should be `r.input_params`
+   - `started_at`, `finished_at` → Should be `generated_at`, `processing_time_ms`
+   - `u.last_login_at` → Column doesn't exist in `users` table
+   - `plans.id` → Primary key is `plan_slug`, not `id`
+
+3. **Missing database columns**
+   - `accounts.is_active` column was missing
+
+4. **SQL syntax errors**
+   - `date_trunc('month', CURRENT_DATE)` had quoting issues in affiliates query
+
+**Fixes Applied**:
+
+```python
+# 1. All admin endpoints now set RLS context
+with db_conn() as (conn, cur):
+    set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+    # ... queries now work
+```
+
+```sql
+-- 2. RLS policies updated (migration 0025)
+CREATE POLICY "..." ON report_generations
+FOR SELECT USING (
+    account_id::text = current_setting('app.current_account_id', true)
+    OR current_setting('app.current_user_role', true) = 'ADMIN'  -- Admin bypass
+);
+```
+
+```sql
+-- 3. Added missing column
+ALTER TABLE accounts 
+ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+```
+
+### Issue: "Access Denied" Page Displayed
+
+**Important Distinction**:
+- **"Access Denied" page** = Frontend auth check failed (not logged in, or not admin)
+- **API 500 errors** = Backend database/query issues
+
+**Cause**: The frontend layout (`/admin/layout.tsx`) calls `/v1/me` to verify admin status:
+```typescript
+if (data.role !== 'admin' && data.role !== 'ADMIN') {
+  return null  // Triggers redirect to /access-denied
+}
+```
+
+**Solution**: Log in with an admin account:
+```sql
+-- Admin accounts have role = 'ADMIN'
+SELECT email, role FROM users WHERE role = 'ADMIN';
+```
+
+### Database Schema Reference
+
+Key columns used by admin endpoints:
+
+| Table | Column | Notes |
+|-------|--------|-------|
+| `users` | `role` | `'ADMIN'`, `'MEMBER'`, `'member'` |
+| `users` | `account_id` | Direct FK to accounts |
+| `accounts` | `is_active` | Boolean, defaults to TRUE |
+| `accounts` | `plan_slug` | FK to plans (not plan_id) |
+| `plans` | `plan_slug` | Primary key (not `id`) |
+| `report_generations` | `generated_at` | Timestamp (not `created_at`) |
+| `report_generations` | `processing_time_ms` | Integer (not `started_at`/`finished_at`) |
+| `reports` | `input_params` | JSONB (not `params`) |
+
+### Debugging Checklist
+
+When admin dashboard isn't working:
+
+1. **Check Render logs** for backend errors:
+   ```
+   psycopg.errors.UndefinedColumn: column X does not exist
+   ```
+
+2. **Check Vercel logs** for frontend issues:
+   ```
+   [API] GET /v1/admin/metrics failed: 500
+   ```
+
+3. **Verify admin role** in database:
+   ```sql
+   SELECT email, role FROM users WHERE email = 'your@email.com';
+   ```
+
+4. **Test API directly** (with valid JWT):
+   ```bash
+   curl https://reportscompany.onrender.com/v1/admin/metrics \
+     -H "Cookie: mr_token=YOUR_TOKEN"
+   ```
+
+5. **Check RLS policies**:
+   ```sql
+   SELECT tablename, policyname FROM pg_policies 
+   WHERE policyname LIKE '%admin%' OR policyname LIKE '%rls%';
+   ```
 
 ## Related Documentation
 
