@@ -46,7 +46,8 @@ interface User {
   account_id: string
   account_name: string
   account_type: string
-  role: string
+  role: string  // Tenant role from account_users (OWNER/ADMIN/MEMBER)
+  is_platform_admin: boolean  // Platform admin flag from users table
 }
 
 export default function UsersPage() {
@@ -145,7 +146,8 @@ export default function UsersPage() {
   // Calculate stats
   const activeUsers = users.filter(u => u.is_active).length
   const verifiedUsers = users.filter(u => u.email_verified).length
-  const adminUsers = users.filter(u => u.role === 'ADMIN' || u.role === 'OWNER').length
+  const platformAdmins = users.filter(u => u.is_platform_admin).length
+  const tenantAdmins = users.filter(u => u.role === 'ADMIN' || u.role === 'OWNER').length
 
   return (
     <div className="space-y-8">
@@ -200,8 +202,8 @@ export default function UsersPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Admins/Owners</p>
-                <p className="text-2xl font-bold text-violet-600">{adminUsers}</p>
+                <p className="text-sm text-slate-500">Platform Admins</p>
+                <p className="text-2xl font-bold text-violet-600">{platformAdmins}</p>
               </div>
               <Shield className="h-8 w-8 text-violet-200" />
             </div>
@@ -272,10 +274,10 @@ export default function UsersPage() {
                 <TableRow className="border-slate-200 hover:bg-transparent">
                   <TableHead className="text-slate-500">User</TableHead>
                   <TableHead className="text-slate-500">Account</TableHead>
-                  <TableHead className="text-slate-500">Role</TableHead>
+                  <TableHead className="text-slate-500">Platform Admin</TableHead>
+                  <TableHead className="text-slate-500">Tenant Role</TableHead>
                   <TableHead className="text-slate-500">Status</TableHead>
                   <TableHead className="text-slate-500">Verified</TableHead>
-                  <TableHead className="text-slate-500">Last Login</TableHead>
                   <TableHead className="text-slate-500">Created</TableHead>
                   <TableHead className="text-slate-500 text-right">Actions</TableHead>
                 </TableRow>
@@ -302,10 +304,20 @@ export default function UsersPage() {
                       </div>
                     </TableCell>
                     <TableCell>
+                      {user.is_platform_admin ? (
+                        <Badge className="bg-violet-100 text-violet-700 border-violet-200">
+                          <Shield className="h-3 w-3 mr-1" />
+                          Yes
+                        </Badge>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       <Badge
                         variant="outline"
                         className={
-                          user.role === "OWNER" ? "border-violet-300 text-violet-700 bg-violet-50" :
+                          user.role === "OWNER" ? "border-amber-300 text-amber-700 bg-amber-50" :
                           user.role === "ADMIN" ? "border-blue-300 text-blue-700 bg-blue-50" :
                           "border-slate-300 text-slate-600"
                         }
@@ -324,9 +336,6 @@ export default function UsersPage() {
                       ) : (
                         <XCircle className="h-5 w-5 text-slate-300" />
                       )}
-                    </TableCell>
-                    <TableCell className="text-slate-500 text-sm">
-                      {formatTimeAgo(user.last_login_at)}
                     </TableCell>
                     <TableCell className="text-slate-400 text-sm">
                       {formatDate(user.created_at)}
@@ -400,23 +409,51 @@ export default function UsersPage() {
       {/* Legend */}
       <Card className="bg-slate-50 border-slate-200">
         <CardContent className="py-4">
-          <p className="text-sm text-slate-500 mb-2 font-medium">Action Legend:</p>
-          <div className="flex flex-wrap gap-6 text-sm">
-            <div className="flex items-center gap-2">
-              <UserCheck className="h-4 w-4 text-emerald-600" />
-              <span className="text-slate-600">Activate User</span>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-slate-500 mb-2 font-medium">Role Definitions:</p>
+              <div className="flex flex-wrap gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-violet-100 text-violet-700 border-violet-200">
+                    <Shield className="h-3 w-3 mr-1" />
+                    Platform Admin
+                  </Badge>
+                  <span className="text-slate-600">Access to /admin console (system-wide)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="border-amber-300 text-amber-700 bg-amber-50">OWNER</Badge>
+                  <span className="text-slate-600">Full control within their account</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="border-blue-300 text-blue-700 bg-blue-50">ADMIN</Badge>
+                  <span className="text-slate-600">Admin within their account</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="border-slate-300 text-slate-600">MEMBER</Badge>
+                  <span className="text-slate-600">Regular member</span>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <UserX className="h-4 w-4 text-red-600" />
-              <span className="text-slate-600">Deactivate User</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-blue-600" />
-              <span className="text-slate-600">Mark Email Verified</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Send className="h-4 w-4 text-slate-600" />
-              <span className="text-slate-600">Resend Invite</span>
+            <div>
+              <p className="text-sm text-slate-500 mb-2 font-medium">Actions:</p>
+              <div className="flex flex-wrap gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <UserCheck className="h-4 w-4 text-emerald-600" />
+                  <span className="text-slate-600">Activate</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <UserX className="h-4 w-4 text-red-600" />
+                  <span className="text-slate-600">Deactivate</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-blue-600" />
+                  <span className="text-slate-600">Verify Email</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Send className="h-4 w-4 text-slate-600" />
+                  <span className="text-slate-600">Resend Invite</span>
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>

@@ -30,9 +30,10 @@ async function verifyAdmin() {
     return null
   }
 
-  // Check if user has admin role
-  if (data.role !== 'admin' && data.role !== 'ADMIN') {
-    console.log(`User ${data.email} does not have ADMIN role, has: ${data.role}`)
+  // Check if user is a platform admin (NOT tenant role)
+  // Platform admin is determined by users.is_platform_admin = TRUE
+  if (!data.is_platform_admin) {
+    console.log(`User ${data.email} is not a platform admin`)
     return null
   }
   

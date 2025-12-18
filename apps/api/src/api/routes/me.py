@@ -6,8 +6,8 @@ router = APIRouter(prefix="/v1")
 @router.get("/me")
 def me(request: Request):
     """
-    Get current user information including role and account type.
-    Returns: { account_id, user_id, email, role, account_type }
+    Get current user information including role, account type, and platform admin status.
+    Returns: { account_id, user_id, email, role, account_type, is_platform_admin }
     """
     # Auth middleware already set account_id and user info
     account_id = getattr(request.state, "account_id", None)
@@ -33,13 +33,14 @@ def me(request: Request):
             "user_id": user_info.get("id"),
             "email": user_info.get("email"),
             "role": user_info.get("role", "USER"),
-            "account_type": account_type
+            "account_type": account_type,
+            "is_platform_admin": user_info.get("is_platform_admin", False)
         }
     
     # Fallback: look up first user in account (API key authentication)
     with db_conn() as (conn, cur):
         cur.execute("""
-            SELECT id::text AS user_id, email, role 
+            SELECT id::text AS user_id, email, role, is_platform_admin 
             FROM users 
             WHERE account_id=%s::uuid 
             ORDER BY created_at ASC 
@@ -55,6 +56,7 @@ def me(request: Request):
             "user_id": row[0],
             "email": row[1],
             "role": (row[2] or "USER").upper(),
-            "account_type": account_type
+            "account_type": account_type,
+            "is_platform_admin": bool(row[3]) if row[3] is not None else False
         }
 

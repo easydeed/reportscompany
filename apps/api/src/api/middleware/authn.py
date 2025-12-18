@@ -109,11 +109,11 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
         user_info = {"account_id": acct, "role": "USER"}  # default
         
         if claims and claims.get("user_id"):
-            # JWT authentication - fetch user's role
+            # JWT authentication - fetch user's role and platform admin status
             with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        SELECT id, email, role FROM users
+                        SELECT id, email, role, is_platform_admin FROM users
                         WHERE id=%s::uuid AND account_id=%s::uuid
                     """, (claims["user_id"], acct))
                     user_row = cur.fetchone()
@@ -122,6 +122,7 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
                             "id": str(user_row[0]),
                             "email": user_row[1],
                             "role": (user_row[2] or "USER").upper(),  # Normalize to uppercase
+                            "is_platform_admin": bool(user_row[3]) if user_row[3] is not None else False,
                             "account_id": acct
                         }
         

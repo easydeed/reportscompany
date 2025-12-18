@@ -1244,7 +1244,8 @@ def list_users(
             a.id::text as account_id,
             a.name as account_name,
             a.account_type,
-            au.role
+            au.role,
+            u.is_platform_admin
         FROM users u
         LEFT JOIN accounts a ON a.id = u.account_id
         LEFT JOIN account_users au ON au.user_id = u.id AND au.account_id = a.id
@@ -1286,7 +1287,8 @@ def list_users(
                 "account_id": row[7],
                 "account_name": row[8],
                 "account_type": row[9],
-                "role": row[10],
+                "role": row[10],  # Tenant role from account_users
+                "is_platform_admin": bool(row[11]) if row[11] is not None else False,
             })
 
         # Get total
