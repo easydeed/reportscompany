@@ -69,6 +69,9 @@ export default async function AdminDashboard() {
   const errorRate = m.error_rate_7d || 0
   const avgRenderSec = ((m.avg_processing_ms_7d || 0) / 1000).toFixed(1)
 
+  // Debug: Check if API calls failed
+  const apiIssue = !metrics && !reports && !accounts
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -76,6 +79,18 @@ export default async function AdminDashboard() {
         <h1 className="text-3xl font-bold text-white">Dashboard</h1>
         <p className="text-gray-400 mt-1">Welcome to TrendyReports Admin Console</p>
       </div>
+
+      {/* API Connection Warning */}
+      {apiIssue && (
+        <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-4">
+          <p className="text-yellow-400 font-medium">⚠️ Unable to load admin data</p>
+          <p className="text-yellow-300/70 text-sm mt-1">
+            API calls to the backend failed. Check the Vercel logs for details.
+            <br />
+            API Base: {API_BASE}
+          </p>
+        </div>
+      )}
 
       {/* Primary KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
