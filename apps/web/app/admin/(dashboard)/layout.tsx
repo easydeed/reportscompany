@@ -10,34 +10,34 @@ import {
   Mail,
   Settings,
   Shield,
-  ChevronRight,
+  LogOut,
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { createServerApi } from "@/lib/api-server"
+import { AdminLogoutButton } from "./logout-button"
 
-async function verifyAdmin() {
+async function verifyAdmin(): Promise<{ admin: any; redirectTo: string | null }> {
   const api = await createServerApi()
   
   if (!api.isAuthenticated()) {
-    return null
+    return { admin: null, redirectTo: '/admin/login' }
   }
 
   const { data, error } = await api.get<any>('/v1/me')
   
   if (error || !data) {
     console.error('Admin verify failed:', error)
-    return null
+    return { admin: null, redirectTo: '/admin/login' }
   }
 
   // Check if user is a platform admin (NOT tenant role)
   // Platform admin is determined by users.is_platform_admin = TRUE
   if (!data.is_platform_admin) {
     console.log(`User ${data.email} is not a platform admin`)
-    return null
+    return { admin: null, redirectTo: '/access-denied' }
   }
   
-  return data
+  return { admin: data, redirectTo: null }
 }
 
 const navItems = [
@@ -56,10 +56,10 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
-  const admin = await verifyAdmin()
+  const { admin, redirectTo } = await verifyAdmin()
 
-  if (!admin) {
-    redirect('/access-denied')
+  if (redirectTo) {
+    redirect(redirectTo)
   }
 
   return (
@@ -109,12 +109,7 @@ export default async function AdminLayout({
               <p className="text-xs text-slate-500 truncate">{admin.email}</p>
             </div>
           </div>
-          <Link href="/app">
-            <Button variant="ghost" size="sm" className="w-full justify-start text-slate-600 hover:text-slate-900 hover:bg-slate-100">
-              <ChevronRight className="w-4 h-4 mr-2 rotate-180" />
-              Back to App
-            </Button>
-          </Link>
+          <AdminLogoutButton />
         </div>
       </aside>
 

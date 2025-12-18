@@ -141,7 +141,7 @@ export default function AccountDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
       </div>
     )
   }
@@ -150,9 +150,9 @@ export default function AccountDetailPage() {
     return (
       <div className="text-center py-12">
         <AlertTriangle className="h-12 w-12 mx-auto text-red-500 mb-4" />
-        <h3 className="text-lg font-semibold text-white mb-2">Account not found</h3>
+        <h3 className="text-lg font-semibold text-slate-900 mb-2">Account not found</h3>
         <Link href="/admin/accounts">
-          <Button variant="outline" className="border-gray-700">Back to Accounts</Button>
+          <Button variant="outline" className="border-slate-300">Back to Accounts</Button>
         </Link>
       </div>
     )
@@ -166,20 +166,20 @@ export default function AccountDetailPage() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/admin/accounts">
-          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
+          <Button variant="ghost" size="icon" className="text-slate-600 hover:text-slate-900">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold text-white">{account.account.name}</h1>
-          <p className="text-gray-400 mt-1">{account.account.slug}</p>
+          <h1 className="text-3xl font-bold text-slate-900">{account.account.name}</h1>
+          <p className="text-slate-500 mt-1">{account.account.slug}</p>
         </div>
         <Badge
           variant="outline"
           className={
             account.account.account_type === "INDUSTRY_AFFILIATE"
-              ? "border-violet-500/50 text-violet-400"
-              : "border-gray-700 text-gray-400"
+              ? "border-violet-300 text-violet-700 bg-violet-50"
+              : "border-slate-300 text-slate-600"
           }
         >
           {account.account.account_type === "INDUSTRY_AFFILIATE" ? "Affiliate" : "Regular"}
@@ -187,14 +187,14 @@ export default function AccountDetailPage() {
       </div>
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg flex items-center gap-2">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
           <AlertTriangle className="h-4 w-4" />
           {error}
         </div>
       )}
 
       {success && (
-        <div className="bg-green-500/10 border border-green-500/30 text-green-400 px-4 py-3 rounded-lg flex items-center gap-2">
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg flex items-center gap-2">
           <CheckCircle className="h-4 w-4" />
           {success}
         </div>
@@ -202,63 +202,63 @@ export default function AccountDetailPage() {
 
       {/* Usage Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Reports This Month</p>
-                <p className="text-2xl font-bold text-white">{account.usage.reports_this_month}</p>
-                <p className="text-xs text-gray-500">of {effectiveLimit} ({usagePercent}%)</p>
+                <p className="text-sm text-slate-500">Reports This Month</p>
+                <p className="text-2xl font-bold text-slate-900">{account.usage.reports_this_month}</p>
+                <p className="text-xs text-slate-400">of {effectiveLimit} ({usagePercent}%)</p>
               </div>
-              <FileText className="h-8 w-8 text-violet-400/30" />
+              <FileText className="h-8 w-8 text-violet-200" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Plan Limit</p>
-                <p className="text-2xl font-bold text-white">{account.plan.monthly_report_limit}</p>
-                <p className="text-xs text-gray-500">{account.plan.plan_name}</p>
+                <p className="text-sm text-slate-500">Plan Limit</p>
+                <p className="text-2xl font-bold text-slate-900">{account.plan.monthly_report_limit}</p>
+                <p className="text-xs text-slate-400">{account.plan.plan_name}</p>
               </div>
-              <Building className="h-8 w-8 text-blue-400/30" />
+              <Building className="h-8 w-8 text-blue-200" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Override</p>
-                <p className="text-2xl font-bold text-white">
+                <p className="text-sm text-slate-500">Override</p>
+                <p className="text-2xl font-bold text-slate-900">
                   {account.account.monthly_report_limit_override || "-"}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-slate-400">
                   {account.account.monthly_report_limit_override ? "Custom limit" : "Using plan"}
                 </p>
               </div>
-              <Users className="h-8 w-8 text-green-400/30" />
+              <Users className="h-8 w-8 text-emerald-200" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400">Status</p>
+                <p className="text-sm text-slate-500">Status</p>
                 <p className={`text-2xl font-bold ${
-                  account.decision === "ALLOW" ? "text-green-400" :
-                  account.decision === "ALLOW_WITH_WARNING" ? "text-yellow-400" :
-                  "text-red-400"
+                  account.decision === "ALLOW" ? "text-emerald-600" :
+                  account.decision === "ALLOW_WITH_WARNING" ? "text-amber-600" :
+                  "text-red-600"
                 }`}>
                   {account.decision === "ALLOW" ? "OK" :
                    account.decision === "ALLOW_WITH_WARNING" ? "Warning" : "Blocked"}
                 </p>
-                <p className="text-xs text-gray-500">{account.info.message || "Within limits"}</p>
+                <p className="text-xs text-slate-400">{account.info.message || "Within limits"}</p>
               </div>
             </div>
           </CardContent>
@@ -266,27 +266,27 @@ export default function AccountDetailPage() {
       </div>
 
       {/* Usage Progress */}
-      <Card className="bg-gray-900 border-gray-800">
+      <Card className="bg-white border-slate-200 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-white">Usage Progress</CardTitle>
-          <CardDescription className="text-gray-400">Monthly report usage for this account</CardDescription>
+          <CardTitle className="text-slate-900">Usage Progress</CardTitle>
+          <CardDescription className="text-slate-500">Monthly report usage for this account</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-400">{account.usage.reports_this_month} / {effectiveLimit} reports</span>
+              <span className="text-slate-500">{account.usage.reports_this_month} / {effectiveLimit} reports</span>
               <span className={
-                usagePercent >= 100 ? "text-red-400 font-semibold" :
-                usagePercent >= 80 ? "text-yellow-400" : "text-green-400"
+                usagePercent >= 100 ? "text-red-600 font-semibold" :
+                usagePercent >= 80 ? "text-amber-600" : "text-emerald-600"
               }>
                 {usagePercent}%
               </span>
             </div>
-            <div className="h-3 bg-gray-800 rounded-full overflow-hidden">
+            <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
               <div
                 className={`h-full transition-all ${
                   usagePercent >= 100 ? "bg-red-500" :
-                  usagePercent >= 80 ? "bg-yellow-500" : "bg-green-500"
+                  usagePercent >= 80 ? "bg-amber-500" : "bg-emerald-500"
                 }`}
                 style={{ width: `${Math.min(usagePercent, 100)}%` }}
               />
@@ -296,20 +296,20 @@ export default function AccountDetailPage() {
       </Card>
 
       {/* Edit Settings */}
-      <Card className="bg-gray-900 border-gray-800">
+      <Card className="bg-white border-slate-200 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-white">Account Settings</CardTitle>
-          <CardDescription className="text-gray-400">Modify plan and limits for this account</CardDescription>
+          <CardTitle className="text-slate-900">Account Settings</CardTitle>
+          <CardDescription className="text-slate-500">Modify plan and limits for this account</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label className="text-gray-300">Plan</Label>
+              <Label className="text-slate-700">Plan</Label>
               <Select value={planSlug} onValueChange={setPlanSlug}>
-                <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                <SelectTrigger className="bg-white border-slate-300 text-slate-900">
                   <SelectValue placeholder="Select plan" />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-700">
+                <SelectContent className="bg-white border-slate-200">
                   <SelectItem value="free">Free (5 reports/month)</SelectItem>
                   <SelectItem value="pro">Pro (300 reports/month)</SelectItem>
                   <SelectItem value="team">Team (1,000 reports/month)</SelectItem>
@@ -317,25 +317,25 @@ export default function AccountDetailPage() {
                   <SelectItem value="sponsored_free">Sponsored Free (10 reports/month)</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500">Current: {account.plan.plan_name}</p>
+              <p className="text-xs text-slate-400">Current: {account.plan.plan_name}</p>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-gray-300">Monthly Report Limit Override</Label>
+              <Label className="text-slate-700">Monthly Report Limit Override</Label>
               <Input
                 type="number"
                 min="0"
                 placeholder={`Plan default: ${account.plan.monthly_report_limit}`}
                 value={limitOverride}
                 onChange={(e) => setLimitOverride(e.target.value)}
-                className="bg-gray-800 border-gray-700 text-white"
+                className="bg-white border-slate-300 text-slate-900"
               />
-              <p className="text-xs text-gray-500">Leave empty for plan default. Set 0 to remove.</p>
+              <p className="text-xs text-slate-400">Leave empty for plan default. Set 0 to remove.</p>
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-800">
-            <Button variant="outline" onClick={() => router.back()} className="border-gray-700 text-gray-300">
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+            <Button variant="outline" onClick={() => router.back()} className="border-slate-300 text-slate-700">
               Cancel
             </Button>
             <Button onClick={handleSave} disabled={saving} className="bg-violet-600 hover:bg-violet-700">
