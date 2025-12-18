@@ -25,33 +25,54 @@ router = APIRouter(prefix="/v1/admin", tags=["admin"])
 def get_admin_metrics(_admin: dict = Depends(get_admin_user)):
     """
     Get system-wide metrics for the admin dashboard.
-    
+
     Returns:
         - reports_24h: Number of reports generated in last 24 hours
         - reports_7d: Number of reports generated in last 7 days
+        - reports_failed_7d: Number of failed reports in last 7 days
+        - error_rate_7d: Failure percentage in last 7 days
         - avg_processing_ms_7d: Average processing time in milliseconds (last 7 days)
         - schedules_active: Number of active schedules
         - emails_24h: Number of emails sent in last 24 hours
+        - total_accounts: Total number of accounts
+        - total_users: Total number of users
+        - total_affiliates: Total number of affiliate accounts
         - queue_depth: Current queue depth (optional, returns 0 if not available)
     """
-    
+
     with db_conn() as conn:
         cur = conn.cursor()
-        
+
         # Reports in last 24h
         cur.execute("""
             SELECT COUNT(*) FROM report_generations
             WHERE created_at >= NOW() - INTERVAL '24 hours'
         """)
         reports_24h = cur.fetchone()[0] or 0
-        
-        # Reports in last 7d
+
+        # Reports in last 7d (total and failed)
         cur.execute("""
-            SELECT COUNT(*) FROM report_generations
+            SELECT
+                COUNT(*) as total,
+                COUNT(*) FILTER (WHERE status = 'failed') as failed,
+                COUNT(*) FILTER (WHERE status = 'completed') as completed,
+                COUNT(*) FILTER (WHERE status = 'processing') as processing,
+                COUNT(*) FILTER (WHERE status = 'pending') as pending
+            FROM report_generations
             WHERE created_at >= NOW() - INTERVAL '7 days'
         """)
-        reports_7d = cur.fetchone()[0] or 0
-        
+        row = cur.fetchone()
+        reports_7d = row[0] or 0
+        reports_failed_7d = row[1] or 0
+        reports_completed_7d = row[2] or 0
+        reports_processing = row[3] or 0
+        reports_pending = row[4] or 0
+
+        # Calculate error rate
+        error_rate_7d = 0.0
+        if reports_7d > 0:
+            error_rate_7d = round((reports_failed_7d / reports_7d) * 100, 2)
+
         # Avg processing time in last 7d (for completed reports)
         cur.execute("""
             SELECT AVG(EXTRACT(EPOCH FROM (finished_at - started_at)) * 1000)
@@ -63,30 +84,63 @@ def get_admin_metrics(_admin: dict = Depends(get_admin_user)):
         """)
         avg_ms = cur.fetchone()[0]
         avg_processing_ms_7d = int(avg_ms) if avg_ms else 0
-        
+
         # Active schedules
         cur.execute("""
             SELECT COUNT(*) FROM schedules
             WHERE active = TRUE
         """)
         schedules_active = cur.fetchone()[0] or 0
-        
+
+        # Total schedules
+        cur.execute("SELECT COUNT(*) FROM schedules")
+        schedules_total = cur.fetchone()[0] or 0
+
         # Emails in last 24h
         cur.execute("""
             SELECT COUNT(*) FROM email_log
             WHERE created_at >= NOW() - INTERVAL '24 hours'
         """)
         emails_24h = cur.fetchone()[0] or 0
-        
+
+        # Total accounts
+        cur.execute("SELECT COUNT(*) FROM accounts")
+        total_accounts = cur.fetchone()[0] or 0
+
+        # Total users
+        cur.execute("SELECT COUNT(*) FROM users")
+        total_users = cur.fetchone()[0] or 0
+
+        # Total affiliates
+        cur.execute("SELECT COUNT(*) FROM accounts WHERE account_type = 'INDUSTRY_AFFILIATE'")
+        total_affiliates = cur.fetchone()[0] or 0
+
+        # Active users (logged in last 30 days)
+        cur.execute("""
+            SELECT COUNT(*) FROM users
+            WHERE last_login_at >= NOW() - INTERVAL '30 days'
+        """)
+        active_users_30d = cur.fetchone()[0] or 0
+
         # Queue depth (placeholder - would require Redis inspection)
         queue_depth = 0
-        
+
         return {
             "reports_24h": reports_24h,
             "reports_7d": reports_7d,
+            "reports_failed_7d": reports_failed_7d,
+            "reports_completed_7d": reports_completed_7d,
+            "reports_processing": reports_processing,
+            "reports_pending": reports_pending,
+            "error_rate_7d": error_rate_7d,
             "avg_processing_ms_7d": avg_processing_ms_7d,
             "schedules_active": schedules_active,
+            "schedules_total": schedules_total,
             "emails_24h": emails_24h,
+            "total_accounts": total_accounts,
+            "total_users": total_users,
+            "total_affiliates": total_affiliates,
+            "active_users_30d": active_users_30d,
             "queue_depth": queue_depth
         }
 

@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Building, Users, FileText, ArrowLeft } from "lucide-react"
+import { Building, Users, FileText, ArrowLeft, Settings } from "lucide-react"
 
 export const dynamic = 'force-dynamic'
 
@@ -197,16 +197,17 @@ export default async function AdminAccountsPage({
                   <TableHead>Reports/Month</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Created</TableHead>
+                  <TableHead className="w-16"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {accounts.map((account) => (
                   <TableRow key={account.account_id}>
                     <TableCell>
-                      <div>
-                        <div className="font-medium">{account.name}</div>
+                      <Link href={`/app/admin/accounts/${account.account_id}`} className="hover:underline">
+                        <div className="font-medium text-primary">{account.name}</div>
                         <div className="text-sm text-muted-foreground">{account.slug}</div>
-                      </div>
+                      </Link>
                     </TableCell>
                     <TableCell>
                       <Badge variant={account.account_type === "INDUSTRY_AFFILIATE" ? "default" : "secondary"}>
@@ -234,6 +235,13 @@ export default async function AdminAccountsPage({
                       {account.created_at
                         ? new Date(account.created_at).toLocaleDateString()
                         : '-'}
+                    </TableCell>
+                    <TableCell>
+                      <Link href={`/app/admin/accounts/${account.account_id}`}>
+                        <Button variant="ghost" size="icon">
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                      </Link>
                     </TableCell>
                   </TableRow>
                 ))}
