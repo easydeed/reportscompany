@@ -115,12 +115,9 @@ def get_admin_metrics(_admin: dict = Depends(get_admin_user)):
         cur.execute("SELECT COUNT(*) FROM accounts WHERE account_type = 'INDUSTRY_AFFILIATE'")
         total_affiliates = cur.fetchone()[0] or 0
 
-        # Active users (logged in last 30 days)
-        cur.execute("""
-            SELECT COUNT(*) FROM users
-            WHERE last_login_at >= NOW() - INTERVAL '30 days'
-        """)
-        active_users_30d = cur.fetchone()[0] or 0
+        # Active users (placeholder - no last_login_at column yet)
+        # TODO: Add last_login_at column to users table to track this
+        active_users_30d = 0
 
         # Queue depth (placeholder - would require Redis inspection)
         queue_depth = 0
@@ -1244,7 +1241,6 @@ def list_users(
             u.is_active,
             u.email_verified,
             u.created_at,
-            u.last_login_at,
             a.id::text as account_id,
             a.name as account_name,
             a.account_type,
@@ -1287,11 +1283,10 @@ def list_users(
                 "is_active": row[4],
                 "email_verified": row[5],
                 "created_at": row[6].isoformat() if row[6] else None,
-                "last_login_at": row[7].isoformat() if row[7] else None,
-                "account_id": row[8],
-                "account_name": row[9],
-                "account_type": row[10],
-                "role": row[11],
+                "account_id": row[7],
+                "account_name": row[8],
+                "account_type": row[9],
+                "role": row[10],
             })
 
         # Get total
@@ -1331,7 +1326,6 @@ def get_user_detail(
                 u.is_active,
                 u.email_verified,
                 u.created_at,
-                u.last_login_at,
                 a.id::text as account_id,
                 a.name as account_name,
                 a.account_type,
@@ -1358,14 +1352,13 @@ def get_user_detail(
             "is_active": row[7],
             "email_verified": row[8],
             "created_at": row[9].isoformat() if row[9] else None,
-            "last_login_at": row[10].isoformat() if row[10] else None,
             "account": {
-                "account_id": row[11],
-                "name": row[12],
-                "account_type": row[13],
-                "plan_slug": row[14],
+                "account_id": row[10],
+                "name": row[11],
+                "account_type": row[12],
+                "plan_slug": row[13],
             },
-            "role": row[15],
+            "role": row[14],
         }
 
         # Get user's report count
@@ -1760,7 +1753,6 @@ def list_plans(_admin: dict = Depends(get_admin_user)):
 
         cur.execute("""
             SELECT
-                id,
                 plan_slug,
                 plan_name,
                 monthly_report_limit,
@@ -1779,18 +1771,17 @@ def list_plans(_admin: dict = Depends(get_admin_user)):
         plans = []
         for row in cur.fetchall():
             plans.append({
-                "id": row[0],
-                "plan_slug": row[1],
-                "plan_name": row[2],
-                "monthly_report_limit": row[3],
-                "allow_overage": row[4],
-                "overage_price_cents": row[5],
-                "stripe_price_id": row[6],
-                "description": row[7],
-                "is_active": row[8],
-                "created_at": row[9].isoformat() if row[9] else None,
-                "updated_at": row[10].isoformat() if row[10] else None,
-                "account_count": row[11] or 0,
+                "plan_slug": row[0],
+                "plan_name": row[1],
+                "monthly_report_limit": row[2],
+                "allow_overage": row[3],
+                "overage_price_cents": row[4],
+                "stripe_price_id": row[5],
+                "description": row[6],
+                "is_active": row[7],
+                "created_at": row[8].isoformat() if row[8] else None,
+                "updated_at": row[9].isoformat() if row[9] else None,
+                "account_count": row[10] or 0,
             })
 
         return {"plans": plans, "count": len(plans)}
@@ -1861,7 +1852,7 @@ def update_plan(
             UPDATE plans
             SET {', '.join(updates)}
             WHERE plan_slug = %s
-            RETURNING id, plan_slug, plan_name, monthly_report_limit, allow_overage, overage_price_cents, is_active
+            RETURNING plan_slug, plan_name, monthly_report_limit, allow_overage, overage_price_cents, is_active
         """, params)
 
         row = cur.fetchone()
@@ -1872,13 +1863,12 @@ def update_plan(
 
         return {
             "ok": True,
-            "id": row[0],
-            "plan_slug": row[1],
-            "plan_name": row[2],
-            "monthly_report_limit": row[3],
-            "allow_overage": row[4],
-            "overage_price_cents": row[5],
-            "is_active": row[6],
+            "plan_slug": row[0],
+            "plan_name": row[1],
+            "monthly_report_limit": row[2],
+            "allow_overage": row[3],
+            "overage_price_cents": row[4],
+            "is_active": row[5],
         }
 
 
@@ -1916,7 +1906,7 @@ def create_plan(
                 allow_overage, overage_price_cents, stripe_price_id, description
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s)
-            RETURNING id, plan_slug, plan_name, monthly_report_limit
+            RETURNING plan_slug, plan_name, monthly_report_limit
         """, (
             body.plan_slug,
             body.plan_name,
@@ -1932,10 +1922,9 @@ def create_plan(
 
         return {
             "ok": True,
-            "id": row[0],
-            "plan_slug": row[1],
-            "plan_name": row[2],
-            "monthly_report_limit": row[3],
+            "plan_slug": row[0],
+            "plan_name": row[1],
+            "monthly_report_limit": row[2],
         }
 
 
