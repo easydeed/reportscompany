@@ -47,7 +47,7 @@ def get_admin_metrics(_admin: dict = Depends(get_admin_user)):
         # Reports in last 24h
         cur.execute("""
             SELECT COUNT(*) FROM report_generations
-            WHERE created_at >= NOW() - INTERVAL '24 hours'
+            WHERE generated_at >= NOW() - INTERVAL '24 hours'
         """)
         reports_24h = cur.fetchone()[0] or 0
 
@@ -60,7 +60,7 @@ def get_admin_metrics(_admin: dict = Depends(get_admin_user)):
                 COUNT(*) FILTER (WHERE status = 'processing') as processing,
                 COUNT(*) FILTER (WHERE status = 'pending') as pending
             FROM report_generations
-            WHERE created_at >= NOW() - INTERVAL '7 days'
+            WHERE generated_at >= NOW() - INTERVAL '7 days'
         """)
         row = cur.fetchone()
         reports_7d = row[0] or 0
@@ -76,12 +76,11 @@ def get_admin_metrics(_admin: dict = Depends(get_admin_user)):
 
         # Avg processing time in last 7d (for completed reports)
         cur.execute("""
-            SELECT AVG(EXTRACT(EPOCH FROM (finished_at - started_at)) * 1000)
+            SELECT AVG(processing_time_ms)
             FROM report_generations
             WHERE status = 'completed'
-            AND finished_at IS NOT NULL
-            AND started_at IS NOT NULL
-            AND created_at >= NOW() - INTERVAL '7 days'
+            AND processing_time_ms IS NOT NULL
+            AND generated_at >= NOW() - INTERVAL '7 days'
         """)
         avg_ms = cur.fetchone()[0]
         avg_processing_ms_7d = int(avg_ms) if avg_ms else 0
@@ -169,11 +168,11 @@ def get_admin_timeseries(
         # Reports by day
         cur.execute("""
             SELECT 
-                DATE(created_at) as day,
+                DATE(generated_at) as day,
                 COUNT(*) as count
             FROM report_generations
-            WHERE created_at >= NOW() - INTERVAL '%s days'
-            GROUP BY DATE(created_at)
+            WHERE generated_at >= NOW() - INTERVAL '%s days'
+            GROUP BY DATE(generated_at)
             ORDER BY day DESC
         """, (days,))
         reports_by_day = [
@@ -323,8 +322,7 @@ def list_admin_reports(
             r.pdf_url,
             r.error,
             r.generated_at,
-            r.processing_time_ms,
-            r.created_at
+            r.processing_time_ms
         FROM report_generations r
         JOIN accounts a ON r.account_id = a.id
         WHERE 1=1
@@ -339,7 +337,7 @@ def list_admin_reports(
         query += " AND r.report_type = %s"
         params.append(report_type)
     
-    query += " ORDER BY r.created_at DESC LIMIT %s"
+    query += " ORDER BY r.generated_at DESC LIMIT %s"
     params.append(limit)
     
     with db_conn() as (conn, cur):
@@ -361,7 +359,6 @@ def list_admin_reports(
                 "error": row[8],
                 "generated_at": row[9].isoformat() if row[9] else None,
                 "duration_ms": int(row[10]) if row[10] else None,
-                "created_at": row[11].isoformat() if row[11] else None,
             })
         
         return {"reports": reports, "count": len(reports)}
@@ -586,7 +583,7 @@ def list_affiliates(
             (SELECT COUNT(*) FROM report_generations rg
              JOIN accounts sa ON rg.account_id = sa.id
              WHERE sa.sponsor_account_id = a.id
-             AND rg.created_at >= date_trunc('month', CURRENT_DATE)) as reports_this_month
+             AND rg.generated_at >= date_trunc('month', CURRENT_DATE)) as reports_this_month
         FROM accounts a
         LEFT JOIN affiliate_branding ab ON ab.account_id = a.id
         WHERE a.account_type = 'INDUSTRY_AFFILIATE'
@@ -721,8 +718,8 @@ def get_affiliate_detail(
                 u.avatar_url,
                 (SELECT COUNT(*) FROM report_generations rg
                  WHERE rg.account_id = a.id
-                 AND rg.created_at >= date_trunc('month', CURRENT_DATE)) as reports_this_month,
-                (SELECT MAX(rg.created_at) FROM report_generations rg WHERE rg.account_id = a.id) as last_report_at
+                 AND rg.generated_at >= date_trunc('month', CURRENT_DATE)) as reports_this_month,
+                (SELECT MAX(rg.generated_at) FROM report_generations rg WHERE rg.account_id = a.id) as last_report_at
             FROM accounts a
             LEFT JOIN users u ON u.account_id = a.id
             WHERE a.sponsor_account_id = %s::uuid
@@ -754,7 +751,7 @@ def get_affiliate_detail(
             SELECT COUNT(*) FROM report_generations rg
             JOIN accounts sa ON rg.account_id = sa.id
             WHERE sa.sponsor_account_id = %s::uuid
-            AND rg.created_at >= date_trunc('month', CURRENT_DATE)
+            AND rg.generated_at >= date_trunc('month', CURRENT_DATE)
         """, (affiliate_id,))
         affiliate["reports_this_month"] = cur.fetchone()[0] or 0
 
@@ -1088,7 +1085,7 @@ def list_accounts(
             (SELECT COUNT(*) FROM users u WHERE u.account_id = a.id) as user_count,
             (SELECT COUNT(*) FROM report_generations rg
              WHERE rg.account_id = a.id
-             AND rg.created_at >= date_trunc('month', CURRENT_DATE)) as reports_this_month
+             AND rg.generated_at >= date_trunc('month', CURRENT_DATE)) as reports_this_month
         FROM accounts a
         LEFT JOIN accounts sa ON sa.id = a.sponsor_account_id
         WHERE 1=1
@@ -1969,7 +1966,7 @@ def get_revenue_stats(_admin: dict = Depends(get_admin_user)):
         cur.execute("""
             SELECT status, COUNT(*) as count
             FROM report_generations
-            WHERE created_at >= date_trunc('month', CURRENT_DATE)
+            WHERE generated_at >= date_trunc('month', CURRENT_DATE)
             GROUP BY status
         """)
         reports_by_status = [
