@@ -534,6 +534,7 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
                                             SELECT
                                                 brand_display_name,
                                                 logo_url,
+                                                email_logo_url,
                                                 primary_color,
                                                 accent_color,
                                                 rep_photo_url,
@@ -548,12 +549,13 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
                                             brand = {
                                                 "display_name": brand_row[0],
                                                 "logo_url": brand_row[1],
-                                                "primary_color": brand_row[2],
-                                                "accent_color": brand_row[3],
-                                                "rep_photo_url": brand_row[4],
-                                                "contact_line1": brand_row[5],
-                                                "contact_line2": brand_row[6],
-                                                "website_url": brand_row[7],
+                                                "email_logo_url": brand_row[2],
+                                                "primary_color": brand_row[3],
+                                                "accent_color": brand_row[4],
+                                                "rep_photo_url": brand_row[5],
+                                                "contact_line1": brand_row[6],
+                                                "contact_line2": brand_row[7],
+                                                "website_url": brand_row[8],
                                             }
                                     elif acc_type == 'INDUSTRY_AFFILIATE':
                                         # Affiliate: use their own branding from affiliate_branding
@@ -561,6 +563,7 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
                                             SELECT
                                                 brand_display_name,
                                                 logo_url,
+                                                email_logo_url,
                                                 primary_color,
                                                 accent_color,
                                                 rep_photo_url,
@@ -575,12 +578,13 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
                                             brand = {
                                                 "display_name": brand_row[0],
                                                 "logo_url": brand_row[1],
-                                                "primary_color": brand_row[2],
-                                                "accent_color": brand_row[3],
-                                                "rep_photo_url": brand_row[4],
-                                                "contact_line1": brand_row[5],
-                                                "contact_line2": brand_row[6],
-                                                "website_url": brand_row[7],
+                                                "email_logo_url": brand_row[2],
+                                                "primary_color": brand_row[3],
+                                                "accent_color": brand_row[4],
+                                                "rep_photo_url": brand_row[5],
+                                                "contact_line1": brand_row[6],
+                                                "contact_line2": brand_row[7],
+                                                "website_url": brand_row[8],
                                             }
                                     else:
                                         # Un-sponsored regular user: use accounts table branding + user avatar
@@ -610,12 +614,44 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
                                 # Continue without brand (will use default branding)
                             
                             # Build email payload
+                            # Flatten counts into metrics for email template compatibility
+                            email_metrics = result.get("metrics", {}).copy()
+                            counts = result.get("counts", {})
+                            # Map counts to what email template expects
+                            email_metrics["total_active"] = counts.get("Active", 0)
+                            email_metrics["total_closed"] = counts.get("Closed", 0)
+                            email_metrics["total_pending"] = counts.get("Pending", 0)
+                            email_metrics["new_listings_7d"] = counts.get("NewListings", email_metrics.get("new_listings_count", 0))
+                            # Normalize key names for template compatibility
+                            if "close_to_list_ratio" in email_metrics and "sale_to_list_ratio" not in email_metrics:
+                                email_metrics["sale_to_list_ratio"] = email_metrics["close_to_list_ratio"]
+                            # Inventory report uses median_dom, template expects avg_dom
+                            if "median_dom" in email_metrics and "avg_dom" not in email_metrics:
+                                email_metrics["avg_dom"] = email_metrics["median_dom"]
+                            
+                            # Add property type breakdown for Market Snapshot
+                            by_property_type = result.get("by_property_type", {})
+                            if by_property_type:
+                                email_metrics["sfr_count"] = by_property_type.get("SingleFamilyResidence", {}).get("count", 0) or by_property_type.get("Single Family Residence", {}).get("count", 0)
+                                email_metrics["condo_count"] = by_property_type.get("Condominium", {}).get("count", 0) or by_property_type.get("Condo", {}).get("count", 0)
+                                email_metrics["townhome_count"] = by_property_type.get("Townhouse", {}).get("count", 0) or by_property_type.get("Townhome", {}).get("count", 0)
+                            
+                            # Add price tier breakdown for Market Snapshot
+                            price_tiers = result.get("price_tiers", {})
+                            if price_tiers:
+                                entry_tier = price_tiers.get("Entry", {})
+                                moveup_tier = price_tiers.get("Move-Up", {})
+                                luxury_tier = price_tiers.get("Luxury", {})
+                                email_metrics["entry_tier_count"] = entry_tier.get("count", 0) + entry_tier.get("active_count", 0)
+                                email_metrics["moveup_tier_count"] = moveup_tier.get("count", 0) + moveup_tier.get("active_count", 0)
+                                email_metrics["luxury_tier_count"] = luxury_tier.get("count", 0) + luxury_tier.get("active_count", 0)
+                            
                             email_payload = {
                                 "report_type": report_type,
                                 "city": city,
                                 "zip_codes": zip_codes,
                                 "lookback_days": lookback,
-                                "metrics": result.get("metrics", {}),
+                                "metrics": email_metrics,
                                 "pdf_url": pdf_url,
                             }
                             

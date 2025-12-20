@@ -361,77 +361,182 @@ async def send_test_email(
     report_type_display = body.report_type.replace("_", " ").title()
     
     # Build sample metrics for test email
-    # V4.2: Report-type-specific sample data for accurate test previews
+    # V5: Immaculate test data matching EXACTLY what report builders produce
+    # These metrics mirror production scheduled emails for each report type
     
-    # Base metrics shared across report types
-    base_metrics = {
-        "total_active": 127,
-        "median_list_price": 4200000,
-        "median_close_price": 4150000,
-        "avg_dom": 42,
-        "months_of_inventory": 2.8,
-        "sale_to_list_ratio": 98.5,
-        "total_closed": 42,
-        "total_pending": 18,
-        "new_listings_7d": 23,
-    }
-    
-    # Report-specific sample data
-    report_specific_metrics = {
+    # Report-specific sample data - matches report_builders.py output structure
+    # Each report type has realistic data for its sample city
+    report_sample_data = {
+        # MARKET SNAPSHOT - Beverly Hills (Luxury Market)
+        # Mirrors: build_market_snapshot_result() output
         "market_snapshot": {
-            # Property type breakdown (segmentation)
-            "sfr_count": 89,
-            "condo_count": 28,
-            "townhome_count": 10,
-            # Price tier breakdown (segmentation)
-            "entry_tier_count": 45,
-            "entry_tier_range": "Under $1M",
-            "moveup_tier_count": 52,
-            "moveup_tier_range": "$1M - $3M",
-            "luxury_tier_count": 30,
-            "luxury_tier_range": "$3M+",
+            # Core counts (from counts.Active, counts.Closed, counts.Pending)
+            "total_active": 89,           # Active inventory
+            "total_closed": 42,           # Closed in last 30 days
+            "total_pending": 18,          # Under contract
+            "new_listings_7d": 23,        # New listings (from counts.NewListings)
+            
+            # Metrics (from metrics object)
+            "median_list_price": 4500000,     # $4.5M median asking
+            "median_close_price": 4200000,    # $4.2M median sale
+            "avg_dom": 42,                    # 42 days average
+            "avg_ppsf": 1250,                 # $1,250/sqft
+            "months_of_inventory": 2.8,       # Seller's market
+            "close_to_list_ratio": 98.5,      # Strong close-to-list
+            "sale_to_list_ratio": 98.5,       # Alias for template compatibility
+            
+            # Property type breakdown (from by_property_type)
+            "sfr_count": 62,              # Single Family homes
+            "condo_count": 18,            # Condominiums
+            "townhome_count": 9,          # Townhomes
+            
+            # Price tier breakdown (from price_tiers)
+            "entry_tier_count": 28,       # Entry level count
+            "entry_tier_range": "Under $2.5M",
+            "moveup_tier_count": 34,      # Move-up count
+            "moveup_tier_range": "$2.5M - $5M",
+            "luxury_tier_count": 27,      # Luxury count
+            "luxury_tier_range": "$5M+",
         },
+        
+        # NEW LISTINGS - Pasadena (Active Market)
+        # Mirrors: build_new_listings_result() output
         "new_listings": {
-            "avg_ppsf": 892,  # Avg price per sq ft
-            "total_active": 47,  # New listings count
+            "total_active": 47,           # New listings in period
+            "total_closed": 0,            # N/A for this report
+            "total_pending": 0,           # N/A for this report
+            "new_listings_7d": 47,        # Same as total for this report
+            
+            "median_list_price": 1350000, # $1.35M median
+            "median_close_price": 0,      # N/A
+            "avg_dom": 18,                # Fresh inventory, low DOM
+            "avg_ppsf": 625,              # $625/sqft
+            "months_of_inventory": 0,     # N/A
+            "close_to_list_ratio": 0,     # N/A
+            "sale_to_list_ratio": 0,      # N/A
         },
+        
+        # INVENTORY - Glendale (Balanced Market)
+        # Mirrors: build_inventory_result() output
         "inventory": {
-            "new_this_month": 34,  # New listings this month
-            "total_active": 156,  # Active inventory
+            "total_active": 156,          # Total active inventory
+            "total_closed": 0,            # N/A
+            "total_pending": 0,           # N/A
+            "new_listings_7d": 34,        # New this month
+            "new_this_month": 34,         # Alias
+            
+            "median_list_price": 1150000, # $1.15M median
+            "median_close_price": 0,      # N/A
+            "median_dom": 28,             # Median DOM (not avg)
+            "avg_dom": 28,                # For template compatibility
+            "months_of_inventory": 3.2,   # Balanced market
+            "close_to_list_ratio": 0,     # N/A
+            "sale_to_list_ratio": 0,      # N/A
         },
+        
+        # CLOSED SALES - Burbank (Strong Sales)
+        # Mirrors: build_closed_result() output
         "closed": {
-            "total_closed": 38,
-            "total_volume": 158700000,  # Total sales volume
+            "total_active": 0,            # N/A
+            "total_closed": 38,           # Closed in period
+            "total_pending": 0,           # N/A
+            "new_listings_7d": 0,         # N/A
+            
+            "median_list_price": 1180000, # Original list price
+            "median_close_price": 1150000,# $1.15M median sale
+            "avg_dom": 32,                # 32 days to sell
+            "avg_ppsf": 585,              # $585/sqft
+            "months_of_inventory": 0,     # N/A
+            "close_to_list_ratio": 99.2,  # Strong 99.2%
+            "sale_to_list_ratio": 99.2,   # Alias
+            "total_volume": 43700000,     # $43.7M total volume
         },
+        
+        # PRICE BANDS - Santa Monica (Premium Market)
+        # Mirrors: build_price_bands_result() output
         "price_bands": {
-            "min_price": 450000,
-            "max_price": 8500000,
+            "total_active": 167,          # Total inventory
+            "total_closed": 0,            # N/A
+            "total_pending": 0,           # N/A
+            "new_listings_7d": 0,         # N/A
+            
+            "median_list_price": 2800000, # $2.8M median
+            "median_close_price": 0,      # N/A
+            "avg_dom": 45,                # Average DOM
+            "min_price": 895000,          # Lowest listing
+            "max_price": 15000000,        # Highest listing
+            "months_of_inventory": 0,     # N/A
+            "close_to_list_ratio": 0,     # N/A
+            "sale_to_list_ratio": 0,      # N/A
+            
+            # Price bands data
             "bands": [
-                {"name": "Entry Level", "range": "$450K - $750K", "count": 45},
-                {"name": "Move-Up", "range": "$750K - $1.5M", "count": 62},
-                {"name": "Premium", "range": "$1.5M - $3M", "count": 38},
-                {"name": "Luxury", "range": "$3M+", "count": 22},
+                {"name": "Entry Level", "range": "Under $1.5M", "count": 42},
+                {"name": "Move-Up", "range": "$1.5M - $3M", "count": 58},
+                {"name": "Premium", "range": "$3M - $6M", "count": 45},
+                {"name": "Luxury", "range": "$6M+", "count": 22},
             ],
         },
+        
+        # OPEN HOUSES - Manhattan Beach (Weekend Activity)
+        # Mirrors: build_inventory_result() (reused)
         "open_houses": {
-            "total_active": 24,
-            "saturday_count": 15,
-            "sunday_count": 18,
+            "total_active": 24,           # Open houses available
+            "total_closed": 0,
+            "total_pending": 0,
+            "new_listings_7d": 0,
+            
+            "median_list_price": 3200000, # $3.2M median
+            "median_close_price": 0,
+            "avg_dom": 0,
+            "saturday_count": 15,         # Saturday events
+            "sunday_count": 18,           # Sunday events
+            "months_of_inventory": 0,
+            "close_to_list_ratio": 0,
+            "sale_to_list_ratio": 0,
         },
+        
+        # NEW LISTINGS GALLERY - Redondo Beach
+        # Mirrors: build_new_listings_gallery_result() output
         "new_listings_gallery": {
+            "total_active": 12,           # Gallery shows 9, but 12 total
             "total_listings": 12,
-            "min_price": 575000,
-            "avg_sqft": 2450,
+            "total_closed": 0,
+            "total_pending": 0,
+            "new_listings_7d": 12,
+            
+            "median_list_price": 1450000, # $1.45M median
+            "median_close_price": 0,
+            "avg_dom": 14,
+            "min_price": 875000,          # Starting at
+            "avg_sqft": 2450,             # Average size
+            "months_of_inventory": 0,
+            "close_to_list_ratio": 0,
+            "sale_to_list_ratio": 0,
         },
+        
+        # FEATURED LISTINGS - Malibu (Ultra-Luxury)
+        # Mirrors: build_featured_listings_result() output
         "featured_listings": {
+            "total_active": 6,            # Featured properties
             "total_listings": 6,
-            "max_price": 12500000,
-            "avg_sqft": 4200,
+            "total_closed": 0,
+            "total_pending": 0,
+            "new_listings_7d": 0,
+            
+            "median_list_price": 8500000, # $8.5M median
+            "median_close_price": 0,
+            "avg_dom": 65,
+            "max_price": 12500000,        # Top listing
+            "avg_sqft": 4200,             # Large homes
+            "months_of_inventory": 0,
+            "close_to_list_ratio": 0,
+            "sale_to_list_ratio": 0,
         },
     }
     
-    # Merge base with report-specific metrics
-    sample_metrics = {**base_metrics, **report_specific_metrics.get(body.report_type, {})}
+    # Get metrics for the requested report type
+    sample_metrics = report_sample_data.get(body.report_type, report_sample_data["market_snapshot"])
     
     # Build brand dict for template
     brand_dict = {
