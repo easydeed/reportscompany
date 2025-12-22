@@ -2,7 +2,7 @@
 
 > Complete technical documentation for the email infrastructure, templates, and delivery pipeline.
 
-**Last Updated:** December 16, 2025
+**Last Updated:** December 22, 2025 (V5 Gallery Photo Grids)
 
 ---
 
@@ -66,12 +66,12 @@ TrendyReports sends emails through two distinct pathways:
 | Component | Location | Responsibility |
 |-----------|----------|----------------|
 | SendGrid Provider | `apps/worker/src/worker/email/providers/sendgrid.py` | Low-level email sending |
-| **Email Template (V4.1)** | `apps/worker/src/worker/email/template.py` | **Unified** HTML generation for ALL emails |
-| Email Orchestrator | `apps/worker/src/worker/email/send.py` | Suppression filtering, template rendering |
-| Branding Test | `apps/api/src/api/routes/branding_tools.py` | Test email endpoint (uses unified template) |
+| **Email Template (V5)** | `apps/worker/src/worker/email/template.py` | **Unified** HTML generation for ALL emails (includes photo galleries) |
+| Email Orchestrator | `apps/worker/src/worker/email/send.py` | Suppression filtering, template rendering, listings passthrough |
+| Branding Test | `apps/api/src/api/routes/branding_tools.py` | Test email endpoint (uses unified template with sample listings) |
 | Unsubscribe API | `apps/api/src/api/routes/unsubscribe.py` | Handle unsubscribe requests |
 
-> 📦 **V4 Architecture:** A single template file (`template.py`) serves both scheduled reports and test emails, with PDF-aligned structure for Market Snapshot.
+> 📦 **V5 Architecture:** A single template file (`template.py`) serves both scheduled reports and test emails. Gallery reports now include photo grids matching PDF content exactly.
 
 ---
 
@@ -354,13 +354,87 @@ The test email uses the **same template function** as production scheduled email
 
 | Version | Date | Changes |
 |---------|------|---------|
-| **V4.2** | Dec 15, 2025 | **All reports PDF-aligned** - new_listings, closed, inventory, price_bands now have V4 layout |
+| **V5** | Dec 22, 2025 | **🎉 Gallery Photo Grids** - Email templates now include photo galleries, matching PDF content exactly |
+| V4.2 | Dec 15, 2025 | **All reports PDF-aligned** - new_listings, closed, inventory, price_bands now have V4 layout |
 | V4.1 | Dec 11, 2025 | **Modern styling** - system fonts, colored dots for property types, diamond icons for price tiers |
 | V4 | Dec 11, 2025 | **PDF-aligned redesign** - Market Snapshot email mirrors PDF structure (4-metric hero, core indicators, insight) |
 | V3.1 | Dec 11, 2025 | Monochromatic refinement - unified colors, template consolidation |
 | V3 | Dec 11, 2024 | Professional styling, Market Snapshot breakdowns |
 | V2 | Nov 25, 2024 | Gradient headers, dark mode, responsive |
 | V1 | Nov 2024 | Initial template |
+
+### 6.1.0 V5 Gallery Photo Grids (Current - December 22, 2025)
+
+**🎉 BREAKTHROUGH:** Gallery report emails now display **photo grids identical to PDF reports**.
+
+Previously, gallery emails (`new_listings_gallery`, `featured_listings`) showed only 3 stat cards—a "teaser" design. Now they include the **actual property photos and listing details**, making emails a true preview of the PDF content.
+
+| Report Type | Grid Layout | Content |
+|-------------|-------------|---------|
+| `new_listings_gallery` | **3×3 grid** (9 properties) | Photo, address, city/zip, price, beds/baths/sqft |
+| `featured_listings` | **2×2 grid** (4 properties) | Photo, address, city/zip, price, beds/baths/sqft |
+
+**V5 Email Structure for Gallery Reports:**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Header: New Listings Gallery – Redondo Beach               │
+│  Subline: Period: Last 30 days • Source: Live MLS Data      │
+├─────────────────────────────────────────────────────────────┤
+│  SECTION LABEL: Photo Gallery                               │
+├─────────────────────────────────────────────────────────────┤
+│  3-COLUMN METRICS (Count, Median Price, DOM)                │
+├─────────────────────────────────────────────────────────────┤
+│  ┌──────────── PHOTO GALLERY GRID ────────────┐            │
+│  │  ┌──────┐ ┌──────┐ ┌──────┐               │            │
+│  │  │ 📷   │ │ 📷   │ │ 📷   │               │            │
+│  │  │ Addr │ │ Addr │ │ Addr │               │            │
+│  │  │$1.8M │ │$1.45M│ │$1.3M │               │            │
+│  │  └──────┘ └──────┘ └──────┘               │            │
+│  │  (... up to 9 properties in 3 rows ...)   │            │
+│  └────────────────────────────────────────────┘            │
+├─────────────────────────────────────────────────────────────┤
+│  [View Full Report →]                                       │
+│  Rep Footer                                                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Implementation Details:**
+
+| Component | File | Description |
+|-----------|------|-------------|
+| `_build_gallery_grid_html()` | `template.py` | Generates email-safe table-based photo grid |
+| `listings` parameter | `schedule_email_html()` | Accepts listings array from report builder |
+| Email payload | `tasks.py` | Passes `result.get("listings")` for gallery reports |
+| Email orchestrator | `send.py` | Forwards `listings` to template function |
+| Test email data | `branding_tools.py` | Sample listings with Unsplash placeholder photos |
+
+**Photo Sources:**
+
+| Environment | Photo Source |
+|-------------|--------------|
+| **Production** | R2-proxied MLS photos (from `result_json.listings[].hero_photo_url`) |
+| **Test emails** | Unsplash placeholder photos (beautiful house images) |
+
+**Key Code Change:**
+
+```python
+# schedule_email_html() now accepts listings parameter
+def schedule_email_html(
+    ...,
+    listings: Optional[List[Dict]] = None,  # NEW in V5
+) -> str:
+
+# Gallery grid is rendered when listings are provided
+if report_type in ("new_listings_gallery", "featured_listings") and listings:
+    gallery_html = _build_gallery_grid_html(listings, report_type, primary_color)
+```
+
+**Benefits:**
+- ✅ Email recipients see the same content as the PDF
+- ✅ Photos load reliably (R2-proxied in production)
+- ✅ Test emails accurately preview production output
+- ✅ Table-based layout ensures email client compatibility
 
 ### 6.1.1 V4.2 PDF-Aligned Design (Current - All Reports)
 
@@ -448,7 +522,7 @@ V3.1 color philosophy is preserved:
 | `accent_color` | Header gradient only |
 | Neutral gray | Labels, supporting text |
 
-### 6.2 Scheduled Report Template (V3.1)
+### 6.2 Scheduled Report Template (V5)
 
 **File:** `apps/worker/src/worker/email/template.py`
 
@@ -465,6 +539,7 @@ def schedule_email_html(
     pdf_url: str,
     unsubscribe_url: str,
     brand: Optional[Brand] = None,
+    listings: Optional[List[Dict]] = None,  # V5: Photo gallery for gallery reports
 ) -> str:
 ```
 
@@ -596,9 +671,9 @@ email_html = schedule_email_html(
 )
 ```
 
-**Sample Data for Test Emails (V4.2 - Report-Specific):**
+**Sample Data for Test Emails (V5 - Report-Specific with Gallery Photos):**
 
-Each report type now uses its own sample data and sample city for clear visual distinction:
+Each report type uses its own sample data and sample city. **V5 adds sample listings with Unsplash photos for gallery reports.**
 
 | Report Type | Sample City | Unique Data |
 |-------------|-------------|-------------|
@@ -608,8 +683,29 @@ Each report type now uses its own sample data and sample city for clear visual d
 | `closed` | Burbank | 38 sold, $158.7M volume |
 | `price_bands` | Santa Monica | 4 price bands ($450K-$8.5M) |
 | `open_houses` | Manhattan Beach | 24 open houses (15 Sat, 18 Sun) |
-| `new_listings_gallery` | Redondo Beach | 12 listings, 2,450 avg sqft |
-| `featured_listings` | Malibu | 6 premium listings, $12.5M max |
+| `new_listings_gallery` | Redondo Beach | **9 sample listings with Unsplash photos** (3×3 grid) |
+| `featured_listings` | Malibu | **4 luxury listings with Unsplash photos** (2×2 grid) |
+
+**V5 Sample Listings Structure:**
+
+Gallery report test emails now include a `sample_listings` array with realistic property data:
+
+```python
+# Example: new_listings_gallery sample data
+sample_listings_data["new_listings_gallery"] = [
+    {
+        "hero_photo_url": "https://images.unsplash.com/photo-1600596542815...",
+        "street_address": "2847 Pacific Coast Hwy",
+        "city": "Redondo Beach",
+        "zip_code": "90277",
+        "list_price": 1875000,
+        "bedrooms": 4,
+        "bathrooms": 3,
+        "sqft": 2650
+    },
+    # ... 8 more listings for 3×3 grid
+]
+```
 
 **Benefits:**
 - ✅ Change template once, both pathways update
