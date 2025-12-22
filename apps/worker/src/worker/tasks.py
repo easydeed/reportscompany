@@ -655,6 +655,10 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
                                 "pdf_url": pdf_url,
                             }
                             
+                            # For gallery reports, include listings with photos
+                            if report_type in ("new_listings_gallery", "featured_listings"):
+                                email_payload["listings"] = result.get("listings", [])
+                            
                             # Send email (with suppression checking + Phase 30 white-label brand)
                             status_code, response_text = send_schedule_email(
                                 account_id=account_id,

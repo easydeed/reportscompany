@@ -154,6 +154,141 @@ def _format_percent(value: Optional[float]) -> str:
     return f"{value:.1f}%"
 
 
+def _build_gallery_grid_html(listings: List[Dict], report_type: str, primary_color: str) -> str:
+    """
+    Build email-safe HTML for photo gallery grid.
+    
+    For new_listings_gallery: 3-column grid (9 listings max)
+    For featured_listings: 2-column grid (4 listings max)
+    
+    Uses table layout for maximum email client compatibility.
+    """
+    if not listings:
+        return ""
+    
+    is_featured = report_type == "featured_listings"
+    cols = 2 if is_featured else 3
+    max_listings = 4 if is_featured else 9
+    listings = listings[:max_listings]
+    
+    # Build listing cards
+    cards_html = ""
+    for i, listing in enumerate(listings):
+        photo_url = listing.get("hero_photo_url") or ""
+        address = listing.get("street_address") or "Address Not Available"
+        city = listing.get("city") or ""
+        zip_code = listing.get("zip_code") or ""
+        price = listing.get("list_price")
+        beds = listing.get("bedrooms")
+        baths = listing.get("bathrooms")
+        sqft = listing.get("sqft")
+        
+        # Format price
+        if price:
+            if price >= 1_000_000:
+                price_str = f"${price / 1_000_000:.2f}M"
+            else:
+                price_str = f"${price:,.0f}"
+        else:
+            price_str = "Price N/A"
+        
+        # Format details
+        details_parts = []
+        if beds:
+            details_parts.append(f"{beds} Bed")
+        if baths:
+            details_parts.append(f"{baths} Bath")
+        if sqft:
+            details_parts.append(f"{sqft:,} SF")
+        details_str = " • ".join(details_parts) if details_parts else ""
+        
+        # Location
+        location = f"{city}, {zip_code}" if zip_code else city
+        
+        # Card width based on layout
+        card_width = "50%" if is_featured else "33%"
+        img_height = "160" if is_featured else "120"
+        
+        # Placeholder if no photo
+        if photo_url:
+            photo_html = f'<img src="{photo_url}" alt="{address}" width="100%" height="{img_height}" style="display: block; width: 100%; height: {img_height}px; object-fit: cover; background: #e2e8f0;">'
+        else:
+            photo_html = f'''<div style="width: 100%; height: {img_height}px; background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); display: flex; align-items: center; justify-content: center;">
+                <span style="color: #94a3b8; font-size: 12px;">No Photo</span>
+            </div>'''
+        
+        # Start new row
+        if i % cols == 0:
+            if i > 0:
+                cards_html += "</tr>"
+            cards_html += "<tr>"
+        
+        cards_html += f'''
+                  <td width="{card_width}" style="padding: 6px; vertical-align: top;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden;">
+                      <tr>
+                        <td style="padding: 0;">
+                          {photo_html}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 10px 12px;">
+                          <p style="margin: 0 0 2px 0; font-size: 13px; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            {address}
+                          </p>
+                          <p style="margin: 0 0 6px 0; font-size: 11px; color: #64748b;">
+                            {location}
+                          </p>
+                          <p style="margin: 0 0 4px 0; font-size: 16px; font-weight: 800; color: #000000;">
+                            {price_str}
+                          </p>
+                          <p style="margin: 0; font-size: 11px; color: #64748b;">
+                            {details_str}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>'''
+    
+    # Close last row
+    if listings:
+        # Pad remaining cells in the last row
+        remaining = cols - (len(listings) % cols)
+        if remaining < cols:
+            for _ in range(remaining):
+                cards_html += f'<td width="{100//cols}%" style="padding: 6px;"></td>'
+        cards_html += "</tr>"
+    
+    # Build section header
+    section_title = "Featured Properties" if is_featured else "New Listings"
+    count = len(listings)
+    
+    return f'''
+              <!-- Photo Gallery Grid -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="padding-bottom: 12px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(90deg, {primary_color}, {primary_color}dd); border-radius: 8px;">
+                      <tr>
+                        <td align="center" style="padding: 14px 20px;">
+                          <span style="font-size: 22px; font-weight: 800; color: #ffffff; margin-right: 10px;">{count}</span>
+                          <span style="font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.9); text-transform: uppercase; letter-spacing: 0.5px;">{section_title}</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      {cards_html}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+'''
+
+
 def _format_decimal(value: Optional[float], decimals: int = 1) -> str:
     """Format decimal for display."""
     if value is None:
@@ -613,6 +748,7 @@ def schedule_email_html(
     pdf_url: str,
     unsubscribe_url: str,
     brand: Optional[Brand] = None,
+    listings: Optional[List[Dict]] = None,
 ) -> str:
     """
     Generate HTML email for a scheduled report notification.
@@ -720,6 +856,9 @@ def schedule_email_html(
     
     # Get price tier breakdown if applicable (Market Snapshot)
     price_tiers = _get_price_tier_breakdown(metrics) if has_price_tiers else None
+    
+    # V5: Gallery reports - check for listings data
+    has_gallery = report_type in ("new_listings_gallery", "featured_listings") and listings
     
     # Build preheader
     preheader = _build_preheader(report_type, area_display, metrics)
@@ -1036,6 +1175,11 @@ def schedule_email_html(
               </table>
 '''
     
+    # V5: Build gallery grid HTML for gallery report types
+    gallery_html = ""
+    if has_gallery:
+        gallery_html = _build_gallery_grid_html(listings or [], report_type, primary_color)
+    
     # Build agent footer HTML
     if rep_photo_url and (contact_line1 or rep_name):
         # Full footer with photo
@@ -1289,7 +1433,7 @@ def schedule_email_html(
                   </td>
                 </tr>
               </table>
-'''}{core_indicators_html if has_hero_4 else ""}{extra_stats_html}{property_types_html}{price_tiers_html}{price_bands_html}
+'''}{core_indicators_html if has_hero_4 else ""}{extra_stats_html}{property_types_html}{price_tiers_html}{price_bands_html}{gallery_html}
               <!-- ========== CTA BUTTON ========== -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>

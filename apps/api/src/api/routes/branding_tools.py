@@ -535,8 +535,36 @@ async def send_test_email(
         },
     }
     
+    # V5: Sample listings for gallery reports (matching PDF exactly)
+    # These use placeholder photos - production uses R2-proxied MLS photos
+    sample_listings_data = {
+        # NEW LISTINGS GALLERY - 9 properties (3x3 grid)
+        "new_listings_gallery": [
+            {"hero_photo_url": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop", "street_address": "2847 Pacific Coast Hwy", "city": "Redondo Beach", "zip_code": "90277", "list_price": 1875000, "bedrooms": 4, "bathrooms": 3, "sqft": 2650},
+            {"hero_photo_url": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&h=300&fit=crop", "street_address": "1523 Esplanade", "city": "Redondo Beach", "zip_code": "90277", "list_price": 1450000, "bedrooms": 3, "bathrooms": 2, "sqft": 1920},
+            {"hero_photo_url": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=400&h=300&fit=crop", "street_address": "426 S Broadway", "city": "Redondo Beach", "zip_code": "90277", "list_price": 1295000, "bedrooms": 3, "bathrooms": 2, "sqft": 1750},
+            {"hero_photo_url": "https://images.unsplash.com/photo-1613977257363-707ba9348227?w=400&h=300&fit=crop", "street_address": "809 N Lucia Ave", "city": "Redondo Beach", "zip_code": "90277", "list_price": 1650000, "bedrooms": 4, "bathrooms": 3, "sqft": 2340},
+            {"hero_photo_url": "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&h=300&fit=crop", "street_address": "3102 Manhattan Ave", "city": "Redondo Beach", "zip_code": "90266", "list_price": 2150000, "bedrooms": 5, "bathrooms": 4, "sqft": 3100},
+            {"hero_photo_url": "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=400&h=300&fit=crop", "street_address": "1847 Prospect Ave", "city": "Redondo Beach", "zip_code": "90277", "list_price": 1125000, "bedrooms": 3, "bathrooms": 2, "sqft": 1540},
+            {"hero_photo_url": "https://images.unsplash.com/photo-1600573472591-ee6981cf35e6?w=400&h=300&fit=crop", "street_address": "512 S Catalina Ave", "city": "Redondo Beach", "zip_code": "90277", "list_price": 1375000, "bedrooms": 3, "bathrooms": 3, "sqft": 1850},
+            {"hero_photo_url": "https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=400&h=300&fit=crop", "street_address": "2219 Ruhland Ave", "city": "Redondo Beach", "zip_code": "90278", "list_price": 1595000, "bedrooms": 4, "bathrooms": 3, "sqft": 2180},
+            {"hero_photo_url": "https://images.unsplash.com/photo-1600585152220-90363fe7e115?w=400&h=300&fit=crop", "street_address": "715 Knob Hill Ave", "city": "Redondo Beach", "zip_code": "90277", "list_price": 1250000, "bedrooms": 3, "bathrooms": 2, "sqft": 1680},
+        ],
+        
+        # FEATURED LISTINGS - 4 luxury properties (2x2 grid)
+        "featured_listings": [
+            {"hero_photo_url": "https://images.unsplash.com/photo-1600607687644-c7171b42498f?w=400&h=300&fit=crop", "street_address": "27150 Pacific Coast Hwy", "city": "Malibu", "zip_code": "90265", "list_price": 12500000, "bedrooms": 6, "bathrooms": 8, "sqft": 7850, "days_on_market": 45, "price_per_sqft": 1592},
+            {"hero_photo_url": "https://images.unsplash.com/photo-1600566752355-35792bedcfea?w=400&h=300&fit=crop", "street_address": "23456 Malibu Colony Rd", "city": "Malibu", "zip_code": "90265", "list_price": 9750000, "bedrooms": 5, "bathrooms": 6, "sqft": 5400, "days_on_market": 62, "price_per_sqft": 1806},
+            {"hero_photo_url": "https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=400&h=300&fit=crop", "street_address": "32100 Broad Beach Rd", "city": "Malibu", "zip_code": "90265", "list_price": 8200000, "bedrooms": 5, "bathrooms": 5, "sqft": 4800, "days_on_market": 78, "price_per_sqft": 1708},
+            {"hero_photo_url": "https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=400&h=300&fit=crop", "street_address": "6543 Zuma Beach Dr", "city": "Malibu", "zip_code": "90265", "list_price": 7100000, "bedrooms": 4, "bathrooms": 5, "sqft": 4200, "days_on_market": 91, "price_per_sqft": 1690},
+        ],
+    }
+    
     # Get metrics for the requested report type
     sample_metrics = report_sample_data.get(body.report_type, report_sample_data["market_snapshot"])
+    
+    # Get listings for gallery reports
+    sample_listings = sample_listings_data.get(body.report_type)
     
     # Build brand dict for template
     brand_dict = {
@@ -578,6 +606,7 @@ async def send_test_email(
             pdf_url="#",  # Placeholder for test
             unsubscribe_url="#",  # Placeholder for test
             brand=brand_dict,
+            listings=sample_listings,  # V5: Photo gallery for gallery reports
         )
         
         # Add test email notice banner after the preheader

@@ -99,6 +99,7 @@ def send_schedule_email(
     lookback_days = payload.get("lookback_days", 30)
     metrics = payload.get("metrics", {})
     pdf_url = payload.get("pdf_url", "")
+    listings = payload.get("listings")  # V5: Photo gallery for gallery reports
     
     if not pdf_url:
         logger.error("No PDF URL provided in payload")
@@ -114,7 +115,7 @@ def send_schedule_email(
     # Generate email subject
     subject = schedule_email_subject(report_type, city, zip_codes)
     
-    # Generate HTML content (Phase 30: with brand)
+    # Generate HTML content (Phase 30: with brand, V5: with listings for gallery reports)
     html_content = schedule_email_html(
         account_name=account_name or "there",
         report_type=report_type,
@@ -125,6 +126,7 @@ def send_schedule_email(
         pdf_url=pdf_url,
         unsubscribe_url=unsubscribe_url,
         brand=brand,
+        listings=listings,  # V5: Photo gallery for gallery reports
     )
     
     # Send email via provider
