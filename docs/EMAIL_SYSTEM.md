@@ -404,10 +404,11 @@ Previously, gallery emails (`new_listings_gallery`, `featured_listings`) showed 
 | Component | File | Description |
 |-----------|------|-------------|
 | `_build_gallery_grid_html()` | `template.py` | Generates email-safe table-based photo grid |
+| `_build_listings_table_html()` | `template.py` | Generates email-safe listings table (Address, Beds, Baths, Price) |
 | `listings` parameter | `schedule_email_html()` | Accepts listings array from report builder |
-| Email payload | `tasks.py` | Passes `result.get("listings")` for gallery reports |
+| Email payload | `tasks.py` | Passes `result.get("listings")` for gallery reports, `result.get("listings_sample")` for inventory |
 | Email orchestrator | `send.py` | Forwards `listings` to template function |
-| Test email data | `branding_tools.py` | Sample listings with Unsplash placeholder photos |
+| Test email data | `branding_tools.py` | Sample listings with Unsplash photos (gallery) or address data (inventory) |
 
 **Photo Sources:**
 
@@ -425,9 +426,13 @@ def schedule_email_html(
     listings: Optional[List[Dict]] = None,  # NEW in V5
 ) -> str:
 
-# Gallery grid is rendered when listings are provided
+# Gallery grid is rendered for gallery reports
 if report_type in ("new_listings_gallery", "featured_listings") and listings:
     gallery_html = _build_gallery_grid_html(listings, report_type, primary_color)
+
+# Listings table is rendered for inventory
+if config.get("has_listings_table", False) and listings:
+    listings_table_html = _build_listings_table_html(listings, report_type, primary_color)
 ```
 
 **Benefits:**
@@ -446,7 +451,7 @@ This matrix shows how each email template aligns with its corresponding PDF:
 |-------------|------------------|--------------------|--------------------|
 | `market_snapshot` | 4 hero metrics, Core Indicators, Property Types table, Price Tiers table | ✅ 4-metric hero row, Core Indicators section, Property Types breakdown, Price Tier cards | **Full alignment** - Email mirrors PDF structure |
 | `new_listings` | 4 hero metrics + full listing table | ✅ 4-metric hero row + insight paragraph | **Summary** - Table omitted, stats highlighted |
-| `inventory` | 4 hero metrics + full listing table | ✅ 4-metric hero row + insight paragraph | **Summary** - Table omitted, stats highlighted |
+| `inventory` | 4 hero metrics + full listing table | ✅ 4-metric hero row + insight + **listings table (top 10)** | **Full (V5)** - Includes listing table |
 | `closed` | 4 hero metrics + full listing table | ✅ 4-metric hero row + insight paragraph | **Summary** - Table omitted, stats highlighted |
 | `price_bands` | 4 hero metrics + visual price band bars + hottest/slowest summary | ✅ 4-metric hero row + price bands rows | **Full alignment** - Price bands shown with counts |
 | `open_houses` | Stats + open house schedule list | 3-metric cards (legacy V3) | **Basic** - Summary only |
@@ -461,10 +466,15 @@ This matrix shows how each email template aligns with its corresponding PDF:
 - Users see the same data in both formats
 
 **Summary Reports (V4):**
-- `new_listings`, `inventory`, `closed`
+- `new_listings`, `closed`
 - Full listing tables would be impractical in email (hundreds of rows)
 - Email shows key summary metrics + insight paragraph
 - "View Full Report" button links to complete PDF
+
+**Enhanced Summary Reports (V5):**
+- `inventory`
+- Now includes **top 10 listings table** (Address, Beds, Baths, Price)
+- Provides actionable listing data directly in email
 
 **Legacy Reports (V3):**
 - `open_houses`
@@ -496,6 +506,27 @@ This matrix shows how each email template aligns with its corresponding PDF:
 │  4-METRIC HERO: Total | Median Price | DOM | $/SqFt         │
 ├─────────────────────────────────────────────────────────────┤
 │  [View Full Report →]  (contains the detailed table)        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Inventory Report (V5 - With Listings Table):**
+```
+┌─────────────────────────────────────────────────────────────┐
+│  INSIGHT: "156 active listings in Glendale..."              │
+├─────────────────────────────────────────────────────────────┤
+│  4-METRIC HERO: Active | New This Month | DOM | MOI         │
+├─────────────────────────────────────────────────────────────┤
+│  ACTIVE LISTINGS (Top 10)                                   │
+│  ┌───────────────────────────┬──────┬──────┬──────────┐    │
+│  │ Address                   │ Beds │ Baths│ Price    │    │
+│  ├───────────────────────────┼──────┼──────┼──────────┤    │
+│  │ 1245 N Central Ave        │  4   │  3   │ $1.30M   │    │
+│  │ 823 E Glenoaks Blvd       │  3   │  2   │ $1.15M   │    │
+│  │ 456 W Dryden St           │  5   │  4   │ $1.58M   │    │
+│  │ ... (up to 10 rows)                                │    │
+│  └───────────────────────────┴──────┴──────┴──────────┘    │
+├─────────────────────────────────────────────────────────────┤
+│  [View Full Report →]                                       │
 └─────────────────────────────────────────────────────────────┘
 ```
 
