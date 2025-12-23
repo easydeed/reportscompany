@@ -73,6 +73,7 @@ REPORT_CONFIG = {
         "has_extra_stats": False,
         "has_hero_4": True,  # V4: 4-metric hero row
         "has_insight": True,  # V4: Insight paragraph
+        "has_listings_table": True,  # V5: Include listings table
     },
     "closed": {
         "label": "Closed Sales",
@@ -282,6 +283,104 @@ def _build_gallery_grid_html(listings: List[Dict], report_type: str, primary_col
                   <td>
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                       {cards_html}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+'''
+
+
+def _build_listings_table_html(listings: List[Dict], report_type: str, primary_color: str) -> str:
+    """
+    Build email-safe HTML table for listings (inventory, new_listings, closed).
+    
+    Shows: Address, Beds, Baths, Price
+    Limited to 10 rows for email practicality.
+    
+    Uses table layout for maximum email client compatibility.
+    """
+    if not listings:
+        return ""
+    
+    # Limit to 10 listings for email
+    listings = listings[:10]
+    
+    # Build table rows
+    rows_html = ""
+    for i, listing in enumerate(listings):
+        address = listing.get("street_address") or "Address Not Available"
+        city = listing.get("city") or ""
+        beds = listing.get("bedrooms") or "-"
+        baths = listing.get("bathrooms") or "-"
+        price = listing.get("list_price")
+        
+        # Format price
+        if price:
+            if price >= 1_000_000:
+                price_str = f"${price / 1_000_000:.2f}M"
+            else:
+                price_str = f"${price:,.0f}"
+        else:
+            price_str = "-"
+        
+        # Alternate row background
+        bg_color = "#f8fafc" if i % 2 == 0 else "#ffffff"
+        
+        rows_html += f'''
+                      <tr style="background-color: {bg_color};">
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0;">
+                          <span style="font-size: 13px; font-weight: 600; color: #0f172a;">{address}</span>
+                          <br/>
+                          <span style="font-size: 11px; color: #64748b;">{city}</span>
+                        </td>
+                        <td align="center" style="padding: 10px 8px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #374151;">
+                          {beds}
+                        </td>
+                        <td align="center" style="padding: 10px 8px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #374151;">
+                          {baths}
+                        </td>
+                        <td align="right" style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; font-weight: 700; color: {primary_color};">
+                          {price_str}
+                        </td>
+                      </tr>'''
+    
+    # Determine section title based on report type
+    titles = {
+        "inventory": "Active Listings",
+        "new_listings": "New Listings",
+        "closed": "Recently Sold",
+    }
+    section_title = titles.get(report_type, "Listings")
+    
+    return f'''
+              <!-- Listings Table -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="padding-bottom: 12px;">
+                    <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px;">
+                      {section_title} (Top {len(listings)})
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden;">
+                      <!-- Header Row -->
+                      <tr style="background-color: #f1f5f9;">
+                        <td style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">
+                          Address
+                        </td>
+                        <td align="center" style="padding: 10px 8px; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; width: 50px;">
+                          Beds
+                        </td>
+                        <td align="center" style="padding: 10px 8px; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; width: 50px;">
+                          Baths
+                        </td>
+                        <td align="right" style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; width: 100px;">
+                          Price
+                        </td>
+                      </tr>
+                      {rows_html}
                     </table>
                   </td>
                 </tr>
@@ -860,6 +959,9 @@ def schedule_email_html(
     # V5: Gallery reports - check for listings data
     has_gallery = report_type in ("new_listings_gallery", "featured_listings") and listings
     
+    # V5: Listings table for inventory (and future: new_listings, closed)
+    has_listings_table = config.get("has_listings_table", False) and listings
+    
     # Build preheader
     preheader = _build_preheader(report_type, area_display, metrics)
     
@@ -1180,6 +1282,11 @@ def schedule_email_html(
     if has_gallery:
         gallery_html = _build_gallery_grid_html(listings or [], report_type, primary_color)
     
+    # V5: Build listings table HTML for inventory/new_listings/closed
+    listings_table_html = ""
+    if has_listings_table:
+        listings_table_html = _build_listings_table_html(listings or [], report_type, primary_color)
+    
     # Build agent footer HTML
     if rep_photo_url and (contact_line1 or rep_name):
         # Full footer with photo
@@ -1433,7 +1540,7 @@ def schedule_email_html(
                   </td>
                 </tr>
               </table>
-'''}{core_indicators_html if has_hero_4 else ""}{extra_stats_html}{property_types_html}{price_tiers_html}{price_bands_html}{gallery_html}
+'''}{core_indicators_html if has_hero_4 else ""}{extra_stats_html}{property_types_html}{price_tiers_html}{price_bands_html}{gallery_html}{listings_table_html}
               <!-- ========== CTA BUTTON ========== -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>

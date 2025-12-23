@@ -535,9 +535,24 @@ async def send_test_email(
         },
     }
     
-    # V5: Sample listings for gallery reports (matching PDF exactly)
-    # These use placeholder photos - production uses R2-proxied MLS photos
+    # V5: Sample listings for gallery reports and listings tables
+    # Gallery reports use placeholder photos - production uses R2-proxied MLS photos
+    # Table reports show Address, Beds, Baths, Price
     sample_listings_data = {
+        # INVENTORY - 10 properties for table (Glendale)
+        "inventory": [
+            {"street_address": "1245 N Central Ave", "city": "Glendale", "bedrooms": 4, "bathrooms": 3, "list_price": 1295000},
+            {"street_address": "823 E Glenoaks Blvd", "city": "Glendale", "bedrooms": 3, "bathrooms": 2, "list_price": 1150000},
+            {"street_address": "456 W Dryden St", "city": "Glendale", "bedrooms": 5, "bathrooms": 4, "list_price": 1575000},
+            {"street_address": "2901 Honolulu Ave", "city": "Glendale", "bedrooms": 3, "bathrooms": 2, "list_price": 985000},
+            {"street_address": "1678 Grandview Ave", "city": "Glendale", "bedrooms": 4, "bathrooms": 3, "list_price": 1425000},
+            {"street_address": "509 E Elk Ave", "city": "Glendale", "bedrooms": 2, "bathrooms": 2, "list_price": 875000},
+            {"street_address": "3412 Ocean View Blvd", "city": "Glendale", "bedrooms": 4, "bathrooms": 3, "list_price": 1350000},
+            {"street_address": "742 N Brand Blvd", "city": "Glendale", "bedrooms": 3, "bathrooms": 2, "list_price": 1095000},
+            {"street_address": "1856 E Chevy Chase Dr", "city": "Glendale", "bedrooms": 5, "bathrooms": 4, "list_price": 1695000},
+            {"street_address": "234 W Lexington Dr", "city": "Glendale", "bedrooms": 3, "bathrooms": 2, "list_price": 1025000},
+        ],
+        
         # NEW LISTINGS GALLERY - 9 properties (3x3 grid)
         "new_listings_gallery": [
             {"hero_photo_url": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop", "street_address": "2847 Pacific Coast Hwy", "city": "Redondo Beach", "zip_code": "90277", "list_price": 1875000, "bedrooms": 4, "bathrooms": 3, "sqft": 2650},
