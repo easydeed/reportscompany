@@ -2,7 +2,7 @@
 
 > Technical documentation for PDF report generation, templates, and white-label branding.
 
-**Last Updated:** December 17, 2025 (R2 Photo Proxy Solution)
+**Last Updated:** December 22, 2025 (V5 Email Alignment + R2 Photo Proxy)
 
 ---
 
@@ -552,6 +552,74 @@ PHOTO_PROXY_ENABLED=true
 4. ❌ **CSS background-image fallback** - Graceful but images still blocked
 
 **Key insight:** The issue was never about *timing* or *lazy loading*—it was about **which IP makes the request**. The R2 proxy solution ensures all image requests come from our controlled infrastructure.
+
+---
+
+## 9. Email Template Alignment (V5)
+
+**See Also:** [EMAIL_SYSTEM.md](./EMAIL_SYSTEM.md) for complete email documentation.
+
+### 9.1 Design Philosophy
+
+Email templates are designed to **mirror PDF content** as closely as possible while respecting email client limitations:
+
+| Report Type | PDF ↔ Email Alignment |
+|-------------|----------------------|
+| `market_snapshot` | ✅ Full - 4 hero metrics, core indicators, property types, price tiers |
+| `new_listings_gallery` | ✅ Full (V5) - 3×3 photo grid matches PDF layout |
+| `featured_listings` | ✅ Full (V5) - 2×2 photo grid matches PDF layout |
+| `price_bands` | ✅ Full - Price band rows with counts |
+| `new_listings` | Summary - Key metrics (table omitted for practicality) |
+| `inventory` | Summary - Key metrics (table omitted for practicality) |
+| `closed` | Summary - Key metrics (table omitted for practicality) |
+| `open_houses` | Basic - 3 metrics only |
+
+### 9.2 Gallery Photo Flow (V5)
+
+For `new_listings_gallery` and `featured_listings`, photos flow through both PDF and email:
+
+```
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│  SimplyRETS  │────▶│ Photo Proxy  │────▶│  result_json │
+│  (MLS URLs)  │     │  (R2 Upload) │     │  (R2 URLs)   │
+└──────────────┘     └──────────────┘     └──────────────┘
+                                                 │
+                    ┌────────────────────────────┴────────────────────────────┐
+                    │                                                          │
+                    ▼                                                          ▼
+             ┌──────────────┐                                           ┌──────────────┐
+             │  PDF Render  │                                           │ Email Render │
+             │  (PDFShift)  │                                           │ (SendGrid)   │
+             │              │                                           │              │
+             │  📷 📷 📷   │                                           │  📷 📷 📷   │
+             │  📷 📷 📷   │                                           │  📷 📷 📷   │
+             │  📷 📷 📷   │                                           │  📷 📷 📷   │
+             └──────────────┘                                           └──────────────┘
+```
+
+**Key:** Same R2-proxied photos appear in both PDF and email, ensuring consistency.
+
+### 9.3 V5 Gallery Grid in Email
+
+Added in December 2025, the email template now includes:
+
+```python
+# apps/worker/src/worker/email/template.py
+
+def _build_gallery_grid_html(listings: List[Dict], report_type: str, primary_color: str) -> str:
+    """
+    Build email-safe HTML for photo gallery grid.
+    - new_listings_gallery: 3×3 grid (9 properties max)
+    - featured_listings: 2×2 grid (4 properties max)
+    """
+```
+
+Each property card shows:
+- Hero photo (R2 URL)
+- Street address
+- City, ZIP
+- List price
+- Beds/Baths/SqFt
 
 ---
 

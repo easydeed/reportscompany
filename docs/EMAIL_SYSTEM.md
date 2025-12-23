@@ -436,6 +436,82 @@ if report_type in ("new_listings_gallery", "featured_listings") and listings:
 - ✅ Test emails accurately preview production output
 - ✅ Table-based layout ensures email client compatibility
 
+---
+
+### 6.1.1 Email-to-PDF Alignment Matrix (V5)
+
+This matrix shows how each email template aligns with its corresponding PDF:
+
+| Report Type | PDF Main Content | Email Main Content | Alignment Strategy |
+|-------------|------------------|--------------------|--------------------|
+| `market_snapshot` | 4 hero metrics, Core Indicators, Property Types table, Price Tiers table | ✅ 4-metric hero row, Core Indicators section, Property Types breakdown, Price Tier cards | **Full alignment** - Email mirrors PDF structure |
+| `new_listings` | 4 hero metrics + full listing table | ✅ 4-metric hero row + insight paragraph | **Summary** - Table omitted, stats highlighted |
+| `inventory` | 4 hero metrics + full listing table | ✅ 4-metric hero row + insight paragraph | **Summary** - Table omitted, stats highlighted |
+| `closed` | 4 hero metrics + full listing table | ✅ 4-metric hero row + insight paragraph | **Summary** - Table omitted, stats highlighted |
+| `price_bands` | 4 hero metrics + visual price band bars + hottest/slowest summary | ✅ 4-metric hero row + price bands rows | **Full alignment** - Price bands shown with counts |
+| `open_houses` | Stats + open house schedule list | 3-metric cards (legacy V3) | **Basic** - Summary only |
+| `new_listings_gallery` | 3×3 photo grid with property cards | ✅ **V5:** 3×3 photo grid with same layout | **Full alignment** - Photos match PDF |
+| `featured_listings` | 2×2 photo grid with property cards | ✅ **V5:** 2×2 photo grid with same layout | **Full alignment** - Photos match PDF |
+
+#### Alignment Philosophy
+
+**Full Alignment Reports (V4/V5):**
+- `market_snapshot`, `price_bands`, `new_listings_gallery`, `featured_listings`
+- Email content mirrors PDF structure exactly
+- Users see the same data in both formats
+
+**Summary Reports (V4):**
+- `new_listings`, `inventory`, `closed`
+- Full listing tables would be impractical in email (hundreds of rows)
+- Email shows key summary metrics + insight paragraph
+- "View Full Report" button links to complete PDF
+
+**Legacy Reports (V3):**
+- `open_houses`
+- Basic 3-metric layout
+- Future enhancement: add open house schedule preview
+
+#### What's Shown in Each Email Type
+
+**Market Snapshot (V4 - Full Alignment):**
+```
+┌─────────────────────────────────────────────────────────────┐
+│  INSIGHT: "This snapshot provides key indicators for..."    │
+├─────────────────────────────────────────────────────────────┤
+│  4-METRIC HERO: Median Price | Closed | DOM | MOI           │
+├─────────────────────────────────────────────────────────────┤
+│  CORE INDICATORS: New Listings | Pending | Sale-to-List     │
+├─────────────────────────────────────────────────────────────┤
+│  PROPERTY TYPES: ● 89 SFR  ● 28 Condos  ● 10 Townhomes     │
+├─────────────────────────────────────────────────────────────┤
+│  PRICE TIERS: [Entry 28] [Move-Up 34] [Luxury 27]          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Table Reports (V4 - Summary):**
+```
+┌─────────────────────────────────────────────────────────────┐
+│  INSIGHT: "47 new listings have entered the market..."      │
+├─────────────────────────────────────────────────────────────┤
+│  4-METRIC HERO: Total | Median Price | DOM | $/SqFt         │
+├─────────────────────────────────────────────────────────────┤
+│  [View Full Report →]  (contains the detailed table)        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Gallery Reports (V5 - Full Alignment):**
+```
+┌─────────────────────────────────────────────────────────────┐
+│  3-METRIC CARDS: Count | Median Price | DOM                 │
+├─────────────────────────────────────────────────────────────┤
+│  PHOTO GALLERY GRID                                         │
+│  ┌──────┐ ┌──────┐ ┌──────┐                                │
+│  │ 📷   │ │ 📷   │ │ 📷   │   (3×3 for gallery)           │
+│  │ $1.8M│ │ $1.4M│ │ $1.3M│   (2×2 for featured)          │
+│  └──────┘ └──────┘ └──────┘                                │
+└─────────────────────────────────────────────────────────────┘
+```
+
 ### 6.1.1 V4.2 PDF-Aligned Design (Current - All Reports)
 
 V4.2 extends the PDF-aligned design to **all major report types**:
