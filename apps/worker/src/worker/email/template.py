@@ -1172,7 +1172,7 @@ def schedule_email_html(
                           <span style="font-size: 13px; color: #78716c; margin-left: 8px;">{band["range"]}</span>
                         </td>
                         <td align="right" style="vertical-align: middle;">
-                          <span style="font-size: 15px; font-weight: 900; color: {primary_color};">{band["count"]} listings</span>
+                          <span style="font-size: 15px; font-weight: 900; color: #1c1917;">{band["count"]} listings</span>
                         </td>
                       </tr>
                     </table>
@@ -1429,19 +1429,15 @@ def schedule_email_html(
         <!-- Email Wrapper -->
         <table role="presentation" cellpadding="0" cellspacing="0" width="600" class="wrapper" style="max-width: 600px; width: 100%;">
           
-          <!-- ========== HEADER WITH ACCENT STRIPE ========== -->
-          <!-- Accent stripe - subtle pop of color at top -->
-          <tr>
-            <td style="background-color: {accent_color}; height: 4px; font-size: 0; line-height: 0; border-radius: 12px 12px 0 0;">&nbsp;</td>
-          </tr>
+          <!-- ========== HEADER WITH GRADIENT ========== -->
           <tr>
             <td>
               <!--[if mso]>
               <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;height:180px;">
-                <v:fill type="solid" color="{primary_color}"/>
+                <v:fill type="gradient" color="{primary_color}" color2="{accent_color}" angle="135"/>
                 <v:textbox inset="0,0,0,0" style="mso-fit-shape-to-text:true">
               <![endif]-->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: {primary_color};">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%); border-radius: 12px 12px 0 0;">
                 <tr>
                   <td align="center" style="padding: 28px 40px 16px 40px;">
                     {logo_html}
