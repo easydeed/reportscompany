@@ -82,6 +82,7 @@ REPORT_CONFIG = {
         "has_extra_stats": False,  # V4: Integrated into hero row
         "has_hero_4": True,  # V4: 4-metric hero row
         "has_insight": True,  # V4: Insight paragraph
+        "has_listings_table": True,  # V6: Include listings table
     },
     "price_bands": {
         "label": "Price Analysis",

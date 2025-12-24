@@ -674,6 +674,21 @@ def generate_report(run_id: str, account_id: str, report_type: str, params: dict
                                     for l in listings_sample
                                 ]
                             
+                            # For closed reports, include listings table data (recently sold)
+                            if report_type == "closed":
+                                # Get top 10 closed listings for email table (sorted by close_date desc)
+                                listings_sample = result.get("listings_sample", [])[:10]
+                                email_payload["listings"] = [
+                                    {
+                                        "street_address": l.get("street_address"),
+                                        "city": l.get("city"),
+                                        "bedrooms": l.get("bedrooms"),
+                                        "bathrooms": l.get("bathrooms"),
+                                        "list_price": l.get("close_price"),  # Use close_price for sold properties
+                                    }
+                                    for l in listings_sample
+                                ]
+                            
                             # Send email (with suppression checking + Phase 30 white-label brand)
                             status_code, response_text = send_schedule_email(
                                 account_id=account_id,
