@@ -304,8 +304,12 @@ def _build_fallback_test_email(report_type: str, branding: dict, metrics: dict) 
 </head>
 <body style="margin: 0; padding: 40px; background-color: #f5f5f4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
   <table width="600" style="margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden;">
+    <!-- Accent stripe - subtle pop of color -->
     <tr>
-      <td style="background: linear-gradient(135deg, {primary_color}, {accent_color}); padding: 40px; text-align: center;">
+      <td style="background-color: {accent_color}; height: 4px; font-size: 0; line-height: 0;">&nbsp;</td>
+    </tr>
+    <tr>
+      <td style="background: {primary_color}; padding: 40px; text-align: center;">
         <h1 style="color: #fff; margin: 0; font-size: 28px; font-weight: 400;">{brand_name}</h1>
         <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 14px;">{report_type_display}</p>
       </td>

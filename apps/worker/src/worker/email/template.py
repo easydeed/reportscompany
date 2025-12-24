@@ -1429,15 +1429,19 @@ def schedule_email_html(
         <!-- Email Wrapper -->
         <table role="presentation" cellpadding="0" cellspacing="0" width="600" class="wrapper" style="max-width: 600px; width: 100%;">
           
-          <!-- ========== HEADER WITH GRADIENT ========== -->
+          <!-- ========== HEADER WITH ACCENT STRIPE ========== -->
+          <!-- Accent stripe - subtle pop of color at top -->
+          <tr>
+            <td style="background-color: {accent_color}; height: 4px; font-size: 0; line-height: 0; border-radius: 12px 12px 0 0;">&nbsp;</td>
+          </tr>
           <tr>
             <td>
               <!--[if mso]>
               <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;height:180px;">
-                <v:fill type="gradient" color="{primary_color}" color2="{accent_color}" angle="135"/>
+                <v:fill type="solid" color="{primary_color}"/>
                 <v:textbox inset="0,0,0,0" style="mso-fit-shape-to-text:true">
               <![endif]-->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%); border-radius: 12px 12px 0 0;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: {primary_color};">
                 <tr>
                   <td align="center" style="padding: 28px 40px 16px 40px;">
                     {logo_html}
