@@ -226,7 +226,7 @@ def _build_gallery_grid_html(listings: List[Dict], report_type: str, primary_col
         
         cards_html += f'''
                   <td width="{card_width}" style="padding: 6px; vertical-align: top;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e7e5e4; overflow: hidden;">
                       <tr>
                         <td style="padding: 0;">
                           {photo_html}
@@ -234,16 +234,16 @@ def _build_gallery_grid_html(listings: List[Dict], report_type: str, primary_col
                       </tr>
                       <tr>
                         <td style="padding: 10px 12px;">
-                          <p style="margin: 0 0 2px 0; font-size: 13px; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                          <p style="margin: 0 0 2px 0; font-size: 13px; font-weight: 700; color: #1c1917; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             {address}
                           </p>
-                          <p style="margin: 0 0 6px 0; font-size: 11px; color: #64748b;">
+                          <p style="margin: 0 0 6px 0; font-size: 11px; color: #78716c;">
                             {location}
                           </p>
-                          <p style="margin: 0 0 4px 0; font-size: 16px; font-weight: 800; color: #000000;">
+                          <p style="margin: 0 0 4px 0; font-size: 16px; font-weight: 900; color: #0c0a09;">
                             {price_str}
                           </p>
-                          <p style="margin: 0; font-size: 11px; color: #64748b;">
+                          <p style="margin: 0; font-size: 11px; color: #78716c;">
                             {details_str}
                           </p>
                         </td>
@@ -324,22 +324,22 @@ def _build_listings_table_html(listings: List[Dict], report_type: str, primary_c
             price_str = "-"
         
         # Alternate row background
-        bg_color = "#f8fafc" if i % 2 == 0 else "#ffffff"
+        bg_color = "#fafaf9" if i % 2 == 0 else "#ffffff"
         
         rows_html += f'''
                       <tr style="background-color: {bg_color};">
-                        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0;">
-                          <span style="font-size: 13px; font-weight: 600; color: #0f172a;">{address}</span>
+                        <td style="padding: 10px 12px; border-bottom: 1px solid #e7e5e4;">
+                          <span style="font-size: 13px; font-weight: 600; color: #1c1917;">{address}</span>
                           <br/>
-                          <span style="font-size: 11px; color: #64748b;">{city}</span>
+                          <span style="font-size: 11px; color: #78716c;">{city}</span>
                         </td>
-                        <td align="center" style="padding: 10px 8px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #374151;">
+                        <td align="center" style="padding: 10px 8px; border-bottom: 1px solid #e7e5e4; font-size: 13px; color: #44403c;">
                           {beds}
                         </td>
-                        <td align="center" style="padding: 10px 8px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #374151;">
+                        <td align="center" style="padding: 10px 8px; border-bottom: 1px solid #e7e5e4; font-size: 13px; color: #44403c;">
                           {baths}
                         </td>
-                        <td align="right" style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; font-weight: 700; color: {primary_color};">
+                        <td align="right" style="padding: 10px 12px; border-bottom: 1px solid #e7e5e4; font-size: 14px; font-weight: 900; color: {primary_color};">
                           {price_str}
                         </td>
                       </tr>'''
@@ -357,26 +357,26 @@ def _build_listings_table_html(listings: List[Dict], report_type: str, primary_c
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
                   <td style="padding-bottom: 12px;">
-                    <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px;">
+                    <p style="margin: 0; font-size: 11px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 1.5px;">
                       {section_title} (Top {len(listings)})
                     </p>
                   </td>
                 </tr>
                 <tr>
                   <td>
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e7e5e4; overflow: hidden;">
                       <!-- Header Row -->
-                      <tr style="background-color: #f1f5f9;">
-                        <td style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">
+                      <tr style="background-color: #f5f5f4;">
+                        <td style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #57534e; text-transform: uppercase; letter-spacing: 0.5px;">
                           Address
                         </td>
-                        <td align="center" style="padding: 10px 8px; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; width: 50px;">
+                        <td align="center" style="padding: 10px 8px; font-size: 11px; font-weight: 700; color: #57534e; text-transform: uppercase; letter-spacing: 0.5px; width: 50px;">
                           Beds
                         </td>
-                        <td align="center" style="padding: 10px 8px; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; width: 50px;">
+                        <td align="center" style="padding: 10px 8px; font-size: 11px; font-weight: 700; color: #57534e; text-transform: uppercase; letter-spacing: 0.5px; width: 50px;">
                           Baths
                         </td>
-                        <td align="right" style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; width: 100px;">
+                        <td align="right" style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #57534e; text-transform: uppercase; letter-spacing: 0.5px; width: 100px;">
                           Price
                         </td>
                       </tr>
@@ -1006,8 +1006,8 @@ def schedule_email_html(
               <!-- V4: Insight Paragraph -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
-                  <td style="padding: 16px 20px; background-color: #f8fafc; border-radius: 8px; border-left: 3px solid {primary_color};">
-                    <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #475569; font-style: italic;">
+                  <td style="padding: 16px 20px; background-color: #fafaf9; border-radius: 8px; border-left: 3px solid {primary_color};">
+                    <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #44403c; font-weight: 400;">
                       {insight_text}
                     </p>
                   </td>
@@ -1024,13 +1024,13 @@ def schedule_email_html(
                 <tr>
                   <!-- Hero Metric 1: Median Sale Price -->
                   <td width="25%" class="metric-card" style="padding: 0 4px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0;" class="dark-card dark-border">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e7e5e4;" class="dark-card dark-border">
                       <tr>
                         <td align="center" style="padding: 16px 8px;">
-                          <p style="margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 24px; font-weight: 400; color: {primary_color};">
+                          <p style="margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 24px; font-weight: 900; color: {primary_color};">
                             {h1_value}
                           </p>
-                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
                             {h1_label}
                           </p>
                         </td>
@@ -1039,13 +1039,13 @@ def schedule_email_html(
                   </td>
                   <!-- Hero Metric 2: Closed Sales -->
                   <td width="25%" class="metric-card" style="padding: 0 4px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0;" class="dark-card dark-border">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e7e5e4;" class="dark-card dark-border">
                       <tr>
                         <td align="center" style="padding: 16px 8px;">
-                          <p style="margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 24px; font-weight: 400; color: {primary_color};">
+                          <p style="margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 24px; font-weight: 900; color: {primary_color};">
                             {h2_value}
                           </p>
-                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
                             {h2_label}
                           </p>
                         </td>
@@ -1054,13 +1054,13 @@ def schedule_email_html(
                   </td>
                   <!-- Hero Metric 3: Avg DOM -->
                   <td width="25%" class="metric-card" style="padding: 0 4px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0;" class="dark-card dark-border">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e7e5e4;" class="dark-card dark-border">
                       <tr>
                         <td align="center" style="padding: 16px 8px;">
-                          <p style="margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 24px; font-weight: 400; color: {primary_color};">
+                          <p style="margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 24px; font-weight: 900; color: {primary_color};">
                             {h3_value}
                           </p>
-                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
                             {h3_label}
                           </p>
                         </td>
@@ -1069,13 +1069,13 @@ def schedule_email_html(
                   </td>
                   <!-- Hero Metric 4: MOI -->
                   <td width="25%" class="metric-card" style="padding: 0 4px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0;" class="dark-card dark-border">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e7e5e4;" class="dark-card dark-border">
                       <tr>
                         <td align="center" style="padding: 16px 8px;">
-                          <p style="margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 24px; font-weight: 400; color: {primary_color};">
+                          <p style="margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 24px; font-weight: 900; color: {primary_color};">
                             {h4_value}
                           </p>
-                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
                             {h4_label}
                           </p>
                         </td>
@@ -1094,7 +1094,7 @@ def schedule_email_html(
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
                   <td style="padding-bottom: 12px;">
-                    <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px;">
+                    <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 11px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 1.5px;">
                       Core Indicators
                     </p>
                   </td>
@@ -1102,13 +1102,13 @@ def schedule_email_html(
                 <tr>
                   <!-- Indicator 1: New Listings -->
                   <td width="33%" class="metric-card" style="padding: 0 4px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafaf9; border-radius: 8px; border: 1px solid #e7e5e4;">
                       <tr>
                         <td align="center" style="padding: 14px 8px;">
-                          <p style="margin: 0 0 2px 0; font-size: 20px; font-weight: 700; color: {primary_color};">
+                          <p style="margin: 0 0 2px 0; font-size: 20px; font-weight: 900; color: {primary_color};">
                             {ci1_value}
                           </p>
-                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase;">
+                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #78716c; text-transform: uppercase;">
                             {ci1_label}
                           </p>
                         </td>
@@ -1117,13 +1117,13 @@ def schedule_email_html(
                   </td>
                   <!-- Indicator 2: Pending Sales -->
                   <td width="33%" class="metric-card" style="padding: 0 4px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafaf9; border-radius: 8px; border: 1px solid #e7e5e4;">
                       <tr>
                         <td align="center" style="padding: 14px 8px;">
-                          <p style="margin: 0 0 2px 0; font-size: 20px; font-weight: 700; color: {primary_color};">
+                          <p style="margin: 0 0 2px 0; font-size: 20px; font-weight: 900; color: {primary_color};">
                             {ci2_value}
                           </p>
-                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase;">
+                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #78716c; text-transform: uppercase;">
                             {ci2_label}
                           </p>
                         </td>
@@ -1132,13 +1132,13 @@ def schedule_email_html(
                   </td>
                   <!-- Indicator 3: Sale-to-List -->
                   <td width="33%" class="metric-card" style="padding: 0 4px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafaf9; border-radius: 8px; border: 1px solid #e7e5e4;">
                       <tr>
                         <td align="center" style="padding: 14px 8px;">
-                          <p style="margin: 0 0 2px 0; font-size: 20px; font-weight: 700; color: {primary_color};">
+                          <p style="margin: 0 0 2px 0; font-size: 20px; font-weight: 900; color: {primary_color};">
                             {ci3_value}
                           </p>
-                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase;">
+                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #78716c; text-transform: uppercase;">
                             {ci3_label}
                           </p>
                         </td>
@@ -1157,7 +1157,7 @@ def schedule_email_html(
             # All bands use primary_color for monochromatic design
             color = primary_color
             
-            border = 'border-bottom: 1px solid #e5e7eb;' if i < len(price_bands) - 1 else ''
+            border = 'border-bottom: 1px solid #e7e5e4;' if i < len(price_bands) - 1 else ''
             bands_rows += f'''
                 <!-- {band["name"]} -->
                 <tr>
@@ -1168,11 +1168,11 @@ def schedule_email_html(
                           <div style="width: 10px; height: 10px; background-color: {color}; border-radius: 50%;"></div>
                         </td>
                         <td style="padding-left: 12px; vertical-align: middle;">
-                          <span style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 15px; font-weight: 600; color: #1f2937;">{band["name"]}</span>
-                          <span style="font-size: 13px; color: #6b7280; margin-left: 8px;">{band["range"]}</span>
+                          <span style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 15px; font-weight: 600; color: #292524;">{band["name"]}</span>
+                          <span style="font-size: 13px; color: #78716c; margin-left: 8px;">{band["range"]}</span>
                         </td>
                         <td align="right" style="vertical-align: middle;">
-                          <span style="font-size: 15px; font-weight: 600; color: {primary_color};">{band["count"]} listings</span>
+                          <span style="font-size: 15px; font-weight: 900; color: {primary_color};">{band["count"]} listings</span>
                         </td>
                       </tr>
                     </table>
@@ -1185,7 +1185,7 @@ def schedule_email_html(
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
                   <td style="padding-bottom: 12px;">
-                    <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 13px; font-weight: 600; color: #4b5563; text-transform: uppercase; letter-spacing: 1px;">
+                    <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 13px; font-weight: 600; color: #57534e; text-transform: uppercase; letter-spacing: 1px;">
                       Price Tiers
                     </p>
                   </td>
@@ -1207,8 +1207,8 @@ def schedule_email_html(
             type_cards += f'''
                   <td align="center" style="padding: 8px 12px;">
                     <span style="display: inline-block; width: 8px; height: 8px; background-color: {color}; border-radius: 50%; margin-right: 6px; vertical-align: middle;"></span>
-                    <span style="font-size: 14px; color: #374151;">
-                      <strong style="color: {primary_color};">{ptype["count"]}</strong> {ptype["name"]}
+                    <span style="font-size: 14px; color: #44403c;">
+                      <strong style="color: {primary_color}; font-weight: 900;">{ptype["count"]}</strong> {ptype["name"]}
                     </span>
                   </td>'''
         
@@ -1216,8 +1216,8 @@ def schedule_email_html(
               <!-- Property Type Breakdown -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
                 <tr>
-                  <td style="padding: 16px 20px; background-color: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0;">
-                    <p style="margin: 0 0 12px 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; text-align: center;">
+                  <td style="padding: 16px 20px; background-color: #fafaf9; border-radius: 10px; border: 1px solid #e7e5e4;">
+                    <p style="margin: 0 0 12px 0; font-size: 11px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 1.5px; text-align: center;">
                       Property Types
                     </p>
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
@@ -1250,11 +1250,11 @@ def schedule_email_html(
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                       <tr>
                         <td align="center" style="padding: 14px 8px; background-color: #ffffff; border-radius: 8px; border-top: 3px solid {border_color};">
-                          <p style="margin: 0 0 4px 0; font-size: 22px; font-weight: 700; color: {primary_color};">{tier["count"]}</p>
-                          <p style="margin: 0 0 2px 0; font-size: 12px; font-weight: 600; color: #374151;">
+                          <p style="margin: 0 0 4px 0; font-size: 22px; font-weight: 900; color: {primary_color};">{tier["count"]}</p>
+                          <p style="margin: 0 0 2px 0; font-size: 12px; font-weight: 600; color: #44403c;">
                             <span style="color: {border_color};">{icon}</span> {tier["name"]}
                           </p>
-                          <p style="margin: 0; font-size: 10px; color: #9ca3af;">{tier["range"]}</p>
+                          <p style="margin: 0; font-size: 10px; color: #a8a29e;">{tier["range"]}</p>
                         </td>
                       </tr>
                     </table>
@@ -1263,10 +1263,10 @@ def schedule_email_html(
         
         price_tiers_html = f'''
               <!-- Price Tier Breakdown -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px; background-color: #f8fafc; border-radius: 10px; padding: 16px; border: 1px solid #e2e8f0;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px; background-color: #fafaf9; border-radius: 10px; padding: 16px; border: 1px solid #e7e5e4;">
                 <tr>
                   <td style="padding-bottom: 12px;" colspan="3">
-                    <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; text-align: center;">
+                    <p style="margin: 0; font-size: 11px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 1.5px; text-align: center;">
                       Price Tier Distribution
                     </p>
                   </td>
@@ -1414,7 +1414,7 @@ def schedule_email_html(
     }}
   </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+<body style="margin: 0; padding: 0; background-color: #f5f5f4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
   
   <!-- Preheader Text (hidden preview text) -->
   <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">
@@ -1422,7 +1422,7 @@ def schedule_email_html(
   </div>
   
   <!-- Email Container -->
-  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc;" class="dark-bg">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f5f4;" class="dark-bg">
     <tr>
       <td align="center" style="padding: 40px 20px;">
         
@@ -1495,13 +1495,13 @@ def schedule_email_html(
                 <tr>
                   <!-- Metric 1 -->
                   <td width="33%" class="metric-card" style="padding: 0 6px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" class="dark-card dark-border">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e7e5e4; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" class="dark-card dark-border">
                       <tr>
                         <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 6px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 30px; font-weight: 400; color: {primary_color};">
+                          <p style="margin: 0 0 6px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 30px; font-weight: 900; color: {primary_color};">
                             {m1_value}
                           </p>
-                          <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
+                          <p style="margin: 0; font-size: 11px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 1px;">
                             {m1_label}
                           </p>
                         </td>
@@ -1510,13 +1510,13 @@ def schedule_email_html(
                   </td>
                   <!-- Metric 2 -->
                   <td width="33%" class="metric-card" style="padding: 0 6px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" class="dark-card dark-border">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e7e5e4; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" class="dark-card dark-border">
                       <tr>
                         <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 6px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 30px; font-weight: 400; color: {primary_color};">
+                          <p style="margin: 0 0 6px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 30px; font-weight: 900; color: {primary_color};">
                             {m2_value}
                           </p>
-                          <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
+                          <p style="margin: 0; font-size: 11px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 1px;">
                             {m2_label}
                           </p>
                         </td>
@@ -1525,13 +1525,13 @@ def schedule_email_html(
                   </td>
                   <!-- Metric 3 -->
                   <td width="33%" class="metric-card" style="padding: 0 6px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" class="dark-card dark-border">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e7e5e4; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" class="dark-card dark-border">
                       <tr>
                         <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 6px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 30px; font-weight: 400; color: {primary_color};">
+                          <p style="margin: 0 0 6px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 30px; font-weight: 900; color: {primary_color};">
                             {m3_value}
                           </p>
-                          <p style="margin: 0; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
+                          <p style="margin: 0; font-size: 11px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 1px;">
                             {m3_label}
                           </p>
                         </td>
