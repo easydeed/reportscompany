@@ -2,7 +2,7 @@
 
 > Complete technical documentation for the email infrastructure, templates, and delivery pipeline.
 
-**Last Updated:** December 23, 2025 (V6 Unified Template Architecture)
+**Last Updated:** December 24, 2025 (V6.1 Gallery Reports Styling)
 
 ---
 
@@ -159,7 +159,8 @@ cp libs/shared/src/shared/email/template.py apps/worker/src/worker/email/templat
 | V4 | Dec 2025 | PDF-aligned layout, 4-metric hero row, insight paragraph |
 | V4.2 | Dec 2025 | All major report types aligned with PDF structure |
 | V5 | Dec 2025 | Photo gallery grids for gallery reports, listings tables |
-| **V6** | Dec 2025 | **Unified template architecture**, accent stripe (not gradient), font-weight 900 |
+| V6 | Dec 2025 | Unified template architecture, warm stone palette, font-weight 900 |
+| **V6.1** | Dec 2025 | **Gallery reports** - consistent headers, inverted section divs (white bg, accent border/text) |
 
 ### 2.6 V6 Styling Updates
 
@@ -179,20 +180,47 @@ cp libs/shared/src/shared/email/template.py apps/worker/src/worker/email/templat
 - Insight text: `font-weight: 400` (no italic)
 - Labels: `font-weight: 600`
 
-**Accent Color Usage:**
-- ✅ Thin 4px stripe at top of header (pops)
-- ✅ Reserved for special emphasis only
-- ❌ NOT used in header gradient (too dominant)
-
 **Header Design (V6):**
+- Beautiful gradient from `primary_color` to `accent_color` (135°)
+- White logo on gradient background (`email_logo_url`)
+
 ```
-████████████████████████████████████████  ← 4px accent stripe
 ┌────────────────────────────────────────┐
-│      (Solid primary color)             │
+│   ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓   │ ← Gradient (primary → accent)
 │           BRAND NAME                   │
 │           Report Type                  │
 └────────────────────────────────────────┘
 ```
+
+### 2.7 V6.1 Gallery Reports Styling
+
+**Header Consistency:**
+- Gallery report headers now show the report label, not a tagline
+- `New Listings Gallery` (not "The Newest Properties")
+- `Featured Listings` (not "Premium Properties")
+
+**Section Div Styling (Inverted):**
+
+Both gallery reports (`new_listings_gallery`, `featured_listings`) now use inverted section header styling:
+
+| Element | Before (V5) | After (V6.1) |
+|---------|-------------|--------------|
+| Background | Orange gradient | White (`#ffffff`) |
+| Border | None | 2px solid `accent_color` |
+| Text color | White | `accent_color` |
+| Count color | White | `accent_color` |
+
+**Visual:**
+```
+BEFORE (V5):                      AFTER (V6.1):
+┌────────────────────────┐        ┌────────────────────────┐
+│ ▓▓▓▓ 9 NEW LISTINGS ▓▓▓│        │   9 NEW LISTINGS      │
+│ (orange bg, white text)│        │ (white bg, orange     │
+└────────────────────────┘        │  border & text)       │
+                                  └────────────────────────┘
+```
+
+This creates a cleaner, more elegant look that complements the header gradient without competing with it.
 
 ---
 
@@ -576,8 +604,8 @@ This matrix shows how each email template aligns with its corresponding PDF:
 | `closed` | 4 hero metrics + full listing table | ✅ 4-metric hero row + insight paragraph | **Summary** - Table omitted, stats highlighted |
 | `price_bands` | 4 hero metrics + visual price band bars + hottest/slowest summary | ✅ 4-metric hero row + price bands rows | **Full alignment** - Price bands shown with counts |
 | `open_houses` | Stats + open house schedule list | 3-metric cards (legacy V3) | **Basic** - Summary only |
-| `new_listings_gallery` | 3×3 photo grid with property cards | ✅ **V5:** 3×3 photo grid with same layout | **Full alignment** - Photos match PDF |
-| `featured_listings` | 2×2 photo grid with property cards | ✅ **V5:** 2×2 photo grid with same layout | **Full alignment** - Photos match PDF |
+| `new_listings_gallery` | 3×3 photo grid with property cards | ✅ **V6.1:** 3×3 photo grid, inverted section header | **Full alignment** - Photos match PDF |
+| `featured_listings` | 2×2 photo grid with property cards | ✅ **V6.1:** 2×2 photo grid, inverted section header | **Full alignment** - Photos match PDF |
 
 #### Alignment Philosophy
 
