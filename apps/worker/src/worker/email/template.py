@@ -101,8 +101,8 @@ REPORT_CONFIG = {
     },
     "new_listings_gallery": {
         "label": "New Listings Gallery",
-        "tagline": "The Newest Properties",
-        "section": "Photo Gallery",
+        "tagline": None,  # V6.1: Use report label in header for consistency
+        "section": "New Listings",
         "has_extra_stats": False,
     },
     "featured_listings": {
@@ -266,15 +266,10 @@ def _build_gallery_grid_html(listings: List[Dict], report_type: str, primary_col
     section_title = "Featured Properties" if is_featured else "New Listings"
     count = len(listings)
     
-    # V6: Featured Listings uses inverted styling (white bg, accent border/text)
-    if is_featured:
-        section_header_style = f"background-color: #ffffff; border: 2px solid {accent_color}; border-radius: 8px;"
-        count_style = f"font-size: 22px; font-weight: 800; color: {accent_color}; margin-right: 10px;"
-        title_style = f"font-size: 12px; font-weight: 600; color: {accent_color}; text-transform: uppercase; letter-spacing: 0.5px;"
-    else:
-        section_header_style = f"background: linear-gradient(90deg, {primary_color}, {primary_color}dd); border-radius: 8px;"
-        count_style = "font-size: 22px; font-weight: 800; color: #ffffff; margin-right: 10px;"
-        title_style = "font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.9); text-transform: uppercase; letter-spacing: 0.5px;"
+    # V6.1: Both gallery reports use inverted styling (white bg, accent border/text)
+    section_header_style = f"background-color: #ffffff; border: 2px solid {accent_color}; border-radius: 8px;"
+    count_style = f"font-size: 22px; font-weight: 800; color: {accent_color}; margin-right: 10px;"
+    title_style = f"font-size: 12px; font-weight: 600; color: {accent_color}; text-transform: uppercase; letter-spacing: 0.5px;"
     
     return f'''
               <!-- Photo Gallery Grid -->
