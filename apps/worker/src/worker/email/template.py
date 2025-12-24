@@ -107,7 +107,7 @@ REPORT_CONFIG = {
     },
     "featured_listings": {
         "label": "Featured Listings",
-        "tagline": "Premium Properties",
+        "tagline": None,  # V6: Use report label in header for consistency
         "section": "Featured Properties",
         "has_extra_stats": False,
     },
@@ -156,7 +156,7 @@ def _format_percent(value: Optional[float]) -> str:
     return f"{value:.1f}%"
 
 
-def _build_gallery_grid_html(listings: List[Dict], report_type: str, primary_color: str) -> str:
+def _build_gallery_grid_html(listings: List[Dict], report_type: str, primary_color: str, accent_color: str = None) -> str:
     """
     Build email-safe HTML for photo gallery grid.
     
@@ -165,6 +165,7 @@ def _build_gallery_grid_html(listings: List[Dict], report_type: str, primary_col
     
     Uses table layout for maximum email client compatibility.
     """
+    accent_color = accent_color or primary_color
     if not listings:
         return ""
     
@@ -265,16 +266,26 @@ def _build_gallery_grid_html(listings: List[Dict], report_type: str, primary_col
     section_title = "Featured Properties" if is_featured else "New Listings"
     count = len(listings)
     
+    # V6: Featured Listings uses inverted styling (white bg, accent border/text)
+    if is_featured:
+        section_header_style = f"background-color: #ffffff; border: 2px solid {accent_color}; border-radius: 8px;"
+        count_style = f"font-size: 22px; font-weight: 800; color: {accent_color}; margin-right: 10px;"
+        title_style = f"font-size: 12px; font-weight: 600; color: {accent_color}; text-transform: uppercase; letter-spacing: 0.5px;"
+    else:
+        section_header_style = f"background: linear-gradient(90deg, {primary_color}, {primary_color}dd); border-radius: 8px;"
+        count_style = "font-size: 22px; font-weight: 800; color: #ffffff; margin-right: 10px;"
+        title_style = "font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.9); text-transform: uppercase; letter-spacing: 0.5px;"
+    
     return f'''
               <!-- Photo Gallery Grid -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
                   <td style="padding-bottom: 12px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(90deg, {primary_color}, {primary_color}dd); border-radius: 8px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="{section_header_style}">
                       <tr>
                         <td align="center" style="padding: 14px 20px;">
-                          <span style="font-size: 22px; font-weight: 800; color: #ffffff; margin-right: 10px;">{count}</span>
-                          <span style="font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.9); text-transform: uppercase; letter-spacing: 0.5px;">{section_title}</span>
+                          <span style="{count_style}">{count}</span>
+                          <span style="{title_style}">{section_title}</span>
                         </td>
                       </tr>
                     </table>
@@ -1281,7 +1292,7 @@ def schedule_email_html(
     # V5: Build gallery grid HTML for gallery report types
     gallery_html = ""
     if has_gallery:
-        gallery_html = _build_gallery_grid_html(listings or [], report_type, primary_color)
+        gallery_html = _build_gallery_grid_html(listings or [], report_type, primary_color, accent_color)
     
     # V5: Build listings table HTML for inventory/new_listings/closed
     listings_table_html = ""
