@@ -2,25 +2,26 @@
 
 > Complete technical documentation for the email infrastructure, templates, and delivery pipeline.
 
-**Last Updated:** December 22, 2025 (V5 Gallery Photo Grids)
+**Last Updated:** December 23, 2025 (V6 Unified Template Architecture)
 
 ---
 
 ## Table of Contents
 
 1. [Architecture Overview](#1-architecture-overview)
-2. [Email Data Model](#2-email-data-model)
-3. [Provider Integration (SendGrid)](#3-provider-integration-sendgrid)
-4. [Scheduled Report Emails](#4-scheduled-report-emails)
-5. [Branding Test Emails](#5-branding-test-emails)
-6. [Email Templates](#6-email-templates)
-7. [White-Label Branding](#7-white-label-branding)
-8. [Unsubscribe & Suppression](#8-unsubscribe--suppression)
-9. [Environment Variables](#9-environment-variables)
-10. [Email Flow Diagrams](#10-email-flow-diagrams)
-11. [Troubleshooting](#11-troubleshooting)
-12. [Database Schema Changes](#12-database-schema-changes)
-13. [Future Enhancements](#13-future-enhancements)
+2. [Unified Template Architecture](#2-unified-template-architecture)
+3. [Email Data Model](#3-email-data-model)
+4. [Provider Integration (SendGrid)](#4-provider-integration-sendgrid)
+5. [Scheduled Report Emails](#5-scheduled-report-emails)
+6. [Branding Test Emails](#6-branding-test-emails)
+7. [Email Templates](#7-email-templates)
+8. [White-Label Branding](#8-white-label-branding)
+9. [Unsubscribe & Suppression](#9-unsubscribe--suppression)
+10. [Environment Variables](#10-environment-variables)
+11. [Email Flow Diagrams](#11-email-flow-diagrams)
+12. [Troubleshooting](#12-troubleshooting)
+13. [Database Schema Changes](#13-database-schema-changes)
+14. [Future Enhancements](#14-future-enhancements)
 
 ---
 
@@ -71,11 +72,131 @@ TrendyReports sends emails through two distinct pathways:
 | Branding Test | `apps/api/src/api/routes/branding_tools.py` | Test email endpoint (uses unified template with sample listings) |
 | Unsubscribe API | `apps/api/src/api/routes/unsubscribe.py` | Handle unsubscribe requests |
 
-> 📦 **V5 Architecture:** A single template file (`template.py`) serves both scheduled reports and test emails. Gallery reports now include photo grids matching PDF content exactly.
+> 📦 **V6 Architecture:** A single template file (`template.py`) serves both scheduled reports and test emails. The unified template is the **single source of truth** for all email styling.
 
 ---
 
-## 2. Email Data Model
+## 2. Unified Template Architecture
+
+### 2.1 The Problem (Pre-V6)
+
+Previously, test emails and production emails could diverge:
+- **Production:** Worker used `apps/worker/src/worker/email/template.py`
+- **Test emails:** API tried to import from worker path, with a fallback inline template
+
+This caused styling inconsistencies when:
+1. The API couldn't access the worker's template path (separate deployments)
+2. The fallback template was outdated
+
+### 2.2 The Solution (V6)
+
+**Single Source of Truth:** `libs/shared/src/shared/email/template.py`
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   Unified Email Template                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   libs/shared/src/shared/email/template.py                      │
+│   ▲                                                             │
+│   │ (copied during development)                                 │
+│   │                                                             │
+│   ├──────────────────────────────────────────────────┐          │
+│   │                                                  │          │
+│   ▼                                                  ▼          │
+│   apps/worker/src/worker/email/template.py    [API imports]     │
+│   (Worker uses directly)                       (via fallback)   │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 2.3 Import Strategy (API)
+
+The API uses a multi-fallback import strategy:
+
+```python
+# branding_tools.py - Import Strategy
+
+# Option 1: Try shared package (ideal for local dev)
+try:
+    from shared.email import schedule_email_html
+    UNIFIED_TEMPLATE_AVAILABLE = True
+except ImportError:
+    pass
+
+# Option 2: Try worker path (works when repo deployed together)
+if not UNIFIED_TEMPLATE_AVAILABLE:
+    try:
+        worker_template_path = "../../../../worker/src/worker/email/template.py"
+        # Dynamic import...
+    except Exception:
+        pass
+
+# Option 3: Use fallback template (last resort)
+if not UNIFIED_TEMPLATE_AVAILABLE:
+    # _build_fallback_test_email() - simplified but styled correctly
+```
+
+### 2.4 Keeping Templates in Sync
+
+When updating email templates:
+
+1. **Edit the source of truth:** `libs/shared/src/shared/email/template.py`
+2. **Copy to worker:** `apps/worker/src/worker/email/template.py`
+3. **Update fallback:** Update `_build_fallback_test_email()` in `branding_tools.py` if needed
+
+**Sync command:**
+```bash
+cp libs/shared/src/shared/email/template.py apps/worker/src/worker/email/template.py
+```
+
+### 2.5 Template Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| V3 | Dec 2024 | Professional styling, VML fallback for Outlook |
+| V3.1 | Dec 2024 | Monochromatic color scheme, unified metrics colors |
+| V4 | Dec 2025 | PDF-aligned layout, 4-metric hero row, insight paragraph |
+| V4.2 | Dec 2025 | All major report types aligned with PDF structure |
+| V5 | Dec 2025 | Photo gallery grids for gallery reports, listings tables |
+| **V6** | Dec 2025 | **Unified template architecture**, accent stripe (not gradient), font-weight 900 |
+
+### 2.6 V6 Styling Updates
+
+**Color Scheme (Mature Stone Palette):**
+
+| Element | Color | CSS Variable |
+|---------|-------|--------------|
+| Body background | `#f5f5f4` | stone-100 |
+| Card background | `#fafaf9` / `#ffffff` | stone-50 / white |
+| Borders | `#e7e5e4` | stone-200 |
+| Secondary text | `#78716c` | stone-500 |
+| Body text | `#44403c` | stone-700 |
+| Dark text | `#1c1917` | stone-900 |
+
+**Typography:**
+- Metric values: `font-weight: 900` (black)
+- Insight text: `font-weight: 400` (no italic)
+- Labels: `font-weight: 600`
+
+**Accent Color Usage:**
+- ✅ Thin 4px stripe at top of header (pops)
+- ✅ Reserved for special emphasis only
+- ❌ NOT used in header gradient (too dominant)
+
+**Header Design (V6):**
+```
+████████████████████████████████████████  ← 4px accent stripe
+┌────────────────────────────────────────┐
+│      (Solid primary color)             │
+│           BRAND NAME                   │
+│           Report Type                  │
+└────────────────────────────────────────┘
+```
+
+---
+
+## 3. Email Data Model
 
 All email-related tables are RLS-protected by `account_id`.
 

@@ -21,33 +21,40 @@ from .reports import require_account_id
 from ..db import db_conn
 from ..services.affiliates import verify_affiliate_account
 
-# Import the unified email template from worker
-# This ensures test emails match production emails exactly
+# Import the unified email template
+# Try shared package first, then worker path, then fallback
+schedule_email_html = None
+UNIFIED_TEMPLATE_AVAILABLE = False
+
+# Option 1: Try shared package (ideal for local dev with poetry install)
 try:
-    # Add worker path to allow importing
-    import importlib.util
-    worker_template_path = os.path.join(
-        os.path.dirname(__file__), 
-        "../../../../worker/src/worker/email/template.py"
-    )
-    # Check if the file exists before importing
-    if os.path.exists(worker_template_path):
-        spec = importlib.util.spec_from_file_location("email_template", worker_template_path)
-        email_template_module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(email_template_module)
-        schedule_email_html = email_template_module.schedule_email_html
-        UNIFIED_TEMPLATE_AVAILABLE = True
-        print(f"[Branding Tools] ✅ Unified email template loaded from: {worker_template_path}")
-    else:
-        UNIFIED_TEMPLATE_AVAILABLE = False
-        schedule_email_html = None
-        print(f"[Branding Tools] ⚠️ Worker template not found at: {worker_template_path}")
-        print(f"[Branding Tools] Current dir: {os.path.dirname(__file__)}")
-except Exception as e:
-    # Fallback if import fails (e.g., in certain deployment scenarios)
-    UNIFIED_TEMPLATE_AVAILABLE = False
-    schedule_email_html = None
-    print(f"[Branding Tools] ❌ Could not import unified email template: {e}")
+    from shared.email import schedule_email_html as _shared_template
+    schedule_email_html = _shared_template
+    UNIFIED_TEMPLATE_AVAILABLE = True
+    print("[Branding Tools] ✅ Unified email template loaded from shared package")
+except ImportError:
+    pass
+
+# Option 2: Try worker path (works when repo is deployed together)
+if not UNIFIED_TEMPLATE_AVAILABLE:
+    try:
+        import importlib.util
+        worker_template_path = os.path.join(
+            os.path.dirname(__file__), 
+            "../../../../worker/src/worker/email/template.py"
+        )
+        if os.path.exists(worker_template_path):
+            spec = importlib.util.spec_from_file_location("email_template", worker_template_path)
+            email_template_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(email_template_module)
+            schedule_email_html = email_template_module.schedule_email_html
+            UNIFIED_TEMPLATE_AVAILABLE = True
+            print(f"[Branding Tools] ✅ Unified email template loaded from worker path")
+    except Exception as e:
+        print(f"[Branding Tools] ⚠️ Worker path import failed: {e}")
+
+if not UNIFIED_TEMPLATE_AVAILABLE:
+    print("[Branding Tools] ⚠️ Using fallback template (update shared package for full features)")
 
 logger = logging.getLogger(__name__)
 

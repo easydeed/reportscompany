@@ -8,6 +8,7 @@ packages = [{ include = "api", from = "src" }]
 
 [tool.poetry.dependencies]
 python = "^3.11"
+# shared = {path = "../../libs/shared", develop = true}  # Optional: install for local dev
 fastapi = "^0.115.0"
 uvicorn = {extras = ["standard"], version = "^0.30.0"}
 pydantic-settings = "^2.4.0"

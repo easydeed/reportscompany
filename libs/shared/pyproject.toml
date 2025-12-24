@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "shared"
+version = "1.0.0"
+description = "Shared modules for TrendyReports (email templates, etc.)"
+authors = ["TrendyReports <info@trendyreports.io>"]
+packages = [{include = "shared", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
