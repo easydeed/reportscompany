@@ -30,16 +30,24 @@ try:
         os.path.dirname(__file__), 
         "../../../../worker/src/worker/email/template.py"
     )
-    spec = importlib.util.spec_from_file_location("email_template", worker_template_path)
-    email_template_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(email_template_module)
-    schedule_email_html = email_template_module.schedule_email_html
-    UNIFIED_TEMPLATE_AVAILABLE = True
+    # Check if the file exists before importing
+    if os.path.exists(worker_template_path):
+        spec = importlib.util.spec_from_file_location("email_template", worker_template_path)
+        email_template_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(email_template_module)
+        schedule_email_html = email_template_module.schedule_email_html
+        UNIFIED_TEMPLATE_AVAILABLE = True
+        print(f"[Branding Tools] ✅ Unified email template loaded from: {worker_template_path}")
+    else:
+        UNIFIED_TEMPLATE_AVAILABLE = False
+        schedule_email_html = None
+        print(f"[Branding Tools] ⚠️ Worker template not found at: {worker_template_path}")
+        print(f"[Branding Tools] Current dir: {os.path.dirname(__file__)}")
 except Exception as e:
     # Fallback if import fails (e.g., in certain deployment scenarios)
     UNIFIED_TEMPLATE_AVAILABLE = False
     schedule_email_html = None
-    print(f"[Branding Tools] Could not import unified email template: {e}")
+    print(f"[Branding Tools] ❌ Could not import unified email template: {e}")
 
 logger = logging.getLogger(__name__)
 
@@ -270,12 +278,23 @@ async def generate_sample_pdf(
 def _build_fallback_test_email(report_type: str, branding: dict, metrics: dict) -> str:
     """
     Fallback test email template if unified template import fails.
-    This is a simplified version - prefer the unified template.
+    V6: Updated with mature stone color scheme and font-weight 900.
     """
     brand_name = branding.get("brand_display_name") or "Your Brand"
     primary_color = branding.get("primary_color") or "#7C3AED"
     accent_color = branding.get("accent_color") or "#F26B2B"
     report_type_display = report_type.replace("_", " ").title()
+    
+    # Format metrics
+    total_active = metrics.get("total_active", 127)
+    median_price = metrics.get("median_list_price") or metrics.get("median_close_price", 4200000)
+    avg_dom = metrics.get("avg_dom", 42)
+    
+    # Format price
+    if median_price >= 1_000_000:
+        price_str = f"${median_price / 1_000_000:.1f}M"
+    else:
+        price_str = f"${median_price:,.0f}"
     
     return f'''<!DOCTYPE html>
 <html>
@@ -283,12 +302,12 @@ def _build_fallback_test_email(report_type: str, branding: dict, metrics: dict) 
   <meta charset="UTF-8">
   <title>{brand_name} - {report_type_display} (Test)</title>
 </head>
-<body style="margin: 0; padding: 40px; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+<body style="margin: 0; padding: 40px; background-color: #f5f5f4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
   <table width="600" style="margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden;">
     <tr>
       <td style="background: linear-gradient(135deg, {primary_color}, {accent_color}); padding: 40px; text-align: center;">
-        <h1 style="color: #fff; margin: 0; font-family: Georgia, serif;">{brand_name}</h1>
-        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0;">{report_type_display}</p>
+        <h1 style="color: #fff; margin: 0; font-size: 28px; font-weight: 400;">{brand_name}</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 14px;">{report_type_display}</p>
       </td>
     </tr>
     <tr>
@@ -296,30 +315,30 @@ def _build_fallback_test_email(report_type: str, branding: dict, metrics: dict) 
         <div style="background: #fef3c7; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
           <p style="margin: 0; color: #92400e;"><strong>🧪 This is a test email</strong> — It shows how your branding appears.</p>
         </div>
-        <table width="100%">
+        <table width="100%" cellpadding="0" cellspacing="8">
           <tr>
-            <td style="text-align: center; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-              <p style="font-size: 30px; color: {primary_color}; margin: 0; font-family: Georgia, serif;">{metrics.get("total_active", 127)}</p>
-              <p style="font-size: 11px; color: #64748b; margin: 8px 0 0; text-transform: uppercase;">Active Listings</p>
+            <td style="text-align: center; padding: 16px 8px; border: 1px solid #e7e5e4; border-radius: 8px; background: #ffffff;">
+              <p style="font-size: 24px; font-weight: 900; color: {primary_color}; margin: 0 0 4px 0;">{total_active}</p>
+              <p style="font-size: 10px; font-weight: 600; color: #78716c; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Active Listings</p>
             </td>
-            <td style="text-align: center; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-              <p style="font-size: 30px; color: {primary_color}; margin: 0; font-family: Georgia, serif;">$4.2M</p>
-              <p style="font-size: 11px; color: #64748b; margin: 8px 0 0; text-transform: uppercase;">Median Price</p>
+            <td style="text-align: center; padding: 16px 8px; border: 1px solid #e7e5e4; border-radius: 8px; background: #ffffff;">
+              <p style="font-size: 24px; font-weight: 900; color: {primary_color}; margin: 0 0 4px 0;">{price_str}</p>
+              <p style="font-size: 10px; font-weight: 600; color: #78716c; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Median Price</p>
             </td>
-            <td style="text-align: center; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-              <p style="font-size: 30px; color: {primary_color}; margin: 0; font-family: Georgia, serif;">{metrics.get("avg_dom", 42)} days</p>
-              <p style="font-size: 11px; color: #64748b; margin: 8px 0 0; text-transform: uppercase;">Avg DOM</p>
+            <td style="text-align: center; padding: 16px 8px; border: 1px solid #e7e5e4; border-radius: 8px; background: #ffffff;">
+              <p style="font-size: 24px; font-weight: 900; color: {primary_color}; margin: 0 0 4px 0;">{avg_dom}</p>
+              <p style="font-size: 10px; font-weight: 600; color: #78716c; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Avg Days on Market</p>
             </td>
           </tr>
         </table>
         <p style="text-align: center; margin-top: 24px;">
-          <a href="#" style="display: inline-block; background: {primary_color}; color: #fff; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-family: Georgia, serif;">View Full Report →</a>
+          <a href="#" style="display: inline-block; background: {primary_color}; color: #fff; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-size: 15px; font-weight: 400;">View Full Report →</a>
         </p>
       </td>
     </tr>
     <tr>
-      <td style="padding: 24px; background: #f9fafb; text-align: center; border-top: 1px solid #e5e7eb;">
-        <p style="margin: 0; font-size: 13px; color: #94a3b8;">Test email from <span style="color: {primary_color};">{brand_name}</span></p>
+      <td style="padding: 24px; background: #f9fafb; text-align: center; border-top: 1px solid #e7e5e4;">
+        <p style="margin: 0; font-size: 13px; color: #a8a29e;">Test email from <span style="color: {primary_color};">{brand_name}</span></p>
       </td>
     </tr>
   </table>
