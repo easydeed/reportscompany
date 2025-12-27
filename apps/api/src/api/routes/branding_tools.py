@@ -77,6 +77,11 @@ class SamplePdfRequest(BaseModel):
     report_type: str = "market_snapshot"
 
 
+class SampleJpgRequest(BaseModel):
+    """Request model for sample social image (JPG) generation."""
+    report_type: str = "market_snapshot"
+
+
 class TestEmailRequest(BaseModel):
     """Request model for test email."""
     email: EmailStr
@@ -278,6 +283,104 @@ async def generate_sample_pdf(
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
             "Content-Length": str(len(pdf_bytes)),
+        }
+    )
+
+
+@router.post("/sample-jpg")
+async def generate_sample_jpg(
+    body: SampleJpgRequest,
+    request: Request,
+    account_id: str = Depends(require_account_id)
+):
+    """
+    Generate a sample branded JPG (1080x1920) for social media preview.
+    
+    Perfect for Instagram Stories, TikTok, LinkedIn Stories.
+    Uses PDFShift's image conversion API.
+    """
+    report_type = body.report_type
+    
+    # Validate report type
+    valid_types = [
+        "market_snapshot", "new_listings", "inventory", "closed",
+        "price_bands", "open_houses", "new_listings_gallery", "featured_listings"
+    ]
+    if report_type not in valid_types:
+        raise HTTPException(status_code=400, detail=f"Invalid report type: {report_type}")
+    
+    # Get branding
+    with db_conn() as (conn, cur):
+        branding = get_branding_for_account(cur, account_id)
+    
+    # Build the social preview URL with branding params
+    params = {
+        "brand_name": branding['brand_display_name'] or "Your Brand",
+    }
+    if branding.get("logo_url"):
+        params["logo_url"] = branding['logo_url']
+    if branding.get("primary_color"):
+        params["primary_color"] = branding['primary_color'].replace('#', '')
+    if branding.get("accent_color"):
+        params["accent_color"] = branding['accent_color'].replace('#', '')
+    if branding.get("rep_photo_url"):
+        params["rep_photo_url"] = branding['rep_photo_url']
+    if branding.get("contact_line1"):
+        params["contact_line1"] = branding['contact_line1']
+    if branding.get("contact_line2"):
+        params["contact_line2"] = branding['contact_line2']
+    if branding.get("website_url"):
+        params["website_url"] = branding['website_url']
+    
+    preview_url = f"{PRINT_BASE}/branding-preview/social/{report_type}?{urlencode(params)}"
+    print(f"[Branding JPG] Social Preview URL: {preview_url}")
+    
+    # Generate JPG using PDFShift
+    if not PDFSHIFT_API_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail="Image generation service not configured. Please contact support."
+        )
+    
+    try:
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            response = await client.post(
+                "https://api.pdfshift.io/v3/convert/image",
+                auth=("api", PDFSHIFT_API_KEY),
+                json={
+                    "source": preview_url,
+                    "format": "jpeg",
+                    "width": 1080,
+                    "height": 1920,
+                    "quality": 90,
+                    "delay": 3000,
+                    "wait_for_network": True,
+                },
+            )
+            
+            if response.status_code != 200:
+                print(f"[Branding JPG] PDFShift error: {response.status_code} - {response.text}")
+                raise HTTPException(
+                    status_code=502,
+                    detail="Failed to generate image. Please try again."
+                )
+            
+            jpg_bytes = response.content
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Image generation timed out. Please try again.")
+    except Exception as e:
+        print(f"[Branding JPG] Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Image generation failed: {str(e)}")
+    
+    # Return JPG as downloadable file
+    filename = f"sample-{report_type.replace('_', '-')}-social.jpg"
+    
+    return StreamingResponse(
+        io.BytesIO(jpg_bytes),
+        media_type="image/jpeg",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Length": str(len(jpg_bytes)),
         }
     )
 

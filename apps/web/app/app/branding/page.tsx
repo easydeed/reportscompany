@@ -102,6 +102,9 @@ export default function BrandingPage() {
   const [isDownloading, setIsDownloading] = useState(false)
   const [downloadSuccess, setDownloadSuccess] = useState(false)
   const [downloadError, setDownloadError] = useState<string | null>(null)
+  const [isDownloadingJpg, setIsDownloadingJpg] = useState(false)
+  const [downloadJpgSuccess, setDownloadJpgSuccess] = useState(false)
+  const [downloadJpgError, setDownloadJpgError] = useState<string | null>(null)
   const [testEmail, setTestEmail] = useState("")
   const [isSending, setIsSending] = useState(false)
   const [sendSuccess, setSendSuccess] = useState(false)
@@ -307,6 +310,44 @@ export default function BrandingPage() {
       setTimeout(() => setDownloadError(null), 5000)
     } finally {
       setIsDownloading(false)
+    }
+  }
+
+  const handleDownloadJpg = async () => {
+    setIsDownloadingJpg(true)
+    setDownloadJpgSuccess(false)
+    setDownloadJpgError(null)
+
+    try {
+      const response = await fetch("/api/proxy/v1/branding/sample-jpg", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ report_type: reportType }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || data.detail || "Failed to generate image")
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `${(formData.brand_display_name || "sample").replace(/\s+/g, "-").toLowerCase()}-${reportType.replace(/_/g, "-")}-social.jpg`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+
+      setDownloadJpgSuccess(true)
+      setTimeout(() => setDownloadJpgSuccess(false), 3000)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Download failed"
+      setDownloadJpgError(message)
+      setTimeout(() => setDownloadJpgError(null), 5000)
+    } finally {
+      setIsDownloadingJpg(false)
     }
   }
 
@@ -738,11 +779,12 @@ export default function BrandingPage() {
                   </Select>
                 </div>
 
-                <div className="grid sm:grid-cols-2 gap-4">
+                <div className="grid sm:grid-cols-3 gap-4">
+                  {/* PDF Download */}
                   <div className="p-4 rounded-lg border bg-red-50 dark:bg-red-900/10">
                     <div className="flex items-center gap-2 mb-3">
                       <FileText className="w-4 h-4 text-red-600" />
-                      <span className="font-medium text-sm">Download Sample PDF</span>
+                      <span className="font-medium text-sm">Sample PDF</span>
                     </div>
                     <Button
                       onClick={handleDownloadPdf}
@@ -755,7 +797,7 @@ export default function BrandingPage() {
                       ) : downloadSuccess ? (
                         <><Check className="w-4 h-4 mr-2" /> Downloaded!</>
                       ) : (
-                        <><Download className="w-4 h-4 mr-2" /> Download PDF</>
+                        <><Download className="w-4 h-4 mr-2" /> PDF</>
                       )}
                     </Button>
                     {downloadError && (
@@ -765,10 +807,39 @@ export default function BrandingPage() {
                     )}
                   </div>
 
+                  {/* JPG Social Download */}
+                  <div className="p-4 rounded-lg border bg-pink-50 dark:bg-pink-900/10">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles className="w-4 h-4 text-pink-600" />
+                      <span className="font-medium text-sm">Social Image</span>
+                    </div>
+                    <Button
+                      onClick={handleDownloadJpg}
+                      disabled={isDownloadingJpg}
+                      variant="outline"
+                      className={cn("w-full h-10", downloadJpgSuccess && "border-green-600 text-green-600")}
+                    >
+                      {isDownloadingJpg ? (
+                        <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Generating...</>
+                      ) : downloadJpgSuccess ? (
+                        <><Check className="w-4 h-4 mr-2" /> Downloaded!</>
+                      ) : (
+                        <><Download className="w-4 h-4 mr-2" /> JPG</>
+                      )}
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-2">1080×1920 for Stories</p>
+                    {downloadJpgError && (
+                      <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> {downloadJpgError}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Test Email */}
                   <div className="p-4 rounded-lg border bg-purple-50 dark:bg-purple-900/10">
                     <div className="flex items-center gap-2 mb-3">
                       <Mail className="w-4 h-4 text-purple-600" />
-                      <span className="font-medium text-sm">Send Test Email</span>
+                      <span className="font-medium text-sm">Test Email</span>
                     </div>
                     <div className="flex gap-2">
                       <Input
