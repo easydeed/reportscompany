@@ -17,8 +17,8 @@ type Props = {
 /**
  * Social Branding Preview Page (1080x1920)
  * 
- * Renders a sample social media story image with branding.
- * Used by the backend to generate sample JPGs for Brand Studio.
+ * Renders report-specific social media story images with branding.
+ * Each report type gets a unique, visually distinct layout.
  */
 export default async function SocialBrandingPreviewPage({ params, searchParams }: Props) {
   const { reportType: rawType } = await params;
@@ -59,10 +59,10 @@ export default async function SocialBrandingPreviewPage({ params, searchParams }
       market_snapshot: "Market Snapshot",
       new_listings: "New Listings",
       new_listings_gallery: "New Listings",
-      featured_listings: "Featured",
-      inventory: "Inventory",
-      closed: "Closed Sales",
-      price_bands: "Price Bands",
+      featured_listings: "Featured Listings",
+      inventory: "Active Inventory",
+      closed: "Just Sold",
+      price_bands: "Market by Price",
       open_houses: "Open Houses",
     };
     return titles[type] || "Market Report";
@@ -71,67 +71,247 @@ export default async function SocialBrandingPreviewPage({ params, searchParams }
   const metrics = (data as any).metrics || {};
   const counts = (data as any).counts || {};
   const city = (data as any).city || "Beverly Hills";
+  const listings = (data as any).listings || (data as any).listings_sample || [];
+  const priceBands = (data as any).price_bands || [];
 
-  // Get report-specific metrics
-  const getHeroMetric = () => {
+  // Render different content based on report type
+  const renderReportContent = () => {
     switch (reportType) {
-      case "market_snapshot":
-        return { value: formatCurrency(metrics.median_close_price || 4150000), label: "Median Sale Price" };
-      case "new_listings":
       case "new_listings_gallery":
-        return { value: formatNumber(counts.Active || 42), label: "New Listings" };
-      case "inventory":
-        return { value: formatNumber(counts.Active || 127), label: "Active Listings" };
-      case "closed":
-        return { value: formatNumber(counts.Closed || 89), label: "Homes Sold" };
-      case "price_bands":
-        return { value: formatCurrency(metrics.median_list_price || 4250000), label: "Median Price" };
       case "featured_listings":
-        return { value: formatNumber((data as any).total_listings || 4), label: "Featured" };
-      case "open_houses":
-        return { value: formatNumber(counts.Active || 15), label: "Open Houses" };
-      default:
-        return { value: formatCurrency(metrics.median_close_price || 0), label: "Median Price" };
-    }
-  };
-
-  const getSecondaryMetrics = () => {
-    switch (reportType) {
-      case "market_snapshot":
-        return [
-          { value: formatNumber(counts.Closed || 89), label: "Homes Sold" },
-          { value: formatNumber(metrics.avg_dom || 42), label: "Avg Days" },
-          { value: (metrics.months_of_inventory || 4.3).toFixed(1), label: "Mo. Inventory" },
-          { value: ((metrics.list_to_close_ratio || 0.976) * 100).toFixed(0) + "%", label: "Sale-to-List" },
-        ];
-      case "new_listings":
-      case "new_listings_gallery":
-        return [
-          { value: formatCurrency(metrics.median_list_price || 4350000), label: "Median Price" },
-          { value: formatNumber(metrics.avg_dom || 7), label: "Avg Days" },
-        ];
-      case "inventory":
-        return [
-          { value: formatNumber(counts.Pending || 34), label: "Pending" },
-          { value: formatNumber(metrics.avg_dom || 45), label: "Avg Days" },
-        ];
-      case "closed":
-        return [
-          { value: formatCurrency(metrics.median_close_price || 4150000), label: "Median Price" },
-          { value: formatNumber(metrics.avg_dom || 42), label: "Avg Days" },
-        ];
+        return renderGalleryContent();
       case "price_bands":
-        return [
-          { value: formatNumber((data as any).price_bands?.reduce((s: number, b: any) => s + b.count, 0) || 127), label: "Total Listings" },
-          { value: formatNumber(metrics.avg_dom || 42), label: "Avg Days" },
-        ];
+        return renderPriceBandsContent();
+      case "new_listings":
+        return renderNewListingsContent();
+      case "inventory":
+        return renderInventoryContent();
+      case "closed":
+        return renderClosedContent();
+      case "open_houses":
+        return renderOpenHousesContent();
       default:
-        return [];
+        return renderMarketSnapshotContent();
     }
   };
 
-  const heroMetric = getHeroMetric();
-  const secondaryMetrics = getSecondaryMetrics();
+  // Market Snapshot - Classic metrics layout
+  const renderMarketSnapshotContent = () => (
+    <div className="content-section metrics-layout">
+      <div className="hero-metric">
+        <div className="value">{formatCurrency(metrics.median_close_price || 4150000)}</div>
+        <div className="label">Median Sale Price</div>
+      </div>
+      <div className="metric-grid">
+        <div className="metric-card">
+          <div className="value">{formatNumber(counts.Closed || 89)}</div>
+          <div className="label">Homes Sold</div>
+        </div>
+        <div className="metric-card">
+          <div className="value">{formatNumber(metrics.avg_dom || 42)}</div>
+          <div className="label">Avg Days</div>
+        </div>
+        <div className="metric-card">
+          <div className="value">{(metrics.months_of_inventory || 4.3).toFixed(1)}</div>
+          <div className="label">Mo. Supply</div>
+        </div>
+        <div className="metric-card">
+          <div className="value">{((metrics.list_to_close_ratio || 0.976) * 100).toFixed(0)}%</div>
+          <div className="label">Sale-to-List</div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Gallery/Featured - Property photo grid
+  const renderGalleryContent = () => {
+    const displayListings = listings.slice(0, 4);
+    const totalCount = reportType === "featured_listings" 
+      ? (data as any).total_listings || 4 
+      : listings.length;
+    
+    return (
+      <div className="content-section gallery-layout">
+        <div className="gallery-header">
+          <div className="gallery-count">{totalCount}</div>
+          <div className="gallery-label">
+            {reportType === "featured_listings" ? "Featured Properties" : "New on Market"}
+          </div>
+        </div>
+        <div className="property-grid">
+          {displayListings.map((listing: any, i: number) => (
+            <div key={i} className="property-card">
+              <div 
+                className="property-image" 
+                style={{ backgroundImage: `url(${listing.hero_photo_url})` }}
+              >
+                <div className="property-price">{formatCurrency(listing.list_price)}</div>
+              </div>
+              <div className="property-details">
+                <div className="property-address">{listing.street_address}</div>
+                <div className="property-specs">
+                  {listing.bedrooms} bd • {listing.bathrooms} ba • {formatNumber(listing.sqft)} sf
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Price Bands - Visual bar chart
+  const renderPriceBandsContent = () => {
+    const maxCount = Math.max(...priceBands.map((b: any) => b.count));
+    
+    return (
+      <div className="content-section pricebands-layout">
+        <div className="bands-header">
+          <div className="bands-title">Price Distribution</div>
+          <div className="bands-subtitle">{formatNumber(priceBands.reduce((s: number, b: any) => s + b.count, 0))} Active Listings</div>
+        </div>
+        <div className="bands-chart">
+          {priceBands.map((band: any, i: number) => (
+            <div key={i} className="band-row">
+              <div className="band-label">{band.label}</div>
+              <div className="band-bar-container">
+                <div 
+                  className="band-bar" 
+                  style={{ width: `${(band.count / maxCount) * 100}%` }}
+                >
+                  <span className="band-count">{band.count}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="bands-footer">
+          <div className="band-stat">
+            <span className="stat-value">{formatCurrency(metrics.median_list_price || 4250000)}</span>
+            <span className="stat-label">Median Price</span>
+          </div>
+          <div className="band-stat">
+            <span className="stat-value">{metrics.avg_dom || 42}</span>
+            <span className="stat-label">Avg Days</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // New Listings - Compact property cards
+  const renderNewListingsContent = () => {
+    const sampleListings = (data as any).listings_sample || [];
+    const displayListings = sampleListings.slice(0, 3);
+    
+    return (
+      <div className="content-section newlistings-layout">
+        <div className="nl-hero">
+          <div className="nl-count">{counts.Active || 42}</div>
+          <div className="nl-label">New Listings</div>
+          <div className="nl-period">Last 14 Days</div>
+        </div>
+        <div className="nl-stats">
+          <div className="nl-stat">
+            <span className="stat-value">{formatCurrency(metrics.median_list_price || 4350000)}</span>
+            <span className="stat-label">Median Price</span>
+          </div>
+          <div className="nl-stat">
+            <span className="stat-value">{metrics.avg_dom || 7}</span>
+            <span className="stat-label">Avg Days</span>
+          </div>
+        </div>
+        {displayListings.length > 0 && (
+          <div className="nl-listings">
+            {displayListings.map((listing: any, i: number) => (
+              <div key={i} className="nl-listing-row">
+                <div className="nl-listing-info">
+                  <div className="nl-address">{listing.address}</div>
+                  <div className="nl-specs">{listing.beds}bd/{listing.baths}ba • {formatNumber(listing.sqft)}sf</div>
+                </div>
+                <div className="nl-price">{formatCurrency(listing.list_price)}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Inventory - Visual breakdown
+  const renderInventoryContent = () => (
+    <div className="content-section inventory-layout">
+      <div className="inv-hero">
+        <div className="inv-count">{counts.Active || 127}</div>
+        <div className="inv-label">Active Listings</div>
+      </div>
+      <div className="inv-breakdown">
+        <div className="inv-segment active-segment">
+          <div className="segment-bar" style={{ height: '100%' }}></div>
+          <div className="segment-info">
+            <span className="segment-count">{counts.Active || 127}</span>
+            <span className="segment-label">Active</span>
+          </div>
+        </div>
+        <div className="inv-segment pending-segment">
+          <div className="segment-bar" style={{ height: `${((counts.Pending || 34) / (counts.Active || 127)) * 100}%` }}></div>
+          <div className="segment-info">
+            <span className="segment-count">{counts.Pending || 34}</span>
+            <span className="segment-label">Pending</span>
+          </div>
+        </div>
+      </div>
+      <div className="inv-stats">
+        <div className="inv-stat">
+          <span className="stat-value">{metrics.avg_dom || 45}</span>
+          <span className="stat-label">Avg Days on Market</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Closed Sales - Performance focused
+  const renderClosedContent = () => (
+    <div className="content-section closed-layout">
+      <div className="closed-hero">
+        <div className="closed-count">{counts.Closed || 89}</div>
+        <div className="closed-label">Homes Sold</div>
+        <div className="closed-period">Last 30 Days</div>
+      </div>
+      <div className="closed-metrics">
+        <div className="closed-metric primary">
+          <div className="metric-value">{formatCurrency(metrics.median_close_price || 4150000)}</div>
+          <div className="metric-label">Median Sale Price</div>
+        </div>
+        <div className="closed-row">
+          <div className="closed-metric">
+            <div className="metric-value">{metrics.avg_dom || 42}</div>
+            <div className="metric-label">Avg Days</div>
+          </div>
+          <div className="closed-metric">
+            <div className="metric-value">{formatCurrency(metrics.median_list_price || 4250000)}</div>
+            <div className="metric-label">Median List</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Open Houses - Event style
+  const renderOpenHousesContent = () => (
+    <div className="content-section openhouses-layout">
+      <div className="oh-hero">
+        <div className="oh-icon">🏠</div>
+        <div className="oh-count">{counts.Active || 15}</div>
+        <div className="oh-label">Open Houses</div>
+        <div className="oh-period">This Weekend</div>
+      </div>
+      <div className="oh-cta">
+        <div className="oh-cta-text">Schedule Your Tour</div>
+        <div className="oh-cta-sub">Contact for exclusive access</div>
+      </div>
+    </div>
+  );
 
   return (
     <html>
@@ -173,19 +353,19 @@ export default async function SocialBrandingPreviewPage({ params, searchParams }
                 background: #ffffff;
               }
               
-              /* Header */
+              /* ===== HEADER ===== */
               .header {
                 background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
-                padding: 80px 60px 60px;
+                padding: 60px 60px 50px;
                 text-align: center;
               }
               
               .header-logo {
-                height: 80px;
+                height: 70px;
                 width: auto;
-                max-width: 280px;
+                max-width: 260px;
                 object-fit: contain;
-                margin-bottom: 24px;
+                margin-bottom: 20px;
                 filter: brightness(0) invert(1);
               }
               
@@ -193,12 +373,12 @@ export default async function SocialBrandingPreviewPage({ params, searchParams }
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                width: 80px;
-                height: 80px;
+                width: 70px;
+                height: 70px;
                 background: rgba(255,255,255,0.2);
-                border-radius: 20px;
-                margin-bottom: 24px;
-                font-size: 36px;
+                border-radius: 16px;
+                margin-bottom: 20px;
+                font-size: 32px;
                 font-weight: 800;
                 color: white;
               }
@@ -207,114 +387,597 @@ export default async function SocialBrandingPreviewPage({ params, searchParams }
                 display: inline-block;
                 background: rgba(255,255,255,0.2);
                 color: #fff;
-                font-size: 24px;
+                font-size: 22px;
                 font-weight: 600;
-                padding: 12px 32px;
+                padding: 10px 28px;
                 border-radius: 999px;
-                margin-bottom: 20px;
+                margin-bottom: 16px;
                 letter-spacing: 1px;
                 text-transform: uppercase;
               }
               
               .header-title {
-                font-size: 48px;
+                font-size: 44px;
                 font-weight: 800;
                 color: #fff;
-                margin-bottom: 12px;
-                letter-spacing: -0.5px;
+                margin-bottom: 8px;
               }
               
               .header-market {
-                font-size: 36px;
-                font-weight: 600;
-                color: rgba(255,255,255,0.9);
-              }
-              
-              /* Metrics */
-              .metrics {
-                flex: 1;
-                padding: 60px;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                gap: 40px;
-              }
-              
-              .hero-metric {
-                text-align: center;
-                padding: 50px 40px;
-                background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
-                border-radius: 32px;
-                margin-bottom: 20px;
-              }
-              
-              .hero-metric .value {
-                font-size: 120px;
-                font-weight: 900;
-                color: #fff;
-                line-height: 1;
-                letter-spacing: -2px;
-              }
-              
-              .hero-metric .label {
                 font-size: 32px;
                 font-weight: 600;
                 color: rgba(255,255,255,0.9);
-                margin-top: 16px;
+              }
+              
+              /* ===== CONTENT SECTIONS ===== */
+              .content-section {
+                flex: 1;
+                padding: 50px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+              }
+              
+              /* --- Market Snapshot Layout --- */
+              .metrics-layout .hero-metric {
+                text-align: center;
+                padding: 40px 30px;
+                background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+                border-radius: 28px;
+                margin-bottom: 30px;
+              }
+              
+              .metrics-layout .hero-metric .value {
+                font-size: 100px;
+                font-weight: 900;
+                color: #fff;
+                line-height: 1;
+              }
+              
+              .metrics-layout .hero-metric .label {
+                font-size: 28px;
+                font-weight: 600;
+                color: rgba(255,255,255,0.9);
+                margin-top: 12px;
                 text-transform: uppercase;
                 letter-spacing: 2px;
               }
               
-              .metric-grid {
+              .metrics-layout .metric-grid {
                 display: grid;
                 grid-template-columns: repeat(2, 1fr);
-                gap: 24px;
+                gap: 20px;
               }
               
-              .metric-card {
+              .metrics-layout .metric-card {
                 background: var(--light-gray);
-                border-radius: 24px;
-                padding: 40px 32px;
+                border-radius: 20px;
+                padding: 32px 24px;
                 text-align: center;
                 border: 2px solid var(--border);
               }
               
-              .metric-card .value {
-                font-size: 72px;
+              .metrics-layout .metric-card .value {
+                font-size: 56px;
                 font-weight: 800;
                 color: var(--ink);
                 line-height: 1;
               }
               
-              .metric-card .label {
-                font-size: 24px;
+              .metrics-layout .metric-card .label {
+                font-size: 20px;
                 font-weight: 600;
                 color: var(--muted);
-                margin-top: 12px;
+                margin-top: 8px;
                 text-transform: uppercase;
-                letter-spacing: 1px;
               }
               
-              .period-badge {
+              /* --- Gallery Layout --- */
+              .gallery-layout {
+                padding: 40px;
+              }
+              
+              .gallery-header {
                 text-align: center;
-                padding: 20px;
+                margin-bottom: 30px;
               }
               
-              .period-badge span {
-                display: inline-block;
-                background: var(--light-gray);
-                color: var(--muted);
+              .gallery-count {
+                font-size: 80px;
+                font-weight: 900;
+                color: var(--primary);
+                line-height: 1;
+              }
+              
+              .gallery-label {
                 font-size: 28px;
+                font-weight: 700;
+                color: var(--ink);
+                text-transform: uppercase;
+                letter-spacing: 2px;
+              }
+              
+              .property-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+                flex: 1;
+              }
+              
+              .property-card {
+                background: #fff;
+                border-radius: 20px;
+                overflow: hidden;
+                border: 2px solid var(--border);
+                box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+              }
+              
+              .property-image {
+                height: 240px;
+                background-size: cover;
+                background-position: center;
+                position: relative;
+              }
+              
+              .property-price {
+                position: absolute;
+                bottom: 12px;
+                left: 12px;
+                background: var(--primary);
+                color: #fff;
+                padding: 8px 16px;
+                border-radius: 8px;
+                font-size: 24px;
+                font-weight: 700;
+              }
+              
+              .property-details {
+                padding: 16px;
+              }
+              
+              .property-address {
+                font-size: 22px;
+                font-weight: 700;
+                color: var(--ink);
+                margin-bottom: 4px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+              
+              .property-specs {
+                font-size: 18px;
+                color: var(--muted);
+              }
+              
+              /* --- Price Bands Layout --- */
+              .pricebands-layout {
+                padding: 50px;
+              }
+              
+              .bands-header {
+                text-align: center;
+                margin-bottom: 40px;
+              }
+              
+              .bands-title {
+                font-size: 40px;
+                font-weight: 800;
+                color: var(--ink);
+              }
+              
+              .bands-subtitle {
+                font-size: 24px;
+                color: var(--muted);
+                margin-top: 8px;
+              }
+              
+              .bands-chart {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+              }
+              
+              .band-row {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+              }
+              
+              .band-label {
+                width: 180px;
+                font-size: 22px;
                 font-weight: 600;
-                padding: 16px 40px;
-                border-radius: 999px;
+                color: var(--ink);
+                text-align: right;
+              }
+              
+              .band-bar-container {
+                flex: 1;
+                height: 50px;
+                background: var(--light-gray);
+                border-radius: 25px;
+                overflow: hidden;
+              }
+              
+              .band-bar {
+                height: 100%;
+                background: linear-gradient(90deg, var(--primary), var(--accent));
+                border-radius: 25px;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                padding-right: 16px;
+                min-width: 60px;
+              }
+              
+              .band-count {
+                font-size: 22px;
+                font-weight: 700;
+                color: #fff;
+              }
+              
+              .bands-footer {
+                display: flex;
+                justify-content: center;
+                gap: 60px;
+                margin-top: 40px;
+                padding-top: 30px;
+                border-top: 2px solid var(--border);
+              }
+              
+              .band-stat {
+                text-align: center;
+              }
+              
+              .band-stat .stat-value {
+                display: block;
+                font-size: 40px;
+                font-weight: 800;
+                color: var(--primary);
+              }
+              
+              .band-stat .stat-label {
+                font-size: 18px;
+                color: var(--muted);
+                text-transform: uppercase;
+              }
+              
+              /* --- New Listings Layout --- */
+              .newlistings-layout {
+                padding: 50px;
+              }
+              
+              .nl-hero {
+                text-align: center;
+                padding: 40px;
+                background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+                border-radius: 28px;
+                margin-bottom: 30px;
+              }
+              
+              .nl-count {
+                font-size: 120px;
+                font-weight: 900;
+                color: #fff;
+                line-height: 1;
+              }
+              
+              .nl-label {
+                font-size: 32px;
+                font-weight: 700;
+                color: rgba(255,255,255,0.95);
+                text-transform: uppercase;
+                letter-spacing: 2px;
+              }
+              
+              .nl-period {
+                font-size: 22px;
+                color: rgba(255,255,255,0.8);
+                margin-top: 8px;
+              }
+              
+              .nl-stats {
+                display: flex;
+                gap: 20px;
+                margin-bottom: 30px;
+              }
+              
+              .nl-stat {
+                flex: 1;
+                background: var(--light-gray);
+                border-radius: 20px;
+                padding: 28px;
+                text-align: center;
                 border: 2px solid var(--border);
               }
               
-              /* Footer */
+              .nl-stat .stat-value {
+                display: block;
+                font-size: 40px;
+                font-weight: 800;
+                color: var(--ink);
+              }
+              
+              .nl-stat .stat-label {
+                font-size: 18px;
+                color: var(--muted);
+                text-transform: uppercase;
+              }
+              
+              .nl-listings {
+                background: var(--light-gray);
+                border-radius: 20px;
+                padding: 20px;
+                border: 2px solid var(--border);
+              }
+              
+              .nl-listing-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 16px 0;
+                border-bottom: 1px solid var(--border);
+              }
+              
+              .nl-listing-row:last-child {
+                border-bottom: none;
+              }
+              
+              .nl-address {
+                font-size: 24px;
+                font-weight: 600;
+                color: var(--ink);
+              }
+              
+              .nl-specs {
+                font-size: 18px;
+                color: var(--muted);
+              }
+              
+              .nl-price {
+                font-size: 28px;
+                font-weight: 700;
+                color: var(--primary);
+              }
+              
+              /* --- Inventory Layout --- */
+              .inventory-layout {
+                padding: 50px;
+                align-items: center;
+              }
+              
+              .inv-hero {
+                text-align: center;
+                margin-bottom: 40px;
+              }
+              
+              .inv-count {
+                font-size: 140px;
+                font-weight: 900;
+                color: var(--primary);
+                line-height: 1;
+              }
+              
+              .inv-label {
+                font-size: 36px;
+                font-weight: 700;
+                color: var(--ink);
+                text-transform: uppercase;
+                letter-spacing: 2px;
+              }
+              
+              .inv-breakdown {
+                display: flex;
+                gap: 30px;
+                height: 300px;
+                width: 100%;
+                max-width: 600px;
+                margin-bottom: 40px;
+              }
+              
+              .inv-segment {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+              }
+              
+              .segment-bar {
+                width: 100%;
+                border-radius: 20px;
+              }
+              
+              .active-segment .segment-bar {
+                background: linear-gradient(135deg, var(--primary), var(--accent));
+              }
+              
+              .pending-segment .segment-bar {
+                background: var(--border);
+              }
+              
+              .segment-info {
+                margin-top: 16px;
+                text-align: center;
+              }
+              
+              .segment-count {
+                display: block;
+                font-size: 40px;
+                font-weight: 800;
+                color: var(--ink);
+              }
+              
+              .segment-label {
+                font-size: 20px;
+                color: var(--muted);
+                text-transform: uppercase;
+              }
+              
+              .inv-stats {
+                text-align: center;
+              }
+              
+              .inv-stat .stat-value {
+                display: block;
+                font-size: 60px;
+                font-weight: 800;
+                color: var(--ink);
+              }
+              
+              .inv-stat .stat-label {
+                font-size: 22px;
+                color: var(--muted);
+              }
+              
+              /* --- Closed Sales Layout --- */
+              .closed-layout {
+                padding: 50px;
+              }
+              
+              .closed-hero {
+                text-align: center;
+                padding: 50px;
+                background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+                border-radius: 28px;
+                margin-bottom: 30px;
+              }
+              
+              .closed-count {
+                font-size: 140px;
+                font-weight: 900;
+                color: #fff;
+                line-height: 1;
+              }
+              
+              .closed-label {
+                font-size: 36px;
+                font-weight: 700;
+                color: rgba(255,255,255,0.95);
+                text-transform: uppercase;
+                letter-spacing: 2px;
+              }
+              
+              .closed-period {
+                font-size: 22px;
+                color: rgba(255,255,255,0.8);
+                margin-top: 8px;
+              }
+              
+              .closed-metrics {
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+              }
+              
+              .closed-metric.primary {
+                background: var(--light-gray);
+                border-radius: 24px;
+                padding: 40px;
+                text-align: center;
+                border: 2px solid var(--border);
+              }
+              
+              .closed-metric.primary .metric-value {
+                font-size: 56px;
+                font-weight: 800;
+                color: var(--primary);
+              }
+              
+              .closed-metric.primary .metric-label {
+                font-size: 22px;
+                color: var(--muted);
+                text-transform: uppercase;
+                margin-top: 8px;
+              }
+              
+              .closed-row {
+                display: flex;
+                gap: 20px;
+              }
+              
+              .closed-row .closed-metric {
+                flex: 1;
+                background: var(--light-gray);
+                border-radius: 20px;
+                padding: 30px;
+                text-align: center;
+                border: 2px solid var(--border);
+              }
+              
+              .closed-row .metric-value {
+                font-size: 40px;
+                font-weight: 800;
+                color: var(--ink);
+              }
+              
+              .closed-row .metric-label {
+                font-size: 18px;
+                color: var(--muted);
+                text-transform: uppercase;
+                margin-top: 4px;
+              }
+              
+              /* --- Open Houses Layout --- */
+              .openhouses-layout {
+                padding: 50px;
+                align-items: center;
+                text-align: center;
+              }
+              
+              .oh-hero {
+                margin-bottom: 60px;
+              }
+              
+              .oh-icon {
+                font-size: 100px;
+                margin-bottom: 20px;
+              }
+              
+              .oh-count {
+                font-size: 160px;
+                font-weight: 900;
+                color: var(--primary);
+                line-height: 1;
+              }
+              
+              .oh-label {
+                font-size: 44px;
+                font-weight: 700;
+                color: var(--ink);
+                text-transform: uppercase;
+                letter-spacing: 2px;
+              }
+              
+              .oh-period {
+                font-size: 28px;
+                color: var(--muted);
+                margin-top: 12px;
+              }
+              
+              .oh-cta {
+                background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+                border-radius: 24px;
+                padding: 40px 60px;
+              }
+              
+              .oh-cta-text {
+                font-size: 32px;
+                font-weight: 700;
+                color: #fff;
+              }
+              
+              .oh-cta-sub {
+                font-size: 22px;
+                color: rgba(255,255,255,0.8);
+                margin-top: 8px;
+              }
+              
+              /* ===== FOOTER ===== */
               .footer {
                 background: var(--light-gray);
-                padding: 48px 60px;
+                padding: 40px 50px;
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
@@ -324,61 +987,61 @@ export default async function SocialBrandingPreviewPage({ params, searchParams }
               .footer-contact {
                 display: flex;
                 align-items: center;
-                gap: 24px;
+                gap: 20px;
               }
               
               .footer-photo {
-                width: 100px;
-                height: 100px;
+                width: 90px;
+                height: 90px;
                 border-radius: 50%;
                 object-fit: cover;
-                border: 4px solid var(--primary);
+                border: 3px solid var(--primary);
               }
               
               .footer-photo-placeholder {
-                width: 100px;
-                height: 100px;
+                width: 90px;
+                height: 90px;
                 border-radius: 50%;
                 background: var(--border);
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 36px;
+                font-size: 32px;
                 color: var(--muted);
               }
               
               .footer-info {
                 display: flex;
                 flex-direction: column;
-                gap: 6px;
+                gap: 4px;
               }
               
               .footer-name {
-                font-size: 32px;
+                font-size: 28px;
                 font-weight: 700;
                 color: var(--ink);
               }
               
               .footer-details {
-                font-size: 24px;
+                font-size: 20px;
                 color: var(--muted);
               }
               
               .footer-website {
-                font-size: 22px;
+                font-size: 20px;
                 color: var(--primary);
                 font-weight: 600;
               }
               
               .footer-logo {
-                height: 80px;
+                height: 70px;
                 width: auto;
-                max-width: 200px;
+                max-width: 180px;
                 object-fit: contain;
               }
               
               .footer-brand-text {
-                font-size: 28px;
+                font-size: 26px;
                 font-weight: 700;
                 color: var(--primary);
               }
@@ -389,7 +1052,7 @@ export default async function SocialBrandingPreviewPage({ params, searchParams }
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%) rotate(-45deg);
-                font-size: 140px;
+                font-size: 120px;
                 font-weight: 900;
                 color: rgba(0,0,0,0.03);
                 pointer-events: none;
@@ -416,31 +1079,8 @@ export default async function SocialBrandingPreviewPage({ params, searchParams }
             <div className="header-market">Real Estate Update</div>
           </div>
 
-          {/* Metrics */}
-          <div className="metrics">
-            {/* Hero Metric */}
-            <div className="hero-metric">
-              <div className="value">{heroMetric.value}</div>
-              <div className="label">{heroMetric.label}</div>
-            </div>
-
-            {/* Secondary Metrics Grid */}
-            {secondaryMetrics.length > 0 && (
-              <div className="metric-grid">
-                {secondaryMetrics.map((m, i) => (
-                  <div key={i} className="metric-card">
-                    <div className="value">{m.value}</div>
-                    <div className="label">{m.label}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Period Badge */}
-            <div className="period-badge">
-              <span>Last 30 days • Sample Data</span>
-            </div>
-          </div>
+          {/* Report-specific Content */}
+          {renderReportContent()}
 
           {/* Footer */}
           <div className="footer">
@@ -479,4 +1119,3 @@ export default async function SocialBrandingPreviewPage({ params, searchParams }
 export const metadata = {
   title: "Social Branding Preview",
 };
-
