@@ -3,8 +3,14 @@
 export default function NavAuth() {
   async function logout() {
     try {
-      await fetch("/api/auth/logout", { method: "POST" })
-    } catch {}
+      // Use correct logout route that clears the mr_token cookie
+      await fetch("/api/proxy/v1/auth/logout", { 
+        method: "POST",
+        credentials: "include"
+      })
+    } catch (err) {
+      console.error("Logout error:", err)
+    }
     window.location.href = "/login"
   }
 

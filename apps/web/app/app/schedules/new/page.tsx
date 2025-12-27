@@ -13,6 +13,9 @@ export default function NewSchedulePage() {
 
     try {
       // Map frontend state to API format
+      // Detect user's timezone for accurate scheduling
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
+      
       const apiPayload = {
         name: payload.name,
         report_type: payload.report_type,
@@ -24,6 +27,7 @@ export default function NewSchedulePage() {
         monthly_dom: payload.cadence === 'monthly' ? payload.monthly_day : null,
         send_hour: parseInt(payload.time.split(':')[0], 10),
         send_minute: parseInt(payload.time.split(':')[1], 10),
+        timezone: userTimezone,  // Use detected timezone for correct scheduling
         // Use typedRecipients if available, otherwise fall back to plain recipients
         recipients: payload.typedRecipients || payload.recipients,
         include_attachment: false,

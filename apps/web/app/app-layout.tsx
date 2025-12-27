@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense } from "react"
+import { Suspense, useState, useEffect } from "react"
 import {
   SidebarProvider,
   Sidebar,
@@ -159,6 +159,35 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
 }
 
 function DashboardTopbar({ accountType, isAdmin, isAffiliate }: { accountType?: string; isAdmin: boolean; isAffiliate: boolean }) {
+  const [user, setUser] = useState<{ email: string; first_name?: string; last_name?: string } | null>(null)
+  
+  useEffect(() => {
+    // Fetch actual user info for the dropdown
+    fetch("/api/proxy/v1/users/me", { credentials: "include" })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data) setUser(data)
+      })
+      .catch(() => {})
+  }, [])
+  
+  async function handleLogout() {
+    try {
+      await fetch("/api/proxy/v1/auth/logout", { 
+        method: "POST",
+        credentials: "include"
+      })
+    } catch {}
+    window.location.href = "/login"
+  }
+  
+  const displayName = user?.first_name && user?.last_name 
+    ? `${user.first_name} ${user.last_name}`
+    : user?.first_name || user?.email?.split('@')[0] || "User"
+  
+  const displayEmail = user?.email || ""
+  const initials = displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || "U"
+  
   return (
     <header className="flex h-12 shrink-0 items-center gap-4 border-b border-[var(--app-border)] bg-[var(--app-surface)] px-4">
       <SidebarTrigger />
@@ -184,15 +213,15 @@ function DashboardTopbar({ accountType, isAdmin, isAffiliate }: { accountType?: 
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-9 w-9 rounded-full">
             <Avatar className="h-9 w-9">
-              <AvatarFallback className="bg-primary text-primary-foreground">U</AvatarFallback>
+              <AvatarFallback className="bg-primary text-primary-foreground">{initials}</AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>
             <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium">Demo User</p>
-              <p className="text-xs text-muted-foreground">demo@example.com</p>
+              <p className="text-sm font-medium">{displayName}</p>
+              <p className="text-xs text-muted-foreground">{displayEmail}</p>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -209,7 +238,9 @@ function DashboardTopbar({ accountType, isAdmin, isAffiliate }: { accountType?: 
             <Link href="/app/billing">Billing</Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>Log out</DropdownMenuItem>
+          <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-600">
+            Log out
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </header>
