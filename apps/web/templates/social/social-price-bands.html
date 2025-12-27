@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>{{brand_name}} • Price Analysis</title>
+<meta name="viewport" content="width=1080" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 1080px;
+    height: 1920px;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #ffffff;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :root {
+    --pct-blue: #7C3AED;
+    --pct-accent: #F26B2B;
+    --ink: #0f172a;
+    --muted: #64748b;
+    --light-gray: #f8fafc;
+    --border: #e2e8f0;
+  }
+
+  .story {
+    width: 1080px;
+    height: 1920px;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+  }
+
+  .header {
+    background: linear-gradient(135deg, var(--pct-blue) 0%, var(--pct-accent) 100%);
+    padding: 80px 60px 60px;
+    text-align: center;
+  }
+
+  .header-logo {
+    height: 80px;
+    width: auto;
+    max-width: 280px;
+    object-fit: contain;
+    margin-bottom: 24px;
+  }
+
+  .header-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    font-size: 24px;
+    font-weight: 600;
+    padding: 12px 32px;
+    border-radius: 999px;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .header-title {
+    font-size: 48px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 12px;
+  }
+
+  .header-market {
+    font-size: 36px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.9);
+  }
+
+  .content {
+    flex: 1;
+    padding: 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .section-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--ink);
+    text-align: center;
+    margin-bottom: 16px;
+  }
+
+  .price-band {
+    background: var(--light-gray);
+    border-radius: 20px;
+    padding: 32px;
+    border: 2px solid var(--border);
+  }
+
+  .band-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .band-label {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .band-count {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .band-bar-container {
+    height: 48px;
+    background: #e2e8f0;
+    border-radius: 24px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .band-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--pct-blue), var(--pct-accent));
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 16px;
+    min-width: 60px;
+  }
+
+  .band-bar-text {
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .band-stats {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .band-stat {
+    text-align: center;
+  }
+
+  .band-stat-value {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--ink);
+  }
+
+  .band-stat-label {
+    font-size: 18px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .summary-card {
+    background: linear-gradient(135deg, var(--pct-blue) 0%, var(--pct-accent) 100%);
+    border-radius: 24px;
+    padding: 40px;
+    text-align: center;
+  }
+
+  .summary-row {
+    display: flex;
+    justify-content: space-around;
+    gap: 24px;
+  }
+
+  .summary-item .value {
+    font-size: 48px;
+    font-weight: 800;
+    color: #fff;
+  }
+
+  .summary-item .label {
+    font-size: 20px;
+    color: rgba(255,255,255,0.9);
+    margin-top: 8px;
+  }
+
+  .period-badge {
+    text-align: center;
+    padding: 20px;
+    margin-top: auto;
+  }
+
+  .period-badge span {
+    display: inline-block;
+    background: var(--light-gray);
+    color: var(--muted);
+    font-size: 28px;
+    font-weight: 600;
+    padding: 16px 40px;
+    border-radius: 999px;
+    border: 2px solid var(--border);
+  }
+
+  .footer {
+    background: var(--light-gray);
+    padding: 48px 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 2px solid var(--border);
+  }
+
+  .footer-contact {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .footer-photo {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid var(--pct-blue);
+  }
+
+  .footer-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .footer-name {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .footer-details {
+    font-size: 24px;
+    color: var(--muted);
+  }
+
+  .footer-website {
+    font-size: 22px;
+    color: var(--pct-blue);
+    font-weight: 600;
+  }
+
+  .footer-logo {
+    height: 80px;
+    width: auto;
+    max-width: 200px;
+    object-fit: contain;
+  }
+
+  .footer-brand-text {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--pct-blue);
+  }
+</style>
+</head>
+<body>
+  <div class="story">
+    <div class="header">
+      {{#if logo_url}}
+      <img src="{{logo_url}}" alt="{{brand_name}}" class="header-logo" />
+      {{/if}}
+      <div class="header-badge">Price Analysis</div>
+      <div class="header-title">{{market_name}}</div>
+      <div class="header-market">Market by Price Range</div>
+    </div>
+
+    <div class="content">
+      <div class="summary-card">
+        <div class="summary-row">
+          <div class="summary-item">
+            <div class="value">{{total_listings}}</div>
+            <div class="label">Total Listings</div>
+          </div>
+          <div class="summary-item">
+            <div class="value">{{median_price}}</div>
+            <div class="label">Median Price</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRICE_BANDS_SOCIAL -->
+
+      <div class="period-badge">
+        <span>{{period_label}} • {{report_date}}</span>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="footer-contact">
+        {{#if rep_photo_url}}
+        <img src="{{rep_photo_url}}" alt="{{contact_line1}}" class="footer-photo" />
+        {{/if}}
+        <div class="footer-info">
+          {{#if contact_line1}}<div class="footer-name">{{contact_line1}}</div>{{/if}}
+          {{#if contact_line2}}<div class="footer-details">{{contact_line2}}</div>{{/if}}
+          {{#if website_url}}<div class="footer-website">{{website_url}}</div>{{/if}}
+        </div>
+      </div>
+      {{#if footer_logo_url}}
+      <img src="{{footer_logo_url}}" alt="{{brand_name}}" class="footer-logo" />
+      {{else}}
+      <div class="footer-brand-text">{{brand_name}}</div>
+      {{/if}}
+    </div>
+  </div>
+</body>
+</html>

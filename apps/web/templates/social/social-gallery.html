@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>{{brand_name}} • Featured Property</title>
+<meta name="viewport" content="width=1080" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 1080px;
+    height: 1920px;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #ffffff;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :root {
+    --pct-blue: #7C3AED;
+    --pct-accent: #F26B2B;
+    --ink: #0f172a;
+    --muted: #64748b;
+    --light-gray: #f8fafc;
+    --border: #e2e8f0;
+  }
+
+  .story {
+    width: 1080px;
+    height: 1920px;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+  }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, var(--pct-blue) 0%, var(--pct-accent) 100%);
+    padding: 48px 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .header-logo {
+    height: 60px;
+    width: auto;
+    max-width: 180px;
+    object-fit: contain;
+  }
+
+  .header-text {
+    color: #fff;
+  }
+
+  .header-brand {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .header-badge {
+    font-size: 18px;
+    font-weight: 500;
+    opacity: 0.9;
+  }
+
+  .new-badge {
+    background: #ef4444;
+    color: #fff;
+    font-size: 20px;
+    font-weight: 800;
+    padding: 12px 24px;
+    border-radius: 8px;
+    letter-spacing: 1px;
+  }
+
+  /* Hero Photo */
+  .hero-photo {
+    width: 100%;
+    height: 700px;
+    background-size: cover;
+    background-position: center;
+    background-color: var(--light-gray);
+  }
+
+  /* Property Info */
+  .property-info {
+    padding: 48px 60px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .price {
+    font-size: 96px;
+    font-weight: 900;
+    color: var(--ink);
+    letter-spacing: -2px;
+  }
+
+  .address {
+    font-size: 40px;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.2;
+  }
+
+  .city {
+    font-size: 32px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  .details-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+
+  .detail-item {
+    background: var(--light-gray);
+    border-radius: 16px;
+    padding: 24px 16px;
+    text-align: center;
+    border: 2px solid var(--border);
+  }
+
+  .detail-value {
+    font-size: 40px;
+    font-weight: 800;
+    color: var(--ink);
+  }
+
+  .detail-label {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--muted);
+    margin-top: 8px;
+    text-transform: uppercase;
+  }
+
+  .cta-box {
+    background: linear-gradient(135deg, var(--pct-blue) 0%, var(--pct-accent) 100%);
+    border-radius: 20px;
+    padding: 32px;
+    text-align: center;
+  }
+
+  .cta-text {
+    font-size: 32px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  /* Footer */
+  .footer {
+    background: var(--light-gray);
+    padding: 40px 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 2px solid var(--border);
+  }
+
+  .footer-contact {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .footer-photo {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid var(--pct-blue);
+  }
+
+  .footer-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .footer-name {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .footer-details {
+    font-size: 22px;
+    color: var(--muted);
+  }
+
+  .footer-website {
+    font-size: 20px;
+    color: var(--pct-blue);
+    font-weight: 600;
+  }
+
+  .footer-logo {
+    height: 70px;
+    width: auto;
+    max-width: 180px;
+    object-fit: contain;
+  }
+
+  .footer-brand-text {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--pct-blue);
+  }
+</style>
+</head>
+<body>
+  <div class="story">
+    <div class="header">
+      <div class="header-left">
+        {{#if logo_url}}
+        <img src="{{logo_url}}" alt="{{brand_name}}" class="header-logo" />
+        {{/if}}
+        <div class="header-text">
+          <div class="header-brand">{{brand_name}}</div>
+          <div class="header-badge">{{market_name}}</div>
+        </div>
+      </div>
+      <div class="new-badge">NEW LISTING</div>
+    </div>
+
+    <div class="hero-photo" style="background-image: url('{{hero_photo_url}}');"></div>
+
+    <div class="property-info">
+      <div class="price">{{list_price}}</div>
+
+      <div>
+        <div class="address">{{street_address}}</div>
+        <div class="city">{{city}}, {{zip_code}}</div>
+      </div>
+
+      <div class="details-grid">
+        <div class="detail-item">
+          <div class="detail-value">{{bedrooms}}</div>
+          <div class="detail-label">Beds</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-value">{{bathrooms}}</div>
+          <div class="detail-label">Baths</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-value">{{sqft}}</div>
+          <div class="detail-label">Sq Ft</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-value">{{days_on_market}}</div>
+          <div class="detail-label">Days</div>
+        </div>
+      </div>
+
+      <div class="cta-box">
+        <div class="cta-text">Schedule Your Private Showing Today!</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="footer-contact">
+        {{#if rep_photo_url}}
+        <img src="{{rep_photo_url}}" alt="{{contact_line1}}" class="footer-photo" />
+        {{/if}}
+        <div class="footer-info">
+          {{#if contact_line1}}<div class="footer-name">{{contact_line1}}</div>{{/if}}
+          {{#if contact_line2}}<div class="footer-details">{{contact_line2}}</div>{{/if}}
+          {{#if website_url}}<div class="footer-website">{{website_url}}</div>{{/if}}
+        </div>
+      </div>
+      {{#if footer_logo_url}}
+      <img src="{{footer_logo_url}}" alt="{{brand_name}}" class="footer-logo" />
+      {{else}}
+      <div class="footer-brand-text">{{brand_name}}</div>
+      {{/if}}
+    </div>
+  </div>
+</body>
+</html>
