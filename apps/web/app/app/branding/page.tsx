@@ -760,13 +760,15 @@ export default function BrandingPage() {
                   <Download className="w-4 h-4 text-green-600" />
                 </div>
                 <h2 className="font-semibold text-lg">Test Your Branding</h2>
+                <span className="text-xs text-muted-foreground ml-auto">Preview before you publish</span>
               </div>
               
-              <div className="bg-card border rounded-xl p-5">
-                <div className="mb-4">
-                  <Label className="text-sm font-medium">Report Type</Label>
+              <div className="bg-card border rounded-xl p-6 space-y-6">
+                {/* Report Type Selector - Full Width */}
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Choose Report Type to Preview</Label>
                   <Select value={reportType} onValueChange={(v) => setReportType(v as ReportType)}>
-                    <SelectTrigger className="mt-1.5 h-11">
+                    <SelectTrigger className="h-12 text-base">
                       <SelectValue placeholder="Select report type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -779,93 +781,135 @@ export default function BrandingPage() {
                   </Select>
                 </div>
 
-                <div className="grid sm:grid-cols-3 gap-4">
-                  {/* PDF Download */}
-                  <div className="p-4 rounded-lg border bg-red-50 dark:bg-red-900/10">
-                    <div className="flex items-center gap-2 mb-3">
-                      <FileText className="w-4 h-4 text-red-600" />
-                      <span className="font-medium text-sm">Sample PDF</span>
-                    </div>
-                    <Button
-                      onClick={handleDownloadPdf}
-                      disabled={isDownloading}
-                      variant="outline"
-                      className={cn("w-full h-10", downloadSuccess && "border-green-600 text-green-600")}
-                    >
-                      {isDownloading ? (
-                        <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Generating...</>
-                      ) : downloadSuccess ? (
-                        <><Check className="w-4 h-4 mr-2" /> Downloaded!</>
-                      ) : (
-                        <><Download className="w-4 h-4 mr-2" /> PDF</>
-                      )}
-                    </Button>
-                    {downloadError && (
-                      <p className="text-xs text-destructive mt-2 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" /> {downloadError}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* JPG Social Download */}
-                  <div className="p-4 rounded-lg border bg-pink-50 dark:bg-pink-900/10">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Sparkles className="w-4 h-4 text-pink-600" />
-                      <span className="font-medium text-sm">Social Image</span>
-                    </div>
-                    <Button
-                      onClick={handleDownloadJpg}
-                      disabled={isDownloadingJpg}
-                      variant="outline"
-                      className={cn("w-full h-10", downloadJpgSuccess && "border-green-600 text-green-600")}
-                    >
-                      {isDownloadingJpg ? (
-                        <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Generating...</>
-                      ) : downloadJpgSuccess ? (
-                        <><Check className="w-4 h-4 mr-2" /> Downloaded!</>
-                      ) : (
-                        <><Download className="w-4 h-4 mr-2" /> JPG</>
-                      )}
-                    </Button>
-                    <p className="text-xs text-muted-foreground mt-2">1080×1920 for Stories</p>
-                    {downloadJpgError && (
-                      <p className="text-xs text-destructive mt-1 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" /> {downloadJpgError}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Test Email */}
-                  <div className="p-4 rounded-lg border bg-purple-50 dark:bg-purple-900/10">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Mail className="w-4 h-4 text-purple-600" />
-                      <span className="font-medium text-sm">Test Email</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <Input
-                        type="email"
-                        placeholder="your@email.com"
-                        value={testEmail}
-                        onChange={(e) => setTestEmail(e.target.value)}
-                        className="h-10 text-sm"
-                      />
+                {/* Download Options - 2 Column Layout */}
+                <div>
+                  <p className="text-sm text-muted-foreground mb-4">Download a sample to see how your branding looks</p>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {/* PDF Download Card */}
+                    <div className="p-5 rounded-xl border-2 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-red-100 dark:border-red-800/30">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-red-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-sm">PDF Report</h3>
+                          <p className="text-xs text-muted-foreground">Letter size, print-ready</p>
+                        </div>
+                      </div>
                       <Button
-                        onClick={handleSendTestEmail}
-                        disabled={isSending || !testEmail}
+                        onClick={handleDownloadPdf}
+                        disabled={isDownloading}
                         variant="outline"
-                        size="icon"
-                        className={cn("h-10 w-10 flex-shrink-0", sendSuccess && "border-green-600 text-green-600")}
+                        className={cn(
+                          "w-full h-11 bg-white dark:bg-zinc-900 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/30",
+                          downloadSuccess && "border-green-600 text-green-600 bg-green-50"
+                        )}
                       >
-                        {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : 
-                         sendSuccess ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+                        {isDownloading ? (
+                          <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Generating PDF...</>
+                        ) : downloadSuccess ? (
+                          <><Check className="w-4 h-4 mr-2" /> Downloaded!</>
+                        ) : (
+                          <><Download className="w-4 h-4 mr-2" /> Download PDF</>
+                        )}
                       </Button>
+                      {downloadError && (
+                        <p className="text-xs text-destructive mt-3 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" /> {downloadError}
+                        </p>
+                      )}
                     </div>
-                    {sendError && (
-                      <p className="text-xs text-destructive mt-2 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" /> {sendError}
-                      </p>
-                    )}
+
+                    {/* JPG Social Download Card */}
+                    <div className="p-5 rounded-xl border-2 bg-gradient-to-br from-pink-50 to-purple-50 dark:from-pink-900/20 dark:to-purple-900/20 border-pink-100 dark:border-pink-800/30">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-lg bg-pink-100 dark:bg-pink-900/40 flex items-center justify-center">
+                          <Sparkles className="w-5 h-5 text-pink-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-sm">Social Image</h3>
+                          <p className="text-xs text-muted-foreground">1080×1920 for Stories</p>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={handleDownloadJpg}
+                        disabled={isDownloadingJpg}
+                        variant="outline"
+                        className={cn(
+                          "w-full h-11 bg-white dark:bg-zinc-900 border-pink-200 dark:border-pink-800 hover:bg-pink-50 dark:hover:bg-pink-900/30",
+                          downloadJpgSuccess && "border-green-600 text-green-600 bg-green-50"
+                        )}
+                      >
+                        {isDownloadingJpg ? (
+                          <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Generating Image...</>
+                        ) : downloadJpgSuccess ? (
+                          <><Check className="w-4 h-4 mr-2" /> Downloaded!</>
+                        ) : (
+                          <><Download className="w-4 h-4 mr-2" /> Download JPG</>
+                        )}
+                      </Button>
+                      {downloadJpgError && (
+                        <p className="text-xs text-destructive mt-3 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" /> {downloadJpgError}
+                        </p>
+                      )}
+                    </div>
                   </div>
+                </div>
+
+                {/* Divider */}
+                <div className="flex items-center gap-4">
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider">or</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+
+                {/* Test Email - Full Width */}
+                <div className="p-5 rounded-xl border-2 bg-gradient-to-br from-violet-50 to-indigo-50 dark:from-violet-900/20 dark:to-indigo-900/20 border-violet-100 dark:border-violet-800/30">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center">
+                      <Mail className="w-5 h-5 text-violet-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-sm">Send Test Email</h3>
+                      <p className="text-xs text-muted-foreground">See how your branded email looks in inbox</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <Input
+                      type="email"
+                      placeholder="Enter your email address"
+                      value={testEmail}
+                      onChange={(e) => setTestEmail(e.target.value)}
+                      className="h-11 flex-1 bg-white dark:bg-zinc-900"
+                    />
+                    <Button
+                      onClick={handleSendTestEmail}
+                      disabled={isSending || !testEmail}
+                      className={cn(
+                        "h-11 px-6",
+                        sendSuccess && "bg-green-600 hover:bg-green-700"
+                      )}
+                    >
+                      {isSending ? (
+                        <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Sending...</>
+                      ) : sendSuccess ? (
+                        <><Check className="w-4 h-4 mr-2" /> Sent!</>
+                      ) : (
+                        <><Send className="w-4 h-4 mr-2" /> Send Email</>
+                      )}
+                    </Button>
+                  </div>
+                  {sendSuccess && (
+                    <p className="text-xs text-green-600 mt-3 flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Test email sent! Check your inbox.
+                    </p>
+                  )}
+                  {sendError && (
+                    <p className="text-xs text-destructive mt-3 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> {sendError}
+                    </p>
+                  )}
                 </div>
               </div>
             </section>
