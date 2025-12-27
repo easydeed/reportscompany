@@ -348,8 +348,7 @@ async def generate_sample_jpg(
         print(f"[Branding JPG] Source URL: {preview_url}")
         
         async with httpx.AsyncClient(timeout=120.0) as client:
-            # Use same parameters as PDF but for JPEG
-            # viewport sets the browser window size for the screenshot
+            # JPEG endpoint supports: source, viewport, delay, wait_for_network
             response = await client.post(
                 "https://api.pdfshift.io/v3/convert/jpeg",
                 headers={
@@ -359,9 +358,7 @@ async def generate_sample_jpg(
                 json={
                     "source": preview_url,
                     "viewport": "1080x1920",  # Browser viewport size
-                    "full_page": True,        # Capture full page
                     "delay": 5000,            # 5s delay for fonts/images
-                    "wait_for_network": True,
                 },
             )
             

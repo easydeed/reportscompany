@@ -73,9 +73,7 @@ def render_social_image(
         json={
             "source": social_url,
             "viewport": "1080x1920",  # Browser viewport size
-            "full_page": True,        # Capture full page
-            "delay": 3000,
-            "wait_for_network": True,
+            "delay": 3000,            # Wait for assets to load
         },
         timeout=90.0
     )
