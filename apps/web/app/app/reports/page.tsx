@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Download, Eye, FileJson, FileText as FileTextIcon } from "lucide-react"
+import { Plus, Download, Eye, FileJson, FileText as FileTextIcon, Share2 } from "lucide-react"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import Link from "next/link"
 import { apiFetch } from "@/lib/api"
 import {
@@ -127,29 +133,67 @@ export default function ReportsPage() {
                   </TableCell>
                   <TableCell>{getStatusBadge(r.status)}</TableCell>
                   <TableCell>
-                    <div className="flex gap-2">
-                      {r.html_url && (
-                        <a href={r.html_url} target="_blank" rel="noopener noreferrer">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                        </a>
-                      )}
-                      {r.pdf_url && (
-                        <a href={r.pdf_url} target="_blank" rel="noopener noreferrer">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Download className="w-4 h-4" />
-                          </Button>
-                        </a>
-                      )}
-                      {r.json_url && (
-                        <a href={r.json_url} target="_blank" rel="noopener noreferrer">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <FileJson className="w-4 h-4" />
-                          </Button>
-                        </a>
-                      )}
-                    </div>
+                    <TooltipProvider delayDuration={300}>
+                      <div className="flex gap-1">
+                        {r.html_url && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <a href={r.html_url} target="_blank" rel="noopener noreferrer">
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                              </a>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Preview Report</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        {r.pdf_url && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <a href={r.pdf_url} target="_blank" rel="noopener noreferrer">
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <Download className="w-4 h-4" />
+                                </Button>
+                              </a>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Download PDF</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        {r.status === "completed" && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <a href={`/social/${r.id}`} target="_blank" rel="noopener noreferrer">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-pink-600 hover:text-pink-700 hover:bg-pink-50">
+                                  <Share2 className="w-4 h-4" />
+                                </Button>
+                              </a>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Share on Social Media</p>
+                              <p className="text-xs text-muted-foreground">1080x1920 for Stories</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        {r.json_url && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <a href={r.json_url} target="_blank" rel="noopener noreferrer">
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <FileJson className="w-4 h-4" />
+                                </Button>
+                              </a>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>View JSON Data</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </TooltipProvider>
                   </TableCell>
                 </TableRow>
               ))

@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>{{brand_name}} • Closed Sales</title>
+<meta name="viewport" content="width=1080" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 1080px;
+    height: 1920px;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #ffffff;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :root {
+    --pct-blue: #7C3AED;
+    --pct-accent: #F26B2B;
+    --ink: #0f172a;
+    --muted: #64748b;
+    --light-gray: #f8fafc;
+    --border: #e2e8f0;
+  }
+
+  .story {
+    width: 1080px;
+    height: 1920px;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+  }
+
+  .header {
+    background: linear-gradient(135deg, var(--pct-blue) 0%, var(--pct-accent) 100%);
+    padding: 80px 60px 60px;
+    text-align: center;
+  }
+
+  .header-logo {
+    height: 80px;
+    width: auto;
+    max-width: 280px;
+    object-fit: contain;
+    margin-bottom: 24px;
+  }
+
+  .header-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    font-size: 24px;
+    font-weight: 600;
+    padding: 12px 32px;
+    border-radius: 999px;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .header-title {
+    font-size: 48px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 12px;
+  }
+
+  .header-market {
+    font-size: 36px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.9);
+  }
+
+  .metrics {
+    flex: 1;
+    padding: 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 40px;
+  }
+
+  .hero-metric {
+    text-align: center;
+    padding: 60px 40px;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    border-radius: 32px;
+  }
+
+  .hero-metric .value {
+    font-size: 160px;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+  }
+
+  .hero-metric .label {
+    font-size: 36px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.9);
+    margin-top: 20px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .stat-row {
+    display: flex;
+    gap: 24px;
+  }
+
+  .stat-card {
+    flex: 1;
+    background: var(--light-gray);
+    border-radius: 24px;
+    padding: 40px 24px;
+    text-align: center;
+    border: 2px solid var(--border);
+  }
+
+  .stat-card .value {
+    font-size: 56px;
+    font-weight: 800;
+    color: var(--ink);
+    line-height: 1;
+  }
+
+  .stat-card .label {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--muted);
+    margin-top: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .insight-card {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-radius: 24px;
+    padding: 40px;
+    text-align: center;
+    border: 2px solid #fbbf24;
+  }
+
+  .insight-card .icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+
+  .insight-card .text {
+    font-size: 28px;
+    font-weight: 600;
+    color: #92400e;
+    line-height: 1.4;
+  }
+
+  .period-badge {
+    text-align: center;
+    padding: 20px;
+  }
+
+  .period-badge span {
+    display: inline-block;
+    background: var(--light-gray);
+    color: var(--muted);
+    font-size: 28px;
+    font-weight: 600;
+    padding: 16px 40px;
+    border-radius: 999px;
+    border: 2px solid var(--border);
+  }
+
+  .footer {
+    background: var(--light-gray);
+    padding: 48px 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 2px solid var(--border);
+  }
+
+  .footer-contact {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .footer-photo {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid var(--pct-blue);
+  }
+
+  .footer-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .footer-name {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .footer-details {
+    font-size: 24px;
+    color: var(--muted);
+  }
+
+  .footer-website {
+    font-size: 22px;
+    color: var(--pct-blue);
+    font-weight: 600;
+  }
+
+  .footer-logo {
+    height: 80px;
+    width: auto;
+    max-width: 200px;
+    object-fit: contain;
+  }
+
+  .footer-brand-text {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--pct-blue);
+  }
+</style>
+</head>
+<body>
+  <div class="story">
+    <div class="header">
+      {{#if logo_url}}
+      <img src="{{logo_url}}" alt="{{brand_name}}" class="header-logo" />
+      {{/if}}
+      <div class="header-badge">Closed Sales</div>
+      <div class="header-title">{{market_name}}</div>
+      <div class="header-market">Recent Sales Report</div>
+    </div>
+
+    <div class="metrics">
+      <div class="hero-metric">
+        <div class="value">{{closed_sales}}</div>
+        <div class="label">Homes Sold</div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="value">{{median_price}}</div>
+          <div class="label">Median Price</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">{{avg_dom}}</div>
+          <div class="label">Avg Days</div>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="value">{{close_to_list_ratio}}%</div>
+          <div class="label">Sale-to-List</div>
+        </div>
+      </div>
+
+      <div class="insight-card">
+        <div class="text">Homes are selling at {{close_to_list_ratio}}% of asking price on average</div>
+      </div>
+
+      <div class="period-badge">
+        <span>{{period_label}} • {{report_date}}</span>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="footer-contact">
+        {{#if rep_photo_url}}
+        <img src="{{rep_photo_url}}" alt="{{contact_line1}}" class="footer-photo" />
+        {{/if}}
+        <div class="footer-info">
+          {{#if contact_line1}}<div class="footer-name">{{contact_line1}}</div>{{/if}}
+          {{#if contact_line2}}<div class="footer-details">{{contact_line2}}</div>{{/if}}
+          {{#if website_url}}<div class="footer-website">{{website_url}}</div>{{/if}}
+        </div>
+      </div>
+      {{#if footer_logo_url}}
+      <img src="{{footer_logo_url}}" alt="{{brand_name}}" class="footer-logo" />
+      {{else}}
+      <div class="footer-brand-text">{{brand_name}}</div>
+      {{/if}}
+    </div>
+  </div>
+</body>
+</html>
