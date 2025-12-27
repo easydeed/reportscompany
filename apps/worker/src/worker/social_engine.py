@@ -62,21 +62,23 @@ def render_social_image(
     
     print(f"📱 Generating social image: {social_url}")
     
-    # PDFShift image conversion
-    # Docs: https://pdfshift.io/documentation/image
+    # PDFShift JPEG conversion
+    # Docs: https://docs.pdfshift.io/
     response = httpx.post(
-        "https://api.pdfshift.io/v3/convert/image",
+        "https://api.pdfshift.io/v3/convert/jpeg",  # Correct JPEG endpoint
+        headers={
+            "X-API-Key": PDFSHIFT_API_KEY,  # Header auth per PDFShift docs
+            "Content-Type": "application/json",
+        },
         json={
             "source": social_url,
-            "format": "jpeg",
             "width": 1080,
             "height": 1920,
             "quality": 90,
             "delay": 3000,
             "wait_for_network": True,
         },
-        auth=("api", PDFSHIFT_API_KEY),
-        timeout=60.0
+        timeout=90.0
     )
     
     response.raise_for_status()

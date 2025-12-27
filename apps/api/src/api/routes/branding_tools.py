@@ -343,16 +343,19 @@ async def generate_sample_jpg(
         )
     
     try:
-        # Use same pattern as social_engine.py (proven working)
-        print(f"[Branding JPG] Calling PDFShift with source: {preview_url}")
+        # PDFShift JPEG endpoint with X-API-Key auth (per docs.pdfshift.io)
+        print(f"[Branding JPG] Calling PDFShift JPEG endpoint")
+        print(f"[Branding JPG] Source URL: {preview_url}")
         
         async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
-                "https://api.pdfshift.io/v3/convert/image",
-                auth=("api", PDFSHIFT_API_KEY),  # Basic auth with "api" as username
+                "https://api.pdfshift.io/v3/convert/jpeg",  # Correct JPEG endpoint
+                headers={
+                    "X-API-Key": PDFSHIFT_API_KEY,  # Header auth per PDFShift docs
+                    "Content-Type": "application/json",
+                },
                 json={
                     "source": preview_url,
-                    "format": "jpeg",
                     "width": 1080,
                     "height": 1920,
                     "quality": 90,
