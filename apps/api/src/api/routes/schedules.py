@@ -1,10 +1,31 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, Field, EmailStr, constr
+from pydantic import BaseModel, Field, EmailStr, constr, model_validator
 from typing import List, Optional, Dict, Any, Literal, Union
 from datetime import datetime
 import json
 import traceback
 from ..db import db_conn, set_rls, fetchone_dict, fetchall_dicts
+
+
+# ====== Filter Schema ======
+class ReportFilters(BaseModel):
+    """
+    Filters for preset-based schedule reports.
+    These filters are passed to SimplyRETS API and report builders.
+    """
+    minbeds: Optional[int] = Field(default=None, ge=0, le=10)
+    minbaths: Optional[int] = Field(default=None, ge=0, le=10)
+    minprice: Optional[int] = Field(default=None, ge=0)
+    maxprice: Optional[int] = Field(default=None, ge=0)
+    subtype: Optional[Literal["SingleFamilyResidence", "Condominium"]] = None
+    
+    @model_validator(mode='after')
+    def validate_price_range(self):
+        """Ensure minprice <= maxprice when both are set."""
+        if self.minprice is not None and self.maxprice is not None:
+            if self.minprice > self.maxprice:
+                raise ValueError("minprice cannot exceed maxprice")
+        return self
 
 router = APIRouter(prefix="/v1")
 
@@ -53,6 +74,8 @@ class ScheduleCreate(BaseModel):
     recipients: List[Union[RecipientInput, EmailStr]] = Field(..., min_items=1)  # Support both typed and legacy plain emails
     include_attachment: bool = False
     active: bool = True
+    # NEW: Filters for Smart Presets
+    filters: Optional[ReportFilters] = Field(default_factory=ReportFilters)
 
 
 class ScheduleUpdate(BaseModel):
@@ -69,6 +92,8 @@ class ScheduleUpdate(BaseModel):
     recipients: Optional[List[Union[RecipientInput, EmailStr]]] = None  # Support both typed and legacy plain emails
     include_attachment: Optional[bool] = None
     active: Optional[bool] = None
+    # NEW: Filters for Smart Presets
+    filters: Optional[ReportFilters] = None
 
 
 class ScheduleRow(BaseModel):
@@ -91,6 +116,8 @@ class ScheduleRow(BaseModel):
     last_run_at: Optional[str] = None
     next_run_at: Optional[str] = None
     created_at: str
+    # NEW: Filters for Smart Presets
+    filters: Optional[Dict[str, Any]] = None
 
 
 class ScheduleRunRow(BaseModel):
@@ -275,25 +302,28 @@ def create_schedule(
             if payload.zip_codes:
                 zip_codes_array = "{" + ",".join(payload.zip_codes) + "}"
             
+            # Serialize filters to JSON (empty dict if None)
+            filters_json = json.dumps(payload.filters.model_dump(exclude_none=True) if payload.filters else {})
+            
             cur.execute("""
                 INSERT INTO schedules (
                     account_id, name, report_type, city, zip_codes, lookback_days,
                     cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone,
-                    recipients, include_attachment, active
+                    recipients, include_attachment, active, filters
                 ) VALUES (
                     %s, %s, %s, %s, %s, %s,
                     %s, %s, %s, %s, %s, %s,
-                    %s, %s, %s
+                    %s, %s, %s, %s::jsonb
                 )
                 RETURNING id::text, name, report_type, city, zip_codes, lookback_days,
                           cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone,
                           recipients, include_attachment, active,
-                          last_run_at, next_run_at, created_at
+                          last_run_at, next_run_at, created_at, filters
             """, (
                 account_id, payload.name, payload.report_type, payload.city, zip_codes_array,
                 payload.lookback_days, payload.cadence, payload.weekly_dow, payload.monthly_dom,
                 payload.send_hour, payload.send_minute, payload.timezone, recipients_array,
-                payload.include_attachment, payload.active
+                payload.include_attachment, payload.active, filters_json
             ))
             
             row = cur.fetchone()
@@ -319,7 +349,8 @@ def create_schedule(
                 "active": row[14],
                 "last_run_at": row[15].isoformat() if row[15] else None,
                 "next_run_at": row[16].isoformat() if row[16] else None,
-                "created_at": row[17].isoformat()
+                "created_at": row[17].isoformat(),
+                "filters": row[18] if row[18] else {}  # NEW: filters
             }
     except HTTPException:
         raise
@@ -346,7 +377,7 @@ def list_schedules(
             SELECT id::text, name, report_type, city, zip_codes, lookback_days,
                    cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone,
                    recipients, include_attachment, active,
-                   last_run_at, next_run_at, created_at
+                   last_run_at, next_run_at, created_at, filters
             FROM schedules
             WHERE account_id = %s
         """
@@ -382,7 +413,8 @@ def list_schedules(
                 "active": row[14],
                 "last_run_at": row[15].isoformat() if row[15] else None,
                 "next_run_at": row[16].isoformat() if row[16] else None,
-                "created_at": row[17].isoformat()
+                "created_at": row[17].isoformat(),
+                "filters": row[18] if row[18] else {}  # NEW: filters
             })
         
         return {"schedules": schedules, "count": len(schedules)}
@@ -405,7 +437,7 @@ def get_schedule(
             SELECT id::text, name, report_type, city, zip_codes, lookback_days,
                    cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone,
                    recipients, include_attachment, active,
-                   last_run_at, next_run_at, created_at
+                   last_run_at, next_run_at, created_at, filters
             FROM schedules
             WHERE id = %s::uuid AND account_id = %s
         """, (schedule_id, account_id))
@@ -434,7 +466,8 @@ def get_schedule(
             "active": row[14],
             "last_run_at": row[15].isoformat() if row[15] else None,
             "next_run_at": row[16].isoformat() if row[16] else None,
-            "created_at": row[17].isoformat()
+            "created_at": row[17].isoformat(),
+            "filters": row[18] if row[18] else {}  # NEW: filters
         }
 
 
@@ -505,7 +538,10 @@ def update_schedule(
         updates.append("active = %s")
         params.append(payload.active)
     
-    if not updates and recipients_to_update is None:
+    # NEW: Handle filters update
+    filters_to_update = payload.filters
+    
+    if not updates and recipients_to_update is None and filters_to_update is None:
         raise HTTPException(status_code=400, detail="No fields to update")
     
     with db_conn() as (conn, cur):
@@ -523,6 +559,12 @@ def update_schedule(
             recipients_array = "{\"" + "\",\"".join(recipients_escaped) + "\"}"
             updates.append("recipients = %s")
             params.append(recipients_array)
+        
+        # Handle filters update
+        if filters_to_update is not None:
+            filters_json = json.dumps(filters_to_update.model_dump(exclude_none=True))
+            updates.append("filters = %s::jsonb")
+            params.append(filters_json)
         
         if not updates:
             raise HTTPException(status_code=400, detail="No fields to update")

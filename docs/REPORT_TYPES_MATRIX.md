@@ -2,8 +2,26 @@
 
 > **Single Source of Truth** for all report types, their parameters, filtering logic, and expected outputs.
 
-**Last Updated:** December 15, 2025  
-**Version:** 1.1
+**Last Updated:** December 27, 2025  
+**Version:** 1.2
+
+---
+
+## 🆕 Smart Preset Filters (v1.5)
+
+All report types now support optional filters via Smart Presets:
+
+| Filter | SimplyRETS Param | Description |
+|--------|------------------|-------------|
+| `minbeds` | `minbeds` | Minimum bedrooms |
+| `minbaths` | `minbaths` | Minimum bathrooms |
+| `minprice` | `minprice` | Minimum price |
+| `maxprice` | `maxprice` | Maximum price |
+| `subtype` | `subtype` | `SingleFamilyResidence` or `Condominium` |
+
+Filters are applied server-side by SimplyRETS where possible, then client-side date filtering is applied per the table below.
+
+See `docs/SCHEDULES.md` Section 5 for full Smart Presets documentation.
 
 ---
 

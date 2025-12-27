@@ -31,8 +31,10 @@ import {
   Image,
   Star,
   Users,
+  Sparkles,
+  LayoutGrid,
 } from "lucide-react"
-import { type ScheduleWizardState, type ReportType, type Weekday, weekdayLabels } from "./types"
+import { type ScheduleWizardState, type ReportType, type Weekday, type ReportFilters, weekdayLabels, SMART_PRESETS } from "./types"
 import { cn } from "../../lib/utils"
 
 const steps = [
@@ -74,17 +76,51 @@ function validateEmailDomain(email: string): boolean {
   return !!(domain && domain.includes("."))
 }
 
-// Step 1: Basics
+// Tab type for Step 1
+type ReportTab = "presets" | "standard"
+
+// Step 1: Basics (with Tabs for Presets vs Standard Reports)
 function StepBasics({ state, setState }: { state: ScheduleWizardState; setState: (s: ScheduleWizardState) => void }) {
+  const [activeTab, setActiveTab] = useState<ReportTab>("presets")
+
+  // Handle preset selection - auto-fills form
+  const handlePresetSelect = (presetKey: string) => {
+    const preset = SMART_PRESETS.find(p => p.key === presetKey)
+    if (!preset) return
+    
+    setState({
+      ...state,
+      name: state.name || `${preset.name} - Weekly`,  // Suggest name if empty
+      report_type: preset.report_type,
+      lookback_days: preset.lookback_days,
+      filters: preset.filters,
+      preset_key: presetKey
+    })
+  }
+
+  // Handle standard report type selection
+  const handleReportTypeSelect = (reportType: ReportType) => {
+    setState({
+      ...state,
+      report_type: reportType,
+      filters: {},  // Clear filters for standard reports
+      preset_key: undefined
+    })
+  }
+
+  // Check if a preset is selected
+  const isPresetSelected = (presetKey: string) => state.preset_key === presetKey
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="font-display font-semibold text-xl mb-1">Schedule Basics</h2>
-        <p className="text-sm text-muted-foreground">Give your schedule a name and choose the report type</p>
+        <p className="text-sm text-muted-foreground">Give your schedule a name and choose a report type</p>
       </div>
 
       <Card>
         <CardContent className="pt-6 space-y-6">
+          {/* Schedule Name */}
           <div className="space-y-2">
             <Label htmlFor="schedule-name">
               Schedule Name <span className="text-destructive">*</span>
@@ -101,50 +137,152 @@ function StepBasics({ state, setState }: { state: ScheduleWizardState; setState:
             <p className="text-xs text-muted-foreground">Choose a descriptive name for this schedule</p>
           </div>
 
+          {/* Tab Toggle */}
           <div className="space-y-3">
             <Label>
               Report Type <span className="text-destructive">*</span>
             </Label>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {reportTypes.map((type) => {
-                const Icon = type.icon
-                const isSelected = state.report_type === type.id
-                return (
-                  <button
-                    key={type.id}
-                    type="button"
-                    onClick={() => setState({ ...state, report_type: type.id })}
-                    className={`group relative flex flex-col p-4 rounded-xl border-2 transition-all text-left ${
-                      isSelected
-                        ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
-                        : "border-border hover:border-primary/50 hover:shadow-sm"
-                    }`}
-                    aria-pressed={isSelected}
-                  >
-                    {isSelected && (
-                      <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    )}
-                    <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2 transition-colors ${
-                        isSelected
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-primary/10 text-primary group-hover:bg-primary/15"
-                      }`}
-                    >
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <span className="font-semibold text-sm">{type.name}</span>
-                    <span className="text-xs text-muted-foreground mt-0.5">{type.description}</span>
-                  </button>
-                )
-              })}
+            
+            {/* Tab Buttons */}
+            <div className="flex gap-2 p-1 bg-muted/50 rounded-lg w-fit">
+              <button
+                type="button"
+                onClick={() => setActiveTab("presets")}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all",
+                  activeTab === "presets"
+                    ? "bg-background text-primary shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Sparkles className="w-4 h-4" />
+                Smart Presets
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("standard")}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all",
+                  activeTab === "standard"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <LayoutGrid className="w-4 h-4" />
+                Standard Reports
+              </button>
             </div>
+
+            {/* Smart Presets Tab */}
+            {activeTab === "presets" && (
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Pre-configured reports for common audiences. Filters and settings are auto-filled.
+                </p>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {SMART_PRESETS.map((preset) => {
+                    const isSelected = isPresetSelected(preset.key)
+                    return (
+                      <button
+                        key={preset.key}
+                        type="button"
+                        onClick={() => handlePresetSelect(preset.key)}
+                        className={cn(
+                          "group relative flex flex-col p-4 rounded-xl border-2 transition-all text-left",
+                          isSelected
+                            ? "border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-md shadow-primary/10"
+                            : "border-border hover:border-primary/50 hover:shadow-sm"
+                        )}
+                        aria-pressed={isSelected}
+                      >
+                        {isSelected && (
+                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+                        <div className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center mb-2 text-xl transition-colors",
+                          isSelected ? "bg-primary/20" : "bg-muted"
+                        )}>
+                          {preset.icon}
+                        </div>
+                        <span className="font-semibold text-sm">{preset.name}</span>
+                        <span className="text-xs text-muted-foreground mt-0.5">{preset.tagline}</span>
+                        {/* Show what's included */}
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {preset.filters.minbeds && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">{preset.filters.minbeds}+ bed</Badge>
+                          )}
+                          {preset.filters.maxprice && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">≤${(preset.filters.maxprice/1000000).toFixed(1)}M</Badge>
+                          )}
+                          {preset.filters.minprice && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">≥${(preset.filters.minprice/1000000).toFixed(1)}M</Badge>
+                          )}
+                          {preset.filters.subtype === "Condominium" && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">Condo</Badge>
+                          )}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Standard Reports Tab */}
+            {activeTab === "standard" && (
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Classic reports without pre-configured filters. Full control over settings.
+                </p>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {reportTypes.map((type) => {
+                    const Icon = type.icon
+                    const isSelected = state.report_type === type.id && !state.preset_key
+                    return (
+                      <button
+                        key={type.id}
+                        type="button"
+                        onClick={() => handleReportTypeSelect(type.id)}
+                        className={cn(
+                          "group relative flex flex-col p-4 rounded-xl border-2 transition-all text-left",
+                          isSelected
+                            ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
+                            : "border-border hover:border-primary/50 hover:shadow-sm"
+                        )}
+                        aria-pressed={isSelected}
+                      >
+                        {isSelected && (
+                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+                        <div
+                          className={cn(
+                            "w-10 h-10 rounded-xl flex items-center justify-center mb-2 transition-colors",
+                            isSelected
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-primary/10 text-primary group-hover:bg-primary/15"
+                          )}
+                        >
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        <span className="font-semibold text-sm">{type.name}</span>
+                        <span className="text-xs text-muted-foreground mt-0.5">{type.description}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
+          {/* Lookback Period */}
           <div className="space-y-3">
             <Label>
               Lookback Period <span className="text-destructive">*</span>
@@ -155,11 +293,12 @@ function StepBasics({ state, setState }: { state: ScheduleWizardState; setState:
                   key={days}
                   type="button"
                   onClick={() => setState({ ...state, lookback_days: days })}
-                  className={`px-4 py-2.5 rounded-lg border-2 font-medium transition-all ${
+                  className={cn(
+                    "px-4 py-2.5 rounded-lg border-2 font-medium transition-all",
                     state.lookback_days === days
                       ? "border-primary bg-primary/5 text-primary"
                       : "border-border hover:border-primary/50"
-                  }`}
+                  )}
                   aria-pressed={state.lookback_days === days}
                 >
                   {days} days
@@ -168,6 +307,35 @@ function StepBasics({ state, setState }: { state: ScheduleWizardState; setState:
             </div>
             <p className="text-xs text-muted-foreground">How far back to include data in each report</p>
           </div>
+
+          {/* Filters Summary (show when preset is selected) */}
+          {state.preset_key && state.filters && Object.keys(state.filters).length > 0 && (
+            <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium text-primary">Preset Filters Applied</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {state.filters.minbeds && (
+                  <Badge variant="secondary">{state.filters.minbeds}+ Bedrooms</Badge>
+                )}
+                {state.filters.minbaths && (
+                  <Badge variant="secondary">{state.filters.minbaths}+ Bathrooms</Badge>
+                )}
+                {state.filters.minprice && (
+                  <Badge variant="secondary">Min ${state.filters.minprice.toLocaleString()}</Badge>
+                )}
+                {state.filters.maxprice && (
+                  <Badge variant="secondary">Max ${state.filters.maxprice.toLocaleString()}</Badge>
+                )}
+                {state.filters.subtype && (
+                  <Badge variant="secondary">
+                    {state.filters.subtype === "SingleFamilyResidence" ? "Single Family" : "Condo"}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -712,6 +880,7 @@ function StepRecipients({
 // Step 5: Review
 function StepReview({ state }: { state: ScheduleWizardState }) {
   const selectedType = reportTypes.find((t) => t.id === state.report_type)
+  const selectedPreset = state.preset_key ? SMART_PRESETS.find(p => p.key === state.preset_key) : null
   const TypeIcon = selectedType?.icon || FileText
 
   const formatCadence = () => {
@@ -724,6 +893,8 @@ function StepReview({ state }: { state: ScheduleWizardState }) {
   const recipientCount = (state.typedRecipients || []).length
   const contactCount = (state.typedRecipients || []).filter(r => r.type === "contact").length
   const groupCount = (state.typedRecipients || []).filter(r => r.type === "group").length
+  
+  const hasFilters = state.filters && Object.keys(state.filters).length > 0
 
   return (
     <div className="space-y-6">
@@ -736,11 +907,25 @@ function StepReview({ state }: { state: ScheduleWizardState }) {
       <div className="relative overflow-hidden rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background">
         {/* Header with schedule name and report type */}
         <div className="flex items-center gap-4 p-5 border-b border-primary/10">
-          <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-            <TypeIcon className="w-7 h-7 text-white" />
-          </div>
+          {selectedPreset ? (
+            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shadow-lg shadow-primary/10 text-2xl">
+              {selectedPreset.icon}
+            </div>
+          ) : (
+            <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
+              <TypeIcon className="w-7 h-7 text-white" />
+            </div>
+          )}
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Schedule</p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Schedule</p>
+              {selectedPreset && (
+                <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary">
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  Smart Preset
+                </Badge>
+              )}
+            </div>
             <h3 className="font-display font-bold text-xl truncate">{state.name}</h3>
             <p className="text-sm text-muted-foreground">{selectedType?.name}</p>
           </div>
@@ -796,6 +981,35 @@ function StepReview({ state }: { state: ScheduleWizardState }) {
             </div>
           </div>
 
+          {/* Filters Summary (NEW) */}
+          {hasFilters && (
+            <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                <span className="text-xs font-medium text-primary">Filters Applied</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {state.filters.minbeds && (
+                  <Badge variant="outline" className="text-xs">{state.filters.minbeds}+ Beds</Badge>
+                )}
+                {state.filters.minbaths && (
+                  <Badge variant="outline" className="text-xs">{state.filters.minbaths}+ Baths</Badge>
+                )}
+                {state.filters.minprice && (
+                  <Badge variant="outline" className="text-xs">≥${(state.filters.minprice/1000).toLocaleString()}K</Badge>
+                )}
+                {state.filters.maxprice && (
+                  <Badge variant="outline" className="text-xs">≤${(state.filters.maxprice/1000).toLocaleString()}K</Badge>
+                )}
+                {state.filters.subtype && (
+                  <Badge variant="outline" className="text-xs">
+                    {state.filters.subtype === "SingleFamilyResidence" ? "Single Family" : "Condo"}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Recipients Summary */}
           <div className="p-3 rounded-lg bg-background/80 border border-border/50">
             <div className="flex items-center gap-3">
@@ -833,11 +1047,13 @@ export function ScheduleWizard({ onSubmit, onCancel }: ScheduleWizardProps) {
     name: "",
     report_type: null,
     lookback_days: 30,
+    filters: {},  // NEW: empty filters by default
+    preset_key: undefined,  // NEW: track preset selection
     area_mode: "city",
     city: "",
     zips: [],
     cadence: "weekly",
-    weekday: "monday",
+    weekday: "friday",  // Default to Friday (common choice)
     monthly_day: 1,
     time: "09:00",
     recipients: [],

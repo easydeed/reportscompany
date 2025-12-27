@@ -32,6 +32,8 @@ export default function NewSchedulePage() {
         recipients: payload.typedRecipients || payload.recipients,
         include_attachment: false,
         active: true,
+        // NEW: Include filters for Smart Presets
+        filters: payload.filters || {},
       }
 
       const res = await fetch(`/api/proxy/v1/schedules`, {

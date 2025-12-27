@@ -91,7 +91,7 @@ def _filters(filters: Optional[dict], default_type: str = "RES") -> Dict:
       - minprice, maxprice: Price range
       - type: Property type (RES=Residential, CND=Condo, MUL=Multi-family, LND=Land, COM=Commercial, RNT=Rental)
       - subtype: Property subtype (SingleFamilyResidence, Condominium, Townhouse, ManufacturedHome, Duplex)
-      - beds, baths: Minimum bedrooms/bathrooms
+      - minbeds/beds, minbaths/baths: Minimum bedrooms/bathrooms (supports both naming conventions)
     
     Note on type vs subtype:
       - type=RES includes all residential (SFR, Condo, Townhouse)
@@ -112,8 +112,12 @@ def _filters(filters: Optional[dict], default_type: str = "RES") -> Dict:
     out["type"] = f.get("type") or default_type
     
     if f.get("subtype"):              out["subtype"]  = f["subtype"]
-    if f.get("beds") is not None:     out["minbeds"]  = int(f["beds"])
-    if f.get("baths") is not None:    out["minbaths"] = int(f["baths"])
+    
+    # Support both naming conventions: minbeds/minbaths (from presets) and beds/baths (legacy)
+    beds = f.get("minbeds") or f.get("beds")
+    baths = f.get("minbaths") or f.get("baths")
+    if beds is not None:     out["minbeds"]  = int(beds)
+    if baths is not None:    out["minbaths"] = int(baths)
     return out
 
 # Builders per report type

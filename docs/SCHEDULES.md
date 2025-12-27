@@ -2,7 +2,7 @@
 
 > Complete documentation for the automated report scheduling system.
 
-**Last Updated:** December 26, 2025
+**Last Updated:** December 27, 2025
 
 ---
 
@@ -12,12 +12,13 @@
 2. [Architecture](#2-architecture)
 3. [Database Schema](#3-database-schema)
 4. [API Endpoints](#4-api-endpoints)
-5. [Ticker Process](#5-ticker-process)
-6. [Report Types](#6-report-types)
-7. [Recipients](#7-recipients)
-8. [Timezone Handling](#8-timezone-handling)
-9. [Error Handling & Auto-Pause](#9-error-handling--auto-pause)
-10. [Troubleshooting](#10-troubleshooting)
+5. [Smart Presets & Filters](#5-smart-presets--filters)
+6. [Ticker Process](#6-ticker-process)
+7. [Report Types](#7-report-types)
+8. [Recipients](#8-recipients)
+9. [Timezone Handling](#9-timezone-handling)
+10. [Error Handling & Auto-Pause](#10-error-handling--auto-pause)
+11. [Troubleshooting](#11-troubleshooting)
 
 ---
 
@@ -111,6 +112,9 @@ CREATE TABLE schedules (
   include_attachment BOOLEAN DEFAULT FALSE,
   active BOOLEAN DEFAULT TRUE,
   
+  -- Smart Preset Filters (NEW in v1.5)
+  filters JSONB NOT NULL DEFAULT '{}'::jsonb,  -- minbeds, minbaths, minprice, maxprice, subtype
+  
   -- Timing
   last_run_at TIMESTAMPTZ,
   next_run_at TIMESTAMPTZ,
@@ -123,6 +127,9 @@ CREATE TABLE schedules (
   
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Index for filter queries
+CREATE INDEX idx_schedules_filters ON schedules USING gin (filters);
 ```
 
 ### schedule_runs Table
@@ -164,9 +171,25 @@ Content-Type: application/json
     {"type": "contact", "id": "uuid..."},
     {"type": "manual_email", "email": "agent@example.com"}
   ],
+  "filters": {               // NEW: Smart Preset filters (optional)
+    "minbeds": 3,
+    "minbaths": 2,
+    "maxprice": 950000,
+    "subtype": "SingleFamilyResidence"
+  },
   "active": true
 }
 ```
+
+### Filters Schema
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `minbeds` | int | Minimum bedrooms (0-10) |
+| `minbaths` | int | Minimum bathrooms (0-10) |
+| `minprice` | int | Minimum price |
+| `maxprice` | int | Maximum price (must be >= minprice) |
+| `subtype` | string | `"SingleFamilyResidence"` or `"Condominium"` |
 
 ### List Schedules
 
@@ -206,7 +229,69 @@ GET /v1/schedules/{schedule_id}/runs?limit=50
 
 ---
 
-## 5. Ticker Process
+## 5. Smart Presets & Filters
+
+### Overview
+
+Smart Presets provide pre-configured report templates for common audiences. When a user selects a preset, filters are automatically applied to narrow down listings.
+
+### Built-in Presets
+
+| Preset | Report Type | Filters Applied |
+|--------|-------------|-----------------|
+| 🏠 First-Time Buyer | `new_listings_gallery` | 2+ beds, 2+ baths, ≤$950K, Single Family |
+| 🏢 Condo Watch | `new_listings_gallery` | 1+ beds, 1+ baths, Condominium |
+| 💎 Luxury Showcase | `featured_listings` | ≥$2M, Single Family |
+| 👨‍👩‍👧‍👦 Family Homes | `new_listings` | 4+ beds, 2+ baths, Single Family |
+| 📈 Investor Deals | `new_listings` | ≤$500K |
+
+### How Filters Work
+
+1. **User selects preset** in the Schedule Wizard
+2. **Filters auto-fill** based on preset definition
+3. **Filters stored** in `schedules.filters` JSONB column
+4. **Ticker passes filters** to Celery worker
+5. **Query builders apply filters** to SimplyRETS API calls
+6. **Report shows filtered results** matching criteria
+
+### Filter Flow
+
+```
+User → Preset Selection → filters JSON → schedules table
+                                              ↓
+                                    Ticker (schedules_tick.py)
+                                              ↓
+                                    enqueue_report(filters=...)
+                                              ↓
+                                    query_builders._filters()
+                                              ↓
+                                    SimplyRETS API (?minbeds=3&maxprice=950000...)
+```
+
+### Frontend Components
+
+| File | Purpose |
+|------|---------|
+| `packages/ui/src/components/schedules/types.ts` | `ReportFilters`, `PresetDefinition`, `SMART_PRESETS` |
+| `packages/ui/src/components/schedules/schedule-wizard.tsx` | Tabbed UI (Smart Presets / Standard Reports) |
+
+### Database Migration
+
+```sql
+-- Migration 0033_schedule_filters.sql
+ALTER TABLE schedules
+ADD COLUMN filters JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+CREATE INDEX idx_schedules_filters ON schedules USING gin (filters);
+
+-- Rollback:
+-- DROP INDEX idx_schedules_filters;
+-- ALTER TABLE schedules DROP COLUMN filters;
+```
+
+---
+
+## 6. Ticker Process
 
 The ticker (`schedules_tick.py`) runs as a separate background worker:
 
@@ -249,7 +334,7 @@ RETURNING ...
 
 ---
 
-## 6. Report Types
+## 7. Report Types
 
 All report types supported by the scheduling system:
 
@@ -266,7 +351,7 @@ All report types supported by the scheduling system:
 
 ---
 
-## 7. Recipients
+## 8. Recipients
 
 ### Recipient Types
 
@@ -283,7 +368,7 @@ Recipients who unsubscribe are added to `email_suppressions` table and automatic
 
 ---
 
-## 8. Timezone Handling
+## 9. Timezone Handling
 
 ### How It Works
 
@@ -314,7 +399,7 @@ weekly_dow = 1  # Monday
 
 ---
 
-## 9. Error Handling & Auto-Pause
+## 10. Error Handling & Auto-Pause
 
 ### Failure Tracking
 
@@ -343,7 +428,7 @@ UPDATE schedules SET consecutive_failures = 0, last_error = NULL
 
 ---
 
-## 10. Troubleshooting
+## 11. Troubleshooting
 
 ### Schedule Not Running
 

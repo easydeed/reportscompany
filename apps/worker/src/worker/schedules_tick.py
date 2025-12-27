@@ -302,7 +302,7 @@ def process_due_schedules():
                               s.city, s.zip_codes, s.lookback_days,
                               s.cadence, s.weekly_dow, s.monthly_dom,
                               s.send_hour, s.send_minute, s.timezone,
-                              s.recipients, s.include_attachment
+                              s.recipients, s.include_attachment, s.filters
                 """)
                 
                 due_schedules = cur.fetchall()
@@ -329,6 +329,7 @@ def process_due_schedules():
                     timezone = row[12]  # PASS S2
                     recipients = row[13]
                     include_attachment = row[14]
+                    filters = row[15]  # NEW: Smart Preset filters (JSONB → dict or None)
                     
                     try:
                         # Compute next run time (PASS S2: timezone-aware)
@@ -338,9 +339,11 @@ def process_due_schedules():
                         )
                         
                         # Enqueue report generation (creates report_generations record + Celery task)
+                        # Pass filters to worker for preset-based filtering
                         report_gen_id, task_id = enqueue_report(
                             schedule_id, account_id, report_type,
-                            city, zip_codes, lookback_days
+                            city, zip_codes, lookback_days,
+                            filters=filters  # NEW: pass filters
                         )
                         
                         # Create schedule_runs audit record linked to report_generation
