@@ -1,349 +1,217 @@
-# Social Media Sharing Feature
+# Social Media Sharing
 
-> **Status:** COMPLETE | **Last Updated:** December 27, 2025
-
-## Overview
-
-TrendyReports users can now generate **1080x1920 JPEG images** optimized for social media stories (Instagram, TikTok, Facebook Stories, LinkedIn Stories). These social images incorporate the user's full branding and key report metrics in an eye-catching vertical format.
-
-## Feature Summary
-
-| Aspect | Details |
-|--------|---------|
-| Output Format | JPEG, 1080x1920 pixels (9:16 aspect ratio) |
-| Target Platforms | Instagram Stories, TikTok, Facebook Stories, LinkedIn |
-| Branding | Full white-label support (logo, colors, headshot, contact) |
-| Report Types | All 8 report types supported |
-| User Experience | One-click share button in Reports table |
+> Branded, share-ready market reports for Instagram, TikTok, and LinkedIn Stories
 
 ---
 
-## Architecture
+## What It Does
 
-### Flow Diagram
+TrendyReports generates **1080×1920 pixel images** optimized for social media stories. Agents can share stunning, branded market insights directly to Instagram Stories, TikTok, LinkedIn, and Facebook—in seconds.
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           USER WORKFLOW                                  │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│   1. User generates report (any type)                                   │
-│                    ↓                                                     │
-│   2. Report appears in /app/reports with Share button (pink icon)       │
-│                    ↓                                                     │
-│   3. User clicks Share → opens /social/{runId} in new tab               │
-│                    ↓                                                     │
-│   4. Social template renders with their branding + metrics              │
-│                    ↓                                                     │
-│   5. User screenshots or uses browser "Save Image As"                   │
-│                    ↓                                                     │
-│   6. User uploads to Instagram/TikTok/Facebook                          │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-### Technical Flow
-
-```
-/social/[runId]/page.tsx
-        │
-        ├── Fetches /v1/reports/{runId}/data (same as PDF)
-        │
-        ├── Selects social template based on report_type
-        │
-        ├── Calls buildSocial*Html() from lib/social-templates.ts
-        │
-        └── Returns server-rendered HTML (1080x1920)
-```
+| Feature | Details |
+|---------|---------|
+| **Format** | 1080×1920 JPEG (9:16 aspect ratio) |
+| **Platforms** | Instagram Stories, TikTok, LinkedIn Stories, Facebook Stories |
+| **Branding** | Full white-label (logo, colors, headshot, contact info) |
+| **Report Types** | All 8 report types supported |
+| **User Action** | One-click from Reports dashboard |
 
 ---
 
-## Files Created
+## User Experience
 
-### Frontend
+### How Agents Use It
 
-| File | Purpose |
-|------|---------|
-| `apps/web/app/social/[runId]/page.tsx` | Social image render endpoint |
-| `apps/web/lib/social-templates.ts` | Template builder functions |
-| `apps/web/templates/social/social-market-snapshot.html` | Market Snapshot template |
-| `apps/web/templates/social/social-new-listings.html` | New Listings template |
-| `apps/web/templates/social/social-closed.html` | Closed Sales template |
-| `apps/web/templates/social/social-inventory.html` | Inventory template |
-| `apps/web/templates/social/social-gallery.html` | Gallery/Featured template |
-| `apps/web/templates/social/social-price-bands.html` | Price Bands template |
+1. **Generate any report** in TrendyReports
+2. **Click the Share button** (pink icon) in the Reports table
+3. **Screenshot or save** the social-optimized preview
+4. **Post directly** to Instagram, TikTok, or LinkedIn
 
-### Backend (Worker)
+The entire workflow takes under 30 seconds.
 
-| File | Purpose |
-|------|---------|
-| `apps/worker/src/worker/social_engine.py` | PDFShift JPEG conversion (optional) |
-
-### UI Updates
-
-| File | Change |
-|------|--------|
-| `apps/web/app/app/reports/page.tsx` | Added Share button with tooltip |
-
----
-
-## Template Design Principles
-
-### 1. Mobile-First Vertical Layout (1080x1920)
-
-All templates follow the Instagram Story / TikTok format:
-- **9:16 aspect ratio** (portrait)
-- **1080px wide, 1920px tall**
-- Optimized for mobile viewing
-
-### 2. Bold, Eye-Catching Metrics
-
-Each template features:
-- **Hero metric**: Large, prominent number (e.g., $1.2M, 47 Homes Sold)
-- **Supporting metrics**: 2-4 additional KPIs in card format
-- **Period badge**: Shows timeframe (e.g., "Last 30 days")
-
-### 3. Full Branding Integration
-
-Templates include:
-- **Header logo**: User's company logo
-- **Brand colors**: Primary and accent colors from branding settings
-- **Agent headshot**: Circular photo in footer
-- **Contact info**: Name, phone/email, website
-- **Footer logo**: Company logo for gray backgrounds
-
-### 4. Call-to-Action Ready
-
-Templates include:
-- Professional layout that invites engagement
-- Space for agent contact information
-- Clean, modern design that stands out in feeds
-
----
-
-## Template Breakdown
-
-### 1. Market Snapshot (`social-market-snapshot.html`)
+### Example Output
 
 ```
-┌──────────────────────────┐
-│ ▓▓▓ GRADIENT HEADER ▓▓▓  │
-│    [LOGO]                │
-│    Market Snapshot       │
-│    Los Angeles, CA       │
-├──────────────────────────┤
-│                          │
-│    $1.2M                 │
-│    Median Sale Price     │
-│                          │
-│    ┌────┐  ┌────┐        │
-│    │ 47 │  │ 28 │        │
-│    │Sold│  │DOM │        │
-│    └────┘  └────┘        │
-│                          │
-│    ┌────┐  ┌────┐        │
-│    │2.1 │  │98% │        │
-│    │MOI │  │CTL │        │
-│    └────┘  └────┘        │
-│                          │
-├──────────────────────────┤
-│ [Photo] Agent Name       │
-│         Phone • Email    │
-│    [COMPANY LOGO]        │
-└──────────────────────────┘
-```
-
-**Metrics shown:**
-- Median Sale Price (hero)
-- Homes Sold
-- Average Days on Market
-- Months of Inventory
-- Sale-to-List Ratio
-
-### 2. New Listings (`social-new-listings.html`)
-
-**Metrics shown:**
-- New Listings Count (hero, green gradient)
-- Median Price
-- Average DOM
-- CTA: "Contact me for a private showing!"
-
-### 3. Closed Sales (`social-closed.html`)
-
-**Metrics shown:**
-- Homes Sold (hero, blue gradient)
-- Median Close Price
-- Average DOM
-- Sale-to-List Ratio
-- Insight card: "Homes are selling at X% of asking price"
-
-### 4. Inventory (`social-inventory.html`)
-
-**Metrics shown:**
-- Active Listings (hero, purple gradient)
-- Median Price
-- Median DOM
-- Months of Inventory
-
-### 5. Gallery / Featured (`social-gallery.html`)
-
-**Content:**
-- Featured property hero photo (700px tall)
-- Price (large)
-- Address
-- Beds / Baths / SqFt / Days on Market
-- CTA: "Schedule Your Private Showing Today!"
-
-### 6. Price Bands (`social-price-bands.html`)
-
-**Content:**
-- Total Listings & Median Price summary
-- Top 3 price bands with visual bars
-- Percentage distribution
-- Median price and DOM per band
-
----
-
-## Data Flow
-
-### Social Template Builder (`lib/social-templates.ts`)
-
-Each builder function:
-
-1. **Extracts data** from `result_json` (same as PDF)
-2. **Formats values** for compact display:
-   - `$1,234,567` → `$1.2M`
-   - `$567,000` → `$567K`
-3. **Injects branding** via `injectBrand()`:
-   - CSS color overrides
-   - Logo URLs
-   - Contact info
-   - Conditional rendering for optional fields
-4. **Returns complete HTML** ready for rendering
-
-### Example: Market Snapshot
-
-```typescript
-export function buildSocialMarketSnapshotHtml(
-  templateHtml: string,
-  data: any
-): string {
-  const r = data.result_json || data;
-  const metrics = r.metrics || {};
-  const counts = r.counts || {};
-
-  const replacements = {
-    "{{market_name}}": r.city || "Market",
-    "{{median_price}}": formatCurrency(metrics.median_close_price),
-    "{{closed_sales}}": formatNumber(counts.Closed),
-    "{{avg_dom}}": formatNumber(metrics.avg_dom),
-    "{{moi}}": formatDecimal(moi),
-    "{{close_to_list_ratio}}": formatPercent(closeToListRatio),
-    // ...
-  };
-
-  // Apply replacements and inject branding
-  return injectBrand(html, data.brand);
-}
+┌──────────────────────────────┐
+│    ▓▓▓ YOUR LOGO ▓▓▓         │
+│    MARKET SNAPSHOT           │
+│    Los Angeles, CA           │
+├──────────────────────────────┤
+│                              │
+│         $1.2M                │
+│    Median Sale Price         │
+│                              │
+│    ┌────────┐ ┌────────┐     │
+│    │   47   │ │   28   │     │
+│    │  Sold  │ │  Days  │     │
+│    └────────┘ └────────┘     │
+│                              │
+│    ┌────────┐ ┌────────┐     │
+│    │  2.1   │ │  98%   │     │
+│    │  MOI   │ │ SP/LP  │     │
+│    └────────┘ └────────┘     │
+│                              │
+│       Last 30 days           │
+├──────────────────────────────┤
+│  [Photo] Jane Smith          │
+│          (555) 123-4567      │
+│          jane@realty.com     │
+│               [COMPANY LOGO] │
+└──────────────────────────────┘
 ```
 
 ---
 
-## UI Integration
+## Supported Report Types
 
-### Reports Page (`/app/reports`)
-
-The Share button appears in the Files column for completed reports:
-
-```tsx
-{r.status === "completed" && (
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <a href={`/social/${r.id}`} target="_blank">
-        <Button variant="ghost" className="text-pink-600 hover:bg-pink-50">
-          <Share2 className="w-4 h-4" />
-        </Button>
-      </a>
-    </TooltipTrigger>
-    <TooltipContent>
-      <p>Share on Social Media</p>
-      <p className="text-xs text-muted-foreground">1080x1920 for Stories</p>
-    </TooltipContent>
-  </Tooltip>
-)}
-```
-
-**Button Design:**
-- Pink color (`text-pink-600`) to differentiate from other actions
-- Tooltip explains the format
-- Opens in new tab for easy screenshot/save
+| Report | Hero Metric | Additional Metrics |
+|--------|-------------|-------------------|
+| **Market Snapshot** | Median Price | Homes Sold, Avg DOM, MOI, SP/LP |
+| **New Listings** | New Listings Count | Median Price, Avg DOM |
+| **Closed Sales** | Homes Sold | Median Price, Avg DOM, SP/LP |
+| **Inventory** | Active Listings | Median Price, Avg DOM, MOI |
+| **Price Bands** | Total Listings | Top 3 bands with distribution |
+| **Gallery** | Featured Photo | Price, Address, Beds/Baths/SqFt |
+| **Featured Listings** | Featured Photo | Price, Address, Details |
+| **Open Houses** | Active Listings | Date/Time, Locations |
 
 ---
 
-## PDFShift JPEG Conversion (Optional)
+## Branding Integration
 
-For automated JPEG generation, the worker includes `social_engine.py`:
+Every social image automatically includes the agent's branding:
 
-```python
-from .social_engine import render_social_image
+| Element | Source |
+|---------|--------|
+| **Header Logo** | Account branding settings |
+| **Brand Colors** | Primary + accent from settings |
+| **Agent Headshot** | Circular photo in footer |
+| **Contact Info** | Name, phone, email |
+| **Footer Logo** | Company/brokerage logo |
 
-jpg_path, social_url = render_social_image(
-    run_id="abc123",
-    account_id="uuid",
-    print_base="https://trendyreports.com"
-)
-```
-
-**PDFShift Configuration:**
-```python
-payload = {
-    "source": social_url,
-    "format": "1080x1920",
-    "quality": 90,
-    "full_page": True,
-    "delay": 3000,        # Wait for fonts/images
-    "wait_for_network": True,
-    "timeout": 60,
-}
-```
-
-**Environment Variables:**
-- `PDFSHIFT_API_KEY`: Required for JPEG conversion
-- `PRINT_BASE`: Base URL for social pages
-
----
-
-## CSS Variables
-
-All templates use the same CSS variables as PDF templates for brand consistency:
+Colors are injected via CSS variables for perfect consistency:
 
 ```css
 :root {
-  --pct-blue: #7C3AED;    /* Primary color */
-  --pct-accent: #F26B2B;  /* Accent color */
-  --ink: #0f172a;         /* Text color */
-  --muted: #64748b;       /* Secondary text */
-  --light-gray: #f8fafc;  /* Background */
-  --border: #e2e8f0;      /* Border color */
+  --pct-blue: #7C3AED;    /* Primary */
+  --pct-accent: #F26B2B;  /* Accent */
 }
 ```
 
-These are overridden by the user's branding colors via `injectBrand()`.
+---
+
+## Technical Architecture
+
+### Route Structure
+
+```
+/api/social/[runId]     → Raw HTML (for screenshots)
+/social/[runId]         → Redirects to API route
+```
+
+### Data Flow
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. User clicks Share on completed report                   │
+│                          ↓                                  │
+│  2. Opens /social/{runId} → redirects to /api/social/{id}   │
+│                          ↓                                  │
+│  3. API route fetches report data from backend              │
+│                          ↓                                  │
+│  4. Template builder injects metrics + branding             │
+│                          ↓                                  │
+│  5. Returns clean 1080×1920 HTML page                       │
+│                          ↓                                  │
+│  6. User screenshots or saves image                         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Files
+
+| Path | Purpose |
+|------|---------|
+| `apps/web/app/api/social/[runId]/route.ts` | API route serving clean HTML |
+| `apps/web/app/social/[runId]/page.tsx` | Redirect to API route |
+| `apps/web/lib/social-templates.ts` | Template builder functions |
+| `apps/web/templates/social/*.html` | HTML templates (6 files) |
+| `apps/worker/src/worker/social_engine.py` | Automated screenshot engine |
 
 ---
 
-## Future Enhancements
+## Automated Screenshot Generation
 
-1. **Pre-generated JPEGs**: Generate social image at report creation time, store in R2
-2. **Multiple sizes**: Add 1200x630 for Facebook/LinkedIn feed posts
-3. **Direct sharing**: Integrate Web Share API for mobile one-tap sharing
-4. **Custom text overlays**: Allow users to add custom captions
-5. **Video export**: Animate metrics for Instagram Reels / TikTok
+For pre-generated images (future feature), the worker uses Playwright:
+
+```python
+from worker.social_engine import render_social_image
+
+jpg_path, url = render_social_image(
+    run_id="abc123",
+    account_id="uuid",
+    print_base="https://app.trendyreports.com"
+)
+# Returns: ("/tmp/mr_social/abc123_social.jpg", "https://...")
+```
+
+### Requirements
+
+```bash
+pip install playwright
+playwright install chromium
+```
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PRINT_BASE` | `http://localhost:3000` | Base URL for social pages |
+| `SOCIAL_DIR` | `/tmp/mr_social` | Output directory for JPEGs |
+
+---
+
+## Security
+
+All templates implement XSS protection:
+
+- **Text values**: Escaped via `escapeHtml()`
+- **URLs**: Validated (http/https only) via `sanitizeUrl()`
+- **Colors**: Hex validation only
+- **Report IDs**: UUID v4 format validation
+
+---
+
+## Selling Points
+
+### For Real Estate Agents
+
+- **Stand out on social media** with professional, branded market updates
+- **Save hours** vs. manually creating graphics
+- **Consistent branding** across all reports and channels
+- **Mobile-optimized** format for Stories and Reels
+
+### For Brokerages & Affiliates
+
+- **Co-branded exposure** on every agent post
+- **Track engagement** via report generation metrics
+- **Empower agents** with marketing tools that actually get used
+
+---
+
+## Future Roadmap
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| Pre-generated JPEGs | Planned | Auto-generate at report creation, store in R2 |
+| Multiple sizes | Planned | 1200×630 for feed posts, 1080×1080 for grid |
+| Web Share API | Planned | One-tap share on mobile |
+| Video export | Planned | Animated metrics for Reels/TikTok |
+| Custom captions | Planned | User-added text overlays |
 
 ---
 
 ## Related Documentation
 
-- [PDF_REPORTS.md](./PDF_REPORTS.md) - PDF generation system
-- [BRANDING.md](./BRANDING.md) - White-label branding configuration
-- [EMAIL_SYSTEM.md](./EMAIL_SYSTEM.md) - Email delivery with branding
+- [PDF Reports](./PDF_REPORTS.md) — PDF generation system
+- [Branding](./BRANDING.md) — White-label configuration
+- [Email System](./EMAIL_SYSTEM.md) — Email delivery with branding
