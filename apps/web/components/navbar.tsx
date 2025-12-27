@@ -9,10 +9,9 @@ import { cn } from "@/lib/utils"
 import { Logo } from "@/components/logo"
 
 const navLinks = [
-  { label: "How It Works", href: "#demo" },
+  { label: "Product", href: "#demo" },
   { label: "For Agents", href: "#for-agents" },
   { label: "For Affiliates", href: "#for-affiliates" },
-  { label: "Samples", href: "#samples" },
   { label: "Pricing", href: "#pricing" },
 ]
 

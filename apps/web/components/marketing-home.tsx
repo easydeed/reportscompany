@@ -27,6 +27,7 @@ import {
 import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
 
 export function MarketingHome() {
   const [currentSample, setCurrentSample] = useState(0)
@@ -70,7 +71,7 @@ export function MarketingHome() {
                   Trusted by 1,200+ real estate professionals
                 </span>
               </div>
-              <h1 className="font-display font-bold text-5xl sm:text-6xl lg:text-7xl mb-6 text-slate-900 leading-[1.05]">
+              <h1 className="font-display font-semibold text-5xl sm:text-6xl lg:text-7xl mb-6 text-slate-900 leading-[1.05]">
                 Stop wasting time on market reports
               </h1>
               <p className="text-xl text-slate-600 mb-8 leading-relaxed max-w-xl">
@@ -120,11 +121,11 @@ export function MarketingHome() {
               transition={{ duration: 0.4, delay: 0.1 }}
               className="relative"
             >
-              <div className="bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden">
+              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
                 <img
-                  src="/placeholder.svg?height=600&width=800&text=TrendyReports+Dashboard"
-                  alt="TrendyReports Dashboard"
-                  className="w-full"
+                  src="/market-snapshot-laverne-hero.jpg"
+                  alt="Market Snapshot Report for La Verne showing $895K median price, 32 closed sales, and complete market analytics with property type and price tier breakdown"
+                  className="w-full h-auto"
                 />
               </div>
             </motion.div>
@@ -159,7 +160,7 @@ export function MarketingHome() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          3. WHY CHOOSE US - Benefits with visual impact (NEW from V0)
+          3. WHY CHOOSE US - Benefits with visual impact
       ═══════════════════════════════════════════════════════════════════ */}
       <section className="py-24 px-4 sm:px-6 lg:px-8 text-white overflow-hidden relative">
         <div className="absolute inset-0">
@@ -180,11 +181,11 @@ export function MarketingHome() {
         <div className="max-w-[1200px] mx-auto relative z-10">
           <div className="text-center mb-16">
             <p className="text-purple-400 font-medium uppercase tracking-wider text-sm mb-4">
-              Your time back
+              Built for top performers
             </p>
-            <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4">More time closing. Less time formatting.</h2>
+            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4">Why top producers choose us</h2>
             <p className="text-xl text-slate-400 max-w-2xl mx-auto">
-              Stay top-of-mind with every client, every week — without the busywork.
+              The tools you need to stay top-of-mind with every client, every week.
             </p>
           </div>
 
@@ -195,7 +196,7 @@ export function MarketingHome() {
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mb-6 shadow-lg shadow-purple-500/25">
                   <Clock className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="font-display font-bold text-2xl text-white mb-3">Set it and forget it</h3>
+                <h3 className="font-display font-semibold text-2xl text-white mb-3">Set it and forget it</h3>
                 <p className="text-slate-400 leading-relaxed text-lg">
                   Configure once. Reports generate and deliver automatically every week, month, or on your custom
                   schedule.
@@ -215,7 +216,7 @@ export function MarketingHome() {
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center mb-6 shadow-lg shadow-orange-500/25">
                   <Palette className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="font-display font-bold text-2xl text-white mb-3">Your brand, everywhere</h3>
+                <h3 className="font-display font-semibold text-2xl text-white mb-3">Your brand, everywhere</h3>
                 <p className="text-slate-400 leading-relaxed text-lg">
                   Logo, colors, contact info — every report looks like it came from your design team.
                 </p>
@@ -234,7 +235,7 @@ export function MarketingHome() {
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center mb-6 shadow-lg shadow-emerald-500/25">
                   <TrendingUp className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="font-display font-bold text-2xl text-white mb-3">Always fresh data</h3>
+                <h3 className="font-display font-semibold text-2xl text-white mb-3">Always fresh data</h3>
                 <p className="text-slate-400 leading-relaxed text-lg">
                   Direct MLS integration means your reports show real-time listings, sales, and market stats.
                 </p>
@@ -272,7 +273,663 @@ export function MarketingHome() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          4. YOUR DATA, ALWAYS CURRENT (from Latest.zip)
+          4. TWO AUDIENCES - Split section for Agents vs Affiliates
+      ═══════════════════════════════════════════════════════════════════ */}
+      <section id="for-agents" className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        {/* Split background */}
+        <div className="absolute inset-0 flex">
+          <div className="w-1/2 bg-gradient-to-br from-purple-50 via-white to-purple-50/30" />
+          <div className="w-1/2 bg-gradient-to-bl from-orange-50 via-white to-orange-50/30" />
+        </div>
+
+        {/* Diagonal divider line */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="h-full w-px bg-gradient-to-b from-transparent via-slate-200 to-transparent" />
+        </div>
+
+        <div className="relative max-w-[1200px] mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            {/* For Agents - Left side */}
+            <div className="group">
+              <div className="relative p-8 rounded-3xl bg-white shadow-lg border border-purple-100 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300">
+                {/* Decorative corner accent */}
+                <div className="absolute -top-3 -right-3 w-24 h-24 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl opacity-10 blur-2xl group-hover:opacity-20 transition-opacity" />
+
+                <div className="relative">
+                  <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 mb-6 shadow-lg shadow-purple-500/20">
+                    <User className="w-8 h-8 text-white" />
+                  </div>
+
+                  <h3 className="font-display font-semibold text-2xl text-slate-900 mb-3">For Agents</h3>
+                  <p className="text-slate-600 text-lg leading-relaxed mb-6">
+                    Grow your business and impress clients with stunning, branded market reports
+                  </p>
+
+                  {/* Key features mini-list */}
+                  <div className="space-y-2 mb-6">
+                    <div className="flex items-center gap-2 text-sm text-slate-700">
+                      <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                      <span>Automated MLS data pulls</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-slate-700">
+                      <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                      <span>Custom branding & logos</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-slate-700">
+                      <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                      <span>Share in seconds</span>
+                    </div>
+                  </div>
+
+                  <Button size="lg" className="bg-purple-600 hover:bg-purple-700 text-white" asChild>
+                    <Link href="/register">
+                      Start Free — No Credit Card
+                      <ChevronRight className="w-5 h-5 ml-2" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* For Affiliates - Right side */}
+            <div id="for-affiliates" className="group">
+              <div className="relative p-8 rounded-3xl bg-white shadow-lg border border-orange-100 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300">
+                {/* Decorative corner accent */}
+                <div className="absolute -top-3 -left-3 w-24 h-24 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl opacity-10 blur-2xl group-hover:opacity-20 transition-opacity" />
+
+                <div className="relative">
+                  <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 mb-6 shadow-lg shadow-orange-500/20">
+                    <Building2 className="w-8 h-8 text-white" />
+                  </div>
+
+                  <h3 className="font-display font-semibold text-2xl text-slate-900 mb-3">For Affiliates</h3>
+                  <p className="text-slate-600 text-base leading-relaxed mb-2">
+                    (Title Companies, Lenders & Brokerages)
+                  </p>
+                  <p className="text-slate-600 text-lg leading-relaxed mb-6">
+                    Sponsor agents and strengthen relationships with co-branded reports
+                  </p>
+
+                  {/* Key features mini-list */}
+                  <div className="space-y-2 mb-6">
+                    <div className="flex items-center gap-2 text-sm text-slate-700">
+                      <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                      <span>Co-branded reports with your logo</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-slate-700">
+                      <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                      <span>Sponsor unlimited agents</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-slate-700">
+                      <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                      <span>Track engagement & usage</span>
+                    </div>
+                  </div>
+
+                  <Button size="lg" className="bg-orange-600 hover:bg-orange-700 text-white" asChild>
+                    <a href="mailto:enterprise@trendyreports.com">
+                      Request Enterprise Demo
+                      <ChevronRight className="w-5 h-5 ml-2" />
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Center connecting element */}
+          <div className="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-white border-4 border-slate-100 shadow-xl flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 via-violet-500 to-orange-500 animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          5. HOW IT WORKS - 3 step process with video
+      ═══════════════════════════════════════════════════════════════════ */}
+      <section id="demo" className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-900 text-white">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4">From MLS to inbox in 3 clicks</h2>
+            <p className="text-xl text-slate-400">No spreadsheets. No manual formatting. Just results.</p>
+          </div>
+
+          {/* Video Demo */}
+          <div className="mb-20">
+            <div className="max-w-4xl mx-auto bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-2xl">
+              <div className="aspect-video bg-slate-800 relative">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <button className="w-20 h-20 rounded-full bg-purple-600 hover:bg-purple-700 flex items-center justify-center shadow-2xl hover:scale-110 transition-transform">
+                    <Play className="w-8 h-8 text-white ml-1" />
+                  </button>
+                </div>
+                <img
+                  src="/placeholder.svg?height=720&width=1280&text=Watch+Demo:+Create+Report+in+60+Seconds"
+                  alt="Product demo video"
+                  className="w-full h-full object-cover opacity-60"
+                />
+              </div>
+            </div>
+            <p className="text-center mt-4 text-slate-500">
+              Watch a real agent create a market report in under 60 seconds
+            </p>
+          </div>
+
+          {/* 3 Steps - Alternating Layout */}
+          <div className="space-y-20">
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              <div className="order-2 lg:order-1">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-full bg-purple-500 flex items-center justify-center font-bold text-xl">
+                    1
+                  </div>
+                  <div className="h-px flex-1 bg-gradient-to-r from-purple-500 to-transparent" />
+                </div>
+                <h3 className="font-display font-semibold text-3xl mb-4">Define your market</h3>
+                <p className="text-lg text-slate-400 leading-relaxed mb-6">
+                  Select ZIP codes, neighborhoods, or draw custom boundaries. Choose the report type that fits your
+                  audience.
+                </p>
+                <ul className="space-y-3 text-slate-300">
+                  <li className="flex items-center gap-3">
+                    <Check className="w-5 h-5 text-purple-400" />
+                    <span>City, ZIP, or custom polygon selection</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <Check className="w-5 h-5 text-purple-400" />
+                    <span>10+ report templates to choose from</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="order-1 lg:order-2">
+                <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-2xl">
+                  <div className="bg-slate-700/50 px-4 py-3 flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500" />
+                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                  </div>
+                  <img
+                    src="/map-location-pin-real-estate-neighborhood-illustra.jpg"
+                    alt="Market selection interface"
+                    className="w-full"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              <div>
+                <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-2xl">
+                  <div className="bg-slate-700/50 px-4 py-3 flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500" />
+                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                  </div>
+                  <img
+                    src="/branding-logo-colors-customization-palette-illustr.jpg"
+                    alt="Schedule configuration"
+                    className="w-full"
+                  />
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center font-bold text-xl">
+                    2
+                  </div>
+                  <div className="h-px flex-1 bg-gradient-to-r from-orange-500 to-transparent" />
+                </div>
+                <h3 className="font-display font-semibold text-3xl mb-4">Add your brand & schedule</h3>
+                <p className="text-lg text-slate-400 leading-relaxed mb-6">
+                  Upload your logo, pick your colors, set your delivery cadence. Every report reflects your professional
+                  brand.
+                </p>
+                <ul className="space-y-3 text-slate-300">
+                  <li className="flex items-center gap-3">
+                    <Check className="w-5 h-5 text-orange-400" />
+                    <span>Logo, colors, and contact info</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <Check className="w-5 h-5 text-orange-400" />
+                    <span>Weekly, monthly, or custom schedules</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              <div className="order-2 lg:order-1">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center font-bold text-xl">
+                    3
+                  </div>
+                  <div className="h-px flex-1 bg-gradient-to-r from-green-500 to-transparent" />
+                </div>
+                <h3 className="font-display font-semibold text-3xl mb-4">Deliver and impress</h3>
+                <p className="text-lg text-slate-400 leading-relaxed mb-6">
+                  Reports generate automatically and land in your clients&apos; inboxes. You stay top-of-mind without lifting
+                  a finger.
+                </p>
+                <ul className="space-y-3 text-slate-300">
+                  <li className="flex items-center gap-3">
+                    <Check className="w-5 h-5 text-green-400" />
+                    <span>PDF download or email delivery</span>
+                  </li>
+                  <li className="flex items-center gap-3">
+                    <Check className="w-5 h-5 text-green-400" />
+                    <span>Track opens and engagement</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="order-1 lg:order-2">
+                <div className="bg-white rounded-2xl overflow-hidden shadow-2xl p-6">
+                  <img
+                    src="/beautiful-finished-real-estate-market-report-pdf-r.jpg"
+                    alt="Finished report preview"
+                    className="w-full rounded-lg shadow-lg"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-20 text-center">
+            <Button
+              size="lg"
+              className="bg-white text-slate-900 hover:bg-slate-100 shadow-lg px-8 py-6 text-lg font-semibold"
+              asChild
+            >
+              <Link href="/login">
+                Start Your Free Trial
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Link>
+            </Button>
+            <p className="mt-4 text-slate-500 text-sm">No credit card required</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          6. SAMPLE REPORTS CAROUSEL
+      ═══════════════════════════════════════════════════════════════════ */}
+      <section id="samples" className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
+              Professional reports. Every time.
+            </h2>
+            <p className="text-xl text-slate-600">8.5×11 print-ready PDFs with your branding</p>
+          </div>
+
+          <div className="grid md:grid-cols-5 gap-6">
+            {samples.map((sample, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCurrentSample(idx)}
+                className={`group bg-white rounded-xl border-2 transition-all hover:shadow-xl ${
+                  currentSample === idx ? "border-purple-500 shadow-xl" : "border-slate-200"
+                }`}
+              >
+                <div className="aspect-[8.5/11] bg-slate-50 rounded-t-xl overflow-hidden">
+                  <img
+                    src={`/ceholder-svg-height-220-width-170-text-.jpg`}
+                    alt={sample.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+                <div className="p-4 text-left">
+                  <div className="font-semibold text-sm text-slate-900 mb-1">{sample.title}</div>
+                  <div className="text-xs text-slate-600">{sample.desc}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-12 text-center">
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-purple-300 text-purple-700 hover:bg-purple-50 bg-transparent"
+            >
+              View Full Sample Reports
+              <ChevronRight className="w-5 h-5 ml-2" />
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          7. EMAIL REPORTS SHOWCASE - Product focus
+      ═══════════════════════════════════════════════════════════════════ */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-white overflow-hidden">
+        <div className="max-w-[1400px] mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
+              Email reports clients actually open
+            </h2>
+            <p className="text-xl text-slate-600">Mobile-optimized HTML emails with your brand front and center</p>
+          </div>
+
+          <div className="relative max-w-[1200px] mx-auto px-4">
+            {/* Feature callouts - Left side */}
+            <div className="hidden lg:block absolute left-0 top-1/3 max-w-[200px] animate-in fade-in slide-in-from-left duration-700 delay-300">
+              <div className="text-right">
+                <div className="font-semibold text-slate-900 mb-1">Your logo & colors</div>
+                <div className="text-sm text-slate-600">Full white-label branding in every email</div>
+              </div>
+            </div>
+
+            <div className="hidden lg:block absolute left-0 top-2/3 max-w-[200px] animate-in fade-in slide-in-from-left duration-700 delay-500">
+              <div className="text-right">
+                <div className="font-semibold text-slate-900 mb-1">Key market metrics</div>
+                <div className="text-sm text-slate-600">Median price, inventory, days on market</div>
+              </div>
+            </div>
+
+            {/* Center mockup carousel */}
+            <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-700">
+              <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center gap-3">
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-red-500" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                  <div className="w-3 h-3 rounded-full bg-green-500" />
+                </div>
+                <div className="text-sm text-slate-600">Market Report — December 2024</div>
+              </div>
+
+              <div className="p-8 bg-gradient-to-br from-slate-50 to-white">
+                <div className="relative group">
+                  <Carousel className="w-full">
+                    <CarouselContent>
+                      <CarouselItem>
+                        <img
+                          src="/real-estate-market-snapshot-report-with-purple-gra.jpg"
+                          alt="Market Snapshot email report"
+                          className="w-full rounded-lg shadow-lg"
+                        />
+                      </CarouselItem>
+                      <CarouselItem>
+                        <img
+                          src="/real-estate-new-listings-gallery-with-property-pho.jpg"
+                          alt="New Listings email report"
+                          className="w-full rounded-lg shadow-lg"
+                        />
+                      </CarouselItem>
+                      <CarouselItem>
+                        <img
+                          src="/real-estate-featured-listings-report-with-blue-gra.jpg"
+                          alt="Featured Listings email report"
+                          className="w-full rounded-lg shadow-lg"
+                        />
+                      </CarouselItem>
+                      <CarouselItem>
+                        <img
+                          src="/real-estate-market-analysis-report-with-orange-gra.jpg"
+                          alt="Market Analysis email report"
+                          className="w-full rounded-lg shadow-lg"
+                        />
+                      </CarouselItem>
+                    </CarouselContent>
+                    <CarouselPrevious className="left-2" />
+                    <CarouselNext className="right-2" />
+                  </Carousel>
+                </div>
+              </div>
+            </div>
+
+            {/* Feature callouts - Right side */}
+            <div className="hidden lg:block absolute right-0 top-1/3 max-w-[200px] animate-in fade-in slide-in-from-right duration-700 delay-300">
+              <div className="text-left">
+                <div className="font-semibold text-slate-900 mb-1">Mobile-first design</div>
+                <div className="text-sm text-slate-600">Looks perfect on every device</div>
+              </div>
+            </div>
+
+            <div className="hidden lg:block absolute right-0 top-2/3 max-w-[200px] animate-in fade-in slide-in-from-right duration-700 delay-500">
+              <div className="text-left">
+                <div className="font-semibold text-slate-900 mb-1">Your contact info</div>
+                <div className="text-sm text-slate-600">Photo, phone, email, social links</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile feature list */}
+          <div className="lg:hidden mt-12 grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
+            <div className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold text-slate-900 mb-1">Your logo & colors</div>
+                <div className="text-sm text-slate-600">Full white-label branding in every email</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold text-slate-900 mb-1">Mobile-first design</div>
+                <div className="text-sm text-slate-600">Looks perfect on every device</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold text-slate-900 mb-1">Key market metrics</div>
+                <div className="text-sm text-slate-600">Median price, inventory, days on market</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold text-slate-900 mb-1">Your contact info</div>
+                <div className="text-sm text-slate-600">Photo, phone, email, social links</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          8. PDF REPORTS SHOWCASE - Product focus
+      ═══════════════════════════════════════════════════════════════════ */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50">
+        <div className="max-w-[1400px] mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
+              Print-ready PDFs that look expensive
+            </h2>
+            <p className="text-xl text-slate-600">8.5×11 formatted for perfect printing and digital sharing</p>
+          </div>
+
+          <div className="relative max-w-[1200px] mx-auto px-4">
+            {/* Feature callouts - Left side */}
+            <div className="hidden lg:block absolute left-0 top-1/3 max-w-[200px] animate-in fade-in slide-in-from-left duration-700 delay-300">
+              <div className="text-right">
+                <div className="font-semibold text-slate-900 mb-1">Professional header</div>
+                <div className="text-sm text-slate-600">Gradient design with your branding</div>
+              </div>
+            </div>
+
+            <div className="hidden lg:block absolute left-0 top-2/3 max-w-[200px] animate-in fade-in slide-in-from-left duration-700 delay-500">
+              <div className="text-right">
+                <div className="font-semibold text-slate-900 mb-1">Property galleries</div>
+                <div className="text-sm text-slate-600">Clean grid layouts with listing details</div>
+              </div>
+            </div>
+
+            {/* Center mockup carousel */}
+            <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-2xl border border-slate-200 p-8 animate-in fade-in zoom-in-95 duration-700">
+              <div className="bg-slate-100 rounded-lg p-6">
+                <div className="relative group">
+                  <Carousel className="w-full">
+                    <CarouselContent>
+                      <CarouselItem>
+                        <img
+                          src="/market-snapshot-report-purple-gradient-header-with.jpg"
+                          alt="Market Snapshot PDF report"
+                          className="w-full rounded shadow-2xl"
+                        />
+                      </CarouselItem>
+                      <CarouselItem>
+                        <img
+                          src="/new-listings-gallery-report-purple-header-with-pro.jpg"
+                          alt="New Listings Gallery PDF report"
+                          className="w-full rounded shadow-2xl"
+                        />
+                      </CarouselItem>
+                      <CarouselItem>
+                        <img
+                          src="/featured-listings-report-purple-header-with-2x2-pr.jpg"
+                          alt="Featured Listings PDF report"
+                          className="w-full rounded shadow-2xl"
+                        />
+                      </CarouselItem>
+                      <CarouselItem>
+                        <img
+                          src="/price-trends-report-purple-header-with-historica.jpg"
+                          alt="Price Trends PDF report"
+                          className="w-full rounded shadow-2xl"
+                        />
+                      </CarouselItem>
+                    </CarouselContent>
+                    <CarouselPrevious className="left-2" />
+                    <CarouselNext className="right-2" />
+                  </Carousel>
+                </div>
+              </div>
+            </div>
+
+            {/* Feature callouts - Right side */}
+            <div className="hidden lg:block absolute right-0 top-1/3 max-w-[200px] animate-in fade-in slide-in-from-right duration-700 delay-300">
+              <div className="text-left">
+                <div className="font-semibold text-slate-900 mb-1">Charts & visualizations</div>
+                <div className="text-sm text-slate-600">Price trends, inventory, and market stats</div>
+              </div>
+            </div>
+
+            <div className="hidden lg:block absolute right-0 top-2/3 max-w-[200px] animate-in fade-in slide-in-from-right duration-700 delay-500">
+              <div className="text-left">
+                <div className="font-semibold text-slate-900 mb-1">Agent footer</div>
+                <div className="text-sm text-slate-600">Photo, credentials, and contact details</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile feature list */}
+          <div className="lg:hidden mt-12 grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
+            <div className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold text-slate-900 mb-1">Professional header</div>
+                <div className="text-sm text-slate-600">Gradient design with your branding</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold text-slate-900 mb-1">Charts & visualizations</div>
+                <div className="text-sm text-slate-600">Price trends, inventory, and market stats</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold text-slate-900 mb-1">Property galleries</div>
+                <div className="text-sm text-slate-600">Clean grid layouts with listing details</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold text-slate-900 mb-1">Agent footer</div>
+                <div className="text-sm text-slate-600">Photo, credentials, and contact details</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          9. TESTIMONIALS
+      ═══════════════════════════════════════════════════════════════════ */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
+              Trusted by top-producing agents
+            </h2>
+            <p className="text-xl text-slate-600">Real results from real estate professionals</p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-white rounded-2xl border border-slate-200 p-8">
+              <div className="flex gap-1 mb-6">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="w-5 h-5 fill-orange-400 text-orange-400" />
+                ))}
+              </div>
+              <p className="text-slate-700 text-lg leading-relaxed mb-6">
+                &quot;TrendyReports recovered 3+ hours every week. That&apos;s billable time I now spend on client meetings and
+                prospecting. ROI is 20x my subscription cost.&quot;
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+                  JM
+                </div>
+                <div>
+                  <div className="font-semibold text-slate-900">Jessica Martinez</div>
+                  <div className="text-sm text-slate-600">Keller Williams, Austin TX</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200 p-8">
+              <div className="flex gap-1 mb-6">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="w-5 h-5 fill-orange-400 text-orange-400" />
+                ))}
+              </div>
+              <p className="text-slate-700 text-lg leading-relaxed mb-6">
+                &quot;We sponsor 40 agents under one plan. Every report carries our brand. The usage analytics show clear
+                engagement. Best marketing investment we&apos;ve made.&quot;
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+                  RC
+                </div>
+                <div>
+                  <div className="font-semibold text-slate-900">Robert Chen</div>
+                  <div className="text-sm text-slate-600">Broker/Owner, Pacific Realty</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200 p-8">
+              <div className="flex gap-1 mb-6">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="w-5 h-5 fill-orange-400 text-orange-400" />
+                ))}
+              </div>
+              <p className="text-slate-700 text-lg leading-relaxed mb-6">
+                &quot;My clients forward the reports to their friends. The design is clean and the data is current. I close
+                more referrals now than ever before.&quot;
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+                  SP
+                </div>
+                <div>
+                  <div className="font-semibold text-slate-900">Sarah Patel</div>
+                  <div className="text-sm text-slate-600">RE/MAX, Denver CO</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          10. DATA & AUTOMATION BENEFITS
       ═══════════════════════════════════════════════════════════════════ */}
       <section id="integrations" className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50 border-y border-slate-200">
         <div className="max-w-[1200px] mx-auto">
@@ -350,7 +1007,7 @@ export function MarketingHome() {
             <p className="text-slate-600">
               Questions about your specific market or MLS?{" "}
               <a href="mailto:support@trendyreports.com" className="text-purple-600 hover:text-purple-700 font-semibold underline">
-                Let's talk
+                Let&apos;s talk
               </a>
             </p>
           </div>
@@ -358,464 +1015,25 @@ export function MarketingHome() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          5. FOR AGENTS - Full width section (Image left, text right)
+          11. PRICING - 3 TIER
       ═══════════════════════════════════════════════════════════════════ */}
-      <section id="for-agents" className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-purple-50/50 via-white to-white">
-        <div className="max-w-[1200px] mx-auto">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            {/* Image - Left side */}
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xl">
-              <img
-                src="/placeholder.svg?height=600&width=800&text=Agent+Dashboard+Screenshot"
-                alt="Agent dashboard showing market reports and scheduling"
-                className="w-full"
-              />
-            </div>
-
-            {/* Content - Right side */}
-            <div>
-              <div className="inline-flex items-center gap-2 bg-purple-50 border border-purple-200 rounded-full px-4 py-2 mb-6">
-                <span className="text-sm font-semibold text-purple-900">FOR REAL ESTATE AGENTS</span>
-              </div>
-              <h2 className="font-display font-bold text-4xl sm:text-5xl mb-6 text-slate-900">
-                Win more listings. Stay top of mind.
-              </h2>
-              <p className="text-xl text-slate-600 mb-8 leading-relaxed">
-                Generate beautiful, branded market reports in 30 seconds. Schedule automated delivery to your sphere. 
-                Spend less time on busywork, more time closing deals.
-              </p>
-
-              <div className="space-y-6 mb-8">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
-                    <Check className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-lg text-slate-900 mb-1">Real-time MLS data</div>
-                    <div className="text-slate-600">
-                      Fresh listings, sales, and market stats pulled directly from your MLS. Always accurate.
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
-                    <Check className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-lg text-slate-900 mb-1">Your brand, your reports</div>
-                    <div className="text-slate-600">
-                      Logo, colors, contact info — every report looks like it came from your own design team.
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
-                    <Check className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-lg text-slate-900 mb-1">Set it and forget it</div>
-                    <div className="text-slate-600">
-                      Schedule weekly or monthly reports. They generate and send automatically while you focus on clients.
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Button size="lg" className="bg-purple-600 hover:bg-purple-700 text-white h-14 px-8" asChild>
-                <Link href="/register">
-                  Start Free — No Credit Card
-                  <ChevronRight className="w-5 h-5 ml-2" />
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════════
-          6. FOR BROKERAGES / TITLE COMPANIES (Expanded Affiliates Section)
-      ═══════════════════════════════════════════════════════════════════ */}
-      <section id="for-affiliates" className="py-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-[1200px] mx-auto">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-full px-4 py-2 mb-6">
-                <span className="text-sm font-semibold text-orange-900">FOR BROKERAGES & TITLE COMPANIES</span>
-              </div>
-              <h2 className="font-display font-bold text-4xl sm:text-5xl mb-6 text-slate-900">
-                Sponsor agents. Scale touchpoints. Track ROI.
-              </h2>
-              <p className="text-xl text-slate-600 mb-8 leading-relaxed">
-                Provide unlimited report access to your entire agent roster under your brand. One flat rate. No per-seat
-                fees. Full usage analytics.
-              </p>
-
-              <div className="space-y-6 mb-8">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
-                    <Check className="w-6 h-6 text-orange-600" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-lg text-slate-900 mb-1">Co-branded reports</div>
-                    <div className="text-slate-600">
-                      Your logo, colors, and contact info on every report. TrendyReports stays invisible.
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
-                    <Check className="w-6 h-6 text-orange-600" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-lg text-slate-900 mb-1">Unlimited agent seats</div>
-                    <div className="text-slate-600">Sponsor 10 agents or 1,000. Same price. No per-user charges.</div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
-                    <Check className="w-6 h-6 text-orange-600" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-lg text-slate-900 mb-1">Usage dashboard</div>
-                    <div className="text-slate-600">
-                      See which agents are active, reports generated, and engagement metrics.
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Button size="lg" className="bg-orange-600 hover:bg-orange-700 text-white h-14 px-8" asChild>
-                <a href="mailto:enterprise@trendyreports.com">
-                  Request Enterprise Demo
-                  <ChevronRight className="w-5 h-5 ml-2" />
-                </a>
-              </Button>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xl">
-              <img
-                src="/placeholder.svg?height=600&width=800&text=Admin+Dashboard+Screenshot"
-                alt="Enterprise admin dashboard showing agent activity and report analytics"
-                className="w-full"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════════
-          7. HOW IT WORKS - 3 step process with video
-      ═══════════════════════════════════════════════════════════════════ */}
-      <section id="demo" className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-900 text-white">
-        <div className="max-w-[1200px] mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4">From MLS to inbox in 3 clicks</h2>
-            <p className="text-xl text-slate-400">No spreadsheets. No manual formatting. Just results.</p>
-          </div>
-
-          {/* Video Demo */}
-          <div className="mb-20">
-            <div className="max-w-4xl mx-auto bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-2xl">
-              <div className="aspect-video bg-slate-800 relative">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <button className="w-20 h-20 rounded-full bg-purple-600 hover:bg-purple-700 flex items-center justify-center shadow-2xl hover:scale-110 transition-transform">
-                    <Play className="w-8 h-8 text-white ml-1" />
-                  </button>
-                </div>
-                <img
-                  src="/placeholder.svg?height=720&width=1280&text=Watch+Demo:+Create+Report+in+60+Seconds"
-                  alt="Product demo video"
-                  className="w-full h-full object-cover opacity-60"
-                />
-              </div>
-            </div>
-            <p className="text-center mt-4 text-slate-500">
-              Watch a real agent create a market report in under 60 seconds
-            </p>
-          </div>
-
-          {/* 3 Steps - Alternating Layout */}
-          <div className="space-y-20">
-            <div className="grid lg:grid-cols-2 gap-12 items-center">
-              <div className="order-2 lg:order-1">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-12 h-12 rounded-full bg-purple-500 flex items-center justify-center font-bold text-xl">
-                    1
-                  </div>
-                  <div className="h-px flex-1 bg-gradient-to-r from-purple-500 to-transparent" />
-                </div>
-                <h3 className="font-display font-bold text-3xl mb-4">Define your market</h3>
-                <p className="text-lg text-slate-400 leading-relaxed mb-6">
-                  Select ZIP codes, neighborhoods, or draw custom boundaries. Choose the report type that fits your
-                  audience.
-                </p>
-                <ul className="space-y-3 text-slate-300">
-                  <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-purple-400" />
-                    <span>City, ZIP, or custom polygon selection</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-purple-400" />
-                    <span>10+ report templates to choose from</span>
-                  </li>
-                </ul>
-              </div>
-              <div className="order-1 lg:order-2">
-                <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-2xl">
-                  <div className="bg-slate-700/50 px-4 py-3 flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-red-500" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                    <div className="w-3 h-3 rounded-full bg-green-500" />
-                  </div>
-                  <img
-                    src="/placeholder.svg?height=400&width=600&text=App:+Market+Selection+Map"
-                    alt="Market selection interface"
-                    className="w-full"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid lg:grid-cols-2 gap-12 items-center">
-              <div>
-                <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-2xl">
-                  <div className="bg-slate-700/50 px-4 py-3 flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-red-500" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                    <div className="w-3 h-3 rounded-full bg-green-500" />
-                  </div>
-                  <img
-                    src="/placeholder.svg?height=400&width=600&text=App:+Schedule+%26+Branding"
-                    alt="Schedule configuration"
-                    className="w-full"
-                  />
-                </div>
-              </div>
-              <div>
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center font-bold text-xl">
-                    2
-                  </div>
-                  <div className="h-px flex-1 bg-gradient-to-r from-orange-500 to-transparent" />
-                </div>
-                <h3 className="font-display font-bold text-3xl mb-4">Add your brand & schedule</h3>
-                <p className="text-lg text-slate-400 leading-relaxed mb-6">
-                  Upload your logo, pick your colors, set your delivery cadence. Every report reflects your professional
-                  brand.
-                </p>
-                <ul className="space-y-3 text-slate-300">
-                  <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-orange-400" />
-                    <span>Logo, colors, and contact info</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-orange-400" />
-                    <span>Weekly, monthly, or custom schedules</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="grid lg:grid-cols-2 gap-12 items-center">
-              <div className="order-2 lg:order-1">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center font-bold text-xl">
-                    3
-                  </div>
-                  <div className="h-px flex-1 bg-gradient-to-r from-green-500 to-transparent" />
-                </div>
-                <h3 className="font-display font-bold text-3xl mb-4">Deliver and impress</h3>
-                <p className="text-lg text-slate-400 leading-relaxed mb-6">
-                  Reports generate automatically and land in your clients&apos; inboxes. You stay top-of-mind without lifting
-                  a finger.
-                </p>
-                <ul className="space-y-3 text-slate-300">
-                  <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-green-400" />
-                    <span>PDF download or email delivery</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-green-400" />
-                    <span>Track opens and engagement</span>
-                  </li>
-                </ul>
-              </div>
-              <div className="order-1 lg:order-2">
-                <div className="bg-white rounded-2xl overflow-hidden shadow-2xl p-6">
-                  <img
-                    src="/placeholder.svg?height=450&width=350&text=Finished+Report+Preview"
-                    alt="Finished report preview"
-                    className="w-full rounded-lg shadow-lg"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-20 text-center">
-            <Button
-              size="lg"
-              className="bg-white text-slate-900 hover:bg-slate-100 shadow-lg px-8 py-6 text-lg font-semibold"
-              asChild
-            >
-              <Link href="/login">
-                Start Your Free Trial
-                <ArrowRight className="ml-2 w-5 h-5" />
-              </Link>
-            </Button>
-            <p className="mt-4 text-slate-500 text-sm">No credit card required</p>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════════
-          8. SAMPLE REPORTS CAROUSEL
-      ═══════════════════════════════════════════════════════════════════ */}
-      <section id="samples" className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50">
+      <section id="pricing" className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-16">
-            <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4 text-slate-900">
-              Professional reports. Every time.
-            </h2>
-            <p className="text-xl text-slate-600">8.5×11 print-ready PDFs with your branding</p>
-          </div>
-
-          <div className="grid md:grid-cols-5 gap-6">
-            {samples.map((sample, idx) => (
-              <button
-                key={idx}
-                onClick={() => setCurrentSample(idx)}
-                className={`group bg-white rounded-xl border-2 transition-all hover:shadow-xl ${
-                  currentSample === idx ? "border-purple-500 shadow-xl" : "border-slate-200"
-                }`}
-              >
-                <div className="aspect-[8.5/11] bg-slate-50 rounded-t-xl overflow-hidden">
-                  <img
-                    src={`/placeholder.svg?height=220&width=170&text=${encodeURIComponent(sample.title)}`}
-                    alt={sample.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
-                <div className="p-4 text-left">
-                  <div className="font-semibold text-sm text-slate-900 mb-1">{sample.title}</div>
-                  <div className="text-xs text-slate-600">{sample.desc}</div>
-                </div>
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-12 text-center">
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-purple-300 text-purple-700 hover:bg-purple-50 bg-transparent"
-            >
-              View Full Sample Reports
-              <ChevronRight className="w-5 h-5 ml-2" />
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════════
-          9. TESTIMONIALS
-      ═══════════════════════════════════════════════════════════════════ */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
-        <div className="max-w-[1200px] mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4 text-slate-900">
-              Trusted by top-producing agents
-            </h2>
-            <p className="text-xl text-slate-600">Real results from real estate professionals</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-white rounded-2xl border border-slate-200 p-8">
-              <div className="flex gap-1 mb-6">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-5 h-5 fill-orange-400 text-orange-400" />
-                ))}
-              </div>
-              <p className="text-slate-700 text-lg leading-relaxed mb-6">
-                &quot;TrendyReports recovered 3+ hours every week. That&apos;s billable time I now spend on client meetings and
-                prospecting. ROI is 20x my subscription cost.&quot;
-              </p>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
-                  JM
-                </div>
-                <div>
-                  <div className="font-semibold text-slate-900">Jessica Martinez</div>
-                  <div className="text-sm text-slate-600">Keller Williams, Austin TX</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-slate-200 p-8">
-              <div className="flex gap-1 mb-6">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-5 h-5 fill-orange-400 text-orange-400" />
-                ))}
-              </div>
-              <p className="text-slate-700 text-lg leading-relaxed mb-6">
-                &quot;We sponsor 40 agents under one plan. Every report carries our brand. The usage analytics show clear
-                engagement. Best marketing investment we&apos;ve made.&quot;
-              </p>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
-                  RC
-                </div>
-                <div>
-                  <div className="font-semibold text-slate-900">Robert Chen</div>
-                  <div className="text-sm text-slate-600">Broker/Owner, Pacific Realty</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-slate-200 p-8">
-              <div className="flex gap-1 mb-6">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-5 h-5 fill-orange-400 text-orange-400" />
-                ))}
-              </div>
-              <p className="text-slate-700 text-lg leading-relaxed mb-6">
-                &quot;My clients forward the reports to their friends. The design is clean and the data is current. I close
-                more referrals now than ever before.&quot;
-              </p>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
-                  SP
-                </div>
-                <div>
-                  <div className="font-semibold text-slate-900">Sarah Patel</div>
-                  <div className="text-sm text-slate-600">RE/MAX, Denver CO</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════════
-          10. PRICING
-      ═══════════════════════════════════════════════════════════════════ */}
-      <section id="pricing" className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50">
-        <div className="max-w-[1200px] mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4 text-slate-900">
+            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
               Simple, transparent pricing
             </h2>
             <p className="text-xl text-slate-600">
-              Start free, upgrade when you&apos;re ready. No surprises.
+              Choose the plan that fits your business. Upgrade or downgrade anytime.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-16">
-            {/* Free */}
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {/* Starter */}
             <div className="bg-white rounded-3xl border border-slate-200 p-8 hover:border-purple-200 hover:shadow-lg transition-all">
               <div className="mb-6">
-                <h3 className="font-display font-bold text-2xl mb-2 text-slate-900">Free</h3>
-                <p className="text-slate-600">Get started at no cost</p>
+                <h3 className="font-display font-semibold text-2xl mb-2 text-slate-900">Starter</h3>
+                <p className="text-slate-600">Try TrendyReports risk-free</p>
               </div>
               <div className="mb-6">
                 <span className="font-display font-bold text-5xl text-slate-900">$0</span>
@@ -830,7 +1048,7 @@ export function MarketingHome() {
                 </li>
                 <li className="flex items-start gap-3 text-sm">
                   <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
-                  <span className="text-slate-700">All report templates</span>
+                  <span className="text-slate-700">Market snapshot templates</span>
                 </li>
                 <li className="flex items-start gap-3 text-sm">
                   <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
@@ -838,11 +1056,7 @@ export function MarketingHome() {
                 </li>
                 <li className="flex items-start gap-3 text-sm">
                   <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
-                  <span className="text-slate-700">Basic branding</span>
-                </li>
-                <li className="flex items-start gap-3 text-sm">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
-                  <span className="text-slate-700">Community support</span>
+                  <span className="text-slate-700">Basic branding options</span>
                 </li>
               </ul>
               <Button className="w-full h-12 bg-transparent" variant="outline" asChild>
@@ -851,13 +1065,13 @@ export function MarketingHome() {
             </div>
 
             {/* Pro */}
-            <div className="bg-gradient-to-br from-purple-50 via-white to-white rounded-3xl border-2 border-purple-300 p-8 relative shadow-lg hover:shadow-xl transition-all">
+            <div className="bg-gradient-to-br from-purple-50 via-white to-white rounded-3xl border-2 border-purple-300 p-8 relative shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
               <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg">
-                RECOMMENDED
+                MOST POPULAR
               </div>
               <div className="mb-6">
-                <h3 className="font-display font-bold text-2xl mb-2 text-slate-900">Pro</h3>
-                <p className="text-slate-700">For serious agents who want to scale</p>
+                <h3 className="font-display font-semibold text-2xl mb-2 text-slate-900">Pro</h3>
+                <p className="text-slate-700">For individual agents and small teams</p>
               </div>
               <div className="mb-6">
                 <span className="font-display font-bold text-5xl text-slate-900">$29</span>
@@ -872,7 +1086,7 @@ export function MarketingHome() {
                 </li>
                 <li className="flex items-start gap-3 text-sm">
                   <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
-                  <span className="text-slate-700">All report types + photo galleries</span>
+                  <span className="text-slate-700">All report types + galleries</span>
                 </li>
                 <li className="flex items-start gap-3 text-sm">
                   <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
@@ -884,7 +1098,7 @@ export function MarketingHome() {
                 </li>
                 <li className="flex items-start gap-3 text-sm">
                   <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
-                  <span className="text-slate-700">Priority email support</span>
+                  <span className="text-slate-700">Priority support</span>
                 </li>
               </ul>
               <Button
@@ -894,62 +1108,71 @@ export function MarketingHome() {
                 <Link href="/register">Start 14-Day Free Trial</Link>
               </Button>
             </div>
-          </div>
 
-          {/* Affiliate Plan */}
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-gradient-to-br from-orange-50 via-white to-white rounded-3xl border-2 border-orange-200 p-8 relative">
-              <div className="grid md:grid-cols-2 gap-8 items-center">
-                <div>
-                  <div className="inline-flex items-center gap-2 bg-orange-100 rounded-full px-3 py-1 mb-4">
-                    <Building2 className="w-4 h-4 text-orange-600" />
-                    <span className="text-sm font-semibold text-orange-900">For Affiliates</span>
-                  </div>
-                  <h3 className="font-display font-bold text-2xl mb-2 text-slate-900">Affiliate Partner</h3>
-                  <p className="text-slate-600 mb-4">
-                    Title companies, lenders, and brokerages. Sponsor unlimited agents under your brand.
-                  </p>
-                  <div className="mb-6">
-                    <span className="font-display font-bold text-4xl text-slate-900">Custom</span>
-                    <span className="text-slate-600 text-lg ml-2">pricing</span>
-                  </div>
-                  <Button className="h-12 bg-orange-600 hover:bg-orange-700 text-white" asChild>
-                    <a href="mailto:partners@trendyreports.com">
-                      Contact for Pricing
-                      <ChevronRight className="w-4 h-4 ml-2" />
-                    </a>
-                  </Button>
-                </div>
-                <div>
-                  <ul className="space-y-3">
-                    <li className="flex items-start gap-3 text-sm">
-                      <Check className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
-                      <span className="text-slate-700"><strong>Unlimited</strong> sponsored agents</span>
-                    </li>
-                    <li className="flex items-start gap-3 text-sm">
-                      <Check className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
-                      <span className="text-slate-700">Co-branded reports with your logo</span>
-                    </li>
-                    <li className="flex items-start gap-3 text-sm">
-                      <Check className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
-                      <span className="text-slate-700">Admin dashboard & usage analytics</span>
-                    </li>
-                    <li className="flex items-start gap-3 text-sm">
-                      <Check className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
-                      <span className="text-slate-700">Dedicated account manager</span>
-                    </li>
-                    <li className="flex items-start gap-3 text-sm">
-                      <Check className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
-                      <span className="text-slate-700">API access & custom integrations</span>
-                    </li>
-                  </ul>
-                </div>
+            {/* Team */}
+            <div className="bg-white rounded-3xl border border-slate-200 p-8 hover:border-purple-200 hover:shadow-lg transition-all">
+              <div className="mb-6">
+                <h3 className="font-display font-semibold text-2xl mb-2 text-slate-900">Team</h3>
+                <p className="text-slate-600">For brokerages, teams & affiliates</p>
               </div>
+              <div className="mb-6">
+                <span className="font-display font-bold text-5xl text-slate-900">$99</span>
+                <span className="text-slate-600 text-lg">/month</span>
+              </div>
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-start gap-3 text-sm">
+                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <span className="text-slate-700">
+                    <strong>Unlimited reports</strong>
+                  </span>
+                </li>
+                <li className="flex items-start gap-3 text-sm">
+                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <span className="text-slate-700">Sponsor agents under one plan</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm">
+                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <span className="text-slate-700">Admin dashboard & analytics</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm">
+                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <span className="text-slate-700">Co-branded reports</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm">
+                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <span className="text-slate-700">Dedicated support manager</span>
+                </li>
+              </ul>
+              <Button className="w-full h-12 bg-transparent" variant="outline" asChild>
+                <Link href="/register">Start 14-Day Free Trial</Link>
+              </Button>
             </div>
           </div>
 
-          <div className="mt-12 text-center text-sm text-slate-600">
-            <p>All plans include: 14-day free trial • Cancel anytime • 99.9% uptime SLA • SOC 2 compliant</p>
+          <div className="mt-16 max-w-3xl mx-auto">
+            <div className="grid md:grid-cols-2 gap-8 text-sm">
+              <div>
+                <h4 className="font-semibold text-slate-900 mb-2">All plans include:</h4>
+                <ul className="space-y-1 text-slate-600">
+                  <li>14-day free trial, no credit card</li>
+                  <li>Cancel or change plans anytime</li>
+                  <li>99.9% uptime SLA</li>
+                  <li>SOC 2 Type II compliant</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold text-slate-900 mb-2">Need something custom?</h4>
+                <p className="text-slate-600 mb-2">
+                  Enterprise plans available with custom integrations, dedicated infrastructure, and volume pricing.
+                </p>
+                <a
+                  href="mailto:enterprise@trendyreports.com"
+                  className="text-purple-600 hover:text-purple-700 font-semibold underline"
+                >
+                  Contact sales
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -957,10 +1180,10 @@ export function MarketingHome() {
       {/* ═══════════════════════════════════════════════════════════════════
           12. SECURITY
       ═══════════════════════════════════════════════════════════════════ */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8">
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-16">
-            <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4 text-slate-900">
+            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
               Enterprise-grade security
             </h2>
             <p className="text-xl text-slate-600">Bank-level protection for your data</p>
@@ -1012,7 +1235,7 @@ export function MarketingHome() {
           />
         </div>
         <div className="max-w-[1200px] mx-auto text-center relative z-10">
-          <h2 className="font-display font-bold text-4xl sm:text-5xl lg:text-6xl mb-6 text-white leading-tight">
+          <h2 className="font-display font-semibold text-4xl sm:text-5xl lg:text-6xl mb-6 text-white leading-tight">
             Ready to automate your market reports?
           </h2>
           <p className="text-xl text-purple-100 mb-8 max-w-3xl mx-auto leading-relaxed">
