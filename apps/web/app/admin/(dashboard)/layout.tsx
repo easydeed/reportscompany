@@ -11,6 +11,8 @@ import {
   Settings,
   Shield,
   LogOut,
+  Calendar,
+  Activity,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { createServerApi } from "@/lib/api-server"
@@ -45,6 +47,7 @@ const navItems = [
   { href: "/admin/accounts", icon: Building, label: "Accounts" },
   { href: "/admin/users", icon: Users, label: "Users" },
   { href: "/admin/affiliates", icon: Building2, label: "Title Companies" },
+  { href: "/admin/schedules", icon: Calendar, label: "Schedules" },
   { href: "/admin/plans", icon: CreditCard, label: "Plans & Pricing" },
   { href: "/admin/reports", icon: FileText, label: "Reports" },
   { href: "/admin/emails", icon: Mail, label: "Email Logs" },

@@ -31,7 +31,9 @@ import {
   CheckCircle,
   XCircle,
   Shield,
+  ShieldOff,
   Send,
+  KeyRound,
 } from "lucide-react"
 
 interface User {
@@ -87,12 +89,13 @@ export default function UsersPage() {
     }
   }
 
-  async function updateUser(userId: string, updates: { is_active?: boolean; email_verified?: boolean }) {
+  async function updateUser(userId: string, updates: { is_active?: boolean; email_verified?: boolean; is_platform_admin?: boolean }) {
     setActionLoading(userId)
     try {
       const params = new URLSearchParams()
       if (updates.is_active !== undefined) params.set("is_active", String(updates.is_active))
       if (updates.email_verified !== undefined) params.set("email_verified", String(updates.email_verified))
+      if (updates.is_platform_admin !== undefined) params.set("is_platform_admin", String(updates.is_platform_admin))
 
       const res = await fetch(`/api/v1/admin/users/${userId}?${params.toString()}`, {
         method: "PATCH",
@@ -120,6 +123,30 @@ export default function UsersPage() {
       }
     } catch (error) {
       console.error("Failed to resend invite:", error)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  async function forcePasswordReset(userId: string, email: string) {
+    if (!confirm(`Send password reset email to ${email}? They will receive a link to set a new password.`)) {
+      return
+    }
+    setActionLoading(userId)
+    try {
+      const res = await fetch(`/api/v1/admin/users/${userId}/force-password-reset`, {
+        method: "POST",
+        credentials: "include",
+      })
+      if (res.ok) {
+        const data = await res.json()
+        alert(`Password reset email sent to ${email}!\n\nReset URL: ${data.reset_url}`)
+      } else {
+        alert("Failed to send password reset email")
+      }
+    } catch (error) {
+      console.error("Failed to send password reset:", error)
+      alert("Failed to send password reset email")
     } finally {
       setActionLoading(null)
     }
@@ -394,6 +421,48 @@ export default function UsersPage() {
                                 <Send className="h-4 w-4" />
                               </Button>
                             )}
+
+                            {/* Force Password Reset */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => forcePasswordReset(user.user_id, user.email)}
+                              className="h-8 px-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                              title="Send password reset email"
+                            >
+                              <KeyRound className="h-4 w-4" />
+                            </Button>
+
+                            {/* Toggle Platform Admin */}
+                            {user.is_platform_admin ? (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  if (confirm(`Revoke platform admin from ${user.email}? They will lose access to /admin.`)) {
+                                    updateUser(user.user_id, { is_platform_admin: false })
+                                  }
+                                }}
+                                className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                title="Revoke platform admin"
+                              >
+                                <ShieldOff className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  if (confirm(`Grant platform admin to ${user.email}? They will have full access to /admin.`)) {
+                                    updateUser(user.user_id, { is_platform_admin: true })
+                                  }
+                                }}
+                                className="h-8 px-2 text-violet-600 hover:text-violet-700 hover:bg-violet-50"
+                                title="Grant platform admin"
+                              >
+                                <Shield className="h-4 w-4" />
+                              </Button>
+                            )}
                           </>
                         )}
                       </div>
@@ -452,6 +521,18 @@ export default function UsersPage() {
                 <div className="flex items-center gap-2">
                   <Send className="h-4 w-4 text-slate-600" />
                   <span className="text-slate-600">Resend Invite</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <KeyRound className="h-4 w-4 text-amber-600" />
+                  <span className="text-slate-600">Password Reset</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-violet-600" />
+                  <span className="text-slate-600">Grant Admin</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ShieldOff className="h-4 w-4 text-red-600" />
+                  <span className="text-slate-600">Revoke Admin</span>
                 </div>
               </div>
             </div>

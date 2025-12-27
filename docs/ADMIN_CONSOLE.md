@@ -316,10 +316,11 @@ This prevents confusion between platform and tenant permissions.
 | Accounts | `/admin/accounts` | All accounts with plans and user counts |
 | Users | `/admin/users` | All users with platform admin + tenant roles |
 | Affiliates | `/admin/affiliates` | Title company management |
+| **Schedules** | `/admin/schedules` | All automated schedules (pause/resume) |
 | Plans | `/admin/plans` | Subscription plan configuration |
 | Reports | `/admin/reports` | Report generation monitoring |
 | Emails | `/admin/emails` | Email delivery logs |
-| Settings | `/admin/settings` | System status and integrations |
+| Settings | `/admin/settings` | System health, integrations, stats |
 
 ### 7.4 Sidebar Features
 
@@ -413,6 +414,72 @@ This prevents confusion between platform and tenant permissions.
 
 ---
 
+---
+
+## 12. Admin Actions Reference
+
+### 12.1 User Management Actions
+
+| Action | API Endpoint | Description |
+|--------|--------------|-------------|
+| Activate User | `PATCH /v1/admin/users/{id}?is_active=true` | Enable user login |
+| Deactivate User | `PATCH /v1/admin/users/{id}?is_active=false` | Disable user login |
+| Verify Email | `PATCH /v1/admin/users/{id}?email_verified=true` | Mark email as verified |
+| Grant Platform Admin | `PATCH /v1/admin/users/{id}?is_platform_admin=true` | Grant /admin access |
+| Revoke Platform Admin | `PATCH /v1/admin/users/{id}?is_platform_admin=false` | Remove /admin access |
+| Force Password Reset | `POST /v1/admin/users/{id}/force-password-reset` | Send password reset email |
+| Resend Invite | `POST /v1/admin/users/{id}/resend-invite` | Resend welcome email |
+
+### 12.2 Schedule Management Actions
+
+| Action | API Endpoint | Description |
+|--------|--------------|-------------|
+| Pause Schedule | `PATCH /v1/admin/schedules/{id}?active=false` | Stop schedule from running |
+| Resume Schedule | `PATCH /v1/admin/schedules/{id}?active=true` | Reactivate schedule |
+| List All Schedules | `GET /v1/admin/schedules` | View all schedules with filters |
+
+### 12.3 Account Management Actions
+
+| Action | API Endpoint | Description |
+|--------|--------------|-------------|
+| Change Plan | `PATCH /v1/admin/accounts/{id}?plan_slug=pro` | Update account plan |
+| Set Limit Override | `PATCH /v1/admin/accounts/{id}?monthly_report_limit_override=500` | Custom report limit |
+| Trigger Report | `POST /v1/admin/accounts/{id}/trigger-report` | Manually generate report |
+
+### 12.4 System Monitoring
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /v1/admin/system/health` | Live health check (DB, Redis, Worker) |
+| `GET /v1/admin/metrics` | Dashboard KPIs |
+| `GET /v1/admin/metrics/timeseries` | Charts data |
+| `GET /v1/admin/stats/revenue` | Revenue & growth stats |
+
+---
+
+## 13. API Proxy Routes
+
+All admin API calls go through Next.js proxy routes at `/api/v1/admin/*`:
+
+```
+/api/v1/admin/metrics           → /v1/admin/metrics
+/api/v1/admin/accounts          → /v1/admin/accounts
+/api/v1/admin/accounts/[id]     → /v1/admin/accounts/{id}
+/api/v1/admin/users             → /v1/admin/users
+/api/v1/admin/users/[id]        → /v1/admin/users/{id}
+/api/v1/admin/users/[id]/force-password-reset
+/api/v1/admin/users/[id]/resend-invite
+/api/v1/admin/schedules         → /v1/admin/schedules
+/api/v1/admin/schedules/[id]    → /v1/admin/schedules/{id}
+/api/v1/admin/affiliates        → /v1/admin/affiliates
+/api/v1/admin/reports           → /v1/admin/reports
+/api/v1/admin/emails            → /v1/admin/emails
+/api/v1/admin/plans             → /v1/admin/plans
+/api/v1/admin/system/health     → /v1/admin/system/health
+```
+
+---
+
 ## Related Documentation
 
 - [User Onboarding](./USER_ONBOARDING.md) - User setup flow
@@ -420,3 +487,4 @@ This prevents confusion between platform and tenant permissions.
 - [Branding](./BRANDING.md) - White-label branding system
 - [Email System](./EMAIL_SYSTEM.md) - Email delivery infrastructure
 - [Title Company Onboarding](./TITLE_COMPANY_ONBOARDING.md) - Affiliate setup
+- [Schedules](./SCHEDULES.md) - Scheduling system documentation

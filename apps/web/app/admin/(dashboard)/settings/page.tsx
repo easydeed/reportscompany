@@ -3,19 +3,61 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Database,
   Server,
   Mail,
   ExternalLink,
+  Activity,
+  HardDrive,
+  RefreshCw,
+  Loader2,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
 } from "lucide-react"
+
+interface SystemHealth {
+  timestamp: string
+  database: {
+    status: string
+    size_mb?: number
+    users?: number
+    accounts?: number
+    reports_24h?: number
+    active_schedules?: number
+    recent_failures?: number
+    error?: string
+  }
+  redis: {
+    status: string
+    queue_depth?: number
+    error?: string
+    message?: string
+  }
+  worker: {
+    status: string
+    recent_completed_10m?: number
+    currently_processing?: number
+    pending?: number
+    error?: string
+  }
+  system: {
+    environment?: string
+    api_base?: string
+  }
+}
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<any>(null)
+  const [health, setHealth] = useState<SystemHealth | null>(null)
+  const [healthLoading, setHealthLoading] = useState(false)
 
   useEffect(() => {
     fetchStats()
+    fetchHealth()
   }, [])
 
   async function fetchStats() {
@@ -32,22 +74,189 @@ export default function SettingsPage() {
     }
   }
 
+  async function fetchHealth() {
+    setHealthLoading(true)
+    try {
+      const res = await fetch("/api/v1/admin/system/health", { credentials: "include" })
+      if (res.ok) {
+        const data = await res.json()
+        setHealth(data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch health:", error)
+    } finally {
+      setHealthLoading(false)
+    }
+  }
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "healthy":
+      case "active":
+        return <Badge className="bg-emerald-100 text-emerald-700"><CheckCircle className="h-3 w-3 mr-1" />Healthy</Badge>
+      case "idle":
+        return <Badge className="bg-blue-100 text-blue-700"><Clock className="h-3 w-3 mr-1" />Idle</Badge>
+      case "idle_with_pending":
+        return <Badge className="bg-amber-100 text-amber-700"><AlertTriangle className="h-3 w-3 mr-1" />Pending</Badge>
+      case "unhealthy":
+        return <Badge className="bg-red-100 text-red-700"><AlertTriangle className="h-3 w-3 mr-1" />Unhealthy</Badge>
+      default:
+        return <Badge className="bg-slate-100 text-slate-600">Unknown</Badge>
+    }
+  }
+
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
-        <p className="text-slate-500 mt-1">System configuration and integrations</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
+          <p className="text-slate-500 mt-1">System configuration and integrations</p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={fetchHealth}
+          disabled={healthLoading}
+          className="border-slate-300 text-slate-600 hover:bg-slate-50"
+        >
+          {healthLoading ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4 mr-2" />
+          )}
+          Refresh Health
+        </Button>
       </div>
 
-      {/* System Status */}
+      {/* Live System Health */}
+      {health && (
+        <Card className="bg-white border-slate-200 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-slate-900 flex items-center gap-2">
+              <Activity className="h-5 w-5 text-violet-500" />
+              Live System Health
+            </CardTitle>
+            <CardDescription className="text-slate-500">
+              Last checked: {new Date(health.timestamp).toLocaleString()}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Database */}
+              <Card className="bg-slate-50 border-slate-200">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Database className="h-5 w-5 text-blue-500" />
+                      <span className="font-medium text-slate-900">Database</span>
+                    </div>
+                    {getStatusBadge(health.database.status)}
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    {health.database.size_mb && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Size</span>
+                        <span className="text-slate-700">{health.database.size_mb} MB</span>
+                      </div>
+                    )}
+                    {health.database.users !== undefined && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Users</span>
+                        <span className="text-slate-700">{health.database.users}</span>
+                      </div>
+                    )}
+                    {health.database.accounts !== undefined && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Accounts</span>
+                        <span className="text-slate-700">{health.database.accounts}</span>
+                      </div>
+                    )}
+                    {health.database.recent_failures !== undefined && health.database.recent_failures > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-red-500">Failures (1h)</span>
+                        <span className="text-red-600 font-medium">{health.database.recent_failures}</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Redis / Queue */}
+              <Card className="bg-slate-50 border-slate-200">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <HardDrive className="h-5 w-5 text-red-500" />
+                      <span className="font-medium text-slate-900">Redis Queue</span>
+                    </div>
+                    {getStatusBadge(health.redis.status)}
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    {health.redis.queue_depth !== undefined && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Queue Depth</span>
+                        <span className={`font-medium ${health.redis.queue_depth > 10 ? 'text-amber-600' : 'text-slate-700'}`}>
+                          {health.redis.queue_depth}
+                        </span>
+                      </div>
+                    )}
+                    {health.redis.message && (
+                      <p className="text-slate-400 text-xs">{health.redis.message}</p>
+                    )}
+                    {health.redis.error && (
+                      <p className="text-red-500 text-xs">{health.redis.error}</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Worker */}
+              <Card className="bg-slate-50 border-slate-200">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Server className="h-5 w-5 text-emerald-500" />
+                      <span className="font-medium text-slate-900">Worker</span>
+                    </div>
+                    {getStatusBadge(health.worker.status)}
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    {health.worker.currently_processing !== undefined && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Processing</span>
+                        <span className="text-blue-600 font-medium">{health.worker.currently_processing}</span>
+                      </div>
+                    )}
+                    {health.worker.pending !== undefined && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Pending</span>
+                        <span className={`font-medium ${health.worker.pending > 5 ? 'text-amber-600' : 'text-slate-700'}`}>
+                          {health.worker.pending}
+                        </span>
+                      </div>
+                    )}
+                    {health.worker.recent_completed_10m !== undefined && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Completed (10m)</span>
+                        <span className="text-emerald-600 font-medium">{health.worker.recent_completed_10m}</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Static System Status */}
       <Card className="bg-white border-slate-200 shadow-sm">
         <CardHeader>
           <CardTitle className="text-slate-900 flex items-center gap-2">
             <Server className="h-5 w-5 text-slate-500" />
-            System Status
+            Infrastructure
           </CardTitle>
-          <CardDescription className="text-slate-500">Current system health and connectivity</CardDescription>
+          <CardDescription className="text-slate-500">Connected services and providers</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -56,7 +265,7 @@ export default function SettingsPage() {
                 <Database className="h-5 w-5 text-emerald-500" />
                 <div>
                   <p className="text-slate-900 font-medium">Database</p>
-                  <p className="text-xs text-slate-400">PostgreSQL</p>
+                  <p className="text-xs text-slate-400">PostgreSQL on Render</p>
                 </div>
               </div>
               <Badge className="bg-emerald-100 text-emerald-700">Connected</Badge>
@@ -66,7 +275,7 @@ export default function SettingsPage() {
                 <Server className="h-5 w-5 text-emerald-500" />
                 <div>
                   <p className="text-slate-900 font-medium">API Server</p>
-                  <p className="text-xs text-slate-400">FastAPI</p>
+                  <p className="text-xs text-slate-400">FastAPI on Render</p>
                 </div>
               </div>
               <Badge className="bg-emerald-100 text-emerald-700">Online</Badge>

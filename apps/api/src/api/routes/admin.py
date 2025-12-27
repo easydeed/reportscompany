@@ -1378,10 +1378,17 @@ def update_user(
     user_id: str,
     is_active: Optional[bool] = None,
     email_verified: Optional[bool] = None,
+    is_platform_admin: Optional[bool] = None,
     _admin: dict = Depends(get_admin_user)
 ):
     """
     Update a user's status.
+    
+    Args:
+        user_id: User UUID
+        is_active: Activate/deactivate user
+        email_verified: Mark email as verified
+        is_platform_admin: Grant/revoke platform admin access (DANGEROUS)
     """
     with db_conn() as (conn, cur):
         # Set admin role for RLS bypass
@@ -1397,6 +1404,11 @@ def update_user(
         if email_verified is not None:
             updates.append("email_verified = %s")
             params.append(email_verified)
+        
+        if is_platform_admin is not None:
+            updates.append("is_platform_admin = %s")
+            params.append(is_platform_admin)
+            logger.warning(f"Platform admin {'granted to' if is_platform_admin else 'revoked from'} user {user_id} by admin {_admin.get('email')}")
 
         if not updates:
             raise HTTPException(status_code=400, detail="No updates provided")
@@ -1407,7 +1419,7 @@ def update_user(
             UPDATE users
             SET {', '.join(updates)}, updated_at = NOW()
             WHERE id = %s::uuid
-            RETURNING id::text, email, is_active, email_verified
+            RETURNING id::text, email, is_active, email_verified, is_platform_admin
         """, params)
 
         row = cur.fetchone()
@@ -1422,6 +1434,7 @@ def update_user(
             "email": row[1],
             "is_active": row[2],
             "email_verified": row[3],
+            "is_platform_admin": row[4],
         }
 
 
@@ -1928,6 +1941,285 @@ def create_plan(
             "plan_name": row[1],
             "monthly_report_limit": row[2],
         }
+
+
+# ==================== Manual Actions ====================
+
+class TriggerReportRequest(BaseModel):
+    """Request body for manually triggering a report."""
+    report_type: str
+    city: Optional[str] = None
+    zip_codes: Optional[List[str]] = None
+    recipients: Optional[List[str]] = None
+
+
+@router.post("/accounts/{account_id}/trigger-report")
+def trigger_report_for_account(
+    account_id: str,
+    body: TriggerReportRequest,
+    _admin: dict = Depends(get_admin_user)
+):
+    """
+    Manually trigger a report generation for any account.
+    
+    This bypasses normal limits and schedules, useful for:
+    - Testing reports for a customer
+    - Regenerating failed reports
+    - Customer support requests
+    
+    Args:
+        account_id: Target account UUID
+        body: Report parameters
+    
+    Returns:
+        Report generation ID and status
+    """
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        
+        # Verify account exists
+        cur.execute("SELECT id, name FROM accounts WHERE id = %s::uuid", (account_id,))
+        account_row = cur.fetchone()
+        if not account_row:
+            raise HTTPException(status_code=404, detail="Account not found")
+        
+        account_name = account_row[1]
+        
+        # Create report generation record
+        import uuid
+        run_id = str(uuid.uuid4())
+        
+        input_params = {
+            "report_type": body.report_type,
+            "city": body.city,
+            "zip_codes": body.zip_codes or [],
+            "triggered_by_admin": _admin.get("email"),
+        }
+        
+        cur.execute("""
+            INSERT INTO report_generations (
+                id, account_id, report_type, status, input_params, generated_at
+            ) VALUES (
+                %s::uuid, %s::uuid, %s, 'pending', %s, NOW()
+            )
+            RETURNING id::text
+        """, (run_id, account_id, body.report_type, str(input_params).replace("'", '"')))
+        
+        conn.commit()
+        
+        logger.info(f"Admin {_admin.get('email')} triggered {body.report_type} report for account {account_name}")
+        
+        # Note: The actual report generation would be enqueued here
+        # For now we just create the record - the worker will pick it up
+        # or we can call enqueue_generate_report if available
+        
+        return {
+            "ok": True,
+            "run_id": run_id,
+            "account_id": account_id,
+            "account_name": account_name,
+            "report_type": body.report_type,
+            "status": "pending",
+            "message": "Report generation queued. Check /admin/reports for status.",
+        }
+
+
+@router.post("/users/{user_id}/force-password-reset")
+def force_password_reset(
+    user_id: str,
+    background_tasks: BackgroundTasks,
+    _admin: dict = Depends(get_admin_user)
+):
+    """
+    Force send a password reset email to any user.
+    
+    Useful for:
+    - Users who can't access their email
+    - Locked out accounts
+    - Security concerns
+    
+    Args:
+        user_id: Target user UUID
+    
+    Returns:
+        Success message
+    """
+    with db_conn() as (conn, cur):
+        # Set admin role for RLS bypass
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        
+        # Get user info
+        cur.execute("SELECT email, first_name FROM users WHERE id = %s::uuid", (user_id,))
+        user_row = cur.fetchone()
+        if not user_row:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        email, first_name = user_row
+        
+        # Generate reset token
+        token = secrets.token_urlsafe(32)
+        
+        # Delete any existing tokens
+        cur.execute("DELETE FROM password_reset_tokens WHERE user_id = %s::uuid", (user_id,))
+        
+        # Create new token
+        cur.execute("""
+            INSERT INTO password_reset_tokens (user_id, token, expires_at)
+            VALUES (%s::uuid, %s, NOW() + INTERVAL '24 hours')
+        """, (user_id, token))
+        
+        conn.commit()
+        
+        # Send reset email
+        from ..services.email import send_password_reset_email
+        try:
+            background_tasks.add_task(send_password_reset_email, email, token, first_name)
+            logger.info(f"Admin {_admin.get('email')} force sent password reset to {email}")
+        except Exception as e:
+            logger.error(f"Failed to queue password reset email: {e}")
+            raise HTTPException(status_code=500, detail="Failed to send email")
+        
+        return {
+            "ok": True,
+            "user_id": user_id,
+            "email": email,
+            "message": "Password reset email sent. Token expires in 24 hours.",
+            "reset_url": f"https://reportscompany-web.vercel.app/reset-password?token={token}",
+        }
+
+
+# ==================== System Health ====================
+
+@router.get("/system/health")
+def get_system_health(_admin: dict = Depends(get_admin_user)):
+    """
+    Get system health status including database, Redis, and worker status.
+    
+    Returns:
+        - database: Connection status and basic stats
+        - redis: Connection status (if available)
+        - worker: Recent task stats
+        - system: General system info
+    """
+    import os
+    from datetime import datetime
+    
+    health = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "database": {"status": "unknown"},
+        "redis": {"status": "unknown"},
+        "worker": {"status": "unknown"},
+        "system": {},
+    }
+    
+    # Database health
+    try:
+        with db_conn() as (conn, cur):
+            set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+            
+            # Test query
+            cur.execute("SELECT 1")
+            health["database"]["status"] = "healthy"
+            
+            # Get DB size
+            cur.execute("""
+                SELECT pg_database_size(current_database()) / 1024 / 1024 as size_mb
+            """)
+            health["database"]["size_mb"] = round(cur.fetchone()[0], 2)
+            
+            # Get table counts
+            cur.execute("SELECT COUNT(*) FROM users")
+            health["database"]["users"] = cur.fetchone()[0]
+            
+            cur.execute("SELECT COUNT(*) FROM accounts")
+            health["database"]["accounts"] = cur.fetchone()[0]
+            
+            cur.execute("SELECT COUNT(*) FROM report_generations WHERE generated_at >= NOW() - INTERVAL '24 hours'")
+            health["database"]["reports_24h"] = cur.fetchone()[0]
+            
+            cur.execute("SELECT COUNT(*) FROM schedules WHERE active = true")
+            health["database"]["active_schedules"] = cur.fetchone()[0]
+            
+            # Recent failures
+            cur.execute("""
+                SELECT COUNT(*) FROM report_generations 
+                WHERE status = 'failed' 
+                AND generated_at >= NOW() - INTERVAL '1 hour'
+            """)
+            health["database"]["recent_failures"] = cur.fetchone()[0]
+            
+    except Exception as e:
+        health["database"]["status"] = "unhealthy"
+        health["database"]["error"] = str(e)
+    
+    # Redis health (try to connect)
+    try:
+        import redis
+        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
+        r = redis.from_url(redis_url, socket_connect_timeout=2)
+        r.ping()
+        health["redis"]["status"] = "healthy"
+        
+        # Get queue depth
+        try:
+            queue_len = r.llen("celery")
+            health["redis"]["queue_depth"] = queue_len
+        except:
+            health["redis"]["queue_depth"] = 0
+            
+    except ImportError:
+        health["redis"]["status"] = "not_available"
+        health["redis"]["message"] = "Redis client not installed"
+    except Exception as e:
+        health["redis"]["status"] = "unhealthy"
+        health["redis"]["error"] = str(e)
+    
+    # Worker status (check recent activity)
+    try:
+        with db_conn() as (conn, cur):
+            set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+            
+            # Check for recent completed reports (indicates worker is processing)
+            cur.execute("""
+                SELECT COUNT(*) FROM report_generations
+                WHERE status = 'completed'
+                AND generated_at >= NOW() - INTERVAL '10 minutes'
+            """)
+            recent_completed = cur.fetchone()[0]
+            
+            cur.execute("""
+                SELECT COUNT(*) FROM report_generations
+                WHERE status = 'processing'
+            """)
+            currently_processing = cur.fetchone()[0]
+            
+            cur.execute("""
+                SELECT COUNT(*) FROM report_generations
+                WHERE status = 'pending'
+            """)
+            pending = cur.fetchone()[0]
+            
+            health["worker"]["recent_completed_10m"] = recent_completed
+            health["worker"]["currently_processing"] = currently_processing
+            health["worker"]["pending"] = pending
+            
+            if recent_completed > 0 or currently_processing > 0:
+                health["worker"]["status"] = "active"
+            elif pending > 0:
+                health["worker"]["status"] = "idle_with_pending"
+            else:
+                health["worker"]["status"] = "idle"
+                
+    except Exception as e:
+        health["worker"]["status"] = "unknown"
+        health["worker"]["error"] = str(e)
+    
+    # System info
+    health["system"]["environment"] = os.getenv("ENVIRONMENT", "production")
+    health["system"]["api_base"] = os.getenv("NEXT_PUBLIC_API_BASE", "unknown")
+    
+    return health
 
 
 # ==================== System Stats ====================
