@@ -343,33 +343,52 @@ async def generate_sample_jpg(
         )
     
     try:
+        # Use same pattern as social_engine.py (proven working)
+        print(f"[Branding JPG] Calling PDFShift with source: {preview_url}")
+        
         async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
                 "https://api.pdfshift.io/v3/convert/image",
-                auth=("api", PDFSHIFT_API_KEY),
+                auth=("api", PDFSHIFT_API_KEY),  # Basic auth with "api" as username
                 json={
                     "source": preview_url,
                     "format": "jpeg",
                     "width": 1080,
                     "height": 1920,
                     "quality": 90,
-                    "delay": 3000,
+                    "delay": 5000,  # 5s delay for fonts/images
                     "wait_for_network": True,
                 },
             )
             
+            print(f"[Branding JPG] PDFShift response status: {response.status_code}")
+            
             if response.status_code != 200:
-                print(f"[Branding JPG] PDFShift error: {response.status_code} - {response.text}")
+                error_detail = response.text[:1000]
+                print(f"[Branding JPG] PDFShift error response: {error_detail}")
+                
+                # Try to parse error message
+                try:
+                    error_json = response.json()
+                    error_msg = error_json.get("error", error_json.get("message", "Unknown error"))
+                except Exception:
+                    error_msg = f"HTTP {response.status_code}"
+                
                 raise HTTPException(
                     status_code=502,
-                    detail="Failed to generate image. Please try again."
+                    detail=f"Image generation failed: {error_msg}"
                 )
             
             jpg_bytes = response.content
+            print(f"[Branding JPG] Success! Generated {len(jpg_bytes):,} bytes")
+            
     except httpx.TimeoutException:
+        print(f"[Branding JPG] Timeout after 120s - source: {preview_url}")
         raise HTTPException(status_code=504, detail="Image generation timed out. Please try again.")
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"[Branding JPG] Error: {e}")
+        print(f"[Branding JPG] Unexpected error: {type(e).__name__}: {e}")
         raise HTTPException(status_code=500, detail=f"Image generation failed: {str(e)}")
     
     # Return JPG as downloadable file
