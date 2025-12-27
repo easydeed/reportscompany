@@ -114,7 +114,7 @@ export default async function PrintReport({ params }: Props) {
     "inventory": { filename: 'trendy-inventory.html', builder: buildInventoryHtml },
     "closed": { filename: 'trendy-closed.html', builder: buildClosedHtml },
     "price_bands": { filename: 'trendy-price-bands.html', builder: buildPriceBandsHtml },
-    "open_houses": { filename: 'trendy-open-houses.html', builder: buildInventoryHtml },  // Reuse inventory builder
+    "open_houses": { filename: 'trendy-inventory.html', builder: buildInventoryHtml },  // Reuse inventory template
     "new_listings_gallery": { filename: 'trendy-new-listings-gallery.html', builder: buildNewListingsGalleryHtml },
     "featured_listings": { filename: 'trendy-featured-listings.html', builder: buildFeaturedListingsHtml },
   };

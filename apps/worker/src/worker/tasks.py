@@ -1,6 +1,8 @@
 from .app import celery
-import os, time, json, psycopg, redis, hmac, hashlib, httpx
+import os, time, json, psycopg, redis, hmac, hashlib, httpx, logging
 from datetime import datetime, date
+
+logger = logging.getLogger(__name__)
 from psycopg import sql
 from .vendors.simplyrets import fetch_properties
 from .compute.extract import PropertyDataExtractor
