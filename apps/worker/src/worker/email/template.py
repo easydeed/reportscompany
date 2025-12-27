@@ -119,7 +119,9 @@ def _format_price(price: Optional[float]) -> str:
     if price is None:
         return "N/A"
     if price >= 1_000_000:
-        return f"${price / 1_000_000:.2f}M".rstrip('0').rstrip('.')  + "M" if price % 1_000_000 == 0 else f"${price / 1_000_000:.2f}M"
+        # Format as millions, strip trailing zeros and decimal point
+        formatted = f"${price / 1_000_000:.2f}".rstrip('0').rstrip('.')
+        return f"{formatted}M"
     if price >= 1_000:
         return f"${price / 1_000:.0f}K"
     return f"${price:,.0f}"

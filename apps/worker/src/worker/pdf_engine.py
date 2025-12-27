@@ -37,7 +37,7 @@ PDF_DIR = os.getenv("PDF_DIR", "/tmp/mr_reports")
 Path(PDF_DIR).mkdir(parents=True, exist_ok=True)
 
 
-def render_pdf_playwright(run_id: str, account_id: str, html_content: Optional[str] = None) -> Tuple[str, str]:
+def render_pdf_playwright(run_id: str, account_id: str, html_content: Optional[str] = None, print_base: Optional[str] = None) -> Tuple[str, str]:
     """
     Render PDF using local Playwright/Chromium.
     
@@ -45,6 +45,7 @@ def render_pdf_playwright(run_id: str, account_id: str, html_content: Optional[s
         run_id: Report generation ID
         account_id: Account UUID
         html_content: Optional HTML string (if None, navigates to print page)
+        print_base: Base URL for print pages (uses PRINT_BASE if not provided)
     
     Returns:
         (pdf_path, print_url): Local path to PDF and the URL that was rendered
@@ -54,7 +55,8 @@ def render_pdf_playwright(run_id: str, account_id: str, html_content: Optional[s
     """
     from playwright.sync_api import sync_playwright
     
-    print_url = f"{PRINT_BASE}/print/{run_id}"
+    effective_base = print_base or PRINT_BASE
+    print_url = f"{effective_base}/print/{run_id}"
     pdf_path = os.path.join(PDF_DIR, f"{run_id}.pdf")
     
     print(f"🎭 Rendering PDF with Playwright: {print_url}")
@@ -89,7 +91,7 @@ def render_pdf_playwright(run_id: str, account_id: str, html_content: Optional[s
     return pdf_path, print_url
 
 
-def render_pdf_pdfshift(run_id: str, account_id: str, html_content: Optional[str] = None) -> Tuple[str, str]:
+def render_pdf_pdfshift(run_id: str, account_id: str, html_content: Optional[str] = None, print_base: Optional[str] = None) -> Tuple[str, str]:
     """
     Render PDF using PDFShift cloud API.
     
@@ -97,6 +99,7 @@ def render_pdf_pdfshift(run_id: str, account_id: str, html_content: Optional[str
         run_id: Report generation ID
         account_id: Account UUID
         html_content: Optional HTML string (if None, uses print page URL)
+        print_base: Base URL for print pages (uses PRINT_BASE if not provided)
     
     Returns:
         (pdf_path, print_url): Local path to PDF and the URL/HTML that was rendered
@@ -108,7 +111,8 @@ def render_pdf_pdfshift(run_id: str, account_id: str, html_content: Optional[str
     if not PDFSHIFT_API_KEY:
         raise Exception("PDFSHIFT_API_KEY environment variable is required when PDF_ENGINE=pdfshift")
     
-    print_url = f"{PRINT_BASE}/print/{run_id}"
+    effective_base = print_base or PRINT_BASE
+    print_url = f"{effective_base}/print/{run_id}"
     pdf_path = os.path.join(PDF_DIR, f"{run_id}.pdf")
     
     # Prepare request payload
@@ -226,17 +230,16 @@ def render_pdf(
         ValueError: If PDF_ENGINE is invalid
         Exception: If rendering fails
     """
-    # Override global PRINT_BASE if provided
-    global PRINT_BASE
-    if print_base:
-        PRINT_BASE = print_base
+    # Use local variable to avoid race conditions in concurrent workers
+    # DO NOT mutate global PRINT_BASE - it causes race conditions!
+    effective_print_base = print_base or PRINT_BASE
     
-    print(f"📄 PDF Engine: {PDF_ENGINE}")
+    print(f"📄 PDF Engine: {PDF_ENGINE}, print_base: {effective_print_base}")
     
     if PDF_ENGINE == "playwright":
-        return render_pdf_playwright(run_id, account_id, html_content)
+        return render_pdf_playwright(run_id, account_id, html_content, effective_print_base)
     elif PDF_ENGINE == "pdfshift":
-        return render_pdf_pdfshift(run_id, account_id, html_content)
+        return render_pdf_pdfshift(run_id, account_id, html_content, effective_print_base)
     else:
         raise ValueError(f"Invalid PDF_ENGINE: {PDF_ENGINE}. Must be 'playwright' or 'pdfshift'")
 
