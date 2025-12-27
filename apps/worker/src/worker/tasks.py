@@ -276,8 +276,15 @@ def _deliver_webhooks(account_id: str, event: str, payload: dict):
                   VALUES (%s,%s,%s,%s::jsonb,%s,%s,%s)
                 """, (account_id, hook_id, event, payload_json, status_code, elapsed, error))
 
-@celery.task(name="generate_report")
-def generate_report(run_id: str, account_id: str, report_type: str, params: dict):
+@celery.task(
+    name="generate_report",
+    bind=True,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=600,  # Max 10 minutes between retries
+    retry_kwargs={"max_retries": 3},
+)
+def generate_report(self, run_id: str, account_id: str, report_type: str, params: dict):
     started = time.perf_counter()
     pdf_url = html_url = None
     schedule_id = (params or {}).get("schedule_id")  # Check if this is a scheduled report

@@ -11,7 +11,12 @@ from .template import schedule_email_html, schedule_email_subject
 logger = logging.getLogger(__name__)
 
 WEB_BASE = os.getenv("WEB_BASE", "http://localhost:3000")
-EMAIL_UNSUB_SECRET = os.getenv("EMAIL_UNSUB_SECRET", "change-me-in-production")
+
+# CRITICAL: This MUST be set in production environment variables!
+EMAIL_UNSUB_SECRET = os.getenv("EMAIL_UNSUB_SECRET")
+if not EMAIL_UNSUB_SECRET:
+    logger.critical("⚠️  EMAIL_UNSUB_SECRET not set! Unsubscribe links will fail in production!")
+    EMAIL_UNSUB_SECRET = "dev-only-secret-do-not-use-in-production"
 
 
 def generate_unsubscribe_token(account_id: str, email: str) -> str:

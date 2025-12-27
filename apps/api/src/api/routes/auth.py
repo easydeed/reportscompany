@@ -28,17 +28,54 @@ class RegisterIn(BaseModel):
 
 @router.post("/auth/login")
 def login(body: LoginIn, response: Response):
+    email = body.email.strip().lower()
+    
     with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
         with conn.cursor() as cur:
+            # Check for too many failed login attempts (brute-force protection)
+            cur.execute("""
+                SELECT COUNT(*) FROM login_attempts 
+                WHERE email = %s 
+                AND attempted_at > NOW() - INTERVAL '15 minutes'
+                AND success = FALSE
+            """, (email,))
+            failed_attempts = cur.fetchone()[0]
+            
+            if failed_attempts >= 5:
+                logger.warning(f"Login blocked for {email}: too many failed attempts")
+                raise HTTPException(
+                    status_code=429, 
+                    detail="Too many failed login attempts. Please try again in 15 minutes."
+                )
+            
             cur.execute("""
               SELECT id::text, account_id::text, password_hash FROM users WHERE email=%s AND is_active=TRUE
-            """, (body.email,))
+            """, (email,))
             row = cur.fetchone()
+            
+            # Log failed attempt if user not found
             if not row:
+                cur.execute("""
+                    INSERT INTO login_attempts (email, success, ip_address)
+                    VALUES (%s, FALSE, NULL)
+                """, (email,))
                 raise HTTPException(status_code=401, detail="Invalid credentials")
+            
             user_id, default_account_id, pw_hash = row
+            
             if not pw_hash or not check_password(body.password, pw_hash):
+                # Log failed attempt
+                cur.execute("""
+                    INSERT INTO login_attempts (email, success, ip_address)
+                    VALUES (%s, FALSE, NULL)
+                """, (email,))
                 raise HTTPException(status_code=401, detail="Invalid credentials")
+            
+            # Log successful login
+            cur.execute("""
+                INSERT INTO login_attempts (email, success, ip_address)
+                VALUES (%s, TRUE, NULL)
+            """, (email,))
             
             # Prioritize INDUSTRY_AFFILIATE account if user belongs to one
             # This ensures affiliates land in their affiliate dashboard by default

@@ -103,8 +103,18 @@ def create_report(
     try:
         from ..worker_client import enqueue_generate_report
         enqueue_generate_report(row["id"], account_id, payload.report_type, params)
-    except Exception:
-        pass
+    except Exception as e:
+        # Log the error instead of swallowing it silently
+        import logging
+        logging.getLogger(__name__).error(f"Failed to enqueue report {row['id']}: {e}")
+        # Update report status to failed
+        with db_conn() as (conn2, cur2):
+            cur2.execute("""
+                UPDATE report_generations 
+                SET status='failed', error_message=%s 
+                WHERE id=%s
+            """, (f"Failed to enqueue: {str(e)}", row["id"]))
+            conn2.commit()
 
     return {"report_id": row["id"], "status": row["status"]}
 
