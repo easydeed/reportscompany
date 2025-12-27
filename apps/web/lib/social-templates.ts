@@ -15,20 +15,53 @@ const DEFAULT_PRIMARY_COLOR = "#7C3AED";
 const DEFAULT_ACCENT_COLOR = "#F26B2B";
 
 /**
+ * Escape HTML special characters to prevent XSS attacks.
+ * All user-provided strings must be passed through this function.
+ */
+function escapeHtml(unsafe: string | null | undefined): string {
+  if (unsafe == null) return "";
+  return String(unsafe)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+/**
+ * Sanitize a URL - only allow http, https, and data URLs
+ */
+function sanitizeUrl(url: string | null | undefined): string {
+  if (!url) return "";
+  const trimmed = String(url).trim();
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("data:")) {
+    return trimmed;
+  }
+  return "";
+}
+
+/**
  * Inject brand colors into social template
+ * All brand values are sanitized to prevent XSS
  */
 function injectBrand(html: string, brand: any): string {
   if (!brand) return html;
 
-  const primaryColor = brand.primary_color || DEFAULT_PRIMARY_COLOR;
-  const accentColor = brand.accent_color || DEFAULT_ACCENT_COLOR;
-  const brandName = brand.display_name || "TrendyReports";
-  const logoUrl = brand.logo_url || "";
-  const footerLogoUrl = brand.footer_logo_url || logoUrl;
-  const repPhotoUrl = brand.rep_photo_url || "";
-  const contactLine1 = brand.contact_line1 || "";
-  const contactLine2 = brand.contact_line2 || "";
-  const websiteUrl = brand.website_url || "";
+  // Sanitize color values - only allow valid hex colors
+  const colorRegex = /^#[0-9A-Fa-f]{6}$/;
+  const primaryColor = colorRegex.test(brand.primary_color) ? brand.primary_color : DEFAULT_PRIMARY_COLOR;
+  const accentColor = colorRegex.test(brand.accent_color) ? brand.accent_color : DEFAULT_ACCENT_COLOR;
+  
+  // Sanitize text values
+  const brandName = escapeHtml(brand.display_name) || "TrendyReports";
+  const contactLine1 = escapeHtml(brand.contact_line1) || "";
+  const contactLine2 = escapeHtml(brand.contact_line2) || "";
+  const websiteUrl = escapeHtml(brand.website_url) || "";
+  
+  // Sanitize URLs
+  const logoUrl = sanitizeUrl(brand.logo_url);
+  const footerLogoUrl = sanitizeUrl(brand.footer_logo_url) || logoUrl;
+  const repPhotoUrl = sanitizeUrl(brand.rep_photo_url);
 
   // Inject CSS color overrides
   const colorOverride = `
@@ -144,9 +177,10 @@ export function buildSocialMarketSnapshotHtml(
       : 0
   );
 
+  // All user-provided text is escaped to prevent XSS
   const replacements: Record<string, string> = {
-    "{{market_name}}": r.city || "Market",
-    "{{period_label}}": r.period_label || `Last ${lookback} days`,
+    "{{market_name}}": escapeHtml(r.city) || "Market",
+    "{{period_label}}": escapeHtml(r.period_label) || `Last ${lookback} days`,
     "{{report_date}}": r.report_date || new Date().toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -181,9 +215,10 @@ export function buildSocialNewListingsHtml(
 
   const newListingsCount = counts.NewListings ?? counts.Active ?? metrics.new_listings_count ?? 0;
 
+  // All user-provided text is escaped to prevent XSS
   const replacements: Record<string, string> = {
-    "{{market_name}}": r.city || "Market",
-    "{{period_label}}": r.period_label || `Last ${lookback} days`,
+    "{{market_name}}": escapeHtml(r.city) || "Market",
+    "{{period_label}}": escapeHtml(r.period_label) || `Last ${lookback} days`,
     "{{report_date}}": r.report_date || new Date().toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -221,9 +256,10 @@ export function buildSocialClosedHtml(
       : 0
   );
 
+  // All user-provided text is escaped to prevent XSS
   const replacements: Record<string, string> = {
-    "{{market_name}}": r.city || "Market",
-    "{{period_label}}": r.period_label || `Last ${lookback} days`,
+    "{{market_name}}": escapeHtml(r.city) || "Market",
+    "{{period_label}}": escapeHtml(r.period_label) || `Last ${lookback} days`,
     "{{report_date}}": r.report_date || new Date().toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -259,9 +295,10 @@ export function buildSocialInventoryHtml(
   const closedCount = counts.Closed ?? 0;
   const moi = metrics.months_of_inventory ?? (closedCount > 0 ? (activeCount / closedCount) * (lookback / 30) : 0);
 
+  // All user-provided text is escaped to prevent XSS
   const replacements: Record<string, string> = {
-    "{{market_name}}": r.city || "Market",
-    "{{period_label}}": r.period_label || `Last ${lookback} days`,
+    "{{market_name}}": escapeHtml(r.city) || "Market",
+    "{{period_label}}": escapeHtml(r.period_label) || `Last ${lookback} days`,
     "{{report_date}}": r.report_date || new Date().toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -292,20 +329,25 @@ export function buildSocialGalleryHtml(
   const r = data.result_json || data;
   const listings = r.listings || r.listings_sample || [];
 
-  // Get the first listing as the featured property
+  // Get the first listing as the featured property, with safe defaults
   const featured = listings[0] || {};
+  
+  // Check if we have a valid featured listing
+  const hasValidListing = featured && (featured.street_address || featured.list_price);
 
+  // All user-provided text is escaped to prevent XSS
+  // URLs are sanitized to prevent javascript: injection
   const replacements: Record<string, string> = {
-    "{{market_name}}": r.city || "Market",
-    "{{hero_photo_url}}": featured.hero_photo_url || "",
-    "{{list_price}}": formatCurrency(featured.list_price),
-    "{{street_address}}": featured.street_address || "Address not available",
-    "{{city}}": featured.city || r.city || "",
-    "{{zip_code}}": featured.zip_code || "",
-    "{{bedrooms}}": formatNumber(featured.bedrooms),
-    "{{bathrooms}}": formatDecimal(featured.bathrooms, 1),
-    "{{sqft}}": formatNumber(featured.sqft),
-    "{{days_on_market}}": formatNumber(featured.days_on_market || 0),
+    "{{market_name}}": escapeHtml(r.city) || "Market",
+    "{{hero_photo_url}}": sanitizeUrl(featured.hero_photo_url),
+    "{{list_price}}": hasValidListing ? formatCurrency(featured.list_price) : "—",
+    "{{street_address}}": escapeHtml(featured.street_address) || "Property Details Coming Soon",
+    "{{city}}": escapeHtml(featured.city || r.city) || "",
+    "{{zip_code}}": escapeHtml(featured.zip_code) || "",
+    "{{bedrooms}}": hasValidListing ? formatNumber(featured.bedrooms) : "—",
+    "{{bathrooms}}": hasValidListing ? formatDecimal(featured.bathrooms, 1) : "—",
+    "{{sqft}}": hasValidListing ? formatNumber(featured.sqft) : "—",
+    "{{days_on_market}}": hasValidListing ? formatNumber(featured.days_on_market || 0) : "—",
   };
 
   let html = templateHtml;
@@ -330,9 +372,10 @@ export function buildSocialPriceBandsHtml(
 
   const totalListings = bands.reduce((sum: number, b: any) => sum + (b.count || 0), 0);
 
+  // All user-provided text is escaped to prevent XSS
   const replacements: Record<string, string> = {
-    "{{market_name}}": r.city || "Market",
-    "{{period_label}}": r.period_label || `Last ${lookback} days`,
+    "{{market_name}}": escapeHtml(r.city) || "Market",
+    "{{period_label}}": escapeHtml(r.period_label) || `Last ${lookback} days`,
     "{{report_date}}": r.report_date || new Date().toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -348,13 +391,15 @@ export function buildSocialPriceBandsHtml(
   }
 
   // Build price bands visualization (top 3)
+  // All band labels are escaped to prevent XSS
   const topBands = bands.slice(0, 3);
   const bandsHtml = topBands.map((band: any) => {
     const percentage = totalListings > 0 ? ((band.count || 0) / totalListings) * 100 : 0;
+    const safeLabel = escapeHtml(band.label) || "—";
     return `
       <div class="price-band">
         <div class="band-header">
-          <div class="band-label">${band.label || "—"}</div>
+          <div class="band-label">${safeLabel}</div>
           <div class="band-count">${formatNumber(band.count)} listings</div>
         </div>
         <div class="band-bar-container">

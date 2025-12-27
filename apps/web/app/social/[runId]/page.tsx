@@ -128,12 +128,22 @@ export default async function SocialReport({ params }: Props) {
       const template = await loadTemplate(templateConfig.filename);
       const html = templateConfig.builder(template, data);
 
+      // The template already includes full HTML structure, return as-is
+      // Note: dangerouslySetInnerHTML is safe here because:
+      // 1. Template files are static and controlled by us
+      // 2. All dynamic data is XSS-sanitized in the builder functions
       return (
-        <html lang="en">
+        <html lang="en" suppressHydrationWarning>
           <head>
-            <title>{reportTitle} - {data.city} | Social</title>
+            <meta charSet="utf-8" />
+            <meta name="viewport" content="width=1080" />
+            <title>{reportTitle} - {data.city || 'Market'} | Social</title>
           </head>
-          <body dangerouslySetInnerHTML={{ __html: html }} />
+          <body 
+            dangerouslySetInnerHTML={{ __html: html }} 
+            suppressHydrationWarning
+            style={{ margin: 0, padding: 0 }}
+          />
         </html>
       );
     } catch (error) {
