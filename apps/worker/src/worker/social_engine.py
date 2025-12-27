@@ -65,16 +65,15 @@ def render_social_image(
     # PDFShift JPEG conversion
     # Docs: https://docs.pdfshift.io/
     response = httpx.post(
-        "https://api.pdfshift.io/v3/convert/jpeg",  # Correct JPEG endpoint
+        "https://api.pdfshift.io/v3/convert/jpeg",
         headers={
-            "X-API-Key": PDFSHIFT_API_KEY,  # Header auth per PDFShift docs
+            "X-API-Key": PDFSHIFT_API_KEY,
             "Content-Type": "application/json",
         },
         json={
             "source": social_url,
-            "width": 1080,
-            "height": 1920,
-            "quality": 90,
+            "viewport": "1080x1920",  # Browser viewport size
+            "full_page": True,        # Capture full page
             "delay": 3000,
             "wait_for_network": True,
         },
