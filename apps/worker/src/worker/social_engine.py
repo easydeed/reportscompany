@@ -2,7 +2,10 @@
 Social Image Generation Engine
 
 Generates 1080x1920 JPEG images for social media sharing (Instagram Stories, etc.)
-Uses Playwright for reliable browser-based screenshot generation.
+
+Strategy:
+- PRIMARY: PDFShift API (99% uptime, no server resources)
+- FALLBACK: Playwright (local Chromium, if PDFShift unavailable)
 
 Usage:
     from .social_engine import render_social_image
@@ -14,16 +17,19 @@ Usage:
     )
 
 Environment Variables:
-    PRINT_BASE: Base URL for social pages (default: http://localhost:3000)
-    SOCIAL_DIR: Directory to save generated images (default: /tmp/mr_social)
+    PDFSHIFT_API_KEY: API key for PDFShift (primary)
+    PRINT_BASE: Base URL for social pages
+    SOCIAL_DIR: Directory to save generated images
 """
 
 import os
+import httpx
 import asyncio
 from pathlib import Path
 from typing import Tuple, Optional
 
 # Configuration
+PDFSHIFT_API_KEY = os.getenv("PDFSHIFT_API_KEY", "")
 PRINT_BASE = os.getenv("PRINT_BASE", "http://localhost:3000")
 SOCIAL_DIR = os.getenv("SOCIAL_DIR", "/tmp/mr_social")
 
@@ -31,49 +37,100 @@ SOCIAL_DIR = os.getenv("SOCIAL_DIR", "/tmp/mr_social")
 Path(SOCIAL_DIR).mkdir(parents=True, exist_ok=True)
 
 
+def _render_with_pdfshift(url: str, output_path: str) -> bool:
+    """
+    PRIMARY: Render using PDFShift API.
+    
+    Benefits:
+    - 99% uptime SaaS
+    - No server resources used
+    - They handle browser maintenance
+    """
+    if not PDFSHIFT_API_KEY:
+        print("⚠️ PDFSHIFT_API_KEY not set, skipping PDFShift")
+        return False
+    
+    print(f"📱 [PDFShift] Rendering: {url}")
+    
+    # PDFShift image conversion
+    # Docs: https://pdfshift.io/documentation/image
+    payload = {
+        "source": url,
+        "format": "jpeg",
+        "width": 1080,
+        "height": 1920,
+        "quality": 90,
+        "delay": 3000,  # Wait for fonts/images
+        "wait_for_network": True,
+    }
+    
+    try:
+        response = httpx.post(
+            "https://api.pdfshift.io/v3/convert/image",
+            json=payload,
+            auth=("api", PDFSHIFT_API_KEY),
+            timeout=60.0
+        )
+        
+        if response.status_code == 200:
+            with open(output_path, "wb") as f:
+                f.write(response.content)
+            
+            file_size = len(response.content)
+            print(f"✅ [PDFShift] Generated: {output_path} ({file_size:,} bytes)")
+            return True
+        else:
+            print(f"❌ [PDFShift] Error {response.status_code}: {response.text[:200]}")
+            return False
+            
+    except Exception as e:
+        print(f"❌ [PDFShift] Failed: {e}")
+        return False
+
+
 async def _render_with_playwright(url: str, output_path: str) -> bool:
     """
-    Render social image using Playwright (headless browser).
+    FALLBACK: Render using local Playwright/Chromium.
     
-    This is the recommended approach for reliable screenshot generation.
+    Used when:
+    - PDFShift API key not configured
+    - PDFShift temporarily unavailable
     """
     try:
         from playwright.async_api import async_playwright
     except ImportError:
-        print("❌ Playwright not installed. Run: pip install playwright && playwright install chromium")
+        print("❌ [Playwright] Not installed. Run: pip install playwright && playwright install chromium")
         return False
     
-    print(f"📱 Rendering social image with Playwright: {url}")
+    print(f"📱 [Playwright] Rendering: {url}")
     
-    async with async_playwright() as p:
-        # Launch headless browser
-        browser = await p.chromium.launch(headless=True)
-        
-        # Create page with exact social media dimensions
-        page = await browser.new_page(
-            viewport={"width": 1080, "height": 1920},
-            device_scale_factor=1  # 1:1 pixel ratio for crisp images
-        )
-        
-        # Navigate to social page
-        await page.goto(url, wait_until="networkidle", timeout=30000)
-        
-        # Wait for fonts and images to load
-        await page.wait_for_timeout(2000)
-        
-        # Capture screenshot as JPEG
-        await page.screenshot(
-            path=output_path,
-            type="jpeg",
-            quality=90,
-            full_page=False,  # Capture viewport only (1080x1920)
-        )
-        
-        await browser.close()
-        
-        file_size = os.path.getsize(output_path)
-        print(f"✅ Social image generated: {output_path} ({file_size:,} bytes)")
-        return True
+    try:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page(
+                viewport={"width": 1080, "height": 1920},
+                device_scale_factor=1
+            )
+            
+            await page.goto(url, wait_until="networkidle", timeout=30000)
+            await page.wait_for_timeout(2000)  # Wait for fonts
+            
+            await page.screenshot(
+                path=output_path,
+                type="jpeg",
+                quality=90,
+                full_page=False,
+            )
+            
+            await browser.close()
+            
+            file_size = os.path.getsize(output_path)
+            print(f"✅ [Playwright] Generated: {output_path} ({file_size:,} bytes)")
+            return True
+            
+    except Exception as e:
+        print(f"❌ [Playwright] Failed: {e}")
+        return False
 
 
 def render_social_image(
@@ -84,112 +141,71 @@ def render_social_image(
     """
     Render social media image (1080x1920 JPEG).
     
-    Uses Playwright for browser-based screenshot generation.
-    Falls back to the social page URL if screenshot fails.
+    Strategy:
+    1. Try PDFShift first (99% uptime, no server load)
+    2. Fall back to Playwright if PDFShift fails
 
     Args:
         run_id: Report generation ID (UUID)
-        account_id: Account UUID (for logging/tracking)
+        account_id: Account UUID (for logging)
         print_base: Optional override for PRINT_BASE
 
     Returns:
         (jpg_path, social_url): Local path to JPEG and the source URL
 
     Raises:
-        Exception: If screenshot generation fails
+        Exception: If both methods fail
     """
     base_url = print_base or PRINT_BASE
-    
-    # Use API route for clean HTML (no nested document structure)
     social_url = f"{base_url}/api/social/{run_id}"
     jpg_path = os.path.join(SOCIAL_DIR, f"{run_id}_social.jpg")
     
     print(f"📱 Generating social image for run_id={run_id}")
-    print(f"   URL: {social_url}")
-    print(f"   Output: {jpg_path}")
     
-    # Run async playwright screenshot
+    # PRIMARY: PDFShift
+    if _render_with_pdfshift(social_url, jpg_path):
+        return jpg_path, social_url
+    
+    print("⚠️ PDFShift failed, trying Playwright fallback...")
+    
+    # FALLBACK: Playwright
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     
     try:
         success = loop.run_until_complete(_render_with_playwright(social_url, jpg_path))
-        
-        if not success:
-            raise Exception("Playwright screenshot failed - check logs for details")
-        
-        return jpg_path, social_url
-        
-    except Exception as e:
-        print(f"❌ Social image generation failed: {e}")
-        raise
+        if success:
+            return jpg_path, social_url
     finally:
         loop.close()
-
-
-def render_social_image_async(
-    run_id: str,
-    account_id: str,
-    print_base: Optional[str] = None
-) -> Tuple[str, str]:
-    """
-    Async version of render_social_image for use in async contexts.
-    """
-    base_url = print_base or PRINT_BASE
-    social_url = f"{base_url}/api/social/{run_id}"
-    jpg_path = os.path.join(SOCIAL_DIR, f"{run_id}_social.jpg")
     
-    # This should be called from an async context
-    import asyncio
-    loop = asyncio.get_event_loop()
-    success = loop.run_until_complete(_render_with_playwright(social_url, jpg_path))
-    
-    if not success:
-        raise Exception("Playwright screenshot failed")
-    
-    return jpg_path, social_url
-
-
-def check_playwright_installed() -> bool:
-    """Check if Playwright is properly installed."""
-    try:
-        from playwright.sync_api import sync_playwright
-        with sync_playwright() as p:
-            # Just check if chromium is available
-            browser = p.chromium.launch(headless=True)
-            browser.close()
-            return True
-    except Exception as e:
-        print(f"⚠️ Playwright check failed: {e}")
-        print("   Run: pip install playwright && playwright install chromium")
-        return False
+    raise Exception("Social image generation failed: both PDFShift and Playwright failed")
 
 
 def test_social_engine():
-    """Test the social image engine."""
+    """Test the social image engine configuration."""
     print("=" * 60)
-    print("Social Image Engine Test")
+    print("Social Image Engine Status")
     print("=" * 60)
-    print(f"PRINT_BASE: {PRINT_BASE}")
-    print(f"SOCIAL_DIR: {SOCIAL_DIR}")
     print()
+    
+    # Check PDFShift
+    if PDFSHIFT_API_KEY:
+        print("✅ PDFShift: API key configured (PRIMARY)")
+    else:
+        print("⚠️ PDFShift: No API key (PDFSHIFT_API_KEY not set)")
     
     # Check Playwright
-    print("Checking Playwright installation...")
-    if check_playwright_installed():
-        print("✅ Playwright is installed and working")
-    else:
-        print("❌ Playwright is not properly installed")
-        print()
-        print("To install Playwright:")
-        print("  pip install playwright")
-        print("  playwright install chromium")
-        return False
+    try:
+        from playwright.sync_api import sync_playwright
+        print("✅ Playwright: Installed (FALLBACK)")
+    except ImportError:
+        print("⚠️ Playwright: Not installed")
+        print("   Install: pip install playwright && playwright install chromium")
     
     print()
-    print("⚠️ To test image generation, provide a valid run_id:")
-    print("   from worker.social_engine import render_social_image")
-    print("   jpg_path, url = render_social_image('your-run-id', 'account-id')")
+    print(f"PRINT_BASE: {PRINT_BASE}")
+    print(f"SOCIAL_DIR: {SOCIAL_DIR}")
     
     return True
 
