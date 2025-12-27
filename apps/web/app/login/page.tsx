@@ -175,9 +175,9 @@ function LoginForm() {
                   />
                   Remember me
                 </label>
-                <span className="text-slate-400 cursor-not-allowed" title="Coming soon">
+                <Link href="/forgot-password" className="text-purple-600 hover:text-purple-700 font-medium">
                   Forgot password?
-                </span>
+                </Link>
               </div>
 
               <Button

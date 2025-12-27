@@ -3,10 +3,11 @@ from pydantic import BaseModel, EmailStr
 import psycopg
 import logging
 import uuid
-from datetime import datetime
+import secrets
+from datetime import datetime, timedelta
 from ..settings import settings
 from ..auth import sign_jwt, check_password, hash_password
-from ..services.email import send_welcome_email
+from ..services.email import send_welcome_email, send_password_reset_email
 
 logger = logging.getLogger(__name__)
 
@@ -362,8 +363,198 @@ def accept_invite(body: AcceptInviteRequest, response: Response):
             }
 
 
+# ============ Password Reset ============
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
 
 
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+@router.post("/auth/forgot-password")
+def forgot_password(body: ForgotPasswordRequest, background_tasks: BackgroundTasks):
+    """
+    Request a password reset email.
+    
+    Always returns success to prevent email enumeration attacks.
+    If the email exists, sends a reset link valid for 1 hour.
+    """
+    email = body.email.strip().lower()
+    
+    with psycopg.connect(settings.DATABASE_URL, autocommit=False) as conn:
+        with conn.cursor() as cur:
+            # Check if user exists
+            cur.execute("""
+                SELECT id::text, first_name, email
+                FROM users 
+                WHERE email = %s AND is_active = TRUE
+            """, (email,))
+            
+            user_row = cur.fetchone()
+            
+            if user_row:
+                user_id, first_name, user_email = user_row
+                
+                # Invalidate any existing reset tokens for this user
+                cur.execute("""
+                    UPDATE password_reset_tokens
+                    SET used_at = NOW()
+                    WHERE user_id = %s::uuid AND used_at IS NULL
+                """, (user_id,))
+                
+                # Generate secure token
+                reset_token = secrets.token_urlsafe(32)
+                expires_at = datetime.utcnow() + timedelta(hours=1)
+                
+                # Store token
+                cur.execute("""
+                    INSERT INTO password_reset_tokens (user_id, token, expires_at)
+                    VALUES (%s::uuid, %s, %s)
+                """, (user_id, reset_token, expires_at))
+                
+                conn.commit()
+                
+                # Send email in background
+                user_name = first_name or user_email.split('@')[0]
+                try:
+                    background_tasks.add_task(
+                        send_password_reset_email,
+                        user_email,
+                        user_name,
+                        reset_token
+                    )
+                    logger.info(f"Password reset email queued for {email}")
+                except Exception as e:
+                    logger.error(f"Failed to queue password reset email: {e}")
+            else:
+                # User not found - still commit to avoid timing attacks
+                conn.commit()
+                logger.info(f"Password reset requested for non-existent email: {email}")
+    
+    # Always return success to prevent email enumeration
+    return {
+        "ok": True,
+        "message": "If an account exists with this email, you will receive a password reset link."
+    }
+
+
+@router.post("/auth/reset-password")
+def reset_password(body: ResetPasswordRequest, response: Response):
+    """
+    Reset password using a valid reset token.
+    
+    Token is single-use and expires after 1 hour.
+    Returns new auth session on success.
+    """
+    token = body.token.strip()
+    new_password = body.new_password
+    
+    # Validate password
+    if len(new_password) < 8:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 8 characters long"
+        )
+    
+    with psycopg.connect(settings.DATABASE_URL, autocommit=False) as conn:
+        with conn.cursor() as cur:
+            # Find valid token
+            cur.execute("""
+                SELECT 
+                    prt.id::text,
+                    prt.user_id::text,
+                    prt.expires_at,
+                    prt.used_at,
+                    u.email,
+                    u.account_id::text,
+                    u.is_active
+                FROM password_reset_tokens prt
+                JOIN users u ON u.id = prt.user_id
+                WHERE prt.token = %s
+            """, (token,))
+            
+            row = cur.fetchone()
+            
+            if not row:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid or expired reset link. Please request a new one."
+                )
+            
+            token_id, user_id, expires_at, used_at, email, account_id, is_active = row
+            
+            # Check if already used
+            if used_at is not None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="This reset link has already been used. Please request a new one."
+                )
+            
+            # Check if expired
+            if expires_at < datetime.utcnow():
+                raise HTTPException(
+                    status_code=400,
+                    detail="This reset link has expired. Please request a new one."
+                )
+            
+            # Check if user is still active
+            if not is_active:
+                raise HTTPException(
+                    status_code=400,
+                    detail="This account has been deactivated."
+                )
+            
+            # Hash new password
+            password_hash = hash_password(new_password)
+            
+            # Update user's password
+            cur.execute("""
+                UPDATE users
+                SET password_hash = %s, password_changed_at = NOW(), updated_at = NOW()
+                WHERE id = %s::uuid
+            """, (password_hash, user_id))
+            
+            # Mark token as used
+            cur.execute("""
+                UPDATE password_reset_tokens
+                SET used_at = NOW()
+                WHERE id = %s::uuid
+            """, (token_id,))
+            
+            conn.commit()
+            
+            # Generate new auth session
+            access_token = sign_jwt(
+                {
+                    "sub": user_id,
+                    "user_id": user_id,
+                    "account_id": account_id,
+                    "scopes": ["reports:read", "reports:write"]
+                },
+                settings.JWT_SECRET,
+                ttl_seconds=3600
+            )
+            
+            # Set cookie
+            response.set_cookie(
+                key="mr_token",
+                value=access_token,
+                httponly=True,
+                secure=True,
+                samesite="lax",
+                max_age=3600
+            )
+            
+            logger.info(f"Password reset successful for user {user_id}")
+            
+            return {
+                "ok": True,
+                "message": "Password reset successful. You are now logged in.",
+                "access_token": access_token
+            }
 
 
 

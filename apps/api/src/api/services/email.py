@@ -348,3 +348,108 @@ def send_invite_email(
         html=html,
         tags=[{"name": "category", "value": "invite"}],
     )
+
+
+# ============ Password Reset Email ============
+
+def get_password_reset_email_html(user_name: str, reset_url: str) -> str:
+    """Generate password reset email HTML."""
+    return f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Your Password</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #7C3AED; margin: 0;">TrendyReports</h1>
+    </div>
+
+    <div style="background: linear-gradient(135deg, #7C3AED 0%, #a855f7 100%); color: white; padding: 30px; border-radius: 12px; margin-bottom: 30px;">
+        <h2 style="margin: 0 0 10px 0; font-size: 24px;">Password Reset Request</h2>
+        <p style="margin: 0; opacity: 0.9;">Hi {user_name}, we received a request to reset your password.</p>
+    </div>
+
+    <div style="margin-bottom: 30px;">
+        <p>Click the button below to reset your password. This link will expire in <strong>1 hour</strong>.</p>
+    </div>
+
+    <div style="text-align: center; margin-bottom: 30px;">
+        <a href="{reset_url}" style="display: inline-block; background: #7C3AED; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600;">Reset Password</a>
+    </div>
+
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+        <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;">
+            <strong>Didn't request this?</strong>
+        </p>
+        <p style="margin: 0; font-size: 14px; color: #666;">
+            If you didn't request a password reset, you can safely ignore this email. Your password won't be changed.
+        </p>
+    </div>
+
+    <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 8px; margin-bottom: 30px;">
+        <p style="margin: 0; color: #856404; font-size: 14px;">
+            <strong>Security tip:</strong> Never share this link with anyone. TrendyReports will never ask for your password via email.
+        </p>
+    </div>
+
+    <div style="border-top: 1px solid #e5e5e5; padding-top: 20px; text-align: center; color: #666; font-size: 14px;">
+        <p>If the button doesn't work, copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; color: #7C3AED;">{reset_url}</p>
+        <p style="margin-top: 20px;">
+            <a href="{email_service.app_base}" style="color: #7C3AED; text-decoration: none;">TrendyReports</a>
+        </p>
+    </div>
+</body>
+</html>
+"""
+
+
+def get_password_reset_email_text(user_name: str, reset_url: str) -> str:
+    """Generate password reset email plain text."""
+    return f"""
+Password Reset Request
+
+Hi {user_name},
+
+We received a request to reset your password. Click the link below to reset it:
+
+{reset_url}
+
+This link will expire in 1 hour.
+
+Didn't request this?
+If you didn't request a password reset, you can safely ignore this email. Your password won't be changed.
+
+Security tip: Never share this link with anyone.
+
+- The TrendyReports Team
+"""
+
+
+def send_password_reset_email(email: str, user_name: str, reset_token: str) -> Dict[str, Any]:
+    """
+    Send password reset email.
+
+    Args:
+        email: User's email address
+        user_name: User's display name
+        reset_token: Password reset token
+
+    Returns:
+        Result from email service
+    """
+    reset_url = f"{email_service.app_base}/reset-password?token={reset_token}"
+
+    html = get_password_reset_email_html(user_name, reset_url)
+    text = get_password_reset_email_text(user_name, reset_url)
+
+    return email_service.send_email_sync(
+        to=email,
+        subject="Reset your TrendyReports password",
+        html=html,
+        text=text,
+        tags=[{"name": "category", "value": "password-reset"}],
+    )
