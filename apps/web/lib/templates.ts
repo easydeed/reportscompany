@@ -336,18 +336,18 @@ export function buildMarketSnapshotHtml(
     
     // Core indicators
     "{{new_listings}}": formatNumber(newListingsCount),  // New listings in period
-    "{{new_listings_delta}}": "0", // TODO: Calculate from historical
-    "{{new_listings_delta_class}}": "up",
+    "{{new_listings_delta}}": "",  // Historical comparison not yet implemented
+    "{{new_listings_delta_class}}": "neutral",
     "{{new_listings_fill}}": String(Math.min(100, (newListingsCount / 100) * 100)),
     
     "{{pendings}}": formatNumber(pendingCount),
-    "{{pendings_delta}}": "0",
-    "{{pendings_delta_class}}": "up",
+    "{{pendings_delta}}": "",  // Historical comparison not yet implemented
+    "{{pendings_delta_class}}": "neutral",
     "{{pendings_fill}}": String(Math.min(100, (pendingCount / 50) * 100)),
     
     "{{close_to_list_ratio}}": formatPercent(closeToListRatio),
-    "{{ctl_delta}}": "0",
-    "{{ctl_delta_class}}": closeToListRatio >= 100 ? "up" : "down",
+    "{{ctl_delta}}": "",  // Historical comparison not yet implemented
+    "{{ctl_delta_class}}": closeToListRatio >= 100 ? "up" : "neutral",
     "{{ctl_fill}}": String(Math.min(100, closeToListRatio)),
     
     // By Property Type - use actual data from result_json

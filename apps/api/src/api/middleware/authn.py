@@ -2,7 +2,7 @@ from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from typing import Optional
-import redis, time
+import redis, time, hashlib
 import logging
 from ..settings import settings
 from ..auth import verify_jwt, hash_api_key
@@ -58,6 +58,21 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
             # Try JWT first
             claims = verify_jwt(token, settings.JWT_SECRET)
             if claims and claims.get("account_id"):
+                # Check if token is blacklisted (logged out)
+                token_hash = hashlib.sha256(token.encode()).hexdigest()
+                try:
+                    with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
+                        with conn.cursor() as cur:
+                            cur.execute("""
+                                SELECT 1 FROM jwt_blacklist 
+                                WHERE token_hash = %s AND expires_at > NOW()
+                            """, (token_hash,))
+                            if cur.fetchone():
+                                logger.info(f"Blocked blacklisted token for {path}")
+                                return JSONResponse(status_code=401, content={"detail": "Token has been invalidated"})
+                except Exception as e:
+                    logger.warning(f"Failed to check token blacklist: {e}")
+                
                 acct = claims["account_id"]
                 logger.info(f"Auth via Authorization header (JWT) for {path}")
             else:
@@ -83,6 +98,21 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
             if cookie_token:
                 claims = verify_jwt(cookie_token, settings.JWT_SECRET)
                 if claims and claims.get("account_id"):
+                    # Check if token is blacklisted
+                    token_hash = hashlib.sha256(cookie_token.encode()).hexdigest()
+                    try:
+                        with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
+                            with conn.cursor() as cur:
+                                cur.execute("""
+                                    SELECT 1 FROM jwt_blacklist 
+                                    WHERE token_hash = %s AND expires_at > NOW()
+                                """, (token_hash,))
+                                if cur.fetchone():
+                                    logger.info(f"Blocked blacklisted cookie token for {path}")
+                                    return JSONResponse(status_code=401, content={"detail": "Session has expired"})
+                    except Exception as e:
+                        logger.warning(f"Failed to check token blacklist: {e}")
+                    
                     acct = claims["account_id"]
                     logger.info(f"Auth via mr_token cookie for {path}")
                 else:

@@ -453,3 +453,115 @@ def send_password_reset_email(email: str, user_name: str, reset_token: str) -> D
         text=text,
         tags=[{"name": "category", "value": "password-reset"}],
     )
+
+
+# ============ Email Verification ============
+
+def get_verification_email_html(user_name: str, verify_url: str) -> str:
+    """Generate email verification HTML (combines welcome + verify)."""
+    return f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to TrendyReports - Verify Your Email</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #7C3AED; margin: 0;">TrendyReports</h1>
+    </div>
+
+    <div style="background: linear-gradient(135deg, #7C3AED 0%, #a855f7 100%); color: white; padding: 30px; border-radius: 12px; margin-bottom: 30px;">
+        <h2 style="margin: 0 0 10px 0; font-size: 24px;">Welcome, {user_name}! 🎉</h2>
+        <p style="margin: 0; opacity: 0.9;">Your account is ready. Just one quick step to get started.</p>
+    </div>
+
+    <div style="margin-bottom: 30px;">
+        <p>Please verify your email address to unlock all features:</p>
+        <ul style="padding-left: 20px; color: #666;">
+            <li>Schedule automated reports</li>
+            <li>Send reports to your contacts</li>
+            <li>Access premium features</li>
+        </ul>
+    </div>
+
+    <div style="text-align: center; margin-bottom: 30px;">
+        <a href="{verify_url}" style="display: inline-block; background: #7C3AED; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600;">Verify Email Address</a>
+    </div>
+
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+        <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;">
+            <strong>What's next?</strong>
+        </p>
+        <ol style="margin: 0; padding-left: 20px; color: #666; font-size: 14px;">
+            <li>Verify your email (click the button above)</li>
+            <li>Set up your branding (logo, colors)</li>
+            <li>Create your first market report!</li>
+        </ol>
+    </div>
+
+    <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 8px; margin-bottom: 30px;">
+        <p style="margin: 0; color: #856404; font-size: 14px;">
+            This verification link expires in <strong>24 hours</strong>.
+        </p>
+    </div>
+
+    <div style="border-top: 1px solid #e5e5e5; padding-top: 20px; text-align: center; color: #666; font-size: 14px;">
+        <p>If the button doesn't work, copy and paste this link:</p>
+        <p style="word-break: break-all; color: #7C3AED;">{verify_url}</p>
+        <p style="margin-top: 20px;">
+            Questions? Reply to this email or visit <a href="{email_service.app_base}" style="color: #7C3AED; text-decoration: none;">TrendyReports</a>
+        </p>
+    </div>
+</body>
+</html>
+"""
+
+
+def get_verification_email_text(user_name: str, verify_url: str) -> str:
+    """Generate email verification plain text."""
+    return f"""
+Welcome to TrendyReports, {user_name}!
+
+Your account is ready. Please verify your email address to unlock all features.
+
+Click here to verify: {verify_url}
+
+What's next?
+1. Verify your email (click the link above)
+2. Set up your branding (logo, colors)
+3. Create your first market report!
+
+This verification link expires in 24 hours.
+
+Questions? Reply to this email.
+
+- The TrendyReports Team
+"""
+
+
+def send_verification_email(email: str, user_name: str, verification_token: str) -> Dict[str, Any]:
+    """
+    Send email verification email.
+
+    Args:
+        email: User's email address
+        user_name: User's display name
+        verification_token: Verification token
+
+    Returns:
+        Result from email service
+    """
+    verify_url = f"{email_service.app_base}/verify-email?token={verification_token}"
+
+    html = get_verification_email_html(user_name, verify_url)
+    text = get_verification_email_text(user_name, verify_url)
+
+    return email_service.send_email_sync(
+        to=email,
+        subject="Welcome to TrendyReports - Verify Your Email",
+        html=html,
+        text=text,
+        tags=[{"name": "category", "value": "verification"}],
+    )

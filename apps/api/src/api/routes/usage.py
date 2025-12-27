@@ -72,13 +72,77 @@ def get_usage(
           FROM accounts WHERE id = %s
         """, (account_id,))
         limits = fetchone_dict(cur) or {"monthly_report_limit": None, "api_rate_limit": None}
+        
+        # Recent reports (last 10)
+        cur.execute("""
+          SELECT 
+            id::text, 
+            report_type, 
+            status,
+            COALESCE(input_params->>'city', 'Unknown') as city,
+            pdf_url,
+            created_at,
+            generated_at
+          FROM report_generations
+          WHERE account_id = %s
+          ORDER BY created_at DESC
+          LIMIT 10
+        """, (account_id,))
+        recent_reports = [
+            {
+                "id": r["id"],
+                "type": r["report_type"],
+                "status": r["status"],
+                "city": r["city"],
+                "pdf_url": r["pdf_url"],
+                "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+                "generated_at": r["generated_at"].isoformat() if r["generated_at"] else None,
+            }
+            for r in fetchall_dicts(cur)
+        ]
+        
+        # Recent emails (last 10)
+        cur.execute("""
+          SELECT 
+            id::text,
+            subject,
+            to_emails,
+            response_code,
+            status,
+            created_at
+          FROM email_log
+          WHERE account_id = %s
+          ORDER BY created_at DESC
+          LIMIT 10
+        """, (account_id,))
+        recent_emails = [
+            {
+                "id": r["id"],
+                "subject": r["subject"],
+                "to": r["to_emails"],
+                "status": r["status"] or ("sent" if r["response_code"] in (200, 202) else "failed"),
+                "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+            }
+            for r in fetchall_dicts(cur)
+        ]
+        
+        # Active schedules count
+        cur.execute("""
+          SELECT COUNT(*) as count FROM schedules
+          WHERE account_id = %s AND active = TRUE
+        """, (account_id,))
+        active_schedules = (fetchone_dict(cur) or {"count": 0})["count"]
+        
+        limits["active_schedules"] = active_schedules
 
     return {
         "period": {"from": start.isoformat(), "to": end.isoformat(), "group_by": group_by},
         "summary": summary,
         "by_type": by_type,
         "timeline": timeline,
-        "limits": limits
+        "limits": limits,
+        "recent_reports": recent_reports,
+        "recent_emails": recent_emails,
     }
 
 

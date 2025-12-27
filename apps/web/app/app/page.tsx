@@ -42,12 +42,46 @@ export default async function Overview() {
 
   const reports30d = (data?.timeline ?? []).map((item: any) => ({
     date: item.date,
-    value: item.count || 0,
+    value: item.reports || item.count || 0,
   }))
 
-  const emails30d: any[] = [] // TODO: wire when email events land
+  // Wire up email timeline from recent emails
+  const emails30d = (data?.recent_emails ?? []).reduce((acc: any[], email: any) => {
+    if (email.created_at) {
+      const date = email.created_at.split('T')[0]
+      const existing = acc.find((e: any) => e.date === date)
+      if (existing) {
+        existing.value += 1
+      } else {
+        acc.push({ date, value: 1 })
+      }
+    }
+    return acc
+  }, []).sort((a: any, b: any) => a.date.localeCompare(b.date))
 
-  const recent: any[] = [] // TODO: wire recent runs/emails
+  // Combine recent reports and emails into a single feed
+  const recentReports = (data?.recent_reports ?? []).map((r: any) => ({
+    id: r.id,
+    type: 'report' as const,
+    title: `${r.type?.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())} - ${r.city}`,
+    status: r.status,
+    timestamp: r.created_at,
+    url: r.pdf_url,
+  }))
+  
+  const recentEmails = (data?.recent_emails ?? []).map((e: any) => ({
+    id: e.id,
+    type: 'email' as const,
+    title: e.subject || 'Email sent',
+    status: e.status,
+    timestamp: e.created_at,
+    recipients: e.to,
+  }))
+  
+  // Merge and sort by timestamp
+  const recent = [...recentReports, ...recentEmails]
+    .sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''))
+    .slice(0, 10)
 
   return (
     <div className="space-y-6">

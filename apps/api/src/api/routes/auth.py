@@ -6,8 +6,9 @@ import uuid
 import secrets
 from datetime import datetime, timedelta
 from ..settings import settings
-from ..auth import sign_jwt, check_password, hash_password
-from ..services.email import send_welcome_email, send_password_reset_email
+from ..auth import sign_jwt, check_password, hash_password, verify_jwt
+import hashlib
+from ..services.email import send_welcome_email, send_password_reset_email, send_verification_email
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +115,55 @@ def login(body: LoginIn, response: Response):
     
     return {"access_token": token}
 
+
+@router.post("/auth/logout")
+def logout(request: Request, response: Response):
+    """
+    Logout user by:
+    1. Blacklisting the current JWT token
+    2. Clearing the cookie
+    """
+    # Get token from cookie or Authorization header
+    token = request.cookies.get("mr_token")
+    if not token:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header.split(" ", 1)[1].strip()
+    
+    if token:
+        # Verify and decode the token to get expiry
+        claims = verify_jwt(token, settings.JWT_SECRET)
+        if claims:
+            # Hash the token for storage
+            token_hash = hashlib.sha256(token.encode()).hexdigest()
+            exp_timestamp = claims.get("exp", 0)
+            expires_at = datetime.fromtimestamp(exp_timestamp) if exp_timestamp else datetime.utcnow() + timedelta(hours=1)
+            user_id = claims.get("user_id")
+            
+            try:
+                with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            INSERT INTO jwt_blacklist (token_hash, user_id, expires_at)
+                            VALUES (%s, %s::uuid, %s)
+                            ON CONFLICT (token_hash) DO NOTHING
+                        """, (token_hash, user_id, expires_at))
+                logger.info(f"Token blacklisted for user {user_id}")
+            except Exception as e:
+                logger.error(f"Failed to blacklist token: {e}")
+    
+    # Clear the cookie
+    response.delete_cookie(
+        key="mr_token",
+        path="/",
+        secure=True,
+        httponly=True,
+        samesite="lax"
+    )
+    
+    return {"ok": True, "message": "Logged out successfully"}
+
+
 # Optional seed endpoint for dev (remove/guard in prod)
 class SeedIn(BaseModel):
     account_id: str
@@ -200,16 +250,25 @@ def register(body: RegisterIn, response: Response, background_tasks: BackgroundT
             
             account_id = cur.fetchone()[0]
             
-            # 3. Create user
+            # 3. Create user (email_verified=FALSE until they verify)
             password_hash = hash_password(password)
             
             cur.execute("""
                 INSERT INTO users (account_id, email, password_hash, is_active, email_verified)
-                VALUES (%s::uuid, %s, %s, TRUE, TRUE)
+                VALUES (%s::uuid, %s, %s, TRUE, FALSE)
                 RETURNING id::text
             """, (account_id, email, password_hash))
             
             user_id = cur.fetchone()[0]
+            
+            # Generate email verification token
+            verification_token = secrets.token_urlsafe(32)
+            verification_expires = datetime.utcnow() + timedelta(hours=24)
+            
+            cur.execute("""
+                INSERT INTO email_verification_tokens (user_id, email, token, expires_at)
+                VALUES (%s::uuid, %s, %s, %s)
+            """, (user_id, email, verification_token, verification_expires))
             
             # 4. Link user to account as OWNER
             cur.execute("""
@@ -240,15 +299,15 @@ def register(body: RegisterIn, response: Response, background_tasks: BackgroundT
                 max_age=7 * 24 * 60 * 60  # 7 days
             )
 
-            # 6. Send welcome email in background
+            # 6. Send verification email (combines welcome + verify link)
             try:
-                background_tasks.add_task(send_welcome_email, email, name)
-                logger.info(f"Welcome email queued for {email}")
+                background_tasks.add_task(send_verification_email, email, name, verification_token)
+                logger.info(f"Verification email queued for {email}")
             except Exception as e:
                 # Don't fail registration if email fails
-                logger.error(f"Failed to queue welcome email for {email}: {e}")
+                logger.error(f"Failed to queue verification email for {email}: {e}")
 
-            return {"ok": True}
+            return {"ok": True, "email_verified": False}
 
 
 @router.post("/auth/accept-invite", response_model=AcceptInviteResponse)
@@ -594,8 +653,136 @@ def reset_password(body: ResetPasswordRequest, response: Response):
             }
 
 
+# ============ Email Verification ============
+
+class VerifyEmailRequest(BaseModel):
+    token: str
 
 
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
+
+@router.post("/auth/verify-email")
+def verify_email(body: VerifyEmailRequest):
+    """
+    Verify user's email address using the token from the verification email.
+    """
+    token = body.token.strip()
+    
+    with psycopg.connect(settings.DATABASE_URL, autocommit=False) as conn:
+        with conn.cursor() as cur:
+            # Find valid token
+            cur.execute("""
+                SELECT 
+                    evt.id::text,
+                    evt.user_id::text,
+                    evt.email,
+                    evt.expires_at,
+                    evt.verified_at
+                FROM email_verification_tokens evt
+                WHERE evt.token = %s
+            """, (token,))
+            
+            row = cur.fetchone()
+            
+            if not row:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid verification link."
+                )
+            
+            token_id, user_id, email, expires_at, verified_at = row
+            
+            # Check if already verified
+            if verified_at is not None:
+                return {"ok": True, "message": "Email already verified."}
+            
+            # Check if expired
+            if expires_at < datetime.utcnow():
+                raise HTTPException(
+                    status_code=400,
+                    detail="Verification link has expired. Please request a new one."
+                )
+            
+            # Mark token as verified
+            cur.execute("""
+                UPDATE email_verification_tokens
+                SET verified_at = NOW()
+                WHERE id = %s::uuid
+            """, (token_id,))
+            
+            # Update user's email_verified status
+            cur.execute("""
+                UPDATE users
+                SET email_verified = TRUE, updated_at = NOW()
+                WHERE id = %s::uuid
+            """, (user_id,))
+            
+            conn.commit()
+            
+            logger.info(f"Email verified for user {user_id}")
+            
+            return {
+                "ok": True,
+                "message": "Email verified successfully!"
+            }
+
+
+@router.post("/auth/resend-verification")
+def resend_verification(body: ResendVerificationRequest, background_tasks: BackgroundTasks):
+    """
+    Resend email verification link.
+    """
+    email = body.email.strip().lower()
+    
+    with psycopg.connect(settings.DATABASE_URL, autocommit=False) as conn:
+        with conn.cursor() as cur:
+            # Check if user exists and is not verified
+            cur.execute("""
+                SELECT id::text, first_name, email_verified
+                FROM users
+                WHERE email = %s AND is_active = TRUE
+            """, (email,))
+            
+            row = cur.fetchone()
+            
+            if not row:
+                # Don't reveal if user exists
+                return {"ok": True, "message": "If your email is registered, you'll receive a verification link."}
+            
+            user_id, first_name, email_verified = row
+            
+            if email_verified:
+                return {"ok": True, "message": "Email is already verified."}
+            
+            # Invalidate existing tokens
+            cur.execute("""
+                UPDATE email_verification_tokens
+                SET verified_at = NOW()
+                WHERE user_id = %s::uuid AND verified_at IS NULL
+            """, (user_id,))
+            
+            # Generate new token
+            verification_token = secrets.token_urlsafe(32)
+            verification_expires = datetime.utcnow() + timedelta(hours=24)
+            
+            cur.execute("""
+                INSERT INTO email_verification_tokens (user_id, email, token, expires_at)
+                VALUES (%s::uuid, %s, %s, %s)
+            """, (user_id, email, verification_token, verification_expires))
+            
+            conn.commit()
+            
+            # Send verification email
+            user_name = first_name or email.split('@')[0]
+            try:
+                background_tasks.add_task(send_verification_email, email, user_name, verification_token)
+                logger.info(f"Verification email re-sent to {email}")
+            except Exception as e:
+                logger.error(f"Failed to send verification email: {e}")
+            
+            return {"ok": True, "message": "If your email is registered, you'll receive a verification link."}
 
 
 
