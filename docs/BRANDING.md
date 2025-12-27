@@ -2,7 +2,7 @@
 
 > Complete documentation for the white-label branding system, including logo management, color customization, and contact information.
 
-**Last Updated:** December 17, 2025
+**Last Updated:** December 26, 2025
 
 ---
 
@@ -105,6 +105,7 @@ The unified branding page is accessible to all user types and provides:
 │ │                             │ │                         │ │
 │ │ • Test Section              │ │                         │ │
 │ │   - Download Sample PDF     │ │                         │ │
+│ │   - Download Sample JPG     │ │                         │ │
 │ │   - Send Test Email         │ │                         │ │
 │ └─────────────────────────────┘ └─────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
@@ -344,8 +345,34 @@ Added same branding columns to `accounts` table for regular users:
 Users can download a sample PDF with their branding applied:
 
 ```
-GET /api/proxy/v1/branding/sample-pdf?report_type={type}
+POST /api/proxy/v1/branding/sample-pdf
+{
+  "report_type": "market_snapshot"
+}
 ```
+
+### Sample JPG Download (Social Media)
+
+Users can download a sample JPG image (1080x1920 format) for social media preview:
+
+```
+POST /api/proxy/v1/branding/sample-jpg
+{
+  "report_type": "market_snapshot"
+}
+```
+
+**Supported report types:**
+- `market_snapshot`
+- `new_listings`
+- `inventory`
+- `closed`
+- `price_bands`
+- `open_houses`
+- `new_listings_gallery`
+- `featured_listings`
+
+The JPG is generated using PDFShift's JPEG conversion API, rendering the branding preview page at `/branding-preview/social/{reportType}`.
 
 ### Test Email
 
@@ -366,6 +393,7 @@ The branding page shows live previews of:
 - PDF footer with contact info
 - Email header with gradient and logo
 - Email footer with contact info
+- Social media preview (1080x1920 format)
 
 ---
 

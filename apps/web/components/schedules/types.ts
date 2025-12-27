@@ -7,6 +7,8 @@ export type ReportType =
   | "closed"
   | "price_bands"
   | "open_houses"
+  | "new_listings_gallery"
+  | "featured_listings"
 
 export type Cadence = "weekly" | "monthly"
 
@@ -147,6 +149,8 @@ export const reportTypeLabels: Record<ReportType, string> = {
   closed: "Closed Sales",
   price_bands: "Price Bands",
   open_houses: "Open Houses",
+  new_listings_gallery: "New Listings Gallery",
+  featured_listings: "Featured Listings",
 }
 
 export const weekdayLabels: Record<Weekday, string> = {

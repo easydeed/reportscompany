@@ -95,6 +95,11 @@ def compute_next_run(
     """
     Compute the next run time for a schedule based on its cadence (PASS S2: Timezone-aware).
     
+    ROBUST DST HANDLING:
+    - During "spring forward" (e.g., 2:30 AM doesn't exist), we skip to the next valid time
+    - During "fall back" (e.g., 1:30 AM exists twice), we use the first occurrence
+    - ZoneInfo handles this automatically when we use fold=0 (default)
+    
     Args:
         cadence: 'weekly' or 'monthly'
         weekly_dow: Day of week (0=Sun, 6=Sat) for weekly schedules
@@ -119,12 +124,38 @@ def compute_next_run(
     
     now_local = from_time.astimezone(tz)
     
+    def safe_local_datetime(year: int, month: int, day: int, hour: int, minute: int) -> datetime:
+        """
+        Create a timezone-aware datetime, handling DST edge cases.
+        
+        During DST transitions:
+        - "Spring forward": If time doesn't exist (e.g., 2:30 AM), move to next valid time
+        - "Fall back": If time exists twice, use first occurrence (fold=0)
+        """
+        # Create a naive datetime first
+        naive = datetime(year, month, day, hour, minute, 0, 0)
+        
+        # Make it timezone-aware with fold=0 (first occurrence during ambiguous times)
+        try:
+            local_dt = naive.replace(tzinfo=tz, fold=0)
+            # Verify the time exists by round-tripping through UTC
+            utc_dt = local_dt.astimezone(ZoneInfo("UTC"))
+            roundtrip = utc_dt.astimezone(tz)
+            
+            # If the hour changed, the original time didn't exist (DST spring forward)
+            if roundtrip.hour != hour:
+                # Skip to the next valid hour (typically 3 AM after spring forward from 2 AM)
+                logger.info(f"DST gap detected: {hour}:{minute:02d} doesn't exist on {year}-{month:02d}-{day:02d}, using {roundtrip.hour}:{roundtrip.minute:02d}")
+                return roundtrip
+            
+            return local_dt
+        except Exception as e:
+            logger.warning(f"Error creating local datetime: {e}, using naive approach")
+            return naive.replace(tzinfo=tz)
+    
     if cadence == "weekly":
         if weekly_dow is None:
             raise ValueError("weekly_dow required for weekly cadence")
-        
-        # Start with today at the desired local time
-        next_local = now_local.replace(hour=send_hour, minute=send_minute, second=0, microsecond=0)
         
         # Find next occurrence of the target day of week
         # Python weekday: 0=Mon, 6=Sun; our weekly_dow: 0=Sun, 6=Sat
@@ -134,11 +165,20 @@ def compute_next_run(
         
         days_ahead = (target_weekday - current_weekday) % 7
         
-        # If the day is today but the time has passed, move to next week
-        if days_ahead == 0 and next_local <= now_local:
-            days_ahead = 7
+        # Calculate target date
+        target_date = now_local.date() + timedelta(days=days_ahead)
+        next_local = safe_local_datetime(
+            target_date.year, target_date.month, target_date.day,
+            send_hour, send_minute
+        )
         
-        next_local = next_local + timedelta(days=days_ahead)
+        # If the time has already passed today, move to next week
+        if next_local <= now_local:
+            target_date = target_date + timedelta(days=7)
+            next_local = safe_local_datetime(
+                target_date.year, target_date.month, target_date.day,
+                send_hour, send_minute
+            )
         
         # Convert to UTC
         next_utc = next_local.astimezone(ZoneInfo("UTC"))
@@ -151,22 +191,22 @@ def compute_next_run(
         # Cap at 28 to avoid issues with different month lengths
         target_dom = min(monthly_dom, 28)
         
-        # Start with this month at the target day and time in local timezone
-        try:
-            next_local = now_local.replace(day=target_dom, hour=send_hour, minute=send_minute, second=0, microsecond=0)
-        except ValueError:
-            # If target day doesn't exist in current month (shouldn't happen with cap at 28)
-            # Move to next month's first day, then set target day
-            next_month = now_local.replace(day=1) + timedelta(days=32)
-            next_local = next_month.replace(day=target_dom, hour=send_hour, minute=send_minute, second=0, microsecond=0)
+        # Start with this month
+        year = now_local.year
+        month = now_local.month
+        
+        # Create target datetime for this month
+        next_local = safe_local_datetime(year, month, target_dom, send_hour, send_minute)
         
         # If that time has already passed this month, move to next month
         if next_local <= now_local:
             # Move to next month
-            if next_local.month == 12:
-                next_local = next_local.replace(year=next_local.year + 1, month=1)
+            if month == 12:
+                year += 1
+                month = 1
             else:
-                next_local = next_local.replace(month=next_local.month + 1)
+                month += 1
+            next_local = safe_local_datetime(year, month, target_dom, send_hour, send_minute)
         
         # Convert to UTC
         next_utc = next_local.astimezone(ZoneInfo("UTC"))
@@ -230,22 +270,39 @@ def process_due_schedules():
     A schedule is due if:
     - active = true
     - next_run_at IS NULL (never computed) OR next_run_at <= NOW()
+    
+    RACE CONDITION FIX: Uses atomic UPDATE...RETURNING to claim schedules,
+    preventing multiple ticker instances from processing the same schedule.
+    Stale locks (>5 minutes) are automatically released.
     """
     try:
         with psycopg.connect(DATABASE_URL) as conn:
             with conn.cursor() as cur:
-                # Find due schedules (PASS S2: include timezone)
+                # ATOMIC CLAIM: Update and return due schedules in one operation.
+                # This prevents race conditions when multiple tickers are running.
+                # Uses processing_locked_at to claim schedules atomically.
+                # Stale locks (>5 min) are considered abandoned and reclaimed.
                 cur.execute("""
-                    SELECT id::text, account_id::text, name, report_type,
-                           city, zip_codes, lookback_days,
-                           cadence, weekly_dow, monthly_dom,
-                           send_hour, send_minute, timezone,
-                           recipients, include_attachment
-                    FROM schedules
-                    WHERE active = true
-                      AND (next_run_at IS NULL OR next_run_at <= NOW())
-                    ORDER BY COALESCE(next_run_at, '1970-01-01'::timestamptz) ASC
-                    LIMIT 100
+                    WITH due AS (
+                        SELECT id
+                        FROM schedules
+                        WHERE active = true
+                          AND (next_run_at IS NULL OR next_run_at <= NOW())
+                          AND (processing_locked_at IS NULL 
+                               OR processing_locked_at < NOW() - INTERVAL '5 minutes')
+                        ORDER BY COALESCE(next_run_at, '1970-01-01'::timestamptz) ASC
+                        LIMIT 100
+                        FOR UPDATE SKIP LOCKED
+                    )
+                    UPDATE schedules s
+                    SET processing_locked_at = NOW()
+                    FROM due
+                    WHERE s.id = due.id
+                    RETURNING s.id::text, s.account_id::text, s.name, s.report_type,
+                              s.city, s.zip_codes, s.lookback_days,
+                              s.cadence, s.weekly_dow, s.monthly_dom,
+                              s.send_hour, s.send_minute, s.timezone,
+                              s.recipients, s.include_attachment
                 """)
                 
                 due_schedules = cur.fetchall()
@@ -295,11 +352,12 @@ def process_due_schedules():
                         
                         schedule_run_id = cur.fetchone()[0]
                         
-                        # Update schedule with last_run_at and next_run_at
+                        # Update schedule with last_run_at, next_run_at, and clear lock
                         cur.execute("""
                             UPDATE schedules
                             SET last_run_at = NOW(),
-                                next_run_at = %s
+                                next_run_at = %s,
+                                processing_locked_at = NULL
                             WHERE id = %s::uuid
                         """, (next_run_at, schedule_id))
                         
@@ -313,6 +371,16 @@ def process_due_schedules():
                     
                     except Exception as e:
                         logger.error(f"Failed to process schedule {schedule_id}: {e}", exc_info=True)
+                        # Clear the lock on failure so another ticker can retry
+                        try:
+                            cur.execute("""
+                                UPDATE schedules 
+                                SET processing_locked_at = NULL 
+                                WHERE id = %s::uuid
+                            """, (schedule_id,))
+                            conn.commit()
+                        except Exception:
+                            pass
                         conn.rollback()
                         continue
     

@@ -39,6 +39,8 @@ const reportTypes = [
   { id: "closed" as ReportType, name: "Closed Sales", icon: DollarSign },
   { id: "price_bands" as ReportType, name: "Price Bands", icon: BarChart3 },
   { id: "open_houses" as ReportType, name: "Open Houses", icon: Calendar },
+  { id: "new_listings_gallery" as ReportType, name: "New Listings Gallery", icon: Home },
+  { id: "featured_listings" as ReportType, name: "Featured Listings", icon: TrendingUp },
 ]
 
 const lookbackOptions = [7, 14, 30, 60, 90]
