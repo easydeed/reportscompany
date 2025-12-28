@@ -21,21 +21,18 @@ import {
   Image,
   Star,
   Calendar,
-  Building,
+  Sparkles,
+  LayoutGrid,
 } from "lucide-react"
+import { cn } from "../lib/utils"
 
-// Types
-// NOTE: ReportType is now imported from shared module to ensure consistency
-// See apps/web/app/lib/reportTypes.ts for the canonical list
-export type ReportType = 
-  | "market_snapshot" 
-  | "new_listings" 
-  | "inventory" 
-  | "closed" 
-  | "price_bands" 
-  | "open_houses" 
-  | "new_listings_gallery" 
-  | "featured_listings"
+// Import shared types and presets from schedules module
+import { 
+  type ReportType, 
+  type ReportFilters, 
+  type PresetDefinition,
+  SMART_PRESETS 
+} from "./schedules/types"
 
 export type AreaMode = "city" | "zips"
 
@@ -44,12 +41,8 @@ export interface ReportPayload {
   city?: string
   zips?: string[]
   lookback_days: number
-  filters?: {
-    minprice?: number
-    maxprice?: number
-    type?: string
-    subtype?: string
-  }
+  filters?: ReportFilters
+  preset_key?: string // Track which preset was used
 }
 
 interface WizardState {
@@ -58,10 +51,8 @@ interface WizardState {
   city: string
   zips: string[]
   lookback_days: number
-  property_types: string[]
-  property_subtype: string  // SingleFamilyResidence, Condominium, Townhouse, or empty for all
-  minprice: string
-  maxprice: string
+  filters: ReportFilters
+  preset_key?: string
 }
 
 interface NewReportWizardProps {
@@ -82,14 +73,20 @@ export function buildPayload(state: WizardState): ReportPayload {
     payload.zips = state.zips
   }
 
-  const filters: any = {}
-  if (state.minprice) filters.minprice = Number.parseInt(state.minprice)
-  if (state.maxprice) filters.maxprice = Number.parseInt(state.maxprice)
-  if (state.property_types.length > 0) filters.type = state.property_types.join(",")
-  if (state.property_subtype) filters.subtype = state.property_subtype
+  // Only include filters if they have values
+  const filters: ReportFilters = {}
+  if (state.filters.minbeds) filters.minbeds = state.filters.minbeds
+  if (state.filters.minbaths) filters.minbaths = state.filters.minbaths
+  if (state.filters.minprice) filters.minprice = state.filters.minprice
+  if (state.filters.maxprice) filters.maxprice = state.filters.maxprice
+  if (state.filters.subtype) filters.subtype = state.filters.subtype
 
   if (Object.keys(filters).length > 0) {
     payload.filters = filters
+  }
+
+  if (state.preset_key) {
+    payload.preset_key = state.preset_key
   }
 
   return payload
@@ -99,7 +96,8 @@ export function buildPayload(state: WizardState): ReportPayload {
 function validateStep(state: WizardState, step: number): { valid: boolean; error?: string } {
   switch (step) {
     case 0:
-      return state.report_type ? { valid: true } : { valid: false, error: "Select a report type" }
+      if (!state.report_type) return { valid: false, error: "Select a report type" }
+      return { valid: true }
     case 1:
       if (state.area_mode === "city") {
         return state.city.trim() ? { valid: true } : { valid: false, error: "Enter a city name" }
@@ -109,8 +107,6 @@ function validateStep(state: WizardState, step: number): { valid: boolean; error
           : { valid: false, error: state.zips.length === 0 ? "Add at least one ZIP" : "Maximum 10 ZIPs allowed" }
       }
     case 2:
-      return state.lookback_days > 0 ? { valid: true } : { valid: false, error: "Select a lookback period" }
-    case 3:
       return { valid: true }
     default:
       return { valid: false }
@@ -118,9 +114,8 @@ function validateStep(state: WizardState, step: number): { valid: boolean; error
 }
 
 const steps = [
-  { id: "type", label: "Type" },
+  { id: "type", label: "Basics" },
   { id: "area", label: "Area" },
-  { id: "options", label: "Options" },
   { id: "review", label: "Review" },
 ]
 
@@ -131,27 +126,12 @@ const reportTypes = [
   { id: "closed" as ReportType, name: "Closed Sales", icon: DollarSign, description: "Recent sold properties" },
   { id: "new_listings_gallery" as ReportType, name: "Photo Gallery", icon: Image, description: "Visual listing showcase" },
   { id: "featured_listings" as ReportType, name: "Featured Listings", icon: Star, description: "Highlighted properties" },
-  { id: "open_houses" as ReportType, name: "Open Houses", icon: Calendar, description: "Upcoming showings" },
 ]
 
 const lookbackOptions = [7, 14, 30, 60, 90]
 
-// Property types (broad category)
-const propertyTypes = [
-  { id: "RES", name: "Residential", icon: Home },
-  { id: "CND", name: "Condo", icon: Building },
-  { id: "MUL", name: "Multi-Family", icon: Building },
-  { id: "LND", name: "Land", icon: MapPin },
-  { id: "COM", name: "Commercial", icon: Building },
-]
-
-// Property subtypes (more specific - verified working with SimplyRETS)
-const propertySubtypes = [
-  { id: "", name: "All Types", description: "Include all property types" },
-  { id: "SingleFamilyResidence", name: "Single Family", description: "Detached single-family homes" },
-  { id: "Condominium", name: "Condo", description: "Condominiums" },
-  { id: "Townhouse", name: "Townhouse", description: "Attached townhomes" },
-]
+// Tab type for Step 1
+type ReportTab = "presets" | "standard"
 
 export function NewReportWizard({ onSubmit, onCancel }: NewReportWizardProps) {
   const [currentStep, setCurrentStep] = useState(0)
@@ -161,10 +141,8 @@ export function NewReportWizard({ onSubmit, onCancel }: NewReportWizardProps) {
     city: "",
     zips: [],
     lookback_days: 30,
-    property_types: ["RES"],  // Default to Residential
-    property_subtype: "",     // Empty = all subtypes
-    minprice: "",
-    maxprice: "",
+    filters: {},
+    preset_key: undefined,
   })
   const [error, setError] = useState<string | null>(null)
 
@@ -175,7 +153,7 @@ export function NewReportWizard({ onSubmit, onCancel }: NewReportWizardProps) {
       return
     }
     setError(null)
-    if (currentStep < 3) {
+    if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1)
     }
   }
@@ -211,10 +189,9 @@ export function NewReportWizard({ onSubmit, onCancel }: NewReportWizardProps) {
       )}
 
       <div className="min-h-[400px]">
-        {currentStep === 0 && <Step1ReportType state={state} setState={setState} setError={setError} />}
-        {currentStep === 1 && <Step2Area state={state} setState={setState} setError={setError} />}
-        {currentStep === 2 && <Step3Options state={state} setState={setState} setError={setError} />}
-        {currentStep === 3 && <Step4Review state={state} />}
+        {currentStep === 0 && <StepBasics state={state} setState={setState} setError={setError} />}
+        {currentStep === 1 && <StepArea state={state} setState={setState} setError={setError} />}
+        {currentStep === 2 && <StepReview state={state} />}
       </div>
 
       <div className="flex justify-between pt-4 border-t border-border">
@@ -238,8 +215,8 @@ export function NewReportWizard({ onSubmit, onCancel }: NewReportWizardProps) {
   )
 }
 
-// Step 1: Report Type
-function Step1ReportType({
+// Step 1: Basics (with Tabs - identical styling to ScheduleWizard)
+function StepBasics({
   state,
   setState,
   setError,
@@ -248,60 +225,253 @@ function Step1ReportType({
   setState: (s: WizardState) => void
   setError: (e: string | null) => void
 }) {
+  const [activeTab, setActiveTab] = useState<ReportTab>("presets")
+
+  // Handle preset selection - auto-fills form
+  const handlePresetSelect = (presetKey: string) => {
+    const preset = SMART_PRESETS.find(p => p.key === presetKey)
+    if (!preset) return
+    
+    setState({
+      ...state,
+      report_type: preset.report_type,
+      lookback_days: preset.lookback_days,
+      filters: preset.filters,
+      preset_key: presetKey
+    })
+    setError(null)
+  }
+
+  // Handle standard report type selection
+  const handleReportTypeSelect = (reportType: ReportType) => {
+    setState({
+      ...state,
+      report_type: reportType,
+      filters: {},
+      preset_key: undefined
+    })
+    setError(null)
+  }
+
+  // Check if a preset is selected
+  const isPresetSelected = (presetKey: string) => state.preset_key === presetKey
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-display font-semibold text-xl mb-1">What type of report?</h2>
-        <p className="text-sm text-muted-foreground">Select the analysis that fits your needs</p>
+        <h2 className="font-display font-semibold text-xl mb-1">Report Basics</h2>
+        <p className="text-sm text-muted-foreground">Choose a preset or select a standard report type</p>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {reportTypes.map((type) => {
-          const Icon = type.icon
-          const isSelected = state.report_type === type.id
-          return (
-            <button
-              key={type.id}
-              type="button"
-              onClick={() => {
-                setState({ ...state, report_type: type.id })
-                setError(null)
-              }}
-              className={`group relative flex flex-col p-4 rounded-xl border-2 transition-all text-left ${
-                isSelected
-                  ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
-                  : "border-border hover:border-primary/50 hover:shadow-sm"
-              }`}
-              aria-pressed={isSelected}
-            >
-              {isSelected && (
-                <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-              )}
-              <div
-                className={`w-11 h-11 rounded-xl flex items-center justify-center mb-3 transition-colors ${
-                  isSelected
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-primary/10 text-primary group-hover:bg-primary/15"
-                }`}
+      <Card>
+        <CardContent className="pt-6 space-y-6">
+          {/* Tab Toggle - identical to ScheduleWizard */}
+          <div className="space-y-3">
+            <Label>
+              Report Type <span className="text-destructive">*</span>
+            </Label>
+            
+            {/* Tab Buttons */}
+            <div className="flex gap-2 p-1 bg-muted/50 rounded-lg w-fit">
+              <button
+                type="button"
+                onClick={() => setActiveTab("presets")}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all",
+                  activeTab === "presets"
+                    ? "bg-background text-primary shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
               >
-                <Icon className="w-5 h-5" />
+                <Sparkles className="w-4 h-4" />
+                Smart Presets
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("standard")}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all",
+                  activeTab === "standard"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <LayoutGrid className="w-4 h-4" />
+                Standard Reports
+              </button>
+            </div>
+
+            {/* Smart Presets Tab */}
+            {activeTab === "presets" && (
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Pre-configured reports for common audiences. Filters and settings are auto-filled.
+                </p>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {SMART_PRESETS.map((preset) => {
+                    const isSelected = isPresetSelected(preset.key)
+                    return (
+                      <button
+                        key={preset.key}
+                        type="button"
+                        onClick={() => handlePresetSelect(preset.key)}
+                        className={cn(
+                          "group relative flex flex-col p-4 rounded-xl border-2 transition-all text-left",
+                          isSelected
+                            ? "border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-md shadow-primary/10"
+                            : "border-border hover:border-primary/50 hover:shadow-sm"
+                        )}
+                        aria-pressed={isSelected}
+                      >
+                        {isSelected && (
+                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+                        <div className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center mb-2 text-xl transition-colors",
+                          isSelected ? "bg-primary/20" : "bg-muted"
+                        )}>
+                          {preset.icon}
+                        </div>
+                        <span className="font-semibold text-sm">{preset.name}</span>
+                        <span className="text-xs text-muted-foreground mt-0.5">{preset.tagline}</span>
+                        {/* Show what's included */}
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {preset.filters.minbeds && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">{preset.filters.minbeds}+ bed</Badge>
+                          )}
+                          {preset.filters.maxprice && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">≤${(preset.filters.maxprice/1000000).toFixed(1)}M</Badge>
+                          )}
+                          {preset.filters.minprice && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">≥${(preset.filters.minprice/1000000).toFixed(1)}M</Badge>
+                          )}
+                          {preset.filters.subtype === "Condominium" && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">Condo</Badge>
+                          )}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
-              <span className="font-semibold text-sm">{type.name}</span>
-              <span className="text-xs text-muted-foreground mt-0.5">{type.description}</span>
-            </button>
-          )
-        })}
-      </div>
+            )}
+
+            {/* Standard Reports Tab */}
+            {activeTab === "standard" && (
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Classic reports without pre-configured filters. Full control over settings.
+                </p>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {reportTypes.map((type) => {
+                    const Icon = type.icon
+                    const isSelected = state.report_type === type.id && !state.preset_key
+                    return (
+                      <button
+                        key={type.id}
+                        type="button"
+                        onClick={() => handleReportTypeSelect(type.id)}
+                        className={cn(
+                          "group relative flex flex-col p-4 rounded-xl border-2 transition-all text-left",
+                          isSelected
+                            ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
+                            : "border-border hover:border-primary/50 hover:shadow-sm"
+                        )}
+                        aria-pressed={isSelected}
+                      >
+                        {isSelected && (
+                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+                        <div
+                          className={cn(
+                            "w-10 h-10 rounded-xl flex items-center justify-center mb-2 transition-colors",
+                            isSelected
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-primary/10 text-primary group-hover:bg-primary/15"
+                          )}
+                        >
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        <span className="font-semibold text-sm">{type.name}</span>
+                        <span className="text-xs text-muted-foreground mt-0.5">{type.description}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Lookback Period - identical to ScheduleWizard */}
+          <div className="space-y-3">
+            <Label>
+              Lookback Period <span className="text-destructive">*</span>
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {lookbackOptions.map((days) => (
+                <button
+                  key={days}
+                  type="button"
+                  onClick={() => setState({ ...state, lookback_days: days })}
+                  className={cn(
+                    "px-4 py-2.5 rounded-lg border-2 font-medium transition-all",
+                    state.lookback_days === days
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border hover:border-primary/50"
+                  )}
+                  aria-pressed={state.lookback_days === days}
+                >
+                  {days} days
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">How far back to include data in your report</p>
+          </div>
+
+          {/* Filters Summary (show when preset is selected) */}
+          {state.preset_key && state.filters && Object.keys(state.filters).length > 0 && (
+            <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium text-primary">Preset Filters Applied</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {state.filters.minbeds && (
+                  <Badge variant="secondary">{state.filters.minbeds}+ Bedrooms</Badge>
+                )}
+                {state.filters.minbaths && (
+                  <Badge variant="secondary">{state.filters.minbaths}+ Bathrooms</Badge>
+                )}
+                {state.filters.minprice && (
+                  <Badge variant="secondary">Min ${state.filters.minprice.toLocaleString()}</Badge>
+                )}
+                {state.filters.maxprice && (
+                  <Badge variant="secondary">Max ${state.filters.maxprice.toLocaleString()}</Badge>
+                )}
+                {state.filters.subtype && (
+                  <Badge variant="secondary">
+                    {state.filters.subtype === "SingleFamilyResidence" ? "Single Family" : "Condo"}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
 
-// Step 2: Area
-function Step2Area({
+// Step 2: Area - identical styling to ScheduleWizard
+function StepArea({
   state,
   setState,
   setError,
@@ -428,7 +598,6 @@ function Step2Area({
                   ))}
                 </div>
               )}
-              <p className="text-xs text-muted-foreground">Maximum 10 ZIP codes allowed</p>
             </div>
           )}
         </CardContent>
@@ -437,139 +606,13 @@ function Step2Area({
   )
 }
 
-// Step 3: Options
-function Step3Options({
-  state,
-  setState,
-  setError,
-}: {
-  state: WizardState
-  setState: (s: WizardState) => void
-  setError: (e: string | null) => void
-}) {
-  const togglePropertyType = (type: string) => {
-    const types = state.property_types.includes(type)
-      ? state.property_types.filter((t) => t !== type)
-      : [...state.property_types, type]
-    setState({ ...state, property_types: types })
-  }
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="font-display font-semibold text-xl mb-1">Report Options</h2>
-        <p className="text-sm text-muted-foreground">Refine your data parameters and filters</p>
-      </div>
-
-      <Card>
-        <CardContent className="pt-6 space-y-6">
-          {/* Lookback Period */}
-          <div className="space-y-3">
-            <Label>
-              Lookback Period <span className="text-destructive">*</span>
-            </Label>
-            <div className="flex flex-wrap gap-2">
-              {lookbackOptions.map((days) => (
-                <button
-                  key={days}
-                  type="button"
-                  onClick={() => {
-                    setState({ ...state, lookback_days: days })
-                    setError(null)
-                  }}
-                  className={`px-4 py-2.5 rounded-lg border-2 font-medium transition-all ${
-                    state.lookback_days === days
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-border hover:border-primary/50"
-                  }`}
-                  aria-pressed={state.lookback_days === days}
-                >
-                  {days} days
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground">How far back to include data in the report</p>
-          </div>
-
-          {/* Property SubType (More User-Friendly) */}
-          <div className="space-y-3">
-            <Label>Property Type</Label>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {propertySubtypes.map((subtype) => (
-                <button
-                  key={subtype.id}
-                  type="button"
-                  onClick={() => setState({ ...state, property_subtype: subtype.id })}
-                  className={`flex flex-col items-start p-4 rounded-lg border-2 transition-all text-left ${
-                    state.property_subtype === subtype.id
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/50"
-                  }`}
-                  aria-pressed={state.property_subtype === subtype.id}
-                >
-                  <span className="font-medium">{subtype.name}</span>
-                  <span className="text-xs text-muted-foreground mt-1">{subtype.description}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Price Range */}
-          <div className="space-y-3">
-            <Label>Price Range (optional)</Label>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="minprice" className="text-xs text-muted-foreground">
-                  Minimum Price
-                </Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="minprice"
-                    type="number"
-                    placeholder="0"
-                    value={state.minprice}
-                    onChange={(e) => setState({ ...state, minprice: e.target.value })}
-                    className="h-11 pl-9"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="maxprice" className="text-xs text-muted-foreground">
-                  Maximum Price
-                </Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="maxprice"
-                    type="number"
-                    placeholder="No limit"
-                    value={state.maxprice}
-                    onChange={(e) => setState({ ...state, maxprice: e.target.value })}
-                    className="h-11 pl-9"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-// Step 4: Review
-function Step4Review({ state }: { state: WizardState }) {
+// Step 3: Review - identical styling to ScheduleWizard
+function StepReview({ state }: { state: WizardState }) {
   const selectedType = reportTypes.find((t) => t.id === state.report_type)
-  const selectedSubtype = propertySubtypes.find((t) => t.id === state.property_subtype)
+  const selectedPreset = state.preset_key ? SMART_PRESETS.find(p => p.key === state.preset_key) : null
   const TypeIcon = selectedType?.icon || FileText
 
-  const formatPriceRange = () => {
-    if (!state.minprice && !state.maxprice) return null
-    const min = state.minprice ? `$${Number(state.minprice).toLocaleString()}` : "$0"
-    const max = state.maxprice ? `$${Number(state.maxprice).toLocaleString()}` : "No limit"
-    return `${min} – ${max}`
-  }
+  const hasFilters = state.filters && Object.keys(state.filters).length > 0
 
   return (
     <div className="space-y-6">
@@ -578,22 +621,41 @@ function Step4Review({ state }: { state: WizardState }) {
         <p className="text-sm text-muted-foreground">Review your report settings below</p>
       </div>
 
-      {/* Main Summary Card */}
+      {/* Main Summary Card - identical to ScheduleWizard */}
       <div className="relative overflow-hidden rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background">
         {/* Header with report type */}
         <div className="flex items-center gap-4 p-5 border-b border-primary/10">
-          <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-            <TypeIcon className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Report Type</p>
-            <h3 className="font-display font-bold text-xl">{selectedType?.name}</h3>
+          {selectedPreset ? (
+            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shadow-lg shadow-primary/10 text-2xl">
+              {selectedPreset.icon}
+            </div>
+          ) : (
+            <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
+              <TypeIcon className="w-7 h-7 text-white" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Report</p>
+              {selectedPreset && (
+                <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary">
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  Smart Preset
+                </Badge>
+              )}
+            </div>
+            <h3 className="font-display font-bold text-xl truncate">
+              {selectedPreset?.name || selectedType?.name}
+            </h3>
+            {selectedPreset && (
+              <p className="text-sm text-muted-foreground">{selectedType?.name}</p>
+            )}
           </div>
         </div>
 
-        {/* Details Grid */}
+        {/* Details Grid - gap-3 to match ScheduleWizard */}
         <div className="p-5 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             {/* Location */}
             <div className="flex items-start gap-3 p-3 rounded-lg bg-background/80 border border-border/50">
               <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
@@ -602,7 +664,7 @@ function Step4Review({ state }: { state: WizardState }) {
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Location</p>
                 <p className="font-semibold text-sm truncate">
-                  {state.area_mode === "city" ? state.city : `${state.zips.length} ZIP code${state.zips.length !== 1 ? "s" : ""}`}
+                  {state.area_mode === "city" ? state.city : `${state.zips.length} ZIP codes`}
                 </p>
               </div>
             </div>
@@ -610,37 +672,13 @@ function Step4Review({ state }: { state: WizardState }) {
             {/* Time Period */}
             <div className="flex items-start gap-3 p-3 rounded-lg bg-background/80 border border-border/50">
               <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
-                <Calendar className="w-4 h-4 text-green-600" />
+                <BarChart3 className="w-4 h-4 text-green-600" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Time Period</p>
+                <p className="text-xs text-muted-foreground">Data Range</p>
                 <p className="font-semibold text-sm">Last {state.lookback_days} days</p>
               </div>
             </div>
-
-            {/* Property Type */}
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-background/80 border border-border/50">
-              <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
-                <Home className="w-4 h-4 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Property Type</p>
-                <p className="font-semibold text-sm">{selectedSubtype?.name || "All Types"}</p>
-              </div>
-            </div>
-
-            {/* Price Range (if set) */}
-            {formatPriceRange() && (
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-background/80 border border-border/50">
-                <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-                  <DollarSign className="w-4 h-4 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Price Range</p>
-                  <p className="font-semibold text-sm">{formatPriceRange()}</p>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* ZIP Codes List */}
@@ -653,6 +691,35 @@ function Step4Review({ state }: { state: WizardState }) {
                     {zip}
                   </Badge>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Filters Summary (NEW) */}
+          {hasFilters && (
+            <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                <span className="text-xs font-medium text-primary">Filters Applied</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {state.filters.minbeds && (
+                  <Badge variant="outline" className="text-xs">{state.filters.minbeds}+ Beds</Badge>
+                )}
+                {state.filters.minbaths && (
+                  <Badge variant="outline" className="text-xs">{state.filters.minbaths}+ Baths</Badge>
+                )}
+                {state.filters.minprice && (
+                  <Badge variant="outline" className="text-xs">≥${(state.filters.minprice/1000).toLocaleString()}K</Badge>
+                )}
+                {state.filters.maxprice && (
+                  <Badge variant="outline" className="text-xs">≤${(state.filters.maxprice/1000).toLocaleString()}K</Badge>
+                )}
+                {state.filters.subtype && (
+                  <Badge variant="outline" className="text-xs">
+                    {state.filters.subtype === "SingleFamilyResidence" ? "Single Family" : "Condo"}
+                  </Badge>
+                )}
               </div>
             </div>
           )}
