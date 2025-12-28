@@ -93,7 +93,7 @@ export function HorizontalStepper({ steps, currentStep, className }: HorizontalS
             >
               <span
                 className={cn(
-                  "text-xs font-medium transition-all duration-300",
+                  "text-sm font-medium transition-all duration-300",
                   isCurrent && "text-primary font-semibold",
                   isCompleted && "text-muted-foreground",
                   !isCurrent && !isCompleted && "text-muted-foreground/60",
