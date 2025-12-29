@@ -2,7 +2,7 @@
 
 > Complete documentation for the automated report scheduling system.
 
-**Last Updated:** December 27, 2025
+**Last Updated:** December 29, 2025
 
 ---
 
@@ -171,11 +171,15 @@ Content-Type: application/json
     {"type": "contact", "id": "uuid..."},
     {"type": "manual_email", "email": "agent@example.com"}
   ],
-  "filters": {               // NEW: Smart Preset filters (optional)
-    "minbeds": 3,
+  "filters": {               // Smart Preset filters (optional)
+    "minbeds": 2,
     "minbaths": 2,
-    "maxprice": 950000,
-    "subtype": "SingleFamilyResidence"
+    "subtype": "SingleFamilyResidence",
+    "price_strategy": {      // NEW: Market-adaptive pricing
+      "mode": "maxprice_pct_of_median_list",
+      "value": 0.70          // 70% of median list price
+    },
+    "preset_display_name": "First-Time Buyer"  // Custom PDF header name
   },
   "active": true
 }
@@ -187,9 +191,20 @@ Content-Type: application/json
 |-------|------|-------------|
 | `minbeds` | int | Minimum bedrooms (0-10) |
 | `minbaths` | int | Minimum bathrooms (0-10) |
-| `minprice` | int | Minimum price |
-| `maxprice` | int | Maximum price (must be >= minprice) |
+| `minprice` | int | Minimum price (absolute fallback) |
+| `maxprice` | int | Maximum price (absolute fallback) |
 | `subtype` | string | `"SingleFamilyResidence"` or `"Condominium"` |
+| `price_strategy` | object | **NEW**: Market-adaptive pricing (see below) |
+| `preset_display_name` | string | **NEW**: Custom name for PDF headers |
+
+### Price Strategy Schema (Market-Adaptive)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `mode` | string | `"maxprice_pct_of_median_list"`, `"minprice_pct_of_median_list"`, etc. |
+| `value` | float | Percentage as decimal (0.70 = 70%) |
+
+**How it works**: At runtime, the worker fetches baseline listings for the area, computes the median price, and resolves the percentage to an actual dollar amount. This ensures presets work in any market.
 
 ### List Schedules
 
@@ -235,45 +250,81 @@ GET /v1/schedules/{schedule_id}/runs?limit=50
 
 Smart Presets provide pre-configured report templates for common audiences. When a user selects a preset, filters are automatically applied to narrow down listings.
 
-### Built-in Presets
+**NEW in v2.0**: Presets now use **market-adaptive pricing** with percentage-of-median instead of fixed dollar amounts. This ensures presets work in any market (e.g., both Irvine and Riverside).
+
+### Built-in Presets (Market-Adaptive)
 
 | Preset | Report Type | Filters Applied |
 |--------|-------------|-----------------|
-| 🏠 First-Time Buyer | `new_listings_gallery` | 2+ beds, 2+ baths, ≤$950K, Single Family |
+| 🏠 First-Time Buyer | `new_listings_gallery` | 2+ beds, 2+ baths, **≤70% of median**, Single Family |
 | 🏢 Condo Watch | `new_listings_gallery` | 1+ beds, 1+ baths, Condominium |
-| 💎 Luxury Showcase | `featured_listings` | ≥$2M, Single Family |
+| 💎 Luxury Showcase | `featured_listings` | **≥150% of median**, Single Family |
 | 👨‍👩‍👧‍👦 Family Homes | `new_listings` | 4+ beds, 2+ baths, Single Family |
-| 📈 Investor Deals | `new_listings` | ≤$500K |
+| 📈 Investor Deals | `new_listings` | **≤50% of median** |
 
-### How Filters Work
+### How Market-Adaptive Pricing Works
 
-1. **User selects preset** in the Schedule Wizard
-2. **Filters auto-fill** based on preset definition
-3. **Filters stored** in `schedules.filters` JSONB column
-4. **Ticker passes filters** to Celery worker
-5. **Query builders apply filters** to SimplyRETS API calls
-6. **Report shows filtered results** matching criteria
+```
+1. User selects "First-Time Buyer" preset
+   → filters.price_strategy = { mode: "maxprice_pct_of_median_list", value: 0.70 }
+   → filters.preset_display_name = "First-Time Buyer"
+
+2. Schedule is created & stored in DB
+
+3. Ticker fires, passes filters to worker
+
+4. Worker receives job for "Irvine":
+   a. Fetches 500 baseline listings (90 days, same subtype)
+   b. Computes median_list_price = $2,400,000
+   c. Resolves: maxprice = $2,400,000 × 0.70 = $1,680,000
+   d. Queries SimplyRETS with resolved maxprice
+
+5. PDF header shows "First-Time Buyer — Irvine" (not "New Listings Gallery")
+```
+
+### Elastic Widening (Zero Results Safety Net)
+
+If the resolved filters return < 6 results (4 for featured):
+
+1. Worker widens price: 70% → 85% → 100% → 120%
+2. PDF shows note: "Expanded price range to match local market conditions"
 
 ### Filter Flow
 
 ```
-User → Preset Selection → filters JSON → schedules table
-                                              ↓
-                                    Ticker (schedules_tick.py)
-                                              ↓
-                                    enqueue_report(filters=...)
-                                              ↓
-                                    query_builders._filters()
-                                              ↓
-                                    SimplyRETS API (?minbeds=3&maxprice=950000...)
+User → Preset Selection → filters JSON (with price_strategy) → schedules table
+                                                                      ↓
+                                                            Ticker (schedules_tick.py)
+                                                                      ↓
+                                                            Worker receives filters
+                                                                      ↓
+                                                  ┌─────────────────────────────────────┐
+                                                  │ filter_resolver.py                   │
+                                                  │ 1. compute_market_stats() → median   │
+                                                  │ 2. resolve_filters() → actual $      │
+                                                  │ 3. elastic_widen_filters() if needed │
+                                                  └─────────────────────────────────────┘
+                                                                      ↓
+                                                            query_builders._filters()
+                                                                      ↓
+                                                  SimplyRETS API (?minbeds=2&maxprice=1680000...)
 ```
 
 ### Frontend Components
 
 | File | Purpose |
 |------|---------|
-| `packages/ui/src/components/schedules/types.ts` | `ReportFilters`, `PresetDefinition`, `SMART_PRESETS` |
+| `packages/ui/src/components/schedules/types.ts` | `PriceStrategy`, `ReportFilters`, `SMART_PRESETS` |
 | `packages/ui/src/components/schedules/schedule-wizard.tsx` | Tabbed UI (Smart Presets / Standard Reports) |
+| `packages/ui/src/components/new-report-wizard.tsx` | One-time report wizard (also uses presets) |
+
+### Worker Components
+
+| File | Purpose |
+|------|---------|
+| `apps/worker/src/worker/filter_resolver.py` | `compute_market_stats()`, `resolve_filters()`, `elastic_widen_filters()` |
+| `apps/worker/src/worker/tasks.py` | Integration point for market-adaptive resolution |
+| `apps/api/src/api/routes/schedules.py` | `PriceStrategy` and `ReportFilters` Pydantic models |
 
 ### Database Migration
 
@@ -284,9 +335,10 @@ ADD COLUMN filters JSONB NOT NULL DEFAULT '{}'::jsonb;
 
 CREATE INDEX idx_schedules_filters ON schedules USING gin (filters);
 
--- Rollback:
--- DROP INDEX idx_schedules_filters;
--- ALTER TABLE schedules DROP COLUMN filters;
+-- Note: filters JSONB now supports:
+-- - minbeds, minbaths, minprice, maxprice, subtype (basic filters)
+-- - price_strategy: { mode, value } (market-adaptive pricing)
+-- - preset_display_name (custom PDF header name)
 ```
 
 ---

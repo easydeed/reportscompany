@@ -2,22 +2,90 @@
 
 > **Single Source of Truth** for all report types, their parameters, filtering logic, and expected outputs.
 
-**Last Updated:** December 27, 2025  
-**Version:** 1.2
+**Last Updated:** December 29, 2025  
+**Version:** 1.3
 
 ---
 
-## 🆕 Smart Preset Filters (v1.5)
+## 🆕 Market-Adaptive Smart Presets (v2.0)
 
-All report types now support optional filters via Smart Presets:
+All report types now support optional filters via Smart Presets with **market-adaptive pricing**.
+
+### Basic Filters
 
 | Filter | SimplyRETS Param | Description |
 |--------|------------------|-------------|
 | `minbeds` | `minbeds` | Minimum bedrooms |
 | `minbaths` | `minbaths` | Minimum bathrooms |
-| `minprice` | `minprice` | Minimum price |
-| `maxprice` | `maxprice` | Maximum price |
+| `minprice` | `minprice` | Minimum price (absolute) |
+| `maxprice` | `maxprice` | Maximum price (absolute) |
 | `subtype` | `subtype` | `SingleFamilyResidence` or `Condominium` |
+
+### Market-Adaptive Pricing (NEW in v2.0)
+
+Instead of hardcoded price caps that fail in expensive markets, presets now use **percentage of market median**:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `price_strategy.mode` | string | Pricing strategy mode (see below) |
+| `price_strategy.value` | float | Percentage as decimal (0.70 = 70%) |
+| `preset_display_name` | string | Custom name for PDF headers (e.g., "First-Time Buyer") |
+
+#### Price Strategy Modes
+
+| Mode | Description | Example |
+|------|-------------|---------|
+| `maxprice_pct_of_median_list` | Max price = X% of median list price | 70% median → $1.68M in Irvine |
+| `maxprice_pct_of_median_close` | Max price = X% of median close price | 70% median close |
+| `minprice_pct_of_median_list` | Min price = X% of median list price | 150% median → $3.6M in Irvine (luxury) |
+| `minprice_pct_of_median_close` | Min price = X% of median close price | 150% median close |
+
+#### How It Works
+
+```
+1. User selects "First-Time Buyer" preset in wizard
+   → filters: { price_strategy: { mode: "maxprice_pct_of_median_list", value: 0.70 } }
+
+2. Worker receives job for "Irvine"
+   → Fetches baseline listings (90 days, same subtype)
+   → Computes median_list_price = $2,400,000
+
+3. Worker resolves filters
+   → maxprice = $2,400,000 × 0.70 = $1,680,000
+
+4. Worker queries SimplyRETS with resolved maxprice
+   → Returns homes under $1.68M
+
+5. PDF shows "First-Time Buyer — Irvine" (not "New Listings Gallery")
+```
+
+#### Default Presets
+
+| Preset | Price Strategy | Other Filters |
+|--------|---------------|---------------|
+| **First-Time Buyer** | ≤70% of median list | 2+ beds, 2+ baths, SFR |
+| **Investor Deals** | ≤50% of median list | (all property types) |
+| **Luxury Showcase** | ≥150% of median list | SFR |
+| **Condo Watch** | (no price filter) | 1+ beds, Condo |
+| **Family Homes** | (no price filter) | 4+ beds, 2+ baths, SFR |
+
+### Elastic Widening (Zero Results Safety Net)
+
+If a market-adaptive preset returns fewer than 6 results (4 for featured listings):
+
+1. **Expand price range**: 70% → 85% → 100% → 120%
+2. **Note in PDF**: "Expanded price range to match local market conditions"
+
+This ensures users never see empty reports.
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `packages/ui/src/components/schedules/types.ts` | `PriceStrategy` interface, `SMART_PRESETS` definitions |
+| `apps/api/src/api/routes/schedules.py` | `ReportFilters` Pydantic model with `price_strategy` |
+| `apps/worker/src/worker/filter_resolver.py` | `resolve_filters()`, `compute_market_stats()`, `elastic_widen_filters()` |
+| `apps/worker/src/worker/tasks.py` | Integration: median computation → filter resolution → query |
 
 Filters are applied server-side by SimplyRETS where possible, then client-side date filtering is applied per the table below.
 
@@ -552,6 +620,8 @@ Each scheduled report email includes:
 
 | Date | Version | Changes |
 |------|---------|---------|
+| Dec 29, 2025 | 1.3 | **Market-Adaptive Presets**: Added `price_strategy` for percentage-of-median pricing, `preset_display_name` for custom PDF headers, elastic widening fallback |
+| Dec 27, 2025 | 1.2 | Added Smart Preset Filters (v1.5) with absolute price caps |
 | Dec 10, 2024 | 1.1 | Added SimplyRETS API filtering limitation warning, local testing instructions |
 | Dec 10, 2024 | 1.0 | Initial version |
 
