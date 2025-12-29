@@ -47,7 +47,7 @@ export function MarketingHome() {
                   Beautiful market reports.
                 </span>
                 <br />
-                <span className="text-slate-900">Zero effort.</span>
+                <span className="text-slate-700">Zero effort.</span>
               </h1>
               <p className="text-xl text-slate-600 mb-8 leading-relaxed max-w-xl">
                 Generate branded market reports in 30 seconds. Automated delivery to clients. 
@@ -249,8 +249,8 @@ export function MarketingHome() {
             {/* Feature callouts - Left side with connectors */}
             <div className="hidden lg:flex items-center absolute left-4 top-[28%] animate-in fade-in slide-in-from-left-8 duration-700 delay-300">
               <div className="text-right max-w-[180px]">
-                <div className="font-semibold text-slate-900 mb-1">Your logo & colors</div>
-                <div className="text-sm text-slate-600">Full white-label branding</div>
+                <div className="font-semibold text-lg text-slate-800 mb-1">Your logo & colors</div>
+                <div className="text-sm text-slate-500">Full white-label branding</div>
               </div>
               <div className="flex items-center ml-3">
                 <div className="w-12 border-t-2 border-dashed border-purple-300" />
@@ -260,8 +260,8 @@ export function MarketingHome() {
 
             <div className="hidden lg:flex items-center absolute left-4 top-[62%] animate-in fade-in slide-in-from-left-8 duration-700 delay-500">
               <div className="text-right max-w-[180px]">
-                <div className="font-semibold text-slate-900 mb-1">Key market metrics</div>
-                <div className="text-sm text-slate-600">Price, inventory, DOM</div>
+                <div className="font-semibold text-lg text-slate-800 mb-1">Key market metrics</div>
+                <div className="text-sm text-slate-500">Price, inventory, DOM</div>
               </div>
               <div className="flex items-center ml-3">
                 <div className="w-12 border-t-2 border-dashed border-purple-300" />
@@ -327,8 +327,8 @@ export function MarketingHome() {
                 <div className="w-12 border-t-2 border-dashed border-orange-300" />
               </div>
               <div className="text-left max-w-[180px]">
-                <div className="font-semibold text-slate-900 mb-1">Mobile-first design</div>
-                <div className="text-sm text-slate-600">Perfect on every device</div>
+                <div className="font-semibold text-lg text-slate-800 mb-1">Mobile-first design</div>
+                <div className="text-sm text-slate-500">Perfect on every device</div>
               </div>
             </div>
 
@@ -338,8 +338,8 @@ export function MarketingHome() {
                 <div className="w-12 border-t-2 border-dashed border-orange-300" />
               </div>
               <div className="text-left max-w-[180px]">
-                <div className="font-semibold text-slate-900 mb-1">Your contact info</div>
-                <div className="text-sm text-slate-600">Photo, phone, social links</div>
+                <div className="font-semibold text-lg text-slate-800 mb-1">Your contact info</div>
+                <div className="text-sm text-slate-500">Photo, phone, social links</div>
               </div>
             </div>
           </div>
@@ -394,8 +394,8 @@ export function MarketingHome() {
             {/* Feature callouts - Left side with connectors */}
             <div className="hidden lg:flex items-center absolute left-4 top-[28%] animate-in fade-in slide-in-from-left-8 duration-700 delay-300">
               <div className="text-right max-w-[180px]">
-                <div className="font-semibold text-slate-900 mb-1">Professional header</div>
-                <div className="text-sm text-slate-600">Gradient design with branding</div>
+                <div className="font-semibold text-lg text-slate-800 mb-1">Professional header</div>
+                <div className="text-sm text-slate-500">Gradient design with branding</div>
               </div>
               <div className="flex items-center ml-3">
                 <div className="w-12 border-t-2 border-dashed border-purple-300" />
@@ -405,8 +405,8 @@ export function MarketingHome() {
 
             <div className="hidden lg:flex items-center absolute left-4 top-[62%] animate-in fade-in slide-in-from-left-8 duration-700 delay-500">
               <div className="text-right max-w-[180px]">
-                <div className="font-semibold text-slate-900 mb-1">Property galleries</div>
-                <div className="text-sm text-slate-600">Clean grid layouts</div>
+                <div className="font-semibold text-lg text-slate-800 mb-1">Property galleries</div>
+                <div className="text-sm text-slate-500">Clean grid layouts</div>
               </div>
               <div className="flex items-center ml-3">
                 <div className="w-12 border-t-2 border-dashed border-purple-300" />
@@ -463,8 +463,8 @@ export function MarketingHome() {
                 <div className="w-12 border-t-2 border-dashed border-emerald-300" />
               </div>
               <div className="text-left max-w-[180px]">
-                <div className="font-semibold text-slate-900 mb-1">Charts & visualizations</div>
-                <div className="text-sm text-slate-600">Price trends, market stats</div>
+                <div className="font-semibold text-lg text-slate-800 mb-1">Charts & visualizations</div>
+                <div className="text-sm text-slate-500">Price trends, market stats</div>
               </div>
             </div>
 
@@ -474,8 +474,8 @@ export function MarketingHome() {
                 <div className="w-12 border-t-2 border-dashed border-emerald-300" />
               </div>
               <div className="text-left max-w-[180px]">
-                <div className="font-semibold text-slate-900 mb-1">Agent footer</div>
-                <div className="text-sm text-slate-600">Photo & contact details</div>
+                <div className="font-semibold text-lg text-slate-800 mb-1">Agent footer</div>
+                <div className="text-sm text-slate-500">Photo & contact details</div>
               </div>
             </div>
           </div>
