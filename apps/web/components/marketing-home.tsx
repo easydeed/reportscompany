@@ -43,11 +43,13 @@ export function MarketingHome() {
                 </span>
               </div>
               <h1 className="font-display font-black text-5xl sm:text-6xl lg:text-7xl mb-6 leading-[1.05]">
-                <span className="bg-gradient-to-r from-slate-900 via-purple-800 to-purple-600 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-purple-600 via-violet-600 to-purple-500 bg-clip-text text-transparent">
                   Beautiful market reports.
                 </span>
                 <br />
-                <span className="text-slate-700">Zero effort.</span>
+                <span className="bg-gradient-to-r from-purple-500 via-fuchsia-500 to-orange-500 bg-clip-text text-transparent">
+                  Zero effort.
+                </span>
               </h1>
               <p className="text-xl text-slate-600 mb-8 leading-relaxed max-w-xl">
                 Generate branded market reports in 30 seconds. Automated delivery to clients. 
