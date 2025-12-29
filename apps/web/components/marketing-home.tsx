@@ -232,7 +232,7 @@ export function MarketingHome() {
       {/* ═══════════════════════════════════════════════════════════════════
           4. EMAIL REPORTS SHOWCASE
       ═══════════════════════════════════════════════════════════════════ */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-white overflow-hidden">
+      <section id="email-reports" className="py-24 px-4 sm:px-6 lg:px-8 bg-white overflow-hidden">
         <div className="max-w-[1400px] mx-auto">
           <div className="text-center mb-16">
             <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
@@ -361,7 +361,7 @@ export function MarketingHome() {
       {/* ═══════════════════════════════════════════════════════════════════
           5. PDF REPORTS SHOWCASE
       ═══════════════════════════════════════════════════════════════════ */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50">
+      <section id="pdf-reports" className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50">
         <div className="max-w-[1400px] mx-auto">
           <div className="text-center mb-16">
             <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
