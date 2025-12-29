@@ -42,8 +42,12 @@ export function MarketingHome() {
                   Trusted by 1,200+ agents at KW, RE/MAX, Coldwell Banker
                 </span>
               </div>
-              <h1 className="font-display font-black text-5xl sm:text-6xl lg:text-7xl mb-6 text-slate-900 leading-[1.05]">
-                Beautiful market reports. Zero effort.
+              <h1 className="font-display font-black text-5xl sm:text-6xl lg:text-7xl mb-6 leading-[1.05]">
+                <span className="bg-gradient-to-r from-slate-900 via-purple-800 to-purple-600 bg-clip-text text-transparent">
+                  Beautiful market reports.
+                </span>
+                <br />
+                <span className="text-slate-900">Zero effort.</span>
               </h1>
               <p className="text-xl text-slate-600 mb-8 leading-relaxed max-w-xl">
                 Generate branded market reports in 30 seconds. Automated delivery to clients. 
@@ -242,23 +246,31 @@ export function MarketingHome() {
           </div>
 
           <div className="relative max-w-[1200px] mx-auto px-4">
-            {/* Feature callouts - Left side */}
-            <div className="hidden lg:block absolute left-0 top-1/3 max-w-[200px] animate-in fade-in slide-in-from-left duration-700 delay-300">
-              <div className="text-right">
+            {/* Feature callouts - Left side with connectors */}
+            <div className="hidden lg:flex items-center absolute left-4 top-[28%] animate-in fade-in slide-in-from-left-8 duration-700 delay-300">
+              <div className="text-right max-w-[180px]">
                 <div className="font-semibold text-slate-900 mb-1">Your logo & colors</div>
-                <div className="text-sm text-slate-600">Full white-label branding in every email</div>
+                <div className="text-sm text-slate-600">Full white-label branding</div>
+              </div>
+              <div className="flex items-center ml-3">
+                <div className="w-12 border-t-2 border-dashed border-purple-300" />
+                <div className="w-3 h-3 rounded-full bg-purple-500 shadow-lg shadow-purple-500/50 animate-pulse" />
               </div>
             </div>
 
-            <div className="hidden lg:block absolute left-0 top-2/3 max-w-[200px] animate-in fade-in slide-in-from-left duration-700 delay-500">
-              <div className="text-right">
+            <div className="hidden lg:flex items-center absolute left-4 top-[62%] animate-in fade-in slide-in-from-left-8 duration-700 delay-500">
+              <div className="text-right max-w-[180px]">
                 <div className="font-semibold text-slate-900 mb-1">Key market metrics</div>
-                <div className="text-sm text-slate-600">Median price, inventory, days on market</div>
+                <div className="text-sm text-slate-600">Price, inventory, DOM</div>
+              </div>
+              <div className="flex items-center ml-3">
+                <div className="w-12 border-t-2 border-dashed border-purple-300" />
+                <div className="w-3 h-3 rounded-full bg-purple-500 shadow-lg shadow-purple-500/50 animate-pulse" />
               </div>
             </div>
 
             {/* Center mockup carousel */}
-            <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-700">
+            <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-500">
               <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center gap-3">
                 <div className="flex gap-1.5">
                   <div className="w-3 h-3 rounded-full bg-red-500" />
@@ -308,18 +320,26 @@ export function MarketingHome() {
               </div>
             </div>
 
-            {/* Feature callouts - Right side */}
-            <div className="hidden lg:block absolute right-0 top-1/3 max-w-[200px] animate-in fade-in slide-in-from-right duration-700 delay-300">
-              <div className="text-left">
+            {/* Feature callouts - Right side with connectors */}
+            <div className="hidden lg:flex items-center absolute right-4 top-[28%] animate-in fade-in slide-in-from-right-8 duration-700 delay-300">
+              <div className="flex items-center mr-3">
+                <div className="w-3 h-3 rounded-full bg-orange-500 shadow-lg shadow-orange-500/50 animate-pulse" />
+                <div className="w-12 border-t-2 border-dashed border-orange-300" />
+              </div>
+              <div className="text-left max-w-[180px]">
                 <div className="font-semibold text-slate-900 mb-1">Mobile-first design</div>
-                <div className="text-sm text-slate-600">Looks perfect on every device</div>
+                <div className="text-sm text-slate-600">Perfect on every device</div>
               </div>
             </div>
 
-            <div className="hidden lg:block absolute right-0 top-2/3 max-w-[200px] animate-in fade-in slide-in-from-right duration-700 delay-500">
-              <div className="text-left">
+            <div className="hidden lg:flex items-center absolute right-4 top-[62%] animate-in fade-in slide-in-from-right-8 duration-700 delay-500">
+              <div className="flex items-center mr-3">
+                <div className="w-3 h-3 rounded-full bg-orange-500 shadow-lg shadow-orange-500/50 animate-pulse" />
+                <div className="w-12 border-t-2 border-dashed border-orange-300" />
+              </div>
+              <div className="text-left max-w-[180px]">
                 <div className="font-semibold text-slate-900 mb-1">Your contact info</div>
-                <div className="text-sm text-slate-600">Photo, phone, email, social links</div>
+                <div className="text-sm text-slate-600">Photo, phone, social links</div>
               </div>
             </div>
           </div>
@@ -371,23 +391,31 @@ export function MarketingHome() {
           </div>
 
           <div className="relative max-w-[1200px] mx-auto px-4">
-            {/* Feature callouts - Left side */}
-            <div className="hidden lg:block absolute left-0 top-1/3 max-w-[200px] animate-in fade-in slide-in-from-left duration-700 delay-300">
-              <div className="text-right">
+            {/* Feature callouts - Left side with connectors */}
+            <div className="hidden lg:flex items-center absolute left-4 top-[28%] animate-in fade-in slide-in-from-left-8 duration-700 delay-300">
+              <div className="text-right max-w-[180px]">
                 <div className="font-semibold text-slate-900 mb-1">Professional header</div>
-                <div className="text-sm text-slate-600">Gradient design with your branding</div>
+                <div className="text-sm text-slate-600">Gradient design with branding</div>
+              </div>
+              <div className="flex items-center ml-3">
+                <div className="w-12 border-t-2 border-dashed border-purple-300" />
+                <div className="w-3 h-3 rounded-full bg-purple-500 shadow-lg shadow-purple-500/50 animate-pulse" />
               </div>
             </div>
 
-            <div className="hidden lg:block absolute left-0 top-2/3 max-w-[200px] animate-in fade-in slide-in-from-left duration-700 delay-500">
-              <div className="text-right">
+            <div className="hidden lg:flex items-center absolute left-4 top-[62%] animate-in fade-in slide-in-from-left-8 duration-700 delay-500">
+              <div className="text-right max-w-[180px]">
                 <div className="font-semibold text-slate-900 mb-1">Property galleries</div>
-                <div className="text-sm text-slate-600">Clean grid layouts with listing details</div>
+                <div className="text-sm text-slate-600">Clean grid layouts</div>
+              </div>
+              <div className="flex items-center ml-3">
+                <div className="w-12 border-t-2 border-dashed border-purple-300" />
+                <div className="w-3 h-3 rounded-full bg-purple-500 shadow-lg shadow-purple-500/50 animate-pulse" />
               </div>
             </div>
 
             {/* Center mockup carousel */}
-            <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-2xl border border-slate-200 p-8 animate-in fade-in zoom-in-95 duration-700">
+            <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-2xl border border-slate-200 p-8 animate-in fade-in zoom-in-95 duration-500">
               <div className="bg-slate-100 rounded-lg p-6">
                 <div className="relative group">
                   <Carousel className="w-full">
@@ -428,18 +456,26 @@ export function MarketingHome() {
               </div>
             </div>
 
-            {/* Feature callouts - Right side */}
-            <div className="hidden lg:block absolute right-0 top-1/3 max-w-[200px] animate-in fade-in slide-in-from-right duration-700 delay-300">
-              <div className="text-left">
+            {/* Feature callouts - Right side with connectors */}
+            <div className="hidden lg:flex items-center absolute right-4 top-[28%] animate-in fade-in slide-in-from-right-8 duration-700 delay-300">
+              <div className="flex items-center mr-3">
+                <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50 animate-pulse" />
+                <div className="w-12 border-t-2 border-dashed border-emerald-300" />
+              </div>
+              <div className="text-left max-w-[180px]">
                 <div className="font-semibold text-slate-900 mb-1">Charts & visualizations</div>
-                <div className="text-sm text-slate-600">Price trends, inventory, and market stats</div>
+                <div className="text-sm text-slate-600">Price trends, market stats</div>
               </div>
             </div>
 
-            <div className="hidden lg:block absolute right-0 top-2/3 max-w-[200px] animate-in fade-in slide-in-from-right duration-700 delay-500">
-              <div className="text-left">
+            <div className="hidden lg:flex items-center absolute right-4 top-[62%] animate-in fade-in slide-in-from-right-8 duration-700 delay-500">
+              <div className="flex items-center mr-3">
+                <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50 animate-pulse" />
+                <div className="w-12 border-t-2 border-dashed border-emerald-300" />
+              </div>
+              <div className="text-left max-w-[180px]">
                 <div className="font-semibold text-slate-900 mb-1">Agent footer</div>
-                <div className="text-sm text-slate-600">Photo, credentials, and contact details</div>
+                <div className="text-sm text-slate-600">Photo & contact details</div>
               </div>
             </div>
           </div>
