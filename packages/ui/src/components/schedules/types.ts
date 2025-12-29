@@ -31,6 +31,7 @@ export interface ReportFilters {
   maxprice?: number           // Absolute max price (fallback)
   subtype?: PropertySubtype
   price_strategy?: PriceStrategy  // Market-adaptive pricing (preferred)
+  preset_display_name?: string    // Custom name for PDF headers (e.g., "First-Time Buyer")
 }
 
 // Preset definition for Smart Presets
