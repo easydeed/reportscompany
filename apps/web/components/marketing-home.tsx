@@ -100,15 +100,13 @@ export function MarketingHome() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4, delay: 0.1 }}
-              className="relative"
+              className="relative lg:scale-110 lg:translate-x-4"
             >
-              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
-                <img
-                  src="/images/hero-dashboard.png"
-                  alt="TrendyReports dashboard showing market reports, analytics, and automated email delivery"
-                  className="w-full h-auto"
-                />
-              </div>
+              <img
+                src="/images/hero-dashboard.png"
+                alt="TrendyReports dashboard showing market reports, analytics, and automated email delivery"
+                className="w-full h-auto drop-shadow-2xl"
+              />
             </motion.div>
           </div>
         </div>
