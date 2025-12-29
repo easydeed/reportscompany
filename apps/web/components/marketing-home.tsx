@@ -241,8 +241,10 @@ export function MarketingHome() {
       <section id="email-reports" className="py-24 px-4 sm:px-6 lg:px-8 bg-white overflow-hidden">
         <div className="max-w-[1400px] mx-auto">
           <div className="text-center mb-16">
-            <h2 className="font-display font-black text-4xl sm:text-5xl mb-4 text-slate-900">
-              Email reports clients actually open
+            <h2 className="font-display font-black text-4xl sm:text-5xl mb-4">
+              <span className="bg-gradient-to-r from-purple-600 via-violet-600 to-fuchsia-500 bg-clip-text text-transparent">
+                Email reports clients actually open
+              </span>
             </h2>
             <p className="text-xl text-slate-600">Mobile-optimized HTML emails with your brand front and center</p>
           </div>
@@ -386,8 +388,10 @@ export function MarketingHome() {
       <section id="pdf-reports" className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50">
         <div className="max-w-[1400px] mx-auto">
           <div className="text-center mb-16">
-            <h2 className="font-display font-black text-4xl sm:text-5xl mb-4 text-slate-900">
-              Print-ready PDFs that look expensive
+            <h2 className="font-display font-black text-4xl sm:text-5xl mb-4">
+              <span className="bg-gradient-to-r from-violet-600 via-purple-600 to-purple-500 bg-clip-text text-transparent">
+                Print-ready PDFs that look expensive
+              </span>
             </h2>
             <p className="text-xl text-slate-600">8.5×11 formatted for perfect printing and digital sharing</p>
           </div>
@@ -713,8 +717,10 @@ export function MarketingHome() {
       <section id="pricing" className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-16">
-            <h2 className="font-display font-black text-4xl sm:text-5xl mb-4 text-slate-900">
-              Simple, transparent pricing
+            <h2 className="font-display font-black text-4xl sm:text-5xl mb-4">
+              <span className="bg-gradient-to-r from-purple-600 via-fuchsia-500 to-orange-500 bg-clip-text text-transparent">
+                Simple, transparent pricing
+              </span>
             </h2>
             <p className="text-xl text-slate-600">
               Choose the plan that fits your business. Upgrade or downgrade anytime.
