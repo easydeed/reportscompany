@@ -16,6 +16,7 @@ from .email.send import send_schedule_email
 from .report_builders import build_result_json
 from .limit_checker import check_usage_limit, log_limit_decision_worker
 from .utils.photo_proxy import proxy_report_photos_inplace
+from .filter_resolver import compute_market_stats, resolve_filters, build_filters_label, elastic_widen_filters
 import boto3
 from botocore.client import Config
 
@@ -361,6 +362,46 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
             city = "Unknown"  # Don't default to Houston - this indicates a problem
         print(f"🔍 REPORT RUN {run_id}: city={city}, zips={zips}")
         lookback = int(_params.get("lookback_days") or 30)
+        # ===== MARKET-ADAPTIVE FILTER RESOLUTION =====
+        # If filters include a price_strategy, resolve percentages to actual dollars
+        # based on the market's median prices. This makes presets work across all markets.
+        filters = _params.get("filters") or {}
+        resolved_filters = None
+        market_stats = None
+        filters_label = None
+        
+        if filters.get("price_strategy"):
+            print(f"🔍 REPORT RUN {run_id}: Market-adaptive pricing detected, computing median first")
+            
+            # Step 1: Fetch baseline listings for median calculation
+            # Use location + type=RES + subtype only (don't apply bed/bath filters yet)
+            baseline_params = {
+                "city": city,
+                "zips": zips,
+                "lookback_days": 90,  # Use 90 days for stable median
+                "filters": {"subtype": filters.get("subtype")} if filters.get("subtype") else {}
+            }
+            baseline_query = build_params("inventory", baseline_params)
+            print(f"🔍 REPORT RUN {run_id}: baseline_query for median={baseline_query}")
+            baseline_raw = fetch_properties(baseline_query, limit=500)
+            print(f"🔍 REPORT RUN {run_id}: fetched {len(baseline_raw)} baseline listings for median")
+            
+            # Step 2: Compute market stats
+            baseline_extracted = PropertyDataExtractor(baseline_raw).run()
+            market_stats = compute_market_stats(baseline_extracted)
+            print(f"🔍 REPORT RUN {run_id}: market_stats={market_stats}")
+            
+            # Step 3: Resolve filters (convert % to actual $)
+            resolved_filters = resolve_filters(filters, market_stats)
+            print(f"🔍 REPORT RUN {run_id}: resolved_filters={resolved_filters}")
+            
+            # Step 4: Build human-readable label for PDF/email
+            filters_label = build_filters_label(filters, resolved_filters, market_stats)
+            print(f"🔍 REPORT RUN {run_id}: filters_label={filters_label}")
+            
+            # Update params with resolved filters for query builders
+            _params = {**_params, "filters": resolved_filters}
+        
         cache_payload = {"type": report_type, "params": params}
         result = cache_get("report", cache_payload)
         if not result:
@@ -397,7 +438,7 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                 print(f"🔍 REPORT RUN {run_id}: combined {len(raw)} total properties")
             else:
                 # Standard single query for other report types
-                q = build_params(report_type, params or {})
+                q = build_params(report_type, _params)
                 print(f"🔍 REPORT RUN {run_id}: simplyrets_query={q}")
                 raw = fetch_properties(q, limit=800)
                 print(f"🔍 REPORT RUN {run_id}: fetched {len(raw)} properties from SimplyRETS")
@@ -406,16 +447,80 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
             clean = filter_valid(extracted)
             print(f"🔍 REPORT RUN {run_id}: cleaned to {len(clean)} valid properties")
             
-            # Build context for report builders
+            # ===== ELASTIC WIDENING (auto-expand filters if too few results) =====
+            # This ensures users almost never see empty reports
+            widening_note = None
+            if filters.get("price_strategy") and market_stats and len(clean) < 6:
+                # Determine minimum results based on report type
+                min_results = 4 if "featured" in (report_type or "").lower() else 6
+                
+                if len(clean) < min_results:
+                    print(f"⚠️  REPORT RUN {run_id}: Only {len(clean)} results, attempting elastic widening")
+                    
+                    # Try widening up to 3 times
+                    current_filters_intent = filters.copy()
+                    for attempt in range(3):
+                        widened = elastic_widen_filters(
+                            current_filters_intent, 
+                            market_stats, 
+                            len(clean), 
+                            min_results
+                        )
+                        if not widened:
+                            print(f"⚠️  REPORT RUN {run_id}: Cannot widen further after {attempt} attempts")
+                            break
+                        
+                        # Resolve widened filters
+                        widened_resolved = resolve_filters(widened, market_stats)
+                        widened_params = {**_params, "filters": widened_resolved}
+                        
+                        # Re-query with widened filters
+                        q2 = build_params(report_type, widened_params)
+                        print(f"🔍 REPORT RUN {run_id}: widened_query (attempt {attempt+1})={q2}")
+                        raw2 = fetch_properties(q2, limit=800)
+                        extracted2 = PropertyDataExtractor(raw2).run()
+                        clean2 = filter_valid(extracted2)
+                        print(f"🔍 REPORT RUN {run_id}: widened results: {len(clean2)} properties")
+                        
+                        if len(clean2) >= min_results:
+                            # Success! Use widened results
+                            clean = clean2
+                            resolved_filters = widened_resolved
+                            filters_label = build_filters_label(widened, widened_resolved, market_stats)
+                            widening_note = widened.get("_widened_reason", "Expanded price range to match local market conditions")
+                            print(f"✅ REPORT RUN {run_id}: elastic widening successful: {widening_note}")
+                            break
+                        
+                        current_filters_intent = widened
+            
+            # Build context for report builders (include market-adaptive data)
             context = {
                 "city": city,
                 "lookback_days": lookback,
                 "generated_at": int(time.time()),
+                "filters": resolved_filters or filters,  # Pass resolved filters
             }
+            
+            # Add market-adaptive metadata for PDF/email rendering
+            if market_stats:
+                context["market_stats"] = market_stats
+            if filters_label:
+                context["filters_label"] = filters_label
             
             print(f"🔍 REPORT RUN {run_id}: step=build_context")
             # Use report builder dispatcher to create result_json
             result = build_result_json(report_type, clean, context)
+            
+            # Add widening note if filters were expanded
+            if widening_note:
+                result["widening_note"] = widening_note
+            
+            # Add resolved filter info to result for PDF header display
+            if filters_label:
+                result["filters_label"] = filters_label
+            if resolved_filters and resolved_filters.get("_resolved_from"):
+                result["price_resolved_from"] = resolved_filters["_resolved_from"]
+            
             cache_set("report", cache_payload, result, ttl_s=900)  # 15 minutes
             print(f"✅ REPORT RUN {run_id}: data_fetch complete (from SimplyRETS)")
         else:

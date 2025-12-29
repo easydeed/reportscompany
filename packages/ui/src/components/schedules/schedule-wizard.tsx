@@ -215,14 +215,29 @@ function StepBasics({ state, setState }: { state: ScheduleWizardState; setState:
                           {preset.filters.minbeds && (
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0">{preset.filters.minbeds}+ bed</Badge>
                           )}
-                          {preset.filters.maxprice && (
+                          {/* Market-adaptive pricing (percentage of median) */}
+                          {preset.filters.price_strategy?.mode === "maxprice_pct_of_median_list" && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-blue-600">
+                              ≤{Math.round(preset.filters.price_strategy.value * 100)}% median
+                            </Badge>
+                          )}
+                          {preset.filters.price_strategy?.mode === "minprice_pct_of_median_list" && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-blue-600">
+                              ≥{Math.round(preset.filters.price_strategy.value * 100)}% median
+                            </Badge>
+                          )}
+                          {/* Fallback: absolute prices (legacy) */}
+                          {!preset.filters.price_strategy && preset.filters.maxprice && (
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0">≤${(preset.filters.maxprice/1000000).toFixed(1)}M</Badge>
                           )}
-                          {preset.filters.minprice && (
+                          {!preset.filters.price_strategy && preset.filters.minprice && (
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0">≥${(preset.filters.minprice/1000000).toFixed(1)}M</Badge>
                           )}
                           {preset.filters.subtype === "Condominium" && (
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0">Condo</Badge>
+                          )}
+                          {preset.filters.subtype === "SingleFamilyResidence" && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">SFR</Badge>
                           )}
                         </div>
                       </button>
@@ -995,10 +1010,22 @@ function StepReview({ state }: { state: ScheduleWizardState }) {
                 {state.filters.minbaths && (
                   <Badge variant="outline" className="text-xs">{state.filters.minbaths}+ Baths</Badge>
                 )}
-                {state.filters.minprice && (
+                {/* Market-adaptive pricing (shows intent, resolved at runtime) */}
+                {state.filters.price_strategy?.mode === "maxprice_pct_of_median_list" && (
+                  <Badge variant="outline" className="text-xs text-blue-600 border-blue-200 bg-blue-50">
+                    ≤{Math.round(state.filters.price_strategy.value * 100)}% of local median
+                  </Badge>
+                )}
+                {state.filters.price_strategy?.mode === "minprice_pct_of_median_list" && (
+                  <Badge variant="outline" className="text-xs text-blue-600 border-blue-200 bg-blue-50">
+                    ≥{Math.round(state.filters.price_strategy.value * 100)}% of local median
+                  </Badge>
+                )}
+                {/* Fallback: absolute prices (legacy) */}
+                {!state.filters.price_strategy && state.filters.minprice && (
                   <Badge variant="outline" className="text-xs">≥${(state.filters.minprice/1000).toLocaleString()}K</Badge>
                 )}
-                {state.filters.maxprice && (
+                {!state.filters.price_strategy && state.filters.maxprice && (
                   <Badge variant="outline" className="text-xs">≤${(state.filters.maxprice/1000).toLocaleString()}K</Badge>
                 )}
                 {state.filters.subtype && (
@@ -1007,6 +1034,15 @@ function StepReview({ state }: { state: ScheduleWizardState }) {
                   </Badge>
                 )}
               </div>
+              {/* Explain market-adaptive pricing */}
+              {state.filters.price_strategy && (
+                <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Price threshold auto-adjusts based on {state.city || "selected area"}'s market conditions
+                </p>
+              )}
             </div>
           )}
 
