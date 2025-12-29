@@ -288,6 +288,7 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 12px;  /* Reduced gap */
     margin: 8px 0;  /* Reduced margin */
+    align-content: start;  /* Prevent cards from stretching to fill space */
   }
 
   .property-card{
@@ -298,6 +299,7 @@
     break-inside: avoid;
     page-break-inside: avoid;
     box-shadow: 0 2px 12px rgba(0,0,0,.04);
+    height: fit-content;  /* Card height based on content, not stretched */
   }
 
   /* Photo container - ENLARGED for better visibility (V2.4) */

@@ -52,24 +52,32 @@ function sanitizeColor(color: string | null | undefined, fallback: string): stri
 /**
  * Phase 30: Inject brand colors and metadata into template
  * SECURITY: All brand values are sanitized to prevent XSS
+ * 
+ * IMPORTANT: This function MUST process ALL Handlebars-style conditionals,
+ * even when brand data is missing. Otherwise raw {{#if}} tags appear in output.
  */
 function injectBrand(html: string, brand: any): string {
-  if (!brand) return html;
+  // Provide default brand if none supplied to ensure conditionals are processed
+  const safeBrand = brand || {
+    display_name: "TrendyReports",
+    primary_color: DEFAULT_PRIMARY_COLOR,
+    accent_color: DEFAULT_ACCENT_COLOR,
+  };
   
   // Sanitize colors - only allow valid hex
-  const primaryColor = sanitizeColor(brand.primary_color, DEFAULT_PRIMARY_COLOR);
-  const accentColor = sanitizeColor(brand.accent_color, DEFAULT_ACCENT_COLOR);
+  const primaryColor = sanitizeColor(safeBrand.primary_color, DEFAULT_PRIMARY_COLOR);
+  const accentColor = sanitizeColor(safeBrand.accent_color, DEFAULT_ACCENT_COLOR);
   
   // Sanitize text values to prevent XSS
-  const brandName = escapeHtml(brand.display_name) || "TrendyReports";
+  const brandName = escapeHtml(safeBrand.display_name) || "TrendyReports";
   
   // Sanitize URLs
-  const logoUrl = sanitizeUrl(brand.logo_url);
-  const footerLogoUrl = sanitizeUrl(brand.footer_logo_url) || logoUrl;
-  const repPhotoUrl = sanitizeUrl(brand.rep_photo_url);
-  const contactLine1 = escapeHtml(brand.contact_line1) || "";
-  const contactLine2 = escapeHtml(brand.contact_line2) || "";
-  const websiteUrl = escapeHtml(brand.website_url) || "";
+  const logoUrl = sanitizeUrl(safeBrand.logo_url);
+  const footerLogoUrl = sanitizeUrl(safeBrand.footer_logo_url) || logoUrl;
+  const repPhotoUrl = sanitizeUrl(safeBrand.rep_photo_url);
+  const contactLine1 = escapeHtml(safeBrand.contact_line1) || "";
+  const contactLine2 = escapeHtml(safeBrand.contact_line2) || "";
+  const websiteUrl = escapeHtml(safeBrand.website_url) || "";
   
   // Inject CSS color overrides right before </head>
   const colorOverride = `
@@ -83,7 +91,7 @@ function injectBrand(html: string, brand: any): string {
   
   let result = html.replace("</head>", `${colorOverride}</head>`);
   
-  // Replace brand placeholders
+  // Replace brand placeholders FIRST (before conditionals)
   result = result.replaceAll("{{brand_name}}", brandName);
   result = result.replaceAll("{{brand_logo_url}}", logoUrl);
   result = result.replaceAll("{{brand_badge}}", `${brandName} Insights`);
@@ -96,54 +104,74 @@ function injectBrand(html: string, brand: any): string {
   result = result.replaceAll("{{contact_line2}}", contactLine2);
   result = result.replaceAll("{{website_url}}", websiteUrl);
   
-  // Handle Handlebars-style conditionals for branded footer
-  // {{#if rep_photo_url}}...{{/if}}
+  // Process Handlebars-style conditionals
+  // CRITICAL: Process {{#if...}}{{else}}{{/if}} BEFORE simple {{#if...}}{{/if}}
+  // to avoid partial matches
+  
+  // rep_photo_url conditionals
   if (repPhotoUrl) {
-    result = result.replace(/\{\{#if rep_photo_url\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+    result = result.replace(/\{\{#if\s+rep_photo_url\s*\}\}([\s\S]*?)\{\{else\}\}[\s\S]*?\{\{\/if\}\}/g, '$1');
+    result = result.replace(/\{\{#if\s+rep_photo_url\s*\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
   } else {
-    result = result.replace(/\{\{#if rep_photo_url\}\}[\s\S]*?\{\{\/if\}\}/g, '');
+    result = result.replace(/\{\{#if\s+rep_photo_url\s*\}\}[\s\S]*?\{\{else\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+    result = result.replace(/\{\{#if\s+rep_photo_url\s*\}\}[\s\S]*?\{\{\/if\}\}/g, '');
   }
   
+  // contact_line1 conditionals
   if (contactLine1) {
-    result = result.replace(/\{\{#if contact_line1\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+    result = result.replace(/\{\{#if\s+contact_line1\s*\}\}([\s\S]*?)\{\{else\}\}[\s\S]*?\{\{\/if\}\}/g, '$1');
+    result = result.replace(/\{\{#if\s+contact_line1\s*\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
   } else {
-    result = result.replace(/\{\{#if contact_line1\}\}[\s\S]*?\{\{\/if\}\}/g, '');
+    result = result.replace(/\{\{#if\s+contact_line1\s*\}\}[\s\S]*?\{\{else\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+    result = result.replace(/\{\{#if\s+contact_line1\s*\}\}[\s\S]*?\{\{\/if\}\}/g, '');
   }
   
+  // contact_line2 conditionals
   if (contactLine2) {
-    result = result.replace(/\{\{#if contact_line2\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+    result = result.replace(/\{\{#if\s+contact_line2\s*\}\}([\s\S]*?)\{\{else\}\}[\s\S]*?\{\{\/if\}\}/g, '$1');
+    result = result.replace(/\{\{#if\s+contact_line2\s*\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
   } else {
-    result = result.replace(/\{\{#if contact_line2\}\}[\s\S]*?\{\{\/if\}\}/g, '');
+    result = result.replace(/\{\{#if\s+contact_line2\s*\}\}[\s\S]*?\{\{else\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+    result = result.replace(/\{\{#if\s+contact_line2\s*\}\}[\s\S]*?\{\{\/if\}\}/g, '');
   }
   
+  // website_url conditionals
   if (websiteUrl) {
-    result = result.replace(/\{\{#if website_url\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+    result = result.replace(/\{\{#if\s+website_url\s*\}\}([\s\S]*?)\{\{else\}\}[\s\S]*?\{\{\/if\}\}/g, '$1');
+    result = result.replace(/\{\{#if\s+website_url\s*\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
   } else {
-    result = result.replace(/\{\{#if website_url\}\}[\s\S]*?\{\{\/if\}\}/g, '');
+    result = result.replace(/\{\{#if\s+website_url\s*\}\}[\s\S]*?\{\{else\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+    result = result.replace(/\{\{#if\s+website_url\s*\}\}[\s\S]*?\{\{\/if\}\}/g, '');
   }
   
+  // logo_url conditionals
   if (logoUrl) {
-    result = result.replace(/\{\{#if logo_url\}\}([\s\S]*?)\{\{else\}\}[\s\S]*?\{\{\/if\}\}/g, '$1');
-    result = result.replace(/\{\{#if logo_url\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+    result = result.replace(/\{\{#if\s+logo_url\s*\}\}([\s\S]*?)\{\{else\}\}[\s\S]*?\{\{\/if\}\}/g, '$1');
+    result = result.replace(/\{\{#if\s+logo_url\s*\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
   } else {
-    result = result.replace(/\{\{#if logo_url\}\}[\s\S]*?\{\{else\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
-    result = result.replace(/\{\{#if logo_url\}\}[\s\S]*?\{\{\/if\}\}/g, '');
+    result = result.replace(/\{\{#if\s+logo_url\s*\}\}[\s\S]*?\{\{else\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+    result = result.replace(/\{\{#if\s+logo_url\s*\}\}[\s\S]*?\{\{\/if\}\}/g, '');
   }
   
-  // Handle footer_logo_url conditionals (separate from header logo)
+  // footer_logo_url conditionals (separate from header logo)
   if (footerLogoUrl) {
-    result = result.replace(/\{\{#if footer_logo_url\}\}([\s\S]*?)\{\{else\}\}[\s\S]*?\{\{\/if\}\}/g, '$1');
-    result = result.replace(/\{\{#if footer_logo_url\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+    result = result.replace(/\{\{#if\s+footer_logo_url\s*\}\}([\s\S]*?)\{\{else\}\}[\s\S]*?\{\{\/if\}\}/g, '$1');
+    result = result.replace(/\{\{#if\s+footer_logo_url\s*\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
   } else {
-    result = result.replace(/\{\{#if footer_logo_url\}\}[\s\S]*?\{\{else\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
-    result = result.replace(/\{\{#if footer_logo_url\}\}[\s\S]*?\{\{\/if\}\}/g, '');
+    result = result.replace(/\{\{#if\s+footer_logo_url\s*\}\}[\s\S]*?\{\{else\}\}([\s\S]*?)\{\{\/if\}\}/g, '$1');
+    result = result.replace(/\{\{#if\s+footer_logo_url\s*\}\}[\s\S]*?\{\{\/if\}\}/g, '');
   }
   
   // Tagline for footer
-  const tagline = brand.display_name 
+  const tagline = safeBrand.display_name 
     ? `${brandName} • Market Intelligence`
     : "TrendyReports • Market Intelligence Powered by Live MLS Data";
   result = result.replaceAll("{{brand_tagline}}", tagline);
+  
+  // CLEANUP: Remove any remaining Handlebars tags that weren't matched
+  // This prevents raw {{...}} from appearing in the final output
+  result = result.replace(/\{\{#if\s+\w+\s*\}\}[\s\S]*?\{\{\/if\}\}/g, '');
+  result = result.replace(/\{\{[^}]+\}\}/g, '');
   
   return result;
 }
@@ -215,12 +243,19 @@ function buildBrandedFooterHtml(brand: any, brandName: string, reportDate: strin
  * Build hero header HTML (V2 - Full-bleed gradient)
  * Used across all report types for consistent branding
  * SECURITY: All values are pre-sanitized by injectBrand, but we double-check here
+ * 
+ * @param reportType - Base report type (e.g., "new_listings_gallery")
+ * @param brandName - Brand display name
+ * @param brandBadge - Badge text (e.g., "TrendyReports Insights")
+ * @param logoUrl - Optional logo URL
+ * @param presetDisplayName - Optional preset name to override default (e.g., "Condo Watch")
  */
 function buildHeroHeader(
   reportType: string,
   brandName: string,
   brandBadge: string,
-  logoUrl?: string
+  logoUrl?: string,
+  presetDisplayName?: string
 ): string {
   const reportLabels: Record<string, string> = {
     new_listings: "New Listings",
@@ -230,7 +265,8 @@ function buildHeroHeader(
     new_listings_gallery: "New Listings Gallery",
     featured_listings: "Featured Listings",
   };
-  const reportLabel = reportLabels[reportType] || "Market Report";
+  // Use preset display name if available, otherwise fall back to default label
+  const reportLabel = presetDisplayName || reportLabels[reportType] || "Market Report";
   
   // Sanitize inputs (defensive - should already be sanitized by caller)
   const safeBrandName = escapeHtml(brandName);
@@ -422,6 +458,8 @@ export function buildNewListingsHtml(
   });
   const brandName = data.brand?.display_name || "TrendyReports";
   const brandBadge = `${brandName} Insights`;
+  // Smart Preset display name (e.g., "Condo Watch" instead of "New Listings Gallery")
+  const presetDisplayName = r.preset_display_name || null;
 
   // Footer HTML (reused on each page) - uses XSS-protected helper
   const footerHtml = buildBrandedFooterHtml(data.brand, brandName, reportDate);
@@ -474,9 +512,10 @@ export function buildNewListingsHtml(
     if (pageNum === 1) {
       // V2: Hero header for first page
       const logoUrl = data.brand?.logo_url || "";
+      const titleBarName = presetDisplayName || "New Listings";
       headerHtml = `
-        ${buildHeroHeader("new_listings", brandName, brandBadge, logoUrl)}
-        ${buildTitleBar("New Listings", marketName, periodLabel, reportDate)}
+        ${buildHeroHeader("new_listings", brandName, brandBadge, logoUrl, presetDisplayName)}
+        ${buildTitleBar(titleBarName, marketName, periodLabel, reportDate)}
         <section class="ribbon avoid-break">
           <div class="kpi">
             <div class="item"><div class="lbl">Total New Listings</div><div class="val">${formatNumber(counts.Active || 0)}</div></div>
@@ -489,9 +528,10 @@ export function buildNewListingsHtml(
       `;
     } else {
       // Condensed header for continuation pages
+      const titleBarName = presetDisplayName || "New Listings";
       headerHtml = `
         <div class="header-continuation">
-          <div class="title">New Listings — ${marketName} (continued)</div>
+          <div class="title">${titleBarName} — ${marketName} (continued)</div>
           <div class="page-info">Page ${pageNum} of ${totalPages}</div>
         </div>
       `;
@@ -503,7 +543,7 @@ export function buildNewListingsHtml(
           ${headerHtml}
           <section class="stack data-section">
             <div class="card">
-              ${pageNum === 1 ? '<h3>New Listings — Sorted by List Date</h3>' : ''}
+              ${pageNum === 1 ? `<h3>${presetDisplayName || "New Listings"} — Sorted by List Date</h3>` : ''}
               <table>
                 ${tableHeader}
                 <tbody>${rowsHtml}</tbody>
@@ -563,6 +603,8 @@ export function buildInventoryHtml(
   });
   const brandName = data.brand?.display_name || "TrendyReports";
   const brandBadge = `${brandName} Insights`;
+  // Smart Preset display name (e.g., "Condo Watch" instead of "Inventory Report")
+  const presetDisplayName = r.preset_display_name || null;
 
   // Footer HTML (reused on each page) - uses XSS-protected helper
   const footerHtml = buildBrandedFooterHtml(data.brand, brandName, reportDate);
@@ -614,9 +656,10 @@ export function buildInventoryHtml(
     if (pageNum === 1) {
       // V2: Hero header for first page
       const logoUrl = data.brand?.logo_url || "";
+      const titleBarName = presetDisplayName || "Listing Inventory";
       headerHtml = `
-        ${buildHeroHeader("inventory", brandName, brandBadge, logoUrl)}
-        ${buildTitleBar("Listing Inventory", marketName, periodLabel, reportDate)}
+        ${buildHeroHeader("inventory", brandName, brandBadge, logoUrl, presetDisplayName)}
+        ${buildTitleBar(titleBarName, marketName, periodLabel, reportDate)}
         <section class="ribbon avoid-break">
           <div class="kpi">
             <div class="item"><div class="lbl">Total Active Listings</div><div class="val">${formatNumber(activeCount)}</div></div>
@@ -629,9 +672,10 @@ export function buildInventoryHtml(
       `;
     } else {
       // Condensed header for continuation pages
+      const titleBarName = presetDisplayName || "Listing Inventory";
       headerHtml = `
         <div class="header-continuation">
-          <div class="title">Listing Inventory — ${marketName} (continued)</div>
+          <div class="title">${titleBarName} — ${marketName} (continued)</div>
           <div class="page-info">Page ${pageNum} of ${totalPages}</div>
         </div>
       `;
@@ -703,6 +747,8 @@ export function buildClosedHtml(
   });
   const brandName = data.brand?.display_name || "TrendyReports";
   const brandBadge = `${brandName} Insights`;
+  // Smart Preset display name
+  const presetDisplayName = r.preset_display_name || null;
 
   // Footer HTML (reused on each page) - uses XSS-protected helper
   const footerHtml = buildBrandedFooterHtml(data.brand, brandName, reportDate);
@@ -754,9 +800,10 @@ export function buildClosedHtml(
     if (pageNum === 1) {
       // V2: Hero header for first page
       const logoUrl = data.brand?.logo_url || "";
+      const titleBarName = presetDisplayName || "Closed Sales";
       headerHtml = `
-        ${buildHeroHeader("closed", brandName, brandBadge, logoUrl)}
-        ${buildTitleBar("Closed Sales", marketName, periodLabel, reportDate)}
+        ${buildHeroHeader("closed", brandName, brandBadge, logoUrl, presetDisplayName)}
+        ${buildTitleBar(titleBarName, marketName, periodLabel, reportDate)}
         <section class="ribbon avoid-break">
           <div class="kpi">
             <div class="item"><div class="lbl">Total Closed</div><div class="val">${formatNumber(counts.Closed || 0)}</div></div>
@@ -916,6 +963,8 @@ export function buildNewListingsGalleryHtml(
   });
   const brandName = data.brand?.display_name || "TrendyReports";
   const brandBadge = `${brandName} Insights`;
+  // Smart Preset display name (e.g., "Condo Watch" instead of "New Listings Gallery")
+  const presetDisplayName = r.preset_display_name || null;
 
   // Footer HTML (reused on each page) - uses XSS-protected helper
   const footerHtml = buildBrandedFooterHtml(data.brand, brandName, reportDate);
@@ -962,14 +1011,16 @@ export function buildNewListingsGalleryHtml(
     if (pageNum === 1) {
       // V2.3: Hero header OUTSIDE page-content for full-bleed
       const logoUrl = data.brand?.logo_url || "";
+      const titleBarName = presetDisplayName || "New Listings Gallery";
+      const ribbonLabel = presetDisplayName ? presetDisplayName.toUpperCase() : "NEW LISTINGS";
       pageHtml = `
       <div class="page">
-        ${buildHeroHeader("new_listings_gallery", brandName, brandBadge, logoUrl)}
+        ${buildHeroHeader("new_listings_gallery", brandName, brandBadge, logoUrl, presetDisplayName)}
         <div class="page-content">
-          ${buildTitleBar("New Listings Gallery", marketName, periodLabel, reportDate)}
+          ${buildTitleBar(titleBarName, marketName, periodLabel, reportDate)}
           <section class="ribbon avoid-break">
             <div class="count">${formatNumber(r.total_listings || listings.length)}</div>
-            <div class="label">NEW LISTINGS — LAST ${lookback} DAYS</div>
+            <div class="label">${ribbonLabel} — LAST ${lookback} DAYS</div>
           </section>
           <section class="gallery-grid">
             ${cardsHtml}
@@ -980,11 +1031,12 @@ export function buildNewListingsGalleryHtml(
       `;
     } else {
       // Condensed header for continuation pages
+      const titleBarName = presetDisplayName || "New Listings Gallery";
       pageHtml = `
       <div class="page">
         <div class="page-content" style="padding-top: 0.4in;">
           <div class="header-continuation">
-            <div class="title">New Listings Gallery — ${marketName} (continued)</div>
+            <div class="title">${titleBarName} — ${marketName} (continued)</div>
             <div class="page-info">Page ${pageNum} of ${totalPages}</div>
           </div>
           <section class="gallery-grid">
@@ -1016,6 +1068,11 @@ export function buildFeaturedListingsHtml(
   const r = data.result_json || data;
   const lookback = r.lookback_days || 30;
   
+  // Smart Preset display name (e.g., "Luxury Showcase" instead of "Featured Listings")
+  const presetDisplayName = r.preset_display_name || null;
+  const reportTitle = presetDisplayName || "Featured Listings";
+  const ribbonLabel = presetDisplayName ? presetDisplayName.toUpperCase() : "FEATURED PROPERTIES";
+  
   // Build header and ribbon replacements
   const replacements: Record<string, string> = {
     "{{market_name}}": r.city || "Market",
@@ -1027,6 +1084,8 @@ export function buildFeaturedListingsHtml(
     }),
     "{{lookback_days}}": String(lookback),
     "{{total_listings}}": formatNumber(r.total_listings || 0),
+    "{{report_title}}": escapeHtml(reportTitle),
+    "{{ribbon_label}}": escapeHtml(ribbonLabel),
   };
   
   let html = templateHtml;

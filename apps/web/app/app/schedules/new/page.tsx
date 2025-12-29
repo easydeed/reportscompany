@@ -16,6 +16,20 @@ export default function NewSchedulePage() {
       // Detect user's timezone for accurate scheduling
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
       
+      // Build filters with preset_display_name for PDF headers
+      const filters = payload.filters || {};
+      if (payload.preset_key) {
+        // Map preset_key to display name for PDF headers
+        const presetNames: Record<string, string> = {
+          "first_time_buyer": "First-Time Buyer",
+          "condo_watch": "Condo Watch",
+          "luxury_showcase": "Luxury Showcase",
+          "family_homes": "Family Homes",
+          "investor_deals": "Investor Deals",
+        };
+        filters.preset_display_name = presetNames[payload.preset_key] || null;
+      }
+      
       const apiPayload = {
         name: payload.name,
         report_type: payload.report_type,
@@ -32,8 +46,8 @@ export default function NewSchedulePage() {
         recipients: payload.typedRecipients || payload.recipients,
         include_attachment: false,
         active: true,
-        // NEW: Include filters for Smart Presets
-        filters: payload.filters || {},
+        // NEW: Include filters for Smart Presets (with preset_display_name for PDF headers)
+        filters: filters,
       }
 
       const res = await fetch(`/api/proxy/v1/schedules`, {

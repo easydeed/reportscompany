@@ -787,7 +787,7 @@ def build_result_json(report_type: str, listings: List[Dict], context: Dict) -> 
     Args:
         report_type: One of 7 TrendyReports types (5 original + 2 gallery)
         listings: Property data from PropertyDataExtractor
-        context: Dict with city, lookback_days, etc.
+        context: Dict with city, lookback_days, filters, etc.
     
     Returns:
         result_json dict matching template expectations
@@ -811,5 +811,14 @@ def build_result_json(report_type: str, listings: List[Dict], context: Dict) -> 
     if not builder:
         raise ValueError(f"Unsupported report_type: {report_type}. Supported: {list(builders.keys())}")
     
-    return builder(listings, context)
+    result = builder(listings, context)
+    
+    # Pass through preset_display_name for PDF header customization
+    # This allows Smart Presets to show their custom name (e.g., "Condo Watch")
+    # instead of the generic report type name (e.g., "New Listings Gallery")
+    filters = context.get("filters") or {}
+    if filters.get("preset_display_name"):
+        result["preset_display_name"] = filters["preset_display_name"]
+    
+    return result
 

@@ -387,7 +387,7 @@
         {{/if}}
         <div class="hero-text">
           <div class="hero-brand-name">{{brand_name}}</div>
-          <div class="hero-report-type">Featured Listings</div>
+          <div class="hero-report-type">{{report_title}}</div>
         </div>
       </div>
       <div class="hero-right">
@@ -398,13 +398,13 @@
 
     <!-- Title Bar -->
     <div class="title-bar">
-      <h1>Featured Listings — {{market_name}}</h1>
+      <h1>{{report_title}} — {{market_name}}</h1>
       <p class="sub">Premium properties • Source: Live MLS Data • Report Date: {{report_date}}</p>
     </div>
 
     <section class="ribbon avoid-break">
       <div class="count">{{total_listings}}</div>
-      <div class="label">FEATURED PROPERTIES</div>
+      <div class="label">{{ribbon_label}}</div>
     </section>
 
     <!-- FEATURED GRID (2×2 - Larger Cards) -->
