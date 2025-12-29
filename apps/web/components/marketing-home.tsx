@@ -104,8 +104,8 @@ export function MarketingHome() {
             >
               <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
                 <img
-                  src="/market-snapshot-laverne-hero.jpg"
-                  alt="Market Snapshot Report showing $895K median price, 32 closed sales, and complete market analytics"
+                  src="/images/hero-dashboard.png"
+                  alt="TrendyReports dashboard showing market reports, analytics, and automated email delivery"
                   className="w-full h-auto"
                 />
               </div>
