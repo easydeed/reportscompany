@@ -366,6 +366,7 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
         # If filters include a price_strategy, resolve percentages to actual dollars
         # based on the market's median prices. This makes presets work across all markets.
         filters = _params.get("filters") or {}
+        print(f"🔍 REPORT RUN {run_id}: filters={filters}")  # DEBUG: Show what filters we received
         resolved_filters = None
         market_stats = None
         filters_label = None
@@ -566,18 +567,25 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
         # Create descriptive filename: City_ReportType_RunId.pdf
         # Sanitize city name (remove spaces, special chars)
         safe_city = (city or "Market").replace(" ", "_").replace(",", "").replace(".", "")[:30]
-        # Map report_type to title case
-        report_type_map = {
-            "market_snapshot": "MarketSnapshot",
-            "new_listings": "NewListings",
-            "closed": "ClosedSales",
-            "inventory": "Inventory",
-            "price_bands": "PriceBands",
-            "open_houses": "OpenHouses",
-            "new_listings_gallery": "NewListingsGallery",
-            "featured_listings": "FeaturedListings",
-        }
-        safe_report_type = report_type_map.get(report_type, report_type.replace("_", "").title())
+        
+        # Use preset_display_name if available (e.g., "First-Time Buyer" instead of "NewListingsGallery")
+        preset_name = result.get("preset_display_name") if isinstance(result, dict) else None
+        if preset_name:
+            # Convert "First-Time Buyer" to "FirstTimeBuyer"
+            safe_report_type = preset_name.replace("-", "").replace(" ", "").replace("'", "")
+        else:
+            # Map report_type to title case
+            report_type_map = {
+                "market_snapshot": "MarketSnapshot",
+                "new_listings": "NewListings",
+                "closed": "ClosedSales",
+                "inventory": "Inventory",
+                "price_bands": "PriceBands",
+                "open_houses": "OpenHouses",
+                "new_listings_gallery": "NewListingsGallery",
+                "featured_listings": "FeaturedListings",
+            }
+            safe_report_type = report_type_map.get(report_type, report_type.replace("_", "").title())
         pdf_filename = f"{safe_city}_{safe_report_type}_{run_id[:8]}.pdf"
         s3_key = f"reports/{account_id}/{pdf_filename}"
         pdf_url = upload_to_r2(pdf_path, s3_key)
