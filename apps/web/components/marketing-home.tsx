@@ -230,35 +230,46 @@ export function MarketingHome() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          4. PRODUCT SHOWCASE - Email + PDF in one section
+          4. EMAIL REPORTS SHOWCASE
       ═══════════════════════════════════════════════════════════════════ */}
       <section className="py-24 px-4 sm:px-6 lg:px-8 bg-white overflow-hidden">
         <div className="max-w-[1400px] mx-auto">
           <div className="text-center mb-16">
             <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
-              Reports clients actually open
+              Email reports clients actually open
             </h2>
-            <p className="text-xl text-slate-600">Mobile-optimized emails. Print-ready PDFs. All with your branding.</p>
+            <p className="text-xl text-slate-600">Mobile-optimized HTML emails with your brand front and center</p>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-12">
-            {/* Email Reports */}
-            <div>
-              <div className="text-center mb-6">
-                <span className="inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold">
-                  📧 Email Reports
-                </span>
+          <div className="relative max-w-[1200px] mx-auto px-4">
+            {/* Feature callouts - Left side */}
+            <div className="hidden lg:block absolute left-0 top-1/3 max-w-[200px] animate-in fade-in slide-in-from-left duration-700 delay-300">
+              <div className="text-right">
+                <div className="font-semibold text-slate-900 mb-1">Your logo & colors</div>
+                <div className="text-sm text-slate-600">Full white-label branding in every email</div>
               </div>
-              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
-                <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center gap-3">
-                  <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-red-500" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                    <div className="w-3 h-3 rounded-full bg-green-500" />
-                  </div>
-                  <div className="text-sm text-slate-600">Market Report — December 2024</div>
+            </div>
+
+            <div className="hidden lg:block absolute left-0 top-2/3 max-w-[200px] animate-in fade-in slide-in-from-left duration-700 delay-500">
+              <div className="text-right">
+                <div className="font-semibold text-slate-900 mb-1">Key market metrics</div>
+                <div className="text-sm text-slate-600">Median price, inventory, days on market</div>
+              </div>
+            </div>
+
+            {/* Center mockup carousel */}
+            <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-700">
+              <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center gap-3">
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-red-500" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                  <div className="w-3 h-3 rounded-full bg-green-500" />
                 </div>
-                <div className="p-6 bg-gradient-to-br from-slate-50 to-white">
+                <div className="text-sm text-slate-600">Market Report — December 2024</div>
+              </div>
+
+              <div className="p-8 bg-gradient-to-br from-slate-50 to-white">
+                <div className="relative group">
                   <Carousel className="w-full">
                     <CarouselContent>
                       <CarouselItem>
@@ -282,41 +293,103 @@ export function MarketingHome() {
                           className="w-full rounded-lg shadow-lg"
                         />
                       </CarouselItem>
+                      <CarouselItem>
+                        <img
+                          src="/real-estate-market-analysis-report-with-orange-gra.jpg"
+                          alt="Market Analysis email report"
+                          className="w-full rounded-lg shadow-lg"
+                        />
+                      </CarouselItem>
                     </CarouselContent>
                     <CarouselPrevious className="left-2" />
                     <CarouselNext className="right-2" />
                   </Carousel>
                 </div>
               </div>
-              <div className="mt-6 grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Check className="w-4 h-4 text-purple-600" />
-                  <span>Mobile-first design</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Check className="w-4 h-4 text-purple-600" />
-                  <span>Your logo & colors</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Check className="w-4 h-4 text-purple-600" />
-                  <span>Key market metrics</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Check className="w-4 h-4 text-purple-600" />
-                  <span>Your contact info</span>
-                </div>
+            </div>
+
+            {/* Feature callouts - Right side */}
+            <div className="hidden lg:block absolute right-0 top-1/3 max-w-[200px] animate-in fade-in slide-in-from-right duration-700 delay-300">
+              <div className="text-left">
+                <div className="font-semibold text-slate-900 mb-1">Mobile-first design</div>
+                <div className="text-sm text-slate-600">Looks perfect on every device</div>
               </div>
             </div>
 
-            {/* PDF Reports */}
-            <div>
-              <div className="text-center mb-6">
-                <span className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-4 py-2 rounded-full text-sm font-semibold">
-                  📄 PDF Reports
-                </span>
+            <div className="hidden lg:block absolute right-0 top-2/3 max-w-[200px] animate-in fade-in slide-in-from-right duration-700 delay-500">
+              <div className="text-left">
+                <div className="font-semibold text-slate-900 mb-1">Your contact info</div>
+                <div className="text-sm text-slate-600">Photo, phone, email, social links</div>
               </div>
-              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-6">
-                <div className="bg-slate-100 rounded-lg p-4">
+            </div>
+          </div>
+
+          {/* Mobile feature list */}
+          <div className="lg:hidden mt-12 grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
+            <div className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold text-slate-900 mb-1">Your logo & colors</div>
+                <div className="text-sm text-slate-600">Full white-label branding in every email</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold text-slate-900 mb-1">Mobile-first design</div>
+                <div className="text-sm text-slate-600">Looks perfect on every device</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold text-slate-900 mb-1">Key market metrics</div>
+                <div className="text-sm text-slate-600">Median price, inventory, days on market</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold text-slate-900 mb-1">Your contact info</div>
+                <div className="text-sm text-slate-600">Photo, phone, email, social links</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          5. PDF REPORTS SHOWCASE
+      ═══════════════════════════════════════════════════════════════════ */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50">
+        <div className="max-w-[1400px] mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
+              Print-ready PDFs that look expensive
+            </h2>
+            <p className="text-xl text-slate-600">8.5×11 formatted for perfect printing and digital sharing</p>
+          </div>
+
+          <div className="relative max-w-[1200px] mx-auto px-4">
+            {/* Feature callouts - Left side */}
+            <div className="hidden lg:block absolute left-0 top-1/3 max-w-[200px] animate-in fade-in slide-in-from-left duration-700 delay-300">
+              <div className="text-right">
+                <div className="font-semibold text-slate-900 mb-1">Professional header</div>
+                <div className="text-sm text-slate-600">Gradient design with your branding</div>
+              </div>
+            </div>
+
+            <div className="hidden lg:block absolute left-0 top-2/3 max-w-[200px] animate-in fade-in slide-in-from-left duration-700 delay-500">
+              <div className="text-right">
+                <div className="font-semibold text-slate-900 mb-1">Property galleries</div>
+                <div className="text-sm text-slate-600">Clean grid layouts with listing details</div>
+              </div>
+            </div>
+
+            {/* Center mockup carousel */}
+            <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-2xl border border-slate-200 p-8 animate-in fade-in zoom-in-95 duration-700">
+              <div className="bg-slate-100 rounded-lg p-6">
+                <div className="relative group">
                   <Carousel className="w-full">
                     <CarouselContent>
                       <CarouselItem>
@@ -340,29 +413,65 @@ export function MarketingHome() {
                           className="w-full rounded shadow-2xl"
                         />
                       </CarouselItem>
+                      <CarouselItem>
+                        <img
+                          src="/price-trends-report-purple-header-with-historica.jpg"
+                          alt="Price Trends PDF report"
+                          className="w-full rounded shadow-2xl"
+                        />
+                      </CarouselItem>
                     </CarouselContent>
                     <CarouselPrevious className="left-2" />
                     <CarouselNext className="right-2" />
                   </Carousel>
                 </div>
               </div>
-              <div className="mt-6 grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Check className="w-4 h-4 text-orange-600" />
-                  <span>8.5×11 print-ready</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Check className="w-4 h-4 text-orange-600" />
-                  <span>Professional header</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Check className="w-4 h-4 text-orange-600" />
-                  <span>Charts & visualizations</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Check className="w-4 h-4 text-orange-600" />
-                  <span>Property galleries</span>
-                </div>
+            </div>
+
+            {/* Feature callouts - Right side */}
+            <div className="hidden lg:block absolute right-0 top-1/3 max-w-[200px] animate-in fade-in slide-in-from-right duration-700 delay-300">
+              <div className="text-left">
+                <div className="font-semibold text-slate-900 mb-1">Charts & visualizations</div>
+                <div className="text-sm text-slate-600">Price trends, inventory, and market stats</div>
+              </div>
+            </div>
+
+            <div className="hidden lg:block absolute right-0 top-2/3 max-w-[200px] animate-in fade-in slide-in-from-right duration-700 delay-500">
+              <div className="text-left">
+                <div className="font-semibold text-slate-900 mb-1">Agent footer</div>
+                <div className="text-sm text-slate-600">Photo, credentials, and contact details</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile feature list */}
+          <div className="lg:hidden mt-12 grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
+            <div className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold text-slate-900 mb-1">Professional header</div>
+                <div className="text-sm text-slate-600">Gradient design with your branding</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold text-slate-900 mb-1">Charts & visualizations</div>
+                <div className="text-sm text-slate-600">Price trends, inventory, and market stats</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold text-slate-900 mb-1">Property galleries</div>
+                <div className="text-sm text-slate-600">Clean grid layouts with listing details</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold text-slate-900 mb-1">Agent footer</div>
+                <div className="text-sm text-slate-600">Photo, credentials, and contact details</div>
               </div>
             </div>
           </div>
@@ -370,7 +479,7 @@ export function MarketingHome() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          5. WHY CHOOSE US - Benefits after they see the product
+          6. WHY CHOOSE US - Benefits after they see the product
       ═══════════════════════════════════════════════════════════════════ */}
       <section className="py-24 px-4 sm:px-6 lg:px-8 text-white overflow-hidden relative">
         <div className="absolute inset-0">
@@ -483,7 +592,7 @@ export function MarketingHome() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          6. TESTIMONIALS - Social proof before pricing
+          7. TESTIMONIALS - Social proof before pricing
       ═══════════════════════════════════════════════════════════════════ */}
       <section className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50">
         <div className="max-w-[1200px] mx-auto">
@@ -561,7 +670,7 @@ export function MarketingHome() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          7. PRICING - Decision point
+          8. PRICING - Decision point
       ═══════════════════════════════════════════════════════════════════ */}
       <section id="pricing" className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-[1200px] mx-auto">
@@ -704,7 +813,7 @@ export function MarketingHome() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          8. TWO AUDIENCES - Speak to both groups
+          9. TWO AUDIENCES - Speak to both groups
       ═══════════════════════════════════════════════════════════════════ */}
       <section id="for-agents" className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden bg-slate-50">
         <div className="relative max-w-[1200px] mx-auto">
@@ -803,7 +912,7 @@ export function MarketingHome() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          9. SECURITY - Handle objections
+          10. SECURITY - Handle objections
       ═══════════════════════════════════════════════════════════════════ */}
       <section className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-[1200px] mx-auto">
@@ -847,7 +956,7 @@ export function MarketingHome() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          10. FINAL CTA - Close the deal
+          11. FINAL CTA - Close the deal
       ═══════════════════════════════════════════════════════════════════ */}
       <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-purple-600 via-purple-700 to-purple-800 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
