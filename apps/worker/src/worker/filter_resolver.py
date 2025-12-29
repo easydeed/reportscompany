@@ -99,8 +99,8 @@ def resolve_filters(
     # Always enforce type=RES to exclude rentals (prevents metric pollution)
     resolved: Dict[str, Any] = {"type": "RES"}
     
-    # Pass through standard filters
-    for key in ("minbeds", "minbaths", "subtype"):
+    # Pass through standard filters AND preset_display_name for PDF headers
+    for key in ("minbeds", "minbaths", "subtype", "preset_display_name"):
         value = filters_intent.get(key)
         if value is not None and value != "":
             resolved[key] = value
