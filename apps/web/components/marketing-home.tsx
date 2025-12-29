@@ -100,7 +100,7 @@ export function MarketingHome() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4, delay: 0.1 }}
-              className="relative lg:scale-110 lg:translate-x-4"
+              className="relative lg:scale-[1.15] lg:translate-x-4"
             >
               <img
                 src="/images/hero-dashboard.png"
