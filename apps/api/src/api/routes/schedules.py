@@ -8,16 +8,38 @@ from ..db import db_conn, set_rls, fetchone_dict, fetchall_dicts
 
 
 # ====== Filter Schema ======
+class PriceStrategy(BaseModel):
+    """
+    Market-adaptive pricing strategy.
+    Resolves at runtime based on the area's median prices.
+    """
+    mode: Literal[
+        "maxprice_pct_of_median_list",   # e.g., 70% of median list price
+        "maxprice_pct_of_median_close",  # e.g., 70% of median close price
+        "minprice_pct_of_median_list",   # e.g., 150% of median (luxury)
+        "minprice_pct_of_median_close"
+    ]
+    value: float = Field(..., ge=0.1, le=3.0)  # Percentage as decimal (0.70 = 70%)
+
+
 class ReportFilters(BaseModel):
     """
     Filters for preset-based schedule reports.
     These filters are passed to SimplyRETS API and report builders.
+    
+    Supports both absolute prices (minprice/maxprice) and market-adaptive
+    pricing via price_strategy. When price_strategy is present, it takes
+    precedence and resolves to actual dollar amounts at runtime.
     """
     minbeds: Optional[int] = Field(default=None, ge=0, le=10)
     minbaths: Optional[int] = Field(default=None, ge=0, le=10)
     minprice: Optional[int] = Field(default=None, ge=0)
     maxprice: Optional[int] = Field(default=None, ge=0)
     subtype: Optional[Literal["SingleFamilyResidence", "Condominium"]] = None
+    # Market-adaptive pricing (preferred over absolute prices)
+    price_strategy: Optional[PriceStrategy] = None
+    # Display name for PDF headers (e.g., "First-Time Buyer" instead of "New Listings Gallery")
+    preset_display_name: Optional[str] = None
     
     @model_validator(mode='after')
     def validate_price_range(self):
