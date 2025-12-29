@@ -42,7 +42,7 @@ export function MarketingHome() {
                   Trusted by 1,200+ agents at KW, RE/MAX, Coldwell Banker
                 </span>
               </div>
-              <h1 className="font-display font-semibold text-5xl sm:text-6xl lg:text-7xl mb-6 text-slate-900 leading-[1.05]">
+              <h1 className="font-display font-black text-5xl sm:text-6xl lg:text-7xl mb-6 text-slate-900 leading-[1.05]">
                 Beautiful market reports. Zero effort.
               </h1>
               <p className="text-xl text-slate-600 mb-8 leading-relaxed max-w-xl">
@@ -140,7 +140,7 @@ export function MarketingHome() {
       <section id="how-it-works" className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-900 text-white">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-16">
-            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4">From MLS to inbox in 3 clicks</h2>
+            <h2 className="font-display font-black text-4xl sm:text-5xl mb-4">From MLS to inbox in 3 clicks</h2>
             <p className="text-xl text-slate-400">No spreadsheets. No manual formatting. Just results.</p>
           </div>
 
@@ -235,7 +235,7 @@ export function MarketingHome() {
       <section id="email-reports" className="py-24 px-4 sm:px-6 lg:px-8 bg-white overflow-hidden">
         <div className="max-w-[1400px] mx-auto">
           <div className="text-center mb-16">
-            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
+            <h2 className="font-display font-black text-4xl sm:text-5xl mb-4 text-slate-900">
               Email reports clients actually open
             </h2>
             <p className="text-xl text-slate-600">Mobile-optimized HTML emails with your brand front and center</p>
@@ -364,7 +364,7 @@ export function MarketingHome() {
       <section id="pdf-reports" className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50">
         <div className="max-w-[1400px] mx-auto">
           <div className="text-center mb-16">
-            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
+            <h2 className="font-display font-black text-4xl sm:text-5xl mb-4 text-slate-900">
               Print-ready PDFs that look expensive
             </h2>
             <p className="text-xl text-slate-600">8.5×11 formatted for perfect printing and digital sharing</p>
@@ -502,7 +502,7 @@ export function MarketingHome() {
             <p className="text-purple-400 font-medium uppercase tracking-wider text-sm mb-4">
               Built for top performers
             </p>
-            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4">Why top producers choose us</h2>
+            <h2 className="font-display font-black text-4xl sm:text-5xl mb-4">Why top producers choose us</h2>
             <p className="text-xl text-slate-400 max-w-2xl mx-auto">
               The tools you need to stay top-of-mind with every client, every week.
             </p>
@@ -597,7 +597,7 @@ export function MarketingHome() {
       <section className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-16">
-            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
+            <h2 className="font-display font-black text-4xl sm:text-5xl mb-4 text-slate-900">
               Trusted by top-producing agents
             </h2>
             <p className="text-xl text-slate-600">Real results from real estate professionals</p>
@@ -675,7 +675,7 @@ export function MarketingHome() {
       <section id="pricing" className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-16">
-            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
+            <h2 className="font-display font-black text-4xl sm:text-5xl mb-4 text-slate-900">
               Simple, transparent pricing
             </h2>
             <p className="text-xl text-slate-600">
@@ -818,7 +818,7 @@ export function MarketingHome() {
       <section id="for-agents" className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden bg-slate-50">
         <div className="relative max-w-[1200px] mx-auto">
           <div className="text-center mb-12">
-            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
+            <h2 className="font-display font-black text-4xl sm:text-5xl mb-4 text-slate-900">
               Built for you
             </h2>
             <p className="text-xl text-slate-600">Whether you&apos;re an agent or an affiliate, we&apos;ve got you covered</p>
@@ -917,7 +917,7 @@ export function MarketingHome() {
       <section className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-16">
-            <h2 className="font-display font-semibold text-4xl sm:text-5xl mb-4 text-slate-900">
+            <h2 className="font-display font-black text-4xl sm:text-5xl mb-4 text-slate-900">
               Enterprise-grade security
             </h2>
             <p className="text-xl text-slate-600">Bank-level protection for your data</p>
@@ -969,7 +969,7 @@ export function MarketingHome() {
           />
         </div>
         <div className="max-w-[1200px] mx-auto text-center relative z-10">
-          <h2 className="font-display font-semibold text-4xl sm:text-5xl lg:text-6xl mb-6 text-white leading-tight">
+          <h2 className="font-display font-black text-4xl sm:text-5xl lg:text-6xl mb-6 text-white leading-tight">
             Ready to automate your market reports?
           </h2>
           <p className="text-xl text-purple-100 mb-8 max-w-3xl mx-auto leading-relaxed">
