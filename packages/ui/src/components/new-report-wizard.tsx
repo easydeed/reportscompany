@@ -60,6 +60,15 @@ interface NewReportWizardProps {
   onCancel: () => void
 }
 
+// Preset key to display name mapping
+const PRESET_DISPLAY_NAMES: Record<string, string> = {
+  "first_time_buyer": "First-Time Buyer",
+  "condo_watch": "Condo Watch",
+  "luxury_showcase": "Luxury Showcase",
+  "family_homes": "Family Homes",
+  "investor_deals": "Investor Deals",
+}
+
 // Helper function to build API payload
 export function buildPayload(state: WizardState): ReportPayload {
   const payload: ReportPayload = {
@@ -73,13 +82,20 @@ export function buildPayload(state: WizardState): ReportPayload {
     payload.zips = state.zips
   }
 
-  // Only include filters if they have values
+  // Build filters - include ALL filter properties
   const filters: ReportFilters = {}
   if (state.filters.minbeds) filters.minbeds = state.filters.minbeds
   if (state.filters.minbaths) filters.minbaths = state.filters.minbaths
   if (state.filters.minprice) filters.minprice = state.filters.minprice
   if (state.filters.maxprice) filters.maxprice = state.filters.maxprice
   if (state.filters.subtype) filters.subtype = state.filters.subtype
+  // Include market-adaptive price_strategy for Smart Presets
+  if (state.filters.price_strategy) filters.price_strategy = state.filters.price_strategy
+  
+  // Add preset_display_name for PDF headers (e.g., "First-Time Buyer" instead of "New Listings Gallery")
+  if (state.preset_key && PRESET_DISPLAY_NAMES[state.preset_key]) {
+    filters.preset_display_name = PRESET_DISPLAY_NAMES[state.preset_key]
+  }
 
   if (Object.keys(filters).length > 0) {
     payload.filters = filters
@@ -343,14 +359,29 @@ function StepBasics({
                           {preset.filters.minbeds && (
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0">{preset.filters.minbeds}+ bed</Badge>
                           )}
-                          {preset.filters.maxprice && (
+                          {/* Market-adaptive pricing (percentage of median) */}
+                          {preset.filters.price_strategy?.mode === "maxprice_pct_of_median_list" && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-blue-600">
+                              ≤{Math.round(preset.filters.price_strategy.value * 100)}% median
+                            </Badge>
+                          )}
+                          {preset.filters.price_strategy?.mode === "minprice_pct_of_median_list" && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-blue-600">
+                              ≥{Math.round(preset.filters.price_strategy.value * 100)}% median
+                            </Badge>
+                          )}
+                          {/* Fallback: absolute prices (legacy) */}
+                          {!preset.filters.price_strategy && preset.filters.maxprice && (
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0">≤${(preset.filters.maxprice/1000000).toFixed(1)}M</Badge>
                           )}
-                          {preset.filters.minprice && (
+                          {!preset.filters.price_strategy && preset.filters.minprice && (
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0">≥${(preset.filters.minprice/1000000).toFixed(1)}M</Badge>
                           )}
                           {preset.filters.subtype === "Condominium" && (
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0">Condo</Badge>
+                          )}
+                          {preset.filters.subtype === "SingleFamilyResidence" && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">SFR</Badge>
                           )}
                         </div>
                       </button>
@@ -709,10 +740,22 @@ function StepReview({ state }: { state: WizardState }) {
                 {state.filters.minbaths && (
                   <Badge variant="outline" className="text-xs">{state.filters.minbaths}+ Baths</Badge>
                 )}
-                {state.filters.minprice && (
+                {/* Market-adaptive pricing (shows intent, resolved at runtime) */}
+                {state.filters.price_strategy?.mode === "maxprice_pct_of_median_list" && (
+                  <Badge variant="outline" className="text-xs text-blue-600 border-blue-200 bg-blue-50">
+                    ≤{Math.round(state.filters.price_strategy.value * 100)}% of local median
+                  </Badge>
+                )}
+                {state.filters.price_strategy?.mode === "minprice_pct_of_median_list" && (
+                  <Badge variant="outline" className="text-xs text-blue-600 border-blue-200 bg-blue-50">
+                    ≥{Math.round(state.filters.price_strategy.value * 100)}% of local median
+                  </Badge>
+                )}
+                {/* Fallback: absolute prices (legacy) */}
+                {!state.filters.price_strategy && state.filters.minprice && (
                   <Badge variant="outline" className="text-xs">≥${(state.filters.minprice/1000).toLocaleString()}K</Badge>
                 )}
-                {state.filters.maxprice && (
+                {!state.filters.price_strategy && state.filters.maxprice && (
                   <Badge variant="outline" className="text-xs">≤${(state.filters.maxprice/1000).toLocaleString()}K</Badge>
                 )}
                 {state.filters.subtype && (
@@ -721,6 +764,15 @@ function StepReview({ state }: { state: WizardState }) {
                   </Badge>
                 )}
               </div>
+              {/* Explain market-adaptive pricing */}
+              {state.filters.price_strategy && (
+                <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Price threshold auto-adjusts based on {state.city || "selected area"}'s market conditions
+                </p>
+              )}
             </div>
           )}
         </div>
