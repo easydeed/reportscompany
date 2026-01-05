@@ -228,6 +228,9 @@ def _build_gallery_grid_html(listings: List[Dict], report_type: str, primary_col
                 cards_html += "</tr>"
             cards_html += "<tr>"
         
+        # Fixed card content height for consistent grid appearance
+        content_height = "90" if is_featured else "80"
+        
         cards_html += f'''
                   <td width="{card_width}" style="padding: 6px; vertical-align: top;">
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e7e5e4; overflow: hidden;">
@@ -237,11 +240,11 @@ def _build_gallery_grid_html(listings: List[Dict], report_type: str, primary_col
                         </td>
                       </tr>
                       <tr>
-                        <td style="padding: 10px 12px;">
-                          <p style="margin: 0 0 2px 0; font-size: 13px; font-weight: 700; color: #1c1917; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        <td style="padding: 10px 12px; height: {content_height}px; vertical-align: top;">
+                          <p style="margin: 0 0 2px 0; font-size: 13px; font-weight: 700; color: #1c1917; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">
                             {address}
                           </p>
-                          <p style="margin: 0 0 6px 0; font-size: 11px; color: #78716c;">
+                          <p style="margin: 0 0 6px 0; font-size: 11px; color: #78716c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             {location}
                           </p>
                           <p style="margin: 0 0 4px 0; font-size: 16px; font-weight: 900; color: #0c0a09;">
@@ -257,11 +260,13 @@ def _build_gallery_grid_html(listings: List[Dict], report_type: str, primary_col
     
     # Close last row
     if listings:
-        # Pad remaining cells in the last row
+        # Pad remaining cells in the last row to maintain consistent widths
         remaining = cols - (len(listings) % cols)
         if remaining < cols:
+            card_width = "50%" if is_featured else "33%"
+            # Add empty cells that maintain column width but are invisible
             for _ in range(remaining):
-                cards_html += f'<td width="{100//cols}%" style="padding: 6px;"></td>'
+                cards_html += f'<td width="{card_width}" style="padding: 6px; vertical-align: top;"></td>'
         cards_html += "</tr>"
     
     # Build section header
