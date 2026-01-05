@@ -8,6 +8,13 @@ import { Label } from "./ui/label"
 import { Badge } from "./ui/badge"
 import { HorizontalStepper } from "./horizontal-stepper"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select"
+import {
   FileText,
   TrendingUp,
   Home,
@@ -23,6 +30,8 @@ import {
   Calendar,
   Sparkles,
   LayoutGrid,
+  Users,
+  ChevronDown,
 } from "lucide-react"
 import { cn } from "../lib/utils"
 
@@ -30,8 +39,7 @@ import { cn } from "../lib/utils"
 import { 
   type ReportType, 
   type ReportFilters, 
-  type PresetDefinition,
-  SMART_PRESETS 
+  AUDIENCE_OPTIONS,
 } from "./schedules/types"
 
 export type AreaMode = "city" | "zips"
@@ -60,15 +68,6 @@ interface NewReportWizardProps {
   onCancel: () => void
 }
 
-// Preset key to display name mapping
-const PRESET_DISPLAY_NAMES: Record<string, string> = {
-  "first_time_buyer": "First-Time Buyer",
-  "condo_watch": "Condo Watch",
-  "luxury_showcase": "Luxury Showcase",
-  "family_homes": "Family Homes",
-  "investor_deals": "Investor Deals",
-}
-
 // Helper function to build API payload
 export function buildPayload(state: WizardState): ReportPayload {
   const payload: ReportPayload = {
@@ -89,13 +88,10 @@ export function buildPayload(state: WizardState): ReportPayload {
   if (state.filters.minprice) filters.minprice = state.filters.minprice
   if (state.filters.maxprice) filters.maxprice = state.filters.maxprice
   if (state.filters.subtype) filters.subtype = state.filters.subtype
-  // Include market-adaptive price_strategy for Smart Presets
+  // Include market-adaptive price_strategy
   if (state.filters.price_strategy) filters.price_strategy = state.filters.price_strategy
-  
-  // Add preset_display_name for PDF headers (e.g., "First-Time Buyer" instead of "New Listings Gallery")
-  if (state.preset_key && PRESET_DISPLAY_NAMES[state.preset_key]) {
-    filters.preset_display_name = PRESET_DISPLAY_NAMES[state.preset_key]
-  }
+  // Include preset_display_name for PDF headers
+  if (state.filters.preset_display_name) filters.preset_display_name = state.filters.preset_display_name
 
   if (Object.keys(filters).length > 0) {
     payload.filters = filters
@@ -130,24 +126,15 @@ function validateStep(state: WizardState, step: number): { valid: boolean; error
 }
 
 const steps = [
-  { id: "type", label: "Basics" },
+  { id: "type", label: "Report" },
   { id: "area", label: "Area" },
   { id: "review", label: "Review" },
 ]
 
-const reportTypes = [
-  { id: "market_snapshot" as ReportType, name: "Market Snapshot", icon: TrendingUp, description: "Complete market overview" },
-  { id: "new_listings" as ReportType, name: "New Listings", icon: Home, description: "Recently listed properties" },
-  { id: "inventory" as ReportType, name: "Inventory Report", icon: BarChart3, description: "Active listings analysis" },
-  { id: "closed" as ReportType, name: "Closed Sales", icon: DollarSign, description: "Recent sold properties" },
-  { id: "new_listings_gallery" as ReportType, name: "Photo Gallery", icon: Image, description: "Visual listing showcase" },
-  { id: "featured_listings" as ReportType, name: "Featured Listings", icon: Star, description: "Highlighted properties" },
-]
-
 const lookbackOptions = [7, 14, 30, 60, 90]
 
-// Tab type for Step 1
-type ReportTab = "presets" | "standard"
+// Simplified tab type - two main report categories
+type ReportTab = "new_listings" | "market_update"
 
 export function NewReportWizard({ onSubmit, onCancel }: NewReportWizardProps) {
   const [currentStep, setCurrentStep] = useState(0)
@@ -231,7 +218,7 @@ export function NewReportWizard({ onSubmit, onCancel }: NewReportWizardProps) {
   )
 }
 
-// Step 1: Basics (with Tabs - identical styling to ScheduleWizard)
+// Step 1: Simplified Report Selection (Two Tabs + Audience Dropdown)
 function StepBasics({
   state,
   setState,
@@ -241,210 +228,191 @@ function StepBasics({
   setState: (s: WizardState) => void
   setError: (e: string | null) => void
 }) {
-  const [activeTab, setActiveTab] = useState<ReportTab>("presets")
+  const [activeTab, setActiveTab] = useState<ReportTab>("new_listings")
+  const [selectedAudience, setSelectedAudience] = useState<string>("all")
 
-  // Handle preset selection - auto-fills form
-  const handlePresetSelect = (presetKey: string) => {
-    const preset = SMART_PRESETS.find(p => p.key === presetKey)
-    if (!preset) return
-    
+  // Handle tab selection
+  const handleTabSelect = (tab: ReportTab) => {
+    setActiveTab(tab)
+    if (tab === "new_listings") {
+      // Default to gallery report with current audience filters
+      const audience = AUDIENCE_OPTIONS.find(a => a.key === selectedAudience) || AUDIENCE_OPTIONS[0]
+      setState({
+        ...state,
+        report_type: "new_listings_gallery",
+        filters: audience.filters,
+        preset_key: selectedAudience !== "all" ? selectedAudience : undefined
+      })
+    } else {
+      // Market Update = Market Snapshot
+      setState({
+        ...state,
+        report_type: "market_snapshot",
+        filters: {},
+        preset_key: undefined
+      })
+    }
+    setError(null)
+  }
+
+  // Handle audience selection
+  const handleAudienceChange = (audienceKey: string) => {
+    setSelectedAudience(audienceKey)
+    const audience = AUDIENCE_OPTIONS.find(a => a.key === audienceKey) || AUDIENCE_OPTIONS[0]
     setState({
       ...state,
-      report_type: preset.report_type,
-      lookback_days: preset.lookback_days,
-      filters: preset.filters,
-      preset_key: presetKey
+      report_type: "new_listings_gallery",
+      filters: audience.filters,
+      preset_key: audienceKey !== "all" ? audienceKey : undefined
     })
     setError(null)
   }
 
-  // Handle standard report type selection
-  const handleReportTypeSelect = (reportType: ReportType) => {
-    setState({
-      ...state,
-      report_type: reportType,
-      filters: {},
-      preset_key: undefined
-    })
-    setError(null)
-  }
+  // Initialize on mount
+  useState(() => {
+    if (!state.report_type) {
+      handleTabSelect("new_listings")
+    }
+  })
 
-  // Check if a preset is selected
-  const isPresetSelected = (presetKey: string) => state.preset_key === presetKey
+  const selectedAudienceOption = AUDIENCE_OPTIONS.find(a => a.key === selectedAudience)
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-display font-semibold text-xl mb-1">Report Basics</h2>
-        <p className="text-sm text-muted-foreground">Choose a preset or select a standard report type</p>
+        <h2 className="font-display font-semibold text-xl mb-1">What do you want to share?</h2>
+        <p className="text-sm text-muted-foreground">Choose a report type to generate</p>
       </div>
 
       <Card>
         <CardContent className="pt-6 space-y-6">
-          {/* Tab Toggle - identical to ScheduleWizard */}
-          <div className="space-y-3">
-            <Label>
-              Report Type <span className="text-destructive">*</span>
-            </Label>
-            
-            {/* Tab Buttons */}
-            <div className="flex gap-2 p-1 bg-muted/50 rounded-lg w-fit">
+          {/* Simplified Two-Tab Toggle */}
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              {/* New Listings Tab */}
               <button
                 type="button"
-                onClick={() => setActiveTab("presets")}
+                onClick={() => handleTabSelect("new_listings")}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all",
-                  activeTab === "presets"
-                    ? "bg-background text-primary shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
+                  "relative flex flex-col items-center p-6 rounded-xl border-2 transition-all text-center",
+                  activeTab === "new_listings"
+                    ? "border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg shadow-primary/10"
+                    : "border-border hover:border-primary/50 hover:shadow-sm"
                 )}
+                aria-pressed={activeTab === "new_listings"}
               >
-                <Sparkles className="w-4 h-4" />
-                Smart Presets
+                {activeTab === "new_listings" && (
+                  <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                )}
+                <div className={cn(
+                  "w-14 h-14 rounded-xl flex items-center justify-center mb-3 transition-colors",
+                  activeTab === "new_listings"
+                    ? "bg-primary text-white"
+                    : "bg-primary/10 text-primary"
+                )}>
+                  <Image className="w-7 h-7" />
+                </div>
+                <span className="font-bold text-lg">New Listings</span>
+                <span className="text-sm text-muted-foreground mt-1">Visual gallery of properties</span>
+                <Badge variant="secondary" className="mt-3 text-xs">
+                  Most Popular
+                </Badge>
               </button>
+
+              {/* Market Update Tab */}
               <button
                 type="button"
-                onClick={() => setActiveTab("standard")}
+                onClick={() => handleTabSelect("market_update")}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-md font-medium text-sm transition-all",
-                  activeTab === "standard"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
+                  "relative flex flex-col items-center p-6 rounded-xl border-2 transition-all text-center",
+                  activeTab === "market_update"
+                    ? "border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg shadow-primary/10"
+                    : "border-border hover:border-primary/50 hover:shadow-sm"
                 )}
+                aria-pressed={activeTab === "market_update"}
               >
-                <LayoutGrid className="w-4 h-4" />
-                Standard Reports
+                {activeTab === "market_update" && (
+                  <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                )}
+                <div className={cn(
+                  "w-14 h-14 rounded-xl flex items-center justify-center mb-3 transition-colors",
+                  activeTab === "market_update"
+                    ? "bg-primary text-white"
+                    : "bg-primary/10 text-primary"
+                )}>
+                  <TrendingUp className="w-7 h-7" />
+                </div>
+                <span className="font-bold text-lg">Market Update</span>
+                <span className="text-sm text-muted-foreground mt-1">Stats, trends & insights</span>
+                <Badge variant="outline" className="mt-3 text-xs">
+                  For Sellers
+                </Badge>
               </button>
             </div>
-
-            {/* Smart Presets Tab */}
-            {activeTab === "presets" && (
-              <div className="space-y-3">
-                <p className="text-xs text-muted-foreground">
-                  Pre-configured reports for common audiences. Filters and settings are auto-filled.
-                </p>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {SMART_PRESETS.map((preset) => {
-                    const isSelected = isPresetSelected(preset.key)
-                    return (
-                      <button
-                        key={preset.key}
-                        type="button"
-                        onClick={() => handlePresetSelect(preset.key)}
-                        className={cn(
-                          "group relative flex flex-col p-4 rounded-xl border-2 transition-all text-left",
-                          isSelected
-                            ? "border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-md shadow-primary/10"
-                            : "border-border hover:border-primary/50 hover:shadow-sm"
-                        )}
-                        aria-pressed={isSelected}
-                      >
-                        {isSelected && (
-                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                            </svg>
-                          </div>
-                        )}
-                        <div className={cn(
-                          "w-10 h-10 rounded-xl flex items-center justify-center mb-2 text-xl transition-colors",
-                          isSelected ? "bg-primary/20" : "bg-muted"
-                        )}>
-                          {preset.icon}
-                        </div>
-                        <span className="font-semibold text-sm">{preset.name}</span>
-                        <span className="text-xs text-muted-foreground mt-0.5">{preset.tagline}</span>
-                        {/* Show what's included */}
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {preset.filters.minbeds && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">{preset.filters.minbeds}+ bed</Badge>
-                          )}
-                          {/* Market-adaptive pricing (percentage of median) */}
-                          {preset.filters.price_strategy?.mode === "maxprice_pct_of_median_list" && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-blue-600">
-                              ≤{Math.round(preset.filters.price_strategy.value * 100)}% median
-                            </Badge>
-                          )}
-                          {preset.filters.price_strategy?.mode === "minprice_pct_of_median_list" && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-blue-600">
-                              ≥{Math.round(preset.filters.price_strategy.value * 100)}% median
-                            </Badge>
-                          )}
-                          {/* Fallback: absolute prices (legacy) */}
-                          {!preset.filters.price_strategy && preset.filters.maxprice && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">≤${(preset.filters.maxprice/1000000).toFixed(1)}M</Badge>
-                          )}
-                          {!preset.filters.price_strategy && preset.filters.minprice && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">≥${(preset.filters.minprice/1000000).toFixed(1)}M</Badge>
-                          )}
-                          {preset.filters.subtype === "Condominium" && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">Condo</Badge>
-                          )}
-                          {preset.filters.subtype === "SingleFamilyResidence" && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">SFR</Badge>
-                          )}
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Standard Reports Tab */}
-            {activeTab === "standard" && (
-              <div className="space-y-3">
-                <p className="text-xs text-muted-foreground">
-                  Classic reports without pre-configured filters. Full control over settings.
-                </p>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {reportTypes.map((type) => {
-                    const Icon = type.icon
-                    const isSelected = state.report_type === type.id && !state.preset_key
-                    return (
-                      <button
-                        key={type.id}
-                        type="button"
-                        onClick={() => handleReportTypeSelect(type.id)}
-                        className={cn(
-                          "group relative flex flex-col p-4 rounded-xl border-2 transition-all text-left",
-                          isSelected
-                            ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
-                            : "border-border hover:border-primary/50 hover:shadow-sm"
-                        )}
-                        aria-pressed={isSelected}
-                      >
-                        {isSelected && (
-                          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                            </svg>
-                          </div>
-                        )}
-                        <div
-                          className={cn(
-                            "w-10 h-10 rounded-xl flex items-center justify-center mb-2 transition-colors",
-                            isSelected
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-primary/10 text-primary group-hover:bg-primary/15"
-                          )}
-                        >
-                          <Icon className="w-5 h-5" />
-                        </div>
-                        <span className="font-semibold text-sm">{type.name}</span>
-                        <span className="text-xs text-muted-foreground mt-0.5">{type.description}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* Lookback Period - identical to ScheduleWizard */}
+          {/* Audience Dropdown - Only for New Listings */}
+          {activeTab === "new_listings" && (
+            <div className="space-y-3 p-4 rounded-xl bg-muted/30 border border-border">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-primary" />
+                <Label className="text-sm font-medium">Who is this for?</Label>
+              </div>
+              <Select value={selectedAudience} onValueChange={handleAudienceChange}>
+                <SelectTrigger className="h-12 bg-background">
+                  <SelectValue placeholder="Select audience" />
+                </SelectTrigger>
+                <SelectContent>
+                  {AUDIENCE_OPTIONS.map((audience) => (
+                    <SelectItem key={audience.key} value={audience.key} className="py-3">
+                      <div className="flex flex-col">
+                        <span className="font-medium">{audience.name}</span>
+                        <span className="text-xs text-muted-foreground">{audience.description}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {/* Show applied filters */}
+              {selectedAudience !== "all" && selectedAudienceOption && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {selectedAudienceOption.filters.minbeds && (
+                    <Badge variant="outline" className="text-xs">{selectedAudienceOption.filters.minbeds}+ beds</Badge>
+                  )}
+                  {selectedAudienceOption.filters.price_strategy?.mode === "maxprice_pct_of_median_list" && (
+                    <Badge variant="outline" className="text-xs text-blue-600 border-blue-200 bg-blue-50">
+                      ≤{Math.round(selectedAudienceOption.filters.price_strategy.value * 100)}% median
+                    </Badge>
+                  )}
+                  {selectedAudienceOption.filters.price_strategy?.mode === "minprice_pct_of_median_list" && (
+                    <Badge variant="outline" className="text-xs text-blue-600 border-blue-200 bg-blue-50">
+                      ≥{Math.round(selectedAudienceOption.filters.price_strategy.value * 100)}% median
+                    </Badge>
+                  )}
+                  {selectedAudienceOption.filters.subtype === "Condominium" && (
+                    <Badge variant="outline" className="text-xs">Condos only</Badge>
+                  )}
+                  {selectedAudienceOption.filters.subtype === "SingleFamilyResidence" && (
+                    <Badge variant="outline" className="text-xs">Single Family</Badge>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Lookback Period */}
           <div className="space-y-3">
             <Label>
-              Lookback Period <span className="text-destructive">*</span>
+              Time Period <span className="text-destructive">*</span>
             </Label>
             <div className="flex flex-wrap gap-2">
               {lookbackOptions.map((days) => (
@@ -464,37 +432,8 @@ function StepBasics({
                 </button>
               ))}
             </div>
-            <p className="text-xs text-muted-foreground">How far back to include data in your report</p>
+            <p className="text-xs text-muted-foreground">How far back to include data</p>
           </div>
-
-          {/* Filters Summary (show when preset is selected) */}
-          {state.preset_key && state.filters && Object.keys(state.filters).length > 0 && (
-            <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="w-4 h-4 text-primary" />
-                <span className="text-sm font-medium text-primary">Preset Filters Applied</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {state.filters.minbeds && (
-                  <Badge variant="secondary">{state.filters.minbeds}+ Bedrooms</Badge>
-                )}
-                {state.filters.minbaths && (
-                  <Badge variant="secondary">{state.filters.minbaths}+ Bathrooms</Badge>
-                )}
-                {state.filters.minprice && (
-                  <Badge variant="secondary">Min ${state.filters.minprice.toLocaleString()}</Badge>
-                )}
-                {state.filters.maxprice && (
-                  <Badge variant="secondary">Max ${state.filters.maxprice.toLocaleString()}</Badge>
-                )}
-                {state.filters.subtype && (
-                  <Badge variant="secondary">
-                    {state.filters.subtype === "SingleFamilyResidence" ? "Single Family" : "Condo"}
-                  </Badge>
-                )}
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>
@@ -637,54 +576,54 @@ function StepArea({
   )
 }
 
-// Step 3: Review - identical styling to ScheduleWizard
+// Step 3: Review - Simplified version
 function StepReview({ state }: { state: WizardState }) {
-  const selectedType = reportTypes.find((t) => t.id === state.report_type)
-  const selectedPreset = state.preset_key ? SMART_PRESETS.find(p => p.key === state.preset_key) : null
-  const TypeIcon = selectedType?.icon || FileText
-
-  const hasFilters = state.filters && Object.keys(state.filters).length > 0
+  const isNewListings = state.report_type === "new_listings_gallery" || state.report_type === "featured_listings"
+  const isMarketUpdate = state.report_type === "market_snapshot"
+  
+  // Get audience name from filters
+  const audienceName = state.filters?.preset_display_name || (isNewListings ? "All Listings" : null)
+  
+  const hasFilters = state.filters && Object.keys(state.filters).filter(k => k !== 'preset_display_name').length > 0
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="font-display font-semibold text-xl mb-1">Ready to generate!</h2>
-        <p className="text-sm text-muted-foreground">Review your report settings below</p>
+        <p className="text-sm text-muted-foreground">Review your report settings</p>
       </div>
 
-      {/* Main Summary Card - identical to ScheduleWizard */}
+      {/* Main Summary Card */}
       <div className="relative overflow-hidden rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background">
         {/* Header with report type */}
         <div className="flex items-center gap-4 p-5 border-b border-primary/10">
-          {selectedPreset ? (
-            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shadow-lg shadow-primary/10 text-2xl">
-              {selectedPreset.icon}
-            </div>
-          ) : (
-            <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-              <TypeIcon className="w-7 h-7 text-white" />
-            </div>
-          )}
+          <div className={cn(
+            "w-14 h-14 rounded-xl flex items-center justify-center shadow-lg",
+            isNewListings ? "bg-primary shadow-primary/20" : "bg-emerald-500 shadow-emerald-500/20"
+          )}>
+            {isNewListings ? (
+              <Image className="w-7 h-7 text-white" />
+            ) : (
+              <TrendingUp className="w-7 h-7 text-white" />
+            )}
+          </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Report</p>
-              {selectedPreset && (
-                <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary">
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  Smart Preset
-                </Badge>
-              )}
-            </div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Report</p>
             <h3 className="font-display font-bold text-xl truncate">
-              {selectedPreset?.name || selectedType?.name}
+              {isNewListings ? "New Listings" : "Market Update"}
             </h3>
-            {selectedPreset && (
-              <p className="text-sm text-muted-foreground">{selectedType?.name}</p>
+            {audienceName && audienceName !== "All Listings" && (
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
+                  <Users className="w-3 h-3 mr-1" />
+                  {audienceName}
+                </Badge>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Details Grid - gap-3 to match ScheduleWizard */}
+        {/* Details Grid */}
         <div className="p-5 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             {/* Location */}
@@ -703,10 +642,10 @@ function StepReview({ state }: { state: WizardState }) {
             {/* Time Period */}
             <div className="flex items-start gap-3 p-3 rounded-lg bg-background/80 border border-border/50">
               <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
-                <BarChart3 className="w-4 h-4 text-green-600" />
+                <Calendar className="w-4 h-4 text-green-600" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Data Range</p>
+                <p className="text-xs text-muted-foreground">Time Period</p>
                 <p className="font-semibold text-sm">Last {state.lookback_days} days</p>
               </div>
             </div>
@@ -726,12 +665,12 @@ function StepReview({ state }: { state: WizardState }) {
             </div>
           )}
 
-          {/* Filters Summary (NEW) */}
+          {/* Filters Summary - only if audience filters applied */}
           {hasFilters && (
             <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
               <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="w-4 h-4 text-primary" />
-                <span className="text-xs font-medium text-primary">Filters Applied</span>
+                <Users className="w-4 h-4 text-primary" />
+                <span className="text-xs font-medium text-primary">Audience Filters</span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {state.filters.minbeds && (
@@ -740,37 +679,25 @@ function StepReview({ state }: { state: WizardState }) {
                 {state.filters.minbaths && (
                   <Badge variant="outline" className="text-xs">{state.filters.minbaths}+ Baths</Badge>
                 )}
-                {/* Market-adaptive pricing (shows intent, resolved at runtime) */}
                 {state.filters.price_strategy?.mode === "maxprice_pct_of_median_list" && (
                   <Badge variant="outline" className="text-xs text-blue-600 border-blue-200 bg-blue-50">
-                    ≤{Math.round(state.filters.price_strategy.value * 100)}% of local median
+                    ≤{Math.round(state.filters.price_strategy.value * 100)}% of median
                   </Badge>
                 )}
                 {state.filters.price_strategy?.mode === "minprice_pct_of_median_list" && (
                   <Badge variant="outline" className="text-xs text-blue-600 border-blue-200 bg-blue-50">
-                    ≥{Math.round(state.filters.price_strategy.value * 100)}% of local median
+                    ≥{Math.round(state.filters.price_strategy.value * 100)}% of median
                   </Badge>
-                )}
-                {/* Fallback: absolute prices (legacy) */}
-                {!state.filters.price_strategy && state.filters.minprice && (
-                  <Badge variant="outline" className="text-xs">≥${(state.filters.minprice/1000).toLocaleString()}K</Badge>
-                )}
-                {!state.filters.price_strategy && state.filters.maxprice && (
-                  <Badge variant="outline" className="text-xs">≤${(state.filters.maxprice/1000).toLocaleString()}K</Badge>
                 )}
                 {state.filters.subtype && (
                   <Badge variant="outline" className="text-xs">
-                    {state.filters.subtype === "SingleFamilyResidence" ? "Single Family" : "Condo"}
+                    {state.filters.subtype === "SingleFamilyResidence" ? "Single Family" : "Condos"}
                   </Badge>
                 )}
               </div>
-              {/* Explain market-adaptive pricing */}
               {state.filters.price_strategy && (
-                <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Price threshold auto-adjusts based on {state.city || "selected area"}'s market conditions
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  💡 Price auto-adjusts based on {state.city || "area"}'s market
                 </p>
               )}
             </div>

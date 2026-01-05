@@ -212,3 +212,86 @@ export const weekdayLabels: Record<Weekday, string> = {
   saturday: "Saturday",
   sunday: "Sunday",
 }
+
+// ============================================================================
+// SIMPLIFIED UI - Audience Targeting (v2.0)
+// ============================================================================
+// Two main report types: New Listings (Gallery) and Market Update (Snapshot)
+// Audience dropdown filters the New Listings report for different segments.
+// ============================================================================
+
+export interface AudienceOption {
+  key: string
+  name: string
+  description: string
+  filters: ReportFilters
+}
+
+export const AUDIENCE_OPTIONS: AudienceOption[] = [
+  {
+    key: "all",
+    name: "All Listings",
+    description: "No filters - show everything",
+    filters: {}
+  },
+  {
+    key: "first_time_buyers",
+    name: "First-Time Buyers",
+    description: "Affordable homes ≤70% of local median",
+    filters: {
+      minbeds: 2,
+      minbaths: 2,
+      subtype: "SingleFamilyResidence",
+      price_strategy: {
+        mode: "maxprice_pct_of_median_list",
+        value: 0.70
+      },
+      preset_display_name: "First-Time Buyer"
+    }
+  },
+  {
+    key: "luxury_clients",
+    name: "Luxury Clients",
+    description: "Premium homes ≥150% of local median",
+    filters: {
+      subtype: "SingleFamilyResidence",
+      price_strategy: {
+        mode: "minprice_pct_of_median_list",
+        value: 1.50
+      },
+      preset_display_name: "Luxury Showcase"
+    }
+  },
+  {
+    key: "families",
+    name: "Families (3+ beds)",
+    description: "Larger homes for growing families",
+    filters: {
+      minbeds: 3,
+      minbaths: 2,
+      subtype: "SingleFamilyResidence",
+      preset_display_name: "Family Homes"
+    }
+  },
+  {
+    key: "condo_buyers",
+    name: "Condo Buyers",
+    description: "Condos and townhomes",
+    filters: {
+      subtype: "Condominium",
+      preset_display_name: "Condo Watch"
+    }
+  },
+  {
+    key: "investors",
+    name: "Investors",
+    description: "Budget-friendly ≤50% of local median",
+    filters: {
+      price_strategy: {
+        mode: "maxprice_pct_of_median_list",
+        value: 0.50
+      },
+      preset_display_name: "Investor Deals"
+    }
+  },
+]
