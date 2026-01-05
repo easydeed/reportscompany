@@ -1,7 +1,7 @@
 # Product Simplification Strategy
 
 > **Last Updated:** December 17, 2024  
-> **Status:** Pre-Launch Review  
+> **Status:** APPROVED - Ready for Implementation  
 > **Principle:** "Don't tell me about your fertilizer, tell me about my grass."
 
 ---
@@ -162,17 +162,129 @@ If the answer is no, or "maybe," it's fertilizer—not grass.
 
 ---
 
-## Implementation Options
+## Implementation Decision
 
-- [ ] **Option A:** Simplified UI - Hide/remove extra report types, focus on Gallery + Snapshot
-- [ ] **Option B:** Email Redesign - Conversation-focused with share CTAs and prompts
-- [ ] **Option C:** Both A and B
-- [ ] **Option D:** Different approach (specify)
+### ✅ Selected: Option A + B
+
+- [x] **Option A:** Simplified UI - Hide/remove extra report types, focus on Gallery + Snapshot
+- [x] **Option B:** Email Redesign - Conversation-focused with share CTAs and prompts
+
+---
+
+## Smart Presets Strategy
+
+### Decision: Two Tabs + Audience Dropdown
+
+Smart Presets are **audience filters**, not separate report types. They live inside the New Listings tab.
+
+```
+┌─────────────────────────────────────────┐
+│  [New Listings]    [Market Update]      │
+├─────────────────────────────────────────┤
+│                                         │
+│  Who is this for?                       │
+│  ┌─────────────────────────────────┐    │
+│  │ All Listings              ▼    │    │
+│  ├─────────────────────────────────┤    │
+│  │ ○ All Listings                  │    │
+│  │ ○ First-Time Buyers             │    │
+│  │ ○ Luxury Clients                │    │
+│  │ ○ Families (3+ beds)            │    │
+│  │ ○ Condo Buyers                  │    │
+│  │ ○ Investors                     │    │
+│  │ ─────────────────               │    │
+│  │ ○ Custom Filters...             │    │
+│  └─────────────────────────────────┘    │
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+| Audience | Filter Applied |
+|----------|----------------|
+| All Listings | No filter (default) |
+| First-Time Buyers | ≤70% of market median |
+| Luxury Clients | ≥150% of market median |
+| Families (3+ beds) | minbeds: 3 |
+| Condo Buyers | subtype: Condominium |
+| Investors | Multi-family or value plays |
+| Custom Filters | Opens advanced filter panel |
+
+**For Schedules:** Same dropdown—pick audience once, it recurs automatically.
+
+---
+
+## Rollback Plan
+
+If simplification causes issues, here's how to restore functionality:
+
+### Trigger Conditions for Rollback
+- User complaints about missing reports (>5 in first week)
+- Affiliate pushback on reduced options
+- Clear data showing users need removed reports
+
+### Rollback Steps
+
+#### Level 1: Soft Rollback (Add "More Reports" Link)
+```
+┌─────────────────────────────────────────────────┐
+│  [New Listings]  [Market Update]  [More ▼]      │
+└─────────────────────────────────────────────────┘
+```
+- Keep simplified UI as default
+- Add dropdown/link for hidden reports
+- **Time to implement:** ~2 hours
+
+#### Level 2: Full Rollback (Restore All Tabs)
+- Revert to previous UI with all 8 report types
+- Keep email improvements (no reason to rollback those)
+- **Time to implement:** ~30 minutes (git revert)
+
+### What We're NOT Rolling Back
+- Email conversation prompts (pure value-add)
+- Share CTAs (no downside)
+- Visual gallery as primary format
+
+### Git Reference
+Before implementing simplification, tag the current state:
+```bash
+git tag pre-simplification-v1
+```
+
+If rollback needed:
+```bash
+git revert --no-commit pre-simplification-v1..HEAD
+```
+
+---
+
+## Implementation Checklist
+
+### Phase 1: UI Simplification
+- [ ] Create `pre-simplification-v1` git tag
+- [ ] Update report selection to two tabs: New Listings, Market Update
+- [ ] Add "Who is this for?" audience dropdown to New Listings
+- [ ] Hide other report types (don't delete backend support)
+- [ ] Update onboarding to reflect simplified options
+
+### Phase 2: Email Redesign
+- [ ] Add conversation starter text to email templates
+- [ ] Make "Share with Client" the primary CTA
+- [ ] Reduce data density in email body
+- [ ] Add "Quick take" summary line
+
+### Phase 3: Validation
+- [ ] Test with 3-5 users before full launch
+- [ ] Monitor for rollback trigger conditions
+- [ ] Gather feedback on audience dropdown
 
 ---
 
 ## Notes
 
-*Add your thoughts and decisions here after review.*
+*Decision made December 17, 2024: Go with A+B and two-tab approach with audience dropdown.*
 
 ---
+
+
+
+
