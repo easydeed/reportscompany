@@ -37,24 +37,24 @@ except ImportError:
 # CONFIGURATION
 # ============================================================================
 
-API_BASE = "https://api.trendyreports.io/v1"
+API_BASE = "https://reportscompany.onrender.com/v1"
 CITY = "Downey"
 EMAIL = "gerardoh@gmail.com"
 LOOKBACK_DAYS = 30
 
-# Report configurations
+# Report configurations - using correct API price_strategy format
 REPORTS_TO_TEST = [
     # New Listings with all audiences
     {"type": "new_listings_gallery", "name": "New Listings - All Buyers", "audience": None},
     {"type": "new_listings_gallery", "name": "First-Time Buyer", "audience": "first_time_buyer", 
-     "price_strategy": {"mode": "relative_to_median", "value": 0.70, "position": "max"}},
+     "price_strategy": {"mode": "maxprice_pct_of_median_list", "value": 0.70}},
     {"type": "new_listings_gallery", "name": "Luxury Buyer", "audience": "luxury_buyer",
-     "price_strategy": {"mode": "relative_to_median", "value": 1.75, "position": "min"}},
+     "price_strategy": {"mode": "minprice_pct_of_median_list", "value": 1.75}},
     {"type": "new_listings_gallery", "name": "Investor", "audience": "investor",
-     "price_strategy": {"mode": "relative_to_median", "value": 0.85, "position": "max"}},
+     "price_strategy": {"mode": "maxprice_pct_of_median_list", "value": 0.85}},
     {"type": "new_listings_gallery", "name": "Condo Buyer", "audience": "condo_buyer"},
     {"type": "new_listings_gallery", "name": "Family Buyer", "audience": "family_buyer",
-     "price_strategy": {"mode": "relative_to_median", "value": 1.10, "position": "max"}},
+     "price_strategy": {"mode": "maxprice_pct_of_median_list", "value": 1.10}},
     
     # Market Update
     {"type": "market_snapshot", "name": "Market Update"},
@@ -102,11 +102,14 @@ def create_one_time_report(token: str, config: Dict) -> Optional[str]:
         
         if resp.status_code in (200, 201, 202):
             data = resp.json()
-            report_id = data.get("id")
+            # Response may have "id", "report_id", or nested
+            report_id = data.get("id") or data.get("report_id") or data.get("report", {}).get("id")
             print(f"     ✅ Created report: {report_id}")
+            if not report_id:
+                print(f"        Debug response: {json.dumps(data)[:300]}")
             return report_id
         else:
-            print(f"     ❌ Failed ({resp.status_code}): {resp.text[:200]}")
+            print(f"     ❌ Failed ({resp.status_code}): {resp.text[:300]}")
             return None
             
     except Exception as e:
@@ -125,22 +128,25 @@ def create_scheduled_report(token: str, config: Dict, email: str) -> Optional[st
     if config.get("price_strategy"):
         filters["price_strategy"] = config["price_strategy"]
     
-    # Calculate next run time (5 minutes from now to allow processing)
-    next_run = datetime.utcnow() + timedelta(minutes=2)
+    # Calculate next run time (2 minutes from now)
+    from datetime import timezone
+    next_run = datetime.now(timezone.utc) + timedelta(minutes=2)
+    
+    # Get day of week (0=Monday, 6=Sunday)
+    weekly_dow = next_run.weekday()
     
     payload = {
         "name": f"QA Test - {config['name']} - {CITY}",
         "report_type": config["type"],
         "city": CITY,
         "lookback_days": LOOKBACK_DAYS,
-        "cadence": "once",  # One-time schedule
+        "cadence": "weekly",
+        "weekly_dow": weekly_dow,  # Required for weekly cadence (0-6)
+        "run_at_time": next_run.strftime("%H:%M"),
         "filters": filters if filters else None,
         "recipients": [
             {"type": "manual_email", "email": email}
         ],
-        # Schedule for immediate run
-        "run_at_time": next_run.strftime("%H:%M"),
-        "run_on_days": [next_run.strftime("%A").lower()],
         "is_active": True
     }
     
