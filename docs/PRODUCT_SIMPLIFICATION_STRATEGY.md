@@ -261,9 +261,11 @@ git revert --no-commit pre-simplification-v1..HEAD
 
 ### Phase 1: UI Simplification ✅ COMPLETED
 - [x] Create `pre-simplification-v1` git tag
-- [x] Update report selection to two tabs: New Listings, Market Update
-- [x] Add "Who is this for?" audience dropdown to New Listings
+- [x] Update report selection to three types: New Listings, Market Update, Closed Sales
+- [x] Add "Who is this for?" audience selector (pill buttons) to New Listings
 - [x] Hide other report types (backend support preserved)
+- [x] Replace audience dropdown with pill buttons for better UX
+- [x] Add City Autocomplete for Southern California (CRMLS coverage)
 - [ ] Update onboarding to reflect simplified options (if needed)
 
 ### Phase 2: Email Redesign
@@ -273,15 +275,17 @@ git revert --no-commit pre-simplification-v1..HEAD
 - [ ] Add "Quick take" summary line
 
 ### Phase 3: Validation
+- [x] Create QA script for all report variations (`scripts/qa_generate_all_reports.py`)
+- [x] Create QA checklist (`docs/QA_REPORTS_CHECKLIST.md`)
 - [ ] Test with 3-5 users before full launch
 - [ ] Monitor for rollback trigger conditions
-- [ ] Gather feedback on audience dropdown
+- [ ] Gather feedback on audience selector
 
 ---
 
 ## Notes
 
-*Decision made December 17, 2024: Go with A+B and two-tab approach with audience dropdown.*
+*Decision made December 17, 2024: Go with A+B with three report types (New Listings + Market Update + Closed Sales) and audience pill buttons.*
 
 ---
 
