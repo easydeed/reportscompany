@@ -259,12 +259,12 @@ git revert --no-commit pre-simplification-v1..HEAD
 
 ## Implementation Checklist
 
-### Phase 1: UI Simplification
-- [ ] Create `pre-simplification-v1` git tag
-- [ ] Update report selection to two tabs: New Listings, Market Update
-- [ ] Add "Who is this for?" audience dropdown to New Listings
-- [ ] Hide other report types (don't delete backend support)
-- [ ] Update onboarding to reflect simplified options
+### Phase 1: UI Simplification ✅ COMPLETED
+- [x] Create `pre-simplification-v1` git tag
+- [x] Update report selection to two tabs: New Listings, Market Update
+- [x] Add "Who is this for?" audience dropdown to New Listings
+- [x] Hide other report types (backend support preserved)
+- [ ] Update onboarding to reflect simplified options (if needed)
 
 ### Phase 2: Email Redesign
 - [ ] Add conversation starter text to email templates
