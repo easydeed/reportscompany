@@ -775,6 +775,8 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                                 "lookback_days": lookback,
                                 "metrics": email_metrics,
                                 "pdf_url": pdf_url,
+                                # Pass preset_display_name for email headers (e.g., "First-Time Buyer" instead of "New Listings Gallery")
+                                "preset_display_name": result.get("preset_display_name") if isinstance(result, dict) else None,
                             }
                             
                             # For gallery reports, include listings with photos

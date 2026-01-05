@@ -681,13 +681,16 @@ export function buildInventoryHtml(
       `;
     }
 
-    const pageHtml = `
+    // V6: Hero header must be OUTSIDE page-content for proper negative margin bleed
+    // This matches the Market Snapshot template structure
+    const pageHtml = pageNum === 1
+      ? `
       <div class="page">
+        ${headerHtml}
         <div class="page-content">
-          ${headerHtml}
           <section class="stack data-section">
             <div class="card">
-              ${pageNum === 1 ? '<h3>Active Listings — Sorted by Days on Market</h3>' : ''}
+              <h3>Active Listings — Sorted by Days on Market</h3>
               <table>
                 ${tableHeader}
                 <tbody>${rowsHtml}</tbody>
@@ -697,7 +700,23 @@ export function buildInventoryHtml(
         </div>
         ${footerHtml}
       </div>
-    `;
+      `
+      : `
+      <div class="page">
+        <div class="page-content">
+          ${headerHtml}
+          <section class="stack data-section">
+            <div class="card">
+              <table>
+                ${tableHeader}
+                <tbody>${rowsHtml}</tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+        ${footerHtml}
+      </div>
+      `;
 
     pages.push(pageHtml);
   }
@@ -824,13 +843,16 @@ export function buildClosedHtml(
       `;
     }
 
-    const pageHtml = `
+    // V6: Hero header must be OUTSIDE page-content for proper negative margin bleed
+    // This matches the Market Snapshot template structure
+    const pageHtml = pageNum === 1
+      ? `
       <div class="page">
+        ${headerHtml}
         <div class="page-content">
-          ${headerHtml}
           <section class="stack data-section">
             <div class="card">
-              ${pageNum === 1 ? '<h3>Closed Listings — Sorted by Close Date</h3>' : ''}
+              <h3>Closed Listings — Sorted by Close Date</h3>
               <table>
                 ${tableHeader}
                 <tbody>${rowsHtml}</tbody>
@@ -840,7 +862,23 @@ export function buildClosedHtml(
         </div>
         ${footerHtml}
       </div>
-    `;
+      `
+      : `
+      <div class="page">
+        <div class="page-content">
+          ${headerHtml}
+          <section class="stack data-section">
+            <div class="card">
+              <table>
+                ${tableHeader}
+                <tbody>${rowsHtml}</tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+        ${footerHtml}
+      </div>
+      `;
 
     pages.push(pageHtml);
   }

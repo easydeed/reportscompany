@@ -158,7 +158,7 @@ def _format_percent(value: Optional[float]) -> str:
     return f"{value:.1f}%"
 
 
-def _build_gallery_grid_html(listings: List[Dict], report_type: str, primary_color: str, accent_color: str = None) -> str:
+def _build_gallery_grid_html(listings: List[Dict], report_type: str, primary_color: str, accent_color: str = None, preset_display_name: str = None) -> str:
     """
     Build email-safe HTML for photo gallery grid.
     
@@ -166,6 +166,8 @@ def _build_gallery_grid_html(listings: List[Dict], report_type: str, primary_col
     For featured_listings: 2-column grid (4 listings max)
     
     Uses table layout for maximum email client compatibility.
+    
+    V6: preset_display_name overrides the default section title (e.g., "First-Time Buyer" instead of "New Listings")
     """
     accent_color = accent_color or primary_color
     if not listings:
@@ -269,8 +271,13 @@ def _build_gallery_grid_html(listings: List[Dict], report_type: str, primary_col
                 cards_html += f'<td width="{card_width}" style="padding: 6px; vertical-align: top;"></td>'
         cards_html += "</tr>"
     
-    # Build section header
-    section_title = "Featured Properties" if is_featured else "New Listings"
+    # Build section header - V6: Use preset_display_name if provided
+    if preset_display_name:
+        section_title = preset_display_name
+    elif is_featured:
+        section_title = "Featured Properties"
+    else:
+        section_title = "New Listings"
     count = len(listings)
     
     # V6.1: Both gallery reports use inverted styling (white bg, accent border/text)
@@ -979,6 +986,7 @@ def schedule_email_html(
     unsubscribe_url: str,
     brand: Optional[Brand] = None,
     listings: Optional[List[Dict]] = None,
+    preset_display_name: Optional[str] = None,
 ) -> str:
     """
     Generate HTML email for a scheduled report notification.
@@ -1029,7 +1037,8 @@ def schedule_email_html(
         "tagline": "Your Market Report",
         "section": "Market Overview",
     })
-    report_label = config.get("label")
+    # V6: Use preset_display_name if provided (e.g., "First-Time Buyer" instead of "New Listings Gallery")
+    report_label = preset_display_name or config.get("label")
     tagline = config.get("tagline")
     section_label = config.get("section")
     has_extra_stats = config.get("has_extra_stats", False)
@@ -1150,14 +1159,90 @@ def schedule_email_html(
               </table>
 '''
     
-    # V4: 4-Metric Hero Row
+    # V7: Redesigned Market Snapshot Email - "Wow Factor" Design
+    # For market_snapshot: Use prominent hero stat banner with gradient
+    # For other report types: Use 4-metric row layout
     hero_4_html = ""
     if has_hero_4:
-        hero_4_html = f'''
-              <!-- V4: 4-Metric Hero Row (matches PDF) -->
+        if report_type == "market_snapshot":
+            # V7: Market Snapshot gets the premium "wow factor" design
+            hero_4_html = f'''
+              <!-- V7: HERO STAT BANNER (Market Snapshot "Wow Factor") -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
-                  <!-- Hero Metric 1: Median Sale Price -->
+                  <td>
+                    <!-- Gradient Hero Banner with Median Price -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%); border-radius: 16px; overflow: hidden;">
+                      <tr>
+                        <td align="center" style="padding: 32px 24px;">
+                          <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.9); text-transform: uppercase; letter-spacing: 2px;">
+                            {h1_label}
+                          </p>
+                          <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 48px; font-weight: 900; color: #ffffff; letter-spacing: -1px;">
+                            {h1_value}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- V7: Secondary Stats Row (Closed, DOM, MOI) -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 28px;">
+                <tr>
+                  <td width="33%" style="padding: 0 6px 0 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafaf9; border-radius: 12px; border: 2px solid {primary_color}20;">
+                      <tr>
+                        <td align="center" style="padding: 20px 12px;">
+                          <p style="margin: 0 0 6px 0; font-size: 28px; font-weight: 900; color: {primary_color};">
+                            {h2_value}
+                          </p>
+                          <p style="margin: 0; font-size: 11px; font-weight: 700; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
+                            {h2_label}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td width="33%" style="padding: 0 3px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafaf9; border-radius: 12px; border: 2px solid {primary_color}20;">
+                      <tr>
+                        <td align="center" style="padding: 20px 12px;">
+                          <p style="margin: 0 0 6px 0; font-size: 28px; font-weight: 900; color: {primary_color};">
+                            {h3_value}
+                          </p>
+                          <p style="margin: 0; font-size: 11px; font-weight: 700; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
+                            {h3_label}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td width="33%" style="padding: 0 0 0 6px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafaf9; border-radius: 12px; border: 2px solid {primary_color}20;">
+                      <tr>
+                        <td align="center" style="padding: 20px 12px;">
+                          <p style="margin: 0 0 6px 0; font-size: 28px; font-weight: 900; color: {primary_color};">
+                            {h4_value}
+                          </p>
+                          <p style="margin: 0; font-size: 11px; font-weight: 700; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
+                            {h4_label}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+'''
+        else:
+            # Non-Market Snapshot reports: Use standard 4-metric row
+            hero_4_html = f'''
+              <!-- V4: 4-Metric Hero Row -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <!-- Hero Metric 1 -->
                   <td width="25%" class="metric-card" style="padding: 0 4px;">
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e7e5e4;" class="dark-card dark-border">
                       <tr>
@@ -1172,7 +1257,7 @@ def schedule_email_html(
                       </tr>
                     </table>
                   </td>
-                  <!-- Hero Metric 2: Closed Sales -->
+                  <!-- Hero Metric 2 -->
                   <td width="25%" class="metric-card" style="padding: 0 4px;">
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e7e5e4;" class="dark-card dark-border">
                       <tr>
@@ -1187,7 +1272,7 @@ def schedule_email_html(
                       </tr>
                     </table>
                   </td>
-                  <!-- Hero Metric 3: Avg DOM -->
+                  <!-- Hero Metric 3 -->
                   <td width="25%" class="metric-card" style="padding: 0 4px;">
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e7e5e4;" class="dark-card dark-border">
                       <tr>
@@ -1202,7 +1287,7 @@ def schedule_email_html(
                       </tr>
                     </table>
                   </td>
-                  <!-- Hero Metric 4: MOI -->
+                  <!-- Hero Metric 4 -->
                   <td width="25%" class="metric-card" style="padding: 0 4px;">
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e7e5e4;" class="dark-card dark-border">
                       <tr>
@@ -1221,61 +1306,69 @@ def schedule_email_html(
               </table>
 '''
     
-    # V4: Core Indicators Section
+    # V7: Redesigned Core Indicators Section (Market Snapshot)
     core_indicators_html = ""
     if has_core_indicators:
         core_indicators_html = f'''
-              <!-- V4: Core Indicators Section (matches PDF) -->
+              <!-- V7: Market Activity Section with Gradient Accent Bar -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
-                  <td style="padding-bottom: 12px;">
-                    <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 11px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 1.5px;">
-                      Core Indicators
-                    </p>
-                  </td>
-                </tr>
-                <tr>
-                  <!-- Indicator 1: New Listings -->
-                  <td width="33%" class="metric-card" style="padding: 0 4px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafaf9; border-radius: 8px; border: 1px solid #e7e5e4;">
+                  <td>
+                    <!-- Section Header with Gradient Accent -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 16px;">
                       <tr>
-                        <td align="center" style="padding: 14px 8px;">
-                          <p style="margin: 0 0 2px 0; font-size: 20px; font-weight: 900; color: {primary_color};">
-                            {ci1_value}
-                          </p>
-                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #78716c; text-transform: uppercase;">
-                            {ci1_label}
+                        <td style="padding-bottom: 12px; border-bottom: 3px solid; border-image: linear-gradient(90deg, {primary_color}, {accent_color}) 1;">
+                          <p style="margin: 0; font-size: 14px; font-weight: 700; color: {primary_color}; text-transform: uppercase; letter-spacing: 1px;">
+                            Market Activity
                           </p>
                         </td>
                       </tr>
                     </table>
-                  </td>
-                  <!-- Indicator 2: Pending Sales -->
-                  <td width="33%" class="metric-card" style="padding: 0 4px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafaf9; border-radius: 8px; border: 1px solid #e7e5e4;">
+                    
+                    <!-- Activity Indicators -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                       <tr>
-                        <td align="center" style="padding: 14px 8px;">
-                          <p style="margin: 0 0 2px 0; font-size: 20px; font-weight: 900; color: {primary_color};">
-                            {ci2_value}
-                          </p>
-                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #78716c; text-transform: uppercase;">
-                            {ci2_label}
-                          </p>
+                        <td width="33%" style="padding: 0 6px 0 0;">
+                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(180deg, #ffffff 0%, #f5f5f4 100%); border-radius: 12px; border: 1px solid #e7e5e4;">
+                            <tr>
+                              <td align="center" style="padding: 18px 12px;">
+                                <p style="margin: 0 0 4px 0; font-size: 32px; font-weight: 900; color: {primary_color};">
+                                  {ci1_value}
+                                </p>
+                                <p style="margin: 0; font-size: 11px; font-weight: 700; color: #57534e; text-transform: uppercase; letter-spacing: 0.5px;">
+                                  {ci1_label}
+                                </p>
+                              </td>
+                            </tr>
+                          </table>
                         </td>
-                      </tr>
-                    </table>
-                  </td>
-                  <!-- Indicator 3: Sale-to-List -->
-                  <td width="33%" class="metric-card" style="padding: 0 4px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafaf9; border-radius: 8px; border: 1px solid #e7e5e4;">
-                      <tr>
-                        <td align="center" style="padding: 14px 8px;">
-                          <p style="margin: 0 0 2px 0; font-size: 20px; font-weight: 900; color: {primary_color};">
-                            {ci3_value}
-                          </p>
-                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #78716c; text-transform: uppercase;">
-                            {ci3_label}
-                          </p>
+                        <td width="33%" style="padding: 0 3px;">
+                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(180deg, #ffffff 0%, #f5f5f4 100%); border-radius: 12px; border: 1px solid #e7e5e4;">
+                            <tr>
+                              <td align="center" style="padding: 18px 12px;">
+                                <p style="margin: 0 0 4px 0; font-size: 32px; font-weight: 900; color: {primary_color};">
+                                  {ci2_value}
+                                </p>
+                                <p style="margin: 0; font-size: 11px; font-weight: 700; color: #57534e; text-transform: uppercase; letter-spacing: 0.5px;">
+                                  {ci2_label}
+                                </p>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                        <td width="33%" style="padding: 0 0 0 6px;">
+                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(180deg, #ffffff 0%, #f5f5f4 100%); border-radius: 12px; border: 1px solid #e7e5e4;">
+                            <tr>
+                              <td align="center" style="padding: 18px 12px;">
+                                <p style="margin: 0 0 4px 0; font-size: 32px; font-weight: 900; color: {primary_color};">
+                                  {ci3_value}
+                                </p>
+                                <p style="margin: 0; font-size: 11px; font-weight: 700; color: #57534e; text-transform: uppercase; letter-spacing: 0.5px;">
+                                  {ci3_label}
+                                </p>
+                              </td>
+                            </tr>
+                          </table>
                         </td>
                       </tr>
                     </table>
@@ -1329,93 +1422,112 @@ def schedule_email_html(
               </table>
 '''
     
-    # Build property type breakdown HTML (Market Snapshot)
-    # V4.1: Modern styling with colored dots instead of emoji
+    # V7: Redesigned Property Types Section (Market Snapshot)
     property_types_html = ""
     if property_types:
-        # Build individual type cards with colored indicators
-        type_cards = ""
-        type_colors = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b"]  # Blue, Purple, Pink, Amber
+        # Build individual type rows - V7: Cleaner list layout with larger numbers
+        type_rows = ""
         
         for i, ptype in enumerate(property_types):
-            color = type_colors[i % len(type_colors)]
-            type_cards += f'''
-                  <td align="center" style="padding: 8px 12px;">
-                    <span style="display: inline-block; width: 8px; height: 8px; background-color: {color}; border-radius: 50%; margin-right: 6px; vertical-align: middle;"></span>
-                    <span style="font-size: 14px; color: #44403c;">
-                      <strong style="color: {primary_color}; font-weight: 900;">{ptype["count"]}</strong> {ptype["name"]}
-                    </span>
-                  </td>'''
+            border = 'border-bottom: 1px solid #e7e5e4;' if i < len(property_types) - 1 else ''
+            type_rows += f'''
+                      <tr>
+                        <td style="padding: 14px 16px; {border}">
+                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                              <td style="vertical-align: middle;">
+                                <span style="font-size: 15px; font-weight: 600; color: #292524;">{ptype["name"]}</span>
+                              </td>
+                              <td align="right" style="vertical-align: middle;">
+                                <span style="font-size: 22px; font-weight: 900; color: {primary_color};">{ptype["count"]}</span>
+                                <span style="font-size: 12px; color: #78716c; margin-left: 4px;">sales</span>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>'''
         
         property_types_html = f'''
-              <!-- Property Type Breakdown -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
+              <!-- V7: Property Type Breakdown with Section Header -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
-                  <td style="padding: 16px 20px; background-color: #fafaf9; border-radius: 10px; border: 1px solid #e7e5e4;">
-                    <p style="margin: 0 0 12px 0; font-size: 11px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 1.5px; text-align: center;">
-                      Property Types
-                    </p>
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                  <td>
+                    <!-- Section Header with Gradient Accent -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 12px;">
                       <tr>
-                        {type_cards}
+                        <td style="padding-bottom: 10px; border-bottom: 3px solid; border-image: linear-gradient(90deg, {primary_color}, {accent_color}) 1;">
+                          <p style="margin: 0; font-size: 13px; font-weight: 700; color: {primary_color}; text-transform: uppercase; letter-spacing: 1px;">
+                            By Property Type
+                          </p>
+                        </td>
                       </tr>
+                    </table>
+                    
+                    <!-- Property Type List -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafaf9; border-radius: 12px; border: 1px solid #e7e5e4;">
+                      {type_rows}
                     </table>
                   </td>
                 </tr>
               </table>
 '''
     
-    # Build price tier breakdown HTML (Market Snapshot)
-    # V4.1: Added icons, centered text, modern styling
+    # V7: Redesigned Price Tier Section (Market Snapshot)
     price_tiers_html = ""
     if price_tiers:
-        # Icons for each tier level
-        tier_icons = {"Entry Level": "◇", "Move-Up": "◈", "Luxury": "◆"}
+        # Build tier rows - V7: Cleaner list layout matching property types
+        tier_rows = ""
         
-        tier_items = ""
         for i, tier in enumerate(price_tiers):
-            # All tiers use primary_color - opacity creates visual hierarchy
-            opacity = tier.get("opacity", "100")
-            opacity_hex = {"40": "66", "70": "B3", "100": ""}.get(opacity, "")
-            border_color = f"{primary_color}{opacity_hex}"
-            icon = tier_icons.get(tier["name"], "▪")
-            
-            tier_items += f'''
-                  <td width="33%" class="metric-card" style="padding: 0 4px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+            border = 'border-bottom: 1px solid #e7e5e4;' if i < len(price_tiers) - 1 else ''
+            tier_rows += f'''
                       <tr>
-                        <td align="center" style="padding: 14px 8px; background-color: #ffffff; border-radius: 8px; border-top: 3px solid {border_color};">
-                          <p style="margin: 0 0 4px 0; font-size: 22px; font-weight: 900; color: {primary_color};">{tier["count"]}</p>
-                          <p style="margin: 0 0 2px 0; font-size: 12px; font-weight: 600; color: #44403c;">
-                            <span style="color: {border_color};">{icon}</span> {tier["name"]}
+                        <td style="padding: 14px 16px; {border}">
+                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                              <td style="vertical-align: middle;">
+                                <span style="font-size: 15px; font-weight: 600; color: #292524;">{tier["name"]}</span>
+                                <span style="font-size: 12px; color: #78716c; margin-left: 8px;">{tier["range"]}</span>
+                              </td>
+                              <td align="right" style="vertical-align: middle;">
+                                <span style="font-size: 22px; font-weight: 900; color: {primary_color};">{tier["count"]}</span>
+                                <span style="font-size: 12px; color: #78716c; margin-left: 4px;">sales</span>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>'''
+        
+        price_tiers_html = f'''
+              <!-- V7: Price Tier Breakdown with Section Header -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <td>
+                    <!-- Section Header with Gradient Accent -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 12px;">
+                      <tr>
+                        <td style="padding-bottom: 10px; border-bottom: 3px solid; border-image: linear-gradient(90deg, {primary_color}, {accent_color}) 1;">
+                          <p style="margin: 0; font-size: 13px; font-weight: 700; color: {primary_color}; text-transform: uppercase; letter-spacing: 1px;">
+                            By Price Tier
                           </p>
-                          <p style="margin: 0; font-size: 10px; color: #a8a29e;">{tier["range"]}</p>
                         </td>
                       </tr>
                     </table>
+                    
+                    <!-- Price Tier List -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafaf9; border-radius: 12px; border: 1px solid #e7e5e4;">
+                      {tier_rows}
+                    </table>
                   </td>
-'''
-        
-        price_tiers_html = f'''
-              <!-- Price Tier Breakdown -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px; background-color: #fafaf9; border-radius: 10px; padding: 16px; border: 1px solid #e7e5e4;">
-                <tr>
-                  <td style="padding-bottom: 12px;" colspan="3">
-                    <p style="margin: 0; font-size: 11px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 1.5px; text-align: center;">
-                      Price Tier Distribution
-                    </p>
-                  </td>
-                </tr>
-                <tr>
-                  {tier_items}
                 </tr>
               </table>
 '''
     
     # V5: Build gallery grid HTML for gallery report types
+    # V6: Pass preset_display_name for custom section titles
     gallery_html = ""
     if has_gallery:
-        gallery_html = _build_gallery_grid_html(listings or [], report_type, primary_color, accent_color)
+        gallery_html = _build_gallery_grid_html(listings or [], report_type, primary_color, accent_color, preset_display_name)
     
     # V5: Build listings table HTML for inventory/new_listings/closed
     listings_table_html = ""
