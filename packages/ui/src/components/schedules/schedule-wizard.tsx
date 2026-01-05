@@ -36,6 +36,7 @@ import {
 } from "lucide-react"
 import { type ScheduleWizardState, type ReportType, type Weekday, type ReportFilters, weekdayLabels, AUDIENCE_OPTIONS } from "./types"
 import { cn } from "../../lib/utils"
+import { CityAutocomplete } from "../city-autocomplete"
 
 const steps = [
   { id: "basics", label: "Basics" },
@@ -375,15 +376,14 @@ function StepArea({ state, setState }: { state: ScheduleWizardState; setState: (
               <Label htmlFor="city">
                 City Name <span className="text-destructive">*</span>
               </Label>
-              <Input
-                id="city"
-                type="text"
-                placeholder="e.g., San Francisco"
+              <CityAutocomplete
                 value={state.city}
-                onChange={(e) => setState({ ...state, city: e.target.value })}
-                aria-required="true"
-                className="h-11"
+                onChange={(city) => setState({ ...state, city })}
+                placeholder="Start typing a city..."
               />
+              <p className="text-xs text-muted-foreground">
+                Coverage: Southern California (CRMLS)
+              </p>
             </div>
           )}
 

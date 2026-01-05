@@ -214,6 +214,73 @@ export const weekdayLabels: Record<Weekday, string> = {
 }
 
 // ============================================================================
+// SOUTHERN CALIFORNIA CITIES (CRMLS Coverage Area)
+// ============================================================================
+// Counties: Los Angeles, Orange, San Diego, Riverside, San Bernardino,
+// Ventura, Santa Barbara, Imperial, Kern (south)
+// ============================================================================
+export const SOCAL_CITIES: string[] = [
+  // Los Angeles County - Major Cities
+  "Los Angeles", "Long Beach", "Santa Clarita", "Glendale", "Lancaster",
+  "Palmdale", "Pomona", "Torrance", "Pasadena", "El Monte",
+  "Downey", "Inglewood", "West Covina", "Norwalk", "Burbank",
+  "Compton", "South Gate", "Carson", "Santa Monica", "Whittier",
+  "Hawthorne", "Alhambra", "Lakewood", "Bellflower", "Baldwin Park",
+  "Lynwood", "Redondo Beach", "Pico Rivera", "Montebello", "Monterey Park",
+  "Gardena", "Huntington Park", "Arcadia", "Diamond Bar", "Paramount",
+  "Rosemead", "Glendora", "Cerritos", "La Mirada", "Covina",
+  "Azusa", "La Puente", "San Dimas", "Culver City", "West Hollywood",
+  "Claremont", "Monrovia", "Bell Gardens", "Manhattan Beach", "Beverly Hills",
+  "Rancho Palos Verdes", "San Gabriel", "Hermosa Beach", "Temple City", "La Verne",
+  "Duarte", "Calabasas", "Walnut", "Lawndale", "El Segundo",
+  "Agoura Hills", "Malibu", "Palos Verdes Estates", "Rolling Hills",
+  
+  // Orange County
+  "Anaheim", "Santa Ana", "Irvine", "Huntington Beach", "Garden Grove",
+  "Orange", "Fullerton", "Costa Mesa", "Mission Viejo", "Westminster",
+  "Newport Beach", "Buena Park", "Lake Forest", "Tustin", "Yorba Linda",
+  "San Clemente", "Laguna Niguel", "La Habra", "Fountain Valley", "Placentia",
+  "Rancho Santa Margarita", "Aliso Viejo", "Cypress", "Brea", "Stanton",
+  "San Juan Capistrano", "Dana Point", "Laguna Beach", "Laguna Hills", "Seal Beach",
+  "Los Alamitos", "Laguna Woods", "La Palma", "Villa Park",
+  
+  // San Diego County
+  "San Diego", "Chula Vista", "Oceanside", "Escondido", "Carlsbad",
+  "El Cajon", "Vista", "San Marcos", "Encinitas", "National City",
+  "La Mesa", "Santee", "Poway", "Imperial Beach", "Solana Beach",
+  "Lemon Grove", "Coronado", "Del Mar",
+  
+  // Riverside County
+  "Riverside", "Moreno Valley", "Corona", "Murrieta", "Temecula",
+  "Menifee", "Hemet", "Lake Elsinore", "Indio", "Perris",
+  "Palm Desert", "Palm Springs", "San Jacinto", "La Quinta", "Eastvale",
+  "Jurupa Valley", "Cathedral City", "Beaumont", "Coachella", "Wildomar",
+  "Banning", "Desert Hot Springs", "Norco", "Rancho Mirage", "Indian Wells",
+  
+  // San Bernardino County
+  "San Bernardino", "Fontana", "Rancho Cucamonga", "Ontario", "Victorville",
+  "Rialto", "Hesperia", "Chino", "Chino Hills", "Upland",
+  "Apple Valley", "Redlands", "Highland", "Colton", "Yucaipa",
+  "Montclair", "Adelanto", "Loma Linda", "Barstow", "Twentynine Palms",
+  "Yucca Valley", "Grand Terrace", "Big Bear Lake",
+  
+  // Ventura County
+  "Oxnard", "Thousand Oaks", "Simi Valley", "Ventura", "Camarillo",
+  "Moorpark", "Santa Paula", "Port Hueneme", "Fillmore", "Ojai",
+  
+  // Santa Barbara County
+  "Santa Barbara", "Santa Maria", "Lompoc", "Goleta", "Carpinteria",
+  "Guadalupe", "Solvang", "Buellton",
+  
+  // Imperial County
+  "El Centro", "Calexico", "Brawley", "Imperial", "Holtville",
+  
+  // Kern County (Southern portion)
+  "Bakersfield", "Tehachapi", "California City", "Ridgecrest", "Arvin",
+  "Wasco", "Delano", "Shafter", "Taft", "Maricopa",
+].sort()
+
+// ============================================================================
 // SIMPLIFIED UI - Audience Targeting (v2.0)
 // ============================================================================
 // Two main report types: New Listings (Gallery) and Market Update (Snapshot)

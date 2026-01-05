@@ -27,6 +27,7 @@ import {
   Check,
 } from "lucide-react"
 import { cn } from "../lib/utils"
+import { CityAutocomplete } from "./city-autocomplete"
 
 // Import shared types and presets from schedules module
 import { 
@@ -503,18 +504,17 @@ function StepArea({
               <Label htmlFor="city">
                 City Name <span className="text-destructive">*</span>
               </Label>
-              <Input
-                id="city"
-                type="text"
-                placeholder="e.g., San Francisco"
+              <CityAutocomplete
                 value={state.city}
-                onChange={(e) => {
-                  setState({ ...state, city: e.target.value })
+                onChange={(city) => {
+                  setState({ ...state, city })
                   setError(null)
                 }}
-                aria-required="true"
-                className="h-11"
+                placeholder="Start typing a city..."
               />
+              <p className="text-xs text-muted-foreground">
+                Coverage: Southern California (CRMLS)
+              </p>
             </div>
           )}
 
