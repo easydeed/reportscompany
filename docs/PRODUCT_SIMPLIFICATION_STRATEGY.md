@@ -268,11 +268,11 @@ git revert --no-commit pre-simplification-v1..HEAD
 - [x] Add City Autocomplete for Southern California (CRMLS coverage)
 - [ ] Update onboarding to reflect simplified options (if needed)
 
-### Phase 2: Email Redesign
-- [ ] Add conversation starter text to email templates
-- [ ] Make "Share with Client" the primary CTA
-- [ ] Reduce data density in email body
-- [ ] Add "Quick take" summary line
+### Phase 2: Email Redesign ✅ COMPLETED
+- [x] Add conversation starter text to email templates ("Text This to Your Client" box)
+- [x] Make "Share with Client" the primary CTA (green button)
+- [x] Demote "View Full Report" to secondary CTA (outline button)
+- [x] Add "Quick take" summary line (punchy one-liner with emoji)
 
 ### Phase 3: Validation
 - [x] Create QA script for all report variations (`scripts/qa_generate_all_reports.py`)

@@ -822,6 +822,123 @@ def _get_insight_paragraph(report_type: str, area: str, metrics: Dict, lookback_
         )
 
 
+def _get_quick_take(report_type: str, area: str, metrics: Dict) -> str:
+    """
+    V5: Generate a punchy "Quick Take" one-liner for email.
+    This is the headline insight that grabs attention.
+    """
+    total_active = metrics.get("total_active", 0)
+    total_closed = metrics.get("total_closed", 0)
+    median_price = metrics.get("median_close_price") or metrics.get("median_list_price")
+    avg_dom = metrics.get("avg_dom")
+    moi = metrics.get("months_of_inventory")
+    
+    price_str = _format_price_clean(median_price) if median_price else None
+    
+    if report_type == "market_snapshot":
+        if moi and moi < 3:
+            return f"🔥 Hot market! Only {moi:.1f} months of inventory in {area}."
+        elif moi and moi > 6:
+            return f"📊 Buyer's market: {moi:.1f} months of inventory available in {area}."
+        elif total_closed and price_str:
+            return f"📊 {total_closed} sales this month at {price_str} median in {area}."
+        else:
+            return f"📊 Here's what's happening in {area} this month."
+    
+    elif report_type in ("new_listings", "new_listings_gallery"):
+        if total_active and price_str:
+            return f"🏠 {total_active} new listings just hit the market in {area}!"
+        elif total_active:
+            return f"🏠 {total_active} fresh listings in {area} - see them first!"
+        else:
+            return f"🏠 Check out the latest listings in {area}."
+    
+    elif report_type == "closed":
+        if total_closed and price_str:
+            return f"🔑 {total_closed} homes sold in {area} at {price_str} median."
+        elif total_closed:
+            return f"🔑 {total_closed} recent sales in {area} - see the details."
+        else:
+            return f"🔑 Recent sales activity in {area}."
+    
+    elif report_type == "featured_listings":
+        return f"⭐ Handpicked listings in {area} you'll want to see."
+    
+    else:
+        return f"📊 Your {area} market update is ready."
+
+
+def _get_conversation_starter(report_type: str, area: str, metrics: Dict, listings: Optional[List[Dict]] = None) -> str:
+    """
+    V5: Generate a ready-to-text conversation starter for agents.
+    This is what agents can copy and send to their clients.
+    """
+    total_active = metrics.get("total_active", 0)
+    median_price = metrics.get("median_close_price") or metrics.get("median_list_price")
+    price_str = _format_price_clean(median_price) if median_price else None
+    
+    # Try to get a featured listing for personalization
+    featured_address = None
+    featured_price = None
+    if listings and len(listings) > 0:
+        first = listings[0]
+        featured_address = first.get("street_address")
+        featured_price = _format_price_clean(first.get("list_price")) if first.get("list_price") else None
+    
+    if report_type in ("new_listings", "new_listings_gallery"):
+        if featured_address and featured_price:
+            return (
+                f"Hey! Just saw a new listing at {featured_address} for {featured_price} - "
+                f"thought of you. Want me to send you the details?"
+            )
+        elif total_active:
+            return (
+                f"Hey! {total_active} new listings just hit the market in {area}. "
+                f"Want me to send you the ones that match what you're looking for?"
+            )
+        else:
+            return (
+                f"Hey! Some new listings just came up in {area}. "
+                f"Let me know if you'd like to take a look!"
+            )
+    
+    elif report_type == "market_snapshot":
+        if price_str:
+            return (
+                f"Hey! Quick update on the {area} market - "
+                f"median prices are at {price_str}. Want to chat about what this means for you?"
+            )
+        else:
+            return (
+                f"Hey! Just pulled the latest market data for {area}. "
+                f"Let me know if you want to talk strategy!"
+            )
+    
+    elif report_type == "closed":
+        return (
+            f"Hey! Just looked at recent sales in {area} - "
+            f"some interesting comps. Want me to walk you through them?"
+        )
+    
+    elif report_type == "featured_listings":
+        if featured_address:
+            return (
+                f"Hey! I think you'll love this one - {featured_address}. "
+                f"Free this weekend to take a look?"
+            )
+        else:
+            return (
+                f"Hey! Found some great properties in {area} I think you'll love. "
+                f"When can we chat?"
+            )
+    
+    else:
+        return (
+            f"Hey! Just pulled some fresh market data for {area}. "
+            f"Let me know when you have a few minutes to chat!"
+        )
+
+
 def _build_preheader(report_type: str, area: str, metrics: Dict) -> str:
     """Build preheader text for email preview."""
     config = REPORT_CONFIG.get(report_type, {})
@@ -973,6 +1090,10 @@ def schedule_email_html(
     
     # Build preheader
     preheader = _build_preheader(report_type, area_display, metrics)
+    
+    # V5: Quick Take and Conversation Starter
+    quick_take = _get_quick_take(report_type, area_display, metrics)
+    conversation_starter = _get_conversation_starter(report_type, area_display, metrics, listings)
     
     # Build logo HTML for email header
     # Use email_logo_url if available (light version for gradient headers)
@@ -1550,21 +1671,61 @@ def schedule_email_html(
                 </tr>
               </table>
 '''}{core_indicators_html if has_hero_4 else ""}{extra_stats_html}{property_types_html}{price_tiers_html}{price_bands_html}{gallery_html}{listings_table_html}
-              <!-- ========== CTA BUTTON ========== -->
+              <!-- ========== V5: QUICK TAKE ========== -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
+                <tr>
+                  <td align="center" style="padding: 16px 20px; background-color: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                    <p style="margin: 0; font-size: 16px; font-weight: 600; color: #92400e; line-height: 1.4;">
+                      {quick_take}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- ========== V5: CONVERSATION STARTER ========== -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 20px; background-color: #f0fdf4; border-radius: 12px; border: 1px solid #bbf7d0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td>
+                          <p style="margin: 0 0 8px 0; font-size: 11px; font-weight: 700; color: #166534; text-transform: uppercase; letter-spacing: 1px;">
+                            💬 Text This to Your Client
+                          </p>
+                          <p style="margin: 0; font-size: 15px; color: #15803d; line-height: 1.5; font-style: italic;">
+                            "{conversation_starter}"
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- ========== V5: DUAL CTA BUTTONS ========== -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
-                  <td align="center" style="padding: 8px 0 32px 0;">
+                  <td align="center" style="padding: 8px 0 16px 0;">
+                    <!-- Primary CTA: Share with Client -->
                     <!--[if mso]>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{pdf_url}" style="height:52px;v-text-anchor:middle;width:200px;" arcsize="10%" stroke="f" fillcolor="{primary_color}">
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{pdf_url}" style="height:52px;v-text-anchor:middle;width:220px;" arcsize="10%" stroke="f" fillcolor="#16a34a">
                       <w:anchorlock/>
-                      <center style="color:#ffffff;font-family:Georgia,serif;font-size:15px;font-weight:normal;">View Full Report</center>
+                      <center style="color:#ffffff;font-family:Georgia,serif;font-size:15px;font-weight:normal;">Share with Client</center>
                     </v:roundrect>
                     <![endif]-->
                     <!--[if !mso]><!-->
-                    <a href="{pdf_url}" target="_blank" style="display: inline-block; background-color: {primary_color}; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 15px; font-weight: 400; text-decoration: none; padding: 14px 32px; border-radius: 6px; box-shadow: 0 2px 8px {primary_color}30; letter-spacing: 0.3px;">
-                      View Full Report →
+                    <a href="{pdf_url}" target="_blank" style="display: inline-block; background-color: #16a34a; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 15px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 6px; box-shadow: 0 2px 8px rgba(22,163,74,0.3); letter-spacing: 0.3px;">
+                      📤 Share with Client
                     </a>
                     <!--<![endif]-->
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding: 8px 0 24px 0;">
+                    <!-- Secondary CTA: View Full Report -->
+                    <a href="{pdf_url}" target="_blank" style="display: inline-block; color: {primary_color}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 14px; font-weight: 500; text-decoration: none; padding: 10px 20px; border-radius: 6px; border: 1px solid {primary_color};">
+                      View Full Report →
+                    </a>
                   </td>
                 </tr>
               </table>

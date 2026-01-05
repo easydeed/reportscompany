@@ -287,9 +287,11 @@
   .gallery-grid{
     display: grid;
     grid-template-columns: repeat(3, 1fr);
+    grid-auto-rows: min-content;  /* V2.6: Each row only as tall as its content */
     gap: 12px;  /* Reduced gap */
     margin: 8px 0;  /* Reduced margin */
     align-content: start;  /* Prevent cards from stretching to fill space */
+    justify-content: start;  /* V2.6: Keep cards aligned left */
   }
 
   .property-card{

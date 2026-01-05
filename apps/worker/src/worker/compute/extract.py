@@ -51,7 +51,7 @@ class PropertyDataExtractor:
                 
                 # Additional property details for gallery templates
                 beds = _int((pr or {}).get("bedrooms"))
-                baths = _int((pr or {}).get("bathrooms"))
+                baths = _float((pr or {}).get("bathrooms"))  # Keep as float (e.g., 2.5 baths)
                 street = (addr or {}).get("full") or (addr or {}).get("streetName")
                 
                 # Extract property subtype for better categorization
@@ -110,6 +110,13 @@ def _int(v):
     try: 
         return int(v) if v is not None else None
     except: 
+        return None
+
+def _float(v):
+    """Convert to float, preserving fractional values (e.g., 2.5 bathrooms)."""
+    try:
+        return float(v) if v is not None else None
+    except:
         return None
 
 
