@@ -51,8 +51,8 @@ const weekdays: Weekday[] = ["monday", "tuesday", "wednesday", "thursday", "frid
 
 const monthlyDays = Array.from({ length: 28 }, (_, i) => i + 1)
 
-// Simplified tab type - two main report categories
-type ReportTab = "new_listings" | "market_update"
+// Three main report categories
+type ReportTab = "new_listings" | "market_update" | "closed_sales"
 
 export interface ScheduleWizardProps {
   onSubmit: (data: ScheduleWizardState) => void
@@ -70,7 +70,7 @@ function validateEmailDomain(email: string): boolean {
   return !!(domain && domain.includes("."))
 }
 
-// Step 1: Simplified Basics (Two Tabs + Audience Dropdown)
+// Step 1: Simplified Basics (Three Cards + Pill Audience Selector)
 function StepBasics({ state, setState }: { state: ScheduleWizardState; setState: (s: ScheduleWizardState) => void }) {
   const [activeTab, setActiveTab] = useState<ReportTab>("new_listings")
   const [selectedAudience, setSelectedAudience] = useState<string>("all")
@@ -90,11 +90,19 @@ function StepBasics({ state, setState }: { state: ScheduleWizardState; setState:
         filters: audience.filters,
         preset_key: selectedAudience !== "all" ? selectedAudience : undefined
       })
-    } else {
+    } else if (tab === "market_update") {
       setState({
         ...state,
         name: state.name || "Market Update - Weekly",
         report_type: "market_snapshot",
+        filters: {},
+        preset_key: undefined
+      })
+    } else if (tab === "closed_sales") {
+      setState({
+        ...state,
+        name: state.name || "Closed Sales - Weekly",
+        report_type: "closed",
         filters: {},
         preset_key: undefined
       })
@@ -149,134 +157,138 @@ function StepBasics({ state, setState }: { state: ScheduleWizardState; setState:
               aria-required="true"
               className="h-11"
             />
-            <p className="text-xs text-muted-foreground">Choose a descriptive name for this schedule</p>
           </div>
 
-          {/* Simplified Two-Tab Toggle */}
-          <div className="space-y-4">
-            <Label>
-              Report Type <span className="text-destructive">*</span>
-            </Label>
-            <div className="grid grid-cols-2 gap-3">
-              {/* New Listings Tab */}
+          {/* Three Report Type Cards */}
+          <div className="space-y-3">
+            <Label>Report Type <span className="text-destructive">*</span></Label>
+            <div className="grid grid-cols-3 gap-3">
+              {/* New Listings */}
               <button
                 type="button"
                 onClick={() => handleTabSelect("new_listings")}
                 className={cn(
-                  "relative flex flex-col items-center p-5 rounded-xl border-2 transition-all text-center",
+                  "relative flex flex-col items-center p-4 rounded-xl border-2 transition-all text-center",
                   activeTab === "new_listings"
-                    ? "border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg shadow-primary/10"
-                    : "border-border hover:border-primary/50 hover:shadow-sm"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-muted-foreground/50"
                 )}
-                aria-pressed={activeTab === "new_listings"}
               >
                 {activeTab === "new_listings" && (
                   <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
                 )}
                 <div className={cn(
-                  "w-12 h-12 rounded-xl flex items-center justify-center mb-2 transition-colors",
-                  activeTab === "new_listings"
-                    ? "bg-primary text-white"
-                    : "bg-primary/10 text-primary"
+                  "w-11 h-11 rounded-lg flex items-center justify-center mb-2",
+                  activeTab === "new_listings" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                 )}>
-                  <Image className="w-6 h-6" />
+                  <Image className="w-5 h-5" />
                 </div>
-                <span className="font-bold">New Listings</span>
-                <span className="text-xs text-muted-foreground mt-1">Visual gallery</span>
+                <span className={cn("font-semibold text-sm", activeTab === "new_listings" && "text-primary")}>New Listings</span>
+                <span className="text-xs text-muted-foreground mt-0.5">Photo gallery</span>
               </button>
 
-              {/* Market Update Tab */}
+              {/* Market Update */}
               <button
                 type="button"
                 onClick={() => handleTabSelect("market_update")}
                 className={cn(
-                  "relative flex flex-col items-center p-5 rounded-xl border-2 transition-all text-center",
+                  "relative flex flex-col items-center p-4 rounded-xl border-2 transition-all text-center",
                   activeTab === "market_update"
-                    ? "border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg shadow-primary/10"
-                    : "border-border hover:border-primary/50 hover:shadow-sm"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-muted-foreground/50"
                 )}
-                aria-pressed={activeTab === "market_update"}
               >
                 {activeTab === "market_update" && (
                   <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
                 )}
                 <div className={cn(
-                  "w-12 h-12 rounded-xl flex items-center justify-center mb-2 transition-colors",
-                  activeTab === "market_update"
-                    ? "bg-primary text-white"
-                    : "bg-primary/10 text-primary"
+                  "w-11 h-11 rounded-lg flex items-center justify-center mb-2",
+                  activeTab === "market_update" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                 )}>
-                  <TrendingUp className="w-6 h-6" />
+                  <TrendingUp className="w-5 h-5" />
                 </div>
-                <span className="font-bold">Market Update</span>
-                <span className="text-xs text-muted-foreground mt-1">Stats & trends</span>
+                <span className={cn("font-semibold text-sm", activeTab === "market_update" && "text-primary")}>Market Update</span>
+                <span className="text-xs text-muted-foreground mt-0.5">Stats & trends</span>
+              </button>
+
+              {/* Closed Sales */}
+              <button
+                type="button"
+                onClick={() => handleTabSelect("closed_sales")}
+                className={cn(
+                  "relative flex flex-col items-center p-4 rounded-xl border-2 transition-all text-center",
+                  activeTab === "closed_sales"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-muted-foreground/50"
+                )}
+              >
+                {activeTab === "closed_sales" && (
+                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                    <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                )}
+                <div className={cn(
+                  "w-11 h-11 rounded-lg flex items-center justify-center mb-2",
+                  activeTab === "closed_sales" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                )}>
+                  <DollarSign className="w-5 h-5" />
+                </div>
+                <span className={cn("font-semibold text-sm", activeTab === "closed_sales" && "text-primary")}>Closed Sales</span>
+                <span className="text-xs text-muted-foreground mt-0.5">Recent solds</span>
               </button>
             </div>
           </div>
 
-          {/* Audience Dropdown - Only for New Listings */}
+          {/* Audience Pill Buttons - Only for New Listings */}
           {activeTab === "new_listings" && (
-            <div className="space-y-3 p-4 rounded-xl bg-muted/30 border border-border">
+            <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-primary" />
-                <Label className="text-sm font-medium">Who is this for?</Label>
+                <Users className="w-4 h-4 text-muted-foreground" />
+                <Label className="text-sm">Who is this for?</Label>
               </div>
-              <Select value={selectedAudience} onValueChange={handleAudienceChange}>
-                <SelectTrigger className="h-11 bg-background">
-                  <SelectValue placeholder="Select audience" />
-                </SelectTrigger>
-                <SelectContent>
-                  {AUDIENCE_OPTIONS.map((audience) => (
-                    <SelectItem key={audience.key} value={audience.key} className="py-2">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{audience.name}</span>
-                        <span className="text-xs text-muted-foreground">{audience.description}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex flex-wrap gap-2">
+                {AUDIENCE_OPTIONS.map((audience) => {
+                  const isSelected = selectedAudience === audience.key
+                  return (
+                    <button
+                      key={audience.key}
+                      type="button"
+                      onClick={() => handleAudienceChange(audience.key)}
+                      className={cn(
+                        "px-3 py-2 rounded-full text-sm font-medium transition-all border",
+                        isSelected
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background text-foreground border-border hover:border-muted-foreground"
+                      )}
+                    >
+                      {audience.name}
+                    </button>
+                  )
+                })}
+              </div>
               
-              {/* Show applied filters */}
+              {/* Show applied filters as subtle hint */}
               {selectedAudience !== "all" && selectedAudienceOption && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {selectedAudienceOption.filters.minbeds && (
-                    <Badge variant="outline" className="text-xs">{selectedAudienceOption.filters.minbeds}+ beds</Badge>
-                  )}
-                  {selectedAudienceOption.filters.price_strategy?.mode === "maxprice_pct_of_median_list" && (
-                    <Badge variant="outline" className="text-xs text-blue-600 border-blue-200 bg-blue-50">
-                      ≤{Math.round(selectedAudienceOption.filters.price_strategy.value * 100)}% median
-                    </Badge>
-                  )}
-                  {selectedAudienceOption.filters.price_strategy?.mode === "minprice_pct_of_median_list" && (
-                    <Badge variant="outline" className="text-xs text-blue-600 border-blue-200 bg-blue-50">
-                      ≥{Math.round(selectedAudienceOption.filters.price_strategy.value * 100)}% median
-                    </Badge>
-                  )}
-                  {selectedAudienceOption.filters.subtype === "Condominium" && (
-                    <Badge variant="outline" className="text-xs">Condos only</Badge>
-                  )}
-                  {selectedAudienceOption.filters.subtype === "SingleFamilyResidence" && (
-                    <Badge variant="outline" className="text-xs">Single Family</Badge>
-                  )}
-                </div>
+                <p className="text-xs text-muted-foreground pl-1">
+                  {selectedAudienceOption.description}
+                </p>
               )}
             </div>
           )}
 
           {/* Lookback Period */}
           <div className="space-y-3">
-            <Label>
-              Time Period <span className="text-destructive">*</span>
-            </Label>
+            <Label>Time Period <span className="text-destructive">*</span></Label>
             <div className="flex flex-wrap gap-2">
               {lookbackOptions.map((days) => (
                 <button
@@ -284,18 +296,16 @@ function StepBasics({ state, setState }: { state: ScheduleWizardState; setState:
                   type="button"
                   onClick={() => setState({ ...state, lookback_days: days })}
                   className={cn(
-                    "px-4 py-2.5 rounded-lg border-2 font-medium transition-all",
+                    "px-4 py-2 rounded-lg border font-medium text-sm transition-all",
                     state.lookback_days === days
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-border hover:border-primary/50"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background border-border hover:border-muted-foreground"
                   )}
-                  aria-pressed={state.lookback_days === days}
                 >
                   {days} days
                 </button>
               ))}
             </div>
-            <p className="text-xs text-muted-foreground">How far back to include data</p>
           </div>
         </CardContent>
       </Card>
@@ -842,6 +852,7 @@ function StepRecipients({
 function StepReview({ state }: { state: ScheduleWizardState }) {
   const isNewListings = state.report_type === "new_listings_gallery" || state.report_type === "featured_listings"
   const isMarketUpdate = state.report_type === "market_snapshot"
+  const isClosedSales = state.report_type === "closed"
   
   // Get audience name from filters
   const audienceName = state.filters?.preset_display_name || (isNewListings ? "All Listings" : null)
@@ -859,6 +870,17 @@ function StepReview({ state }: { state: ScheduleWizardState }) {
   
   const hasFilters = state.filters && Object.keys(state.filters).filter(k => k !== 'preset_display_name').length > 0
 
+  // Get report display name and icon
+  const getReportInfo = () => {
+    if (isNewListings) return { name: "New Listings", icon: Image }
+    if (isMarketUpdate) return { name: "Market Update", icon: TrendingUp }
+    if (isClosedSales) return { name: "Closed Sales", icon: DollarSign }
+    return { name: "Report", icon: FileText }
+  }
+  
+  const reportInfo = getReportInfo()
+  const ReportIcon = reportInfo.icon
+
   return (
     <div className="space-y-6">
       <div>
@@ -870,23 +892,14 @@ function StepReview({ state }: { state: ScheduleWizardState }) {
       <div className="relative overflow-hidden rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background">
         {/* Header with schedule name and report type */}
         <div className="flex items-center gap-4 p-5 border-b border-primary/10">
-          <div className={cn(
-            "w-14 h-14 rounded-xl flex items-center justify-center shadow-lg",
-            isNewListings ? "bg-primary shadow-primary/20" : "bg-emerald-500 shadow-emerald-500/20"
-          )}>
-            {isNewListings ? (
-              <Image className="w-7 h-7 text-white" />
-            ) : (
-              <TrendingUp className="w-7 h-7 text-white" />
-            )}
+          <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center">
+            <ReportIcon className="w-7 h-7 text-primary-foreground" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Schedule</p>
             <h3 className="font-display font-bold text-xl truncate">{state.name}</h3>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-sm text-muted-foreground">
-                {isNewListings ? "New Listings" : "Market Update"}
-              </span>
+              <span className="text-sm text-muted-foreground">{reportInfo.name}</span>
               {audienceName && audienceName !== "All Listings" && (
                 <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
                   <Users className="w-3 h-3 mr-1" />

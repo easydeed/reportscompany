@@ -8,13 +8,6 @@ import { Label } from "./ui/label"
 import { Badge } from "./ui/badge"
 import { HorizontalStepper } from "./horizontal-stepper"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select"
-import {
   FileText,
   TrendingUp,
   Home,
@@ -31,7 +24,7 @@ import {
   Sparkles,
   LayoutGrid,
   Users,
-  ChevronDown,
+  Check,
 } from "lucide-react"
 import { cn } from "../lib/utils"
 
@@ -133,8 +126,8 @@ const steps = [
 
 const lookbackOptions = [7, 14, 30, 60, 90]
 
-// Simplified tab type - two main report categories
-type ReportTab = "new_listings" | "market_update"
+// Three main report categories
+type ReportTab = "new_listings" | "market_update" | "closed_sales"
 
 export function NewReportWizard({ onSubmit, onCancel }: NewReportWizardProps) {
   const [currentStep, setCurrentStep] = useState(0)
@@ -218,7 +211,7 @@ export function NewReportWizard({ onSubmit, onCancel }: NewReportWizardProps) {
   )
 }
 
-// Step 1: Simplified Report Selection (Two Tabs + Audience Dropdown)
+// Step 1: Simplified Report Selection (Three Cards + Pill Audience Selector)
 function StepBasics({
   state,
   setState,
@@ -235,7 +228,6 @@ function StepBasics({
   const handleTabSelect = (tab: ReportTab) => {
     setActiveTab(tab)
     if (tab === "new_listings") {
-      // Default to gallery report with current audience filters
       const audience = AUDIENCE_OPTIONS.find(a => a.key === selectedAudience) || AUDIENCE_OPTIONS[0]
       setState({
         ...state,
@@ -243,11 +235,17 @@ function StepBasics({
         filters: audience.filters,
         preset_key: selectedAudience !== "all" ? selectedAudience : undefined
       })
-    } else {
-      // Market Update = Market Snapshot
+    } else if (tab === "market_update") {
       setState({
         ...state,
         report_type: "market_snapshot",
+        filters: {},
+        preset_key: undefined
+      })
+    } else if (tab === "closed_sales") {
+      setState({
+        ...state,
+        report_type: "closed",
         filters: {},
         preset_key: undefined
       })
@@ -286,134 +284,130 @@ function StepBasics({
 
       <Card>
         <CardContent className="pt-6 space-y-6">
-          {/* Simplified Two-Tab Toggle */}
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              {/* New Listings Tab */}
+          {/* Three Report Type Cards */}
+          <div className="space-y-3">
+            <Label>Report Type <span className="text-destructive">*</span></Label>
+            <div className="grid grid-cols-3 gap-3">
+              {/* New Listings */}
               <button
                 type="button"
                 onClick={() => handleTabSelect("new_listings")}
                 className={cn(
-                  "relative flex flex-col items-center p-6 rounded-xl border-2 transition-all text-center",
+                  "relative flex flex-col items-center p-4 rounded-xl border-2 transition-all text-center",
                   activeTab === "new_listings"
-                    ? "border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg shadow-primary/10"
-                    : "border-border hover:border-primary/50 hover:shadow-sm"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-muted-foreground/50"
                 )}
-                aria-pressed={activeTab === "new_listings"}
               >
                 {activeTab === "new_listings" && (
-                  <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                    </svg>
+                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                    <Check className="w-3 h-3 text-primary-foreground" />
                   </div>
                 )}
                 <div className={cn(
-                  "w-14 h-14 rounded-xl flex items-center justify-center mb-3 transition-colors",
-                  activeTab === "new_listings"
-                    ? "bg-primary text-white"
-                    : "bg-primary/10 text-primary"
+                  "w-11 h-11 rounded-lg flex items-center justify-center mb-2",
+                  activeTab === "new_listings" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                 )}>
-                  <Image className="w-7 h-7" />
+                  <Image className="w-5 h-5" />
                 </div>
-                <span className="font-bold text-lg">New Listings</span>
-                <span className="text-sm text-muted-foreground mt-1">Visual gallery of properties</span>
-                <Badge variant="secondary" className="mt-3 text-xs">
-                  Most Popular
-                </Badge>
+                <span className={cn("font-semibold text-sm", activeTab === "new_listings" && "text-primary")}>New Listings</span>
+                <span className="text-xs text-muted-foreground mt-0.5">Photo gallery</span>
               </button>
 
-              {/* Market Update Tab */}
+              {/* Market Update */}
               <button
                 type="button"
                 onClick={() => handleTabSelect("market_update")}
                 className={cn(
-                  "relative flex flex-col items-center p-6 rounded-xl border-2 transition-all text-center",
+                  "relative flex flex-col items-center p-4 rounded-xl border-2 transition-all text-center",
                   activeTab === "market_update"
-                    ? "border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg shadow-primary/10"
-                    : "border-border hover:border-primary/50 hover:shadow-sm"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-muted-foreground/50"
                 )}
-                aria-pressed={activeTab === "market_update"}
               >
                 {activeTab === "market_update" && (
-                  <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                    </svg>
+                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                    <Check className="w-3 h-3 text-primary-foreground" />
                   </div>
                 )}
                 <div className={cn(
-                  "w-14 h-14 rounded-xl flex items-center justify-center mb-3 transition-colors",
-                  activeTab === "market_update"
-                    ? "bg-primary text-white"
-                    : "bg-primary/10 text-primary"
+                  "w-11 h-11 rounded-lg flex items-center justify-center mb-2",
+                  activeTab === "market_update" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                 )}>
-                  <TrendingUp className="w-7 h-7" />
+                  <TrendingUp className="w-5 h-5" />
                 </div>
-                <span className="font-bold text-lg">Market Update</span>
-                <span className="text-sm text-muted-foreground mt-1">Stats, trends & insights</span>
-                <Badge variant="outline" className="mt-3 text-xs">
-                  For Sellers
-                </Badge>
+                <span className={cn("font-semibold text-sm", activeTab === "market_update" && "text-primary")}>Market Update</span>
+                <span className="text-xs text-muted-foreground mt-0.5">Stats & trends</span>
+              </button>
+
+              {/* Closed Sales */}
+              <button
+                type="button"
+                onClick={() => handleTabSelect("closed_sales")}
+                className={cn(
+                  "relative flex flex-col items-center p-4 rounded-xl border-2 transition-all text-center",
+                  activeTab === "closed_sales"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-muted-foreground/50"
+                )}
+              >
+                {activeTab === "closed_sales" && (
+                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                    <Check className="w-3 h-3 text-primary-foreground" />
+                  </div>
+                )}
+                <div className={cn(
+                  "w-11 h-11 rounded-lg flex items-center justify-center mb-2",
+                  activeTab === "closed_sales" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                )}>
+                  <DollarSign className="w-5 h-5" />
+                </div>
+                <span className={cn("font-semibold text-sm", activeTab === "closed_sales" && "text-primary")}>Closed Sales</span>
+                <span className="text-xs text-muted-foreground mt-0.5">Recent solds</span>
               </button>
             </div>
           </div>
 
-          {/* Audience Dropdown - Only for New Listings */}
+          {/* Audience Pill Buttons - Only for New Listings */}
           {activeTab === "new_listings" && (
-            <div className="space-y-3 p-4 rounded-xl bg-muted/30 border border-border">
+            <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-primary" />
-                <Label className="text-sm font-medium">Who is this for?</Label>
+                <Users className="w-4 h-4 text-muted-foreground" />
+                <Label className="text-sm">Who is this for?</Label>
               </div>
-              <Select value={selectedAudience} onValueChange={handleAudienceChange}>
-                <SelectTrigger className="h-12 bg-background">
-                  <SelectValue placeholder="Select audience" />
-                </SelectTrigger>
-                <SelectContent>
-                  {AUDIENCE_OPTIONS.map((audience) => (
-                    <SelectItem key={audience.key} value={audience.key} className="py-3">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{audience.name}</span>
-                        <span className="text-xs text-muted-foreground">{audience.description}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex flex-wrap gap-2">
+                {AUDIENCE_OPTIONS.map((audience) => {
+                  const isSelected = selectedAudience === audience.key
+                  return (
+                    <button
+                      key={audience.key}
+                      type="button"
+                      onClick={() => handleAudienceChange(audience.key)}
+                      className={cn(
+                        "px-3 py-2 rounded-full text-sm font-medium transition-all border",
+                        isSelected
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background text-foreground border-border hover:border-muted-foreground"
+                      )}
+                    >
+                      {audience.name}
+                    </button>
+                  )
+                })}
+              </div>
               
-              {/* Show applied filters */}
+              {/* Show applied filters as subtle hint */}
               {selectedAudience !== "all" && selectedAudienceOption && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {selectedAudienceOption.filters.minbeds && (
-                    <Badge variant="outline" className="text-xs">{selectedAudienceOption.filters.minbeds}+ beds</Badge>
-                  )}
-                  {selectedAudienceOption.filters.price_strategy?.mode === "maxprice_pct_of_median_list" && (
-                    <Badge variant="outline" className="text-xs text-blue-600 border-blue-200 bg-blue-50">
-                      ≤{Math.round(selectedAudienceOption.filters.price_strategy.value * 100)}% median
-                    </Badge>
-                  )}
-                  {selectedAudienceOption.filters.price_strategy?.mode === "minprice_pct_of_median_list" && (
-                    <Badge variant="outline" className="text-xs text-blue-600 border-blue-200 bg-blue-50">
-                      ≥{Math.round(selectedAudienceOption.filters.price_strategy.value * 100)}% median
-                    </Badge>
-                  )}
-                  {selectedAudienceOption.filters.subtype === "Condominium" && (
-                    <Badge variant="outline" className="text-xs">Condos only</Badge>
-                  )}
-                  {selectedAudienceOption.filters.subtype === "SingleFamilyResidence" && (
-                    <Badge variant="outline" className="text-xs">Single Family</Badge>
-                  )}
-                </div>
+                <p className="text-xs text-muted-foreground pl-1">
+                  {selectedAudienceOption.description}
+                </p>
               )}
             </div>
           )}
 
           {/* Lookback Period */}
           <div className="space-y-3">
-            <Label>
-              Time Period <span className="text-destructive">*</span>
-            </Label>
+            <Label>Time Period <span className="text-destructive">*</span></Label>
             <div className="flex flex-wrap gap-2">
               {lookbackOptions.map((days) => (
                 <button
@@ -421,18 +415,16 @@ function StepBasics({
                   type="button"
                   onClick={() => setState({ ...state, lookback_days: days })}
                   className={cn(
-                    "px-4 py-2.5 rounded-lg border-2 font-medium transition-all",
+                    "px-4 py-2 rounded-lg border font-medium text-sm transition-all",
                     state.lookback_days === days
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-border hover:border-primary/50"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background border-border hover:border-muted-foreground"
                   )}
-                  aria-pressed={state.lookback_days === days}
                 >
                   {days} days
                 </button>
               ))}
             </div>
-            <p className="text-xs text-muted-foreground">How far back to include data</p>
           </div>
         </CardContent>
       </Card>
@@ -580,11 +572,23 @@ function StepArea({
 function StepReview({ state }: { state: WizardState }) {
   const isNewListings = state.report_type === "new_listings_gallery" || state.report_type === "featured_listings"
   const isMarketUpdate = state.report_type === "market_snapshot"
+  const isClosedSales = state.report_type === "closed"
   
   // Get audience name from filters
   const audienceName = state.filters?.preset_display_name || (isNewListings ? "All Listings" : null)
   
   const hasFilters = state.filters && Object.keys(state.filters).filter(k => k !== 'preset_display_name').length > 0
+
+  // Get report display name and icon
+  const getReportInfo = () => {
+    if (isNewListings) return { name: "New Listings", icon: Image, color: "bg-primary" }
+    if (isMarketUpdate) return { name: "Market Update", icon: TrendingUp, color: "bg-primary" }
+    if (isClosedSales) return { name: "Closed Sales", icon: DollarSign, color: "bg-primary" }
+    return { name: "Report", icon: FileText, color: "bg-primary" }
+  }
+  
+  const reportInfo = getReportInfo()
+  const ReportIcon = reportInfo.icon
 
   return (
     <div className="space-y-6">
@@ -597,21 +601,12 @@ function StepReview({ state }: { state: WizardState }) {
       <div className="relative overflow-hidden rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background">
         {/* Header with report type */}
         <div className="flex items-center gap-4 p-5 border-b border-primary/10">
-          <div className={cn(
-            "w-14 h-14 rounded-xl flex items-center justify-center shadow-lg",
-            isNewListings ? "bg-primary shadow-primary/20" : "bg-emerald-500 shadow-emerald-500/20"
-          )}>
-            {isNewListings ? (
-              <Image className="w-7 h-7 text-white" />
-            ) : (
-              <TrendingUp className="w-7 h-7 text-white" />
-            )}
+          <div className={cn("w-14 h-14 rounded-xl flex items-center justify-center", reportInfo.color)}>
+            <ReportIcon className="w-7 h-7 text-primary-foreground" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Report</p>
-            <h3 className="font-display font-bold text-xl truncate">
-              {isNewListings ? "New Listings" : "Market Update"}
-            </h3>
+            <h3 className="font-display font-bold text-xl truncate">{reportInfo.name}</h3>
             {audienceName && audienceName !== "All Listings" && (
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
