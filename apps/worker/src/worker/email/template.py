@@ -1316,65 +1316,54 @@ def schedule_email_html(
               </table>
 '''
         else:
-            # Non-Market Snapshot reports: Use standard 4-metric row
+            # V10: Non-Market Snapshot reports - Professional 4-metric layout
+            # Uses same clean styling as market_snapshot but with 4-column layout
             hero_4_html = f'''
-              <!-- V4: 4-Metric Hero Row -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+              <!-- V10: HEADLINE METRIC (Clean, Refined) -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 0;">
                 <tr>
-                  <!-- Hero Metric 1 -->
-                  <td width="25%" class="metric-card" style="padding: 0 4px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e7e5e4;" class="dark-card dark-border">
-                      <tr>
-                        <td align="center" style="padding: 16px 8px;">
-                          <p style="margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 24px; font-weight: 900; color: {primary_color};">
-                            {h1_value}
-                          </p>
-                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
-                            {h1_label}
-                          </p>
-                        </td>
-                      </tr>
-                    </table>
+                  <td align="center" style="padding: 0 0 6px 0;">
+                    <p style="margin: 0; font-size: 11px; font-weight: 500; color: #78716c; text-transform: uppercase; letter-spacing: 1.5px;">
+                      {h1_label}
+                    </p>
                   </td>
-                  <!-- Hero Metric 2 -->
-                  <td width="25%" class="metric-card" style="padding: 0 4px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e7e5e4;" class="dark-card dark-border">
+                </tr>
+                <tr>
+                  <td align="center" style="padding: 0 0 24px 0;">
+                    <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 48px; font-weight: 700; color: #1c1917; letter-spacing: -1px; line-height: 1;">
+                      {h1_value}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- V10: KEY METRICS ROW (Clean bordered cards) -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 28px;">
+                <tr>
+                  <td>
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafaf9; border-radius: 8px; border: 1px solid #e7e5e4;">
                       <tr>
-                        <td align="center" style="padding: 16px 8px;">
-                          <p style="margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 24px; font-weight: 900; color: {primary_color};">
+                        <td width="33%" align="center" style="padding: 18px 8px; border-right: 1px solid #e7e5e4;">
+                          <p style="margin: 0 0 4px 0; font-size: 22px; font-weight: 700; color: #1c1917;">
                             {h2_value}
                           </p>
-                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <p style="margin: 0; font-size: 10px; font-weight: 500; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
                             {h2_label}
                           </p>
                         </td>
-                      </tr>
-                    </table>
-                  </td>
-                  <!-- Hero Metric 3 -->
-                  <td width="25%" class="metric-card" style="padding: 0 4px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e7e5e4;" class="dark-card dark-border">
-                      <tr>
-                        <td align="center" style="padding: 16px 8px;">
-                          <p style="margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 24px; font-weight: 900; color: {primary_color};">
+                        <td width="34%" align="center" style="padding: 18px 8px; border-right: 1px solid #e7e5e4;">
+                          <p style="margin: 0 0 4px 0; font-size: 22px; font-weight: 700; color: #1c1917;">
                             {h3_value}
                           </p>
-                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <p style="margin: 0; font-size: 10px; font-weight: 500; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
                             {h3_label}
                           </p>
                         </td>
-                      </tr>
-                    </table>
-                  </td>
-                  <!-- Hero Metric 4 -->
-                  <td width="25%" class="metric-card" style="padding: 0 4px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e7e5e4;" class="dark-card dark-border">
-                      <tr>
-                        <td align="center" style="padding: 16px 8px;">
-                          <p style="margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 24px; font-weight: 900; color: {primary_color};">
+                        <td width="33%" align="center" style="padding: 18px 8px;">
+                          <p style="margin: 0 0 4px 0; font-size: 22px; font-weight: 700; color: #1c1917;">
                             {h4_value}
                           </p>
-                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <p style="margin: 0; font-size: 10px; font-weight: 500; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
                             {h4_label}
                           </p>
                         </td>
@@ -1765,48 +1754,33 @@ def schedule_email_html(
                 </tr>
               </table>
 '''}
-{insight_html if has_hero_4 else ""}{hero_4_html if has_hero_4 else f'''              <!-- ========== 3-COLUMN METRICS (V3 style) ========== -->
+{insight_html if has_hero_4 else ""}{hero_4_html if has_hero_4 else f'''              <!-- ========== V10: 3-COLUMN METRICS (Professional) ========== -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
-                  <!-- Metric 1 -->
-                  <td width="33%" class="metric-card" style="padding: 0 6px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e7e5e4; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" class="dark-card dark-border">
+                  <td>
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafaf9; border-radius: 8px; border: 1px solid #e7e5e4;">
                       <tr>
-                        <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 6px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 30px; font-weight: 900; color: {primary_color};">
+                        <td width="33%" align="center" style="padding: 20px 12px; border-right: 1px solid #e7e5e4;">
+                          <p style="margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 26px; font-weight: 700; color: #1c1917;">
                             {m1_value}
                           </p>
-                          <p style="margin: 0; font-size: 11px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 1px;">
+                          <p style="margin: 0; font-size: 10px; font-weight: 500; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
                             {m1_label}
                           </p>
                         </td>
-                      </tr>
-                    </table>
-                  </td>
-                  <!-- Metric 2 -->
-                  <td width="33%" class="metric-card" style="padding: 0 6px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e7e5e4; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" class="dark-card dark-border">
-                      <tr>
-                        <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 6px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 30px; font-weight: 900; color: {primary_color};">
+                        <td width="34%" align="center" style="padding: 20px 12px; border-right: 1px solid #e7e5e4;">
+                          <p style="margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 26px; font-weight: 700; color: #1c1917;">
                             {m2_value}
                           </p>
-                          <p style="margin: 0; font-size: 11px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 1px;">
+                          <p style="margin: 0; font-size: 10px; font-weight: 500; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
                             {m2_label}
                           </p>
                         </td>
-                      </tr>
-                    </table>
-                  </td>
-                  <!-- Metric 3 -->
-                  <td width="33%" class="metric-card" style="padding: 0 6px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 10px; border: 1px solid #e7e5e4; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" class="dark-card dark-border">
-                      <tr>
-                        <td align="center" style="padding: 20px 12px;">
-                          <p style="margin: 0 0 6px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 30px; font-weight: 900; color: {primary_color};">
+                        <td width="33%" align="center" style="padding: 20px 12px;">
+                          <p style="margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 26px; font-weight: 700; color: #1c1917;">
                             {m3_value}
                           </p>
-                          <p style="margin: 0; font-size: 11px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 1px;">
+                          <p style="margin: 0; font-size: 10px; font-weight: 500; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
                             {m3_label}
                           </p>
                         </td>
