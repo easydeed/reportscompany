@@ -305,10 +305,10 @@ function StepBasics({
                   </div>
                 )}
                 <div className={cn(
-                  "w-11 h-11 rounded-lg flex items-center justify-center mb-2",
+                  "w-12 h-12 rounded-xl flex items-center justify-center mb-2",
                   activeTab === "new_listings" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                 )}>
-                  <Image className="w-5 h-5" />
+                  <Image className="w-6 h-6" />
                 </div>
                 <span className={cn("font-semibold text-sm", activeTab === "new_listings" && "text-primary")}>New Listings</span>
                 <span className="text-xs text-muted-foreground mt-0.5">Photo gallery</span>
@@ -331,10 +331,10 @@ function StepBasics({
                   </div>
                 )}
                 <div className={cn(
-                  "w-11 h-11 rounded-lg flex items-center justify-center mb-2",
+                  "w-12 h-12 rounded-xl flex items-center justify-center mb-2",
                   activeTab === "market_update" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                 )}>
-                  <TrendingUp className="w-5 h-5" />
+                  <TrendingUp className="w-6 h-6" />
                 </div>
                 <span className={cn("font-semibold text-sm", activeTab === "market_update" && "text-primary")}>Market Update</span>
                 <span className="text-xs text-muted-foreground mt-0.5">Stats & trends</span>
@@ -357,10 +357,10 @@ function StepBasics({
                   </div>
                 )}
                 <div className={cn(
-                  "w-11 h-11 rounded-lg flex items-center justify-center mb-2",
+                  "w-12 h-12 rounded-xl flex items-center justify-center mb-2",
                   activeTab === "closed_sales" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                 )}>
-                  <DollarSign className="w-5 h-5" />
+                  <DollarSign className="w-6 h-6" />
                 </div>
                 <span className={cn("font-semibold text-sm", activeTab === "closed_sales" && "text-primary")}>Closed Sales</span>
                 <span className="text-xs text-muted-foreground mt-0.5">Recent solds</span>
@@ -384,7 +384,7 @@ function StepBasics({
                       type="button"
                       onClick={() => handleAudienceChange(audience.key)}
                       className={cn(
-                        "px-3 py-2 rounded-full text-sm font-medium transition-all border",
+                        "px-3 py-2 rounded-lg text-sm font-medium transition-all border",
                         isSelected
                           ? "bg-primary text-primary-foreground border-primary"
                           : "bg-background text-foreground border-border hover:border-muted-foreground"
