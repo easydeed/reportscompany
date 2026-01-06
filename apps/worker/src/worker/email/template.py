@@ -262,21 +262,22 @@ def _build_gallery_grid_html(listings: List[Dict], report_type: str, primary_col
     if not listings:
         return ""
     
-    # Limit to 9 max for gallery display
-    listings = listings[:9]
+    # V12: Increased from 9 to 12 max for more comprehensive email galleries
+    # This allows for 4×3 grid layouts while keeping emails manageable
+    listings = listings[:12]
     count = len(listings)
     
     # Determine layout based on count
-    # Clean grid layouts: 3, 6, 9 (3-col) or 2, 4 (2-col)
-    # Awkward counts that create broken grids: 1, 5, 7, 8 → use vertical list
-    if count in (3, 6, 9):
+    # Clean grid layouts: 3, 6, 9, 12 (3-col) or 2, 4 (2-col)
+    # Awkward counts that create broken grids: 1, 5, 7, 8, 10, 11 → use vertical list
+    if count in (3, 6, 9, 12):
         cols = 3
         use_grid = True
     elif count in (2, 4):
         cols = 2
         use_grid = True
     else:
-        # 1, 5, 7, 8, 10+ → vertical list
+        # 1, 5, 7, 8, 10, 11 → vertical list (looks cleaner than broken grids)
         use_grid = False
     
     # Build section header - V6: Use preset_display_name if provided
@@ -850,13 +851,37 @@ def _get_core_indicators(metrics: Dict) -> Tuple[
     )
 
 
-def _get_insight_paragraph(report_type: str, area: str, metrics: Dict, lookback_days: int) -> str:
+def _get_insight_paragraph(
+    report_type: str, 
+    area: str, 
+    metrics: Dict, 
+    lookback_days: int,
+    filter_description: str = None,
+) -> str:
     """
-    V4: Generate insight paragraph for reports.
-    This mirrors the PDF's introductory narrative paragraph.
+    V4/V12: Generate insight paragraph for reports.
     
-    Can be enhanced with AI later, but starts with template-based text.
+    V12 Enhancement: First tries AI-generated insight via OpenAI,
+    falls back to template-based text if AI is disabled or fails.
     """
+    # V12: Try AI-generated insight first
+    try:
+        from ..ai_insights import generate_insight
+        ai_insight = generate_insight(
+            report_type=report_type,
+            area=area,
+            metrics=metrics,
+            lookback_days=lookback_days,
+            filter_description=filter_description,
+        )
+        if ai_insight:
+            return ai_insight
+    except ImportError:
+        pass  # AI module not available
+    except Exception:
+        pass  # AI generation failed, use fallback
+    
+    # Fallback: Template-based text
     # Extract key metrics for narrative
     total_active = metrics.get("total_active", 0)
     total_closed = metrics.get("total_closed", 0)
@@ -1173,8 +1198,8 @@ def schedule_email_html(
         (ci1_label, ci1_value), (ci2_label, ci2_value), (ci3_label, ci3_value) = \
             _get_core_indicators(metrics)
     
-    # V4: Get insight paragraph
-    insight_text = _get_insight_paragraph(report_type, area_display, metrics, lookback_days) if has_insight else None
+    # V4/V12: Get insight paragraph (with AI enhancement support)
+    insight_text = _get_insight_paragraph(report_type, area_display, metrics, lookback_days, filter_description) if has_insight else None
     
     # Legacy: Get 3 metrics for non-V4 reports
     (m1_label, m1_value), (m2_label, m2_value), (m3_label, m3_value) = \

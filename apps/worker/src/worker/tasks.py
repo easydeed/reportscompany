@@ -768,6 +768,11 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                                 email_metrics["moveup_tier_count"] = moveup_tier.get("count", 0) + moveup_tier.get("active_count", 0)
                                 email_metrics["luxury_tier_count"] = luxury_tier.get("count", 0) + luxury_tier.get("active_count", 0)
                             
+                            # For gallery reports, ensure total_listings is set from result
+                            # (metrics dict includes this, but also set it explicitly for backwards compat)
+                            if report_type in ("new_listings_gallery", "featured_listings"):
+                                email_metrics["total_listings"] = result.get("total_listings", len(result.get("listings", [])))
+                            
                             email_payload = {
                                 "report_type": report_type,
                                 "city": city,

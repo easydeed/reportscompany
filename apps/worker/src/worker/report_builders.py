@@ -704,8 +704,9 @@ def build_new_listings_gallery_result(listings: List[Dict], context: Dict) -> Di
     
     print(f"📊 GALLERY DEBUG: {len(new_listings)} listings after date filter (cutoff={cutoff_date.date()})")
     
-    # Sort by list date desc (newest first), limit to 9
-    new_listings_sorted = sorted(new_listings, key=lambda x: x.get("list_date") or datetime.min, reverse=True)[:9]
+    # Sort by list date desc (newest first), limit to 12 for email galleries
+    # V12: Increased from 9 to 12 for more comprehensive gallery displays
+    new_listings_sorted = sorted(new_listings, key=lambda x: x.get("list_date") or datetime.min, reverse=True)[:12]
     
     # Format listings for gallery display
     gallery_listings = []
@@ -722,14 +723,28 @@ def build_new_listings_gallery_result(listings: List[Dict], context: Dict) -> Di
             "list_date": _format_date(l.get("list_date")),
         })
     
+    # Calculate metrics from ALL new listings (not just the top 9 for display)
+    # This provides accurate statistics for the email header cards
+    all_prices = [l.get("list_price") for l in new_listings if l.get("list_price")]
+    all_doms = [l.get("dom") for l in new_listings if l.get("dom") is not None]
+    
+    metrics = {
+        "total_listings": len(new_listings),  # Total count (not capped)
+        "median_list_price": sorted(all_prices)[len(all_prices) // 2] if all_prices else None,
+        "min_price": min(all_prices) if all_prices else None,
+        "max_price": max(all_prices) if all_prices else None,
+        "avg_dom": sum(all_doms) / len(all_doms) if all_doms else None,
+    }
+    
     return {
         "report_type": "new_listings_gallery",
         "city": city,
         "lookback_days": lookback_days,
         "period_label": _period_label(lookback_days),
         "report_date": datetime.now().strftime("%B %d, %Y"),
-        "total_listings": len(gallery_listings),
+        "total_listings": len(new_listings),  # Total count (not capped)
         "listings": gallery_listings,
+        "metrics": metrics,  # For email template compatibility
     }
 
 
@@ -769,6 +784,16 @@ def build_featured_listings_result(listings: List[Dict], context: Dict) -> Dict:
             "list_date": _format_date(l.get("list_date")),
         })
     
+    # Calculate metrics from featured listings for email header cards
+    all_prices = [l.get("list_price") for l in featured if l.get("list_price")]
+    all_sqfts = [l.get("sqft") for l in featured if l.get("sqft")]
+    
+    metrics = {
+        "total_listings": len(gallery_listings),
+        "max_price": max(all_prices) if all_prices else None,
+        "avg_sqft": int(sum(all_sqfts) / len(all_sqfts)) if all_sqfts else None,
+    }
+    
     return {
         "report_type": "featured_listings",
         "city": city,
@@ -777,6 +802,7 @@ def build_featured_listings_result(listings: List[Dict], context: Dict) -> Dict:
         "report_date": datetime.now().strftime("%B %d, %Y"),
         "total_listings": len(gallery_listings),
         "listings": gallery_listings,
+        "metrics": metrics,  # For email template compatibility
     }
 
 
