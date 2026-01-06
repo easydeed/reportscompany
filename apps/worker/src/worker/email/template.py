@@ -1136,6 +1136,10 @@ def schedule_email_html(
     Returns:
         HTML string for the email body
     """
+    # V12 Debug: Log incoming metrics for gallery reports
+    if report_type in ("new_listings_gallery", "featured_listings"):
+        print(f"📧 TEMPLATE RECEIVED: report_type={report_type}, metrics={metrics}")
+    
     # Extract brand values with defaults
     brand = brand or {}
     brand_name = brand.get("display_name") or account_name or "Market Reports"
