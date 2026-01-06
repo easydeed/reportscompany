@@ -162,9 +162,52 @@ cp libs/shared/src/shared/email/template.py apps/worker/src/worker/email/templat
 | V6 | Dec 2025 | Unified template architecture, warm stone palette, font-weight 900 |
 | V6.1 | Dec 2025 | Gallery reports - consistent headers, inverted section divs |
 | V8 | Jan 2026 | Adaptive gallery layouts (3-col, 2-col, vertical list based on count) |
-| **V10** | Jan 2026 | **Corporate/Professional redesign** - removed emojis, casual callouts; neutral colors (#1c1917) for all data values; clean bordered metric rows; single CTA button |
+| V10 | Jan 2026 | Corporate/Professional redesign - removed emojis, casual callouts; neutral colors (#1c1917) for all data values; clean bordered metric rows; single CTA button |
+| **V11** | Jan 2026 | **Filter Description Blurb** - styled box after hero showing report criteria (e.g., "2+ beds, Condos, under $1.2M"); **Closed Sales Optimization** - listings table moved higher to avoid Gmail clipping |
 
-### 2.6 V10 Professional Styling (Current)
+### 2.6 V11 Filter Description & Closed Sales Optimization (Current)
+
+**January 6, 2026 Update**
+
+V11 introduces two key UX enhancements:
+
+#### A. Filter Description Blurb
+
+For preset reports (First-Time Buyer, Luxury, Condo Watch, etc.), a styled blurb now appears **immediately after the hero section** explaining the applied filters:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Report Criteria: 2+ beds, 2+ baths, SFR, under $1,680,000  │
+│                   (70% of Irvine median)                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Styling:**
+- Light gradient background (primary_color at 8% opacity)
+- Left border accent (3px solid primary_color)
+- "Report Criteria:" label in bold primary color
+- Filter details in neutral text
+
+**Implementation:**
+- New `filter_description` parameter in `schedule_email_html()`
+- Generated from `build_filters_label()` in `filter_resolver.py`
+- Passed through result → email payload → template
+
+#### B. Closed Sales Table Priority
+
+Previously, the Closed Sales email showed: Hero → Core Indicators → Property Types → Price Tiers → **Listings Table**
+
+This caused Gmail to clip the email (~102KB limit), requiring users to click "View entire message" 3 times to see the listings.
+
+**V11 Fix:** For closed sales, the listings table now appears **immediately after the hero metrics**:
+
+```
+Hero Metrics → Listings Table (top 10) → Quick Take → CTA
+```
+
+Property Types and Price Tiers are skipped for Closed Sales since the **listings table is the primary content**.
+
+### 2.7 V10 Professional Styling
 
 **Design Philosophy:** Corporate and professional aesthetic that showcases maturity and credibility.
 
@@ -533,7 +576,8 @@ The test email uses the **same template function** as production scheduled email
 
 | Version | Date | Changes |
 |---------|------|---------|
-| **V10** | Jan 5, 2026 | **Corporate/Professional redesign** - Removed emojis, casual callouts; neutral colors for data; clean bordered metric rows |
+| **V11** | Jan 6, 2026 | **Filter Description Blurb** + Closed Sales table optimization (see §2.6) |
+| V10 | Jan 5, 2026 | Corporate/Professional redesign - Removed emojis, casual callouts; neutral colors for data; clean bordered metric rows |
 | V8 | Jan 5, 2026 | Adaptive gallery layouts based on listing count |
 | V5 | Dec 22, 2025 | Gallery Photo Grids - Email templates now include photo galleries |
 | V4.2 | Dec 15, 2025 | All reports PDF-aligned - new_listings, closed, inventory, price_bands now have V4 layout |
@@ -828,6 +872,8 @@ def schedule_email_html(
     unsubscribe_url: str,
     brand: Optional[Brand] = None,
     listings: Optional[List[Dict]] = None,  # V5: Photo gallery for gallery reports
+    preset_display_name: Optional[str] = None,  # V6: Custom preset name (e.g., "First-Time Buyer")
+    filter_description: Optional[str] = None,  # V11: Human-readable filter summary
 ) -> str:
 ```
 

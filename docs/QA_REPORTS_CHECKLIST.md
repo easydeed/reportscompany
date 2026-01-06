@@ -1,6 +1,6 @@
 # QA Reports & Emails Checklist
 
-> **Last Updated:** December 17, 2025  
+> **Last Updated:** January 6, 2026  
 > **Coverage:** Southern California (CRMLS)
 
 ---
@@ -140,6 +140,21 @@ Table of recently closed/sold properties.
 - [ ] Links to full report work
 - [ ] Responsive on mobile
 - [ ] Images have alt text
+
+### V11 Enhancements (January 2026)
+
+#### Filter Description Blurb
+For preset reports (First-Time Buyer, Luxury, Condo, etc.):
+- [ ] Filter description blurb appears after hero section
+- [ ] Shows criteria like "2+ beds, SFR, under $X"
+- [ ] Left border accent in brand color
+- [ ] "Report Criteria:" label visible
+
+#### Closed Sales Table Priority
+- [ ] Listings table appears directly after hero metrics
+- [ ] No need to click "View entire message" in Gmail
+- [ ] Top 10 closed listings visible without scrolling
+- [ ] Property Types/Price Tiers sections NOT shown (intentional)
 
 ---
 
