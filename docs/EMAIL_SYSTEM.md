@@ -2,7 +2,7 @@
 
 > Complete technical documentation for the email infrastructure, templates, and delivery pipeline.
 
-**Last Updated:** January 5, 2026 (V10 Professional Redesign)
+**Last Updated:** January 6, 2026 (V12 Gallery Metrics Fix + AI Insights)
 
 ---
 
@@ -163,9 +163,10 @@ cp libs/shared/src/shared/email/template.py apps/worker/src/worker/email/templat
 | V6.1 | Dec 2025 | Gallery reports - consistent headers, inverted section divs |
 | V8 | Jan 2026 | Adaptive gallery layouts (3-col, 2-col, vertical list based on count) |
 | V10 | Jan 2026 | Corporate/Professional redesign - removed emojis, casual callouts; neutral colors (#1c1917) for all data values; clean bordered metric rows; single CTA button |
-| **V11** | Jan 2026 | **Filter Description Blurb** - styled box after hero showing report criteria (e.g., "2+ beds, Condos, under $1.2M"); **Closed Sales Optimization** - listings table moved higher to avoid Gmail clipping |
+| V11 | Jan 2026 | **Filter Description Blurb** - styled box after hero showing report criteria (e.g., "2+ beds, Condos, under $1.2M"); **Closed Sales Optimization** - listings table moved higher to avoid Gmail clipping |
+| **V12** | Jan 2026 | **Gallery Metrics Fix** - correct listing counts, median/min prices for gallery emails; **12-listing cap** (up from 9); **AI Insights** (optional) - GPT-4o-mini powered insight generation |
 
-### 2.6 V11 Filter Description & Closed Sales Optimization (Current)
+### 2.6 V11 Filter Description & Closed Sales Optimization
 
 **January 6, 2026 Update**
 
@@ -207,7 +208,67 @@ Hero Metrics → Listings Table (top 10) → Quick Take → CTA
 
 Property Types and Price Tiers are skipped for Closed Sales since the **listings table is the primary content**.
 
-### 2.7 V10 Professional Styling
+### 2.7 V12 Gallery Metrics Fix + AI Insights (Current)
+
+**January 6, 2026 Update**
+
+V12 addresses the gallery email metrics bug and introduces optional AI-powered insights.
+
+#### A. Gallery Metrics Fix
+
+**Problem:** Gallery email cards showed "0 Listings", "N/A", "N/A" instead of actual values.
+
+**Root Cause:** Gallery reports weren't calculating metrics from their filtered listings. The `build_new_listings_gallery_result()` function returned listings but no `metrics` dict.
+
+**V12 Fix:** Added metrics calculation to gallery report builder:
+
+```python
+# Calculate metrics from ALL filtered listings (not just top 12 for display)
+all_prices = [l.get("list_price") for l in new_listings if l.get("list_price")]
+all_doms = [l.get("dom") for l in new_listings if l.get("dom") is not None]
+
+metrics = {
+    "total_listings": len(new_listings),
+    "median_list_price": sorted(all_prices)[len(all_prices) // 2] if all_prices else None,
+    "min_price": min(all_prices) if all_prices else None,
+    "max_price": max(all_prices) if all_prices else None,
+    "avg_dom": sum(all_doms) / len(all_doms) if all_doms else None,
+}
+```
+
+**Email Card Display (Gallery Reports):**
+| Card | Label | Value Source |
+|------|-------|--------------|
+| 1 | New Listings | `metrics["total_listings"]` |
+| 2 | Median Price | `metrics["median_list_price"]` |
+| 3 | Starting At | `metrics["min_price"]` |
+
+#### B. Gallery Listing Cap Increase
+
+- **Before V12:** 9 listings max
+- **After V12:** 12 listings max (allows 4×3 grid layouts)
+
+#### C. AI-Powered Insights (Optional)
+
+V12 introduces GPT-4o-mini integration for generating contextual market insight blurbs.
+
+**Configuration:**
+```bash
+AI_INSIGHTS_ENABLED=true    # Enable AI insights (default: false)
+OPENAI_API_KEY=sk-xxx       # Required if AI enabled
+```
+
+**Features:**
+- Generates professional, contextual market insights
+- Uses actual metrics (median price, DOM, inventory) in narrative
+- Graceful fallback to template text if AI disabled or fails
+- Cost-efficient: ~$0.001-0.002 per email
+
+**Module:** `apps/worker/src/worker/ai_insights.py`
+
+**Recommendation:** Start with AI disabled. Enable for testing, then optionally offer as premium feature.
+
+### 2.8 V10 Professional Styling
 
 **Design Philosophy:** Corporate and professional aesthetic that showcases maturity and credibility.
 

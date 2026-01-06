@@ -85,3 +85,89 @@ docs/QA_REPORTS_CHECKLIST.md               # Added V11 email checks
 - **All 3 workers live:** worker-service, consumer-bridge, ticker
 - **Commit:** `92f645f` - "V11: Email enhancements - filter description blurb + closed sales table priority"
 
+---
+
+## V12 Gallery Metrics Fix + AI Insights
+
+### Bug Fix: Gallery Email Metrics
+
+**Problem:** Gallery email cards showed "0 Listings", "N/A", "N/A" instead of actual values.
+
+**Root Cause:** The `build_new_listings_gallery_result()` function in `report_builders.py` returned listings but didn't calculate metrics. The email template expected a `metrics` dict with `total_listings`, `median_list_price`, and `min_price`.
+
+**V12 Fix:** Added metrics calculation to gallery report builder:
+
+```python
+# Calculate metrics from ALL filtered listings (not just top 12 for display)
+all_prices = [l.get("list_price") for l in new_listings if l.get("list_price")]
+
+metrics = {
+    "total_listings": len(new_listings),
+    "median_list_price": sorted(all_prices)[len(all_prices) // 2] if all_prices else None,
+    "min_price": min(all_prices) if all_prices else None,
+    "max_price": max(all_prices) if all_prices else None,
+    "avg_dom": sum(all_doms) / len(all_doms) if all_doms else None,
+}
+```
+
+**Email Card Display After Fix:**
+| Card | Before V12 | After V12 |
+|------|-----------|-----------|
+| New Listings | 0 | 102 |
+| Median Price | N/A | $1.8M |
+| Starting At | N/A | $615K |
+
+### Enhancement: Gallery Listing Cap
+
+- **Before V12:** Maximum 9 listings in gallery emails
+- **After V12:** Maximum 12 listings (allows 4×3 grid layouts)
+
+### Feature: AI-Powered Insights (Optional)
+
+V12 introduces GPT-4o-mini integration for generating contextual market insight blurbs.
+
+**Configuration:**
+```bash
+AI_INSIGHTS_ENABLED=true    # Enable AI insights (default: false)
+OPENAI_API_KEY=sk-xxx       # Required if AI enabled
+```
+
+**Features:**
+- Generates professional, market-aware insights
+- Uses actual metrics in narrative
+- Graceful fallback to template text if disabled/fails
+- Cost-efficient: ~$0.001-0.002 per email
+
+**Module:** `apps/worker/src/worker/ai_insights.py`
+
+**Recommendation:** Keep AI disabled for launch. Enable for testing on your account, then offer as premium feature.
+
+### QA Verification
+
+Metrics now display correctly for all gallery reports:
+
+| Report | Metrics Before | Metrics After |
+|--------|---------------|---------------|
+| ✅ New Listings - All | 0, N/A, N/A | 102, $1.8M, $615K |
+| ✅ New Listings - First-Time | 0, N/A, N/A | Correct values |
+| ✅ New Listings - Luxury | 0, N/A, N/A | Correct values |
+| ✅ New Listings - Condo | 0, N/A, N/A | Correct values |
+| ✅ New Listings - Family | 0, N/A, N/A | Correct values |
+| ✅ New Listings - Investors | 0, N/A, N/A | Correct values |
+
+### Files Modified
+
+```
+apps/worker/src/worker/report_builders.py  # V12 metrics calculation for gallery
+apps/worker/src/worker/tasks.py            # Explicit total_listings for gallery emails
+apps/worker/src/worker/email/template.py   # Gallery listing cap 9→12
+apps/worker/src/worker/ai_insights.py      # NEW: GPT-4o-mini insight generation
+docs/EMAIL_SYSTEM.md                       # V12 documentation (§2.7)
+docs/QA_REPORTS_CHECKLIST.md               # V12 email checks
+```
+
+### Deployment
+
+- **Render Worker Services:** Auto-deployed via Git push
+- **Commit:** `ef3e7b0` - "V12: Email gallery enhancements + AI insights"
+

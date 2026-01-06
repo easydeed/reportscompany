@@ -772,8 +772,6 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                             # (metrics dict includes this, but also set it explicitly for backwards compat)
                             if report_type in ("new_listings_gallery", "featured_listings"):
                                 email_metrics["total_listings"] = result.get("total_listings", len(result.get("listings", [])))
-                                # V12 Debug: Log metrics being sent to email
-                                print(f"📧 GALLERY EMAIL METRICS: total_listings={email_metrics.get('total_listings')}, median_list_price={email_metrics.get('median_list_price')}, min_price={email_metrics.get('min_price')}")
                             
                             email_payload = {
                                 "report_type": report_type,

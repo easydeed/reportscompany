@@ -736,9 +736,6 @@ def build_new_listings_gallery_result(listings: List[Dict], context: Dict) -> Di
         "avg_dom": sum(all_doms) / len(all_doms) if all_doms else None,
     }
     
-    # V12 Debug: Log calculated metrics
-    print(f"📊 GALLERY METRICS: count={len(new_listings)}, prices_found={len(all_prices)}, median={metrics['median_list_price']}, min={metrics['min_price']}")
-    
     return {
         "report_type": "new_listings_gallery",
         "city": city,

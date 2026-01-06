@@ -156,6 +156,24 @@ For preset reports (First-Time Buyer, Luxury, Condo, etc.):
 - [ ] Top 10 closed listings visible without scrolling
 - [ ] Property Types/Price Tiers sections NOT shown (intentional)
 
+### V12 Enhancements (January 2026)
+
+#### Gallery Metrics Cards
+For gallery reports (New Listings - All, First-Time, Luxury, etc.):
+- [ ] "New Listings" card shows actual count (NOT 0)
+- [ ] "Median Price" card shows price (NOT N/A)
+- [ ] "Starting At" card shows min price (NOT N/A)
+- [ ] Values match the actual filtered listings
+
+#### Gallery Listing Count
+- [ ] Up to 12 listings displayed in gallery (was 9)
+- [ ] Photos load correctly for all 12
+
+#### AI Insights (Optional - if enabled)
+- [ ] Insight paragraph shows contextual market commentary
+- [ ] Falls back to template text if AI disabled
+- [ ] No hallucinated data
+
 ---
 
 ## Known Issues / Edge Cases
