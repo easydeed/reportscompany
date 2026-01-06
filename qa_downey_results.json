@@ -1,0 +1,119 @@
+{
+  "city": "Downey",
+  "email": "gerardoh@gmail.com",
+  "timestamp": "2026-01-05T15:18:26.069596",
+  "results": [
+    {
+      "name": "New Listings - All Buyers",
+      "type": "report",
+      "id": "c88424e9-cea5-450b-b3e1-8afd5eaa17db",
+      "status": "completed",
+      "pdf_url": "https://db85a7d510688f5ce34d1e4c0129d2b3.r2.cloudflarestorage.com/market-reports/reports/6588ca4a-9509-4118-9359-d1cbf72dcd52/Downey_NewListingsGallery_c88424e9.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=cde16dd5ce6cacbe85b81783f70db25b%2F20260105%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260105T231803Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=fce1e94a2dff0e27dda6bf82c9a227c4579244f71753378938d65f80ee1e1191",
+      "html_url": "https://reportscompany-web.vercel.app/print/c88424e9-cea5-450b-b3e1-8afd5eaa17db"
+    },
+    {
+      "name": "First-Time Buyer",
+      "type": "report",
+      "id": "10ad49bb-1f14-47ca-a5d3-17ddf70ac222",
+      "status": "completed",
+      "pdf_url": "https://db85a7d510688f5ce34d1e4c0129d2b3.r2.cloudflarestorage.com/market-reports/reports/6588ca4a-9509-4118-9359-d1cbf72dcd52/Downey_FirstTimeBuyer_10ad49bb.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=cde16dd5ce6cacbe85b81783f70db25b%2F20260105%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260105T231802Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=1052b24573c6cb0ad5b60cd254f0039c3c654beffc105233d59ebc65bdb15cfa",
+      "html_url": "https://reportscompany-web.vercel.app/print/10ad49bb-1f14-47ca-a5d3-17ddf70ac222"
+    },
+    {
+      "name": "Luxury Buyer",
+      "type": "report",
+      "id": "3fdcd398-7f3b-4726-b1ce-b88a905e12a5",
+      "status": "completed",
+      "pdf_url": "https://db85a7d510688f5ce34d1e4c0129d2b3.r2.cloudflarestorage.com/market-reports/reports/6588ca4a-9509-4118-9359-d1cbf72dcd52/Downey_LuxuryBuyer_3fdcd398.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=cde16dd5ce6cacbe85b81783f70db25b%2F20260105%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260105T231801Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=984370fd916dff3e8e37483ac84266de6281de43e0a17dc0db0ef26381b60977",
+      "html_url": "https://reportscompany-web.vercel.app/print/3fdcd398-7f3b-4726-b1ce-b88a905e12a5"
+    },
+    {
+      "name": "Investor",
+      "type": "report",
+      "id": "4cdcea46-0d04-4c63-b603-9e181d97959c",
+      "status": "completed",
+      "pdf_url": "https://db85a7d510688f5ce34d1e4c0129d2b3.r2.cloudflarestorage.com/market-reports/reports/6588ca4a-9509-4118-9359-d1cbf72dcd52/Downey_Investor_4cdcea46.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=cde16dd5ce6cacbe85b81783f70db25b%2F20260105%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260105T231805Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=228873f5fbc3fd394603f47ea5f39f452931b8dea82587e7d37ad9bc7ab75cb3",
+      "html_url": "https://reportscompany-web.vercel.app/print/4cdcea46-0d04-4c63-b603-9e181d97959c"
+    },
+    {
+      "name": "Condo Buyer",
+      "type": "report",
+      "id": "018a071b-5ca5-4a8d-a24c-1bb75ebcc0b4",
+      "status": "completed",
+      "pdf_url": "https://db85a7d510688f5ce34d1e4c0129d2b3.r2.cloudflarestorage.com/market-reports/reports/6588ca4a-9509-4118-9359-d1cbf72dcd52/Downey_CondoBuyer_018a071b.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=cde16dd5ce6cacbe85b81783f70db25b%2F20260105%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260105T231806Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=8dc54a8942a7985a8b7e18acec864e4bb5c35dae432ffea0a580c82453fc8fe6",
+      "html_url": "https://reportscompany-web.vercel.app/print/018a071b-5ca5-4a8d-a24c-1bb75ebcc0b4"
+    },
+    {
+      "name": "Family Buyer",
+      "type": "report",
+      "id": "536d7c0c-7414-47f9-9672-61fa937a52ab",
+      "status": "completed",
+      "pdf_url": "https://db85a7d510688f5ce34d1e4c0129d2b3.r2.cloudflarestorage.com/market-reports/reports/6588ca4a-9509-4118-9359-d1cbf72dcd52/Downey_FamilyBuyer_536d7c0c.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=cde16dd5ce6cacbe85b81783f70db25b%2F20260105%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260105T231808Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=0f110b963a43113db220ce18673655c271fc7bfa259273c8d5d2a830baad24bc",
+      "html_url": "https://reportscompany-web.vercel.app/print/536d7c0c-7414-47f9-9672-61fa937a52ab"
+    },
+    {
+      "name": "Market Update",
+      "type": "report",
+      "id": "8867a4b9-c2da-4256-9116-42c1f5db1905",
+      "status": "completed",
+      "pdf_url": "https://db85a7d510688f5ce34d1e4c0129d2b3.r2.cloudflarestorage.com/market-reports/reports/6588ca4a-9509-4118-9359-d1cbf72dcd52/Downey_MarketSnapshot_8867a4b9.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=cde16dd5ce6cacbe85b81783f70db25b%2F20260105%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260105T231807Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=597e87cdf6915d7940bf9bf713ac0affce7795dc6768e03ff9879a64a79019f5",
+      "html_url": "https://reportscompany-web.vercel.app/print/8867a4b9-c2da-4256-9116-42c1f5db1905"
+    },
+    {
+      "name": "Closed Sales",
+      "type": "report",
+      "id": "8a79222b-8709-4a89-aec8-a707ca450289",
+      "status": "completed",
+      "pdf_url": "https://db85a7d510688f5ce34d1e4c0129d2b3.r2.cloudflarestorage.com/market-reports/reports/6588ca4a-9509-4118-9359-d1cbf72dcd52/Downey_ClosedSales_8a79222b.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=cde16dd5ce6cacbe85b81783f70db25b%2F20260105%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260105T231808Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=2318671769d852096f32076bd0f277437760d2aafaaa8d93cee8eda5d1d5bc6d",
+      "html_url": "https://reportscompany-web.vercel.app/print/8a79222b-8709-4a89-aec8-a707ca450289"
+    },
+    {
+      "name": "New Listings - All Buyers",
+      "type": "schedule",
+      "id": "e7b79083-72a4-4a14-bf69-c16adbeaeb3a",
+      "status": "scheduled"
+    },
+    {
+      "name": "First-Time Buyer",
+      "type": "schedule",
+      "id": "6e7a0b62-6923-4848-9484-776bca6ffe83",
+      "status": "scheduled"
+    },
+    {
+      "name": "Luxury Buyer",
+      "type": "schedule",
+      "id": "0e8e3cd4-1e5f-4d23-ae02-a86129bd818c",
+      "status": "scheduled"
+    },
+    {
+      "name": "Investor",
+      "type": "schedule",
+      "id": "6257cc2b-7d47-403f-ad81-07fc0faad600",
+      "status": "scheduled"
+    },
+    {
+      "name": "Condo Buyer",
+      "type": "schedule",
+      "id": "3fec0d7e-2ee5-4d6c-bf43-4e5679478a70",
+      "status": "scheduled"
+    },
+    {
+      "name": "Family Buyer",
+      "type": "schedule",
+      "id": "e4801867-1c9f-43bd-a96d-a83340f0a0b9",
+      "status": "scheduled"
+    },
+    {
+      "name": "Market Update",
+      "type": "schedule",
+      "id": "fdf050a8-241c-4fc4-8727-214d83812e87",
+      "status": "scheduled"
+    },
+    {
+      "name": "Closed Sales",
+      "type": "schedule",
+      "id": "7b842cc2-33c1-4d7f-977e-90492c324ad7",
+      "status": "scheduled"
+    }
+  ]
+}

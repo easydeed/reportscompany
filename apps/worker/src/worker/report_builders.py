@@ -820,5 +820,10 @@ def build_result_json(report_type: str, listings: List[Dict], context: Dict) -> 
     if filters.get("preset_display_name"):
         result["preset_display_name"] = filters["preset_display_name"]
     
+    # V11: Pass through filters_label for email filter description blurb
+    # This provides a human-readable summary like "2+ beds, Condos, under $1.2M"
+    if context.get("filters_label"):
+        result["filters_label"] = context["filters_label"]
+    
     return result
 

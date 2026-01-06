@@ -777,6 +777,8 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                                 "pdf_url": pdf_url,
                                 # Pass preset_display_name for email headers (e.g., "First-Time Buyer" instead of "New Listings Gallery")
                                 "preset_display_name": result.get("preset_display_name") if isinstance(result, dict) else None,
+                                # V11: Pass filter_description for email blurb (e.g., "2+ beds, Condos, under $1.2M")
+                                "filter_description": result.get("filters_label") if isinstance(result, dict) else None,
                             }
                             
                             # For gallery reports, include listings with photos

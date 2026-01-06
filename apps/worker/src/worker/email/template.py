@@ -1082,6 +1082,7 @@ def schedule_email_html(
     brand: Optional[Brand] = None,
     listings: Optional[List[Dict]] = None,
     preset_display_name: Optional[str] = None,
+    filter_description: Optional[str] = None,
 ) -> str:
     """
     Generate HTML email for a scheduled report notification.
@@ -1247,6 +1248,22 @@ def schedule_email_html(
                   <td style="padding: 16px 20px; background-color: #fafaf9; border-radius: 6px; border: 1px solid #e7e5e4;">
                     <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #44403c; font-weight: 400;">
                       {insight_text}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+'''
+    
+    # V11: Filter Description Blurb - Shows preset/audience filter details
+    filter_description_html = ""
+    if filter_description:
+        filter_description_html = f'''
+              <!-- V11: Filter Description Blurb -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
+                <tr>
+                  <td align="center" style="padding: 12px 16px; background: linear-gradient(135deg, {primary_color}08 0%, {accent_color}08 100%); border-radius: 8px; border-left: 3px solid {primary_color};">
+                    <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #44403c;">
+                      <span style="font-weight: 600; color: {primary_color};">Report Criteria:</span> {filter_description}
                     </p>
                   </td>
                 </tr>
@@ -1754,7 +1771,7 @@ def schedule_email_html(
                 </tr>
               </table>
 '''}
-{insight_html if has_hero_4 else ""}{hero_4_html if has_hero_4 else f'''              <!-- ========== V10: 3-COLUMN METRICS (Professional) ========== -->
+{filter_description_html}{insight_html if has_hero_4 else ""}{hero_4_html if has_hero_4 else f'''              <!-- ========== V10: 3-COLUMN METRICS (Professional) ========== -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
                   <td>
@@ -1789,7 +1806,7 @@ def schedule_email_html(
                   </td>
                 </tr>
               </table>
-'''}{core_indicators_html if has_hero_4 else ""}{extra_stats_html}{property_types_html}{price_tiers_html}{price_bands_html}{gallery_html}{listings_table_html}
+'''}{listings_table_html if report_type == "closed" else ""}{core_indicators_html if has_hero_4 else ""}{extra_stats_html}{property_types_html if report_type != "closed" else ""}{price_tiers_html if report_type != "closed" else ""}{price_bands_html}{gallery_html}{listings_table_html if report_type != "closed" else ""}
               <!-- ========== V10: MARKET INSIGHT (Professional) ========== -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 28px;">
                 <tr>
