@@ -2,7 +2,7 @@
 
 > Complete technical documentation for the email infrastructure, templates, and delivery pipeline.
 
-**Last Updated:** December 24, 2025 (V6.1 Gallery Reports Styling)
+**Last Updated:** January 5, 2026 (V10 Professional Redesign)
 
 ---
 
@@ -160,9 +160,39 @@ cp libs/shared/src/shared/email/template.py apps/worker/src/worker/email/templat
 | V4.2 | Dec 2025 | All major report types aligned with PDF structure |
 | V5 | Dec 2025 | Photo gallery grids for gallery reports, listings tables |
 | V6 | Dec 2025 | Unified template architecture, warm stone palette, font-weight 900 |
-| **V6.1** | Dec 2025 | **Gallery reports** - consistent headers, inverted section divs (white bg, accent border/text) |
+| V6.1 | Dec 2025 | Gallery reports - consistent headers, inverted section divs |
+| V8 | Jan 2026 | Adaptive gallery layouts (3-col, 2-col, vertical list based on count) |
+| **V10** | Jan 2026 | **Corporate/Professional redesign** - removed emojis, casual callouts; neutral colors (#1c1917) for all data values; clean bordered metric rows; single CTA button |
 
-### 2.6 V6 Styling Updates
+### 2.6 V10 Professional Styling (Current)
+
+**Design Philosophy:** Corporate and professional aesthetic that showcases maturity and credibility.
+
+**Key Changes from V9:**
+
+| Element | V9 (Casual) | V10 (Professional) |
+|---------|-------------|-------------------|
+| Quick Take | Yellow box with emojis (🔥, 📊) | Subtle italic insight line |
+| Conversation Starter | Green callout box | **Removed** |
+| Headline metric | 56px, brand colored | 48px, neutral dark (#1c1917) |
+| Key Stats Bar | Gradient with white text | Light gray bg (#fafaf9), bordered cells |
+| Data values | Brand primary color | Neutral dark (#1c1917) |
+| Font weights | 900 (extra bold) | 700 (bold) |
+| CTA Buttons | Dual buttons with emojis | Single "View Full Report" button |
+| Preheaders | Emoji prefixes | Clean text only |
+
+**Color Usage (V10):**
+
+| Element | Color |
+|---------|-------|
+| Header gradient | `primary_color` → `accent_color` (unchanged) |
+| All data values | Neutral dark `#1c1917` |
+| Labels | Stone gray `#78716c` |
+| Card backgrounds | `#fafaf9` (light gray) |
+| Borders | `#e7e5e4` (stone-200) |
+| CTA button | `primary_color` (brand) |
+
+### 2.7 V6 Styling Updates (Legacy)
 
 **Color Scheme (Mature Stone Palette):**
 
@@ -503,10 +533,12 @@ The test email uses the **same template function** as production scheduled email
 
 | Version | Date | Changes |
 |---------|------|---------|
-| **V5** | Dec 22, 2025 | **🎉 Gallery Photo Grids** - Email templates now include photo galleries, matching PDF content exactly |
-| V4.2 | Dec 15, 2025 | **All reports PDF-aligned** - new_listings, closed, inventory, price_bands now have V4 layout |
-| V4.1 | Dec 11, 2025 | **Modern styling** - system fonts, colored dots for property types, diamond icons for price tiers |
-| V4 | Dec 11, 2025 | **PDF-aligned redesign** - Market Snapshot email mirrors PDF structure (4-metric hero, core indicators, insight) |
+| **V10** | Jan 5, 2026 | **Corporate/Professional redesign** - Removed emojis, casual callouts; neutral colors for data; clean bordered metric rows |
+| V8 | Jan 5, 2026 | Adaptive gallery layouts based on listing count |
+| V5 | Dec 22, 2025 | Gallery Photo Grids - Email templates now include photo galleries |
+| V4.2 | Dec 15, 2025 | All reports PDF-aligned - new_listings, closed, inventory, price_bands now have V4 layout |
+| V4.1 | Dec 11, 2025 | Modern styling - system fonts, colored dots for property types |
+| V4 | Dec 11, 2025 | PDF-aligned redesign - Market Snapshot email mirrors PDF structure |
 | V3.1 | Dec 11, 2025 | Monochromatic refinement - unified colors, template consolidation |
 | V3 | Dec 11, 2024 | Professional styling, Market Snapshot breakdowns |
 | V2 | Nov 25, 2024 | Gradient headers, dark mode, responsive |
