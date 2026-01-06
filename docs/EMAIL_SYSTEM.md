@@ -576,7 +576,8 @@ The test email uses the **same template function** as production scheduled email
 
 | Version | Date | Changes |
 |---------|------|---------|
-| **V11** | Jan 6, 2026 | **Filter Description Blurb** + Closed Sales table optimization (see §2.6) |
+| **V12** | Jan 6, 2026 | **Gallery metrics fix** (was 0/N/A), listing cap increased to 12, **AI-powered insights** (optional) |
+| V11 | Jan 6, 2026 | Filter Description Blurb + Closed Sales table optimization (see §2.6) |
 | V10 | Jan 5, 2026 | Corporate/Professional redesign - Removed emojis, casual callouts; neutral colors for data; clean bordered metric rows |
 | V8 | Jan 5, 2026 | Adaptive gallery layouts based on listing count |
 | V5 | Dec 22, 2025 | Gallery Photo Grids - Email templates now include photo galleries |
