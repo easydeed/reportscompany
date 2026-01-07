@@ -2,8 +2,7 @@
 
 > **Single Source of Truth** for all report types, their parameters, filtering logic, and expected outputs.
 
-**Last Updated:** December 29, 2025  
-**Version:** 1.3
+**Version:** 1.3 (Current)
 
 ---
 
@@ -615,15 +614,6 @@ Each scheduled report email includes:
 | `open_houses` | `build_open_houses()` |
 
 ---
-
-## Changelog
-
-| Date | Version | Changes |
-|------|---------|---------|
-| Dec 29, 2025 | 1.3 | **Market-Adaptive Presets**: Added `price_strategy` for percentage-of-median pricing, `preset_display_name` for custom PDF headers, elastic widening fallback |
-| Dec 27, 2025 | 1.2 | Added Smart Preset Filters (v1.5) with absolute price caps |
-| Dec 10, 2024 | 1.1 | Added SimplyRETS API filtering limitation warning, local testing instructions |
-| Dec 10, 2024 | 1.0 | Initial version |
 
 ---
 

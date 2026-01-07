@@ -2,7 +2,7 @@
 
 > Technical documentation for PDF report generation, templates, and white-label branding.
 
-**Last Updated:** December 22, 2025 (V5 Email Alignment + R2 Photo Proxy)
+**Version:** V2.5 (Current)
 
 ---
 

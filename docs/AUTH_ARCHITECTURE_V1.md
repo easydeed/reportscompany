@@ -1,7 +1,6 @@
 # Authentication Architecture V1
 
-**Last Updated:** November 14, 2025  
-**Purpose:** Document the authentication contract to prevent regressions and establish clear ownership
+**Purpose:** Document the authentication contract and establish clear ownership
 
 ---
 
@@ -247,68 +246,6 @@ SELECT * FROM reports WHERE account_id = current_setting('app.current_account_id
 
 ---
 
-## Critical Lessons (Phase 29D Debugging)
-
-### ❌ The Bug That Cost 6 Hours
-
-**Problem:** Frontend was setting `mr_token=undefined` in cookie
-
-**Root Cause:**
-```typescript
-// ❌ BAD: Frontend login code was doing this:
-const data = await response.json();
-document.cookie = `mr_token=${data.token}; ...`;  // data.token was undefined!
-```
-
-**Why it happened:**
-- Backend returned `{ access_token: <jwt> }` (not `{ token: <jwt> }`)
-- Frontend tried to read `data.token` → `undefined`
-- Frontend overwrote cookie with literal string `"undefined"`
-
-**The Fix:**
-1. ✅ Backend sets cookie via `Set-Cookie` header
-2. ✅ Frontend uses proxy route (same-origin for cookie)
-3. ✅ Frontend NEVER manually sets `mr_token`
-
-### ✅ The Correct Pattern
-
-**Backend** (`apps/api/src/api/routes/auth.py`):
-```python
-@router.post("/auth/login")
-def login(body: LoginIn, response: Response):
-    # ... validate credentials ...
-    token = sign_jwt({...}, settings.JWT_SECRET, ttl_seconds=3600)
-    
-    # ✅ Backend owns cookie setting
-    response.set_cookie(
-        key="mr_token",
-        value=token,
-        httponly=True,
-        secure=True,
-        samesite="lax",
-        max_age=3600
-    )
-    
-    return {"access_token": token}  # Optional: for debugging
-```
-
-**Frontend** (`apps/web/app/login/page.tsx`):
-```typescript
-const res = await fetch("/api/proxy/v1/auth/login", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ email, password }),
-  credentials: "include",  // ✅ Allow browser to accept Set-Cookie
-});
-
-// ✅ NO cookie manipulation here!
-if (res.ok) {
-  router.push("/app");  // Cookie already set by backend
-}
-```
-
----
-
 ## Security Checklist
 
 ### Production Requirements
@@ -362,6 +299,5 @@ When modifying authentication logic, **ALL** of these must pass:
 
 ---
 
-**Status:** 🔒 Locked Contract  
-**Last Tested:** November 14, 2025 (Phase 29D completion)
+**Status:** 🔒 Locked Contract
 

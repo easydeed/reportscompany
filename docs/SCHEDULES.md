@@ -2,7 +2,7 @@
 
 > Complete documentation for the automated report scheduling system.
 
-**Last Updated:** December 29, 2025
+**Version:** 2.0 (Current)
 
 ---
 

@@ -307,4 +307,3 @@ curl -X PATCH https://api.example.com/v1/users/me/email \
 ## Related Documentation
 
 - [AUTH_ARCHITECTURE_V1.md](./AUTH_ARCHITECTURE_V1.md) - Authentication system details
-- [DEMO_ACCOUNTS.md](./DEMO_ACCOUNTS.md) - Demo account information

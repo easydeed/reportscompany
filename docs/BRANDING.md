@@ -2,7 +2,7 @@
 
 > Complete documentation for the white-label branding system, including logo management, color customization, and contact information.
 
-**Last Updated:** December 26, 2025
+**Version:** 1.0 (Current)
 
 ---
 

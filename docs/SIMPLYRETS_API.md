@@ -1,8 +1,6 @@
 # SimplyRETS API - Complete Technical Guide
 
-**Last Updated**: December 2, 2025 (v2)  
-**Status**: ✅ Production Ready  
-**Test Scripts**: `scripts/test_simplyrets.py`, `scripts/test_report_flow.py`
+**Status**: ✅ Production Ready
 
 ---
 
@@ -24,15 +22,18 @@ python ../../scripts/test_report_flow.py --raw
 ```
 Base URL: https://api.simplyrets.com/properties
 Auth: HTTP Basic (username:password)
-Production: info_456z6zv2 / lm0182gh3pu6f827
 ```
 
-```python
-import requests
-from base64 import b64encode
+Credentials are stored in environment variables:
+- `SIMPLYRETS_USERNAME`
+- `SIMPLYRETS_PASSWORD`
 
-USERNAME = "info_456z6zv2"
-PASSWORD = "lm0182gh3pu6f827"
+```python
+import os
+import requests
+
+USERNAME = os.getenv("SIMPLYRETS_USERNAME")
+PASSWORD = os.getenv("SIMPLYRETS_PASSWORD")
 
 response = requests.get(
     "https://api.simplyrets.com/properties",
@@ -471,57 +472,14 @@ payload = {
 
 ```bash
 # Required
-SIMPLYRETS_USERNAME=info_456z6zv2
-SIMPLYRETS_PASSWORD=lm0182gh3pu6f827
+SIMPLYRETS_USERNAME=<your-username>
+SIMPLYRETS_PASSWORD=<your-password>
 
-# Optional (not used with our account)
+# Optional
 # SIMPLYRETS_VENDOR=crmls
 ```
 
 ---
 
-## 10. Verified Test Results (December 2, 2025)
-
-### Irvine, CA - 30 Day Lookback
-
-**With `type=RES` (Correct)**:
-| Metric | Value |
-|--------|-------|
-| Active | 500 |
-| Closed (date-filtered) | 150 |
-| Median Close Price | $1,530,000 |
-| Avg DOM | 76.1 days |
-| MOI | 3.3 months |
-| Prices < $100k | 0 |
-
-**Without `type=RES` (Wrong - includes rentals)**:
-| Metric | Value |
-|--------|-------|
-| Closed (date-filtered) | 350 |
-| Median Close Price | $6,390 😱 |
-| Prices < $100k | 203 |
-
 ---
 
-## 11. Changelog
-
-### December 2, 2025 (v2) - Data & PDF Fixes
-- ✅ **Fixed field mapping in templates**: `address`→`street_address`, `beds`→`bedrooms`, `baths`→`bathrooms`
-- ✅ **Fixed price/sqft formatting**: Now displays as `$540` instead of `540`
-- ✅ **Added city filtering**: Filter listings to exact city match (API `q` param returns nearby cities)
-- ✅ **Fixed PDF blank page issue**: Added `remove_blank=true` to PDFShift API calls
-- ✅ **Fixed PDF footer positioning**: Removed CSS flexbox `flex:1` that caused overflow to blank pages
-- ✅ **Updated all HTML templates**: Consistent page break handling across all report types
-
-### December 2, 2025 - Major Fixes
-- ✅ **Fixed rental pollution**: Default all queries to `type=RES`
-- ✅ **Fixed DOM calculation**: Calculate from `listDate` to `closeDate` for Closed
-- ✅ **Fixed date filtering**: Client-side filter by `closeDate` (API uses `listDate`)
-- ✅ **Fixed timezone issues**: Strip timezone from parsed dates
-- ✅ **Added test script**: `scripts/test_report_flow.py` for local testing
-
-### Previous Fixes
-- ✅ Switched from `cities` to `q` parameter
-- ✅ Disabled `sort` and `vendor` parameters
-- ✅ Added `subtype` filter support
-- ✅ Fixed city extraction bug (was defaulting to "Houston")

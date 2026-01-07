@@ -2,7 +2,7 @@
 
 > Complete technical documentation for the email infrastructure, templates, and delivery pipeline.
 
-**Last Updated:** January 6, 2026 (V12 Gallery Metrics Fix + AI Insights)
+**Version:** V12 (Current)
 
 ---
 

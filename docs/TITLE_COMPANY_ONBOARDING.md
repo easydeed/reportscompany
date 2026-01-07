@@ -1,6 +1,5 @@
 # Title Company Onboarding Guide
 
-**Last Updated**: December 2, 2025  
 **Purpose**: Scalable process for onboarding title companies and their representatives  
 **Admin Dashboard**: `/app/admin/affiliates`
 
@@ -411,14 +410,6 @@ overage_price_cents       INT
 ```
 
 ---
-
-## 8. Support Contacts
-
-| Role | Contact | Notes |
-|------|---------|-------|
-| Technical Lead | [Your name] | Database setup, API issues |
-| Account Manager | [Name] | Client communication |
-| Design | [Name] | Asset requirements |
 
 ---
 

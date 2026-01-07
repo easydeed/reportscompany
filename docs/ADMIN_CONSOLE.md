@@ -28,13 +28,9 @@ The Admin Console provides platform operators with system-wide visibility and ma
 
 ## 2. Access Control
 
-### 2.1 Platform Admin Credentials
+### 2.1 Platform Admin Access
 
-```
-Email: admin@trendyreports.io
-Password: Alpha637#
-Account: TrendyReports Operations (trendyreports-ops)
-```
+Platform admin credentials are managed via environment configuration. Contact your system administrator for access.
 
 ### 2.2 Authentication Flow
 
@@ -69,10 +65,10 @@ The admin console has its own login page at `/admin/login` with:
 SELECT email, is_platform_admin FROM users WHERE is_platform_admin = TRUE;
 
 -- Grant platform admin (ops/staff only)
-UPDATE users SET is_platform_admin = TRUE WHERE email = 'ops@trendyreports.io';
+UPDATE users SET is_platform_admin = TRUE WHERE email = 'user@example.com';
 
 -- Revoke platform admin
-UPDATE users SET is_platform_admin = FALSE WHERE email = 'former-admin@example.com';
+UPDATE users SET is_platform_admin = FALSE WHERE email = 'user@example.com';
 ```
 
 ---
