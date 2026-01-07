@@ -40,11 +40,13 @@ def send_schedule_email(
     account_name: Optional[str] = None,
     db_conn=None,
     brand: Optional[Dict] = None,
+    account_type: str = "REGULAR",
 ) -> Tuple[int, str]:
     """
     Send a scheduled report notification email to recipients.
     
     Phase 30: Now supports white-label branding for affiliate accounts.
+    V14: Sender-aware AI insights based on account_type.
     Filters out suppressed recipients before sending.
     
     Args:
@@ -57,9 +59,13 @@ def send_schedule_email(
             - lookback_days: Number of days covered
             - metrics: Dictionary of key metrics
             - pdf_url: Direct link to the PDF
+            - total_listings: Total found in market (V14)
+            - total_shown: How many displayed (V14)
+            - audience_key: Preset audience type (V14)
         account_name: Account name for personalization (optional)
         db_conn: Database connection for suppression checking (optional)
         brand: Optional brand configuration for white-label output (Phase 30)
+        account_type: "REGULAR" (agent) or "INDUSTRY_AFFILIATE" (title company) (V14)
     
     Returns:
         Tuple of (status_code, response_text)
@@ -108,6 +114,11 @@ def send_schedule_email(
     preset_display_name = payload.get("preset_display_name")  # V6: Custom preset name (e.g., "First-Time Buyer")
     filter_description = payload.get("filter_description")  # V11: Human-readable filter summary
     
+    # V14: Sender-aware AI insights
+    total_found = payload.get("total_listings", 0)  # Total in market
+    total_shown = payload.get("total_shown", len(listings) if listings else 0)  # How many displayed
+    audience_key = payload.get("audience_key", "all")  # Preset audience type
+    
     if not pdf_url:
         logger.error("No PDF URL provided in payload")
         return (400, "No PDF URL")
@@ -122,7 +133,7 @@ def send_schedule_email(
     # Generate email subject
     subject = schedule_email_subject(report_type, city, zip_codes)
     
-    # Generate HTML content (Phase 30: with brand, V5: with listings for gallery reports, V6: preset names, V11: filter description)
+    # Generate HTML content (Phase 30: with brand, V5-V14: full context for AI insights)
     html_content = schedule_email_html(
         account_name=account_name or "there",
         report_type=report_type,
@@ -136,6 +147,10 @@ def send_schedule_email(
         listings=listings,  # V5: Photo gallery for gallery reports
         preset_display_name=preset_display_name,  # V6: Custom preset name
         filter_description=filter_description,  # V11: Human-readable filter summary
+        sender_type=account_type,  # V14: Agent vs Affiliate
+        total_found=total_found,  # V14: Total listings in market
+        total_shown=total_shown,  # V14: How many displayed
+        audience_name=preset_display_name,  # V14: Audience for AI context
     )
     
     # Send email via provider

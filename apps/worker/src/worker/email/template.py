@@ -516,7 +516,8 @@ def _format_decimal(value: Optional[float], decimals: int = 1) -> str:
 
 def _get_metrics_for_report_type(
     report_type: str, 
-    metrics: Dict
+    metrics: Dict,
+    total_shown: int = 0
 ) -> Tuple[Tuple[str, str], Tuple[str, str], Tuple[str, str]]:
     """
     Get the 3 main metrics to display based on report type.
@@ -559,15 +560,25 @@ def _get_metrics_for_report_type(
         )
     
     elif report_type == "new_listings_gallery":
+        # V14: Show "Showing X of Y" when curated
+        if total_shown and total_shown < total_listings:
+            listing_display = f"{total_shown} of {_format_number(total_listings)}"
+        else:
+            listing_display = _format_number(total_listings)
         return (
-            ("New Listings", _format_number(total_listings)),
+            ("New Listings", listing_display),
             ("Median Price", _format_price_clean(median_list_price)),
             ("Starting At", _format_price_clean(metrics.get("min_price"))),
         )
     
     elif report_type == "featured_listings":
+        # V14: Show "Showing X of Y" when curated
+        if total_shown and total_shown < total_listings:
+            listing_display = f"{total_shown} of {_format_number(total_listings)}"
+        else:
+            listing_display = _format_number(total_listings)
         return (
-            ("Featured Homes", _format_number(total_listings)),
+            ("Featured Homes", listing_display),
             ("Highest Price", _format_price_clean(metrics.get("max_price"))),
             ("Avg Sq Ft", _format_number(metrics.get("avg_sqft"))),
         )
@@ -859,23 +870,31 @@ def _get_insight_paragraph(
     metrics: Dict, 
     lookback_days: int,
     filter_description: str = None,
+    sender_type: str = "REGULAR",
+    total_found: int = 0,
+    total_shown: int = 0,
+    audience_name: str = None,
 ) -> str:
     """
-    V4/V12: Generate insight paragraph for reports.
+    V14: Generate insight paragraph for reports with sender/audience awareness.
     
-    V13 Enhancement: First tries AI-generated insight via OpenAI,
+    First tries AI-generated insight via OpenAI (with full context),
     falls back to template-based text if AI is disabled or fails.
     """
-    # V13: Try AI-generated insight first
+    # V14: Try AI-generated insight first with full context
     try:
         from ..ai_insights import generate_insight, AI_INSIGHTS_ENABLED
-        print(f"[INSIGHT] Generating for {report_type} in {area}, AI_ENABLED={AI_INSIGHTS_ENABLED}")
+        print(f"[INSIGHT] Generating for {report_type} in {area}, sender={sender_type}, AI_ENABLED={AI_INSIGHTS_ENABLED}")
         ai_insight = generate_insight(
             report_type=report_type,
             area=area,
             metrics=metrics,
             lookback_days=lookback_days,
             filter_description=filter_description,
+            sender_type=sender_type,
+            total_found=total_found,
+            total_shown=total_shown,
+            audience_name=audience_name,
         )
         if ai_insight:
             print(f"[INSIGHT] AI SUCCESS: {ai_insight[:80]}...")
@@ -1156,11 +1175,17 @@ def schedule_email_html(
     listings: Optional[List[Dict]] = None,
     preset_display_name: Optional[str] = None,
     filter_description: Optional[str] = None,
+    sender_type: str = "REGULAR",
+    total_found: int = 0,
+    total_shown: int = 0,
+    audience_name: Optional[str] = None,
 ) -> str:
     """
     Generate HTML email for a scheduled report notification.
     
     V2: Complete redesign with V0-generated email-safe template.
+    V14: Sender-aware AI insights with audience context.
+    
     Features:
     - Gradient header with Outlook VML fallback
     - Dark mode support
@@ -1169,6 +1194,7 @@ def schedule_email_html(
     - Price bands section for Price Bands report
     - Preheader text for email preview
     - Polished agent footer with circular photo
+    - V14: AI insights adapt based on sender type and audience
     
     Args:
         account_name: Name of the account (for personalization)
@@ -1180,6 +1206,10 @@ def schedule_email_html(
         pdf_url: Direct link to the PDF report
         unsubscribe_url: Link to unsubscribe from future emails
         brand: Optional brand configuration (for white-label output)
+        sender_type: "REGULAR" (agent) or "INDUSTRY_AFFILIATE" (title company)
+        total_found: Total listings in market (for AI context)
+        total_shown: How many listings displayed (for AI context)
+        audience_name: Preset audience (e.g., "First-Time Buyers")
     
     Returns:
         HTML string for the email body
@@ -1246,12 +1276,22 @@ def schedule_email_html(
         (ci1_label, ci1_value), (ci2_label, ci2_value), (ci3_label, ci3_value) = \
             _get_core_indicators(metrics)
     
-    # V4/V12: Get insight paragraph (with AI enhancement support)
-    insight_text = _get_insight_paragraph(report_type, area_display, metrics, lookback_days, filter_description) if has_insight else None
+    # V14: Get insight paragraph (with sender/audience-aware AI)
+    insight_text = _get_insight_paragraph(
+        report_type=report_type,
+        area=area_display,
+        metrics=metrics,
+        lookback_days=lookback_days,
+        filter_description=filter_description,
+        sender_type=sender_type,
+        total_found=total_found,
+        total_shown=total_shown,
+        audience_name=audience_name,
+    ) if has_insight else None
     
-    # Legacy: Get 3 metrics for non-V4 reports
+    # Legacy: Get 3 metrics for non-V4 reports (V14: with total_shown for galleries)
     (m1_label, m1_value), (m2_label, m2_value), (m3_label, m3_value) = \
-        _get_metrics_for_report_type(report_type, metrics)
+        _get_metrics_for_report_type(report_type, metrics, total_shown=total_shown)
     
     # Get extra stats if applicable (not used in V4 Market Snapshot)
     extra_stats = _get_extra_stats(report_type, metrics) if has_extra_stats else None

@@ -637,7 +637,9 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                             account_name = account_row[0] if account_row else None
                             
                             # Phase 30: Resolve brand for white-label emails
+                            # V14: Also capture account_type for sender-aware AI insights
                             brand = None
+                            acc_type = "REGULAR"  # V14: Default to agent
                             try:
                                 # Determine branding account (sponsor for REGULAR, self for AFFILIATE)
                                 cur.execute("""
@@ -784,6 +786,10 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                                 "preset_display_name": result.get("preset_display_name") if isinstance(result, dict) else None,
                                 # V11: Pass filter_description for email blurb (e.g., "2+ beds, Condos, under $1.2M")
                                 "filter_description": result.get("filters_label") if isinstance(result, dict) else None,
+                                # V14: Sender-aware AI insights context
+                                "total_listings": result.get("total_listings", 0) if isinstance(result, dict) else 0,
+                                "total_shown": result.get("total_shown", 0) if isinstance(result, dict) else 0,
+                                "audience_key": result.get("audience_key", "all") if isinstance(result, dict) else "all",
                             }
                             
                             # For gallery reports, include listings with photos
@@ -820,7 +826,7 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                                     for l in listings_sample
                                 ]
                             
-                            # Send email (with suppression checking + Phase 30 white-label brand)
+                            # Send email (with suppression checking + Phase 30 white-label brand + V14 sender type)
                             status_code, response_text = send_schedule_email(
                                 account_id=account_id,
                                 recipients=recipients,
@@ -828,6 +834,7 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                                 account_name=account_name,
                                 db_conn=conn,  # Pass connection for suppression checking
                                 brand=brand,  # Phase 30: white-label branding
+                                account_type=acc_type,  # V14: sender-aware AI insights
                             )
                             
                             # Log email send (defensive try/except)

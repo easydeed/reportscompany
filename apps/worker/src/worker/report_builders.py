@@ -669,16 +669,23 @@ def build_price_bands_result(listings: List[Dict], context: Dict) -> Dict:
 
 def build_new_listings_gallery_result(listings: List[Dict], context: Dict) -> Dict:
     """
-    New Listings Gallery - 3×3 grid (9 properties) with hero photos
+    New Listings Gallery - Photo gallery with hero images
     
     Phase P2: Photo-first template for new listings.
-    Shows newest 9 active listings with images, address, price, beds/baths.
+    V14: Audience-based caps for email display.
     
     IMPORTANT: SimplyRETS API does NOT reliably filter Active listings by mindate/maxdate.
     We MUST filter by list_date client-side to ensure accurate results.
     """
+    from .ai_insights import get_email_listing_cap
+    
     city = context.get("city", "Market")
     lookback_days = context.get("lookback_days", 30)
+    
+    # V14: Get audience key from filters for dynamic cap
+    filters = context.get("filters", {})
+    audience_key = _get_audience_key_from_filters(filters)
+    email_cap = get_email_listing_cap(audience_key)
     
     # Filter to only include listings from the requested city
     listings = _filter_by_city(listings, city)
@@ -702,11 +709,10 @@ def build_new_listings_gallery_result(listings: List[Dict], context: Dict) -> Di
             except:
                 pass
     
-    print(f"📊 GALLERY DEBUG: {len(new_listings)} listings after date filter (cutoff={cutoff_date.date()})")
+    print(f"📊 GALLERY: {len(new_listings)} listings found, showing {min(len(new_listings), email_cap)} (cap={email_cap}, audience={audience_key})")
     
-    # Sort by list date desc (newest first), limit to 12 for email galleries
-    # V12: Increased from 9 to 12 for more comprehensive gallery displays
-    new_listings_sorted = sorted(new_listings, key=lambda x: x.get("list_date") or datetime.min, reverse=True)[:12]
+    # V14: Sort by list date desc, use audience-based cap
+    new_listings_sorted = sorted(new_listings, key=lambda x: x.get("list_date") or datetime.min, reverse=True)[:email_cap]
     
     # Format listings for gallery display
     gallery_listings = []
@@ -743,9 +749,48 @@ def build_new_listings_gallery_result(listings: List[Dict], context: Dict) -> Di
         "period_label": _period_label(lookback_days),
         "report_date": datetime.now().strftime("%B %d, %Y"),
         "total_listings": len(new_listings),  # Total count (not capped)
+        "total_shown": len(gallery_listings),  # V14: How many displayed
+        "audience_key": audience_key,  # V14: For AI prompt context
         "listings": gallery_listings,
         "metrics": metrics,  # For email template compatibility
     }
+
+
+def _get_audience_key_from_filters(filters: Dict) -> str:
+    """
+    V14: Derive audience key from filters for cap selection.
+    Maps preset_display_name or filter patterns to audience keys.
+    """
+    if not filters:
+        return "all"
+    
+    preset_name = filters.get("preset_display_name", "").lower()
+    
+    # Map preset names to audience keys
+    if "first-time" in preset_name or "first time" in preset_name:
+        return "first_time_buyers"
+    elif "luxury" in preset_name:
+        return "luxury"
+    elif "family" in preset_name or "families" in preset_name:
+        return "families"
+    elif "condo" in preset_name:
+        return "condo"
+    elif "investor" in preset_name:
+        return "investors"
+    
+    # Fallback: check filter patterns
+    if filters.get("price_strategy", {}).get("mode") == "minprice_pct_of_median_list":
+        return "luxury"  # Min price filter = luxury
+    elif filters.get("price_strategy", {}).get("value", 1.0) <= 0.5:
+        return "investors"  # Very low price cap = investor deals
+    elif filters.get("price_strategy", {}).get("value", 1.0) <= 0.7:
+        return "first_time_buyers"  # Moderate price cap = first-time
+    elif filters.get("minbeds", 0) >= 4:
+        return "families"  # 4+ beds = family homes
+    elif filters.get("subtype") == "Condominium":
+        return "condo"
+    
+    return "all"
 
 
 def build_featured_listings_result(listings: List[Dict], context: Dict) -> Dict:
@@ -753,7 +798,7 @@ def build_featured_listings_result(listings: List[Dict], context: Dict) -> Dict:
     Featured Listings - 2×2 grid (4 large properties) with hero photos
     
     Phase P2: Premium photo template for featured properties.
-    Shows top 4 most expensive active listings with larger cards.
+    V14: Always curated (4 listings), luxury audience.
     """
     city = context.get("city", "Market")
     lookback_days = context.get("lookback_days", 30)
@@ -766,6 +811,8 @@ def build_featured_listings_result(listings: List[Dict], context: Dict) -> Dict:
     
     # Sort by list price desc (most expensive first), limit to 4
     featured = sorted(active, key=lambda x: x.get("list_price") or 0, reverse=True)[:4]
+    
+    print(f"📊 FEATURED: {len(active)} active listings, showing top 4 by price")
     
     # Format for gallery display
     gallery_listings = []
@@ -800,7 +847,9 @@ def build_featured_listings_result(listings: List[Dict], context: Dict) -> Dict:
         "lookback_days": lookback_days,
         "period_label": _period_label(lookback_days),
         "report_date": datetime.now().strftime("%B %d, %Y"),
-        "total_listings": len(gallery_listings),
+        "total_listings": len(active),  # V14: Total available in market
+        "total_shown": len(gallery_listings),  # V14: How many displayed (always 4)
+        "audience_key": "luxury",  # V14: Featured = luxury audience
         "listings": gallery_listings,
         "metrics": metrics,  # For email template compatibility
     }

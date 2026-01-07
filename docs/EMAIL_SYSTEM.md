@@ -165,7 +165,8 @@ cp libs/shared/src/shared/email/template.py apps/worker/src/worker/email/templat
 | V10 | Jan 2026 | Corporate/Professional redesign - removed emojis, casual callouts; neutral colors (#1c1917) for all data values; clean bordered metric rows; single CTA button |
 | V11 | Jan 2026 | **Filter Description Blurb** - styled box after hero showing report criteria (e.g., "2+ beds, Condos, under $1.2M"); **Closed Sales Optimization** - listings table moved higher to avoid Gmail clipping |
 | V12 | Jan 2026 | **Gallery Metrics Fix** - correct listing counts, median/min prices for gallery emails; **12-listing cap** (up from 9); **AI Insights** (optional) - GPT-4o-mini powered insight generation |
-| **V13** | Jan 2026 | **Gallery AI Insights** - fixed bug where insights weren't rendering for gallery reports; **Improved prompts** - warm, excited tone with 3-4 sentences; **All reports now get insights** |
+| V13 | Jan 2026 | **Gallery AI Insights** - fixed bug where insights weren't rendering for gallery reports; **Improved prompts** - warm, excited tone with 3-4 sentences |
+| **V14** | Jan 2026 | **Sender-aware insights** - Agent vs Affiliate tone; **Audience-based caps** (Luxury=8, First-Time=24); **"Showing X of Y"** display; **4-5 sentences** (80-120 words) |
 
 ### 2.6 V11 Filter Description & Closed Sales Optimization
 
@@ -269,7 +270,85 @@ OPENAI_API_KEY=sk-xxx       # Required if AI enabled
 
 **Recommendation:** Start with AI disabled. Enable for testing, then optionally offer as premium feature.
 
-### 2.8 V10 Professional Styling
+### 2.8 V14 Sender-Aware AI + Audience-Based Caps
+
+**January 7, 2026 Update**
+
+V14 introduces intelligent adaptation based on who's sending and who's receiving.
+
+#### A. Sender-Aware AI Insights
+
+AI insights now adapt their tone based on account type:
+
+| Account Type | Tone | Example Opening |
+|--------------|------|-----------------|
+| **REGULAR** (Agent) | Personal, warm | "I've been keeping an eye out for you..." |
+| **INDUSTRY_AFFILIATE** (Title Co.) | Professional, informative | "This week's market update shows..." |
+
+**Agent System Prompt (excerpt):**
+```
+You are a warm, personable real estate agent writing to your client.
+- "I" statements - you personally selected these listings
+- Like a trusted friend who happens to be a real estate expert
+```
+
+**Affiliate System Prompt (excerpt):**
+```
+You are a professional market analyst writing on behalf of a title company.
+- "We" statements - representing the company
+- Focused on market trends and opportunities
+```
+
+#### B. Audience-Based Listing Caps
+
+Different audiences receive different numbers of listings:
+
+| Audience | Email Cap | Rationale |
+|----------|-----------|-----------|
+| All Listings | 24 | Comprehensive view |
+| First-Time Buyers | 24 | Need lots of options |
+| Family Homes | 18 | Moderate selection |
+| Condo Watch | 18 | Moderate selection |
+| Investors | 12 | Focused on deals |
+| Luxury | 8 | Curated, exclusive |
+| Featured Listings | 4 | Always premium |
+
+**Implementation:** `apps/worker/src/worker/ai_insights.py::AUDIENCE_EMAIL_CAPS`
+
+#### C. "Showing X of Y" Display
+
+Gallery metrics now transparently show curation:
+
+| Before V14 | After V14 |
+|------------|-----------|
+| "104 New Listings" | "24 of 104 New Listings" |
+| (confusing—where are the other 80?) | (clear—curated selection) |
+
+#### D. Longer, More Engaging Insights
+
+| Version | Length | Purpose |
+|---------|--------|---------|
+| V12-V13 | 2-3 sentences | Quick overview |
+| **V14** | 4-5 sentences (80-120 words) | Deep engagement |
+
+**V14 Structure:**
+1. **Hook** - Lead with exciting finding
+2. **Data** - Reference 2-3 specific numbers
+3. **Context** - What it means for buyer/seller
+4. **Highlight** - Something interesting
+5. **Invitation** - Encourage reaching out
+
+#### E. Key Files Changed
+
+| File | Changes |
+|------|---------|
+| `ai_insights.py` | Dual system prompts, audience caps, longer output |
+| `report_builders.py` | `_get_audience_key_from_filters()`, dynamic caps |
+| `email/send.py` | Passes `account_type` to template |
+| `email/template.py` | Passes full context to AI, "X of Y" display |
+| `tasks.py` | Extracts `acc_type` from database |
+
+### 2.9 V10 Professional Styling
 
 **Design Philosophy:** Corporate and professional aesthetic that showcases maturity and credibility.
 
@@ -638,7 +717,8 @@ The test email uses the **same template function** as production scheduled email
 
 | Version | Date | Changes |
 |---------|------|---------|
-| **V13** | Jan 7, 2026 | **AI insights for ALL report types** - fixed gallery insight rendering bug; prompts rewritten for warmth/excitement; 3-4 sentence format |
+| **V14** | Jan 7, 2026 | **Sender-aware AI insights** - Agent vs Affiliate tone; **Audience-based caps** (24/18/12/8); **"X of Y" display**; 4-5 sentence format |
+| V13 | Jan 7, 2026 | AI insights for ALL report types - fixed gallery insight rendering bug; prompts rewritten for warmth/excitement |
 | V12 | Jan 6, 2026 | Gallery metrics fix (was 0/N/A), listing cap increased to 12, AI-powered insights (optional) |
 | V11 | Jan 6, 2026 | Filter Description Blurb + Closed Sales table optimization (see §2.6) |
 | V10 | Jan 5, 2026 | Corporate/Professional redesign - Removed emojis, casual callouts; neutral colors for data; clean bordered metric rows |

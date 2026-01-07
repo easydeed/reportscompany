@@ -9,20 +9,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
-- **AI-Powered Email Insights (V13)** - Exciting, personable market commentary using GPT-4o-mini
-- **Gallery Insight Support** - New Listings Gallery and Featured Listings now include AI-generated blurbs
-- **Display Limits Documentation** - New section in REPORT_TYPES_MATRIX.md explaining email (12) vs PDF (9) listing caps
+- **V14: Sender-Aware AI Insights** - AI adapts tone based on sender type:
+  - **Agent (REGULAR):** Personal, warm tone - "I've selected these for you..."
+  - **Affiliate (INDUSTRY_AFFILIATE):** Professional, informative - "This week's market update..."
+- **Audience-Based Listing Caps** - Different caps per audience for emails:
+  - All Listings / First-Time Buyers: 24 listings
+  - Family Homes / Condo Watch: 18 listings
+  - Investors: 12 listings
+  - Luxury / Featured: 8 / 4 listings (curated)
+- **"Showing X of Y" Display** - Gallery metrics now show "24 of 104" format
+- **Longer AI Insights** - 4-5 sentences (80-120 words) for deeper engagement
+- **Display Limits Documentation** - New section in REPORT_TYPES_MATRIX.md
 
 ### Changed
 - Admin login page updated to light theme (matches admin dashboard)
 - Admin login page and dashboard now use the actual TrendyReports logo
-- **AI prompts completely rewritten** for warmth and excitement:
-  - Leads with exciting findings, not "This report shows..."
-  - Makes numbers human: "129 families found their home" not "129 closed sales"
-  - Conversational tone like a knowledgeable friend
-  - Context-aware for hot vs buyer-friendly markets
-- Fallback templates (when AI unavailable) also rewritten to be personable
-- AI insight length increased to 3-4 sentences (60-90 words) for better engagement
+- **AI system prompts completely rewritten:**
+  - Separate prompts for Agent vs Affiliate tone
+  - References specific curation context ("hand-picked 24 from 104")
+  - Audience-aware messaging (First-Time Buyers, Luxury, etc.)
+  - 4-5 sentence structure with hook, data, context, and invitation
+- Fallback templates also rewritten to be personable
 
 ### Fixed
 - **Gallery reports now display AI insights** - Bug where `insight_html` was gated by `has_hero_4` instead of `has_insight`
