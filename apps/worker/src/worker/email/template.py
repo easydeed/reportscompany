@@ -863,12 +863,13 @@ def _get_insight_paragraph(
     """
     V4/V12: Generate insight paragraph for reports.
     
-    V12 Enhancement: First tries AI-generated insight via OpenAI,
+    V13 Enhancement: First tries AI-generated insight via OpenAI,
     falls back to template-based text if AI is disabled or fails.
     """
-    # V12: Try AI-generated insight first
+    # V13: Try AI-generated insight first
     try:
-        from ..ai_insights import generate_insight
+        from ..ai_insights import generate_insight, AI_INSIGHTS_ENABLED
+        print(f"[INSIGHT] Generating for {report_type} in {area}, AI_ENABLED={AI_INSIGHTS_ENABLED}")
         ai_insight = generate_insight(
             report_type=report_type,
             area=area,
@@ -877,13 +878,17 @@ def _get_insight_paragraph(
             filter_description=filter_description,
         )
         if ai_insight:
+            print(f"[INSIGHT] AI SUCCESS: {ai_insight[:80]}...")
             return ai_insight
-    except ImportError:
-        pass  # AI module not available
-    except Exception:
-        pass  # AI generation failed, use fallback
+        else:
+            print(f"[INSIGHT] AI returned None, using fallback")
+    except ImportError as e:
+        print(f"[INSIGHT] Import error: {e}")
+    except Exception as e:
+        print(f"[INSIGHT] Exception: {e}")
     
     # Fallback: Template-based text (V13: More exciting and personable)
+    print(f"[INSIGHT] Using FALLBACK template for {report_type}")
     # Extract key metrics for narrative
     total_active = metrics.get("total_active", 0)
     total_closed = metrics.get("total_closed", 0)
@@ -1839,7 +1844,7 @@ def schedule_email_html(
                 </tr>
               </table>
 '''}
-{filter_description_html}{insight_html if has_hero_4 else ""}{hero_4_html if has_hero_4 else f'''              <!-- ========== V10: 3-COLUMN METRICS (Professional) ========== -->
+{filter_description_html}{insight_html}{hero_4_html if has_hero_4 else f'''              <!-- ========== V10: 3-COLUMN METRICS (Professional) ========== -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
                   <td>
