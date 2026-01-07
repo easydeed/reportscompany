@@ -9,11 +9,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
-- **AI-Powered Email Insights** - Emails now generate contextual, personalized market commentary using GPT-4o-mini
+- **AI-Powered Email Insights** - Emails generate contextual, personalized market commentary using GPT-4o-mini
+- **Display Limits Documentation** - New section in REPORT_TYPES_MATRIX.md explaining email (12) vs PDF (9) listing caps
 
 ### Changed
 - Admin login page updated to light theme (matches admin dashboard)
 - Admin login page and dashboard now use the actual TrendyReports logo
+- AI prompt improved: warmer tone, more optimistic framing, references specific data points
 
 ---
 
