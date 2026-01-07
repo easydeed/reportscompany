@@ -2,7 +2,7 @@
 
 > Complete technical documentation for the email infrastructure, templates, and delivery pipeline.
 
-**Version:** V12 (Current)
+**Version:** V13 (Current)
 
 ---
 
@@ -164,7 +164,8 @@ cp libs/shared/src/shared/email/template.py apps/worker/src/worker/email/templat
 | V8 | Jan 2026 | Adaptive gallery layouts (3-col, 2-col, vertical list based on count) |
 | V10 | Jan 2026 | Corporate/Professional redesign - removed emojis, casual callouts; neutral colors (#1c1917) for all data values; clean bordered metric rows; single CTA button |
 | V11 | Jan 2026 | **Filter Description Blurb** - styled box after hero showing report criteria (e.g., "2+ beds, Condos, under $1.2M"); **Closed Sales Optimization** - listings table moved higher to avoid Gmail clipping |
-| **V12** | Jan 2026 | **Gallery Metrics Fix** - correct listing counts, median/min prices for gallery emails; **12-listing cap** (up from 9); **AI Insights** (optional) - GPT-4o-mini powered insight generation |
+| V12 | Jan 2026 | **Gallery Metrics Fix** - correct listing counts, median/min prices for gallery emails; **12-listing cap** (up from 9); **AI Insights** (optional) - GPT-4o-mini powered insight generation |
+| **V13** | Jan 2026 | **Gallery AI Insights** - fixed bug where insights weren't rendering for gallery reports; **Improved prompts** - warm, excited tone with 3-4 sentences; **All reports now get insights** |
 
 ### 2.6 V11 Filter Description & Closed Sales Optimization
 
@@ -637,7 +638,8 @@ The test email uses the **same template function** as production scheduled email
 
 | Version | Date | Changes |
 |---------|------|---------|
-| **V12** | Jan 6, 2026 | **Gallery metrics fix** (was 0/N/A), listing cap increased to 12, **AI-powered insights** (optional) |
+| **V13** | Jan 7, 2026 | **AI insights for ALL report types** - fixed gallery insight rendering bug; prompts rewritten for warmth/excitement; 3-4 sentence format |
+| V12 | Jan 6, 2026 | Gallery metrics fix (was 0/N/A), listing cap increased to 12, AI-powered insights (optional) |
 | V11 | Jan 6, 2026 | Filter Description Blurb + Closed Sales table optimization (see §2.6) |
 | V10 | Jan 5, 2026 | Corporate/Professional redesign - Removed emojis, casual callouts; neutral colors for data; clean bordered metric rows |
 | V8 | Jan 5, 2026 | Adaptive gallery layouts based on listing count |

@@ -22,6 +22,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Conversational tone like a knowledgeable friend
   - Context-aware for hot vs buyer-friendly markets
 - Fallback templates (when AI unavailable) also rewritten to be personable
+- AI insight length increased to 3-4 sentences (60-90 words) for better engagement
+
+### Fixed
+- **Gallery reports now display AI insights** - Bug where `insight_html` was gated by `has_hero_4` instead of `has_insight`
 
 ---
 
