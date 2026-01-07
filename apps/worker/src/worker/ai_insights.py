@@ -1,7 +1,7 @@
 """
 AI-powered market insights using OpenAI.
 
-V12: Generate contextual, professional market insights for email reports.
+V13: Generate exciting, personable market insights for email reports.
 Uses GPT-4o-mini for fast, cost-effective insight generation.
 
 Environment Variables:
@@ -9,7 +9,6 @@ Environment Variables:
     AI_INSIGHTS_ENABLED: Set to "true" to enable (default: "false")
 """
 import os
-import json
 import logging
 from typing import Dict, Optional
 
@@ -18,24 +17,38 @@ logger = logging.getLogger(__name__)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 AI_INSIGHTS_ENABLED = os.getenv("AI_INSIGHTS_ENABLED", "false").lower() == "true"
 
-# System prompt for generating market insights
-SYSTEM_PROMPT = """You are a warm, knowledgeable real estate market advisor helping agents connect with their clients. Generate concise, encouraging market insights for email reports.
+# System prompt for generating exciting market insights
+SYSTEM_PROMPT = """You are an enthusiastic real estate expert writing personalized email blurbs for agents to send their clients. Your goal is to make every email feel like it was written just for the recipient.
 
-Tone & Voice:
-- Warm and optimistic, but grounded in data
-- Speak as a trusted advisor sharing good news and opportunities
-- Highlight positive trends and buyer/seller advantages
-- Be encouraging without being pushy or salesy
+Your Voice:
+- Warm, excited, and genuinely helpful
+- Like a knowledgeable friend sharing insider info
+- Confident but not pushy
+- Natural and conversational
 
-Guidelines:
-- Reference 2-3 specific numbers from the data to build credibility
-- Keep insights to 2-3 sentences (40-60 words)
-- Frame market conditions positively: "healthy activity", "strong demand", "excellent selection", "competitive pricing"
-- Use action-oriented language: "presents opportunities", "ideal timing", "worth exploring"
-- For slower markets, emphasize negotiating power and selection
-- For hot markets, emphasize urgency and value retention
-- Do not use emojis or exclamation marks
-- Vary sentence structure - never start with "This" or "The market"
+What Makes Great Insights:
+- Start with the MOST interesting finding (not "This report shows...")
+- Lead with excitement: "Wow!", "Great news!", "You'll love this—"
+- Make numbers feel meaningful: "129 families found their dream home" not "129 closed sales"
+- Create urgency without pressure: "these won't last long" vs "act now"
+- Connect data to real life: what does this mean for someone buying/selling?
+
+Structure (2-3 sentences, 40-60 words):
+1. Hook: The most exciting finding
+2. Context: What it means for the reader
+3. Nudge: Gentle encouragement to explore
+
+Tone Examples:
+- "Great news for buyers in Irvine—129 homes sold last month at a median of $1.6M, and with 101 days average on market, there's time to find the perfect fit."
+- "You're going to love these fresh listings! 104 new properties just hit the market, with options starting at $850K."
+- "Here's something exciting: first-time buyer inventory is up 15% this month. The market is making room for new homeowners."
+
+NEVER:
+- Start with "This report" or "The data shows"
+- Use corporate jargon ("market conditions indicate")
+- Be generic ("the market is active")
+- Use emojis
+- Make predictions or guarantees
 """
 
 
@@ -59,8 +72,12 @@ def generate_insight(
     Returns:
         AI-generated insight string, or None if AI is disabled or fails
     """
-    if not AI_INSIGHTS_ENABLED or not OPENAI_API_KEY:
-        logger.debug("AI insights disabled or no API key")
+    if not AI_INSIGHTS_ENABLED:
+        logger.info("AI insights disabled (AI_INSIGHTS_ENABLED != true)")
+        return None
+    
+    if not OPENAI_API_KEY:
+        logger.warning("AI insights enabled but OPENAI_API_KEY is missing")
         return None
     
     try:
@@ -68,6 +85,8 @@ def generate_insight(
         
         # Build context for the AI
         user_prompt = _build_prompt(report_type, area, metrics, lookback_days, filter_description)
+        
+        logger.info(f"Generating AI insight for {report_type} in {area}...")
         
         # Call OpenAI API
         response = httpx.post(
@@ -82,27 +101,32 @@ def generate_insight(
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": user_prompt},
                 ],
-                "max_tokens": 100,
-                "temperature": 0.7,
+                "max_tokens": 120,
+                "temperature": 0.8,  # Slightly more creative
             },
-            timeout=10.0,
+            timeout=15.0,
         )
         
         if response.status_code != 200:
-            logger.warning(f"OpenAI API error: {response.status_code} - {response.text}")
+            logger.error(f"OpenAI API error: {response.status_code} - {response.text}")
             return None
         
         result = response.json()
         insight = result.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
         
+        # Clean up any quotes the model might have added
+        if insight.startswith('"') and insight.endswith('"'):
+            insight = insight[1:-1]
+        
         if insight:
-            logger.info(f"AI insight generated for {report_type} in {area}")
+            logger.info(f"AI insight generated successfully: {insight[:50]}...")
             return insight
         
+        logger.warning("OpenAI returned empty insight")
         return None
         
     except Exception as e:
-        logger.warning(f"AI insight generation failed: {e}")
+        logger.error(f"AI insight generation failed: {e}")
         return None
 
 
@@ -119,7 +143,7 @@ def _build_prompt(
     median_price = metrics.get("median_close_price") or metrics.get("median_list_price")
     total_closed = metrics.get("total_closed", 0)
     total_active = metrics.get("total_active", 0)
-    total_listings = metrics.get("total_listings", total_active)
+    total_listings = metrics.get("total_listings", total_active or total_closed)
     avg_dom = metrics.get("avg_dom")
     moi = metrics.get("months_of_inventory")
     ctl = metrics.get("sale_to_list_ratio") or metrics.get("close_to_list_ratio")
@@ -134,53 +158,70 @@ def _build_prompt(
             return f"${p/1_000_000:.1f}M"
         return f"${p/1_000:,.0f}K"
     
-    # Build prompt based on report type
-    ctl_str = f"{ctl:.1f}%" if ctl else "N/A"
-    dom_str = f"{avg_dom:.0f}" if avg_dom else "N/A"
-    moi_str = f"{moi:.1f}" if moi else "N/A"
+    # Format other metrics
+    ctl_str = f"{ctl:.1f}%" if ctl else "competitive"
+    dom_str = f"{avg_dom:.0f} days" if avg_dom else "N/A"
+    moi_str = f"{moi:.1f} months" if moi else "N/A"
     
+    # Build context-rich prompts
     if report_type == "market_snapshot":
-        return f"""Generate an encouraging market insight for {area} based on the last {lookback_days} days:
+        # Determine market conditions for context
+        market_vibe = "balanced"
+        if moi and moi < 3:
+            market_vibe = "competitive (seller's market)"
+        elif moi and moi > 6:
+            market_vibe = "buyer-friendly with lots of options"
+        
+        return f"""Write an exciting market update email blurb for {area}.
 
-Market Data:
-- Closed Sales: {total_closed}
-- Median Sale Price: {fmt_price(median_price)}
-- Average Days on Market: {dom_str}
-- Months of Inventory: {moi_str}
-- Close-to-List Ratio: {ctl_str}
+REAL DATA (use these exact numbers):
+- {total_closed} homes sold in the last {lookback_days} days
+- Median sale price: {fmt_price(median_price)}
+- Average time on market: {dom_str}
+- Inventory level: {moi_str} ({market_vibe})
+- Sale-to-list ratio: {ctl_str}
 
-Write a 2-3 sentence warm, optimistic insight. Highlight what makes this an interesting time for buyers or sellers. Reference at least 2 specific numbers."""
+Write 2-3 sentences that make the recipient excited to learn about their local market. Lead with the most interesting finding. Make the numbers feel human (e.g., "129 families found their home" not "129 closed sales")."""
 
     elif report_type == "closed":
-        return f"""Generate an encouraging insight about recent home sales in {area} over the last {lookback_days} days:
+        return f"""Write an exciting email blurb about recent home sales in {area}.
 
-Sales Data:
-- Homes Sold: {total_closed}
-- Median Sale Price: {fmt_price(median_price)}
-- Average Days to Close: {dom_str}
-- Close-to-List Ratio: {ctl_str}
+REAL DATA (use these exact numbers):
+- {total_closed} homes SOLD in the last {lookback_days} days
+- Median sale price: {fmt_price(median_price)}
+- Average days to close: {dom_str}
+- Buyers paid {ctl_str} of asking price
 
-Write a 2-3 sentence warm insight that celebrates the activity in this market. What does this tell us about buyer confidence and opportunities? Reference specific numbers."""
+Write 2-3 sentences celebrating this sales activity. Make it feel like good news for the market. What does this activity level tell us about buyer confidence?"""
 
     elif report_type in ("new_listings_gallery", "new_listings"):
-        filter_text = f" matching {filter_description}" if filter_description else ""
-        return f"""Generate an encouraging insight about new listings in {area}{filter_text} over the last {lookback_days} days:
+        audience_context = ""
+        if filter_description:
+            audience_context = f"\nAUDIENCE: This is curated for {filter_description} buyers specifically."
+        
+        return f"""Write an exciting email blurb about new listings in {area}.{audience_context}
 
-Listing Data:
-- Fresh Listings: {total_listings}
-- Median Asking Price: {fmt_price(median_price)}
-- Price Range: {fmt_price(min_price)} to {fmt_price(max_price)}
-- Average Days on Market: {dom_str}
+REAL DATA (use these exact numbers):
+- {total_listings} NEW properties just listed in the last {lookback_days} days
+- Median asking price: {fmt_price(median_price)}
+- Price range: {fmt_price(min_price)} to {fmt_price(max_price)}
+- Average days on market: {dom_str}
 
-Write a 2-3 sentence warm insight that excites buyers about these opportunities. Emphasize selection, variety, or value. Reference specific numbers."""
+Write 2-3 sentences that make buyers excited to scroll through these listings. Emphasize freshness and opportunity. If there's a filter (like "First-Time Buyers"), acknowledge they're getting personalized picks."""
+
+    elif report_type == "featured_listings":
+        return f"""Write an exciting email blurb about featured properties in {area}.
+
+REAL DATA:
+- {total_listings} hand-picked premium properties
+- Highest price: {fmt_price(max_price)}
+- These are the standout homes in the area
+
+Write 2-3 sentences that make these properties feel special and worth exploring. These aren't just any listings—they're the best of the best."""
 
     else:
-        # Generic prompt for other report types
-        return f"""Generate an encouraging market insight for {area} based on the last {lookback_days} days:
+        return f"""Write an exciting market email blurb for {area}.
 
-- Total Listings: {total_listings}
-- Median Price: {fmt_price(median_price)}
-- Average Days on Market: {dom_str}
+Data: {total_listings} listings, {fmt_price(median_price)} median, {dom_str} average time on market.
 
-Write a 2-3 sentence warm, optimistic insight about opportunities in this market."""
-
+Write 2-3 sentences that make the reader want to explore the attached report."""
