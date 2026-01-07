@@ -159,6 +159,7 @@ This shows exactly what the API returns vs. what our filters produce.
 4. [Date Filtering Quick Reference](#4-date-filtering-quick-reference)
 5. [Email Content by Report Type](#5-email-content-by-report-type)
 6. [Code Reference](#6-code-reference)
+7. [Display Limits & Caps](#7-display-limits--caps)
 
 ---
 
@@ -438,7 +439,7 @@ Avg DOM: {avg_dom} days
 
 ### 3.6 New Listings Gallery
 
-**Purpose:** Visual 3×3 photo grid of the 9 newest listings.
+**Purpose:** Visual photo gallery of the newest listings.
 
 #### Parameters
 
@@ -453,18 +454,31 @@ Avg DOM: {avg_dom} days
 |--------|--------------|--------------|-----------|
 | **Active** | `list_date` | `list_date >= (today - lookback_days)` | Only NEW listings from period |
 
+#### Display Limits
+
+| Output | Limit | Rationale |
+|--------|-------|-----------|
+| **Email** | 12 listings max | Email client compatibility, load time |
+| **PDF** | 9 listings max | Page layout constraints (3×3 grid) |
+
+> See [Display Limits & Caps](#7-display-limits--caps) for detailed reasoning.
+
 #### Output
 
-- **9 listings** (3×3 grid)
 - Sorted by `list_date` descending (newest first)
 - Each card shows: photo, address, price, beds/baths
+- **Email:** Adaptive layout (3-col, 2-col, or vertical based on count)
+- **PDF:** Fixed 3×3 grid layout
 
 #### Email Metrics
 
+The header metrics show **actual totals** (not capped count):
+
 ```
 📊 Your New Listings Gallery
-- {total_listings} New Listings
-- See the newest properties in {city}
+- {total_listings} New Listings (actual count in market)
+- Median Price: {median_list_price}
+- Starting At: {min_price}
 ```
 
 ---
@@ -614,6 +628,53 @@ Each scheduled report email includes:
 | `open_houses` | `build_open_houses()` |
 
 ---
+
+---
+
+## 7. Display Limits & Caps
+
+Different outputs have different constraints. This section documents the display limits for each medium.
+
+### Email Gallery Limits
+
+| Report Type | Max Listings | Rationale |
+|-------------|--------------|-----------|
+| **New Listings Gallery** | 12 | Email client compatibility, image loading time |
+| **Featured Listings** | 4 | Curated highlight, 2×2 grid layout |
+
+**Why 12 for Email Galleries?**
+- **Email client rendering:** Gmail, Outlook, and Apple Mail all perform better with fewer images
+- **Image load time:** Each listing loads a photo; more than 12 risks timeout
+- **Scroll depth:** Recipients rarely scroll past 12 items
+- **Click-through rate:** Focused selection drives better engagement
+
+### PDF Gallery Limits
+
+| Report Type | Max Listings | Rationale |
+|-------------|--------------|-----------|
+| **New Listings Gallery** | 9 | 3×3 grid on single page |
+| **Featured Listings** | 4 | 2×2 premium display |
+
+**Why 9 for PDF Galleries?**
+- **Page layout:** Single-page 3×3 grid is visually balanced
+- **Print-friendly:** Fits on letter/A4 without scrolling
+- **Photo quality:** Larger photos with 9 listings vs. smaller with more
+
+### Metric Display vs. Display Count
+
+| Field | Shows | Notes |
+|-------|-------|-------|
+| `total_listings` in header | **Actual market count** | E.g., "104 New Listings" |
+| Listings displayed | **Capped count** | E.g., 12 shown in email |
+
+This lets recipients know the full market picture while receiving a curated selection.
+
+### Code References
+
+| File | Cap Location |
+|------|--------------|
+| `apps/worker/src/worker/report_builders.py:709` | `[:12]` slice for email galleries |
+| `apps/worker/src/worker/email/template.py:267` | `[:12]` slice for email rendering |
 
 ---
 

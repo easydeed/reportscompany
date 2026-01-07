@@ -19,16 +19,23 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 AI_INSIGHTS_ENABLED = os.getenv("AI_INSIGHTS_ENABLED", "false").lower() == "true"
 
 # System prompt for generating market insights
-SYSTEM_PROMPT = """You are a professional real estate market analyst. Generate concise, data-driven market insights for email reports.
+SYSTEM_PROMPT = """You are a warm, knowledgeable real estate market advisor helping agents connect with their clients. Generate concise, encouraging market insights for email reports.
+
+Tone & Voice:
+- Warm and optimistic, but grounded in data
+- Speak as a trusted advisor sharing good news and opportunities
+- Highlight positive trends and buyer/seller advantages
+- Be encouraging without being pushy or salesy
 
 Guidelines:
-- Be professional and informative, not salesy
-- Reference specific numbers from the data provided
-- Keep insights to 2-3 sentences maximum (under 50 words)
-- Use terms like "indicates", "suggests", "reflects" rather than making predictions
-- Focus on what the data means for buyers/sellers
+- Reference 2-3 specific numbers from the data to build credibility
+- Keep insights to 2-3 sentences (40-60 words)
+- Frame market conditions positively: "healthy activity", "strong demand", "excellent selection", "competitive pricing"
+- Use action-oriented language: "presents opportunities", "ideal timing", "worth exploring"
+- For slower markets, emphasize negotiating power and selection
+- For hot markets, emphasize urgency and value retention
 - Do not use emojis or exclamation marks
-- Do not start with "This" - vary your sentence structure
+- Vary sentence structure - never start with "This" or "The market"
 """
 
 
@@ -133,44 +140,47 @@ def _build_prompt(
     moi_str = f"{moi:.1f}" if moi else "N/A"
     
     if report_type == "market_snapshot":
-        return f"""Generate a market insight for {area} based on the last {lookback_days} days:
+        return f"""Generate an encouraging market insight for {area} based on the last {lookback_days} days:
 
+Market Data:
 - Closed Sales: {total_closed}
 - Median Sale Price: {fmt_price(median_price)}
 - Average Days on Market: {dom_str}
 - Months of Inventory: {moi_str}
 - Close-to-List Ratio: {ctl_str}
 
-Write a 2-3 sentence professional insight about what this data suggests about the {area} market."""
+Write a 2-3 sentence warm, optimistic insight. Highlight what makes this an interesting time for buyers or sellers. Reference at least 2 specific numbers."""
 
     elif report_type == "closed":
-        return f"""Generate a market insight about recent sales in {area} over the last {lookback_days} days:
+        return f"""Generate an encouraging insight about recent home sales in {area} over the last {lookback_days} days:
 
+Sales Data:
 - Homes Sold: {total_closed}
 - Median Sale Price: {fmt_price(median_price)}
 - Average Days to Close: {dom_str}
 - Close-to-List Ratio: {ctl_str}
 
-Write a 2-3 sentence professional insight about the recent sales activity."""
+Write a 2-3 sentence warm insight that celebrates the activity in this market. What does this tell us about buyer confidence and opportunities? Reference specific numbers."""
 
     elif report_type in ("new_listings_gallery", "new_listings"):
-        filter_text = f" ({filter_description})" if filter_description else ""
-        return f"""Generate a market insight about new listings in {area}{filter_text} over the last {lookback_days} days:
+        filter_text = f" matching {filter_description}" if filter_description else ""
+        return f"""Generate an encouraging insight about new listings in {area}{filter_text} over the last {lookback_days} days:
 
-- New Listings: {total_listings}
+Listing Data:
+- Fresh Listings: {total_listings}
 - Median Asking Price: {fmt_price(median_price)}
 - Price Range: {fmt_price(min_price)} to {fmt_price(max_price)}
 - Average Days on Market: {dom_str}
 
-Write a 2-3 sentence professional insight about these new listing opportunities."""
+Write a 2-3 sentence warm insight that excites buyers about these opportunities. Emphasize selection, variety, or value. Reference specific numbers."""
 
     else:
         # Generic prompt for other report types
-        return f"""Generate a market insight for {area} based on the last {lookback_days} days:
+        return f"""Generate an encouraging market insight for {area} based on the last {lookback_days} days:
 
 - Total Listings: {total_listings}
 - Median Price: {fmt_price(median_price)}
 - Average Days on Market: {dom_str}
 
-Write a 2-3 sentence professional market insight."""
+Write a 2-3 sentence warm, optimistic insight about opportunities in this market."""
 
