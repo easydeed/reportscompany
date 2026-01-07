@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import {
   LayoutDashboard,
   Users,
@@ -9,7 +10,6 @@ import {
   FileText,
   Mail,
   Settings,
-  Shield,
   LogOut,
   Calendar,
   Activity,
@@ -71,15 +71,17 @@ export default async function AdminLayout({
       <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shadow-sm">
         {/* Logo/Brand */}
         <div className="p-6 border-b border-slate-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <Shield className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="font-bold text-lg text-slate-900">TrendyReports</h1>
-              <p className="text-xs text-slate-500">Admin Console</p>
-            </div>
-          </div>
+          <Link href="/admin" className="flex items-center gap-3">
+            <Image
+              src="/logo.svg"
+              alt="TrendyReports"
+              width={140}
+              height={40}
+              className="h-8 w-auto"
+              priority
+            />
+          </Link>
+          <p className="text-xs text-slate-500 mt-1 ml-1">Admin Console</p>
         </div>
 
         {/* Navigation */}
