@@ -33,10 +33,11 @@ What Makes Great Insights:
 - Create urgency without pressure: "these won't last long" vs "act now"
 - Connect data to real life: what does this mean for someone buying/selling?
 
-Structure (2-3 sentences, 40-60 words):
-1. Hook: The most exciting finding
-2. Context: What it means for the reader
-3. Nudge: Gentle encouragement to explore
+Structure (3-4 sentences, 60-90 words):
+1. Hook: Lead with the most exciting finding
+2. Data: Reference 2-3 specific numbers that matter
+3. Context: What this means for someone buying or selling
+4. Nudge: Gentle encouragement to explore or reach out
 
 Tone Examples:
 - "Great news for buyers in Irvine—129 homes sold last month at a median of $1.6M, and with 101 days average on market, there's time to find the perfect fit."
@@ -101,7 +102,7 @@ def generate_insight(
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": user_prompt},
                 ],
-                "max_tokens": 120,
+                "max_tokens": 180,  # V13: Longer blurbs (3-4 sentences)
                 "temperature": 0.8,  # Slightly more creative
             },
             timeout=15.0,
@@ -181,7 +182,7 @@ REAL DATA (use these exact numbers):
 - Inventory level: {moi_str} ({market_vibe})
 - Sale-to-list ratio: {ctl_str}
 
-Write 2-3 sentences that make the recipient excited to learn about their local market. Lead with the most interesting finding. Make the numbers feel human (e.g., "129 families found their home" not "129 closed sales")."""
+Write 3-4 sentences that make the recipient excited to learn about their local market. Lead with the most interesting finding, then explain what it means for them. Make the numbers feel human (e.g., "129 families found their home" not "129 closed sales"). End with a gentle nudge to explore or reach out."""
 
     elif report_type == "closed":
         return f"""Write an exciting email blurb about recent home sales in {area}.
@@ -192,7 +193,7 @@ REAL DATA (use these exact numbers):
 - Average days to close: {dom_str}
 - Buyers paid {ctl_str} of asking price
 
-Write 2-3 sentences celebrating this sales activity. Make it feel like good news for the market. What does this activity level tell us about buyer confidence?"""
+Write 3-4 sentences celebrating this sales activity. What does this tell us about buyer confidence? How does the sale-to-list ratio reflect the market? End with encouragement to explore or discuss what this means for them."""
 
     elif report_type in ("new_listings_gallery", "new_listings"):
         audience_context = ""
@@ -207,7 +208,7 @@ REAL DATA (use these exact numbers):
 - Price range: {fmt_price(min_price)} to {fmt_price(max_price)}
 - Average days on market: {dom_str}
 
-Write 2-3 sentences that make buyers excited to scroll through these listings. Emphasize freshness and opportunity. If there's a filter (like "First-Time Buyers"), acknowledge they're getting personalized picks."""
+Write 3-4 sentences that make buyers excited to scroll through these listings. Emphasize freshness, variety, and opportunity. If there's a filter (like "First-Time Buyers"), acknowledge they're getting personalized picks just for them. End with encouragement to reach out about any that catch their eye."""
 
     elif report_type == "featured_listings":
         return f"""Write an exciting email blurb about featured properties in {area}.
@@ -217,11 +218,11 @@ REAL DATA:
 - Highest price: {fmt_price(max_price)}
 - These are the standout homes in the area
 
-Write 2-3 sentences that make these properties feel special and worth exploring. These aren't just any listings—they're the best of the best."""
+Write 3-4 sentences that make these properties feel special and worth exploring. These aren't just any listings—they're hand-picked standouts. Describe what makes featured properties worth attention and encourage them to reach out for private showings."""
 
     else:
         return f"""Write an exciting market email blurb for {area}.
 
 Data: {total_listings} listings, {fmt_price(median_price)} median, {dom_str} average time on market.
 
-Write 2-3 sentences that make the reader want to explore the attached report."""
+Write 3-4 sentences that make the reader want to explore the attached report. Reference the data, explain what it means, and encourage them to reach out with questions."""
