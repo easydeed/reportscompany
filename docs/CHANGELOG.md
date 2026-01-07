@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- **AI-Powered Email Insights** - Emails now generate contextual, personalized market commentary using GPT-4o-mini
+
 ### Changed
 - Admin login page updated to light theme (matches admin dashboard)
 - Admin login page and dashboard now use the actual TrendyReports logo
