@@ -16,6 +16,7 @@ httpx = "^0.27.2"
 boto3 = "^1.35.20"
 sentry-sdk = "^2.13.0"
 psycopg = {version = "^3.2.1", extras = ["binary"]}
+jinja2 = "^3.1.2"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.6.9"
