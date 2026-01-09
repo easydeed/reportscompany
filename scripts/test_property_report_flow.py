@@ -42,8 +42,8 @@ TEST_ADDRESS = "714 Vine St"
 TEST_CITY_STATE_ZIP = "Anaheim, CA 92805"
 
 # API URLs
-STAGING_API_URL = "https://api-staging.trendyreports.io"
-LOCAL_API_URL = "http://localhost:8000"
+STAGING_API_URL = "https://reportscompany.onrender.com"
+LOCAL_API_URL = "http://localhost:10000"
 
 # Colors for output
 class Colors:

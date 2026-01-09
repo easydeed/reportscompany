@@ -1170,7 +1170,7 @@ def get_public_property_report(short_code: str):
                 a.contact_line1,
                 a.contact_line2,
                 a.website_url,
-                ab.company_name,
+                ab.brand_display_name,
                 ab.logo_url as affiliate_logo,
                 ab.rep_photo_url as affiliate_photo
             FROM accounts a
