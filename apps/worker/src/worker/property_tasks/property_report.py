@@ -135,12 +135,12 @@ def fetch_report_with_joins(report_id: str) -> dict:
                     pr.qr_code_url,
                     
                     -- User/Agent info
-                    u.name as agent_name,
+                    COALESCE(u.first_name || ' ' || u.last_name, u.email) as agent_name,
                     u.email as agent_email,
                     u.phone as agent_phone,
-                    u.photo_url as agent_photo_url,
-                    u.title as agent_title,
-                    u.license_number as agent_license,
+                    u.avatar_url as agent_photo_url,
+                    u.company_name as agent_company,
+                    '' as agent_license,
                     
                     -- Account info
                     a.name as account_name,
@@ -185,7 +185,7 @@ def fetch_report_with_joins(report_id: str) -> dict:
                 'owner_name', 'legal_description', 'property_type', 'sitex_data',
                 'comparables', 'short_code', 'qr_code_url',
                 'agent_name', 'agent_email', 'agent_phone', 'agent_photo_url',
-                'agent_title', 'agent_license',
+                'agent_company', 'agent_license',
                 'account_name', 'account_type', 'sponsor_account_id',
                 'brand_display_name', 'brand_logo_url', 'brand_primary_color',
                 'brand_accent_color', 'brand_rep_photo_url', 'brand_contact_line1',
@@ -224,8 +224,9 @@ def fetch_report_with_joins(report_id: str) -> dict:
                     'email': data['agent_email'] or '',
                     'phone': data['agent_phone'] or '',
                     'photo_url': data['agent_photo_url'] or data['brand_rep_photo_url'],
-                    'title': data['agent_title'] or 'Real Estate Professional',
+                    'title': 'Real Estate Professional',
                     'license_number': data['agent_license'],
+                    'company': data['agent_company'] or '',
                     'company_name': data['brand_display_name'] or data['account_name'],
                     'logo_url': data['brand_logo_url'],
                 },
