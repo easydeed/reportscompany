@@ -24,7 +24,7 @@ from ..services.sitex import (
     lookup_property,
     lookup_property_by_apn,
 )
-from ..worker_client import enqueue_generate_report
+from ..worker_client import enqueue_property_report
 from ..services.qr_service import generate_qr_code
 
 logger = logging.getLogger(__name__)
@@ -539,22 +539,10 @@ async def create_property_report(payload: PropertyReportCreate, request: Request
         
         conn.commit()
         
-        # 5. Queue PDF generation
+        # 5. Queue PDF generation via Celery
         try:
-            enqueue_generate_report(
-                run_id=report_id,
-                account_id=account_id,
-                report_type=f"property_{payload.report_type}",
-                params={
-                    "property_address": prop_address,
-                    "property_city": prop_city,
-                    "property_state": prop_state,
-                    "property_zip": prop_zip,
-                    "theme": payload.theme,
-                    "accent_color": payload.accent_color,
-                    "language": payload.language,
-                }
-            )
+            enqueue_property_report(report_id)
+            logger.info(f"Queued property report PDF generation: {report_id}")
         except Exception as e:
             logger.error(f"Failed to enqueue property report: {e}")
             # Update status to failed
