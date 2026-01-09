@@ -27,6 +27,8 @@ from .routes.upload import router as upload_router
 from .routes.branding_tools import router as branding_tools_router
 from .routes.users import router as users_router
 from .routes.onboarding import router as onboarding_router
+from .routes.leads import router as leads_router
+from .routes.property import router as property_router
 
 app = FastAPI(
     title="Market Reports API",
@@ -76,6 +78,8 @@ app.include_router(upload_router)
 app.include_router(branding_tools_router)
 app.include_router(users_router)
 app.include_router(onboarding_router)
+app.include_router(leads_router)
+app.include_router(property_router)
 
 # Root
 @app.get("/")

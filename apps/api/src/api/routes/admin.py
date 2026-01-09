@@ -2278,3 +2278,784 @@ def get_revenue_stats(_admin: dict = Depends(get_admin_user)):
             "growth": growth,
         }
 
+
+# ==================== Property Reports Admin ====================
+
+@router.get("/property-reports")
+def list_admin_property_reports(
+    status: Optional[str] = None,
+    account: Optional[str] = None,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    limit: int = Query(100, ge=1, le=500),
+    _admin: dict = Depends(get_admin_user)
+):
+    """
+    List all property reports across all accounts.
+    
+    Args:
+        status: Filter by status (draft, processing, complete, failed)
+        account: Filter by account name (partial match)
+        from_date: Filter by created date (YYYY-MM-DD)
+        to_date: Filter by created date (YYYY-MM-DD)
+        limit: Maximum number of results
+    
+    Returns:
+        Array of property reports with account and user info
+    """
+    query = """
+        SELECT 
+            pr.id::text,
+            pr.account_id::text,
+            a.name as account_name,
+            u.email as user_email,
+            pr.report_type,
+            pr.status,
+            pr.property_address,
+            pr.property_city,
+            pr.property_state,
+            pr.short_code,
+            pr.pdf_url,
+            pr.view_count,
+            pr.created_at
+        FROM property_reports pr
+        JOIN accounts a ON pr.account_id = a.id
+        LEFT JOIN users u ON pr.user_id = u.id
+        WHERE 1=1
+    """
+    params = []
+    
+    if status:
+        query += " AND pr.status = %s"
+        params.append(status)
+    
+    if account:
+        query += " AND a.name ILIKE %s"
+        params.append(f"%{account}%")
+    
+    if from_date:
+        query += " AND pr.created_at >= %s"
+        params.append(from_date)
+    
+    if to_date:
+        query += " AND pr.created_at <= %s"
+        params.append(to_date)
+    
+    query += " ORDER BY pr.created_at DESC LIMIT %s"
+    params.append(limit)
+    
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        cur.execute(query, params)
+        
+        reports = []
+        for row in cur.fetchall():
+            reports.append({
+                "id": row[0],
+                "account_id": row[1],
+                "account_name": row[2],
+                "user_email": row[3],
+                "report_type": row[4],
+                "status": row[5],
+                "property_address": row[6],
+                "property_city": row[7],
+                "property_state": row[8],
+                "short_code": row[9],
+                "pdf_url": row[10],
+                "view_count": row[11],
+                "created_at": row[12].isoformat() if row[12] else None,
+            })
+        
+        return {"reports": reports, "count": len(reports)}
+
+
+@router.get("/property-reports/{report_id}")
+def get_admin_property_report(
+    report_id: str,
+    _admin: dict = Depends(get_admin_user)
+):
+    """
+    Get detailed property report information including associated leads.
+    """
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        
+        cur.execute("""
+            SELECT 
+                pr.id::text,
+                pr.account_id::text,
+                a.name as account_name,
+                pr.user_id::text,
+                u.email as user_email,
+                COALESCE(u.first_name || ' ' || u.last_name, u.email) as user_name,
+                pr.report_type,
+                pr.status,
+                pr.theme,
+                pr.accent_color,
+                pr.language,
+                pr.property_address,
+                pr.property_city,
+                pr.property_state,
+                pr.property_zip,
+                pr.property_county,
+                pr.apn,
+                pr.owner_name,
+                pr.legal_description,
+                pr.property_type,
+                pr.sitex_data,
+                pr.comparables,
+                pr.short_code,
+                pr.qr_code_url,
+                pr.pdf_url,
+                pr.view_count,
+                pr.unique_visitors,
+                pr.last_viewed_at,
+                pr.is_active,
+                pr.expires_at,
+                pr.max_leads,
+                pr.access_code,
+                pr.created_at,
+                pr.updated_at
+            FROM property_reports pr
+            JOIN accounts a ON pr.account_id = a.id
+            LEFT JOIN users u ON pr.user_id = u.id
+            WHERE pr.id = %s::uuid
+        """, (report_id,))
+        
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Property report not found")
+        
+        report = {
+            "id": row[0],
+            "account_id": row[1],
+            "account_name": row[2],
+            "user_id": row[3],
+            "user_email": row[4],
+            "user_name": row[5],
+            "report_type": row[6],
+            "status": row[7],
+            "theme": row[8],
+            "accent_color": row[9],
+            "language": row[10],
+            "property_address": row[11],
+            "property_city": row[12],
+            "property_state": row[13],
+            "property_zip": row[14],
+            "property_county": row[15],
+            "apn": row[16],
+            "owner_name": row[17],
+            "legal_description": row[18],
+            "property_type": row[19],
+            "sitex_data": row[20],
+            "comparables": row[21],
+            "short_code": row[22],
+            "qr_code_url": row[23],
+            "pdf_url": row[24],
+            "view_count": row[25],
+            "unique_visitors": row[26],
+            "last_viewed_at": row[27].isoformat() if row[27] else None,
+            "is_active": row[28],
+            "expires_at": row[29].isoformat() if row[29] else None,
+            "max_leads": row[30],
+            "access_code": row[31],
+            "created_at": row[32].isoformat() if row[32] else None,
+            "updated_at": row[33].isoformat() if row[33] else None,
+        }
+        
+        # Get associated leads
+        cur.execute("""
+            SELECT 
+                id::text,
+                name,
+                email,
+                phone,
+                status,
+                source,
+                created_at
+            FROM leads
+            WHERE property_report_id = %s::uuid
+            ORDER BY created_at DESC
+        """, (report_id,))
+        
+        leads = []
+        for lead_row in cur.fetchall():
+            leads.append({
+                "id": lead_row[0],
+                "name": lead_row[1],
+                "email": lead_row[2],
+                "phone": lead_row[3],
+                "status": lead_row[4],
+                "source": lead_row[5],
+                "created_at": lead_row[6].isoformat() if lead_row[6] else None,
+            })
+        
+        report["leads"] = leads
+        return report
+
+
+@router.delete("/property-reports/{report_id}")
+def delete_admin_property_report(
+    report_id: str,
+    _admin: dict = Depends(get_admin_user)
+):
+    """Delete a property report (admin action)."""
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        
+        cur.execute("""
+            DELETE FROM property_reports
+            WHERE id = %s::uuid
+            RETURNING id::text
+        """, (report_id,))
+        
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Property report not found")
+        
+        conn.commit()
+        logger.info(f"Admin {_admin.get('email')} deleted property report {report_id}")
+        
+        return {"ok": True, "deleted_id": row[0]}
+
+
+@router.post("/property-reports/{report_id}/retry")
+def retry_property_report(
+    report_id: str,
+    _admin: dict = Depends(get_admin_user)
+):
+    """Re-queue a failed property report for PDF generation."""
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        
+        # Check report exists and is failed
+        cur.execute("""
+            SELECT status FROM property_reports
+            WHERE id = %s::uuid
+        """, (report_id,))
+        
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Property report not found")
+        
+        # Update status to processing
+        cur.execute("""
+            UPDATE property_reports
+            SET status = 'processing', updated_at = NOW()
+            WHERE id = %s::uuid
+        """, (report_id,))
+        
+        conn.commit()
+        
+        # Queue the task
+        try:
+            from celery import current_app
+            current_app.send_task("generate_property_report", args=[report_id])
+            logger.info(f"Admin {_admin.get('email')} retried property report {report_id}")
+        except Exception as e:
+            logger.error(f"Failed to queue property report task: {e}")
+        
+        return {"ok": True, "report_id": report_id, "status": "processing"}
+
+
+@router.get("/stats/property-reports")
+def get_property_report_stats(_admin: dict = Depends(get_admin_user)):
+    """Get property report statistics."""
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        
+        cur.execute("""
+            SELECT 
+                COUNT(*) as total,
+                COUNT(*) FILTER (WHERE created_at >= date_trunc('month', CURRENT_DATE)) as this_month,
+                COUNT(*) FILTER (WHERE status = 'failed') as failed,
+                COUNT(*) FILTER (WHERE status = 'processing') as processing
+            FROM property_reports
+        """)
+        
+        row = cur.fetchone()
+        return {
+            "total": row[0] or 0,
+            "this_month": row[1] or 0,
+            "failed": row[2] or 0,
+            "processing": row[3] or 0,
+        }
+
+
+# ==================== Leads Admin ====================
+
+@router.get("/leads")
+def list_admin_leads(
+    status: Optional[str] = None,
+    account: Optional[str] = None,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    limit: int = Query(100, ge=1, le=500),
+    _admin: dict = Depends(get_admin_user)
+):
+    """
+    List all leads across all accounts.
+    """
+    query = """
+        SELECT 
+            l.id::text,
+            l.account_id::text,
+            a.name as account_name,
+            l.property_report_id::text,
+            pr.property_address,
+            l.name,
+            l.email,
+            l.phone,
+            l.message,
+            l.source,
+            l.status,
+            l.consent_given,
+            l.sms_sent_at,
+            l.email_sent_at,
+            l.created_at
+        FROM leads l
+        JOIN accounts a ON l.account_id = a.id
+        LEFT JOIN property_reports pr ON l.property_report_id = pr.id
+        WHERE 1=1
+    """
+    params = []
+    
+    if status:
+        query += " AND l.status = %s"
+        params.append(status)
+    
+    if account:
+        query += " AND a.name ILIKE %s"
+        params.append(f"%{account}%")
+    
+    if from_date:
+        query += " AND l.created_at >= %s"
+        params.append(from_date)
+    
+    if to_date:
+        query += " AND l.created_at <= %s"
+        params.append(to_date)
+    
+    query += " ORDER BY l.created_at DESC LIMIT %s"
+    params.append(limit)
+    
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        cur.execute(query, params)
+        
+        leads = []
+        for row in cur.fetchall():
+            leads.append({
+                "id": row[0],
+                "account_id": row[1],
+                "account_name": row[2],
+                "property_report_id": row[3],
+                "property_address": row[4],
+                "name": row[5],
+                "email": row[6],
+                "phone": row[7],
+                "message": row[8],
+                "source": row[9],
+                "status": row[10],
+                "consent_given": row[11],
+                "sms_sent_at": row[12].isoformat() if row[12] else None,
+                "email_sent_at": row[13].isoformat() if row[13] else None,
+                "created_at": row[14].isoformat() if row[14] else None,
+            })
+        
+        return {"leads": leads, "count": len(leads)}
+
+
+@router.get("/leads/export")
+def export_admin_leads(_admin: dict = Depends(get_admin_user)):
+    """Export all leads as CSV."""
+    from fastapi.responses import StreamingResponse
+    import io
+    import csv
+    
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        
+        cur.execute("""
+            SELECT 
+                l.id::text,
+                a.name as account_name,
+                pr.property_address,
+                l.name,
+                l.email,
+                l.phone,
+                l.message,
+                l.source,
+                l.status,
+                l.consent_given,
+                l.created_at
+            FROM leads l
+            JOIN accounts a ON l.account_id = a.id
+            LEFT JOIN property_reports pr ON l.property_report_id = pr.id
+            ORDER BY l.created_at DESC
+        """)
+        
+        rows = cur.fetchall()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "ID", "Account", "Property", "Name", "Email", "Phone",
+        "Message", "Source", "Status", "Consent", "Created"
+    ])
+    
+    for row in rows:
+        writer.writerow([
+            row[0], row[1], row[2] or "", row[3], row[4], row[5] or "",
+            row[6] or "", row[7], row[8], row[9],
+            row[10].isoformat() if row[10] else ""
+        ])
+    
+    output.seek(0)
+    
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=leads-export.csv"}
+    )
+
+
+@router.delete("/leads/{lead_id}")
+def delete_admin_lead(
+    lead_id: str,
+    _admin: dict = Depends(get_admin_user)
+):
+    """Delete a lead (admin action)."""
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        
+        cur.execute("""
+            DELETE FROM leads
+            WHERE id = %s::uuid
+            RETURNING id::text
+        """, (lead_id,))
+        
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Lead not found")
+        
+        conn.commit()
+        logger.info(f"Admin {_admin.get('email')} deleted lead {lead_id}")
+        
+        return {"ok": True, "deleted_id": row[0]}
+
+
+@router.get("/stats/leads")
+def get_lead_stats(_admin: dict = Depends(get_admin_user)):
+    """Get lead statistics."""
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        
+        cur.execute("""
+            SELECT 
+                COUNT(*) as total,
+                COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days') as new_this_week,
+                COUNT(*) FILTER (WHERE status = 'contacted') as contacted,
+                COUNT(*) FILTER (WHERE status = 'converted') as converted
+            FROM leads
+        """)
+        
+        row = cur.fetchone()
+        total = row[0] or 0
+        converted = row[3] or 0
+        conversion_rate = (converted / total * 100) if total > 0 else 0
+        
+        return {
+            "total": total,
+            "new_this_week": row[1] or 0,
+            "contacted": row[2] or 0,
+            "converted": converted,
+            "conversion_rate": round(conversion_rate, 1),
+        }
+
+
+# ==================== SMS Admin ====================
+
+@router.get("/sms/credits")
+def get_sms_credits(_admin: dict = Depends(get_admin_user)):
+    """Get SMS credit balances for all accounts."""
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        
+        cur.execute("""
+            SELECT 
+                a.id::text,
+                a.name,
+                a.sms_credits,
+                COALESCE(p.sms_credits_per_month, 0) as sms_credits_per_month,
+                COALESCE(p.lead_capture_enabled, false) as lead_capture_enabled
+            FROM accounts a
+            LEFT JOIN plans p ON a.plan_slug = p.plan_slug
+            WHERE a.sms_credits > 0 OR p.lead_capture_enabled = true
+            ORDER BY a.sms_credits DESC
+        """)
+        
+        accounts = []
+        for row in cur.fetchall():
+            accounts.append({
+                "account_id": row[0],
+                "account_name": row[1],
+                "sms_credits": row[2] or 0,
+                "sms_credits_per_month": row[3],
+                "lead_capture_enabled": row[4],
+            })
+        
+        return {"accounts": accounts, "count": len(accounts)}
+
+
+class AdjustCreditsRequest(BaseModel):
+    """Request body for adjusting SMS credits."""
+    account_id: str
+    adjustment: int
+
+
+@router.post("/sms/credits")
+def adjust_sms_credits(
+    body: AdjustCreditsRequest,
+    _admin: dict = Depends(get_admin_user)
+):
+    """Adjust SMS credits for an account."""
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        
+        cur.execute("""
+            UPDATE accounts
+            SET sms_credits = GREATEST(0, sms_credits + %s), updated_at = NOW()
+            WHERE id = %s::uuid
+            RETURNING id::text, name, sms_credits
+        """, (body.adjustment, body.account_id))
+        
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Account not found")
+        
+        conn.commit()
+        logger.info(f"Admin {_admin.get('email')} adjusted SMS credits for {row[1]} by {body.adjustment}")
+        
+        return {
+            "ok": True,
+            "account_id": row[0],
+            "account_name": row[1],
+            "new_balance": row[2],
+        }
+
+
+@router.get("/sms/logs")
+def get_sms_logs(
+    limit: int = Query(50, ge=1, le=500),
+    _admin: dict = Depends(get_admin_user)
+):
+    """Get SMS delivery logs."""
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        
+        # Check if sms_logs table exists
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_name = 'sms_logs'
+            )
+        """)
+        
+        if not cur.fetchone()[0]:
+            return {"logs": [], "count": 0}
+        
+        cur.execute("""
+            SELECT 
+                sl.id::text,
+                sl.account_id::text,
+                a.name as account_name,
+                sl.to_phone,
+                sl.from_phone,
+                sl.message,
+                sl.status,
+                sl.error,
+                sl.created_at
+            FROM sms_logs sl
+            JOIN accounts a ON sl.account_id = a.id
+            ORDER BY sl.created_at DESC
+            LIMIT %s
+        """, (limit,))
+        
+        logs = []
+        for row in cur.fetchall():
+            logs.append({
+                "id": row[0],
+                "account_id": row[1],
+                "account_name": row[2],
+                "to_phone": row[3],
+                "from_phone": row[4],
+                "message": row[5],
+                "status": row[6],
+                "error": row[7],
+                "created_at": row[8].isoformat() if row[8] else None,
+            })
+        
+        return {"logs": logs, "count": len(logs)}
+
+
+# ==================== Blocked IPs ====================
+
+
+class BlockIPRequest(BaseModel):
+    """Request to block an IP address"""
+    ip_address: str
+    reason: Optional[str] = None
+    expires_at: Optional[str] = None
+
+
+@router.get("/blocked-ips")
+def get_blocked_ips(
+    include_expired: bool = Query(False),
+    _admin: dict = Depends(get_admin_user)
+):
+    """Get all blocked IP addresses."""
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        
+        # Base query
+        if include_expired:
+            where_clause = "1=1"
+        else:
+            where_clause = "(bi.expires_at IS NULL OR bi.expires_at > NOW())"
+        
+        cur.execute(f"""
+            SELECT 
+                bi.id::text,
+                bi.ip_address,
+                bi.reason,
+                u.email as blocked_by_email,
+                bi.created_at,
+                bi.expires_at
+            FROM blocked_ips bi
+            LEFT JOIN users u ON bi.blocked_by = u.id
+            WHERE {where_clause}
+            ORDER BY bi.created_at DESC
+        """)
+        
+        blocked_ips = []
+        for row in cur.fetchall():
+            blocked_ips.append({
+                "id": row[0],
+                "ip_address": row[1],
+                "reason": row[2],
+                "blocked_by_email": row[3],
+                "created_at": row[4].isoformat() if row[4] else None,
+                "expires_at": row[5].isoformat() if row[5] else None,
+            })
+        
+        return {"blocked_ips": blocked_ips, "count": len(blocked_ips)}
+
+
+@router.post("/blocked-ips")
+def block_ip(
+    payload: BlockIPRequest,
+    _admin: dict = Depends(get_admin_user)
+):
+    """Block an IP address."""
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        
+        # Check if IP already blocked
+        cur.execute("""
+            SELECT id FROM blocked_ips 
+            WHERE ip_address = %s
+            AND (expires_at IS NULL OR expires_at > NOW())
+        """, (payload.ip_address,))
+        
+        if cur.fetchone():
+            raise HTTPException(
+                status_code=409,
+                detail="IP address is already blocked"
+            )
+        
+        # Insert new block
+        cur.execute("""
+            INSERT INTO blocked_ips (ip_address, reason, blocked_by, expires_at)
+            VALUES (%s, %s, %s::uuid, %s::timestamptz)
+            RETURNING id::text, created_at
+        """, (
+            payload.ip_address,
+            payload.reason,
+            _admin.get("user_id"),
+            payload.expires_at,
+        ))
+        
+        row = cur.fetchone()
+        conn.commit()
+        
+        logger.info(f"IP {payload.ip_address} blocked by admin {_admin.get('email')}")
+        
+        return {
+            "ok": True,
+            "id": row[0],
+            "ip_address": payload.ip_address,
+            "created_at": row[1].isoformat() if row[1] else None,
+        }
+
+
+@router.delete("/blocked-ips/{block_id}")
+def unblock_ip(
+    block_id: str,
+    _admin: dict = Depends(get_admin_user)
+):
+    """Remove an IP from the block list."""
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        
+        cur.execute("""
+            DELETE FROM blocked_ips
+            WHERE id = %s::uuid
+            RETURNING ip_address
+        """, (block_id,))
+        
+        row = cur.fetchone()
+        
+        if not row:
+            raise HTTPException(status_code=404, detail="Block record not found")
+        
+        conn.commit()
+        
+        logger.info(f"IP {row[0]} unblocked by admin {_admin.get('email')}")
+        
+        return {"ok": True, "ip_address": row[0]}
+
+
+@router.post("/blocked-ips/cleanup")
+def cleanup_expired_blocks(
+    _admin: dict = Depends(get_admin_user)
+):
+    """Remove expired IP blocks and old rate limit records."""
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        
+        # Delete expired blocked IPs
+        cur.execute("""
+            DELETE FROM blocked_ips
+            WHERE expires_at IS NOT NULL AND expires_at < NOW()
+            RETURNING id
+        """)
+        expired_blocks = len(cur.fetchall())
+        
+        # Delete old rate limit records (older than 24 hours)
+        cur.execute("""
+            DELETE FROM lead_rate_limits
+            WHERE submitted_at < NOW() - INTERVAL '24 hours'
+            RETURNING id
+        """)
+        old_rate_limits = len(cur.fetchall())
+        
+        conn.commit()
+        
+        logger.info(f"Cleanup: removed {expired_blocks} expired blocks, {old_rate_limits} old rate limits")
+        
+        return {
+            "ok": True,
+            "expired_blocks_removed": expired_blocks,
+            "rate_limits_removed": old_rate_limits,
+        }

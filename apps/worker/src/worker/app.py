@@ -52,4 +52,5 @@ celery.conf.update(**config_updates)
 
 # Import tasks to register them with Celery
 from . import tasks  # noqa
+from .tasks import property_report  # noqa - property report generation tasks
 

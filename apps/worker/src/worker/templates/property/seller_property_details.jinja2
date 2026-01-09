@@ -1,0 +1,345 @@
+{#
+    Seller Report - Property Details Page
+    Converted from: application/views/reports/english/seller/pages/5.php
+
+    Required variables:
+    - property.address          : Full site address
+    - property.street           : Street address
+    - property.city             : City name
+    - property.state            : State abbreviation
+    - property.zip              : ZIP code
+    - property.county           : County name
+    - property.apn              : Assessor's Parcel Number
+    - property.owner_name       : Primary owner name
+    - property.secondary_owner  : Secondary owner name (optional)
+    - property.legal_description: Brief legal description
+    - property.mailing_address  : Mailing address (optional)
+    - property.census_tract     : Census tract (optional)
+    - property.housing_tract    : Housing tract number (optional)
+    - property.lot_number       : Lot number (optional)
+    - property.page_grid        : Page grid / TBM Grid (optional)
+
+    Property characteristics:
+    - property.bedrooms         : Number of bedrooms
+    - property.bathrooms        : Number of bathrooms
+    - property.sqft             : Square footage
+    - property.lot_size         : Lot size
+    - property.year_built       : Year built
+    - property.garage           : Garage car capacity (optional)
+    - property.fireplace        : Fireplace info (optional)
+    - property.pool             : Pool/Spa info (optional)
+    - property.total_rooms      : Total rooms (optional)
+    - property.num_units        : Number of units (optional)
+    - property.zoning           : Zoning info (optional)
+    - property.property_type    : Property type (optional)
+    - property.use_code         : Use code (optional)
+
+    Tax/Assessment info:
+    - property.assessed_value   : Assessed value (optional)
+    - property.tax_amount       : Tax amount (optional)
+    - property.land_value       : Land value (optional)
+    - property.improvement_value: Improvement value (optional)
+    - property.percent_improved : Percent improved (optional)
+    - property.tax_status       : Tax status (optional)
+    - property.tax_rate_area    : Tax rate area (optional)
+    - property.tax_year         : Tax year (optional)
+
+    Theme:
+    - theme_color               : Hex color for theme accents (default: #0d294b)
+#}
+
+{% extends "seller_base.jinja2" %}
+
+{% block title %}Property Details{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .page5 {
+        padding: 45px 50px;
+    }
+
+    .page5 header {
+        text-align: left;
+        margin-bottom: 25px;
+    }
+
+    .page5 header h2 {
+        font-size: 28px;
+        margin-bottom: 5px;
+        color: {{ theme_color | default('#0d294b') }};
+    }
+
+    .page5 header p {
+        color: #666;
+        font-size: 14px;
+    }
+
+    .page5 .table-wrapper {
+        margin-bottom: 25px;
+    }
+
+    .page5 .table-wrapper h2 {
+        font-size: 16px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid {{ theme_color | default('#0d294b') }};
+    }
+
+    .page5 .table-row {
+        padding: 6px 0;
+    }
+
+    .page5 .table-row p {
+        font-size: 13px;
+    }
+
+    .page5 .table-row .col-xs-4,
+    .page5 .table-row .col-xs-6,
+    .page5 .table-row .col-xs-12 {
+        padding: 0 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="section page5">
+
+        <header>
+            <h2 class="underline title-bold">Prospective Property</h2>
+            <p>Overview of your property</p>
+        </header>
+
+        {# Owner, Address & Legal Description #}
+        <div class="table-wrapper">
+            <h2>OWNER, ADDRESS & LEGAL DESCRIPTION</h2>
+
+            <div class="table-row">
+                <div class="row">
+                    <div class="col-xs-12">
+                        <p>Primary Owner: {{ property.owner_name | default('N/A') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            {% if property.secondary_owner %}
+            <div class="table-row">
+                <div class="row">
+                    <div class="col-xs-12">
+                        <p>Secondary Owner: {{ property.secondary_owner }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="table-row">
+                <div class="row">
+                    <div class="col-xs-12">
+                        <p>Site Address: {{ property.street }}, {{ property.city }}, {{ property.state }} {{ property.zip }}</p>
+                    </div>
+                </div>
+            </div>
+
+            {% if property.mailing_address %}
+            <div class="table-row">
+                <div class="row">
+                    <div class="col-xs-12">
+                        <p>Mailing Address: {{ property.mailing_address }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="table-row">
+                <div class="row">
+                    <div class="col-xs-6">
+                        <p>APN: {{ property.apn | default('N/A') }}</p>
+                    </div>
+                    <div class="col-xs-6">
+                        <p>County Name: {{ property.county | default('N/A') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            {% if property.census_tract or property.housing_tract %}
+            <div class="table-row">
+                <div class="row">
+                    <div class="col-xs-6">
+                        <p>Census Tract: {{ property.census_tract | default('N/A') }}</p>
+                    </div>
+                    <div class="col-xs-6">
+                        <p>Housing Tract #: {{ property.housing_tract | default('N/A') }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if property.lot_number or property.page_grid %}
+            <div class="table-row">
+                <div class="row">
+                    <div class="col-xs-6">
+                        <p>Lot Number: {{ property.lot_number | default('N/A') }}</p>
+                    </div>
+                    <div class="col-xs-6">
+                        <p>Page Grid: {{ property.page_grid | default('N/A') }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if property.legal_description %}
+            <div class="table-row">
+                <div class="row">
+                    <div class="col-xs-12">
+                        <p class="no-lineheight">Brief Legal Description:<br>
+                        {{ property.legal_description }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        {# Beds, Baths & Square Footage #}
+        <div class="table-wrapper">
+            <h2>BEDS, BATHS, & SQUARE FOOTAGE</h2>
+
+            <div class="table-row">
+                <div class="row">
+                    <div class="col-xs-4">
+                        <p>Bedrooms: {{ property.bedrooms | default('N/A') }}</p>
+                    </div>
+                    <div class="col-xs-4">
+                        <p>Year: {{ property.year_built | default('N/A') }}</p>
+                    </div>
+                    <div class="col-xs-4">
+                        <p>Square Feet: {{ property.sqft | default('N/A') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-row">
+                <div class="row">
+                    <div class="col-xs-4">
+                        <p>Bathrooms: {{ property.bathrooms | default('N/A') }}</p>
+                    </div>
+                    <div class="col-xs-4">
+                        <p>Garage: {{ property.garage | default('N/A') }}</p>
+                    </div>
+                    <div class="col-xs-4">
+                        <p>Lot Size: {{ property.lot_size | default('N/A') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            {% if property.total_rooms or property.fireplace or property.pool %}
+            <div class="table-row">
+                <div class="row">
+                    <div class="col-xs-4">
+                        <p>Total Rooms: {{ property.total_rooms | default('N/A') }}</p>
+                    </div>
+                    <div class="col-xs-4">
+                        <p>Fireplace: {{ property.fireplace | default('N/A') }}</p>
+                    </div>
+                    <div class="col-xs-4">
+                        <p>Pool/Spa: {{ property.pool | default('N/A') }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if property.num_units or property.zoning %}
+            <div class="table-row">
+                <div class="row">
+                    <div class="col-xs-4">
+                        <p># of Units: {{ property.num_units | default('1') }}</p>
+                    </div>
+                    <div class="col-xs-8">
+                        <p>Zoning: {{ property.zoning | default('N/A') }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if property.property_type %}
+            <div class="table-row">
+                <div class="row">
+                    <div class="col-xs-12">
+                        <p>Property Type: {{ property.property_type }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if property.use_code %}
+            <div class="table-row">
+                <div class="row">
+                    <div class="col-xs-12">
+                        <p>Use Code: {{ property.use_code }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        {# Assessed Value & Tax Details #}
+        {% if property.assessed_value or property.tax_amount %}
+        <div class="table-wrapper">
+            <h2>ASSESSED VALUE & TAX DETAILS</h2>
+
+            <div class="table-row">
+                <div class="row">
+                    <div class="col-xs-6">
+                        <p>Assessed Value: ${{ property.assessed_value | default('N/A') }}</p>
+                    </div>
+                    <div class="col-xs-6">
+                        <p>Tax Amount: ${{ property.tax_amount | default('N/A') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            {% if property.land_value or property.tax_status %}
+            <div class="table-row">
+                <div class="row">
+                    <div class="col-xs-6">
+                        <p>Land Value: ${{ property.land_value | default('N/A') }}</p>
+                    </div>
+                    <div class="col-xs-6">
+                        <p>Tax Status: {{ property.tax_status | default('N/A') }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if property.improvement_value or property.tax_rate_area %}
+            <div class="table-row">
+                <div class="row">
+                    <div class="col-xs-6">
+                        <p>Improvement Value: ${{ property.improvement_value | default('N/A') }}</p>
+                    </div>
+                    <div class="col-xs-6">
+                        <p>Tax Rate Area: {{ property.tax_rate_area | default('N/A') }}%</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if property.percent_improved or property.tax_year %}
+            <div class="table-row">
+                <div class="row">
+                    <div class="col-xs-6">
+                        <p>% Improvement: {{ property.percent_improved | default('N/A') }}%</p>
+                    </div>
+                    <div class="col-xs-6">
+                        <p>Tax Year: {{ property.tax_year | default('N/A') }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

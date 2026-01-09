@@ -33,6 +33,9 @@ import {
   Settings,
   Building2,
   Building,
+  Home,
+  UserCheck,
+  MessageSquare,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -61,7 +64,9 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
     ? [
         // Affiliate navigation
         { name: "Affiliate Dashboard", href: "/app/affiliate", icon: LayoutDashboard },
-        { name: "Create Report", href: "/app/reports", icon: FileText },
+        { name: "Market Reports", href: "/app/reports", icon: FileText },
+        { name: "Property Reports", href: "/app/property", icon: Home },
+        { name: "Leads", href: "/app/leads", icon: UserCheck },
         { name: "Scheduled Reports", href: "/app/schedules", icon: Calendar },
         { name: "Agents & Contacts", href: "/app/people", icon: Users },
         { name: "Affiliate Branding", href: "/app/branding", icon: Palette },
@@ -70,7 +75,9 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
     : [
         // Agent navigation
         { name: "Dashboard", href: "/app", icon: LayoutDashboard },
-        { name: "Reports", href: "/app/reports", icon: FileText },
+        { name: "Market Reports", href: "/app/reports", icon: FileText },
+        { name: "Property Reports", href: "/app/property", icon: Home },
+        { name: "Leads", href: "/app/leads", icon: UserCheck },
         { name: "Scheduled Reports", href: "/app/schedules", icon: Calendar },
         { name: "Contacts", href: "/app/people", icon: Users },
         { name: "Branding", href: "/app/branding", icon: Palette },
@@ -83,6 +90,9 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
     { name: "Title Companies", href: "/app/admin/affiliates", icon: Building2 },
     { name: "All Accounts", href: "/app/admin/accounts", icon: Building },
     { name: "All Users", href: "/app/admin/users", icon: Users },
+    { name: "Property Reports", href: "/app/admin/property-reports", icon: Home },
+    { name: "Leads", href: "/app/admin/leads", icon: UserCheck },
+    { name: "SMS Management", href: "/app/admin/sms", icon: MessageSquare },
   ]
 
   return (
