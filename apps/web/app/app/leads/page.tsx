@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   Select,
   SelectContent,
@@ -48,6 +49,10 @@ import {
   Loader2,
   Filter,
   X,
+  Users,
+  Sparkles,
+  PhoneCall,
+  Trophy,
 } from "lucide-react"
 import { apiFetch } from "@/lib/api"
 
@@ -72,6 +77,13 @@ type PropertyReport = {
   property_address: string
 }
 
+type LeadStats = {
+  total: number
+  newThisWeek: number
+  contacted: number
+  converted: number
+}
+
 export default function LeadsPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -80,6 +92,7 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [total, setTotal] = useState(0)
+  const [stats, setStats] = useState<LeadStats>({ total: 0, newThisWeek: 0, contacted: 0, converted: 0 })
   
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>(searchParams.get("status") || "all")
@@ -110,6 +123,23 @@ export default function LeadsPage() {
       const data = await apiFetch(`/v1/leads?${params.toString()}`)
       setLeads(data.leads || [])
       setTotal(data.total || 0)
+      
+      // Load all leads for stats
+      const allData = await apiFetch("/v1/leads?limit=1000")
+      const allLeads = allData.leads || []
+      
+      const now = new Date()
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      
+      setStats({
+        total: allLeads.length,
+        newThisWeek: allLeads.filter((l: Lead) => 
+          l.status === "new" && new Date(l.created_at) >= oneWeekAgo
+        ).length,
+        contacted: allLeads.filter((l: Lead) => l.status === "contacted").length,
+        converted: allLeads.filter((l: Lead) => l.status === "converted").length,
+      })
+      
       setError(null)
     } catch (e: any) {
       setError(e.message || "Failed to load leads")
@@ -226,6 +256,65 @@ export default function LeadsPage() {
           )}
           Export CSV
         </Button>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Users className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-sm text-muted-foreground">Total Leads</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stats.newThisWeek}</p>
+                <p className="text-sm text-muted-foreground">New This Week</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-yellow-500/10 flex items-center justify-center">
+                <PhoneCall className="w-5 h-5 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stats.contacted}</p>
+                <p className="text-sm text-muted-foreground">Contacted</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                <Trophy className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stats.converted}</p>
+                <p className="text-sm text-muted-foreground">Converted</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {error && (
