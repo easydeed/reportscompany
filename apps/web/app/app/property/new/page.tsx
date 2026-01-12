@@ -124,6 +124,47 @@ const THEME_NAMES: Record<number, string> = {
   5: "Bold",
 };
 
+// All available pages for review display
+const ALL_PAGES = [
+  { id: "cover", name: "Cover" },
+  { id: "contents", name: "Table of Contents" },
+  { id: "introduction", name: "Introduction" },
+  { id: "aerial", name: "Aerial View" },
+  { id: "property_details", name: "Property Details" },
+  { id: "area_analysis", name: "Area Sales Analysis" },
+  { id: "comparables", name: "Sales Comparables" },
+  { id: "range_of_sales", name: "Range of Sales" },
+  { id: "neighborhood", name: "Neighborhood Stats" },
+  { id: "roadmap", name: "Selling Roadmap" },
+  { id: "how_buyers_find", name: "How Buyers Find Homes" },
+  { id: "pricing_correctly", name: "Pricing Strategy" },
+  { id: "avg_days_market", name: "Days on Market" },
+  { id: "marketing_online", name: "Digital Marketing" },
+  { id: "marketing_print", name: "Print Marketing" },
+  { id: "marketing_social", name: "Social Media" },
+  { id: "analyze_optimize", name: "Analyze & Optimize" },
+  { id: "negotiating", name: "Negotiating Offers" },
+  { id: "typical_transaction", name: "Transaction Timeline" },
+  { id: "promise", name: "Agent Promise" },
+  { id: "back_cover", name: "Back Cover" },
+];
+
+// Initial wizard state for reset
+const initialWizardState: WizardState = {
+  step: 1,
+  address: "",
+  cityStateZip: "",
+  property: null,
+  availableComps: [],
+  selectedComps: [],
+  theme: 1,
+  accentColor: "#0d294b",
+  selectedPages: [],
+  radiusMiles: 0.5,
+  sqftVariance: 0.20,
+  searchParams: undefined,
+};
+
 export default function NewPropertyReportPage() {
   const router = useRouter();
   const [state, setState] = useState<WizardState>({
@@ -145,6 +186,13 @@ export default function NewPropertyReportPage() {
   const [searching, setSearching] = useState(false);
   const [loadingComps, setLoadingComps] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState(0);
+  const [generatedReport, setGeneratedReport] = useState<{
+    id: string;
+    pdf_url: string;
+    qr_code_url: string;
+    short_code: string;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mapModalOpen, setMapModalOpen] = useState(false);
   const [showParamsModal, setShowParamsModal] = useState(false);
@@ -363,32 +411,85 @@ export default function NewPropertyReportPage() {
     }));
   };
 
-  // Step 4: Generate Report
+  // Step 4: Generate Report with polling
   const handleGenerateReport = async () => {
     if (!state.property) return;
 
     setGenerating(true);
+    setGenerationProgress(10);
     setError(null);
 
     try {
-      const data = await apiFetch("/v1/property/reports", {
+      // Create the report
+      const response = await apiFetch("/v1/property/reports", {
         method: "POST",
         body: JSON.stringify({
-          address: state.property.street || state.address,
-          city_state_zip: `${state.property.city}, ${state.property.state} ${state.property.zip_code}`,
           report_type: "seller",
           theme: state.theme,
           accent_color: state.accentColor,
-          comparables: state.selectedComps.map((c) => c.mlsId),
+          property_address: state.property.full_address || state.address,
+          property_city: state.property.city,
+          property_state: state.property.state || "CA",
+          property_zip: state.property.zip_code,
+          apn: state.property.apn,
+          owner_name: state.property.owner_name,
+          selected_comp_ids: state.selectedComps.map((c) => c.mlsId),
+          selected_pages: state.selectedPages,
+          sitex_data: state.property,
         }),
       });
 
-      // Redirect to the report detail page
-      router.push(`/app/property/${data.id}?created=true`);
+      if (!response.success && !response.id) {
+        throw new Error(response.error || "Failed to create report");
+      }
+
+      const reportId = response.id;
+      setGenerationProgress(30);
+
+      // Poll for completion
+      let attempts = 0;
+      const maxAttempts = 60; // 2 minutes max
+
+      while (attempts < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 2000)); // 2 sec intervals
+
+        const statusResponse = await apiFetch(`/v1/property/reports/${reportId}`);
+
+        if (statusResponse.status === "complete") {
+          setGenerationProgress(100);
+          setGeneratedReport({
+            id: reportId,
+            pdf_url: statusResponse.pdf_url,
+            qr_code_url: statusResponse.qr_code_url,
+            short_code: statusResponse.short_code,
+          });
+          break;
+        } else if (statusResponse.status === "failed") {
+          throw new Error(statusResponse.error_message || "Report generation failed");
+        }
+
+        // Update progress (30-90% range during polling)
+        setGenerationProgress(Math.min(90, 30 + attempts * 2));
+        attempts++;
+      }
+
+      if (attempts >= maxAttempts) {
+        throw new Error("Report generation timed out. Please check the reports list.");
+      }
     } catch (e: any) {
+      console.error("Generation error:", e);
       setError(e.message || "Failed to generate report");
+    } finally {
       setGenerating(false);
     }
+  };
+
+  // Reset wizard to create another report
+  const resetWizard = () => {
+    setState(initialWizardState);
+    setGeneratedReport(null);
+    setGenerationProgress(0);
+    setError(null);
   };
 
   // Navigation
@@ -955,83 +1056,220 @@ export default function NewPropertyReportPage() {
           {/* STEP 4: Review & Generate */}
           {state.step === 4 && (
             <div className="space-y-6">
-              <div>
-                <CardTitle className="mb-2">Review & Generate</CardTitle>
-                <CardDescription>
-                  Confirm your selections and generate the report
-                </CardDescription>
-              </div>
+              {!generatedReport ? (
+                <>
+                  {/* Review Summary */}
+                  <div className="bg-muted/30 rounded-lg p-6">
+                    <h3 className="font-semibold text-lg mb-4">Review Your Report</h3>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="border rounded-lg p-4 space-y-3">
-                  <h4 className="font-medium flex items-center gap-2">
-                    <Home className="w-4 h-4" />
-                    Property
-                  </h4>
-                  <div className="text-sm">
-                    <p className="font-medium">{state.property?.full_address}</p>
-                    <p className="text-muted-foreground">
-                      {state.property?.city}, {state.property?.state}{" "}
-                      {state.property?.zip_code}
-                    </p>
-                    <p className="text-muted-foreground mt-1">
-                      {state.property?.bedrooms} bed • {state.property?.bathrooms} bath •{" "}
-                      {state.property?.sqft?.toLocaleString()} sqft
-                    </p>
-                  </div>
-                </div>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {/* Property Info */}
+                      <div className="space-y-3">
+                        <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
+                          Property
+                        </h4>
+                        <div className="bg-background rounded-lg p-4 border">
+                          <p className="font-semibold">
+                            {state.property?.full_address || state.address}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {state.property?.city}, {state.property?.state}{" "}
+                            {state.property?.zip_code}
+                          </p>
+                          <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
+                            <span>{state.property?.bedrooms} bed</span>
+                            <span>{state.property?.bathrooms} bath</span>
+                            <span>{state.property?.sqft?.toLocaleString()} sqft</span>
+                          </div>
+                        </div>
+                      </div>
 
-                <div className="border rounded-lg p-4 space-y-3">
-                  <h4 className="font-medium flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
-                    Comparables
-                  </h4>
-                  <div className="text-sm">
-                    <p className="font-medium">{state.selectedComps.length} properties selected</p>
-                    <p className="text-muted-foreground">
-                      {state.selectedComps.slice(0, 3).map((c) => c.address.city).join(", ")}
-                      {state.selectedComps.length > 3 && "..."}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="border rounded-lg p-4 space-y-3">
-                  <h4 className="font-medium flex items-center gap-2">
-                    <Palette className="w-4 h-4" />
-                    Theme & Pages
-                  </h4>
-                  <div className="text-sm space-y-1">
-                    <div className="flex items-center gap-3">
-                      <span className="font-medium">{THEME_NAMES[state.theme] || "Classic"}</span>
-                      <div
-                        className="w-6 h-6 rounded border"
-                        style={{ backgroundColor: state.accentColor }}
-                      />
+                      {/* Report Config */}
+                      <div className="space-y-3">
+                        <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
+                          Report Settings
+                        </h4>
+                        <div className="bg-background rounded-lg p-4 border space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Theme</span>
+                            <span className="font-medium">
+                              {THEME_NAMES[state.theme] || `Theme ${state.theme}`}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">Accent Color</span>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="w-5 h-5 rounded-full border"
+                                style={{ backgroundColor: state.accentColor }}
+                              />
+                              <span className="font-mono text-sm">{state.accentColor}</span>
+                            </div>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Comparables</span>
+                            <span className="font-medium">
+                              {state.selectedComps.length} selected
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Pages</span>
+                            <span className="font-medium">
+                              {state.selectedPages.length} pages
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-muted-foreground">
-                      {state.selectedPages.length} pages selected
-                    </p>
-                  </div>
-                </div>
 
-                <div className="border rounded-lg p-4 space-y-3">
-                  <h4 className="font-medium flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    Report Type
-                  </h4>
-                  <div className="text-sm">
-                    <Badge>Seller Report</Badge>
+                    {/* Selected Pages Preview */}
+                    <div className="mt-6">
+                      <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-3">
+                        Included Pages
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {state.selectedPages.map((pageId, index) => {
+                          const page = ALL_PAGES.find((p) => p.id === pageId);
+                          return (
+                            <span
+                              key={pageId}
+                              className="px-2 py-1 bg-background border rounded text-sm"
+                            >
+                              {index + 1}. {page?.name || pageId}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              {generating && (
-                <div className="bg-muted/50 rounded-lg p-6 text-center space-y-3">
-                  <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
-                  <p className="font-medium">Generating your report...</p>
-                  <p className="text-sm text-muted-foreground">
-                    This may take a few moments
+                  {/* Generation Progress */}
+                  {generating ? (
+                    <div className="text-center py-8">
+                      <div className="w-20 h-20 mx-auto mb-4 relative">
+                        <svg className="animate-spin" viewBox="0 0 100 100">
+                          <circle
+                            className="text-muted stroke-current"
+                            strokeWidth="8"
+                            fill="transparent"
+                            r="42"
+                            cx="50"
+                            cy="50"
+                          />
+                          <circle
+                            className="text-primary stroke-current"
+                            strokeWidth="8"
+                            strokeDasharray={264}
+                            strokeDashoffset={264 - (264 * generationProgress) / 100}
+                            strokeLinecap="round"
+                            fill="transparent"
+                            r="42"
+                            cx="50"
+                            cy="50"
+                          />
+                        </svg>
+                        <span className="absolute inset-0 flex items-center justify-center text-sm font-semibold">
+                          {generationProgress}%
+                        </span>
+                      </div>
+                      <p className="text-foreground font-medium">
+                        Generating your report...
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        This may take up to 30 seconds
+                      </p>
+                    </div>
+                  ) : (
+                    /* Navigation buttons in non-generating state are handled by bottom bar */
+                    null
+                  )}
+                </>
+              ) : (
+                /* Success State */
+                <div className="text-center py-8">
+                  <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Check className="w-10 h-10 text-green-600" />
+                  </div>
+
+                  <h3 className="text-2xl font-semibold mb-2">Report Generated!</h3>
+                  <p className="text-muted-foreground mb-8">
+                    Your seller report for {state.property?.full_address} is ready.
                   </p>
+
+                  <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+                    {/* PDF Download */}
+                    <div className="bg-background border rounded-lg p-6 text-left">
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        <FileText className="w-5 h-5" />
+                        Download PDF
+                      </h4>
+                      {generatedReport.pdf_url ? (
+                        <a
+                          href={generatedReport.pdf_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block w-full px-4 py-3 bg-primary text-primary-foreground rounded-lg text-center hover:bg-primary/90 transition-colors"
+                        >
+                          Download Report
+                        </a>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          PDF is being generated...
+                        </p>
+                      )}
+                    </div>
+
+                    {/* QR Code */}
+                    <div className="bg-background border rounded-lg p-6 text-left">
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        <MapPin className="w-5 h-5" />
+                        QR Code
+                      </h4>
+                      {generatedReport.qr_code_url ? (
+                        <>
+                          <img
+                            src={generatedReport.qr_code_url}
+                            alt="QR Code"
+                            className="w-32 h-32 mx-auto border rounded"
+                          />
+                          <p className="text-xs text-muted-foreground text-center mt-2">
+                            Scan to view landing page
+                          </p>
+                        </>
+                      ) : (
+                        <div className="w-32 h-32 mx-auto bg-muted rounded flex items-center justify-center">
+                          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Landing Page Link */}
+                  {generatedReport.short_code && (
+                    <div className="mt-6 p-4 bg-muted/30 rounded-lg max-w-md mx-auto">
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Public Landing Page:
+                      </p>
+                      <a
+                        href={`https://trendyreports.io/p/${generatedReport.short_code}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline break-all font-medium"
+                      >
+                        trendyreports.io/p/{generatedReport.short_code}
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex justify-center gap-4 mt-8">
+                    <Button variant="outline" onClick={resetWizard}>
+                      Create Another Report
+                    </Button>
+                    <Link href={`/app/property/${generatedReport.id}`}>
+                      <Button>View Report Details</Button>
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
@@ -1039,34 +1277,44 @@ export default function NewPropertyReportPage() {
         </CardContent>
       </Card>
 
-      {/* Navigation Buttons */}
-      <div className="flex justify-between">
-        <Button variant="outline" onClick={goBack} disabled={state.step === 1 || generating}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
+      {/* Navigation Buttons - Hidden when report is generated */}
+      {!generatedReport && (
+        <div className="flex justify-between">
+          <Button 
+            variant="outline" 
+            onClick={goBack} 
+            disabled={state.step === 1 || generating}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
 
-        {state.step < 4 ? (
-          <Button onClick={goNext} disabled={!canProceed()}>
-            Continue
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
-        ) : (
-          <Button onClick={handleGenerateReport} disabled={generating}>
-            {generating ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <FileText className="w-4 h-4 mr-2" />
-                Generate Report
-              </>
-            )}
-          </Button>
-        )}
-      </div>
+          {state.step < 4 ? (
+            <Button onClick={goNext} disabled={!canProceed()}>
+              Continue
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          ) : (
+            <Button 
+              onClick={handleGenerateReport} 
+              disabled={generating}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Generate Report
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
