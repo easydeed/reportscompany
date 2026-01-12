@@ -2,29 +2,43 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 
+/**
+ * Parsed place result from Google Places Autocomplete
+ */
 export interface PlaceResult {
   streetNumber: string;
   street: string;
-  address: string;
+  address: string; // Full street address (number + street)
   city: string;
   state: string;
   zip: string;
   county: string;
-  fullAddress: string;
+  fullAddress: string; // Google's formatted address
   lat?: number;
   lng?: number;
 }
 
 interface UseGooglePlacesOptions {
   onPlaceSelect?: (place: PlaceResult) => void;
+  countryRestriction?: string;
 }
 
+/**
+ * Hook for Google Places Autocomplete integration
+ *
+ * @param inputRef - Ref to the input element
+ * @param options - Configuration options
+ * @returns { place, isLoaded, error, reset }
+ */
 export function useGooglePlaces(
   inputRef: React.RefObject<HTMLInputElement | null>,
   options?: UseGooglePlacesOptions
 ) {
+  const { onPlaceSelect, countryRestriction = "us" } = options || {};
+
   const [place, setPlace] = useState<PlaceResult | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const listenerRef = useRef<google.maps.MapsEventListener | null>(null);
 
@@ -33,6 +47,7 @@ export function useGooglePlaces(
     const checkGoogleMaps = () => {
       if (window.google?.maps?.places) {
         setIsLoaded(true);
+        setError(null);
         return true;
       }
       return false;
@@ -48,10 +63,13 @@ export function useGooglePlaces(
       }
     }, 100);
 
-    // Cleanup after 10 seconds
+    // Timeout after 10 seconds
     const timeout = setTimeout(() => {
       clearInterval(interval);
-      console.warn("Google Maps failed to load within 10 seconds");
+      if (!window.google?.maps?.places) {
+        console.warn("Google Maps failed to load within 10 seconds");
+        setError("Address suggestions unavailable");
+      }
     }, 10000);
 
     return () => {
@@ -72,80 +90,33 @@ export function useGooglePlaces(
       google.maps.event.clearInstanceListeners(autocompleteRef.current);
     }
 
-    // Create new autocomplete instance
-    const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
-      componentRestrictions: { country: "us" },
-      types: ["address"],
-      fields: ["address_components", "formatted_address", "geometry", "name"],
-    });
+    try {
+      // Create new autocomplete instance
+      const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
+        componentRestrictions: { country: countryRestriction },
+        types: ["address"],
+        fields: ["address_components", "formatted_address", "geometry", "name"],
+      });
 
-    // Add place changed listener
-    listenerRef.current = autocomplete.addListener("place_changed", () => {
-      const result = autocomplete.getPlace();
-      
-      if (!result.address_components) {
-        console.warn("No address components in place result");
-        return;
-      }
+      // Add place changed listener
+      listenerRef.current = autocomplete.addListener("place_changed", () => {
+        const result = autocomplete.getPlace();
 
-      let streetNumber = "";
-      let street = "";
-      let city = "";
-      let state = "";
-      let zip = "";
-      let county = "";
-
-      for (const component of result.address_components) {
-        const type = component.types[0];
-        
-        switch (type) {
-          case "street_number":
-            streetNumber = component.long_name;
-            break;
-          case "route":
-            street = component.long_name;
-            break;
-          case "locality":
-            city = component.long_name;
-            break;
-          case "sublocality_level_1":
-            // Fallback for city if locality not present
-            if (!city) city = component.long_name;
-            break;
-          case "administrative_area_level_1":
-            state = component.short_name;
-            break;
-          case "administrative_area_level_2":
-            county = component.long_name.replace(" County", "");
-            break;
-          case "postal_code":
-            zip = component.long_name;
-            break;
+        if (!result.address_components) {
+          console.warn("No address components in place result");
+          return;
         }
-      }
 
-      const fullStreetAddress = streetNumber
-        ? `${streetNumber} ${street}`.trim()
-        : street;
+        const placeResult = parseAddressComponents(result);
+        setPlace(placeResult);
+        onPlaceSelect?.(placeResult);
+      });
 
-      const placeResult: PlaceResult = {
-        streetNumber,
-        street,
-        address: fullStreetAddress,
-        city,
-        state,
-        zip,
-        county,
-        fullAddress: result.formatted_address || "",
-        lat: result.geometry?.location?.lat(),
-        lng: result.geometry?.location?.lng(),
-      };
-
-      setPlace(placeResult);
-      options?.onPlaceSelect?.(placeResult);
-    });
-
-    autocompleteRef.current = autocomplete;
+      autocompleteRef.current = autocomplete;
+    } catch (err) {
+      console.error("Failed to initialize Google Places Autocomplete:", err);
+      setError("Failed to initialize address search");
+    }
 
     return () => {
       if (listenerRef.current) {
@@ -155,12 +126,70 @@ export function useGooglePlaces(
         google.maps.event.clearInstanceListeners(autocompleteRef.current);
       }
     };
-  }, [isLoaded, inputRef, options?.onPlaceSelect]);
+  }, [isLoaded, inputRef, onPlaceSelect, countryRestriction]);
 
   const reset = useCallback(() => {
     setPlace(null);
   }, []);
 
-  return { place, isLoaded, reset };
+  return { place, isLoaded, error, reset };
 }
+
+/**
+ * Parse Google Places address components into a structured PlaceResult
+ */
+function parseAddressComponents(place: google.maps.places.PlaceResult): PlaceResult {
+  let streetNumber = "";
+  let street = "";
+  let city = "";
+  let state = "";
+  let zip = "";
+  let county = "";
+
+  for (const component of place.address_components || []) {
+    const type = component.types[0];
+
+    switch (type) {
+      case "street_number":
+        streetNumber = component.long_name;
+        break;
+      case "route":
+        street = component.long_name;
+        break;
+      case "locality":
+        city = component.long_name;
+        break;
+      case "sublocality_level_1":
+        // Fallback for city if locality not present
+        if (!city) city = component.long_name;
+        break;
+      case "administrative_area_level_1":
+        state = component.short_name;
+        break;
+      case "administrative_area_level_2":
+        county = component.long_name.replace(" County", "");
+        break;
+      case "postal_code":
+        zip = component.long_name;
+        break;
+    }
+  }
+
+  const fullStreetAddress = streetNumber ? `${streetNumber} ${street}`.trim() : street;
+
+  return {
+    streetNumber,
+    street,
+    address: fullStreetAddress,
+    city,
+    state,
+    zip,
+    county,
+    fullAddress: place.formatted_address || "",
+    lat: place.geometry?.location?.lat(),
+    lng: place.geometry?.location?.lng(),
+  };
+}
+
+export default useGooglePlaces;
 
