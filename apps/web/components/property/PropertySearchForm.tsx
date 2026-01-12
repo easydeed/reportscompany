@@ -46,18 +46,21 @@ export function PropertySearchForm({
   canContinue,
 }: PropertySearchFormProps) {
   const addressInputRef = useRef<HTMLInputElement>(null);
-  const searchTriggerRef = useRef(false);
   const [showLegalDesc, setShowLegalDesc] = useState(false);
+  const pendingSearchRef = useRef<{ address: string; cityStateZip: string } | null>(null);
 
   // Handle Google Places selection
   const handlePlaceSelect = useCallback(
     (placeResult: PlaceResult) => {
+      const streetAddress = placeResult.address;
       const cityStateZipStr = `${placeResult.city}, ${placeResult.state} ${placeResult.zip}`;
-      onAddressChange(placeResult.address);
+      
+      // Update the form fields
+      onAddressChange(streetAddress);
       onCityStateZipChange(cityStateZipStr);
 
-      // Trigger search after state updates
-      searchTriggerRef.current = true;
+      // Store the values for search - we'll trigger search after state updates
+      pendingSearchRef.current = { address: streetAddress, cityStateZip: cityStateZipStr };
     },
     [onAddressChange, onCityStateZipChange]
   );
@@ -70,10 +73,19 @@ export function PropertySearchForm({
   );
 
   // Auto-trigger search when place is selected via Google Places
+  // Use setTimeout to ensure React has processed state updates
   useEffect(() => {
-    if (searchTriggerRef.current && address && cityStateZip) {
-      searchTriggerRef.current = false;
-      onSearch();
+    if (pendingSearchRef.current) {
+      const { address: pendingAddress, cityStateZip: pendingCityStateZip } = pendingSearchRef.current;
+      
+      // Verify the form state matches what we set (state has propagated)
+      if (address === pendingAddress && cityStateZip === pendingCityStateZip) {
+        pendingSearchRef.current = null;
+        // Small delay to ensure DOM is fully updated
+        setTimeout(() => {
+          onSearch();
+        }, 50);
+      }
     }
   }, [address, cityStateZip, onSearch]);
 
