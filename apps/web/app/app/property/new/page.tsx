@@ -56,6 +56,8 @@ interface PropertyData {
   year_built: number | null;
   property_type: string;
   assessed_value: number | null;
+  latitude?: number;
+  longitude?: number;
 }
 
 interface Comparable {
@@ -80,6 +82,14 @@ interface Comparable {
   distance?: number;
 }
 
+interface SearchParams {
+  radius_miles: number;
+  sqft_variance: number;
+  sqft_range?: { min: number; max: number };
+  beds_range?: { min: number; max: number };
+  total_before_filter?: number;
+}
+
 interface WizardState {
   step: number;
   address: string;
@@ -89,6 +99,10 @@ interface WizardState {
   selectedComps: Comparable[];
   theme: number;
   accentColor: string;
+  // Search filters
+  radiusMiles: number;
+  sqftVariance: number;
+  searchParams?: SearchParams;
 }
 
 const STEPS = [
@@ -128,6 +142,10 @@ export default function NewPropertyReportPage() {
     selectedComps: [],
     theme: 1,
     accentColor: "#2563eb",
+    // Search filter defaults
+    radiusMiles: 0.5,
+    sqftVariance: 0.20,
+    searchParams: undefined,
   });
 
   const [searching, setSearching] = useState(false);
@@ -173,8 +191,12 @@ export default function NewPropertyReportPage() {
   };
 
   // Step 2: Load Comparables
-  const loadComparables = async () => {
+  const loadComparables = async (radiusMiles?: number, sqftVariance?: number) => {
     if (!state.property) return;
+
+    // Use provided values or current state values
+    const radius = radiusMiles ?? state.radiusMiles;
+    const variance = sqftVariance ?? state.sqftVariance;
 
     setLoadingComps(true);
     setError(null);
@@ -185,13 +207,22 @@ export default function NewPropertyReportPage() {
         body: JSON.stringify({
           address: state.property.full_address,
           city_state_zip: `${state.property.city}, ${state.property.state} ${state.property.zip_code}`,
-          radius_miles: 1.0,
+          // Pass subject property characteristics for better filtering
+          latitude: state.property.latitude,
+          longitude: state.property.longitude,
+          beds: state.property.bedrooms,
+          baths: state.property.bathrooms,
+          sqft: state.property.sqft,
+          property_type: state.property.property_type,
+          // Search filters
+          radius_miles: radius,
+          sqft_variance: variance,
           status: "Closed",
           limit: 20,
         }),
       });
 
-      // API returns { success, subject_property, comparables: ComparableProperty[], error }
+      // API returns { success, subject_property, comparables, search_params, total_found, error }
       // Transform API response to match frontend Comparable interface
       if (response.success && response.comparables) {
         const transformedComps: Comparable[] = response.comparables.map((comp: any) => ({
@@ -216,10 +247,13 @@ export default function NewPropertyReportPage() {
           ...prev,
           availableComps: transformedComps,
           selectedComps: [],
+          radiusMiles: radius,
+          sqftVariance: variance,
+          searchParams: response.search_params,
         }));
 
         if (transformedComps.length === 0) {
-          setError("No comparable properties found in this area. Try expanding the search radius.");
+          setError("No comparable properties found. Try expanding the search radius or SQFT variance.");
         }
       } else {
         setError(response.error || "Failed to load comparables.");
@@ -522,6 +556,111 @@ export default function NewPropertyReportPage() {
                   <Map className="w-4 h-4 mr-2" />
                   View on Map
                 </Button>
+              </div>
+
+              {/* Search Filters */}
+              <div className="bg-muted/50 rounded-lg p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-sm">Search Filters</h4>
+                  {state.searchParams && (
+                    <span className="text-xs text-muted-foreground">
+                      Found {state.searchParams.total_before_filter || 0} listings
+                    </span>
+                  )}
+                </div>
+                <div className="grid sm:grid-cols-3 gap-4">
+                  {/* Radius */}
+                  <div className="space-y-2">
+                    <Label className="text-xs">Radius (miles)</Label>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => {
+                          const newRadius = Math.max(0.25, state.radiusMiles - 0.25);
+                          setState((prev) => ({ ...prev, radiusMiles: newRadius }));
+                        }}
+                        disabled={state.radiusMiles <= 0.25 || loadingComps}
+                      >
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      <span className="text-sm font-medium min-w-[3rem] text-center">
+                        {state.radiusMiles.toFixed(2)} mi
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => {
+                          const newRadius = Math.min(5, state.radiusMiles + 0.25);
+                          setState((prev) => ({ ...prev, radiusMiles: newRadius }));
+                        }}
+                        disabled={state.radiusMiles >= 5 || loadingComps}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* SQFT Variance */}
+                  <div className="space-y-2">
+                    <Label className="text-xs">SQFT Variance</Label>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => {
+                          const newVariance = Math.max(0.05, state.sqftVariance - 0.05);
+                          setState((prev) => ({ ...prev, sqftVariance: newVariance }));
+                        }}
+                        disabled={state.sqftVariance <= 0.05 || loadingComps}
+                      >
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      <span className="text-sm font-medium min-w-[3rem] text-center">
+                        ±{Math.round(state.sqftVariance * 100)}%
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => {
+                          const newVariance = Math.min(0.50, state.sqftVariance + 0.05);
+                          setState((prev) => ({ ...prev, sqftVariance: newVariance }));
+                        }}
+                        disabled={state.sqftVariance >= 0.50 || loadingComps}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    {state.searchParams?.sqft_range && (
+                      <p className="text-xs text-muted-foreground">
+                        {state.searchParams.sqft_range.min.toLocaleString()} - {state.searchParams.sqft_range.max.toLocaleString()} sqft
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Refresh Button */}
+                  <div className="space-y-2">
+                    <Label className="text-xs">&nbsp;</Label>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => loadComparables()}
+                      disabled={loadingComps}
+                    >
+                      {loadingComps ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Search className="h-4 w-4 mr-2" />
+                      )}
+                      Refresh
+                    </Button>
+                  </div>
+                </div>
               </div>
 
               {loadingComps ? (

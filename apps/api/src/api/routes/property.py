@@ -10,10 +10,30 @@ import logging
 import random
 import string
 from datetime import datetime
-from typing import List, Literal, Optional
+from math import radians, cos, sin, asin, sqrt
+from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
+
+
+# =============================================================================
+# UTILITY FUNCTIONS
+# =============================================================================
+
+
+def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """
+    Calculate the great-circle distance between two points in miles.
+    Uses the Haversine formula.
+    """
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+    c = 2 * asin(sqrt(a))
+    miles = 3956 * c  # Earth radius in miles
+    return miles
 
 from ..db import db_conn, fetchall_dicts, fetchone_dict, set_rls
 from ..services.sitex import (
@@ -82,12 +102,32 @@ class ComparableProperty(BaseModel):
 
 
 class ComparablesRequest(BaseModel):
-    """Request for comparable properties"""
+    """Request for comparable properties with filtering options"""
     address: str
     city_state_zip: Optional[str] = ""
-    radius_miles: float = Field(default=1.0, ge=0.1, le=10.0)
+    # Optional subject property characteristics (override SiteX lookup)
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    beds: Optional[int] = None
+    baths: Optional[float] = None
+    sqft: Optional[int] = None
+    property_type: Optional[str] = None
+    # Search filters
+    radius_miles: float = Field(default=0.5, ge=0.1, le=5.0, description="Search radius in miles")
+    sqft_variance: float = Field(default=0.20, ge=0.05, le=0.50, description="SQFT +/- variance (0.20 = 20%)")
     status: Literal["Closed", "Active", "All"] = "Closed"
-    limit: int = Field(default=10, ge=1, le=50)
+    limit: int = Field(default=15, ge=1, le=50)
+
+
+class SearchParamsUsed(BaseModel):
+    """Actual search parameters used (for UI display/adjustment)"""
+    radius_miles: float
+    sqft_variance: float
+    sqft_range: Optional[Dict[str, int]] = None
+    beds_range: Optional[Dict[str, int]] = None
+    baths_range: Optional[Dict[str, int]] = None
+    total_before_filter: int = 0
+    was_auto_expanded: bool = False
 
 
 class ComparablesResponse(BaseModel):
@@ -95,6 +135,8 @@ class ComparablesResponse(BaseModel):
     success: bool
     subject_property: Optional[PropertyData] = None
     comparables: List[ComparableProperty] = []
+    total_found: int = 0
+    search_params: Optional[SearchParamsUsed] = None
     error: Optional[str] = None
 
 
@@ -294,28 +336,45 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
     """
     Get comparable properties for a given address.
     
-    1. Looks up subject property via SiteX
-    2. Searches SimplyRETS for nearby comparable sales
+    Enhanced with:
+    - SQFT variance filtering (+/- percentage)
+    - Radius-based distance filtering
+    - Bed/bath matching
+    - Returns search params used for UI adjustment
+    
+    Flow:
+    1. Look up subject property via SiteX (or use provided characteristics)
+    2. Build SimplyRETS query with filters
+    3. Post-filter by distance if lat/lng available
+    4. Return comparables with search metadata
     """
     # Auth required
     require_account_id(request)
     
-    # Step 1: Get subject property
+    subject = None
+    
+    # Step 1: Get subject property (optional if characteristics provided)
     try:
         subject = await lookup_property(payload.address, payload.city_state_zip)
-        if not subject:
-            return ComparablesResponse(
-                success=False,
-                error="Subject property not found. Please verify the address."
-            )
     except SiteXError as e:
-        return ComparablesResponse(
-            success=False,
-            error=f"Property lookup failed: {e}"
-        )
+        logger.warning(f"SiteX lookup failed, using provided characteristics: {e}")
+    
+    # Use provided values or fall back to subject property
+    subject_sqft = payload.sqft or (subject.sqft if subject else None)
+    subject_beds = payload.beds or (subject.bedrooms if subject else None)
+    subject_baths = payload.baths or (subject.bathrooms if subject else None)
+    subject_lat = payload.latitude or (subject.latitude if subject else None)
+    subject_lng = payload.longitude or (subject.longitude if subject else None)
+    subject_city = subject.city if subject else payload.address.split(",")[0].strip()
+    subject_zip = subject.zip_code if subject else None
+    subject_prop_type = payload.property_type or (subject.property_type if subject else None)
+    
+    # Track search params for response
+    sqft_range = None
+    beds_range = None
+    baths_range = None
     
     # Step 2: Search SimplyRETS for comparables
-    # Import here to avoid circular imports and keep worker dependency optional
     try:
         import sys
         import os
@@ -327,34 +386,82 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
         
         from worker.vendors.simplyrets import fetch_properties
         
-        # Build search params based on subject property
-        params = {
-            "q": subject.city or payload.address.split(",")[0],
+        # Build search params
+        params: Dict[str, Any] = {
             "status": "Closed" if payload.status == "Closed" else "Active,Closed",
             "type": "RES",
-            "limit": payload.limit * 2,  # Fetch extra to filter
+            "limit": payload.limit * 3,  # Fetch extra for post-filtering
         }
         
-        # Add property type filter if available
-        if subject.property_type:
-            if "condo" in subject.property_type.lower():
+        # Location filter
+        if subject_city:
+            params["q"] = subject_city
+        if subject_zip:
+            params["postalCodes"] = subject_zip
+        
+        # SQFT VARIANCE FILTER - Key enhancement from ModernAgent
+        if subject_sqft and payload.sqft_variance:
+            min_sqft = int(subject_sqft * (1 - payload.sqft_variance))
+            max_sqft = int(subject_sqft * (1 + payload.sqft_variance))
+            params["minarea"] = min_sqft
+            params["maxarea"] = max_sqft
+            sqft_range = {"min": min_sqft, "max": max_sqft}
+            logger.info(f"SQFT filter: {min_sqft} - {max_sqft} (subject: {subject_sqft}, variance: {payload.sqft_variance})")
+        
+        # BED FILTER (+/- 1 from subject)
+        if subject_beds:
+            min_beds = max(1, subject_beds - 1)
+            max_beds = subject_beds + 1
+            params["minbeds"] = min_beds
+            params["maxbeds"] = max_beds
+            beds_range = {"min": min_beds, "max": max_beds}
+        
+        # BATH FILTER (+/- 1 from subject)
+        if subject_baths:
+            min_baths = max(1, int(subject_baths) - 1)
+            max_baths = int(subject_baths) + 1
+            params["minbaths"] = min_baths
+            params["maxbaths"] = max_baths
+            baths_range = {"min": min_baths, "max": max_baths}
+        
+        # PROPERTY TYPE FILTER
+        if subject_prop_type:
+            prop_type_lower = subject_prop_type.lower()
+            if "condo" in prop_type_lower:
                 params["subtype"] = "Condominium"
-            else:
+            elif "townhouse" in prop_type_lower:
+                params["subtype"] = "Townhouse"
+            elif "single" in prop_type_lower or "sfr" in prop_type_lower:
                 params["subtype"] = "SingleFamilyResidence"
         
-        # Add price range (+/- 30% of subject if we have assessed value)
-        if subject.assessed_value:
-            est_value = subject.assessed_value * 1.2  # Rough market estimate
-            params["minprice"] = int(est_value * 0.7)
-            params["maxprice"] = int(est_value * 1.3)
-        
-        # Add bed/bath filters
-        if subject.bedrooms:
-            params["minbeds"] = max(1, subject.bedrooms - 1)
-            params["maxbeds"] = subject.bedrooms + 1
+        logger.info(f"SimplyRETS query params: {params}")
         
         # Fetch from SimplyRETS
-        listings = fetch_properties(params, limit=payload.limit * 2)
+        listings = fetch_properties(params, limit=payload.limit * 3)
+        total_before_filter = len(listings)
+        
+        # Step 3: Post-filter by distance if coordinates available
+        if subject_lat and subject_lng:
+            filtered_listings = []
+            for listing in listings:
+                geo = listing.get("geo", {})
+                comp_lat = geo.get("lat")
+                comp_lng = geo.get("lng")
+                
+                if comp_lat and comp_lng:
+                    distance = haversine_distance(subject_lat, subject_lng, comp_lat, comp_lng)
+                    if distance <= payload.radius_miles:
+                        listing["_distance_miles"] = round(distance, 2)
+                        filtered_listings.append(listing)
+                else:
+                    # No geo data - include but without distance
+                    listing["_distance_miles"] = None
+                    filtered_listings.append(listing)
+            
+            # Sort by distance
+            filtered_listings.sort(key=lambda x: x.get("_distance_miles") or 999)
+            listings = filtered_listings
+            logger.info(f"Distance filter: {total_before_filter} -> {len(listings)} (radius: {payload.radius_miles} mi)")
         
         # Convert to ComparableProperty objects
         comparables = []
@@ -378,30 +485,46 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
                 year_built=prop.get("yearBuilt"),
                 dom=listing.get("mls", {}).get("daysOnMarket"),
                 close_date=listing.get("closeDate"),
+                distance_miles=listing.get("_distance_miles"),
                 photo_url=listing.get("photos", [None])[0] if listing.get("photos") else None,
             )
             comparables.append(comp)
         
+        # Build search params response
+        search_params = SearchParamsUsed(
+            radius_miles=payload.radius_miles,
+            sqft_variance=payload.sqft_variance,
+            sqft_range=sqft_range,
+            beds_range=beds_range,
+            baths_range=baths_range,
+            total_before_filter=total_before_filter,
+            was_auto_expanded=False,
+        )
+        
         return ComparablesResponse(
             success=True,
             subject_property=subject,
-            comparables=comparables
+            comparables=comparables,
+            total_found=len(comparables),
+            search_params=search_params,
         )
         
     except ImportError:
         logger.warning("SimplyRETS vendor not available")
         return ComparablesResponse(
-            success=True,
+            success=False,
             subject_property=subject,
             comparables=[],
-            error="Comparable search unavailable"
+            total_found=0,
+            error="Comparable search service unavailable"
         )
     except Exception as e:
-        logger.error(f"Comparables search error: {e}")
+        logger.error(f"Comparables search error: {e}", exc_info=True)
         return ComparablesResponse(
-            success=True,
+            success=False,
             subject_property=subject,
             comparables=[],
+            total_found=0,
             error=f"Comparable search failed: {str(e)}"
         )
 
