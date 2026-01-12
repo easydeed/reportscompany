@@ -85,28 +85,8 @@ class PropertySearchResponse(BaseModel):
     multiple_matches: Optional[List[dict]] = None
 
 
-class ComparableProperty(BaseModel):
-    """Comparable property from MLS"""
-    mls_id: str
-    address: str
-    city: str
-    state: str
-    zip_code: str
-    list_price: Optional[int] = None
-    close_price: Optional[int] = None
-    status: str
-    bedrooms: Optional[int] = None
-    bathrooms: Optional[float] = None
-    sqft: Optional[int] = None
-    lot_size: Optional[int] = None
-    year_built: Optional[int] = None
-    dom: Optional[int] = None
-    close_date: Optional[str] = None
-    distance_miles: Optional[float] = None
-    photo_url: Optional[str] = None
-    # Geo coordinates for map display
-    lat: Optional[float] = None
-    lng: Optional[float] = None
+# ComparableProperty - Using simple dicts now (like Worker does) to avoid Pydantic validation issues
+# with SimplyRETS data that may have None values or unexpected types
 
 
 class ComparablesRequest(BaseModel):
@@ -127,24 +107,24 @@ class ComparablesRequest(BaseModel):
     limit: int = Field(default=15, ge=1, le=50)
 
 
-class SearchParamsUsed(BaseModel):
-    """Actual search parameters used (for UI display/adjustment)"""
-    radius_miles: float
-    sqft_variance: float
-    sqft_range: Optional[Dict[str, int]] = None
-    beds_range: Optional[Dict[str, int]] = None
-    baths_range: Optional[Dict[str, int]] = None
-    total_before_filter: int = 0
-    was_auto_expanded: bool = False
+# SearchParamsUsed - Now using simple dict in ComparablesResponse
+# class SearchParamsUsed(BaseModel):
+#     radius_miles: float
+#     sqft_variance: float
+#     sqft_range: Optional[Dict[str, int]] = None
+#     beds_range: Optional[Dict[str, int]] = None
+#     baths_range: Optional[Dict[str, int]] = None
+#     total_before_filter: int = 0
+#     was_auto_expanded: bool = False
 
 
 class ComparablesResponse(BaseModel):
     """Response with comparable properties"""
     success: bool
-    subject_property: Optional[PropertyData] = None
-    comparables: List[ComparableProperty] = []
+    subject_property: Optional[dict] = None  # Simple dict for subject info
+    comparables: List[dict] = []  # Simple dicts like Worker uses
     total_found: int = 0
-    search_params: Optional[SearchParamsUsed] = None
+    search_params: Optional[dict] = None  # Simple dict for params
     error: Optional[str] = None
 
 
@@ -490,51 +470,66 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
             listings = filtered_listings
             logger.info(f"Distance filter: {total_before_filter} -> {len(listings)} (radius: {payload.radius_miles} mi)")
         
-        # Convert to ComparableProperty objects
+        # Convert to simple dicts (like Worker does) - no Pydantic validation issues
         comparables = []
         for listing in listings[:payload.limit]:
-            prop = listing.get("property", {})
-            address_obj = listing.get("address", {})
+            prop = listing.get("property") or {}
+            address_obj = listing.get("address") or {}
+            geo = listing.get("geo") or {}
+            mls_obj = listing.get("mls") or {}
             
-            geo = listing.get("geo", {})
-            mls_obj = listing.get("mls", {}) or {}
-            comp = ComparableProperty(
-                mls_id=str(listing.get("mlsId") or ""),
-                address=address_obj.get("full") or "",
-                city=address_obj.get("city") or "",
-                state=address_obj.get("state") or "",
-                zip_code=address_obj.get("postalCode") or "",
-                list_price=listing.get("listPrice"),
-                close_price=listing.get("closePrice"),
-                status=mls_obj.get("status") or "Unknown",
-                bedrooms=prop.get("bedrooms"),
-                bathrooms=prop.get("bathsFull"),
-                sqft=prop.get("area"),
-                lot_size=prop.get("lotSize"),
-                year_built=prop.get("yearBuilt"),
-                dom=mls_obj.get("daysOnMarket"),
-                close_date=listing.get("closeDate"),
-                distance_miles=listing.get("_distance_miles"),
-                photo_url=listing.get("photos", [None])[0] if listing.get("photos") else None,
-                lat=geo.get("lat"),
-                lng=geo.get("lng"),
-            )
+            comp = {
+                "mls_id": str(listing.get("mlsId") or ""),
+                "address": address_obj.get("full") or "",
+                "city": address_obj.get("city") or "",
+                "state": address_obj.get("state") or "",
+                "zip_code": address_obj.get("postalCode") or "",
+                "price": listing.get("listPrice") or listing.get("closePrice") or 0,
+                "list_price": listing.get("listPrice"),
+                "close_price": listing.get("closePrice"),
+                "bedrooms": prop.get("bedrooms") or 0,
+                "bathrooms": prop.get("bathsFull") or 0,
+                "sqft": prop.get("area") or 0,
+                "year_built": prop.get("yearBuilt"),
+                "lot_size": prop.get("lotSize"),
+                "photo_url": (listing.get("photos") or [None])[0],
+                "photos": listing.get("photos") or [],
+                "status": mls_obj.get("status") or "Closed",
+                "dom": mls_obj.get("daysOnMarket"),
+                "days_on_market": mls_obj.get("daysOnMarket"),
+                "list_date": listing.get("listDate"),
+                "close_date": listing.get("closeDate"),
+                "lat": geo.get("lat"),
+                "lng": geo.get("lng"),
+                "distance_miles": listing.get("_distance_miles"),
+            }
             comparables.append(comp)
         
-        # Build search params response
-        search_params = SearchParamsUsed(
-            radius_miles=payload.radius_miles,
-            sqft_variance=payload.sqft_variance,
-            sqft_range=sqft_range,
-            beds_range=beds_range,
-            baths_range=baths_range,
-            total_before_filter=total_before_filter,
-            was_auto_expanded=False,
-        )
+        # Build subject property info for response
+        subject_info = {
+            "address": payload.address,
+            "city": subject_city,
+            "zip_code": subject_zip,
+            "beds": subject_beds,
+            "baths": subject_baths,
+            "sqft": subject_sqft,
+            "lat": subject_lat,
+            "lng": subject_lng,
+        }
+        
+        # Build search params as simple dict
+        search_params = {
+            "radius_miles": payload.radius_miles,
+            "sqft_variance": payload.sqft_variance,
+            "sqft_range": sqft_range,
+            "beds_range": beds_range,
+            "baths_range": baths_range,
+            "total_before_filter": total_before_filter,
+        }
         
         return ComparablesResponse(
             success=True,
-            subject_property=subject,
+            subject_property=subject_info,
             comparables=comparables,
             total_found=len(comparables),
             search_params=search_params,
@@ -544,7 +539,7 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
         logger.error(f"Comparables search error: {e}", exc_info=True)
         return ComparablesResponse(
             success=False,
-            subject_property=subject,
+            subject_property=None,
             comparables=[],
             total_found=0,
             error=f"Comparable search failed: {str(e)}"
