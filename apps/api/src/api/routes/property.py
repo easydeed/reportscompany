@@ -498,7 +498,7 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
             
             geo = listing.get("geo", {})
             comp = ComparableProperty(
-                mls_id=listing.get("mlsId", ""),
+                mls_id=str(listing.get("mlsId", "")),  # Convert int to string
                 address=address_obj.get("full", ""),
                 city=address_obj.get("city", ""),
                 state=address_obj.get("state", ""),
