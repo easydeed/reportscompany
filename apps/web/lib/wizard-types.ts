@@ -130,7 +130,7 @@ export const COMPACT_PAGES: PageId[] = [
 ];
 
 // Get required page IDs
-export const REQUIRED_PAGES = ALL_PAGES.filter((p) => p.required).map((p) => p.id);
+export const REQUIRED_PAGES = ALL_PAGES.filter((p) => "required" in p && p.required).map((p) => p.id);
 
 // Wizard state
 export interface WizardState {
