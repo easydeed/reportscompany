@@ -277,7 +277,7 @@ export function ComparablesMapModal({
             {/* InfoWindow for Comparables */}
             {activeMarker && activeMarker !== "subject" && (() => {
               const comp = comparables.find((c) => c.id === activeMarker);
-              if (!comp) return null;
+              if (!comp || comp.lat === undefined || comp.lng === undefined) return null;
               const isSelected = selectedIds.includes(comp.id);
 
               return (
@@ -340,7 +340,7 @@ export function ComparablesMapModal({
                       {comp.distance_miles !== undefined && (
                         <span>📍 {comp.distance_miles.toFixed(2)} mi</span>
                       )}
-                      {comp.yearBuilt && <span>🏠 Built {comp.yearBuilt}</span>}
+                      {comp.year_built && <span>🏠 Built {comp.year_built}</span>}
                     </div>
 
                     {/* Click hint */}
