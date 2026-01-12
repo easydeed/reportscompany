@@ -153,6 +153,7 @@ export default function NewPropertyReportPage() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mapModalOpen, setMapModalOpen] = useState(false);
+  const [showParamsModal, setShowParamsModal] = useState(false);
 
   // Step 1: Search Property
   const handleSearchProperty = async () => {
@@ -252,7 +253,11 @@ export default function NewPropertyReportPage() {
           searchParams: response.search_params,
         }));
 
-        if (transformedComps.length === 0) {
+        // Show adjustment modal if < 4 comps found
+        if (transformedComps.length < 4 && transformedComps.length > 0) {
+          setShowParamsModal(true);
+        } else if (transformedComps.length === 0) {
+          setShowParamsModal(true);
           setError("No comparable properties found. Try expanding the search radius or SQFT variance.");
         }
       } else {
@@ -732,6 +737,111 @@ export default function NewPropertyReportPage() {
                   </DialogHeader>
                   <div className="h-[400px] bg-muted rounded-lg flex items-center justify-center">
                     <p className="text-muted-foreground">Map view coming soon</p>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              {/* Parameter Adjustment Modal */}
+              <Dialog open={showParamsModal} onOpenChange={setShowParamsModal}>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Adjust Search Parameters</DialogTitle>
+                    <DialogDescription>
+                      {state.availableComps.length === 0
+                        ? "No comparable properties found."
+                        : `Only ${state.availableComps.length} comparable ${state.availableComps.length === 1 ? "property" : "properties"} found.`}
+                      {" "}Adjust the parameters below to find more matches.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-6 py-4">
+                    {/* Radius Slider */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Search Radius</Label>
+                        <span className="text-sm font-semibold text-primary">
+                          {state.radiusMiles.toFixed(2)} miles
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.25"
+                        max="3.0"
+                        step="0.25"
+                        value={state.radiusMiles}
+                        onChange={(e) =>
+                          setState((prev) => ({
+                            ...prev,
+                            radiusMiles: parseFloat(e.target.value),
+                          }))
+                        }
+                        className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>0.25 mi</span>
+                        <span>1.5 mi</span>
+                        <span>3.0 mi</span>
+                      </div>
+                    </div>
+
+                    {/* SQFT Variance Slider */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Square Footage Variance</Label>
+                        <span className="text-sm font-semibold text-primary">
+                          ±{Math.round(state.sqftVariance * 100)}%
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.10"
+                        max="0.50"
+                        step="0.05"
+                        value={state.sqftVariance}
+                        onChange={(e) =>
+                          setState((prev) => ({
+                            ...prev,
+                            sqftVariance: parseFloat(e.target.value),
+                          }))
+                        }
+                        className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>±10%</span>
+                        <span>±30%</span>
+                        <span>±50%</span>
+                      </div>
+                      {state.property?.sqft && (
+                        <p className="text-xs text-muted-foreground text-center">
+                          Range: {Math.round(state.property.sqft * (1 - state.sqftVariance)).toLocaleString()} - {Math.round(state.property.sqft * (1 + state.sqftVariance)).toLocaleString()} sqft
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setShowParamsModal(false)}
+                    >
+                      Keep Current
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      onClick={() => {
+                        setShowParamsModal(false);
+                        loadComparables();
+                      }}
+                      disabled={loadingComps}
+                    >
+                      {loadingComps ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Search className="h-4 w-4 mr-2" />
+                      )}
+                      Search Again
+                    </Button>
                   </div>
                 </DialogContent>
               </Dialog>
