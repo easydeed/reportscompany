@@ -9,22 +9,7 @@ import {
 } from "@react-google-maps/api";
 import { X, Home, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-interface Comparable {
-  id: string;
-  address: string;
-  city?: string;
-  price: number;
-  bedrooms: number;
-  bathrooms: number;
-  sqft: number;
-  year_built?: number;
-  lat: number;
-  lng: number;
-  photo_url?: string;
-  distance_miles?: number;
-  status?: string;
-}
+import type { Comparable } from "@/lib/wizard-types";
 
 interface SubjectProperty {
   lat: number;

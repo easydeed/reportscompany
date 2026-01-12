@@ -12,23 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-interface Comparable {
-  id: string;
-  address: string;
-  city?: string;
-  price: number;
-  bedrooms: number;
-  bathrooms: number;
-  sqft: number;
-  year_built?: number;
-  lat?: number;
-  lng?: number;
-  photo_url?: string;
-  distance_miles?: number;
-  status?: string;
-  days_on_market?: number;
-}
+import type { Comparable } from "@/lib/wizard-types";
 
 interface ComparablesPickerProps {
   availableComps: Comparable[];
