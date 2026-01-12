@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useCallback } from "react";
 import { Search, Home, MapPin, Loader2 } from "lucide-react";
 import { useGooglePlaces } from "@/hooks/useGooglePlaces";
 import { Button } from "@/components/ui/button";
@@ -43,23 +43,21 @@ export function PropertySearchForm({
   const searchTriggerRef = useRef(false);
 
   // Google Places autocomplete
-  const handlePlaceSelectInternal = (place: {
-    address: string;
-    city: string;
-    state: string;
-    zip: string;
-  }) => {
-    const cityStateZipStr = `${place.city}, ${place.state} ${place.zip}`;
-    onAddressChange(place.address);
-    onCityStateZipChange(cityStateZipStr);
-    
-    if (onPlaceSelect) {
-      onPlaceSelect({ address: place.address, cityStateZip: cityStateZipStr });
-    }
-    
-    // Trigger search after state updates
-    searchTriggerRef.current = true;
-  };
+  const handlePlaceSelectInternal = useCallback(
+    (placeResult: Parameters<NonNullable<Parameters<typeof useGooglePlaces>[1]>["onPlaceSelect"]>[0]) => {
+      const cityStateZipStr = `${placeResult.city}, ${placeResult.state} ${placeResult.zip}`;
+      onAddressChange(placeResult.address);
+      onCityStateZipChange(cityStateZipStr);
+
+      if (onPlaceSelect) {
+        onPlaceSelect({ address: placeResult.address, cityStateZip: cityStateZipStr });
+      }
+
+      // Trigger search after state updates
+      searchTriggerRef.current = true;
+    },
+    [onAddressChange, onCityStateZipChange, onPlaceSelect]
+  );
 
   const { isLoaded: googleMapsLoaded } = useGooglePlaces(addressInputRef, {
     onPlaceSelect: handlePlaceSelectInternal,
