@@ -18,11 +18,11 @@ interface Comparable {
   bedrooms: number;
   bathrooms: number;
   sqft: number;
-  yearBuilt?: number;
+  year_built?: number;
   lat: number;
   lng: number;
-  photoUrl?: string;
-  distanceMiles?: number;
+  photo_url?: string;
+  distance_miles?: number;
   status?: string;
 }
 
@@ -302,9 +302,9 @@ export function ComparablesMapModal({
                 >
                   <div className="p-2 min-w-[240px] max-w-[300px]">
                     {/* Property Image */}
-                    {comp.photoUrl ? (
+                    {comp.photo_url ? (
                       <img
-                        src={comp.photoUrl}
+                        src={comp.photo_url}
                         alt={comp.address}
                         className="w-full h-28 object-cover rounded-lg mb-2"
                       />
@@ -352,8 +352,8 @@ export function ComparablesMapModal({
 
                     {/* Distance & Year */}
                     <div className="flex gap-3 text-xs text-gray-500 mt-1">
-                      {comp.distanceMiles !== undefined && (
-                        <span>📍 {comp.distanceMiles.toFixed(2)} mi</span>
+                      {comp.distance_miles !== undefined && (
+                        <span>📍 {comp.distance_miles.toFixed(2)} mi</span>
                       )}
                       {comp.yearBuilt && <span>🏠 Built {comp.yearBuilt}</span>}
                     </div>

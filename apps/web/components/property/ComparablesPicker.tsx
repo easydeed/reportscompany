@@ -21,13 +21,13 @@ interface Comparable {
   bedrooms: number;
   bathrooms: number;
   sqft: number;
-  yearBuilt?: number;
+  year_built?: number;
   lat?: number;
   lng?: number;
-  photoUrl?: string;
-  distanceMiles?: number;
+  photo_url?: string;
+  distance_miles?: number;
   status?: string;
-  daysOnMarket?: number;
+  days_on_market?: number;
 }
 
 interface ComparablesPickerProps {
@@ -81,8 +81,8 @@ export function ComparablesPicker({
       let score = 0;
 
       // Closer = better (invert distance)
-      if (comp.distanceMiles) {
-        score += Math.max(0, 10 - comp.distanceMiles * 5);
+      if (comp.distance_miles) {
+        score += Math.max(0, 10 - comp.distance_miles * 5);
       }
 
       // Similar sqft = better
@@ -174,9 +174,9 @@ export function ComparablesPicker({
       {/* Photo and details */}
       <div className="flex gap-3">
         <div className="w-20 h-16 flex-shrink-0 rounded-md overflow-hidden bg-muted">
-          {comp.photoUrl ? (
+          {comp.photo_url ? (
             <img
-              src={comp.photoUrl}
+              src={comp.photo_url}
               alt={comp.address}
               className="w-full h-full object-cover"
             />
@@ -207,9 +207,9 @@ export function ComparablesPicker({
             <span className="flex items-center gap-1">
               <Square className="w-3 h-3" /> {comp.sqft?.toLocaleString()}
             </span>
-            {comp.distanceMiles !== undefined && (
+            {comp.distance_miles !== undefined && (
               <span className="flex items-center gap-1">
-                <MapPin className="w-3 h-3" /> {comp.distanceMiles.toFixed(2)} mi
+                <MapPin className="w-3 h-3" /> {comp.distance_miles.toFixed(2)} mi
               </span>
             )}
           </div>
