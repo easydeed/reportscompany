@@ -38,7 +38,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ComparablesMapModal } from "@/components/property/ComparablesMapModal";
+import { ComparablesMapModal, ComparablesPicker } from "@/components/property";
 
 // Types
 interface PropertyData {
@@ -634,23 +634,6 @@ export default function NewPropertyReportPage() {
           {/* STEP 2: Select Comparables */}
           {state.step === 2 && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="mb-2">Select Comparables</CardTitle>
-                  <CardDescription>
-                    Choose 4-8 comparable properties for your report
-                  </CardDescription>
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => setMapModalOpen(true)}
-                  disabled={!state.property?.latitude || !state.property?.longitude || (state.availableComps.length === 0 && state.selectedComps.length === 0)}
-                >
-                  <Map className="w-4 h-4 mr-2" />
-                  View on Map
-                </Button>
-              </div>
-
               {/* Search Filters */}
               <div className="bg-muted/50 rounded-lg p-4 space-y-4">
                 <div className="flex items-center justify-between">
@@ -757,61 +740,55 @@ export default function NewPropertyReportPage() {
               </div>
 
               {loadingComps ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Finding comparable properties...</p>
+                  <p className="text-sm text-muted-foreground/70 mt-1">
+                    Searching within {state.radiusMiles} miles, ±{Math.round(state.sqftVariance * 100)}% sqft
+                  </p>
                 </div>
               ) : (
-                <div className="grid md:grid-cols-2 gap-6">
-                  {/* Available Comps */}
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-sm text-muted-foreground">
-                      Available Comparables ({state.availableComps.length})
-                    </h4>
-                    <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-                      {state.availableComps.length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-8">
-                          No comparables available
-                        </p>
-                      ) : (
-                        state.availableComps.map((comp) => (
-                          <CompCard
-                            key={comp.mlsId}
-                            comp={comp}
-                            action="add"
-                            onClick={() => selectComp(comp)}
-                            disabled={state.selectedComps.length >= 8}
-                          />
-                        ))
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Selected Comps */}
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-sm text-muted-foreground">
-                      Selected Comparables ({state.selectedComps.length}/8)
-                      {state.selectedComps.length < 4 && (
-                        <span className="text-red-500 ml-2">Min 4 required</span>
-                      )}
-                    </h4>
-                    <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-                      {state.selectedComps.length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-8 border-2 border-dashed rounded-lg">
-                          Click comparables to add them here
-                        </p>
-                      ) : (
-                        state.selectedComps.map((comp) => (
-                          <CompCard
-                            key={comp.mlsId}
-                            comp={comp}
-                            action="remove"
-                            onClick={() => deselectComp(comp)}
-                          />
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <ComparablesPicker
+                  availableComps={[...state.availableComps, ...state.selectedComps].map((c) => ({
+                    id: c.mlsId,
+                    address: c.address.full,
+                    city: c.address.city,
+                    price: c.listPrice,
+                    bedrooms: c.property.bedrooms,
+                    bathrooms: c.property.bathrooms,
+                    sqft: c.property.area,
+                    yearBuilt: c.property.yearBuilt,
+                    lat: c.geo?.lat,
+                    lng: c.geo?.lng,
+                    photoUrl: c.photos?.[0],
+                    distanceMiles: c.distance,
+                    status: "Closed",
+                  }))}
+                  selectedIds={state.selectedComps.map((c) => c.mlsId)}
+                  onSelectionChange={(newSelectedIds) => {
+                    // Combine all comps to find by ID
+                    const allComps = [...state.availableComps, ...state.selectedComps];
+                    
+                    // Find newly selected and deselected
+                    const newSelected = allComps.filter((c) => newSelectedIds.includes(c.mlsId));
+                    const newAvailable = allComps.filter((c) => !newSelectedIds.includes(c.mlsId));
+                    
+                    setState((prev) => ({
+                      ...prev,
+                      selectedComps: newSelected,
+                      availableComps: newAvailable,
+                    }));
+                  }}
+                  onOpenMap={() => setMapModalOpen(true)}
+                  minSelections={4}
+                  maxSelections={8}
+                  subjectProperty={{
+                    bedrooms: state.property?.bedrooms,
+                    bathrooms: state.property?.bathrooms,
+                    sqft: state.property?.sqft,
+                  }}
+                  mapDisabled={!state.property?.latitude || !state.property?.longitude}
+                />
               )}
 
               {/* Comparables Map Modal */}
