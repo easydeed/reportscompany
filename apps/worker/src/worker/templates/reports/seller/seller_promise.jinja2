@@ -1,0 +1,88 @@
+{#
+    Seller Report - A Promise to My Clients Page
+    Converted from: application/views/reports/english/seller/pages/11b.php
+
+    Required variables:
+    - theme_color               : Hex color for theme accents (default: #0d294b)
+    - assets_base_url           : Base URL for static assets
+    - promise                   : Page content object (optional)
+      - title                   : Page title
+      - sub_title               : Page subtitle
+      - content                 : Intro paragraph
+      - points                  : Array of 6 promise points, each with:
+        - title                 : Point title (e.g., "Loyalty")
+        - content               : Point description
+#}
+
+<style>
+    .page11 {
+        padding: 45px 50px;
+    }
+    .page11 .page-tagline {
+        font-size: 13px;
+        line-height: 1.7;
+        color: #666;
+        margin-bottom: 30px;
+    }
+    .page11 .vesting {
+        margin-bottom: 25px;
+        padding: 0;
+        list-style: none;
+    }
+    .page11 .vesting-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: {{ theme_color | default('#0d294b') }};
+        margin-bottom: 8px;
+    }
+    .page11 .vesting li {
+        font-size: 13px;
+        line-height: 1.7;
+        color: #666;
+        margin-left: 0;
+    }
+</style>
+<div class="page">
+    <div class="section page11">
+
+        <header>
+            <h2 class="underline title-bold">{{ promise.title | default('A Promise to my Clients') }}</h2>
+            <p>{{ promise.sub_title | default('My duties to you') }}</p>
+        </header>
+
+        <p class="page-tagline">
+            {{ promise.content | default('As your real estate agent, in addition to any duties or commitments set forth in our listing agreement, my fiduciary duties to you include but are not limited to:') }}
+        </p>
+
+        <ol class="vesting">
+            <h3 class="vesting-title">{{ promise.points[0].title | default('Loyalty') }}</h3>
+            <li>{{ promise.points[0].content | default('Loyalty is my first and foremost duty to you. This means that I must act with your best interest in mind, to the exclusion of all other interests including my own.') }}</li>
+        </ol>
+
+        <ol class="vesting">
+            <h3 class="vesting-title">{{ promise.points[1].title | default('Confidentiality') }}</h3>
+            <li>{{ promise.points[1].content | default('As your agent I am obligated to safeguard your confidence and secrets. I therefore, must keep confidential any information that might weaken your bargaining position if it were revealed.') }}</li>
+        </ol>
+
+        <ol class="vesting">
+            <h3 class="vesting-title">{{ promise.points[2].title | default('Disclosure') }}</h3>
+            <li>{{ promise.points[2].content | default('As your agent, I am responsible to disclose to you, all relevant and material information that I know might affect your ability to obtain the highest price and best terms in the sale of your property.') }}</li>
+        </ol>
+
+        <ol class="vesting">
+            <h3 class="vesting-title">{{ promise.points[3].title | default('Obedience') }}</h3>
+            <li>{{ promise.points[3].content | default('As your agent, I am bound to obey promptly and efficiently all lawful instructions that you give me pertaining to the sale of your property.') }}</li>
+        </ol>
+
+        <ol class="vesting">
+            <h3 class="vesting-title">{{ promise.points[4].title | default('Reasonable care and diligence') }}</h3>
+            <li>{{ promise.points[4].content | default('To assist you in your real estate transaction, the standard of care expected of me, by you, should be that of a competent real estate professional.') }}</li>
+        </ol>
+
+        <ol class="vesting">
+            <h3 class="vesting-title">{{ promise.points[5].title | default('Accounting') }}</h3>
+            <li>{{ promise.points[5].content | default('As your realtor, I am bound to safeguard any money, deeds, or other documents you entrust to me, related to your real estate transaction.') }}</li>
+        </ol>
+
+    </div>
+</div>

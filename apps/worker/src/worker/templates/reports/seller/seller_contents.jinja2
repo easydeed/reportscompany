@@ -1,0 +1,52 @@
+{#
+    Seller Report - Contents Page
+    Converted from: application/views/reports/english/seller/pages/2.php
+
+    Required variables:
+    - theme_color               : Hex color for theme accents (default: #0d294b)
+    - assets_base_url           : Base URL for static assets
+    - contents                  : List of content items (optional, uses defaults)
+#}
+
+<div class="page">
+    <div class="section page2" style="position: relative; height: 100%;">
+        <header style="position: absolute; top: 50px; left: 50px; z-index: 10;">
+            <h2 class="underline" style="font-size: 32px;">Contents</h2>
+            <p style="margin-top: 15px;">What is in your listing proposal</p>
+        </header>
+
+        <div class="body" style="height: 100%;">
+            <img width="100%" class="img-responsive" src="{{ assets_base_url | default('/assets') }}/reports/english/seller/images/2/bg9.jpg" alt="" style="height: 100%; object-fit: cover;">
+
+            <div class="card" style="position: absolute; right: 50px; top: 50%; transform: translateY(-50%); max-width: 280px; background: rgba(255,255,255,0.98); padding: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+                <div class="card-inner">
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        {% if contents %}
+                            {% for item in contents %}
+                            <li style="padding: 10px 0; font-size: 14px; border-bottom: 1px solid #eee; text-transform: lowercase; display: flex; justify-content: space-between;">
+                                <span>{{ item.title }}</span>
+                                <span style="color: {{ theme_color | default('#0d294b') }};">.{{ item.page }}</span>
+                            </li>
+                            {% endfor %}
+                        {% else %}
+                            <li style="padding: 10px 0; font-size: 14px; border-bottom: 1px solid #eee; text-transform: lowercase;">aerial snapshot .3</li>
+                            <li style="padding: 10px 0; font-size: 14px; border-bottom: 1px solid #eee; text-transform: lowercase;">property information .4</li>
+                            <li style="padding: 10px 0; font-size: 14px; border-bottom: 1px solid #eee; text-transform: lowercase;">area sales analysis .5</li>
+                            <li style="padding: 10px 0; font-size: 14px; border-bottom: 1px solid #eee; text-transform: lowercase;">sales comparables .6-7</li>
+                            <li style="padding: 10px 0; font-size: 14px; border-bottom: 1px solid #eee; text-transform: lowercase;">estimated sales price .8</li>
+                            <li style="padding: 10px 0; font-size: 14px; border-bottom: 1px solid #eee; text-transform: lowercase;">selling roadmap .9</li>
+                            <li style="padding: 10px 0; font-size: 14px; border-bottom: 1px solid #eee; text-transform: lowercase;">how buyers find homes .10</li>
+                            <li style="padding: 10px 0; font-size: 14px; border-bottom: 1px solid #eee; text-transform: lowercase;">pricing correctly .11</li>
+                            <li style="padding: 10px 0; font-size: 14px; border-bottom: 1px solid #eee; text-transform: lowercase;">average days on market .12</li>
+                            <li style="padding: 10px 0; font-size: 14px; border-bottom: 1px solid #eee; text-transform: lowercase;">marketing your property .13</li>
+                            <li style="padding: 10px 0; font-size: 14px; border-bottom: 1px solid #eee; text-transform: lowercase;">analyze & optimize .16</li>
+                            <li style="padding: 10px 0; font-size: 14px; border-bottom: 1px solid #eee; text-transform: lowercase;">negotiation offers .17</li>
+                            <li style="padding: 10px 0; font-size: 14px; border-bottom: 1px solid #eee; text-transform: lowercase;">transaction process .18</li>
+                            <li style="padding: 10px 0; font-size: 14px; text-transform: lowercase;">our promise .19</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

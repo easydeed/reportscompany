@@ -3,17 +3,16 @@
     Converted from: application/views/reports/english/seller/pages/5.php
 
     Required variables:
-    - property.address          : Full site address
     - property.street           : Street address
     - property.city             : City name
     - property.state            : State abbreviation
-    - property.zip              : ZIP code
+    - property.zip_code         : ZIP code
     - property.county           : County name
     - property.apn              : Assessor's Parcel Number
     - property.owner_name       : Primary owner name
     - property.secondary_owner  : Secondary owner name (optional)
     - property.legal_description: Brief legal description
-    - property.mailing_address  : Mailing address (optional)
+    - property.mailing_address  : Full mailing address (optional)
     - property.census_tract     : Census tract (optional)
     - property.housing_tract    : Housing tract number (optional)
     - property.lot_number       : Lot number (optional)
@@ -48,43 +47,15 @@
     - theme_color               : Hex color for theme accents (default: #0d294b)
 #}
 
-{% extends "seller_base.jinja2" %}
-
-{% block title %}Property Details{% endblock %}
-
-{% block extra_styles %}
 <style>
-    .page5 {
-        padding: 45px 50px;
-    }
-
-    .page5 header {
-        text-align: left;
-        margin-bottom: 25px;
-    }
-
-    .page5 header h2 {
-        font-size: 28px;
-        margin-bottom: 5px;
-        color: {{ theme_color | default('#0d294b') }};
-    }
-
-    .page5 header p {
-        color: #666;
-        font-size: 14px;
-    }
-
-    .page5 .table-wrapper {
-        margin-bottom: 25px;
-    }
-
     .page5 .table-wrapper h2 {
-        font-size: 16px;
+        font-size: 14px;
         text-transform: uppercase;
         letter-spacing: 1px;
         margin-bottom: 12px;
         padding-bottom: 8px;
         border-bottom: 2px solid {{ theme_color | default('#0d294b') }};
+        color: {{ theme_color | default('#0d294b') }};
     }
 
     .page5 .table-row {
@@ -93,6 +64,7 @@
 
     .page5 .table-row p {
         font-size: 13px;
+        margin: 0;
     }
 
     .page5 .table-row .col-xs-4,
@@ -101,10 +73,7 @@
         padding: 0 10px;
     }
 </style>
-{% endblock %}
-
-{% block content %}
-<div class="container">
+<div class="page">
     <div class="section page5">
 
         <header>
@@ -113,7 +82,7 @@
         </header>
 
         {# Owner, Address & Legal Description #}
-        <div class="table-wrapper">
+        <div class="table-wrapper" style="margin-bottom: 25px;">
             <h2>OWNER, ADDRESS & LEGAL DESCRIPTION</h2>
 
             <div class="table-row">
@@ -137,7 +106,7 @@
             <div class="table-row">
                 <div class="row">
                     <div class="col-xs-12">
-                        <p>Site Address: {{ property.street }}, {{ property.city }}, {{ property.state }} {{ property.zip }}</p>
+                        <p>Site Address: {{ property.street }}, {{ property.city }}, {{ property.state }} {{ property.zip_code }}</p>
                     </div>
                 </div>
             </div>
@@ -202,7 +171,7 @@
         </div>
 
         {# Beds, Baths & Square Footage #}
-        <div class="table-wrapper">
+        <div class="table-wrapper" style="margin-bottom: 25px;">
             <h2>BEDS, BATHS, & SQUARE FOOTAGE</h2>
 
             <div class="table-row">
@@ -214,7 +183,7 @@
                         <p>Year: {{ property.year_built | default('N/A') }}</p>
                     </div>
                     <div class="col-xs-4">
-                        <p>Square Feet: {{ property.sqft | default('N/A') }}</p>
+                        <p>Square Feet: {{ property.sqft | default('N/A') | string | replace('.0', '') }}</p>
                     </div>
                 </div>
             </div>
@@ -291,10 +260,10 @@
             <div class="table-row">
                 <div class="row">
                     <div class="col-xs-6">
-                        <p>Assessed Value: ${{ property.assessed_value | default('N/A') }}</p>
+                        <p>Assessed Value: ${{ "{:,.0f}".format(property.assessed_value | float) if property.assessed_value else 'N/A' }}</p>
                     </div>
                     <div class="col-xs-6">
-                        <p>Tax Amount: ${{ property.tax_amount | default('N/A') }}</p>
+                        <p>Tax Amount: ${{ "{:,.0f}".format(property.tax_amount | float) if property.tax_amount else 'N/A' }}</p>
                     </div>
                 </div>
             </div>
@@ -303,7 +272,7 @@
             <div class="table-row">
                 <div class="row">
                     <div class="col-xs-6">
-                        <p>Land Value: ${{ property.land_value | default('N/A') }}</p>
+                        <p>Land Value: ${{ "{:,.0f}".format(property.land_value | float) if property.land_value else 'N/A' }}</p>
                     </div>
                     <div class="col-xs-6">
                         <p>Tax Status: {{ property.tax_status | default('N/A') }}</p>
@@ -316,7 +285,7 @@
             <div class="table-row">
                 <div class="row">
                     <div class="col-xs-6">
-                        <p>Improvement Value: ${{ property.improvement_value | default('N/A') }}</p>
+                        <p>Improvement Value: ${{ "{:,.0f}".format(property.improvement_value | float) if property.improvement_value else 'N/A' }}</p>
                     </div>
                     <div class="col-xs-6">
                         <p>Tax Rate Area: {{ property.tax_rate_area | default('N/A') }}%</p>
@@ -342,4 +311,3 @@
 
     </div>
 </div>
-{% endblock %}

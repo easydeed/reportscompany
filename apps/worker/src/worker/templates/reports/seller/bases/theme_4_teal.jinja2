@@ -1,0 +1,545 @@
+{#
+    Theme 4: Teal
+    =============
+    Modern minimal design with teal accent
+
+    Fonts: System fonts (with custom styling)
+    Colors: Teal accent (#16d3ba), Navy (#152170)
+    Style: Modern minimal, rounded agent photos, 9-page version
+    Source: seller/4/pages/*.php
+
+    Note: This is a simplified 9-page report template.
+    Use page_set: 'compact' in the master template for this theme.
+#}
+
+{# Define theme-specific defaults #}
+{% set theme_name = 'teal' %}
+{% set theme_fonts = {
+    'primary': "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+    'heading': "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+} %}
+{% set theme_defaults = {
+    'color': '#16d3ba',
+    'navy': '#152170',
+    'text': '#000'
+} %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Seller's Report{% endblock %} - {{ property.street | default('Property Report') }}</title>
+
+    {# Google Fonts fallback #}
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* ==========================================================================
+           Theme 4: Teal - Base Styles
+           ========================================================================== */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            font-size: 16px;
+            color: #000;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: 600;
+            margin: 0;
+        }
+
+        p {
+            margin: 0;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* ==========================================================================
+           Page Structure
+           ========================================================================== */
+        .page_container {
+            width: 816px;
+            margin: 0 auto;
+        }
+
+        .pdf_page, .size_letter {
+            position: relative;
+            display: block;
+            overflow: hidden;
+            width: 816px;
+            height: 1056px;
+            margin: 0 auto;
+            background: #fff;
+            page-break-after: always;
+            page-break-inside: avoid;
+        }
+
+        .pdf1_page {
+            margin: 0 auto;
+            box-sizing: border-box;
+            background-color: #fff;
+            position: relative;
+            padding: 0px 25px;
+        }
+
+        .pdf1_page > img {
+            height: 870px;
+            width: 100%;
+        }
+
+        @page {
+            size: letter;
+            margin: 0;
+        }
+
+        /* ==========================================================================
+           Grid System
+           ========================================================================== */
+        .grid::after {
+            display: table;
+            content: '';
+            width: 100%;
+        }
+
+        .grid > .col-3 {
+            float: left;
+            width: 25%;
+            text-align: center;
+        }
+
+        .grid > .col-4 {
+            float: left;
+            width: 33%;
+        }
+
+        .grid > .col-6 {
+            float: left;
+            width: 50%;
+        }
+
+        .grid > .col-8 {
+            float: left;
+            width: 67%;
+        }
+
+        .img-fluid {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .d-block {
+            display: block;
+        }
+
+        .mt-20 {
+            margin-top: 20px;
+        }
+
+        /* ==========================================================================
+           Theme 4: Teal - Header
+           ========================================================================== */
+        .pdf_header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 40px 0;
+            text-align: center;
+        }
+
+        h1.seller-report {
+            font-size: 65px;
+            color: #fff;
+            margin: 65px 0 0;
+            line-height: 65px;
+            font-weight: 300;
+            text-align: left;
+            padding-left: 35px;
+        }
+
+        h1.seller-report b {
+            color: #152170;
+        }
+
+        /* ==========================================================================
+           Theme 4: Teal - Address
+           ========================================================================== */
+        .address {
+            max-width: 365px;
+            margin-top: 120px;
+            text-align: center;
+            color: #fff;
+        }
+
+        .address img {
+            display: block;
+            margin: 0 auto 10px;
+        }
+
+        .address b {
+            font-size: 45px;
+            color: {{ theme_color | default('#16d3ba') }};
+            display: block;
+        }
+
+        .address span {
+            font-size: 22px;
+            width: 211px;
+            display: block;
+            margin: 0 auto;
+            padding-top: 8px;
+            border-top: 1px solid #fff;
+        }
+
+        /* ==========================================================================
+           Theme 4: Teal - Footer
+           ========================================================================== */
+        .pdf_footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding-top: 10px;
+            text-align: left;
+            font-size: 16px;
+        }
+
+        .pdf1_footer {
+            padding: 10px 25px 10px;
+        }
+
+        .pdf_footer p {
+            margin: 0;
+        }
+
+        /* ==========================================================================
+           Theme 4: Teal - Agent Info
+           ========================================================================== */
+        .zoe-dp {
+            width: 160px;
+            border-radius: 50px;
+        }
+
+        .zoe-noelle {
+            font-size: 18px;
+            font-weight: 700;
+            color: #000;
+        }
+
+        .realtor {
+            color: {{ theme_color | default('#16d3ba') }};
+            font-weight: 600;
+        }
+
+        .contact-detail img {
+            width: 14px;
+            margin-right: 5px;
+        }
+
+        .contact-detail, .license {
+            font-size: 14px;
+            color: #000;
+            margin-bottom: 3px;
+        }
+
+        .license {
+            text-decoration: underline;
+            text-decoration-color: {{ theme_color | default('#16d3ba') }};
+            text-underline-offset: 5px;
+            margin-bottom: 10px;
+            text-decoration-thickness: 2px;
+        }
+
+        .img-flare {
+            width: 160px;
+        }
+
+        /* ==========================================================================
+           Theme 4: Teal - Content Pages
+           ========================================================================== */
+        .pdf_body {
+            position: absolute;
+            top: 290px;
+            bottom: 1.2in;
+            left: 0;
+            right: 0;
+        }
+
+        .page_text {
+            float: right;
+        }
+
+        .page_title {
+            float: left;
+        }
+
+        /* ==========================================================================
+           Theme 4: Teal - Section Headers
+           ========================================================================== */
+        .section-header {
+            margin-bottom: 30px;
+        }
+
+        .section-header h2 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #152170;
+            margin-bottom: 10px;
+            position: relative;
+            display: inline-block;
+        }
+
+        .section-header h2::after {
+            content: "";
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background: {{ theme_color | default('#16d3ba') }};
+        }
+
+        .section-header p {
+            font-size: 14px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* ==========================================================================
+           Theme 4: Teal - Statistics
+           ========================================================================== */
+        .stat-box {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .stat-number {
+            font-size: 48px;
+            font-weight: 700;
+            color: {{ theme_color | default('#16d3ba') }};
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #666;
+            letter-spacing: 1px;
+        }
+
+        /* ==========================================================================
+           Theme 4: Teal - Tables
+           ========================================================================== */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table th, table td {
+            padding: 10px 12px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        table thead th {
+            background: #152170;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        table tbody tr:nth-child(even) {
+            background: #f5f5f5;
+        }
+
+        /* ==========================================================================
+           Theme 4: Teal - Property Cards
+           ========================================================================== */
+        .property-card {
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .property-card-image {
+            height: 150px;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .property-card-body {
+            padding: 15px;
+        }
+
+        .property-card-address {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .property-card-price {
+            font-size: 18px;
+            font-weight: 700;
+            color: {{ theme_color | default('#16d3ba') }};
+        }
+
+        .property-tag {
+            display: inline-block;
+            padding: 5px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            border-radius: 3px;
+            margin-right: 5px;
+        }
+
+        .property-tag.sold {
+            background: #152170;
+            color: #fff;
+        }
+
+        .property-tag.price {
+            background: #fff;
+            color: {{ theme_color | default('#16d3ba') }};
+            border: 2px solid {{ theme_color | default('#16d3ba') }};
+        }
+
+        /* ==========================================================================
+           Theme 4: Teal - Content Blocks
+           ========================================================================== */
+        .content-block {
+            margin-bottom: 25px;
+        }
+
+        .content-block h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #152170;
+            margin-bottom: 10px;
+        }
+
+        .content-block p {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #444;
+        }
+
+        /* ==========================================================================
+           Theme 4: Teal - Process Steps
+           ========================================================================== */
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .step-number {
+            width: 50px;
+            height: 50px;
+            background: {{ theme_color | default('#16d3ba') }};
+            color: #fff;
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-right: 15px;
+        }
+
+        .step-content h4 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .step-content p {
+            font-size: 13px;
+            color: #666;
+        }
+
+        /* ==========================================================================
+           Theme 4: Teal - Slider/Range
+           ========================================================================== */
+        .price-range {
+            background: #f0f0f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .price-range-bar {
+            height: 8px;
+            background: linear-gradient(to right, #e0e0e0, {{ theme_color | default('#16d3ba') }}, #e0e0e0);
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .price-range-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+
+        .price-range-labels span {
+            font-size: 14px;
+            font-weight: 600;
+            color: #152170;
+        }
+
+        /* ==========================================================================
+           Theme 4: Teal - Back Cover
+           ========================================================================== */
+        .back-cover {
+            background: {{ theme_color | default('#16d3ba') }};
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .back-cover-content {
+            text-align: center;
+            color: #fff;
+        }
+
+        .back-cover-logo {
+            max-width: 200px;
+            margin-bottom: 30px;
+        }
+
+        /* ==========================================================================
+           Theme Color Utilities
+           ========================================================================== */
+        .theme-color { color: {{ theme_color | default('#16d3ba') }}; }
+        .theme-bg { background-color: {{ theme_color | default('#16d3ba') }}; }
+        .theme-border { border-color: {{ theme_color | default('#16d3ba') }}; }
+        .navy-color { color: #152170; }
+        .navy-bg { background-color: #152170; }
+    </style>
+
+    {% block extra_styles %}{% endblock %}
+</head>
+<body>
+    {% block content %}{% endblock %}
+</body>
+</html>

@@ -6,10 +6,16 @@ Celery task for generating property reports (seller/buyer).
 
 Flow:
 1. Fetch report from DB with user/branding joins
-2. Build HTML with PropertyReportBuilder
+2. Build HTML with PropertyReportBuilder (uses seller_report.jinja2 orchestrator)
 3. Generate PDF with PDFShift
 4. Upload to R2
 5. Update report: status='complete', pdf_url=...
+
+Template System:
+- Templates are in templates/reports/seller/
+- Entry point: seller_report.jinja2 (orchestrator)
+- Themes 1-5 with full (21 pages) or compact (9 pages) page sets
+- See SELLER_REPORT_INTEGRATION.md for details
 
 Usage:
     from worker.tasks.property_report import generate_property_report

@@ -1,0 +1,150 @@
+{#
+    Seller Report - Range of Sales Page
+    Converted from: application/views/reports/english/seller/pages/5e.php
+
+    Required variables:
+    - theme_color               : Hex color for theme accents (default: #0d294b)
+    - assets_base_url           : Base URL for static assets
+    - google_maps_api_key       : Google Maps API key
+    - property                  : Property object
+      - latitude                : Property latitude
+      - longitude               : Property longitude
+    - range_of_sales            : Range of sales statistics object
+      - total_comps             : Number of comparable properties
+      - avg_sqft                : Average square footage
+      - avg_beds                : Average number of bedrooms
+      - avg_baths               : Average number of bathrooms
+      - price_min               : Minimum sale price in range
+      - price_max               : Maximum sale price in range
+#}
+
+<style>
+    .page5e .text-content {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 30px;
+    }
+    .page5e .text-box {
+        text-align: center;
+        padding: 20px;
+    }
+    .page5e .num-text {
+        font-size: 36px;
+        font-weight: 700;
+        color: {{ theme_color | default('#0d294b') }};
+        margin-bottom: 5px;
+    }
+    .page5e .total-text1, .page5e .total-text2, .page5e .total-text3, .page5e .total-text4 {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: #666;
+        letter-spacing: 1px;
+    }
+    .page5e .slider-wrapper {
+        margin: 40px 0;
+        padding: 20px 40px;
+        background: #f9f9f9;
+        border-radius: 8px;
+    }
+    .page5e .slider-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 15px;
+    }
+    .page5e .slider-bar {
+        height: 8px;
+        background: linear-gradient(to right, #e0e0e0, {{ theme_color | default('#0d294b') }}, #e0e0e0);
+        border-radius: 4px;
+        position: relative;
+    }
+    .page5e .slider-handle {
+        width: 20px;
+        height: 20px;
+        background: {{ theme_color | default('#0d294b') }};
+        border-radius: 50%;
+        position: absolute;
+        top: -6px;
+        border: 2px solid #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .page5e .slider-handle.left { left: 10%; }
+    .page5e .slider-handle.right { right: 10%; }
+    .page5e .price-label {
+        font-size: 14px;
+        font-weight: 600;
+        color: {{ theme_color | default('#0d294b') }};
+    }
+    .page5e .font-average {
+        font-size: 13px;
+        line-height: 1.8;
+        color: #666;
+        margin-top: 20px;
+    }
+</style>
+<div class="page">
+    <div class="section page5e">
+
+        <header>
+            <h2 class="underline title-bold">Range of Sales</h2>
+            <p>BASED ON RECENT COMPARABLE SALES.</p>
+        </header>
+
+        <div class="row" style="margin-top: 30px;">
+            <div class="col-xs-12">
+                <div class="map-container" style="margin: 0 -50px;">
+                    <img src="https://maps.googleapis.com/maps/api/staticmap?zoom=15&size=864x350&maptype=satellite&center={{ property.latitude | default('34.0522') }},{{ property.longitude | default('-118.2437') }}&markers=color:0x{{ theme_color | default('#0d294b') | replace('#', '') }}%7C{{ property.latitude | default('34.0522') }},{{ property.longitude | default('-118.2437') }}&style=feature:water|element:geometry.fill|color:0xd3d3d3&style=feature:transit|color:0x808080|visibility:off&style=feature:road.highway|element:geometry.stroke|visibility:on|color:0xb3b3b3&style=feature:road.highway|element:geometry.fill|color:0xffffff&style=feature:road.local|element:geometry.fill|visibility:on|color:0xffffff|weight:1.8&style=feature:road.local|element:geometry.stroke|color:0xd7d7d7&style=feature:poi|element:geometry.fill|visibility:on|color:0xebebeb&style=feature:administrative|element:geometry|color:0xa7a7a7&style=feature:road.arterial|element:geometry.fill|color:0xffffff&style=feature:landscape|element:geometry.fill|visibility:on|color:0xefefef&style=feature:road|element:labels.text.fill|color:0x696969&style=feature:administrative|element:labels.text.fill|visibility:on|color:0x737373&style=feature:poi|element:labels.icon|visibility:off&style=feature:poi|element:labels|visibility:off&style=feature:road.arterial|element:geometry.stroke|color:0xd6d6d6&style=feature:road|element:labels.icon|visibility:off&style=feature:poi|element:geometry.fill|color:0xdadada&key={{ google_maps_api_key | default('YOUR_API_KEY') }}" alt="Aerial Map" style="width: 100%;">
+                </div>
+            </div>
+        </div>
+
+        <div class="row text-content" style="margin-top: 40px;">
+            <div class="col-xs-3">
+                <div class="text-box text-box1">
+                    <h3 class="num-text">{{ range_of_sales.total_comps | default('9') }}</h3>
+                    <p class="text-uppercase total-text1">total comps</p>
+                </div>
+            </div>
+            <div class="col-xs-3">
+                <div class="text-box text-box2">
+                    <h3 class="num-text">{{ range_of_sales.avg_sqft | default('1,250') }}</h3>
+                    <p class="text-uppercase total-text2">avg. sqft</p>
+                </div>
+            </div>
+            <div class="col-xs-3">
+                <div class="text-box text-box3">
+                    <h3 class="num-text">{{ range_of_sales.avg_beds | default('3') }}</h3>
+                    <p class="text-uppercase total-text3">avg. # beds</p>
+                </div>
+            </div>
+            <div class="col-xs-3">
+                <div class="text-box text-box4">
+                    <h3 class="num-text">{{ range_of_sales.avg_baths | default('2') }}</h3>
+                    <p class="text-uppercase total-text4">avg. # baths</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-xs-12">
+                <div class="slider-wrapper">
+                    <div class="slider-bar">
+                        <div class="slider-handle left"></div>
+                        <div class="slider-handle right"></div>
+                    </div>
+                    <div class="slider-labels">
+                        <span class="price-label">${{ range_of_sales.price_min | default('320') }}K</span>
+                        <span class="price-label">${{ range_of_sales.price_max | default('485') }}K</span>
+                    </div>
+                </div>
+
+                <div class="para-def">
+                    <p class="font-average">
+                        Above are the average property details for homes that are close in proximity to yours AND have been sold within the last 12-months.
+                        The range represents the low AND the high sales price for the properties that were sold in the last 12-months. Only the properties that closely match yours were used. The factors that were analyzed were Square Footage, No. Of Beds, No. of Baths, & Lot Size.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>

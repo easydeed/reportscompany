@@ -1,0 +1,175 @@
+{#
+    Seller Report - Analyze & Optimize Page
+    Converted from: application/views/reports/english/seller/pages/6f.php
+
+    Required variables:
+    - theme_color               : Hex color for theme accents (default: #0d294b)
+    - assets_base_url           : Base URL for static assets
+    - analyze_optimize          : Page content object (optional)
+      - title                   : Page title
+      - sub_title               : Page subtitle
+      - content                 : Main content paragraph
+      - table_1_title           : First table title
+      - table_2_title           : Second table title
+      - footer_content          : Footer paragraph
+#}
+
+<style>
+    .page-analyze .most-buyers2 {
+        font-size: 13px;
+        line-height: 1.8;
+        color: #666;
+        margin-bottom: 30px;
+    }
+    .page-analyze .market-content-top {
+        margin-top: 30px;
+    }
+    .page-analyze .home {
+        font-size: 12px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+    }
+    .page-analyze .table {
+        width: 100%;
+        margin-bottom: 20px;
+        border-collapse: collapse;
+    }
+    .page-analyze .table td {
+        padding: 10px;
+        text-align: center;
+        border: 1px solid #eee;
+    }
+    .page-analyze .table .gray-color td {
+        background: #f5f5f5;
+    }
+    .page-analyze .homea, .page-analyze .homea2 {
+        font-size: 11px;
+        color: #333;
+        margin: 0;
+    }
+    .page-analyze .homea2 {
+        color: #666;
+    }
+    .page-analyze .joe-text {
+        font-size: 12px;
+        line-height: 1.7;
+        color: #666;
+        font-style: italic;
+        margin: 20px 0;
+        padding: 15px;
+        background: #f9f9f9;
+        border-left: 3px solid {{ theme_color | default('#0d294b') }};
+    }
+    .page-analyze .home-box {
+        text-align: center;
+        margin-top: 20px;
+    }
+    .page-analyze .home-pc {
+        display: inline-block;
+        padding: 15px;
+        border-radius: 8px;
+    }
+    .page-analyze .home-pc img {
+        max-width: 300px;
+    }
+</style>
+<div class="page">
+    <div class="section page-analyze">
+
+        <header>
+            <h2 class="underline title-bold">{{ analyze_optimize.title | default('Analyze & Optimize') }}</h2>
+            <p>{{ analyze_optimize.sub_title | default('Review selling price') }}</p>
+        </header>
+
+        <div class="row">
+            <div class="col-xs-12">
+                <p class="most-buyers2">
+                    {{ analyze_optimize.content | default("When your property first hits the market the entire audience which consists of realtors, prospective buyers, and sellers all place eyes on your listing. They all make rapid judgments as to it's price, current condition, and location. How they first perceive it will determine the viewing activity over the next few weeks. If we receive no viewings initially, we are facing the possibility that that market as a whole is rejecting the value proposition of your listing. Our solution? Reduce the price.<br><br>Reducing the price of your home is never an easy call but often times is a necessity one that might need to be made in order to get your home sold. Many homeowners feel that they are giving up hard earned equity that has been gained. In reality, a slight reduction can help avoid problems down the line. The question is, When is the best time? From the time the property is first placed on the market the rule of thumb is 30-45 days.") | safe }}
+                </p>
+            </div>
+        </div>
+
+        <div class="market-content-top">
+            <div class="row">
+                <div class="col-xs-12">
+                    <h4 class="text-uppercase home">
+                        {{ analyze_optimize.table_1_title | default('At Listing Time') }}
+                    </h4>
+
+                    <table class="table">
+                        <tbody>
+                            <tr class="gray-color">
+                                <td><p class="homea">Home A</p></td>
+                                <td><p class="homea2">Home B</p></td>
+                                <td><p class="homea2">Jane & Joe</p></td>
+                                <td><p class="homea2">Home D</p></td>
+                                <td><p class="homea2">Home E</p></td>
+                            </tr>
+                            <tr>
+                                <td><p class="homea">$368,000</p></td>
+                                <td><p class="homea2">$349,000</p></td>
+                                <td><p class="homea2">$345,000</p></td>
+                                <td><p class="homea2">$341,000</p></td>
+                                <td><p class="homea2">$333,000</p></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4 class="text-uppercase home">
+                        {{ analyze_optimize.table_2_title | default('After Price Reduction') }}
+                    </h4>
+
+                    <table class="table">
+                        <tbody>
+                            <tr class="gray-color">
+                                <td><p class="homea">Home A</p></td>
+                                <td><p class="homea">Home B</p></td>
+                                <td><p class="homea">Jane & Joe</p></td>
+                                <td><p class="homea">Home D</p></td>
+                                <td><p class="homea">Home E</p></td>
+                                <td><p class="homea">Home F</p></td>
+                            </tr>
+                            <tr>
+                                <td><p class="homea">Expired</p></td>
+                                <td><p class="homea">$339,000</p></td>
+                                <td><p class="homea">$345,000</p></td>
+                                <td><p class="homea">$341,000</p></td>
+                                <td><p class="homea">$333,000</p></td>
+                                <td><p class="homea">$332,500</p></td>
+                            </tr>
+                            <tr>
+                                <td><p class="homea"></p></td>
+                                <td><p class="homea">Reduced<br>& Sold</p></td>
+                                <td><p class="homea"></p></td>
+                                <td><p class="homea">Sold</p></td>
+                                <td><p class="homea">Sold</p></td>
+                                <td><p class="homea">Just Added</p></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-xs-12">
+                <p class="joe-text">
+                    {{ analyze_optimize.footer_content | default("Joe and Jane went from being very competitively priced to being the highest property in their price range. From a buyer's perspective, their home now offers the worst value proposition in the marketplace.") }}
+                </p>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-xs-12">
+                <div class="home-box">
+                    <div class="home-pc" style="background: {{ theme_color | default('#0d294b') }};">
+                        <img class="img-responsive" src="{{ assets_base_url | default('/assets') }}/reports/english/seller/images/6f/home.png" alt="Home Icon">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>

@@ -1,0 +1,691 @@
+{#
+    Theme 2: Modern
+    ================
+    Modern minimal design with hero images
+
+    Fonts: Montserrat
+    Colors: Customizable via theme_color (default: #f2964a orange accent)
+    Style: Hero images, minimal, horizontal footer, black/orange contrast
+    Source: seller/2/pages/*.php + seller/2/style.css
+#}
+
+{# Define theme-specific defaults #}
+{% set theme_name = 'modern' %}
+{% set theme_fonts = {
+    'primary': "'Montserrat', sans-serif",
+    'heading': "'Crimson Text', serif"
+} %}
+{% set theme_defaults = {
+    'color': '#f2964a',
+    'text': '#231f20'
+} %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Seller's Report{% endblock %} - {{ property.street | default('Property Report') }}</title>
+
+    {# Google Fonts #}
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Crimson+Text:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* ==========================================================================
+           Theme 2: Modern - Base Styles
+           ========================================================================== */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 16px;
+            color: #231f20;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        ::selection {
+            color: #fff;
+            background: #ffd758;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: normal;
+            margin: 0;
+        }
+
+        p {
+            font-size: 17px;
+            line-height: 23px;
+            font-weight: 500;
+            color: rgba(35, 31, 32, 0.7);
+            margin: 0;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* ==========================================================================
+           Page Structure
+           ========================================================================== */
+        page, .page {
+            position: relative;
+            display: block;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 45px 50px;
+            width: 816px;
+            height: 1056px;
+            margin: 0 auto;
+            background: #fff;
+            page-break-after: always;
+            page-break-inside: avoid;
+        }
+
+        @page {
+            size: letter;
+            margin: 0;
+        }
+
+        /* ==========================================================================
+           Grid System
+           ========================================================================== */
+        .d-flex:after {
+            content: '';
+            display: table;
+            width: 100%;
+        }
+
+        .d-flex > * {
+            float: left;
+        }
+
+        .col-60 { width: 60% !important; }
+        .col-40 { width: 40% !important; }
+        .col-50 { width: 50% !important; }
+        .col-30 { width: 33.33% !important; }
+        .col-20 { width: 20% !important; }
+        .col-12 { width: 100% !important; }
+
+        .text-center { text-align: center; }
+        .text-left { text-align: left !important; }
+        .text-right { text-align: right !important; }
+        .text-justify { text-align: justify; }
+
+        .mx-auto { display: block; margin: 0 auto; }
+        .w100 { width: 100%; object-fit: cover; }
+        .img-fluid { max-width: 100%; height: auto; }
+
+        /* Spacing */
+        .m-0 { margin: 0 !important; }
+        .mt-0 { margin-top: 0 !important; }
+        .mt-2 { margin-top: 5px !important; }
+        .mt-10 { margin-top: 10px !important; }
+        .mt-20 { margin-top: 20px !important; }
+        .mt-30 { margin-top: 30px !important; }
+        .mt-40 { margin-top: 40px !important; }
+        .mt-50 { margin-top: 50px !important; }
+        .mt-60 { margin-top: 60px; }
+        .mt-80 { margin-top: 80px !important; }
+        .mt-100 { margin-top: 100px !important; }
+        .mt-120 { margin-top: 120px !important; }
+        .mt-150 { margin-top: 150px; }
+        .mt-170 { margin-top: 193px !important; }
+        .mb-0 { margin-bottom: 0 !important; }
+        .mb-10 { margin-bottom: 10px !important; }
+        .my-20 { margin: 25px 0; }
+        .p-0 { padding: 0 !important; }
+        .pt-0 { padding-top: 0 !important; }
+        .p-50 { padding: 40px 50px !important; }
+
+        /* ==========================================================================
+           Theme 2: Modern - Typography
+           ========================================================================== */
+        .report_title {
+            font-size: 18px;
+            text-transform: uppercase;
+            font-weight: 700;
+            text-align: center;
+            letter-spacing: 2px;
+            margin: -5px 0 0;
+            padding-bottom: 35px;
+            border-bottom: 1px solid;
+        }
+
+        .main_title {
+            text-align: center;
+            color: #fff;
+            background: #000;
+            height: 64px;
+            line-height: 64px;
+            font-size: 18px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .bigger_title {
+            font-size: 68px;
+            line-height: 68px;
+            font-family: 'Crimson Text', serif;
+            font-weight: 400;
+            margin: 0 0 10px;
+        }
+
+        .small_big {
+            font-size: 38px;
+            font-weight: 600;
+            letter-spacing: 6px;
+            color: {{ theme_color | default('#f2964a') }};
+            line-height: 40px;
+            margin: 0;
+        }
+
+        .small_big span {
+            font-size: 24px;
+            display: block;
+        }
+
+        .small_big.white {
+            color: #fff;
+        }
+
+        .welcome_text {
+            font-size: 22px;
+            font-weight: 500;
+            text-align: center;
+            letter-spacing: 4px;
+            margin-top: 50px;
+            margin-bottom: 14px;
+        }
+
+        /* ==========================================================================
+           Theme 2: Modern - Headers
+           ========================================================================== */
+        .map_content h2 {
+            font-size: 26px;
+            margin: 0 0 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            padding-bottom: 12px;
+            position: relative;
+            display: inline-block;
+            padding-right: 25px;
+            white-space: nowrap;
+        }
+
+        .map_content h2:after,
+        .table_title:after {
+            content: '';
+            background: {{ theme_color | default('#f2964a') }};
+            height: 2px;
+            width: 100%;
+            position: absolute;
+            left: 0;
+            bottom: 0;
+        }
+
+        .table_title {
+            font-size: 16px;
+            margin: 40px 0 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            padding-bottom: 12px;
+            position: relative;
+            display: inline-block;
+            padding-right: 25px;
+        }
+
+        /* ==========================================================================
+           Theme 2: Modern - Lines & Dividers
+           ========================================================================== */
+        hr {
+            height: 2px;
+            width: 100%;
+            background-color: #dedcdc;
+            border: none;
+            margin: 15px 0;
+        }
+
+        .mini_line {
+            width: 130px;
+            border-top: 2px solid #231f20;
+            margin: 30px auto;
+        }
+
+        .mini_line.white {
+            border-color: #fff;
+        }
+
+        .orange_line {
+            width: 150px;
+            border-top: 2px solid {{ theme_color | default('#f2964a') }};
+            margin: 0 auto 24px;
+        }
+
+        /* ==========================================================================
+           Theme 2: Modern - Footer
+           ========================================================================== */
+        .footer {
+            padding: 0 20px 40px;
+        }
+
+        .footer .more_info {
+            font-size: 10px;
+            font-style: italic;
+            font-weight: 500;
+            margin-bottom: 30px;
+        }
+
+        .signature {
+            width: 200px;
+            text-align: center;
+            position: relative;
+        }
+
+        .horizontal_sign.signature {
+            width: 500px;
+            text-align: left;
+            position: relative;
+            top: 20px;
+        }
+
+        .horizontal_sign.signature > * {
+            float: left;
+        }
+
+        .horizontal_sign > img {
+            margin-right: 15px;
+        }
+
+        .profile_img {
+            width: 80px;
+            border-radius: 50%;
+            height: 80px;
+            object-fit: cover;
+            object-position: top;
+        }
+
+        .profile_name {
+            margin: 0;
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+
+        .profile_title {
+            font-size: 13px;
+            margin-top: 15px;
+        }
+
+        .tel_number {
+            display: block;
+            font-family: 'Crimson Text', serif;
+            text-decoration: none;
+            font-size: 18px;
+            line-height: 20px;
+        }
+
+        .contact_info {
+            display: block;
+            text-decoration: none;
+            font-size: 12px;
+        }
+
+        .logo {
+            width: 30%;
+        }
+
+        .logo img {
+            width: 120px;
+            height: auto;
+        }
+
+        .signature + .logo {
+            width: auto;
+            position: absolute;
+            right: 55px;
+        }
+
+        .signature + .logo img {
+            max-height: 80px;
+            width: auto;
+            object-fit: contain;
+            max-width: 300px;
+        }
+
+        .auth {
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .info_policy {
+            font-size: 7px;
+            margin-top: 15px;
+        }
+
+        /* ==========================================================================
+           Theme 2: Modern - Content Styles
+           ========================================================================== */
+        .map_content {
+            padding: 45px 50px;
+        }
+
+        .map_content p {
+            font-size: 19px;
+            line-height: 27px;
+        }
+
+        .box_title {
+            padding: 30px;
+            text-align: center;
+            border: 1px solid #231f20;
+            color: {{ theme_color | default('#f2964a') }};
+            font-weight: 600;
+            font-size: 23px;
+            line-height: 37px;
+            letter-spacing: 3px;
+            margin: 0;
+        }
+
+        .medium_bold {
+            font-weight: 700;
+            font-size: 18px;
+            text-align: center;
+            letter-spacing: 4px;
+            line-height: 28px;
+            margin: 30px 0 20px;
+        }
+
+        .critificate_black {
+            max-width: 600px;
+            margin: 80px auto 0;
+            border: 1px solid #000;
+            padding: 50px;
+            text-align: center;
+        }
+
+        /* ==========================================================================
+           Theme 2: Modern - Tables
+           ========================================================================== */
+        table {
+            width: 100%;
+            text-align: left;
+            border-collapse: collapse;
+        }
+
+        table td {
+            font-weight: normal;
+            padding: 7px 15px;
+            font-size: 13px;
+            color: rgba(35, 31, 32, 0.7);
+            line-height: 18px;
+        }
+
+        tr:nth-of-type(even) {
+            background: #ececec;
+            padding: 10px 0;
+        }
+
+        .bar_chart_data {
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .bar_chart_data th:first-child,
+        .bar_chart_data td:first-child {
+            width: 40%;
+        }
+
+        .bar_chart_data th,
+        .bar_chart_data tfoot td {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .bar_chart_data th,
+        .bar_chart_data td {
+            padding: 6px;
+            font-weight: 600;
+        }
+
+        .bar_chart_data td {
+            font-size: 14px;
+        }
+
+        .bar_chart_data tbody tr:not(:last-child) td {
+            border-bottom: 1px solid #d2cbcb;
+        }
+
+        .bar_chart_data thead th {
+            border-bottom: 3px solid #333;
+        }
+
+        .bar_chart_data tfoot td {
+            border-top: 3px solid #333;
+        }
+
+        /* ==========================================================================
+           Theme 2: Modern - Stats
+           ========================================================================== */
+        .stats {
+            display: flex;
+            justify-content: space-evenly;
+            list-style: none;
+            align-items: center;
+            text-align: center;
+            padding: 0;
+            margin: 0 0 30px;
+        }
+
+        ul.stats li {
+            width: 25%;
+            font-size: 16px;
+            color: #413f44;
+            position: relative;
+        }
+
+        ul.stats li:not(:last-child):after {
+            content: '';
+            width: 2px;
+            height: 100%;
+            position: absolute;
+            right: 0;
+            background: #413f44;
+            top: 0;
+        }
+
+        .stats span {
+            display: block;
+            font-weight: 600;
+            font-size: 30px;
+            line-height: 45px;
+        }
+
+        .avg_block {
+            padding: 0 30px;
+            position: relative;
+            margin-left: 16px;
+        }
+
+        .avg_block span {
+            position: absolute;
+            left: 0;
+            writing-mode: vertical-lr;
+            font-size: 14px;
+            top: 50%;
+            transform: translate(0, -50%) rotate(180deg);
+            height: 100%;
+            text-align: center;
+        }
+
+        .avg_block .number {
+            background: {{ theme_color | default('#f2964a') }};
+            color: #fff;
+            width: 180px;
+            height: 180px;
+            text-align: center;
+            line-height: 180px;
+            font-size: 52px;
+            font-weight: 600;
+        }
+
+        /* ==========================================================================
+           Theme 2: Modern - Questionnaire
+           ========================================================================== */
+        .questionnaire {
+            margin: 35px 0 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .questionnaire li {
+            font-size: 16px;
+            line-height: 26px;
+            font-weight: 500;
+            margin-bottom: 15px;
+            color: rgba(35, 31, 32, 0.7);
+        }
+
+        .questionnaire li span {
+            width: 100px;
+            display: inline-block;
+            margin-right: 25px;
+            text-align: center;
+            background: {{ theme_color | default('#f2964a') }};
+            color: #fff;
+            height: 45px;
+            line-height: 45px;
+        }
+
+        /* ==========================================================================
+           Theme 2: Modern - Property Cards
+           ========================================================================== */
+        .house_pricing img {
+            height: 150px;
+            width: 100%;
+            object-fit: cover;
+        }
+
+        .pricing_buttons {
+            padding: 0;
+            margin: 15px 0 20px;
+        }
+
+        .pricing_buttons li {
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .pricing_buttons li a {
+            text-decoration: none;
+            display: block;
+            height: 40px;
+            line-height: 38px;
+            text-align: center;
+            margin-right: 3px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .btn_sale {
+            background: #81a3b2;
+            color: #fff;
+            width: 130px;
+        }
+
+        .pricing_buttons li a.btn_price {
+            background: #fff;
+            color: {{ theme_color | default('#f2964a') }};
+            border: 2px solid;
+            width: 160px;
+            line-height: 37px;
+        }
+
+        /* ==========================================================================
+           Theme 2: Modern - Thanks Block
+           ========================================================================== */
+        .thanks_block {
+            position: relative;
+            background: {{ theme_color | default('#f2964a') }};
+            color: #fff;
+            text-align: center;
+            padding: 365px 0;
+            background-size: cover;
+        }
+
+        .thanks_block:after {
+            content: '';
+            position: absolute;
+            border: 2px solid #fff;
+            left: 50px;
+            right: 50px;
+            top: 50px;
+            bottom: 50px;
+        }
+
+        .thanks_block p {
+            font-size: 14px;
+            line-height: 22px;
+            color: #fff;
+            max-width: 405px;
+            font-weight: 300;
+            margin: 50px auto 0;
+        }
+
+        .thanks_block .small_big {
+            font-size: 32px;
+            font-weight: 400;
+            color: #fff;
+            text-transform: uppercase;
+        }
+
+        /* ==========================================================================
+           Theme 2: Modern - Slider
+           ========================================================================== */
+        #slider {
+            background: #e0e0e0;
+            border: none;
+            height: 11px;
+        }
+
+        .value {
+            position: absolute;
+            top: 25px;
+            left: 50%;
+            margin: 0 0 0 -29px;
+            width: 40px;
+            text-align: center;
+            display: block;
+            color: #333;
+            font-family: 'Open Sans', sans-serif;
+            font-weight: 600;
+        }
+
+        /* ==========================================================================
+           Theme Color Utilities
+           ========================================================================== */
+        .theme-color { color: {{ theme_color | default('#f2964a') }}; }
+        .theme-bg { background-color: {{ theme_color | default('#f2964a') }}; }
+        .theme-border { border-color: {{ theme_color | default('#f2964a') }}; }
+    </style>
+
+    {% block extra_styles %}{% endblock %}
+</head>
+<body>
+    {% block content %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,121 @@
+{#
+    Seller Report - Neighborhood Statistics Page
+    Converted from: application/views/reports/english/seller/pages/6.php
+
+    Required variables:
+    - theme_color               : Hex color for theme accents (default: #0d294b)
+    - assets_base_url           : Base URL for static assets
+    - neighborhood              : Neighborhood statistics object
+      - female_ratio            : Female percentage (e.g., "51.5")
+      - male_ratio              : Male percentage (e.g., "48.5")
+      - avg_sale_price          : Average sale price (formatted)
+      - avg_sqft                : Average square footage
+      - avg_beds                : Average bedrooms
+      - avg_baths               : Average bathrooms
+#}
+
+<style>
+    .page6 .insights {
+        margin-top: 30px;
+    }
+    .page6 .gender-block .perc {
+        color: {{ theme_color | default('#0d294b') }};
+    }
+    .page6 .features {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 40px;
+        padding: 20px 0;
+        border-top: 1px solid #eee;
+    }
+    .page6 .features li {
+        text-align: center;
+        list-style: none;
+        flex: 1;
+    }
+    .page6 .features li span {
+        display: block;
+        width: 40px;
+        height: 40px;
+        margin: 0 auto 10px;
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+    .page6 .features li p {
+        font-size: 12px;
+        line-height: 1.4;
+        color: #333;
+    }
+</style>
+<div class="page">
+    <div class="section page6" style="position: relative;">
+
+        {# Background image #}
+        <img width="100%" class="img-responsive" src="{{ assets_base_url | default('/assets') }}/reports/english/seller/images/6/bg.jpg" alt="" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; object-fit: cover; z-index: 0;">
+
+        <div class="page-content" style="position: relative; z-index: 1; padding: 45px 50px;">
+            <header>
+                <h2 class="underline title-bold">Neighborhood Stats</h2>
+                <p>A Little Insight</p>
+            </header>
+
+            <div class="row insights" style="margin-top: 30px;">
+                <div class="col-xs-6">
+                    <div class="left-insight">
+                        <img class="img-responsive" src="{{ assets_base_url | default('/assets') }}/reports/english/seller/images/6/gender.png" alt="Gender Demographics" style="max-width: 150px;">
+
+                        <div class="text-content" style="margin-top: 20px;">
+                            <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 10px;">Male To Female Ratio</h2>
+                            <p style="font-size: 13px; line-height: 1.6; color: #666;">
+                                These figures represent the male to female ratio in your neighborhood. The housing census is taken every 10 years so depending on the time of this report these figures can be slightly different.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xs-6">
+                    <div class="right-insight">
+                        <div class="gender-block" style="text-align: center; margin-bottom: 20px;">
+                            <p class="gender" style="font-size: 12px; text-transform: uppercase; color: #666; margin-bottom: 5px;">FEMALE</p>
+                            <h1 class="perc" style="font-size: 32px; font-weight: 700; margin: 0;">{{ neighborhood.female_ratio | default('51.5') }}%</h1>
+                        </div>
+                    </div>
+                    <div class="right-insight">
+                        <div class="gender-block" style="text-align: center; margin-bottom: 20px;">
+                            <p class="gender" style="font-size: 12px; text-transform: uppercase; color: #666; margin-bottom: 5px;">MALE</p>
+                            <h1 class="perc" style="font-size: 32px; font-weight: 700; margin: 0;">{{ neighborhood.male_ratio | default('48.5') }}%</h1>
+                        </div>
+
+                        <div class="text-content" style="margin-top: 30px;">
+                            <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 10px;">Avg. Household Income</h2>
+                            <p style="font-size: 13px; line-height: 1.6; color: #666;">
+                                The figure to the right represents the average household income within your perspective neighborhood. This information is gathered from the household census that is taken every 10 years.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <ul class="features" style="list-style: none; padding: 0; display: flex; margin-top: 50px; background: rgba(255,255,255,0.9); padding: 25px; border-radius: 8px;">
+                <li style="flex: 1; text-align: center;">
+                    <span style="display: block; width: 40px; height: 40px; margin: 0 auto 10px; background: url('{{ assets_base_url | default('/assets') }}/reports/english/seller/images/6/home.png') center/contain no-repeat;"></span>
+                    <p style="font-size: 12px; line-height: 1.4;">Avg. Sale Price<br><strong style="color: {{ theme_color | default('#0d294b') }};">${{ neighborhood.avg_sale_price | default('405,000') }}</strong></p>
+                </li>
+                <li style="flex: 1; text-align: center;">
+                    <span style="display: block; width: 40px; height: 40px; margin: 0 auto 10px; background: url('{{ assets_base_url | default('/assets') }}/reports/english/seller/images/6/sqr_feet.png') center/contain no-repeat;"></span>
+                    <p style="font-size: 12px; line-height: 1.4;">Avg. Sqft<br><strong style="color: {{ theme_color | default('#0d294b') }};">{{ neighborhood.avg_sqft | default('852') }}</strong></p>
+                </li>
+                <li style="flex: 1; text-align: center;">
+                    <span style="display: block; width: 40px; height: 40px; margin: 0 auto 10px; background: url('{{ assets_base_url | default('/assets') }}/reports/english/seller/images/6/bed.png') center/contain no-repeat;"></span>
+                    <p style="font-size: 12px; line-height: 1.4;">Avg. Beds<br><strong style="color: {{ theme_color | default('#0d294b') }};">{{ neighborhood.avg_beds | default('2') }} Beds</strong></p>
+                </li>
+                <li style="flex: 1; text-align: center;">
+                    <span style="display: block; width: 40px; height: 40px; margin: 0 auto 10px; background: url('{{ assets_base_url | default('/assets') }}/reports/english/seller/images/6/cup.png') center/contain no-repeat;"></span>
+                    <p style="font-size: 12px; line-height: 1.4;">Avg. Baths<br><strong style="color: {{ theme_color | default('#0d294b') }};">{{ neighborhood.avg_baths | default('1') }} Baths</strong></p>
+                </li>
+            </ul>
+
+        </div>
+
+    </div>
+</div>

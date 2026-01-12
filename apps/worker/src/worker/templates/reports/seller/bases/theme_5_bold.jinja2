@@ -1,0 +1,645 @@
+{#
+    Theme 5: Bold
+    =============
+    Bold typography design with navy/gold color scheme
+
+    Fonts: Bebas Neue (display), System fonts (body)
+    Colors: Navy (#152270), Gold (#d79547)
+    Style: Bold split titles, strong typography, 9-page version
+    Source: seller/5/pages/*.php
+
+    Note: This is a simplified 9-page report template.
+    Use page_set: 'compact' in the master template for this theme.
+#}
+
+{# Define theme-specific defaults #}
+{% set theme_name = 'bold' %}
+{% set theme_fonts = {
+    'primary': "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+    'heading': "'Bebas Neue', 'Arial Black', sans-serif"
+} %}
+{% set theme_defaults = {
+    'navy': '#152270',
+    'gold': '#d79547',
+    'text': '#000'
+} %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Seller's Report{% endblock %} - {{ property.street | default('Property Report') }}</title>
+
+    {# Google Fonts - Bebas Neue #}
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    {# Custom Bebas Neue from R2 if available #}
+    <style>
+        @font-face {
+            font-family: 'BebasNeue Book';
+            src: url('{{ assets_base_url | default("https://assets.trendyreports.com") }}/fonts/bebas/BebasNeue-Book.woff2') format('woff2'),
+                 url('{{ assets_base_url | default("https://assets.trendyreports.com") }}/fonts/bebas/BebasNeue-Book.woff') format('woff');
+            font-weight: 400;
+            font-style: normal;
+            font-display: swap;
+        }
+    </style>
+
+    <style>
+        /* ==========================================================================
+           Theme 5: Bold - Base Styles
+           ========================================================================== */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            font-size: 16px;
+            color: #000;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: 600;
+            margin: 0;
+        }
+
+        p {
+            margin: 0;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* ==========================================================================
+           Page Structure
+           ========================================================================== */
+        .page_container {
+            width: 816px;
+            margin: 0 auto;
+        }
+
+        .pdf_page, .size_letter {
+            position: relative;
+            display: block;
+            overflow: hidden;
+            width: 816px;
+            height: 1056px;
+            margin: 0 auto;
+            background: #fff;
+            page-break-after: always;
+            page-break-inside: avoid;
+        }
+
+        @page {
+            size: letter;
+            margin: 0;
+        }
+
+        /* ==========================================================================
+           Grid System
+           ========================================================================== */
+        .grid::after {
+            display: table;
+            content: '';
+            width: 100%;
+        }
+
+        .col-4 {
+            width: 33%;
+            float: left;
+        }
+
+        .col-8 {
+            float: left;
+            width: 67%;
+        }
+
+        .img-fluid {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .d-block {
+            display: block;
+        }
+
+        .position-relative {
+            position: relative;
+        }
+
+        /* ==========================================================================
+           Theme 5: Bold - Typography
+           ========================================================================== */
+        .page-title {
+            font-size: 80px;
+            line-height: 80px;
+            color: #152270;
+            font-family: 'BebasNeue Book', 'Bebas Neue', sans-serif;
+        }
+
+        .page-title span {
+            color: {{ theme_color | default('#d79547') }};
+            font-family: 'Bebas Neue', sans-serif;
+        }
+
+        .section-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #152270;
+            margin-bottom: 15px;
+            position: relative;
+            display: inline-block;
+        }
+
+        .section-title::after {
+            content: "";
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background: {{ theme_color | default('#d79547') }};
+        }
+
+        /* ==========================================================================
+           Theme 5: Bold - Header
+           ========================================================================== */
+        .pdf_header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 30px 0;
+            text-align: center;
+            height: 130px;
+        }
+
+        /* ==========================================================================
+           Theme 5: Bold - Body/Hero
+           ========================================================================== */
+        .pdf-body {
+            position: absolute;
+            top: 130px;
+            left: 0;
+            right: 0;
+        }
+
+        .pdf-body img {
+            width: 100%;
+        }
+
+        .blue-bar {
+            position: absolute;
+            bottom: 0;
+            max-width: 330px;
+            left: 40px;
+        }
+
+        /* ==========================================================================
+           Theme 5: Bold - Address Block
+           ========================================================================== */
+        .address {
+            width: 330px;
+            margin-top: 0;
+            text-align: center;
+            color: #fff;
+            position: absolute;
+            left: 40px;
+            bottom: 180px;
+        }
+
+        .address b {
+            font-size: 40px;
+            color: #fff;
+            display: block;
+            line-height: 50px;
+            margin-bottom: 60px;
+            margin-top: 20px;
+        }
+
+        .address img {
+            display: block;
+            margin: 0 auto 10px;
+            width: 60px;
+        }
+
+        .contact-me {
+            font-size: 11px;
+            color: #fff;
+            margin-bottom: 40px;
+            text-align: center;
+            text-decoration: underline;
+            text-decoration-color: {{ theme_color | default('#d79547') }};
+            text-decoration-thickness: 2px;
+            text-underline-offset: 6px;
+        }
+
+        /* ==========================================================================
+           Theme 5: Bold - Agent Info
+           ========================================================================== */
+        .realtor-info {
+            position: absolute;
+            bottom: 50px;
+            width: 265px;
+            left: 60px;
+        }
+
+        .jerry-dp {
+            width: 60px;
+            border-radius: 50px;
+        }
+
+        .jerry-hernandez {
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .realtor {
+            color: {{ theme_color | default('#d79547') }};
+            font-weight: 600;
+            margin: 5px 0;
+        }
+
+        .contact-detail img {
+            width: 14px;
+            margin-right: 5px;
+        }
+
+        .contact-detail {
+            font-size: 14px;
+            color: #fff;
+            margin-bottom: 3px;
+        }
+
+        /* ==========================================================================
+           Theme 5: Bold - Company Info
+           ========================================================================== */
+        .the-agency {
+            width: 400px;
+            right: 0;
+            position: absolute;
+            bottom: 50px;
+            font-size: 14px;
+        }
+
+        .authenticity {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .the-agency img {
+            width: 96px;
+            right: -22px;
+            position: relative;
+            top: 2px;
+        }
+
+        .the-agency p {
+            margin-top: 0;
+        }
+
+        /* ==========================================================================
+           Theme 5: Bold - Footer
+           ========================================================================== */
+        .pdf_footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+
+        /* ==========================================================================
+           Theme 5: Bold - Content Sections
+           ========================================================================== */
+        .content-section {
+            padding: 40px 50px;
+        }
+
+        .content-section header {
+            margin-bottom: 25px;
+        }
+
+        .content-section header h2 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #152270;
+            margin-bottom: 8px;
+        }
+
+        .content-section header h2::after {
+            content: "";
+            display: block;
+            width: 50px;
+            height: 3px;
+            background: {{ theme_color | default('#d79547') }};
+            margin-top: 8px;
+        }
+
+        .content-section header p {
+            font-size: 13px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* ==========================================================================
+           Theme 5: Bold - Statistics
+           ========================================================================== */
+        .stats-grid {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 42px;
+            font-weight: 700;
+            color: #152270;
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #666;
+            margin-top: 8px;
+            letter-spacing: 1px;
+        }
+
+        .avg-number-box {
+            background: #152270;
+            color: #fff;
+            width: 150px;
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            font-weight: 700;
+        }
+
+        /* ==========================================================================
+           Theme 5: Bold - Tables
+           ========================================================================== */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table th, table td {
+            padding: 10px 12px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        table thead th {
+            background: #152270;
+            color: #fff;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+
+        table tbody tr:nth-child(even) {
+            background: #f8f8f8;
+        }
+
+        table tbody td {
+            border-bottom: 1px solid #eee;
+        }
+
+        /* ==========================================================================
+           Theme 5: Bold - Property Cards
+           ========================================================================== */
+        .property-card {
+            border: 1px solid #eee;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .property-card-image {
+            height: 140px;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .property-card-body {
+            padding: 12px;
+        }
+
+        .property-card-address {
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .property-card-price {
+            font-size: 16px;
+            font-weight: 700;
+            color: #152270;
+        }
+
+        .property-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            border-radius: 2px;
+            margin-right: 5px;
+        }
+
+        .property-badge.sold {
+            background: #152270;
+            color: #fff;
+        }
+
+        .property-badge.price {
+            background: #fff;
+            color: {{ theme_color | default('#d79547') }};
+            border: 2px solid {{ theme_color | default('#d79547') }};
+        }
+
+        /* ==========================================================================
+           Theme 5: Bold - Process Steps
+           ========================================================================== */
+        .process-step {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 18px;
+        }
+
+        .process-number {
+            width: 45px;
+            height: 45px;
+            background: #152270;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-right: 15px;
+        }
+
+        .process-content h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .process-content p {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        /* ==========================================================================
+           Theme 5: Bold - Text Content
+           ========================================================================== */
+        .text-block {
+            margin-bottom: 20px;
+        }
+
+        .text-block h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #152270;
+            margin-bottom: 8px;
+        }
+
+        .text-block p {
+            font-size: 13px;
+            line-height: 1.6;
+            color: #444;
+        }
+
+        .highlight-text {
+            font-size: 14px;
+            font-weight: 500;
+            color: {{ theme_color | default('#d79547') }};
+            margin-bottom: 8px;
+        }
+
+        /* ==========================================================================
+           Theme 5: Bold - Price Range
+           ========================================================================== */
+        .price-range-container {
+            background: #f5f5f5;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .price-range-bar {
+            height: 6px;
+            background: linear-gradient(to right, #e0e0e0, #152270, #e0e0e0);
+            border-radius: 3px;
+            position: relative;
+        }
+
+        .price-range-handle {
+            width: 16px;
+            height: 16px;
+            background: {{ theme_color | default('#d79547') }};
+            border-radius: 50%;
+            position: absolute;
+            top: -5px;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .price-range-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 12px;
+        }
+
+        .price-range-labels span {
+            font-size: 14px;
+            font-weight: 600;
+            color: #152270;
+        }
+
+        /* ==========================================================================
+           Theme 5: Bold - Back Cover
+           ========================================================================== */
+        .back-cover {
+            background: #152270;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .back-cover::before {
+            content: "";
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            right: 40px;
+            bottom: 40px;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+
+        .back-cover-content {
+            text-align: center;
+            color: #fff;
+            z-index: 1;
+        }
+
+        .back-cover-logo {
+            max-width: 180px;
+            margin-bottom: 30px;
+        }
+
+        .back-cover-tagline {
+            font-size: 16px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: {{ theme_color | default('#d79547') }};
+        }
+
+        /* ==========================================================================
+           Theme Color Utilities
+           ========================================================================== */
+        .theme-color { color: {{ theme_color | default('#d79547') }}; }
+        .theme-bg { background-color: {{ theme_color | default('#d79547') }}; }
+        .theme-border { border-color: {{ theme_color | default('#d79547') }}; }
+        .navy-color { color: #152270; }
+        .navy-bg { background-color: #152270; }
+        .gold-color { color: {{ theme_color | default('#d79547') }}; }
+        .gold-bg { background-color: {{ theme_color | default('#d79547') }}; }
+    </style>
+
+    {% block extra_styles %}{% endblock %}
+</head>
+<body>
+    {% block content %}{% endblock %}
+</body>
+</html>

@@ -3,11 +3,16 @@ Property Report Builder
 =======================
 
 Renders property reports (seller/buyer) using Jinja2 templates.
-Combines cover page + property details + comparables into a full HTML document.
+Uses the orchestrator template (seller_report.jinja2) which handles:
+- Theme selection (1-5)
+- Page set configuration (full/compact/custom)
+- All page includes
 
 Usage:
     builder = PropertyReportBuilder(report_data)
     html = builder.render_html()
+
+Based on SELLER_REPORT_INTEGRATION.md guide.
 """
 
 import os
@@ -16,22 +21,24 @@ from typing import Dict, Any, List, Optional
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from .vendors.simplyrets import fetch_properties
-
 logger = logging.getLogger(__name__)
 
-# Template directory
-TEMPLATES_DIR = Path(__file__).parent / "templates" / "property"
+# Template directory - points to reports/seller for seller reports
+TEMPLATES_BASE_DIR = Path(__file__).parent / "templates" / "reports"
+
+# Configuration from environment
+ASSETS_BASE_URL = os.getenv("ASSETS_BASE_URL", "https://assets.trendyreports.com")
+GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "")
 
 
 class PropertyReportBuilder:
     """
-    Builds HTML property reports from database report data.
+    Builds HTML property reports using the orchestrator template system.
     
-    The report_data should come from the database with joins for:
-    - user (for agent info)
-    - account (for branding)
-    - affiliate_branding (if applicable)
+    The orchestrator (seller_report.jinja2) handles:
+    - Theme selection (1-5)
+    - Page set configuration (full 21 pages / compact 9 pages / custom)
+    - Including all section templates
     
     Expected report_data structure:
     {
@@ -39,8 +46,9 @@ class PropertyReportBuilder:
         "account_id": "uuid",
         "report_type": "seller" | "buyer",
         "theme": 1-5,
-        "accent_color": "#2563eb",
+        "accent_color": "#0d294b",
         "language": "en" | "es",
+        "page_set": "full" | "compact" | ["cover", "property_details", ...],
         
         # Property fields
         "property_address": "123 Main St",
@@ -53,10 +61,10 @@ class PropertyReportBuilder:
         "legal_description": "LOT 1 BLK 2...",
         "property_type": "Single Family",
         
-        # SiteX data (full property details)
+        # SiteX data (full property details from property search)
         "sitex_data": { ... },
         
-        # Comparables (pre-fetched or will be fetched)
+        # Comparables
         "comparables": [ ... ],
         
         # Agent info (from user join)
@@ -68,10 +76,6 @@ class PropertyReportBuilder:
             "title": "Real Estate Agent",
             "license_number": "01234567",
             "company_name": "Acme Realty",
-            "company_address": "456 Broker St",
-            "company_city": "Los Angeles",
-            "company_state": "CA",
-            "company_zip": "90210",
             "logo_url": "https://..."
         },
         
@@ -89,12 +93,16 @@ class PropertyReportBuilder:
         self.report_data = report_data
         self.report_type = report_data.get("report_type", "seller")
         self.theme = report_data.get("theme", 1)
-        self.accent_color = report_data.get("accent_color", "#0d294b")
+        self.accent_color = report_data.get("accent_color")
         self.language = report_data.get("language", "en")
+        self.page_set = report_data.get("page_set", "full")
         
-        # Initialize Jinja2 environment
+        # Template directory based on report type
+        template_dir = TEMPLATES_BASE_DIR / self.report_type
+        
+        # Initialize Jinja2 environment pointing to the report type's template dir
         self.env = Environment(
-            loader=FileSystemLoader(str(TEMPLATES_DIR)),
+            loader=FileSystemLoader(str(template_dir)),
             autoescape=select_autoescape(['html', 'xml', 'jinja2']),
             trim_blocks=True,
             lstrip_blocks=True
@@ -124,183 +132,252 @@ class PropertyReportBuilder:
         except (ValueError, TypeError):
             return str(value)
     
-    def fetch_comparables(self) -> List[Dict[str, Any]]:
-        """
-        Fetch comparable properties from SimplyRETS if not already set.
-        
-        Searches for similar properties based on:
-        - Location (city/zip)
-        - Property type
-        - Price range (+/- 20%)
-        - Bed/bath count (+/- 1)
-        
-        Returns:
-            List of comparable property dictionaries
-        """
-        # Return existing comparables if already fetched
-        existing = self.report_data.get("comparables")
-        if existing:
-            logger.info(f"Using {len(existing)} pre-fetched comparables")
-            return existing
-        
-        # Extract search parameters from SiteX data or report data
-        sitex_data = self.report_data.get("sitex_data") or {}
-        
-        city = self.report_data.get("property_city", "")
-        state = self.report_data.get("property_state", "CA")
-        zip_code = self.report_data.get("property_zip", "")
-        
-        # Get property characteristics for matching
-        bedrooms = sitex_data.get("bedrooms") or 3
-        bathrooms = sitex_data.get("bathrooms") or 2
-        sqft = sitex_data.get("sqft") or 1500
-        assessed_value = sitex_data.get("assessed_value")
-        
-        # Build SimplyRETS query for comparables
-        # Focus on recent closed sales for accurate comps
-        from datetime import datetime, timedelta
-        end_date = datetime.utcnow().date()
-        start_date = end_date - timedelta(days=180)  # 6 months of sales
-        
-        params = {
-            "q": city or zip_code,
-            "status": "Closed",
-            "mindate": start_date.isoformat(),
-            "maxdate": end_date.isoformat(),
-            "sort": "-closeDate",
-        }
-        
-        # Add bedroom filter (+/- 1)
-        if bedrooms:
-            params["minbeds"] = max(1, bedrooms - 1)
-            params["maxbeds"] = bedrooms + 1
-        
-        # Add bathroom filter (+/- 1)
-        if bathrooms:
-            params["minbaths"] = max(1, int(bathrooms) - 1)
-            params["maxbaths"] = int(bathrooms) + 2
-        
-        # Add sqft filter (+/- 30%)
-        if sqft:
-            params["minarea"] = int(sqft * 0.7)
-            params["maxarea"] = int(sqft * 1.3)
-        
-        # Add price filter if we have assessed value (+/- 25%)
-        if assessed_value:
-            # Use assessed value as rough estimate for price range
-            params["minprice"] = int(assessed_value * 0.75)
-            params["maxprice"] = int(assessed_value * 1.5)
-        
-        try:
-            logger.info(f"Fetching comparables: {params}")
-            raw_comps = fetch_properties(params, limit=20)
-            
-            # Extract relevant fields for comparables
-            comparables = []
-            for prop in raw_comps[:10]:  # Limit to 10 comps
-                address = prop.get("address", {})
-                mls = prop.get("mls", {})
-                property_info = prop.get("property", {})
-                
-                comp = {
-                    "address": address.get("full", ""),
-                    "city": address.get("city", ""),
-                    "state": address.get("state", ""),
-                    "zip": address.get("postalCode", ""),
-                    "price": prop.get("listPrice") or prop.get("closePrice"),
-                    "close_price": prop.get("closePrice"),
-                    "close_date": prop.get("closeDate"),
-                    "bedrooms": property_info.get("bedrooms"),
-                    "bathrooms": property_info.get("bathrooms"),
-                    "sqft": property_info.get("area"),
-                    "lot_size": property_info.get("lotSize"),
-                    "year_built": property_info.get("yearBuilt"),
-                    "days_on_market": mls.get("daysOnMarket"),
-                    "mls_id": mls.get("listingId"),
-                    "photos": prop.get("photos", [])[:3],  # First 3 photos
-                }
-                comparables.append(comp)
-            
-            logger.info(f"Found {len(comparables)} comparable properties")
-            return comparables
-            
-        except Exception as e:
-            logger.error(f"Failed to fetch comparables: {e}")
-            return []
-    
     def _build_property_context(self) -> Dict[str, Any]:
         """
-        Build property context for templates from report data and SiteX data.
+        Build property context matching template requirements.
+        
+        Maps report_data fields to the expected 'property' object structure.
         """
         sitex_data = self.report_data.get("sitex_data") or {}
         
         return {
-            # Address
+            # Address (required)
             "street": self.report_data.get("property_address", ""),
-            "address": self.report_data.get("property_address", ""),
             "city": self.report_data.get("property_city", ""),
             "state": self.report_data.get("property_state", ""),
-            "zip": self.report_data.get("property_zip", ""),
-            "county": self.report_data.get("property_county", "") or sitex_data.get("county", ""),
+            "zip_code": self.report_data.get("property_zip", ""),
             
-            # Property identifiers
-            "apn": self.report_data.get("apn", "") or sitex_data.get("apn", ""),
+            # Location for maps
+            "latitude": sitex_data.get("latitude"),
+            "longitude": sitex_data.get("longitude"),
+            
+            # Owner info
             "owner_name": self.report_data.get("owner_name", "") or sitex_data.get("owner_name", ""),
             "secondary_owner": sitex_data.get("secondary_owner"),
-            "legal_description": self.report_data.get("legal_description", "") or sitex_data.get("legal_description", ""),
+            "county": self.report_data.get("property_county", "") or sitex_data.get("county", ""),
+            "apn": self.report_data.get("apn", "") or sitex_data.get("apn", ""),
             
-            # Property characteristics
+            # Property details
             "bedrooms": sitex_data.get("bedrooms"),
             "bathrooms": sitex_data.get("bathrooms"),
             "sqft": sitex_data.get("sqft"),
             "lot_size": sitex_data.get("lot_size"),
             "year_built": sitex_data.get("year_built"),
-            "property_type": self.report_data.get("property_type", "") or sitex_data.get("property_type", ""),
-            
-            # Tax/Assessment
-            "assessed_value": sitex_data.get("assessed_value"),
-            "tax_amount": sitex_data.get("tax_amount"),
-            "land_value": sitex_data.get("land_value"),
-            "improvement_value": sitex_data.get("improvement_value"),
-            "tax_year": sitex_data.get("tax_year"),
-            
-            # Additional fields from SiteX
             "garage": sitex_data.get("garage"),
             "fireplace": sitex_data.get("fireplace"),
             "pool": sitex_data.get("pool"),
             "total_rooms": sitex_data.get("total_rooms"),
             "num_units": sitex_data.get("num_units"),
             "zoning": sitex_data.get("zoning"),
+            "property_type": self.report_data.get("property_type", "") or sitex_data.get("property_type", ""),
             "use_code": sitex_data.get("use_code"),
+            
+            # Tax/Assessment
+            "assessed_value": sitex_data.get("assessed_value"),
+            "tax_amount": sitex_data.get("tax_amount"),
+            "land_value": sitex_data.get("land_value"),
+            "improvement_value": sitex_data.get("improvement_value"),
+            "percent_improved": sitex_data.get("percent_improved"),
+            "tax_status": sitex_data.get("tax_status"),
+            "tax_rate_area": sitex_data.get("tax_rate_area"),
+            "tax_year": sitex_data.get("tax_year"),
+            
+            # Legal
+            "legal_description": self.report_data.get("legal_description", "") or sitex_data.get("legal_description", ""),
+            "mailing_address": sitex_data.get("mailing_address"),
             "census_tract": sitex_data.get("census_tract"),
             "housing_tract": sitex_data.get("housing_tract"),
             "lot_number": sitex_data.get("lot_number"),
             "page_grid": sitex_data.get("page_grid"),
-            "mailing_address": sitex_data.get("mailing_address"),
-            "latitude": sitex_data.get("latitude"),
-            "longitude": sitex_data.get("longitude"),
         }
     
     def _build_agent_context(self) -> Dict[str, Any]:
         """
-        Build agent context from report data.
+        Build agent context matching template requirements.
         """
         agent = self.report_data.get("agent") or {}
         branding = self.report_data.get("branding") or {}
         
         return {
             "name": agent.get("name", ""),
-            "email": agent.get("email", ""),
-            "phone": agent.get("phone", ""),
-            "photo_url": agent.get("photo_url"),
-            "title": agent.get("title", "Real Estate Professional"),
+            "title": agent.get("title", "Realtor®"),
             "license_number": agent.get("license_number"),
+            "phone": agent.get("phone", ""),
+            "email": agent.get("email", ""),
             "company_name": agent.get("company_name") or branding.get("display_name", ""),
-            "company_address": agent.get("company_address"),
-            "company_city": agent.get("company_city"),
-            "company_state": agent.get("company_state"),
-            "company_zip": agent.get("company_zip"),
+            "street": agent.get("company_address") or agent.get("street"),
+            "city": agent.get("company_city") or agent.get("city"),
+            "state": agent.get("company_state") or agent.get("state"),
+            "zip_code": agent.get("company_zip") or agent.get("zip_code"),
+            "photo_url": agent.get("photo_url"),
             "logo_url": agent.get("logo_url") or branding.get("logo_url"),
+        }
+    
+    def _build_comparables_context(self) -> List[Dict[str, Any]]:
+        """
+        Build comparables list matching template requirements.
+        
+        Each comparable should have:
+        - address, latitude, longitude
+        - image_url (optional)
+        - price, days_on_market, distance
+        - sqft, price_per_sqft
+        - bedrooms, bathrooms, year_built
+        - lot_size, pool
+        """
+        raw_comps = self.report_data.get("comparables") or []
+        
+        comparables = []
+        for comp in raw_comps[:6]:  # Max 6 comparables (3 rows of 2)
+            # Handle both direct format and nested format
+            comparables.append({
+                "address": comp.get("address") or comp.get("full_address", ""),
+                "latitude": comp.get("latitude"),
+                "longitude": comp.get("longitude"),
+                "image_url": comp.get("image_url") or (comp.get("photos", [None])[0] if comp.get("photos") else None),
+                "price": self._format_price(comp.get("price") or comp.get("close_price")),
+                "days_on_market": comp.get("days_on_market"),
+                "distance": comp.get("distance", ""),
+                "sqft": comp.get("sqft") or comp.get("area"),
+                "price_per_sqft": self._calc_price_per_sqft(
+                    comp.get("price") or comp.get("close_price"),
+                    comp.get("sqft") or comp.get("area")
+                ),
+                "bedrooms": comp.get("bedrooms"),
+                "bathrooms": comp.get("bathrooms"),
+                "year_built": comp.get("year_built"),
+                "lot_size": comp.get("lot_size"),
+                "pool": comp.get("pool", "No"),
+            })
+        
+        return comparables
+    
+    def _format_price(self, price: Any) -> str:
+        """Format price for display."""
+        if price is None:
+            return "N/A"
+        try:
+            return f"${int(float(price)):,}"
+        except (ValueError, TypeError):
+            return str(price)
+    
+    def _calc_price_per_sqft(self, price: Any, sqft: Any) -> Optional[int]:
+        """Calculate price per square foot."""
+        try:
+            if price and sqft:
+                return int(float(price) / float(sqft))
+        except (ValueError, TypeError, ZeroDivisionError):
+            pass
+        return None
+    
+    def _build_neighborhood_context(self) -> Dict[str, Any]:
+        """
+        Build neighborhood statistics context.
+        Uses data from sitex_data if available, otherwise defaults.
+        """
+        sitex_data = self.report_data.get("sitex_data") or {}
+        neighborhood = sitex_data.get("neighborhood") or {}
+        
+        return {
+            "female_ratio": neighborhood.get("female_ratio", "51.5"),
+            "male_ratio": neighborhood.get("male_ratio", "48.5"),
+            "avg_sale_price": neighborhood.get("avg_sale_price", ""),
+            "avg_sqft": neighborhood.get("avg_sqft", ""),
+            "avg_beds": neighborhood.get("avg_beds", "3"),
+            "avg_baths": neighborhood.get("avg_baths", "2"),
+        }
+    
+    def _build_area_analysis_context(self) -> Dict[str, Any]:
+        """
+        Build area analysis context for charts and statistics.
+        """
+        sitex_data = self.report_data.get("sitex_data") or {}
+        area = sitex_data.get("area_analysis") or {}
+        
+        return {
+            "chart_url": area.get("chart_url"),
+            "area_min_radius": area.get("area_min_radius", "0.1 mi"),
+            "area_median_radius": area.get("area_median_radius", "0.5 mi"),
+            "area_max_radius": area.get("area_max_radius", "1.2 mi"),
+            "living_area": sitex_data.get("sqft"),
+            "living_area_low": area.get("living_area_low"),
+            "living_area_median": area.get("living_area_median"),
+            "living_area_high": area.get("living_area_high"),
+            "price_per_sqft": area.get("price_per_sqft"),
+            "price_per_sqft_low": area.get("price_per_sqft_low"),
+            "price_per_sqft_median": area.get("price_per_sqft_median"),
+            "price_per_sqft_high": area.get("price_per_sqft_high"),
+            "year_built": sitex_data.get("year_built"),
+            "year_low": area.get("year_low"),
+            "year_median": area.get("year_median"),
+            "year_high": area.get("year_high"),
+            "lot_size": sitex_data.get("lot_size"),
+            "lot_size_low": area.get("lot_size_low"),
+            "lot_size_median": area.get("lot_size_median"),
+            "lot_size_high": area.get("lot_size_high"),
+            "bedrooms": sitex_data.get("bedrooms"),
+            "bedrooms_low": area.get("bedrooms_low"),
+            "bedrooms_median": area.get("bedrooms_median"),
+            "bedrooms_high": area.get("bedrooms_high"),
+            "bathrooms": sitex_data.get("bathrooms"),
+            "bathrooms_low": area.get("bathrooms_low"),
+            "bathrooms_median": area.get("bathrooms_median"),
+            "bathrooms_high": area.get("bathrooms_high"),
+            "stories": area.get("stories"),
+            "pool": sitex_data.get("pool"),
+            "pool_low": area.get("pool_low"),
+            "pool_median": area.get("pool_median"),
+            "pool_high": area.get("pool_high"),
+            "sale_price": area.get("sale_price"),
+            "sale_price_low": area.get("sale_price_low"),
+            "sale_price_median": area.get("sale_price_median"),
+            "sale_price_high": area.get("sale_price_high"),
+        }
+    
+    def _build_range_of_sales_context(self) -> Dict[str, Any]:
+        """
+        Build range of sales context from comparables.
+        """
+        comparables = self.report_data.get("comparables") or []
+        
+        if not comparables:
+            return {}
+        
+        # Calculate statistics from comparables
+        prices = []
+        sqfts = []
+        beds = []
+        baths = []
+        
+        for comp in comparables:
+            if comp.get("price") or comp.get("close_price"):
+                try:
+                    prices.append(float(comp.get("price") or comp.get("close_price")))
+                except (ValueError, TypeError):
+                    pass
+            if comp.get("sqft"):
+                try:
+                    sqfts.append(float(comp.get("sqft")))
+                except (ValueError, TypeError):
+                    pass
+            if comp.get("bedrooms"):
+                try:
+                    beds.append(int(comp.get("bedrooms")))
+                except (ValueError, TypeError):
+                    pass
+            if comp.get("bathrooms"):
+                try:
+                    baths.append(float(comp.get("bathrooms")))
+                except (ValueError, TypeError):
+                    pass
+        
+        return {
+            "total_comps": len(comparables),
+            "avg_sqft": f"{int(sum(sqfts)/len(sqfts)):,}" if sqfts else "",
+            "avg_beds": round(sum(beds)/len(beds)) if beds else "",
+            "avg_baths": round(sum(baths)/len(baths)) if baths else "",
+            "price_min": str(int(min(prices)/1000)) if prices else "",
+            "price_max": str(int(max(prices)/1000)) if prices else "",
         }
     
     def _get_theme_color(self) -> str:
@@ -311,152 +388,112 @@ class PropertyReportBuilder:
         return (
             branding.get("primary_color") or 
             self.accent_color or 
-            "#0d294b"
+            None  # Let template use theme default
         )
+    
+    def _build_default_content_sections(self) -> Dict[str, Any]:
+        """
+        Build default content sections for text-heavy pages.
+        Templates have built-in defaults, but we can override here if needed.
+        """
+        return {
+            # Use template defaults for these sections
+            "introduction": {},
+            "roadmap": {
+                "points": [{"title": None, "sub_title": None}] * 7  # 7 points required
+            },
+            "promise": {
+                "points": [{"title": None, "content": None}] * 6  # 6 points required
+            },
+            "how_buyers_find": {},
+            "pricing": {},
+            "avg_days": {},
+            "marketing_online": {},
+            "marketing_print": {},
+            "marketing_social": {},
+            "analyze_optimize": {},
+            "negotiating": {},
+            "transaction": {},
+        }
     
     def render_html(self) -> str:
         """
-        Render the complete HTML report.
+        Render the complete HTML report using the orchestrator template.
         
-        Combines:
-        - Cover page
-        - Property details page
-        - Comparables pages (if available)
+        The orchestrator (seller_report.jinja2) handles:
+        - Theme selection based on theme_number
+        - Page set configuration (full/compact/custom)
+        - Including all section templates
         
         Returns:
             Complete HTML string ready for PDF generation
         """
-        # Build template contexts
-        property_ctx = self._build_property_context()
-        agent_ctx = self._build_agent_context()
+        # Determine theme color
         theme_color = self._get_theme_color()
         
-        # Fetch comparables if not already set
-        comparables = self.fetch_comparables()
-        
-        # Base template selection
-        base_template = f"{self.report_type}_base.jinja2"
-        
-        # Build template context
+        # Build the complete context as specified in SELLER_REPORT_INTEGRATION.md
         context = {
-            "property": property_ctx,
-            "agent": agent_ctx,
+            # Theme configuration
+            "theme_number": self.theme,
             "theme_color": theme_color,
-            "comparables": comparables,
-            "report_type": self.report_type,
-            "language": self.language,
+            "assets_base_url": ASSETS_BASE_URL,
+            "google_maps_api_key": GOOGLE_MAPS_API_KEY,
+            
+            # Page set
+            "page_set": self.page_set,
+            
+            # Property data
+            "property": self._build_property_context(),
+            
+            # Agent data
+            "agent": self._build_agent_context(),
+            
+            # Comparables
+            "comparables": self._build_comparables_context(),
+            
+            # Statistics
+            "neighborhood": self._build_neighborhood_context(),
+            "area_analysis": self._build_area_analysis_context(),
+            "range_of_sales": self._build_range_of_sales_context(),
+            
+            # Content sections (use template defaults)
+            **self._build_default_content_sections(),
+            
+            # Optional assets
             "cover_image_url": self.report_data.get("cover_image_url"),
         }
         
-        # Render each page
-        pages_html = []
-        
-        # 1. Cover page
         try:
-            cover_template = self.env.get_template(f"{self.report_type}_cover.jinja2")
-            cover_html = cover_template.render(**context)
-            pages_html.append(cover_html)
-            logger.debug("Rendered cover page")
+            # Load and render the orchestrator template
+            template = self.env.get_template(f"{self.report_type}_report.jinja2")
+            html = template.render(**context)
+            
+            logger.info(f"Rendered {self.report_type} report: theme={self.theme}, pages={self.page_set}")
+            return html
+            
         except Exception as e:
-            logger.error(f"Failed to render cover page: {e}")
-        
-        # 2. Property details page
-        try:
-            details_template = self.env.get_template(f"{self.report_type}_property_details.jinja2")
-            details_html = details_template.render(**context)
-            pages_html.append(details_html)
-            logger.debug("Rendered property details page")
-        except Exception as e:
-            logger.error(f"Failed to render property details page: {e}")
-        
-        # 3. Comparables page (if we have comps and template exists)
-        if comparables:
-            try:
-                comps_template = self.env.get_template(f"{self.report_type}_comparables.jinja2")
-                comps_html = comps_template.render(**context)
-                pages_html.append(comps_html)
-                logger.debug(f"Rendered comparables page with {len(comparables)} comps")
-            except Exception as e:
-                # Template might not exist yet
-                logger.warning(f"Comparables template not available: {e}")
-        
-        # Combine all pages
-        # Each template extends the base and renders as a complete HTML doc
-        # For PDF generation, we need them as separate pages
-        
-        if len(pages_html) == 1:
-            return pages_html[0]
-        
-        # If multiple pages, we need to combine them properly
-        # Extract body content from each and wrap in a single document
-        return self._combine_pages(pages_html, context)
+            logger.error(f"Failed to render report: {e}")
+            raise
     
-    def _combine_pages(self, pages_html: List[str], context: Dict[str, Any]) -> str:
+    def render_preview(self, pages: List[str] = None) -> str:
         """
-        Combine multiple page HTMLs into a single document.
-        
-        For PDF generation, we need page breaks between sections.
-        This extracts the body content from each rendered template
-        and combines them with proper page break styling.
-        """
-        # For now, simply concatenate the pages
-        # The templates use <page> elements with page-break-after: always
-        # PDFShift handles this correctly
-        
-        # Render base template with all pages as content
-        try:
-            base_template = self.env.get_template(f"{self.report_type}_base.jinja2")
-            
-            # Extract body content from each page (between <body> and </body>)
-            body_contents = []
-            for html in pages_html:
-                import re
-                match = re.search(r'<body[^>]*>(.*?)</body>', html, re.DOTALL)
-                if match:
-                    body_contents.append(match.group(1))
-                else:
-                    body_contents.append(html)
-            
-            # Create combined content block
-            combined_content = "\n<!-- PAGE BREAK -->\n".join(body_contents)
-            
-            # Render the base template with combined content
-            # Override the content block
-            context['combined_content'] = combined_content
-            
-            # For now, just return the first page's full HTML with all content
-            # This is because each template extends base and is complete
-            # A better solution would be a master template that includes all pages
-            
-            return pages_html[0].replace(
-                '</body>',
-                f'\n{chr(10).join(body_contents[1:])}\n</body>'
-            )
-            
-        except Exception as e:
-            logger.error(f"Failed to combine pages: {e}")
-            return pages_html[0] if pages_html else ""
-    
-    def render_page(self, page_name: str) -> str:
-        """
-        Render a single page by name.
+        Render a preview with limited pages.
         
         Args:
-            page_name: Template name without extension (e.g., "seller_cover")
-            
-        Returns:
-            Rendered HTML string
-        """
-        context = {
-            "property": self._build_property_context(),
-            "agent": self._build_agent_context(),
-            "theme_color": self._get_theme_color(),
-            "comparables": self.report_data.get("comparables") or [],
-            "report_type": self.report_type,
-            "language": self.language,
-            "cover_image_url": self.report_data.get("cover_image_url"),
-        }
+            pages: List of page names to include (e.g., ["cover", "property_details"])
+                   Defaults to first 3 pages.
         
-        template = self.env.get_template(f"{page_name}.jinja2")
-        return template.render(**context)
-
+        Returns:
+            HTML string for preview
+        """
+        if pages is None:
+            pages = ["cover", "property_details", "comparables"]
+        
+        # Temporarily override page_set
+        original_page_set = self.page_set
+        self.page_set = pages
+        
+        try:
+            return self.render_html()
+        finally:
+            self.page_set = original_page_set

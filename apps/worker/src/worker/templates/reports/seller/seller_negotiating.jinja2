@@ -1,0 +1,104 @@
+{#
+    Seller Report - Negotiating Offers Page
+    Converted from: application/views/reports/english/seller/pages/6g.php
+
+    Required variables:
+    - theme_color               : Hex color for theme accents (default: #0d294b)
+    - assets_base_url           : Base URL for static assets
+    - negotiating               : Page content object (optional)
+      - title                   : Page title
+      - sub_title               : Page subtitle
+      - content                 : Main content paragraph
+      - point_1_title           : First pitfall point
+      - point_2_title           : Second pitfall point
+      - point_3_title           : Third pitfall point
+      - point_4_title           : Fourth pitfall point
+      - point_5_title           : Fifth pitfall point
+      - footer_content          : Footer paragraph
+#}
+
+<style>
+    .page7-negotiate .two-grid-wrapper {
+        display: flex;
+        align-items: center;
+        margin-top: 30px;
+    }
+    .page7-negotiate .left-grid {
+        padding-right: 30px;
+    }
+    .page7-negotiate .right-grid {
+        text-align: center;
+    }
+    .page7-negotiate .right-grid img {
+        max-width: 100%;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .page7-negotiate .perfect-world {
+        font-size: 13px;
+        line-height: 1.8;
+        color: #666;
+        margin-bottom: 20px;
+    }
+    .page7-negotiate .making {
+        font-size: 13px;
+        font-weight: 500;
+        margin-bottom: 8px;
+    }
+    .page7-negotiate .footer-text {
+        font-size: 13px;
+        line-height: 1.7;
+        color: #666;
+        margin-top: 20px;
+        font-style: italic;
+    }
+</style>
+<div class="page">
+    <div class="section page7-negotiate">
+
+        <header>
+            <h2 class="underline title-bold">{{ negotiating.title | default('Negotiating Offers') }}</h2>
+            <p>{{ negotiating.sub_title | default('Keeping things on your terms.') }}</p>
+        </header>
+
+        <div class="row">
+            <div class="two-grid-wrapper vertical-align">
+                <div class="col-xs-6">
+                    <div class="left-grid">
+                        <div class="text-block-condensed">
+                            <p class="perfect-world">
+                                {{ negotiating.content | default("In a perfect world, every home buyer and every home seller would get exactly the deal they want for their real estate transaction. In reality, the best deals are the ones in which each side feels they got most of what they wanted and didn't have to give up too much.<br><br>The negotiating portion of a real estate transaction can be exciting, frustrating, and tedious. As a seller you want to get what you feel your home is worth and I want to help make that happen. My qualifications will help keep the negotiating terms in your favor.<br><br>The goal is to make sure you avoid pitfalls that many sellers are faced when selling their home. The most common are:") | safe }}
+                            </p>
+
+                            <h4 class="making" style="color: {{ theme_color | default('#0d294b') }};">
+                                {{ negotiating.point_1_title | default('- Not making sure buyers are qualified') }}
+                            </h4>
+                            <h4 class="making" style="color: {{ theme_color | default('#0d294b') }};">
+                                {{ negotiating.point_2_title | default('- Not understanding contract and forms') }}
+                            </h4>
+                            <h4 class="making" style="color: {{ theme_color | default('#0d294b') }};">
+                                {{ negotiating.point_3_title | default('- Failing to disclose all property facts') }}
+                            </h4>
+                            <h4 class="making" style="color: {{ theme_color | default('#0d294b') }};">
+                                {{ negotiating.point_4_title | default('- Setting up contingencies') }}
+                            </h4>
+                            <h4 class="making" style="color: {{ theme_color | default('#0d294b') }};">
+                                {{ negotiating.point_5_title | default('- Handling the buyers deposit') }}
+                            </h4>
+
+                            <p class="footer-text">
+                                {{ negotiating.footer_content | default("The thing to remember about negotiating is that it's not where you start but rather where you finish. My goal is to make sure that you finish first every time.") }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xs-6">
+                    <div class="right-grid">
+                        <img class="img-responsive page-right-img" src="{{ assets_base_url | default('/assets') }}/reports/english/seller/images/6g/6g2.jpg" alt="Negotiating">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>

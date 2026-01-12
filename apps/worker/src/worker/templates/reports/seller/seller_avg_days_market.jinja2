@@ -1,0 +1,181 @@
+{#
+    Seller Report - Average Days on Market Page
+    Converted from: application/views/reports/english/seller/pages/5k.php
+
+    Required variables:
+    - theme_color               : Hex color for theme accents (default: #0d294b)
+    - assets_base_url           : Base URL for static assets
+    - avg_days                  : Page content object (optional)
+      - title                   : Page title
+      - sub_title               : Page subtitle
+      - average_days_text       : Label for average days
+      - average_days            : Number of average days on market
+      - content                 : Main content paragraph
+      - paragraph_1_title       : Market section title
+      - paragraph_1_content     : Market section content
+      - paragraph_2_title       : Season section title
+      - paragraph_2_content     : Season section content
+      - paragraph_3_title       : Economy section title
+      - paragraph_3_content     : Economy section content
+      - point_1                 : First bullet point
+      - point_2                 : Second bullet point
+#}
+
+<style>
+    .page5k .avg-text-box {
+        text-align: center;
+    }
+    .page5k .avg-text {
+        font-size: 11px;
+        color: #666;
+        margin-bottom: 10px;
+        letter-spacing: 1px;
+    }
+    .page5k .avg-box {
+        padding: 30px;
+        border-radius: 8px;
+        display: inline-block;
+    }
+    .page5k .thirty-five-text {
+        font-size: 48px;
+        font-weight: 700;
+        color: #fff;
+        margin: 0;
+    }
+    .page5k .most-buyers3 {
+        font-size: 13px;
+        line-height: 1.8;
+        color: #666;
+    }
+    .page5k .market-content-top2 {
+        margin-top: 40px;
+        padding-top: 30px;
+        border-top: 1px solid #eee;
+    }
+    .page5k .home {
+        font-size: 14px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 10px;
+    }
+    .page5k .valuable2 {
+        font-size: 12px;
+        line-height: 1.7;
+        color: #666;
+        margin-bottom: 20px;
+    }
+    .page5k .market-small-box {
+        width: 20px;
+        height: 20px;
+        border-radius: 3px;
+        margin-bottom: 10px;
+    }
+    .page5k .market-small-box2 {
+        width: 20px;
+        height: 20px;
+        border-radius: 3px;
+    }
+    .page5k .market-left {
+        margin-left: 15px;
+    }
+    .page5k .interest-top {
+        margin-top: 15px;
+        margin-left: 15px;
+    }
+    .page5k .graph-content {
+        margin-top: 30px;
+        text-align: center;
+    }
+    .page5k .inner-content-graph {
+        padding: 20px;
+        border-radius: 8px;
+        display: inline-block;
+    }
+    .page5k .row.vertical-align {
+        display: flex;
+        align-items: center;
+    }
+    .page5k .horizontal-align {
+        display: flex;
+        align-items: flex-start;
+    }
+</style>
+<div class="page">
+    <div class="section page5k average-days">
+
+        <header>
+            <h2 class="underline title-bold">{{ avg_days.title | default('Average Days on Market') }}</h2>
+            <p>{{ avg_days.sub_title | default('How long will it take to sell your home.') }}</p>
+        </header>
+
+        <div class="row vertical-align" style="margin-top: 30px;">
+            <div class="col-xs-4">
+                <div class="avg-text-box">
+                    <p class="text-uppercase text-left avg-text">
+                        {{ avg_days.average_days_text | default('Avg. Days On Market') }}
+                    </p>
+                    <div class="avg-box" style="background-color: {{ theme_color | default('#0d294b') }};">
+                        <div class="thirty-five">
+                            <h1 class="thirty-five-text">{{ avg_days.average_days | default('52') }}</h1>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xs-8">
+                <p class="most-buyers3">
+                    {{ avg_days.content | default("Days on market has a direct correlation with a buyers interest level in your property. Depending on the geographic area of your home, the number of days that your home is on the market can vary. Currently the market is in an upswing and the shortage of inventory is leading to homes flying off the market.<br><br>There are a few factors that come into play when attempting to determine how long it will take these factors are") | safe }}
+                </p>
+            </div>
+        </div>
+
+        <div class="market-content-top2">
+            <div class="row vertical-align">
+                <div class="col-xs-6">
+                    <h4 class="home">{{ avg_days.paragraph_1_title | default('Market') }}</h4>
+                    <p class="valuable2">
+                        {{ avg_days.paragraph_1_content | default('Can be a geographic location or type of housing. So if a certain eclectic neighborhood is deemed desirable, that creates demand which will lead to homes being sold quickly.') }}
+                    </p>
+                </div>
+
+                <div class="col-xs-6">
+                    <h4 class="home">{{ avg_days.paragraph_2_title | default('Season') }}</h4>
+                    <p class="valuable2">
+                        {{ avg_days.paragraph_2_content | default('When someone is looking to pack up and move they typically would do so in good weather. So if your home is listed during the winter or the rainy season this may add to days on market.') }}
+                    </p>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-xs-6 horizontal-align">
+                    <div style="margin-right: 15px;">
+                        <div class="market-small-box" style="background: {{ theme_color | default('#0d294b') }};"></div>
+                        <div class="market-small-box2" style="background: {{ theme_color | default('#0d294b') }};"></div>
+                    </div>
+                    <div>
+                        <h4 class="home" style="margin: 0;">{{ avg_days.point_1 | default('DAYS ON MARKET') }}</h4>
+                        <h4 class="home" style="margin-top: 15px;">{{ avg_days.point_2 | default('BUYER INTEREST') }}</h4>
+                    </div>
+                </div>
+
+                <div class="col-xs-6">
+                    <h4 class="home">{{ avg_days.paragraph_3_title | default('Economy') }}</h4>
+                    <p class="valuable2">
+                        {{ avg_days.paragraph_3_content | default('When interest rates are low the typical median home price tends to rise. During this time motivated buyers take less time to commit to a home which leads to less time on market and quicker sales.') }}
+                    </p>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="graph-content">
+                        <div class="inner-content-graph theme-bg" style="background: {{ theme_color | default('#0d294b') }};">
+                            <img class="img-responsive" src="{{ assets_base_url | default('/assets') }}/reports/english/seller/images/5/Average.png" alt="Average Days Chart">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>

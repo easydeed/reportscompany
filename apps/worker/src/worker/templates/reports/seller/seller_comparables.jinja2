@@ -1,0 +1,216 @@
+{#
+    Seller Report - Sales Comparables Page
+    Converted from: application/views/reports/english/seller/pages/5d.php
+
+    Required variables:
+    - theme_color               : Hex color for theme accents (default: #0d294b)
+    - google_maps_api_key       : Google Maps API key
+    - comparables               : List of comparable properties
+      Each comparable should have:
+      - address                 : Property address
+      - latitude                : Latitude
+      - longitude               : Longitude
+      - image_url               : Property image URL (optional)
+      - price                   : Sale price (formatted, e.g., "$450,000")
+      - days_on_market          : Days on market
+      - distance                : Distance from subject property
+      - sqft                    : Square footage
+      - price_per_sqft          : Price per square foot
+      - bedrooms                : Number of bedrooms
+      - bathrooms               : Number of bathrooms
+      - year_built              : Year built
+      - lot_size                : Lot size
+      - pool                    : Pool/Spa info
+#}
+
+<style>
+    .comp-card {
+        margin-bottom: 25px;
+    }
+    .comp-card .arrow {
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        color: #333;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .comp-card .map1 {
+        margin-bottom: 10px;
+        height: 120px;
+        overflow: hidden;
+        border-radius: 4px;
+    }
+    .comp-card .map1 img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .price-button-group {
+        margin-bottom: 10px;
+        display: flex;
+    }
+    .price-button-group .btn {
+        padding: 6px 12px;
+        font-size: 11px;
+        border: none;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .price-button-group .btn-default {
+        background-color: {{ theme_color | default('#0d294b') }};
+        color: #fff;
+        border-top-left-radius: 3px;
+        border-bottom-left-radius: 3px;
+    }
+    .price-button-group .btn-warning {
+        background-color: #fff;
+        border: 1px solid {{ theme_color | default('#0d294b') }};
+        color: #333;
+        border-top-right-radius: 3px;
+        border-bottom-right-radius: 3px;
+        font-weight: 600;
+    }
+    .table-top-sales {
+        width: 100%;
+    }
+    .table-top-sales td {
+        padding: 3px 0;
+        font-size: 10px;
+    }
+    .table-top-sales .gray-color td {
+        color: #888;
+        text-transform: uppercase;
+    }
+    .table-top-sales .text-mybold td {
+        font-weight: 600;
+        color: #333;
+    }
+</style>
+<div class="page">
+    <div class="section page5">
+
+        <header>
+            <h2 class="underline title-bold">Sales Comparables</h2>
+            <p>Properties that have recently sold</p>
+        </header>
+
+        <div style="margin-top: 20px;">
+            {% if comparables and comparables | length > 0 %}
+                {% for i in range(0, comparables | length, 2) %}
+                <div class="row vertical-align" style="margin-bottom: 20px;">
+                    {# First comparable in row #}
+                    {% set comp = comparables[i] %}
+                    <div class="col-xs-6">
+                        <div class="comp-card">
+                            <h5 class="arrow">{{ comp.address }}</h5>
+
+                            <div class="map1">
+                                {% if comp.image_url %}
+                                <img src="{{ comp.image_url }}" alt="{{ comp.address }}">
+                                {% else %}
+                                {% set theme_hex = theme_color | default('#0d294b') | replace('#', '') %}
+                                <img src="https://maps.googleapis.com/maps/api/staticmap?zoom=14&size=180x100&maptype=roadmap&markers=color:0x{{ theme_hex }}%7Clabel:S%7C{{ comp.latitude }},{{ comp.longitude }}&style=feature:water|element:geometry.fill|color:0xd3d3d3&style=feature:poi|element:labels|visibility:off&style=feature:road|element:labels.icon|visibility:off&key={{ google_maps_api_key }}" alt="{{ comp.address }}">
+                                {% endif %}
+                            </div>
+
+                            <div class="price-button-group">
+                                <button type="button" class="btn btn-default">Sale Price</button>
+                                <button type="button" class="btn btn-warning">{{ comp.price }}</button>
+                            </div>
+
+                            <table class="table-top-sales">
+                                <tbody>
+                                    <tr class="gray-color">
+                                        <td>Days on Market</td>
+                                        <td>Dist.</td>
+                                        <td>Sqft.</td>
+                                        <td>$/Sqft</td>
+                                    </tr>
+                                    <tr class="text-mybold">
+                                        <td>{{ comp.days_on_market | default('-') }}</td>
+                                        <td>{{ comp.distance | default('-') }}</td>
+                                        <td>{{ comp.sqft | default('-') }}</td>
+                                        <td>{{ '$' ~ comp.price_per_sqft if comp.price_per_sqft else '-' }}</td>
+                                    </tr>
+                                    <tr class="gray-color">
+                                        <td>Bed/Bath</td>
+                                        <td>Year Blt</td>
+                                        <td>Lot Area</td>
+                                        <td>Pool</td>
+                                    </tr>
+                                    <tr class="text-mybold">
+                                        <td>{{ comp.bedrooms }}/{{ comp.bathrooms }}</td>
+                                        <td>{{ comp.year_built | default('-') }}</td>
+                                        <td>{{ comp.lot_size | default('-') }}</td>
+                                        <td>{{ comp.pool | default('-') }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {# Second comparable in row (if exists) #}
+                    {% if i + 1 < comparables | length %}
+                    {% set comp2 = comparables[i + 1] %}
+                    <div class="col-xs-6">
+                        <div class="comp-card">
+                            <h5 class="arrow">{{ comp2.address }}</h5>
+
+                            <div class="map1">
+                                {% if comp2.image_url %}
+                                <img src="{{ comp2.image_url }}" alt="{{ comp2.address }}">
+                                {% else %}
+                                {% set theme_hex = theme_color | default('#0d294b') | replace('#', '') %}
+                                <img src="https://maps.googleapis.com/maps/api/staticmap?zoom=14&size=180x100&maptype=roadmap&markers=color:0x{{ theme_hex }}%7Clabel:S%7C{{ comp2.latitude }},{{ comp2.longitude }}&style=feature:water|element:geometry.fill|color:0xd3d3d3&style=feature:poi|element:labels|visibility:off&style=feature:road|element:labels.icon|visibility:off&key={{ google_maps_api_key }}" alt="{{ comp2.address }}">
+                                {% endif %}
+                            </div>
+
+                            <div class="price-button-group">
+                                <button type="button" class="btn btn-default">Sale Price</button>
+                                <button type="button" class="btn btn-warning">{{ comp2.price }}</button>
+                            </div>
+
+                            <table class="table-top-sales">
+                                <tbody>
+                                    <tr class="gray-color">
+                                        <td>Days on Market</td>
+                                        <td>Dist.</td>
+                                        <td>Sqft.</td>
+                                        <td>$/Sqft</td>
+                                    </tr>
+                                    <tr class="text-mybold">
+                                        <td>{{ comp2.days_on_market | default('-') }}</td>
+                                        <td>{{ comp2.distance | default('-') }}</td>
+                                        <td>{{ comp2.sqft | default('-') }}</td>
+                                        <td>{{ '$' ~ comp2.price_per_sqft if comp2.price_per_sqft else '-' }}</td>
+                                    </tr>
+                                    <tr class="gray-color">
+                                        <td>Bed/Bath</td>
+                                        <td>Year Blt</td>
+                                        <td>Lot Area</td>
+                                        <td>Pool</td>
+                                    </tr>
+                                    <tr class="text-mybold">
+                                        <td>{{ comp2.bedrooms }}/{{ comp2.bathrooms }}</td>
+                                        <td>{{ comp2.year_built | default('-') }}</td>
+                                        <td>{{ comp2.lot_size | default('-') }}</td>
+                                        <td>{{ comp2.pool | default('-') }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+            <div style="text-align: center; padding: 50px; color: #999;">
+                <p>No comparable properties available</p>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
