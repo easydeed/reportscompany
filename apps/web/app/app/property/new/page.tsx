@@ -38,7 +38,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ComparablesMapModal, ComparablesPicker } from "@/components/property";
+import { ComparablesMapModal, ComparablesPicker, ThemeSelector } from "@/components/property";
 
 // Types
 interface PropertyData {
@@ -101,6 +101,7 @@ interface WizardState {
   selectedComps: Comparable[];
   theme: number;
   accentColor: string;
+  selectedPages: string[];
   // Search filters
   radiusMiles: number;
   sqftVariance: number;
@@ -114,24 +115,14 @@ const STEPS = [
   { id: 4, title: "Review & Generate", icon: FileText },
 ];
 
-const THEMES = [
-  { id: 1, name: "Classic", colors: ["#1e3a5f", "#f5f5f5", "#c9a227"] },
-  { id: 2, name: "Modern", colors: ["#2563eb", "#ffffff", "#10b981"] },
-  { id: 3, name: "Elegant", colors: ["#1f2937", "#faf5ef", "#a78bfa"] },
-  { id: 4, name: "Warm", colors: ["#78350f", "#fffbeb", "#f59e0b"] },
-  { id: 5, name: "Fresh", colors: ["#065f46", "#ecfdf5", "#34d399"] },
-];
-
-const PRESET_COLORS = [
-  "#2563eb", // Blue
-  "#10b981", // Green
-  "#8b5cf6", // Purple
-  "#f59e0b", // Amber
-  "#ef4444", // Red
-  "#ec4899", // Pink
-  "#06b6d4", // Cyan
-  "#1f2937", // Gray
-];
+// Theme names for review step display
+const THEME_NAMES: Record<number, string> = {
+  1: "Classic",
+  2: "Modern",
+  3: "Elegant",
+  4: "Teal",
+  5: "Bold",
+};
 
 export default function NewPropertyReportPage() {
   const router = useRouter();
@@ -143,7 +134,8 @@ export default function NewPropertyReportPage() {
     availableComps: [],
     selectedComps: [],
     theme: 1,
-    accentColor: "#2563eb",
+    accentColor: "#0d294b",
+    selectedPages: [],
     // Search filter defaults
     radiusMiles: 0.5,
     sqftVariance: 0.20,
@@ -948,78 +940,15 @@ export default function NewPropertyReportPage() {
           {/* STEP 3: Choose Theme */}
           {state.step === 3 && (
             <div className="space-y-6">
-              <div>
-                <CardTitle className="mb-2">Choose Your Theme</CardTitle>
-                <CardDescription>
-                  Select a theme and accent color for your report
-                </CardDescription>
-              </div>
-
-              <div className="space-y-4">
-                <Label>Theme Style</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-                  {THEMES.map((theme) => (
-                    <button
-                      key={theme.id}
-                      onClick={() => setState((prev) => ({ ...prev, theme: theme.id }))}
-                      className={`relative rounded-lg border-2 p-4 text-center transition-all ${
-                        state.theme === theme.id
-                          ? "border-primary ring-2 ring-primary/20"
-                          : "border-muted hover:border-muted-foreground/30"
-                      }`}
-                    >
-                      <div className="flex justify-center gap-1 mb-2">
-                        {theme.colors.map((color, i) => (
-                          <div
-                            key={i}
-                            className="w-6 h-6 rounded"
-                            style={{ backgroundColor: color }}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-sm font-medium">{theme.name}</span>
-                      {state.theme === theme.id && (
-                        <div className="absolute -top-2 -right-2 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
-                          <Check className="w-3 h-3 text-primary-foreground" />
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <Label>Accent Color</Label>
-                <div className="flex flex-wrap gap-3">
-                  {PRESET_COLORS.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => setState((prev) => ({ ...prev, accentColor: color }))}
-                      className={`w-10 h-10 rounded-lg border-2 transition-all ${
-                        state.accentColor === color
-                          ? "border-foreground scale-110"
-                          : "border-transparent hover:scale-105"
-                      }`}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="text"
-                      placeholder="#hex"
-                      value={state.accentColor}
-                      onChange={(e) =>
-                        setState((prev) => ({ ...prev, accentColor: e.target.value }))
-                      }
-                      className="w-24"
-                    />
-                    <div
-                      className="w-10 h-10 rounded-lg border"
-                      style={{ backgroundColor: state.accentColor }}
-                    />
-                  </div>
-                </div>
-              </div>
+              <ThemeSelector
+                selectedTheme={state.theme}
+                onThemeChange={(theme) => setState((prev) => ({ ...prev, theme }))}
+                accentColor={state.accentColor}
+                onAccentColorChange={(accentColor) => setState((prev) => ({ ...prev, accentColor }))}
+                selectedPages={state.selectedPages}
+                onPagesChange={(selectedPages) => setState((prev) => ({ ...prev, selectedPages }))}
+                propertyAddress={state.property?.full_address || state.address}
+              />
             </div>
           )}
 
@@ -1069,16 +998,19 @@ export default function NewPropertyReportPage() {
                 <div className="border rounded-lg p-4 space-y-3">
                   <h4 className="font-medium flex items-center gap-2">
                     <Palette className="w-4 h-4" />
-                    Theme
+                    Theme & Pages
                   </h4>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium">
-                      {THEMES.find((t) => t.id === state.theme)?.name}
-                    </span>
-                    <div
-                      className="w-6 h-6 rounded border"
-                      style={{ backgroundColor: state.accentColor }}
-                    />
+                  <div className="text-sm space-y-1">
+                    <div className="flex items-center gap-3">
+                      <span className="font-medium">{THEME_NAMES[state.theme] || "Classic"}</span>
+                      <div
+                        className="w-6 h-6 rounded border"
+                        style={{ backgroundColor: state.accentColor }}
+                      />
+                    </div>
+                    <p className="text-muted-foreground">
+                      {state.selectedPages.length} pages selected
+                    </p>
                   </div>
                 </div>
 
