@@ -147,7 +147,7 @@ export default function NewPropertyReportPage() {
     setError(null);
 
     try {
-      const data = await apiFetch("/v1/property/search", {
+      const response = await apiFetch("/v1/property/search", {
         method: "POST",
         body: JSON.stringify({
           address: state.address.trim(),
@@ -155,9 +155,18 @@ export default function NewPropertyReportPage() {
         }),
       });
 
-      setState((prev) => ({ ...prev, property: data }));
+      // API returns { success: boolean, data: PropertyData, error?: string }
+      if (response.success && response.data) {
+        setState((prev) => ({ ...prev, property: response.data }));
+      } else if (response.multiple_matches && response.multiple_matches.length > 0) {
+        // Handle multiple property matches
+        setError(`Multiple properties found (${response.multiple_matches.length}). Please be more specific with the address.`);
+      } else {
+        setError(response.error || "Property not found. Please verify the address.");
+      }
     } catch (e: any) {
-      setError(e.message || "Property not found");
+      console.error("Property search error:", e);
+      setError(e.message || "Failed to search property. Please try again.");
     } finally {
       setSearching(false);
     }
@@ -171,31 +180,64 @@ export default function NewPropertyReportPage() {
     setError(null);
 
     try {
-      const data = await apiFetch("/v1/property/comparables", {
+      const response = await apiFetch("/v1/property/comparables", {
         method: "POST",
         body: JSON.stringify({
           address: state.property.full_address,
-          city: state.property.city,
-          state: state.property.state,
-          zip: state.property.zip_code,
-          bedrooms: state.property.bedrooms,
-          bathrooms: state.property.bathrooms,
-          sqft: state.property.sqft,
+          city_state_zip: `${state.property.city}, ${state.property.state} ${state.property.zip_code}`,
+          radius_miles: 1.0,
+          status: "Closed",
+          limit: 20,
         }),
       });
 
-      setState((prev) => ({
-        ...prev,
-        availableComps: data.comparables || [],
-        selectedComps: [],
-      }));
+      // API returns { success, subject_property, comparables: ComparableProperty[], error }
+      // Transform API response to match frontend Comparable interface
+      if (response.success && response.comparables) {
+        const transformedComps: Comparable[] = response.comparables.map((comp: any) => ({
+          mlsId: comp.mls_id,
+          address: {
+            full: comp.address,
+            city: comp.city,
+            state: comp.state,
+          },
+          listPrice: comp.list_price || comp.close_price || 0,
+          property: {
+            bedrooms: comp.bedrooms || 0,
+            bathrooms: comp.bathrooms || 0,
+            area: comp.sqft || 0,
+            yearBuilt: comp.year_built || 0,
+          },
+          photos: comp.photo_url ? [comp.photo_url] : [],
+          distance: comp.distance_miles,
+        }));
+
+        setState((prev) => ({
+          ...prev,
+          availableComps: transformedComps,
+          selectedComps: [],
+        }));
+
+        if (transformedComps.length === 0) {
+          setError("No comparable properties found in this area. Try expanding the search radius.");
+        }
+      } else {
+        setError(response.error || "Failed to load comparables.");
+        setState((prev) => ({
+          ...prev,
+          availableComps: [],
+          selectedComps: [],
+        }));
+      }
     } catch (e: any) {
+      console.error("Comparables loading error:", e);
       // Fallback: use empty comps if endpoint not available
       setState((prev) => ({
         ...prev,
         availableComps: [],
         selectedComps: [],
       }));
+      setError("Failed to load comparable properties.");
     } finally {
       setLoadingComps(false);
     }
