@@ -379,23 +379,30 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
     # Auth required
     require_account_id(request)
     
-    subject = None
+    # Use values directly from payload - frontend already has property details from Step 1
+    # NO SiteX call needed here - SimplyRETS is all we need for comparables
+    subject_sqft = payload.sqft
+    subject_beds = payload.beds
+    subject_baths = payload.baths
+    subject_lat = payload.latitude
+    subject_lng = payload.longitude
+    subject_prop_type = payload.property_type
     
-    # Step 1: Get subject property (optional if characteristics provided)
-    try:
-        subject = await lookup_property(payload.address, payload.city_state_zip)
-    except SiteXError as e:
-        logger.warning(f"SiteX lookup failed, using provided characteristics: {e}")
+    # Parse city and zip from city_state_zip (e.g., "La Verne, CA 91750")
+    subject_city = None
+    subject_zip = None
+    if payload.city_state_zip:
+        parts = payload.city_state_zip.split(",")
+        if parts:
+            subject_city = parts[0].strip()
+        # Try to extract ZIP from last part (e.g., "CA 91750" -> "91750")
+        if len(parts) > 1:
+            state_zip = parts[-1].strip()
+            zip_parts = state_zip.split()
+            if zip_parts and zip_parts[-1].isdigit():
+                subject_zip = zip_parts[-1]
     
-    # Use provided values or fall back to subject property
-    subject_sqft = payload.sqft or (subject.sqft if subject else None)
-    subject_beds = payload.beds or (subject.bedrooms if subject else None)
-    subject_baths = payload.baths or (subject.bathrooms if subject else None)
-    subject_lat = payload.latitude or (subject.latitude if subject else None)
-    subject_lng = payload.longitude or (subject.longitude if subject else None)
-    subject_city = subject.city if subject else payload.address.split(",")[0].strip()
-    subject_zip = subject.zip_code if subject else None
-    subject_prop_type = payload.property_type or (subject.property_type if subject else None)
+    logger.warning(f"Comparables search: city={subject_city}, zip={subject_zip}, beds={subject_beds}, baths={subject_baths}, sqft={subject_sqft}")
     
     # Track search params for response
     sqft_range = None
