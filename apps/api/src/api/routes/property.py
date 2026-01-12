@@ -453,12 +453,12 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
             elif "single" in prop_type_lower or "sfr" in prop_type_lower:
                 params["subtype"] = "SingleFamilyResidence"
         
-        logger.info(f"SimplyRETS query params: {params}")
+        logger.warning(f"SimplyRETS query params: {params}")
         
         # Fetch from SimplyRETS using the API's async client
         listings = await simplyrets_fetch_properties(params, limit=payload.limit * 3)
         total_before_filter = len(listings)
-        logger.info(f"SimplyRETS returned {total_before_filter} listings")
+        logger.warning(f"SimplyRETS returned {total_before_filter} listings")
         
         # Step 3: Post-filter by distance if coordinates available
         if subject_lat and subject_lng:

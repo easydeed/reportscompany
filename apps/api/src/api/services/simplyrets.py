@@ -21,8 +21,8 @@ USERNAME = os.getenv("SIMPLYRETS_USERNAME", "simplyrets")
 PASSWORD = os.getenv("SIMPLYRETS_PASSWORD", "simplyrets")
 TIMEOUT = float(os.getenv("SIMPLYRETS_TIMEOUT_S", "30"))
 
-# Log configuration on startup (mask password)
-logger.info(f"SimplyRETS configured: URL={BASE_URL}, User={USERNAME}, Timeout={TIMEOUT}s")
+# Log configuration on startup (mask password) - use WARNING so it shows in Render logs
+logger.warning(f"SimplyRETS configured: URL={BASE_URL}, User={USERNAME}, Timeout={TIMEOUT}s")
 
 
 async def fetch_properties(params: Dict, limit: Optional[int] = None) -> List[Dict]:
@@ -48,7 +48,7 @@ async def fetch_properties(params: Dict, limit: Optional[int] = None) -> List[Di
     if "type" not in query_params:
         query_params["type"] = "RES"
     
-    logger.info(f"SimplyRETS request: GET /properties params={query_params}")
+    logger.warning(f"SimplyRETS request: GET /properties params={query_params}")
     
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
         try:
@@ -59,7 +59,7 @@ async def fetch_properties(params: Dict, limit: Optional[int] = None) -> List[Di
             )
             
             # Log response status
-            logger.info(f"SimplyRETS response: status={response.status_code}")
+            logger.warning(f"SimplyRETS response: status={response.status_code}")
             
             if response.status_code == 401:
                 logger.error("SimplyRETS auth failed - check SIMPLYRETS_USERNAME/PASSWORD env vars")
@@ -72,7 +72,7 @@ async def fetch_properties(params: Dict, limit: Optional[int] = None) -> List[Di
             response.raise_for_status()
             
             data = response.json()
-            logger.info(f"SimplyRETS returned {len(data)} properties")
+            logger.warning(f"SimplyRETS returned {len(data)} properties")
             
             return data
             
