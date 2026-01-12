@@ -38,6 +38,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ComparablesMapModal } from "@/components/property/ComparablesMapModal";
 
 // Types
 interface PropertyData {
@@ -302,6 +303,7 @@ export default function NewPropertyReportPage() {
             area: comp.sqft || 0,
             yearBuilt: comp.year_built || 0,
           },
+          geo: comp.lat && comp.lng ? { lat: comp.lat, lng: comp.lng } : undefined,
           photos: comp.photo_url ? [comp.photo_url] : [],
           distance: comp.distance_miles,
         }));
@@ -639,7 +641,11 @@ export default function NewPropertyReportPage() {
                     Choose 4-8 comparable properties for your report
                   </CardDescription>
                 </div>
-                <Button variant="outline" onClick={() => setMapModalOpen(true)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setMapModalOpen(true)}
+                  disabled={!state.property?.latitude || !state.property?.longitude || (state.availableComps.length === 0 && state.selectedComps.length === 0)}
+                >
                   <Map className="w-4 h-4 mr-2" />
                   View on Map
                 </Button>
@@ -808,20 +814,52 @@ export default function NewPropertyReportPage() {
                 </div>
               )}
 
-              {/* Map Modal Placeholder */}
-              <Dialog open={mapModalOpen} onOpenChange={setMapModalOpen}>
-                <DialogContent className="max-w-3xl">
-                  <DialogHeader>
-                    <DialogTitle>Comparables Map</DialogTitle>
-                    <DialogDescription>
-                      View comparable properties on a map
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="h-[400px] bg-muted rounded-lg flex items-center justify-center">
-                    <p className="text-muted-foreground">Map view coming soon</p>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              {/* Comparables Map Modal */}
+              {state.property?.latitude && state.property?.longitude && (
+                <ComparablesMapModal
+                  isOpen={mapModalOpen}
+                  onClose={() => setMapModalOpen(false)}
+                  subjectProperty={{
+                    lat: state.property.latitude,
+                    lng: state.property.longitude,
+                    address: state.property.full_address,
+                    bedrooms: state.property.bedrooms,
+                    bathrooms: state.property.bathrooms,
+                    sqft: state.property.sqft,
+                  }}
+                  comparables={[...state.availableComps, ...state.selectedComps].map((c) => ({
+                    id: c.mlsId,
+                    address: c.address.full,
+                    city: c.address.city,
+                    price: c.listPrice,
+                    bedrooms: c.property.bedrooms,
+                    bathrooms: c.property.bathrooms,
+                    sqft: c.property.area,
+                    yearBuilt: c.property.yearBuilt,
+                    lat: c.geo?.lat || 0,
+                    lng: c.geo?.lng || 0,
+                    photoUrl: c.photos?.[0],
+                    distanceMiles: c.distance,
+                    status: "Closed",
+                  }))}
+                  selectedIds={state.selectedComps.map((c) => c.mlsId)}
+                  onSelectionChange={(newSelectedIds) => {
+                    // Combine all comps to find by ID
+                    const allComps = [...state.availableComps, ...state.selectedComps];
+                    
+                    // Find newly selected and deselected
+                    const newSelected = allComps.filter((c) => newSelectedIds.includes(c.mlsId));
+                    const newAvailable = allComps.filter((c) => !newSelectedIds.includes(c.mlsId));
+                    
+                    setState((prev) => ({
+                      ...prev,
+                      selectedComps: newSelected,
+                      availableComps: newAvailable,
+                    }));
+                  }}
+                  maxSelections={8}
+                />
+              )}
 
               {/* Parameter Adjustment Modal */}
               <Dialog open={showParamsModal} onOpenChange={setShowParamsModal}>

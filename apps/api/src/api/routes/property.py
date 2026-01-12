@@ -99,6 +99,9 @@ class ComparableProperty(BaseModel):
     close_date: Optional[str] = None
     distance_miles: Optional[float] = None
     photo_url: Optional[str] = None
+    # Geo coordinates for map display
+    lat: Optional[float] = None
+    lng: Optional[float] = None
 
 
 class ComparablesRequest(BaseModel):
@@ -469,6 +472,7 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
             prop = listing.get("property", {})
             address_obj = listing.get("address", {})
             
+            geo = listing.get("geo", {})
             comp = ComparableProperty(
                 mls_id=listing.get("mlsId", ""),
                 address=address_obj.get("full", ""),
@@ -487,6 +491,8 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
                 close_date=listing.get("closeDate"),
                 distance_miles=listing.get("_distance_miles"),
                 photo_url=listing.get("photos", [None])[0] if listing.get("photos") else None,
+                lat=geo.get("lat"),
+                lng=geo.get("lng"),
             )
             comparables.append(comp)
         
