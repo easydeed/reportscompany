@@ -44,6 +44,11 @@ from ..services.sitex import (
     lookup_property,
     lookup_property_by_apn,
 )
+from ..services.simplyrets import (
+    fetch_properties as simplyrets_fetch_properties,
+    build_comparables_params,
+    normalize_listing,
+)
 from ..worker_client import enqueue_property_report
 from ..services.qr_service import generate_qr_code
 
@@ -397,30 +402,21 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
     beds_range = None
     baths_range = None
     
-    # Step 2: Search SimplyRETS for comparables
+    # Step 2: Search SimplyRETS for comparables using the API's own client
+    # (API and worker are separate deployments, so we use our own simplyrets service)
     try:
-        import sys
-        import os
-        
-        # Add worker path for SimplyRETS vendor
-        worker_path = os.path.join(os.path.dirname(__file__), '../../../../worker/src')
-        if worker_path not in sys.path:
-            sys.path.insert(0, worker_path)
-        
-        from worker.vendors.simplyrets import fetch_properties
-        
-        # Build search params
+        # Build search params - same logic as working Market Reports
         params: Dict[str, Any] = {
             "status": "Closed" if payload.status == "Closed" else "Active,Closed",
-            "type": "RES",
+            "type": "RES",  # CRITICAL: Excludes rentals
             "limit": payload.limit * 3,  # Fetch extra for post-filtering
         }
         
-        # Location filter
-        if subject_city:
-            params["q"] = subject_city
+        # Location filter - prefer ZIP, also add city for broader search
         if subject_zip:
             params["postalCodes"] = subject_zip
+        if subject_city:
+            params["q"] = subject_city
         
         # SQFT VARIANCE FILTER - Key enhancement from ModernAgent
         if subject_sqft and payload.sqft_variance:
@@ -459,9 +455,10 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
         
         logger.info(f"SimplyRETS query params: {params}")
         
-        # Fetch from SimplyRETS
-        listings = fetch_properties(params, limit=payload.limit * 3)
+        # Fetch from SimplyRETS using the API's async client
+        listings = await simplyrets_fetch_properties(params, limit=payload.limit * 3)
         total_before_filter = len(listings)
+        logger.info(f"SimplyRETS returned {total_before_filter} listings")
         
         # Step 3: Post-filter by distance if coordinates available
         if subject_lat and subject_lng:
@@ -535,15 +532,6 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
             search_params=search_params,
         )
         
-    except ImportError:
-        logger.warning("SimplyRETS vendor not available")
-        return ComparablesResponse(
-            success=False,
-            subject_property=subject,
-            comparables=[],
-            total_found=0,
-            error="Comparable search service unavailable"
-        )
     except Exception as e:
         logger.error(f"Comparables search error: {e}", exc_info=True)
         return ComparablesResponse(
