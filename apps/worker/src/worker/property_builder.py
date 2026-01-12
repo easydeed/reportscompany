@@ -95,7 +95,18 @@ class PropertyReportBuilder:
         self.theme = report_data.get("theme", 1)
         self.accent_color = report_data.get("accent_color")
         self.language = report_data.get("language", "en")
-        self.page_set = report_data.get("page_set", "full")
+        
+        # Use selected_pages if provided, otherwise fall back to page_set or default
+        # selected_pages can be:
+        #   - A list of page IDs like ["cover", "property_details", "comparables", ...]
+        #   - None (use default based on theme: compact for themes 4-5, full for 1-3)
+        selected_pages = report_data.get("selected_pages")
+        if selected_pages and isinstance(selected_pages, list) and len(selected_pages) > 0:
+            self.page_set = selected_pages
+        else:
+            # Default based on theme: themes 4-5 use compact, themes 1-3 use full
+            default_page_set = "compact" if self.theme >= 4 else "full"
+            self.page_set = report_data.get("page_set", default_page_set)
         
         # Template directory based on report type
         template_dir = TEMPLATES_BASE_DIR / self.report_type
@@ -497,3 +508,25 @@ class PropertyReportBuilder:
             return self.render_html()
         finally:
             self.page_set = original_page_set
+    
+    def fetch_comparables(self) -> Optional[List[Dict[str, Any]]]:
+        """
+        Fetch comparables for the property if not already set.
+        
+        This method checks if comparables are already in report_data.
+        If not, it could potentially fetch them from SimplyRETS based on
+        the property address (but this is typically done at report creation time).
+        
+        Returns:
+            List of comparable properties or None
+        """
+        # Check if comparables already exist in report data
+        existing = self.report_data.get("comparables")
+        if existing and isinstance(existing, list) and len(existing) > 0:
+            logger.info(f"Using {len(existing)} existing comparables from report data")
+            return existing
+        
+        # Comparables should be selected in the wizard and stored in the DB
+        # If none exist, we can't fetch them here without the subject property coords
+        logger.info("No comparables in report data - should be selected during report creation")
+        return None

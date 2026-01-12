@@ -114,6 +114,7 @@ def fetch_report_with_joins(report_id: str) -> dict:
     - All property_reports fields
     - agent: user info (name, email, phone, photo_url, etc.)
     - branding: affiliate_branding if applicable
+    - selected_pages: list of page IDs to include (or None for all)
     """
     with psycopg.connect(DATABASE_URL, autocommit=False) as conn:
         with conn.cursor() as cur:
@@ -137,6 +138,7 @@ def fetch_report_with_joins(report_id: str) -> dict:
                     pr.property_type,
                     pr.sitex_data,
                     pr.comparables,
+                    pr.selected_pages,
                     pr.short_code,
                     pr.qr_code_url,
                     
@@ -189,7 +191,7 @@ def fetch_report_with_joins(report_id: str) -> dict:
                 'accent_color', 'language', 'property_address', 'property_city',
                 'property_state', 'property_zip', 'property_county', 'apn',
                 'owner_name', 'legal_description', 'property_type', 'sitex_data',
-                'comparables', 'short_code', 'qr_code_url',
+                'comparables', 'selected_pages', 'short_code', 'qr_code_url',
                 'agent_name', 'agent_email', 'agent_phone', 'agent_photo_url',
                 'agent_company', 'agent_license',
                 'account_name', 'account_type', 'sponsor_account_id',
@@ -221,6 +223,7 @@ def fetch_report_with_joins(report_id: str) -> dict:
                 'property_type': data['property_type'],
                 'sitex_data': data['sitex_data'],
                 'comparables': data['comparables'],
+                'selected_pages': data['selected_pages'],  # Custom page selection
                 'short_code': data['short_code'],
                 'qr_code_url': data['qr_code_url'],
                 

@@ -146,11 +146,29 @@ class ComparablesResponse(BaseModel):
 class PropertyReportCreate(BaseModel):
     """Create a new property report"""
     report_type: Literal["seller", "buyer"] = "seller"
-    address: str = Field(..., min_length=5)
-    city_state_zip: Optional[str] = ""
     theme: int = Field(default=1, ge=1, le=5)
-    accent_color: str = Field(default="#2563eb", pattern=r"^#[0-9a-fA-F]{6}$")
+    accent_color: str = Field(default="#0d294b", pattern=r"^#[0-9a-fA-F]{6}$")
     language: Literal["en", "es"] = "en"
+    
+    # Property address (new structure - can also use legacy address/city_state_zip)
+    property_address: Optional[str] = None
+    property_city: Optional[str] = None
+    property_state: str = "CA"
+    property_zip: Optional[str] = None
+    
+    # Legacy address fields (for backwards compatibility)
+    address: Optional[str] = Field(default=None, min_length=5)
+    city_state_zip: Optional[str] = ""
+    
+    # Property details (optional, can come from SiteX lookup)
+    apn: Optional[str] = None
+    owner_name: Optional[str] = None
+    
+    # Comparables and pages
+    selected_comp_ids: Optional[List[str]] = None
+    selected_pages: Optional[List[str]] = None
+    comp_parameters: Optional[dict] = None
+    sitex_data: Optional[dict] = None
 
 
 class PropertyReportResponse(BaseModel):
@@ -183,11 +201,13 @@ class PropertyReportDetail(BaseModel):
     legal_description: Optional[str] = None
     property_type: Optional[str] = None
     sitex_data: Optional[dict] = None
-    comparables: Optional[List[dict]] = None
+    comparables: Optional[List[str]] = None  # List of MLS IDs
+    selected_pages: Optional[List[str]] = None  # List of page IDs to include
     pdf_url: Optional[str] = None
     status: str
     short_code: str
     qr_code_url: Optional[str] = None
+    error_message: Optional[str] = None
     view_count: int
     created_at: str
     updated_at: str
@@ -546,9 +566,10 @@ async def create_property_report(payload: PropertyReportCreate, request: Request
     Create a new property report.
     
     1. Check plan limits
-    2. Lookup property via SiteX
+    2. Use provided sitex_data or lookup property via SiteX
     3. Generate short_code and QR code
-    4. Queue PDF generation
+    4. Store selected_pages and selected_comp_ids
+    5. Queue PDF generation
     """
     account_id = require_account_id(request)
     user_id = require_user_id(request)
@@ -561,43 +582,70 @@ async def create_property_report(payload: PropertyReportCreate, request: Request
         if not allowed:
             raise HTTPException(status_code=429, detail=message)
         
-        # 2. Lookup property via SiteX
-        try:
-            property_data = await lookup_property(payload.address, payload.city_state_zip)
-        except SiteXError as e:
-            logger.error(f"SiteX lookup failed: {e}")
-            property_data = None
+        # 2. Determine address input (new vs legacy format)
+        # New format: property_address, property_city, property_state, property_zip
+        # Legacy format: address, city_state_zip
+        lookup_address = payload.property_address or payload.address
+        lookup_csz = payload.city_state_zip or ""
         
-        # Extract address components (from SiteX or parse from input)
-        if property_data:
-            prop_address = property_data.street or payload.address.split(",")[0].strip()
-            prop_city = property_data.city or ""
-            prop_state = property_data.state or "CA"
-            prop_zip = property_data.zip_code or ""
+        if payload.property_city and payload.property_state:
+            lookup_csz = f"{payload.property_city}, {payload.property_state} {payload.property_zip or ''}"
+        
+        # Use provided sitex_data or lookup via SiteX
+        property_data = None
+        sitex_data = payload.sitex_data
+        
+        if not sitex_data and lookup_address:
+            try:
+                property_data = await lookup_property(lookup_address, lookup_csz)
+                if property_data:
+                    sitex_data = property_data.model_dump()
+            except SiteXError as e:
+                logger.warning(f"SiteX lookup failed: {e}")
+        
+        # Extract address components (from sitex_data, property_data, or payload)
+        if sitex_data:
+            prop_address = sitex_data.get("street") or sitex_data.get("full_address", "").split(",")[0] or payload.property_address or lookup_address
+            prop_city = sitex_data.get("city") or payload.property_city or ""
+            prop_state = sitex_data.get("state") or payload.property_state or "CA"
+            prop_zip = sitex_data.get("zip_code") or payload.property_zip or ""
+            prop_county = sitex_data.get("county")
+            apn = payload.apn or sitex_data.get("apn")
+            owner_name = payload.owner_name or sitex_data.get("owner_name")
+            legal_desc = sitex_data.get("legal_description")
+            prop_type = sitex_data.get("property_type")
+        elif property_data:
+            prop_address = property_data.street or lookup_address.split(",")[0].strip()
+            prop_city = property_data.city or payload.property_city or ""
+            prop_state = property_data.state or payload.property_state or "CA"
+            prop_zip = property_data.zip_code or payload.property_zip or ""
             prop_county = property_data.county
-            apn = property_data.apn
-            owner_name = property_data.owner_name
+            apn = payload.apn or property_data.apn
+            owner_name = payload.owner_name or property_data.owner_name
             legal_desc = property_data.legal_description
             prop_type = property_data.property_type
-            sitex_data = property_data.model_dump() if property_data else None
+            sitex_data = property_data.model_dump()
         else:
             # Parse from input
-            parts = payload.address.split(",")
-            prop_address = parts[0].strip() if parts else payload.address
+            prop_address = payload.property_address or (lookup_address.split(",")[0].strip() if lookup_address else "")
+            prop_city = payload.property_city or ""
+            prop_state = payload.property_state or "CA"
+            prop_zip = payload.property_zip or ""
             
-            csz_parts = (payload.city_state_zip or "").split(",")
-            prop_city = csz_parts[0].strip() if csz_parts else ""
-            
-            state_zip = csz_parts[1].strip().split() if len(csz_parts) > 1 else []
-            prop_state = state_zip[0] if state_zip else "CA"
-            prop_zip = state_zip[1] if len(state_zip) > 1 else ""
+            # Try to parse legacy city_state_zip if new fields not provided
+            if not prop_city and lookup_csz:
+                csz_parts = lookup_csz.split(",")
+                prop_city = csz_parts[0].strip() if csz_parts else ""
+                if len(csz_parts) > 1:
+                    state_zip = csz_parts[1].strip().split()
+                    prop_state = state_zip[0] if state_zip else "CA"
+                    prop_zip = state_zip[1] if len(state_zip) > 1 else ""
             
             prop_county = None
-            apn = None
-            owner_name = None
+            apn = payload.apn
+            owner_name = payload.owner_name
             legal_desc = None
             prop_type = None
-            sitex_data = None
         
         # 3. Create report record (short_code auto-generated by trigger)
         cur.execute("""
@@ -618,12 +666,14 @@ async def create_property_report(payload: PropertyReportCreate, request: Request
                 legal_description,
                 property_type,
                 sitex_data,
+                comparables,
+                selected_pages,
                 status
             )
             VALUES (
                 %s::uuid, %s::uuid, %s, %s, %s, %s,
                 %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                %s::jsonb, 'draft'
+                %s::jsonb, %s::jsonb, %s::jsonb, 'draft'
             )
             RETURNING 
                 id::text,
@@ -647,6 +697,8 @@ async def create_property_report(payload: PropertyReportCreate, request: Request
             legal_desc,
             prop_type,
             json.dumps(sitex_data) if sitex_data else None,
+            json.dumps(payload.selected_comp_ids) if payload.selected_comp_ids else None,
+            json.dumps(payload.selected_pages) if payload.selected_pages else None,
         ))
         
         row = cur.fetchone()
@@ -801,10 +853,12 @@ def get_property_report(report_id: str, request: Request):
                 property_type,
                 sitex_data,
                 comparables,
+                selected_pages,
                 pdf_url,
                 status,
                 short_code,
                 qr_code_url,
+                error_message,
                 view_count,
                 created_at::text,
                 updated_at::text
@@ -836,13 +890,15 @@ def get_property_report(report_id: str, request: Request):
         property_type=row[15],
         sitex_data=row[16],
         comparables=row[17],
-        pdf_url=row[18],
-        status=row[19],
-        short_code=row[20],
-        qr_code_url=row[21],
-        view_count=row[22],
-        created_at=row[23],
-        updated_at=row[24],
+        selected_pages=row[18],
+        pdf_url=row[19],
+        status=row[20],
+        short_code=row[21],
+        qr_code_url=row[22],
+        error_message=row[23],
+        view_count=row[24],
+        created_at=row[25],
+        updated_at=row[26],
     )
 
 
