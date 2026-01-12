@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useGooglePlaces, PlaceResult } from "@/hooks/useGooglePlaces";
 import {
   ArrowLeft,
   ArrowRight,
@@ -155,7 +156,68 @@ export default function NewPropertyReportPage() {
   const [mapModalOpen, setMapModalOpen] = useState(false);
   const [showParamsModal, setShowParamsModal] = useState(false);
 
-  // Step 1: Search Property
+  // Google Places autocomplete
+  const addressInputRef = useRef<HTMLInputElement>(null);
+  const searchTriggerRef = useRef<boolean>(false);
+  
+  // Handle place selection from Google Places autocomplete
+  const handlePlaceSelect = useCallback((place: PlaceResult) => {
+    setState((prev) => ({
+      ...prev,
+      address: place.address,
+      cityStateZip: `${place.city}, ${place.state} ${place.zip}`,
+    }));
+    // Set flag to trigger search after state updates
+    searchTriggerRef.current = true;
+  }, []);
+
+  const { place, isLoaded: googleMapsLoaded } = useGooglePlaces(addressInputRef, {
+    onPlaceSelect: handlePlaceSelect,
+  });
+
+  // Auto-trigger property search when place is selected
+  useEffect(() => {
+    if (searchTriggerRef.current && state.address && state.cityStateZip) {
+      searchTriggerRef.current = false;
+      handleSearchPropertyInternal(state.address, state.cityStateZip);
+    }
+  }, [state.address, state.cityStateZip]);
+
+  // Internal search function that takes address params directly
+  const handleSearchPropertyInternal = async (address: string, cityStateZip: string) => {
+    if (!address.trim() || !cityStateZip.trim()) {
+      setError("Please enter both address and city/state/zip");
+      return;
+    }
+
+    setSearching(true);
+    setError(null);
+
+    try {
+      const response = await apiFetch("/v1/property/search", {
+        method: "POST",
+        body: JSON.stringify({
+          address: address.trim(),
+          city_state_zip: cityStateZip.trim(),
+        }),
+      });
+
+      if (response.success && response.data) {
+        setState((prev) => ({ ...prev, property: response.data }));
+      } else if (response.multiple_matches && response.multiple_matches.length > 0) {
+        setError(`Multiple properties found (${response.multiple_matches.length}). Please be more specific with the address.`);
+      } else {
+        setError(response.error || "Property not found. Please verify the address.");
+      }
+    } catch (e: any) {
+      console.error("Property search error:", e);
+      setError(e.message || "Failed to search property. Please try again.");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  // Step 1: Search Property (called from button click)
   const handleSearchProperty = async () => {
     if (!state.address.trim() || !state.cityStateZip.trim()) {
       setError("Please enter both address and city/state/zip");
@@ -441,19 +503,34 @@ export default function NewPropertyReportPage() {
                 </CardDescription>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-4">
+                {/* Google Places Autocomplete Input */}
                 <div className="space-y-2">
-                  <Label htmlFor="address">Street Address</Label>
-                  <Input
-                    id="address"
-                    placeholder="123 Main St"
-                    value={state.address}
-                    onChange={(e) =>
-                      setState((prev) => ({ ...prev, address: e.target.value }))
-                    }
-                    onKeyDown={(e) => e.key === "Enter" && handleSearchProperty()}
-                  />
+                  <Label htmlFor="address">Property Address</Label>
+                  <div className="relative">
+                    <Input
+                      ref={addressInputRef}
+                      id="address"
+                      placeholder="Start typing an address..."
+                      value={state.address}
+                      onChange={(e) =>
+                        setState((prev) => ({ ...prev, address: e.target.value }))
+                      }
+                      onKeyDown={(e) => e.key === "Enter" && handleSearchProperty()}
+                      className="pr-10"
+                    />
+                    {googleMapsLoaded && (
+                      <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {googleMapsLoaded 
+                      ? "Start typing to see address suggestions" 
+                      : "Loading address autocomplete..."}
+                  </p>
                 </div>
+
+                {/* City, State, ZIP - Auto-populated from Google Places */}
                 <div className="space-y-2">
                   <Label htmlFor="cityStateZip">City, State ZIP</Label>
                   <Input
@@ -465,6 +542,11 @@ export default function NewPropertyReportPage() {
                     }
                     onKeyDown={(e) => e.key === "Enter" && handleSearchProperty()}
                   />
+                  {place && (
+                    <p className="text-xs text-green-600">
+                      ✓ Address auto-filled from selection
+                    </p>
+                  )}
                 </div>
               </div>
 
