@@ -125,7 +125,7 @@ export default function LeadsPage() {
       setTotal(data.total || 0)
       
       // Load all leads for stats
-      const allData = await apiFetch("/v1/leads?limit=1000")
+      const allData = await apiFetch("/v1/leads?limit=100")
       const allLeads = allData.leads || []
       
       const now = new Date()

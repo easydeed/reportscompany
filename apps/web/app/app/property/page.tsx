@@ -108,7 +108,7 @@ export default function PropertyReportsPage() {
       setTotal(data.total || fetchedReports.length)
 
       // Calculate stats from all reports (need separate call for accurate stats)
-      const allData = await apiFetch("/v1/property/reports?limit=1000")
+      const allData = await apiFetch("/v1/property/reports?limit=100")
       const allReports = allData.reports || []
       
       const now = new Date()
