@@ -54,8 +54,9 @@ function formatDate(dateString: string): string {
 export function PlanPageShell(props: PlanPageShellProps) {
   const { account, plan, usage, decision, info } = props;
 
-  const limit = account.monthly_report_limit_override ?? plan.monthly_report_limit;
-  const progressPercent = Math.min((usage.report_count / limit) * 100, 100);
+  const limit = account.monthly_report_limit_override ?? plan.monthly_report_limit ?? 1;
+  const reportCount = usage?.report_count ?? 0;
+  const progressPercent = limit > 0 ? Math.min((reportCount / limit) * 100, 100) : 0;
   const isSponsored = account.sponsor_account_id !== null && plan.plan_slug === 'sponsored_free';
 
   return (
