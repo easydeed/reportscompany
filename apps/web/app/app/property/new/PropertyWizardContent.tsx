@@ -432,8 +432,8 @@ export default function PropertyWizardContent() {
                   <Loader2 className="w-8 h-8 animate-spin text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">Finding comparable properties...</p>
                   <p className="text-sm text-muted-foreground/70 mt-1">
-                    Searching within {searchParams.radius_miles} miles, ±
-                    {Math.round(searchParams.sqft_variance * 100)}% sqft
+                    Searching within {searchParams?.radius_miles ?? 0.5} miles, ±
+                    {Math.round((searchParams?.sqft_variance ?? 0.2) * 100)}% sqft
                   </p>
                 </div>
               ) : (
@@ -463,8 +463,8 @@ export default function PropertyWizardContent() {
               {!compsLoading && availableComps.length > 0 && (
                 <div className="flex items-center justify-between text-sm text-muted-foreground border-t pt-4">
                   <span>
-                    Found {availableComps.length} properties within {searchParams.radius_miles} miles,
-                    ±{Math.round(searchParams.sqft_variance * 100)}% sqft
+                    Found {availableComps.length} properties within {searchParams?.radius_miles ?? 0.5} miles,
+                    ±{Math.round((searchParams?.sqft_variance ?? 0.2) * 100)}% sqft
                   </span>
                   <button
                     onClick={() => setShowParamsModal(true)}
@@ -527,7 +527,7 @@ export default function PropertyWizardContent() {
                       <div className="flex items-center justify-between">
                         <Label>Search Radius</Label>
                         <span className="text-sm font-semibold text-primary">
-                          {searchParams.radius_miles.toFixed(2)} miles
+                          {(searchParams?.radius_miles ?? 0.5).toFixed(2)} miles
                         </span>
                       </div>
                       <input
@@ -535,7 +535,7 @@ export default function PropertyWizardContent() {
                         min="0.25"
                         max="3.0"
                         step="0.25"
-                        value={searchParams.radius_miles}
+                        value={searchParams?.radius_miles ?? 0.5}
                         onChange={(e) =>
                           setSearchParams((prev) => ({
                             ...prev,
@@ -555,7 +555,7 @@ export default function PropertyWizardContent() {
                       <div className="flex items-center justify-between">
                         <Label>Square Footage Variance</Label>
                         <span className="text-sm font-semibold text-primary">
-                          ±{Math.round(searchParams.sqft_variance * 100)}%
+                          ±{Math.round((searchParams?.sqft_variance ?? 0.2) * 100)}%
                         </span>
                       </div>
                       <input
@@ -563,7 +563,7 @@ export default function PropertyWizardContent() {
                         min="0.10"
                         max="0.50"
                         step="0.05"
-                        value={searchParams.sqft_variance}
+                        value={searchParams?.sqft_variance ?? 0.2}
                         onChange={(e) =>
                           setSearchParams((prev) => ({
                             ...prev,
@@ -581,11 +581,11 @@ export default function PropertyWizardContent() {
                         <p className="text-xs text-muted-foreground text-center">
                           Range:{" "}
                           {Math.round(
-                            state.property.sqft * (1 - searchParams.sqft_variance)
+                            state.property.sqft * (1 - (searchParams?.sqft_variance ?? 0.2))
                           ).toLocaleString()}{" "}
                           -{" "}
                           {Math.round(
-                            state.property.sqft * (1 + searchParams.sqft_variance)
+                            state.property.sqft * (1 + (searchParams?.sqft_variance ?? 0.2))
                           ).toLocaleString()}{" "}
                           sqft
                         </p>
