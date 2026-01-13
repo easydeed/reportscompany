@@ -133,6 +133,7 @@ class PropertyReportBuilder:
         
         # Add custom filters
         self.env.filters['format_currency'] = self._format_currency
+        self.env.filters['format_currency_short'] = self._format_currency_short
         self.env.filters['format_number'] = self._format_number
         self.env.filters['truncate'] = self._truncate
         
@@ -157,6 +158,22 @@ class PropertyReportBuilder:
             return str(value)
     
     @staticmethod
+    def _format_currency_short(value: Any) -> str:
+        """Format as short currency: 470000 -> $470k, 1200000 -> $1.2M"""
+        if value is None:
+            return "-"
+        try:
+            val = float(value)
+            if val >= 1_000_000:
+                return f"${val/1_000_000:.1f}M"
+            elif val >= 1_000:
+                return f"${val/1_000:.0f}k"
+            else:
+                return f"${val:.0f}"
+        except (ValueError, TypeError):
+            return str(value)
+    
+    @staticmethod
     def _truncate(value: Any, length: int = 40, suffix: str = "...") -> str:
         """Truncate string to specified length."""
         if value is None:
@@ -171,19 +188,30 @@ class PropertyReportBuilder:
         Build property context matching template requirements.
         
         Maps report_data fields to the expected 'property' object structure.
+        Supports both old-style (street) and new V0 template (street_address) naming.
         """
         sitex_data = self.report_data.get("sitex_data") or {}
         
+        street = self.report_data.get("property_address", "")
+        city = self.report_data.get("property_city", "")
+        state = self.report_data.get("property_state", "")
+        zip_code = self.report_data.get("property_zip", "")
+        
+        # Build full address string
+        full_address = f"{street}, {city}, {state} {zip_code}".strip(", ")
+        
         return {
-            # Address (required)
-            "street": self.report_data.get("property_address", ""),
-            "city": self.report_data.get("property_city", ""),
-            "state": self.report_data.get("property_state", ""),
-            "zip_code": self.report_data.get("property_zip", ""),
+            # Address (required) - both naming conventions for compatibility
+            "street": street,
+            "street_address": street,  # V0 template naming
+            "city": city,
+            "state": state,
+            "zip_code": zip_code,
+            "full_address": full_address,
             
             # Location for maps
-            "latitude": sitex_data.get("latitude"),
-            "longitude": sitex_data.get("longitude"),
+            "latitude": sitex_data.get("latitude") or sitex_data.get("lat"),
+            "longitude": sitex_data.get("longitude") or sitex_data.get("lng"),
             
             # Owner info
             "owner_name": self.report_data.get("owner_name", "") or sitex_data.get("owner_name", ""),
@@ -202,6 +230,7 @@ class PropertyReportBuilder:
             "pool": sitex_data.get("pool"),
             "total_rooms": sitex_data.get("total_rooms"),
             "num_units": sitex_data.get("num_units"),
+            "units": sitex_data.get("num_units"),  # V0 template naming
             "zoning": sitex_data.get("zoning"),
             "property_type": self.report_data.get("property_type", "") or sitex_data.get("property_type", ""),
             "use_code": sitex_data.get("use_code"),
@@ -212,6 +241,7 @@ class PropertyReportBuilder:
             "land_value": sitex_data.get("land_value"),
             "improvement_value": sitex_data.get("improvement_value"),
             "percent_improved": sitex_data.get("percent_improved"),
+            "improvement_pct": sitex_data.get("percent_improved"),  # V0 template naming
             "tax_status": sitex_data.get("tax_status"),
             "tax_rate_area": sitex_data.get("tax_rate_area"),
             "tax_year": sitex_data.get("tax_year"),
@@ -223,26 +253,42 @@ class PropertyReportBuilder:
             "housing_tract": sitex_data.get("housing_tract"),
             "lot_number": sitex_data.get("lot_number"),
             "page_grid": sitex_data.get("page_grid"),
+            "partial_bath": sitex_data.get("partial_bath"),
+            "notes": sitex_data.get("notes"),
         }
     
     def _build_agent_context(self) -> Dict[str, Any]:
         """
         Build agent context matching template requirements.
+        Supports both old-style and new V0 template naming conventions.
         """
         agent = self.report_data.get("agent") or {}
         branding = self.report_data.get("branding") or {}
         
+        # Build full agent address
+        agent_street = agent.get("company_address") or agent.get("street") or ""
+        agent_city = agent.get("company_city") or agent.get("city") or ""
+        agent_state = agent.get("company_state") or agent.get("state") or ""
+        agent_zip = agent.get("company_zip") or agent.get("zip_code") or ""
+        agent_address = f"{agent_street}, {agent_city}, {agent_state} {agent_zip}".strip(", ")
+        
+        # Format license number for display
+        license_num = agent.get("license_number")
+        license_display = f"CA BRE#{license_num}" if license_num else ""
+        
         return {
             "name": agent.get("name", ""),
             "title": agent.get("title", "Realtor®"),
-            "license_number": agent.get("license_number"),
+            "license_number": license_num,
+            "license": license_display,  # V0 template naming (formatted)
             "phone": agent.get("phone", ""),
             "email": agent.get("email", ""),
             "company_name": agent.get("company_name") or branding.get("display_name", ""),
-            "street": agent.get("company_address") or agent.get("street"),
-            "city": agent.get("company_city") or agent.get("city"),
-            "state": agent.get("company_state") or agent.get("state"),
-            "zip_code": agent.get("company_zip") or agent.get("zip_code"),
+            "street": agent_street,
+            "city": agent_city,
+            "state": agent_state,
+            "zip_code": agent_zip,
+            "address": agent_address,  # V0 template expects full address string
             "photo_url": agent.get("photo_url"),
             "logo_url": agent.get("logo_url") or branding.get("logo_url"),
         }
@@ -253,11 +299,11 @@ class PropertyReportBuilder:
         
         Each comparable should have:
         - address, latitude, longitude
-        - image_url (optional)
-        - price, days_on_market, distance
+        - image_url, map_image_url (optional)
+        - price/sale_price, days_on_market, distance/distance_miles
         - sqft, price_per_sqft
         - bedrooms, bathrooms, year_built
-        - lot_size, pool
+        - lot_size, pool, sold_date
         
         Handles field name variations from different sources:
         - Frontend sends: lat/lng, photo_url, distance_miles
@@ -280,28 +326,44 @@ class PropertyReportBuilder:
             )
             
             # Frontend: distance_miles, Backend: distance
-            distance = comp.get("distance") or comp.get("distance_miles", "")
-            if distance and isinstance(distance, (int, float)):
-                distance = f"{distance:.1f} mi"
+            distance_raw = comp.get("distance") or comp.get("distance_miles", "")
+            distance_formatted = distance_raw
+            if distance_raw and isinstance(distance_raw, (int, float)):
+                distance_formatted = f"{distance_raw:.1f} mi"
+            
+            # Get raw price for stats calculations
+            raw_price = comp.get("price") or comp.get("close_price")
+            
+            # Generate map URL if we have coordinates
+            map_image_url = comp.get("map_image_url")
+            if not map_image_url and latitude and longitude and GOOGLE_MAPS_API_KEY:
+                map_image_url = (
+                    f"https://maps.googleapis.com/maps/api/staticmap"
+                    f"?center={latitude},{longitude}"
+                    f"&zoom=16&size=400x200&maptype=roadmap"
+                    f"&markers=color:0x1e3a5f%7C{latitude},{longitude}"
+                    f"&key={GOOGLE_MAPS_API_KEY}"
+                )
             
             comparables.append({
                 "address": comp.get("address") or comp.get("full_address", ""),
                 "latitude": latitude,
                 "longitude": longitude,
                 "image_url": image_url,
-                "price": self._format_price(comp.get("price") or comp.get("close_price")),
+                "map_image_url": map_image_url,  # V0 template field
+                "price": self._format_price(raw_price),  # Formatted
+                "sale_price": raw_price,  # V0 template (raw number for filter)
+                "sold_date": comp.get("sold_date") or comp.get("close_date", ""),  # V0 template
                 "days_on_market": comp.get("days_on_market"),
-                "distance": distance,
+                "distance": distance_formatted,
+                "distance_miles": distance_raw,  # V0 template (raw number)
                 "sqft": comp.get("sqft") or comp.get("area"),
-                "price_per_sqft": self._calc_price_per_sqft(
-                    comp.get("price") or comp.get("close_price"),
-                    comp.get("sqft") or comp.get("area")
-                ),
+                "price_per_sqft": self._calc_price_per_sqft(raw_price, comp.get("sqft") or comp.get("area")),
                 "bedrooms": comp.get("bedrooms"),
                 "bathrooms": comp.get("bathrooms"),
                 "year_built": comp.get("year_built"),
                 "lot_size": comp.get("lot_size"),
-                "pool": comp.get("pool", "No"),
+                "pool": comp.get("pool") if isinstance(comp.get("pool"), bool) else (comp.get("pool", "No") == "Yes"),
             })
         
         return comparables
@@ -434,6 +496,145 @@ class PropertyReportBuilder:
             "price_max": str(int(max(prices)/1000)) if prices else "",
         }
     
+    def _build_stats_context(self) -> Dict[str, Any]:
+        """
+        Build stats context for V0 Teal template.
+        
+        Creates the stats object with piq (property in question), low, medium, high
+        sub-objects for the Area Sales Analysis table.
+        """
+        comparables = self.report_data.get("comparables") or []
+        sitex_data = self.report_data.get("sitex_data") or {}
+        
+        # Calculate statistics from comparables
+        prices = []
+        sqfts = []
+        beds = []
+        baths = []
+        years = []
+        lots = []
+        distances = []
+        
+        for comp in comparables:
+            raw_price = comp.get("price") or comp.get("close_price")
+            if raw_price:
+                try:
+                    prices.append(float(raw_price))
+                except (ValueError, TypeError):
+                    pass
+            if comp.get("sqft"):
+                try:
+                    sqfts.append(float(comp.get("sqft")))
+                except (ValueError, TypeError):
+                    pass
+            if comp.get("bedrooms"):
+                try:
+                    beds.append(int(comp.get("bedrooms")))
+                except (ValueError, TypeError):
+                    pass
+            if comp.get("bathrooms"):
+                try:
+                    baths.append(float(comp.get("bathrooms")))
+                except (ValueError, TypeError):
+                    pass
+            if comp.get("year_built"):
+                try:
+                    years.append(int(comp.get("year_built")))
+                except (ValueError, TypeError):
+                    pass
+            if comp.get("lot_size"):
+                try:
+                    lots.append(float(comp.get("lot_size")))
+                except (ValueError, TypeError):
+                    pass
+            dist = comp.get("distance_miles") or comp.get("distance")
+            if dist and isinstance(dist, (int, float)):
+                distances.append(float(dist))
+        
+        # Sort comparables by price to get low/medium/high
+        sorted_by_price = sorted(
+            [c for c in comparables if c.get("price") or c.get("close_price")],
+            key=lambda x: float(x.get("price") or x.get("close_price") or 0)
+        )
+        
+        # Get low, medium, high comps
+        low_comp = sorted_by_price[0] if sorted_by_price else {}
+        high_comp = sorted_by_price[-1] if sorted_by_price else {}
+        med_idx = len(sorted_by_price) // 2
+        med_comp = sorted_by_price[med_idx] if sorted_by_price else {}
+        
+        def extract_comp_stats(comp):
+            raw_price = comp.get("price") or comp.get("close_price")
+            sqft = comp.get("sqft") or comp.get("area")
+            return {
+                "distance": comp.get("distance_miles") or comp.get("distance") or "-",
+                "sqft": sqft,
+                "price_per_sqft": self._calc_price_per_sqft(raw_price, sqft),
+                "year_built": comp.get("year_built") or "-",
+                "lot_size": comp.get("lot_size") or "-",
+                "bedrooms": comp.get("bedrooms") or "-",
+                "bathrooms": comp.get("bathrooms") or "-",
+                "stories": comp.get("stories") or 0,
+                "pools": 1 if comp.get("pool") else 0,
+                "price": raw_price,
+            }
+        
+        # Property in question stats (from sitex_data)
+        piq = {
+            "distance": 0,
+            "sqft": sitex_data.get("sqft") or "-",
+            "price_per_sqft": self._calc_price_per_sqft(
+                sitex_data.get("estimated_value"),
+                sitex_data.get("sqft")
+            ),
+            "year_built": sitex_data.get("year_built") or "-",
+            "lot_size": sitex_data.get("lot_size") or "-",
+            "bedrooms": sitex_data.get("bedrooms") or "-",
+            "bathrooms": sitex_data.get("bathrooms") or "-",
+            "stories": sitex_data.get("stories") or 0,
+            "pools": 1 if sitex_data.get("pool") else 0,
+            "price": sitex_data.get("estimated_value") or "-",
+        }
+        
+        return {
+            "total_comps": len(comparables),
+            "avg_sqft": int(sum(sqfts)/len(sqfts)) if sqfts else 0,
+            "avg_beds": round(sum(beds)/len(beds)) if beds else 0,
+            "avg_baths": round(sum(baths)/len(baths)) if baths else 0,
+            "price_low": min(prices) if prices else 0,
+            "price_high": max(prices) if prices else 0,
+            "piq": piq,
+            "low": extract_comp_stats(low_comp),
+            "medium": extract_comp_stats(med_comp),
+            "high": extract_comp_stats(high_comp),
+        }
+    
+    def _build_images_context(self) -> Dict[str, Any]:
+        """
+        Build images context for V0 Teal template.
+        
+        Includes hero image and aerial map URLs.
+        """
+        sitex_data = self.report_data.get("sitex_data") or {}
+        lat = sitex_data.get("latitude") or sitex_data.get("lat")
+        lng = sitex_data.get("longitude") or sitex_data.get("lng")
+        
+        # Generate aerial map URL if we have coordinates
+        aerial_map = None
+        if lat and lng and GOOGLE_MAPS_API_KEY:
+            aerial_map = (
+                f"https://maps.googleapis.com/maps/api/staticmap"
+                f"?center={lat},{lng}"
+                f"&zoom=15&size=800x600&maptype=roadmap"
+                f"&markers=color:0x1e3a5f%7C{lat},{lng}"
+                f"&key={GOOGLE_MAPS_API_KEY}"
+            )
+        
+        return {
+            "hero": self.report_data.get("cover_image_url"),
+            "aerial_map": aerial_map,
+        }
+    
     def _get_theme_color(self) -> str:
         """
         Get the theme color, preferring branding over report accent_color.
@@ -503,10 +704,16 @@ class PropertyReportBuilder:
             # Comparables
             "comparables": self._build_comparables_context(),
             
-            # Statistics
+            # Statistics (old-style for themes 1-3, 5)
             "neighborhood": self._build_neighborhood_context(),
             "area_analysis": self._build_area_analysis_context(),
             "range_of_sales": self._build_range_of_sales_context(),
+            
+            # Statistics (V0 Teal template style)
+            "stats": self._build_stats_context(),
+            
+            # Images (V0 Teal template)
+            "images": self._build_images_context(),
             
             # Content sections (use template defaults)
             **self._build_default_content_sections(),
