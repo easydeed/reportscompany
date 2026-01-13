@@ -191,9 +191,9 @@ export function ComparablesPicker({
             <span className="flex items-center gap-1">
               <Square className="w-3 h-3" /> {comp.sqft?.toLocaleString()}
             </span>
-            {comp.distance_miles !== undefined && (
+            {comp.distance_miles != null && (
               <span className="flex items-center gap-1">
-                <MapPin className="w-3 h-3" /> {comp.distance_miles.toFixed(2)} mi
+                <MapPin className="w-3 h-3" /> {Number(comp.distance_miles).toFixed(2)} mi
               </span>
             )}
           </div>

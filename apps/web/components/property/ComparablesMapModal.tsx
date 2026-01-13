@@ -337,8 +337,8 @@ export function ComparablesMapModal({
 
                     {/* Distance & Year */}
                     <div className="flex gap-3 text-xs text-gray-500 mt-1">
-                      {comp.distance_miles !== undefined && (
-                        <span>📍 {comp.distance_miles.toFixed(2)} mi</span>
+                      {comp.distance_miles != null && (
+                        <span>📍 {Number(comp.distance_miles).toFixed(2)} mi</span>
                       )}
                       {comp.year_built && <span>🏠 Built {comp.year_built}</span>}
                     </div>
