@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, memo } from "react";
 import {
   MapPin,
   ArrowLeft,
@@ -14,121 +14,47 @@ import {
 import { Button } from "@/components/ui/button";
 import type { Comparable } from "@/lib/wizard-types";
 
-interface ComparablesPickerProps {
-  availableComps: Comparable[];
-  selectedIds: string[];
-  onSelectionChange: (selectedIds: string[]) => void;
-  onOpenMap: () => void;
-  minSelections?: number;
-  maxSelections?: number;
-  subjectProperty?: {
-    bedrooms?: number | null;
-    bathrooms?: number | null;
-    sqft?: number | null;
-  };
-  mapDisabled?: boolean;
+// ============================================
+// HELPERS
+// ============================================
+
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(price);
+};
+
+// ============================================
+// CompCard - Memoized card component
+// ============================================
+
+interface CompCardProps {
+  comp: Comparable;
+  isSelected: boolean;
+  onAction: () => void;
+  orderNumber?: number;
 }
 
-export function ComparablesPicker({
-  availableComps,
-  selectedIds,
-  onSelectionChange,
-  onOpenMap,
-  minSelections = 4,
-  maxSelections = 8,
-  subjectProperty,
-  mapDisabled = false,
-}: ComparablesPickerProps) {
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-
-  const selectedComps = availableComps.filter((c) => selectedIds.includes(c.id));
-  const unselectedComps = availableComps.filter((c) => !selectedIds.includes(c.id));
-
-  const handleSelect = (compId: string) => {
-    if (selectedIds.length >= maxSelections) {
-      return;
-    }
-    onSelectionChange([...selectedIds, compId]);
-  };
-
-  const handleDeselect = (compId: string) => {
-    onSelectionChange(selectedIds.filter((id) => id !== compId));
-  };
-
-  const handleClearAll = () => {
-    onSelectionChange([]);
-  };
-
-  // Auto-select recommended (closest + most similar)
-  const handleAutoSelect = () => {
-    const scored = availableComps.map((comp) => {
-      let score = 0;
-
-      // Closer = better (invert distance)
-      if (comp.distance_miles) {
-        score += Math.max(0, 10 - comp.distance_miles * 5);
-      }
-
-      // Similar sqft = better
-      if (subjectProperty?.sqft && comp.sqft) {
-        const sqftDiff = Math.abs(comp.sqft - subjectProperty.sqft) / subjectProperty.sqft;
-        score += Math.max(0, 10 - sqftDiff * 20);
-      }
-
-      // Same beds = better
-      if (subjectProperty?.bedrooms && comp.bedrooms === subjectProperty.bedrooms) {
-        score += 5;
-      }
-
-      // Same baths = better
-      if (subjectProperty?.bathrooms && comp.bathrooms === subjectProperty.bathrooms) {
-        score += 3;
-      }
-
-      return { ...comp, score };
-    });
-
-    const topComps = scored
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 6)
-      .map((c) => c.id);
-
-    onSelectionChange(topComps);
-  };
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(price);
-  };
-
-  const CompCard = ({
-    comp,
-    isSelected,
-    onAction,
-    orderNumber,
-  }: {
-    comp: Comparable;
-    isSelected: boolean;
-    onAction: () => void;
-    orderNumber?: number;
-  }) => (
+const CompCard = memo(function CompCard({
+  comp,
+  isSelected,
+  onAction,
+  orderNumber,
+}: CompCardProps) {
+  return (
     <div
       className={`
-        relative border rounded-lg p-3 cursor-pointer transition-all
+        relative border rounded-lg p-3 cursor-pointer transition-colors
         ${
           isSelected
             ? "border-green-500 bg-green-50/50 dark:bg-green-950/20"
             : "border-border hover:border-primary/50 hover:bg-muted/50"
         }
-        ${hoveredId === comp.id ? "ring-2 ring-primary/40" : ""}
       `}
       onClick={onAction}
-      onMouseEnter={() => setHoveredId(comp.id)}
-      onMouseLeave={() => setHoveredId(null)}
     >
       {/* Selection indicator */}
       <div
@@ -141,11 +67,7 @@ export function ComparablesPicker({
           }
         `}
       >
-        {isSelected ? (
-          <Check className="w-3.5 h-3.5" />
-        ) : (
-          "+"
-        )}
+        {isSelected ? <Check className="w-3.5 h-3.5" /> : "+"}
       </div>
 
       {/* Order number badge for selected items */}
@@ -163,6 +85,7 @@ export function ComparablesPicker({
               src={comp.photo_url}
               alt={comp.address}
               className="w-full h-full object-cover"
+              loading="lazy"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
@@ -220,6 +143,99 @@ export function ComparablesPicker({
       )}
     </div>
   );
+});
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
+
+interface ComparablesPickerProps {
+  availableComps: Comparable[];
+  selectedIds: string[];
+  onSelectionChange: (selectedIds: string[]) => void;
+  onOpenMap: () => void;
+  minSelections?: number;
+  maxSelections?: number;
+  subjectProperty?: {
+    bedrooms?: number | null;
+    bathrooms?: number | null;
+    sqft?: number | null;
+  };
+  mapDisabled?: boolean;
+}
+
+export function ComparablesPicker({
+  availableComps,
+  selectedIds,
+  onSelectionChange,
+  onOpenMap,
+  minSelections = 4,
+  maxSelections = 8,
+  subjectProperty,
+  mapDisabled = false,
+}: ComparablesPickerProps) {
+  // Memoize filtered arrays to prevent unnecessary recalculations
+  const selectedComps = useMemo(
+    () => availableComps.filter((c) => selectedIds.includes(c.id)),
+    [availableComps, selectedIds]
+  );
+
+  const unselectedComps = useMemo(
+    () => availableComps.filter((c) => !selectedIds.includes(c.id)),
+    [availableComps, selectedIds]
+  );
+
+  const handleSelect = (compId: string) => {
+    if (selectedIds.length >= maxSelections) {
+      return;
+    }
+    onSelectionChange([...selectedIds, compId]);
+  };
+
+  const handleDeselect = (compId: string) => {
+    onSelectionChange(selectedIds.filter((id) => id !== compId));
+  };
+
+  const handleClearAll = () => {
+    onSelectionChange([]);
+  };
+
+  // Auto-select recommended (closest + most similar)
+  const handleAutoSelect = () => {
+    const scored = availableComps.map((comp) => {
+      let score = 0;
+
+      // Closer = better (invert distance)
+      if (comp.distance_miles) {
+        score += Math.max(0, 10 - comp.distance_miles * 5);
+      }
+
+      // Similar sqft = better
+      if (subjectProperty?.sqft && comp.sqft) {
+        const sqftDiff = Math.abs(comp.sqft - subjectProperty.sqft) / subjectProperty.sqft;
+        score += Math.max(0, 10 - sqftDiff * 20);
+      }
+
+      // Same beds = better
+      if (subjectProperty?.bedrooms && comp.bedrooms === subjectProperty.bedrooms) {
+        score += 5;
+      }
+
+      // Same baths = better
+      if (subjectProperty?.bathrooms && comp.bathrooms === subjectProperty.bathrooms) {
+        score += 3;
+      }
+
+      return { ...comp, score };
+    });
+
+    const topComps = scored
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6)
+      .map((c) => c.id);
+
+    onSelectionChange(topComps);
+  };
 
   return (
     <div className="space-y-4">
@@ -381,4 +397,3 @@ export function ComparablesPicker({
 }
 
 export default ComparablesPicker;
-
