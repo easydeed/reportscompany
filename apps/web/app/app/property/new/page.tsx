@@ -361,6 +361,11 @@ export default function NewPropertyReportPage() {
       // Use street address (not full_address which includes city/state/zip)
       const streetAddress = state.property.street || state.property.full_address.split(",")[0].trim();
       
+      // Get the full comparable objects for the selected IDs
+      const selectedComparables = state.comparables.filter(c => 
+        state.selectedCompIds.includes(c.id)
+      );
+      
       const response = await apiFetch("/v1/property/reports", {
         method: "POST",
         body: JSON.stringify({
@@ -374,6 +379,7 @@ export default function NewPropertyReportPage() {
           apn: state.property.apn || "",
           owner_name: state.property.owner_name || "",
           selected_comp_ids: state.selectedCompIds,
+          comparables: selectedComparables,  // Send full comparable objects
           selected_pages: state.selectedPages,
           sitex_data: state.property,
         }),

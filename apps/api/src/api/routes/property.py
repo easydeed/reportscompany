@@ -151,6 +151,7 @@ class PropertyReportCreate(BaseModel):
     
     # Comparables and pages
     selected_comp_ids: Optional[List[str]] = None
+    comparables: Optional[List[dict]] = None  # Full comparable objects
     selected_pages: Optional[List[str]] = None
     comp_parameters: Optional[dict] = None
     sitex_data: Optional[dict] = None
@@ -698,7 +699,7 @@ async def create_property_report(payload: PropertyReportCreate, request: Request
                 legal_desc,
                 prop_type,
                 json.dumps(sitex_data) if sitex_data else None,
-                json.dumps(payload.selected_comp_ids) if payload.selected_comp_ids else None,
+                json.dumps(payload.comparables) if payload.comparables else None,
                 json.dumps(payload.selected_pages) if payload.selected_pages else None,
             ))
         else:
@@ -751,7 +752,7 @@ async def create_property_report(payload: PropertyReportCreate, request: Request
                 legal_desc,
                 prop_type,
                 json.dumps(sitex_data) if sitex_data else None,
-                json.dumps(payload.selected_comp_ids) if payload.selected_comp_ids else None,
+                json.dumps(payload.comparables) if payload.comparables else None,
             ))
         
         row = cur.fetchone()
