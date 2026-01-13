@@ -235,20 +235,40 @@ class PropertyReportBuilder:
         - sqft, price_per_sqft
         - bedrooms, bathrooms, year_built
         - lot_size, pool
+        
+        Handles field name variations from different sources:
+        - Frontend sends: lat/lng, photo_url, distance_miles
+        - SimplyRETS sends: latitude/longitude, photos, etc.
         """
         raw_comps = self.report_data.get("comparables") or []
         
         comparables = []
         for comp in raw_comps[:6]:  # Max 6 comparables (3 rows of 2)
-            # Handle both direct format and nested format
+            # Handle field name variations from different sources
+            # Frontend: lat/lng, Backend: latitude/longitude
+            latitude = comp.get("latitude") or comp.get("lat")
+            longitude = comp.get("longitude") or comp.get("lng")
+            
+            # Frontend: photo_url, Backend: image_url or photos array
+            image_url = (
+                comp.get("image_url") or 
+                comp.get("photo_url") or 
+                (comp.get("photos", [None])[0] if comp.get("photos") else None)
+            )
+            
+            # Frontend: distance_miles, Backend: distance
+            distance = comp.get("distance") or comp.get("distance_miles", "")
+            if distance and isinstance(distance, (int, float)):
+                distance = f"{distance:.1f} mi"
+            
             comparables.append({
                 "address": comp.get("address") or comp.get("full_address", ""),
-                "latitude": comp.get("latitude"),
-                "longitude": comp.get("longitude"),
-                "image_url": comp.get("image_url") or (comp.get("photos", [None])[0] if comp.get("photos") else None),
+                "latitude": latitude,
+                "longitude": longitude,
+                "image_url": image_url,
                 "price": self._format_price(comp.get("price") or comp.get("close_price")),
                 "days_on_market": comp.get("days_on_market"),
-                "distance": comp.get("distance", ""),
+                "distance": distance,
                 "sqft": comp.get("sqft") or comp.get("area"),
                 "price_per_sqft": self._calc_price_per_sqft(
                     comp.get("price") or comp.get("close_price"),
