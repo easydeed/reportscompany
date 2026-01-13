@@ -560,15 +560,15 @@ export default function NewPropertyReportPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-muted/50 rounded-lg p-3">
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Beds</p>
-                <p className="text-lg font-bold">{state.property.bedrooms}</p>
+                <p className="text-lg font-bold">{state.property.bedrooms ?? "N/A"}</p>
               </div>
               <div className="bg-muted/50 rounded-lg p-3">
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Baths</p>
-                <p className="text-lg font-bold">{state.property.bathrooms}</p>
+                <p className="text-lg font-bold">{state.property.bathrooms ?? "N/A"}</p>
               </div>
               <div className="bg-muted/50 rounded-lg p-3">
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Sqft</p>
-                <p className="text-lg font-bold">{state.property.sqft.toLocaleString()}</p>
+                <p className="text-lg font-bold">{state.property.sqft?.toLocaleString() ?? "N/A"}</p>
               </div>
               <div className="bg-muted/50 rounded-lg p-3">
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Year Built</p>

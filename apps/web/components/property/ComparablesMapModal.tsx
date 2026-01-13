@@ -330,9 +330,9 @@ export function ComparablesMapModal({
 
                     {/* Details */}
                     <div className="flex gap-3 text-xs text-gray-600 mt-2">
-                      <span>🛏 {comp.bedrooms}</span>
-                      <span>🛁 {comp.bathrooms}</span>
-                      <span>📐 {comp.sqft?.toLocaleString()} sqft</span>
+                      <span>🛏 {comp.bedrooms ?? "—"}</span>
+                      <span>🛁 {comp.bathrooms ?? "—"}</span>
+                      <span>📐 {comp.sqft?.toLocaleString() ?? "—"} sqft</span>
                     </div>
 
                     {/* Distance & Year */}

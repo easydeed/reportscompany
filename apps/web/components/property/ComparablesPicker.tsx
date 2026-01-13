@@ -183,13 +183,13 @@ export function ComparablesPicker({
 
           <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1">
             <span className="flex items-center gap-1">
-              <Bed className="w-3 h-3" /> {comp.bedrooms}
+              <Bed className="w-3 h-3" /> {comp.bedrooms ?? "—"}
             </span>
             <span className="flex items-center gap-1">
-              <Bath className="w-3 h-3" /> {comp.bathrooms}
+              <Bath className="w-3 h-3" /> {comp.bathrooms ?? "—"}
             </span>
             <span className="flex items-center gap-1">
-              <Square className="w-3 h-3" /> {comp.sqft?.toLocaleString()}
+              <Square className="w-3 h-3" /> {comp.sqft?.toLocaleString() ?? "—"}
             </span>
             {comp.distance_miles != null && (
               <span className="flex items-center gap-1">
