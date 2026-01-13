@@ -88,6 +88,15 @@ export default function PropertyWizardContent() {
   // STEP 1: Property Search
   // ============================================
 
+  // Memoized callbacks for address form to prevent stale closures in Google Places
+  const handleAddressChange = useCallback((address: string) => {
+    setState((prev) => ({ ...prev, address }));
+  }, []);
+
+  const handleCityStateZipChange = useCallback((cityStateZip: string) => {
+    setState((prev) => ({ ...prev, cityStateZip }));
+  }, []);
+
   const handlePropertySearch = useCallback(async () => {
     if (!state.address.trim()) {
       setSearchError("Please enter an address");
@@ -400,8 +409,8 @@ export default function PropertyWizardContent() {
               property={state.property}
               loading={searchLoading}
               error={searchError}
-              onAddressChange={(address) => setState((prev) => ({ ...prev, address }))}
-              onCityStateZipChange={(csz) => setState((prev) => ({ ...prev, cityStateZip: csz }))}
+              onAddressChange={handleAddressChange}
+              onCityStateZipChange={handleCityStateZipChange}
               onSearch={handlePropertySearch}
               onContinue={() => setCurrentStep(2)}
               canContinue={!!state.property}

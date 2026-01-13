@@ -55,7 +55,17 @@ export function PropertySearchForm({
       const streetAddress = placeResult.address;
       const cityStateZipStr = `${placeResult.city}, ${placeResult.state} ${placeResult.zip}`;
       
-      // Update the form fields
+      // Google Places autocomplete directly modifies the input DOM value to the full formatted address.
+      // We need to override it with just the street address after a microtask.
+      // Also explicitly set the cityStateZip value in the DOM to ensure it displays.
+      requestAnimationFrame(() => {
+        // Force the address input to show just the street address
+        if (addressInputRef.current) {
+          addressInputRef.current.value = streetAddress;
+        }
+      });
+
+      // Update the form fields via React state
       onAddressChange(streetAddress);
       onCityStateZipChange(cityStateZipStr);
 
