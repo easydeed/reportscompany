@@ -174,9 +174,9 @@ export function ThemeSelector({
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
           {availablePages.map((page, index) => {
             const isSelected = selectedPages.includes(page.id);
-            const isRequired = page.required;
+            const isRequired = page.required ?? false;
             const imageKey = `page-${selectedTheme}-${page.previewNumber}`;
-            const hasError = imageErrors[imageKey];
+            const hasError = imageErrors[imageKey] ?? false;
 
             return (
               <PageCard
