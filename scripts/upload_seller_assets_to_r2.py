@@ -122,10 +122,10 @@ def upload_file(client, local_path: Path, r2_key: str, dry_run: bool = False) ->
                     "CacheControl": "public, max-age=31536000",  # 1 year cache
                 },
             )
-        print(f"  ✓ {r2_key}")
+        print(f"  [OK] {r2_key}")
         return True
     except Exception as e:
-        print(f"  ✗ {r2_key}: {e}")
+        print(f"  [FAIL] {r2_key}: {e}")
         return False
 
 
@@ -201,7 +201,7 @@ def main():
     total_files = 0
     
     # 1. Upload fonts
-    print("📁 Uploading fonts...")
+    print("[1/5] Uploading fonts...")
     fonts_dir = SOURCE_DIR / "fonts"
     if fonts_dir.exists():
         s, t = upload_directory(
@@ -217,7 +217,7 @@ def main():
     print()
     
     # 2. Upload CSS
-    print("📁 Uploading CSS...")
+    print("[2/5] Uploading CSS...")
     css_dir = SOURCE_DIR / "css"
     if css_dir.exists():
         s, t = upload_directory(
@@ -233,7 +233,7 @@ def main():
     print()
     
     # 3. Upload images (main images folder)
-    print("📁 Uploading images...")
+    print("[3/5] Uploading images...")
     images_dir = SOURCE_DIR / "images"
     if images_dir.exists():
         s, t = upload_directory(
@@ -252,7 +252,7 @@ def main():
     for theme_num in [2, 3, 4, 5]:
         theme_dir = SOURCE_DIR / f"theme_{theme_num}"
         if theme_dir.exists():
-            print(f"📁 Uploading theme_{theme_num} assets...")
+            print(f"[4/5] Uploading theme_{theme_num} assets...")
             
             # Upload images
             img_dirs = [theme_dir / "images", theme_dir / "img"]
