@@ -358,18 +358,21 @@ export default function NewPropertyReportPage() {
     setError(null);
 
     try {
+      // Use street address (not full_address which includes city/state/zip)
+      const streetAddress = state.property.street || state.property.full_address.split(",")[0].trim();
+      
       const response = await apiFetch("/v1/property/reports", {
         method: "POST",
         body: JSON.stringify({
           report_type: "seller",
           theme: state.theme,
           accent_color: state.accentColor,
-          property_address: state.property.full_address,
+          property_address: streetAddress,
           property_city: state.property.city,
           property_state: state.property.state,
           property_zip: state.property.zip_code,
-          apn: state.property.apn,
-          owner_name: state.property.owner_name,
+          apn: state.property.apn || "",
+          owner_name: state.property.owner_name || "",
           selected_comp_ids: state.selectedCompIds,
           selected_pages: state.selectedPages,
           sitex_data: state.property,
