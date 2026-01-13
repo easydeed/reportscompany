@@ -187,7 +187,7 @@ class PropertyReportDetail(BaseModel):
     legal_description: Optional[str] = None
     property_type: Optional[str] = None
     sitex_data: Optional[dict] = None
-    comparables: Optional[List[str]] = None  # List of MLS IDs
+    comparables: Optional[List[dict]] = None  # Full comparable objects
     selected_pages: Optional[List[str]] = None  # List of page IDs to include
     pdf_url: Optional[str] = None
     status: str
