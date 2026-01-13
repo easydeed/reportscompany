@@ -23,8 +23,11 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 logger = logging.getLogger(__name__)
 
-# Template directory - points to reports/seller for seller reports
+# Template directories
+# Old templates: templates/reports/seller (themes 1-3, 5)
+# V0 Teal templates: templates/property/teal (theme 4)
 TEMPLATES_BASE_DIR = Path(__file__).parent / "templates" / "reports"
+TEMPLATES_V0_DIR = Path(__file__).parent / "templates"  # Parent for property/teal includes
 
 # Configuration from environment
 ASSETS_BASE_URL = os.getenv("ASSETS_BASE_URL", "https://assets.trendyreports.com")
@@ -108,10 +111,19 @@ class PropertyReportBuilder:
             default_page_set = "compact" if self.theme >= 4 else "full"
             self.page_set = report_data.get("page_set", default_page_set)
         
-        # Template directory based on report type
-        template_dir = TEMPLATES_BASE_DIR / self.report_type
+        # Check if using V0 Teal theme (theme 4)
+        self.use_v0_teal = (self.theme == 4)
         
-        # Initialize Jinja2 environment pointing to the report type's template dir
+        # Template directory based on theme and report type
+        if self.use_v0_teal:
+            # V0 Teal templates use the parent templates directory
+            # to allow includes like 'property/teal/teal_cover.jinja2'
+            template_dir = TEMPLATES_V0_DIR
+        else:
+            # Original templates in templates/reports/seller
+            template_dir = TEMPLATES_BASE_DIR / self.report_type
+        
+        # Initialize Jinja2 environment
         self.env = Environment(
             loader=FileSystemLoader(str(template_dir)),
             autoescape=select_autoescape(['html', 'xml', 'jinja2']),
@@ -122,6 +134,7 @@ class PropertyReportBuilder:
         # Add custom filters
         self.env.filters['format_currency'] = self._format_currency
         self.env.filters['format_number'] = self._format_number
+        self.env.filters['truncate'] = self._truncate
         
     @staticmethod
     def _format_currency(value: Any) -> str:
@@ -142,6 +155,16 @@ class PropertyReportBuilder:
             return f"{int(float(value)):,}"
         except (ValueError, TypeError):
             return str(value)
+    
+    @staticmethod
+    def _truncate(value: Any, length: int = 40, suffix: str = "...") -> str:
+        """Truncate string to specified length."""
+        if value is None:
+            return ""
+        text = str(value)
+        if len(text) <= length:
+            return text
+        return text[:length - len(suffix)] + suffix
     
     def _build_property_context(self) -> Dict[str, Any]:
         """
@@ -451,10 +474,8 @@ class PropertyReportBuilder:
         """
         Render the complete HTML report using the orchestrator template.
         
-        The orchestrator (seller_report.jinja2) handles:
-        - Theme selection based on theme_number
-        - Page set configuration (full/compact/custom)
-        - Including all section templates
+        For theme 4 (Teal), uses the V0-generated pixel-perfect templates.
+        For other themes, uses the original seller_report.jinja2 orchestrator.
         
         Returns:
             Complete HTML string ready for PDF generation
@@ -495,11 +516,18 @@ class PropertyReportBuilder:
         }
         
         try:
-            # Load and render the orchestrator template
-            template = self.env.get_template(f"{self.report_type}_report.jinja2")
+            # Select template based on theme
+            if self.use_v0_teal:
+                # V0 Teal theme uses the new pixel-perfect templates
+                template = self.env.get_template("property/teal/teal_report.jinja2")
+                logger.info(f"Using V0 Teal template for theme {self.theme}")
+            else:
+                # Original templates
+                template = self.env.get_template(f"{self.report_type}_report.jinja2")
+            
             html = template.render(**context)
             
-            logger.info(f"Rendered {self.report_type} report: theme={self.theme}, pages={self.page_set}")
+            logger.info(f"Rendered {self.report_type} report: theme={self.theme}, pages={self.page_set}, v0_teal={self.use_v0_teal}")
             return html
             
         except Exception as e:

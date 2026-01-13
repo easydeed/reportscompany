@@ -1,0 +1,333 @@
+{#
+    Teal Theme - Cover Page
+    =======================
+    Converted from V0-generated sellers-report.html
+    
+    Required variables:
+    - property.street           : Street address
+    - property.city             : City name
+    - property.state            : State abbreviation
+    - property.zip_code         : ZIP code
+    - agent.name                : Agent full name
+    - agent.title               : Agent title/position
+    - agent.license_number      : License number
+    - agent.phone               : Phone number
+    - agent.email               : Email address
+    - agent.street              : Agent address
+    - agent.photo_url           : Agent profile photo URL
+    - agent.logo_url            : Company logo URL
+    - cover_image_url           : Hero image URL (optional)
+#}
+
+<style>
+  /* Teal Cover Page Styles */
+  .teal-cover {
+    width: 8.5in;
+    height: 11in;
+    position: relative;
+    overflow: hidden;
+    background: #ffffff;
+    margin: 0 auto;
+    page-break-after: always;
+  }
+
+  .teal-cover :root {
+    --teal: #16d3ba;
+    --navy: #1e3a5f;
+    --white: #ffffff;
+  }
+
+  /* Teal corner stripe */
+  .teal-cover .teal-corner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 450px;
+    height: 250px;
+    background: #16d3ba;
+    z-index: 3;
+  }
+
+  /* Sellers Report text */
+  .teal-cover .header-text {
+    position: absolute;
+    top: 60px;
+    left: 80px;
+    z-index: 4;
+    line-height: 0.9;
+  }
+
+  .teal-cover .header-text .sellers {
+    font-size: 72px;
+    font-weight: 800;
+    color: #1e3a5f;
+    display: block;
+    letter-spacing: 2px;
+  }
+
+  .teal-cover .header-text .report {
+    font-size: 72px;
+    font-weight: 400;
+    color: #ffffff;
+    display: block;
+    letter-spacing: 2px;
+  }
+
+  /* Navy diagonal shape */
+  .teal-cover .navy-diagonal {
+    position: absolute;
+    top: 230px;
+    left: -50px;
+    width: 500px;
+    height: 500px;
+    background: #1e3a5f;
+    transform: rotate(-20deg);
+    z-index: 2;
+  }
+
+  /* Address container */
+  .teal-cover .address-container {
+    position: absolute;
+    top: 330px;
+    left: 95px;
+    z-index: 4;
+    text-align: center;
+  }
+
+  .teal-cover .home-icon {
+    width: 60px;
+    height: 60px;
+    background: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 30px;
+  }
+
+  .teal-cover .home-icon svg {
+    width: 32px;
+    height: 32px;
+    fill: #1e3a5f;
+  }
+
+  .teal-cover .street-address {
+    font-size: 48px;
+    font-weight: 700;
+    color: #16d3ba;
+    letter-spacing: 3px;
+    margin-bottom: 10px;
+    border-bottom: 3px solid #16d3ba;
+    padding-bottom: 10px;
+    display: inline-block;
+  }
+
+  .teal-cover .city-state-zip {
+    font-size: 18px;
+    font-weight: 400;
+    color: #ffffff;
+    letter-spacing: 2px;
+  }
+
+  /* Hero image with frame */
+  .teal-cover .hero-container {
+    position: absolute;
+    top: 48px;
+    right: 0;
+    width: 470px;
+    height: 800px;
+    z-index: 1;
+  }
+
+  .teal-cover .hero-frame {
+    position: absolute;
+    top: 100px;
+    right: 50px;
+    width: 380px;
+    height: 650px;
+    border: 4px solid #16d3ba;
+    background-size: cover;
+    background-position: center;
+    overflow: hidden;
+  }
+
+  .teal-cover .hero-frame::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(180, 190, 205, 0.5);
+  }
+
+  /* Footer */
+  .teal-cover .footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 200px;
+    background: #ffffff;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    padding: 0 60px;
+    justify-content: space-between;
+  }
+
+  .teal-cover .agent-photo {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .teal-cover .agent-info {
+    flex: 1;
+    padding-left: 40px;
+  }
+
+  .teal-cover .agent-name {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1e3a5f;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+  }
+
+  .teal-cover .agent-title {
+    font-size: 18px;
+    font-weight: 400;
+    color: #16d3ba;
+    margin-bottom: 8px;
+  }
+
+  .teal-cover .agent-license {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e3a5f;
+    border-bottom: 2px solid #16d3ba;
+    display: inline-block;
+    margin-bottom: 15px;
+    padding-bottom: 2px;
+  }
+
+  .teal-cover .contact-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .teal-cover .contact-item {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    color: #1e3a5f;
+    gap: 10px;
+  }
+
+  .teal-cover .contact-icon {
+    width: 16px;
+    height: 16px;
+    fill: #1e3a5f;
+    flex-shrink: 0;
+  }
+
+  .teal-cover .company-logo {
+    max-width: 160px;
+    max-height: 80px;
+    flex-shrink: 0;
+    margin-left: 40px;
+  }
+</style>
+
+<div class="teal-cover">
+  <!-- Teal corner stripe -->
+  <div class="teal-corner"></div>
+
+  <!-- Header text -->
+  <div class="header-text">
+    <span class="sellers">SELLERS</span>
+    <span class="report">REPORT</span>
+  </div>
+
+  <!-- Navy diagonal shape -->
+  <div class="navy-diagonal"></div>
+
+  <!-- Address container -->
+  <div class="address-container">
+    <div class="home-icon">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+      </svg>
+    </div>
+    <div class="street-address">{{ property.street | default('123 MAIN ST') | upper }}</div>
+    <div class="city-state-zip">{{ property.city | default('CITY') | upper }}, {{ property.state | default('CA') }} {{ property.zip_code | default('00000') }}</div>
+  </div>
+
+  <!-- Hero image with frame -->
+  <div class="hero-container">
+    {% if cover_image_url %}
+    <div class="hero-frame" style="background-image: url('{{ cover_image_url }}');"></div>
+    {% else %}
+    <div class="hero-frame" style="background-image: url('{{ assets_base_url | default('') }}/property-reports/images/default-house.jpg'); background-color: #c0c8d0;"></div>
+    {% endif %}
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    {% if agent.photo_url %}
+    <img src="{{ agent.photo_url }}" alt="Agent Photo" class="agent-photo">
+    {% else %}
+    <div class="agent-photo" style="background: #e0e0e0; display: flex; align-items: center; justify-content: center;">
+      <svg width="60" height="60" viewBox="0 0 24 24" fill="#999">
+        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+      </svg>
+    </div>
+    {% endif %}
+    
+    <div class="agent-info">
+      <div class="agent-name">{{ agent.name | default('Agent Name') }}</div>
+      <div class="agent-title">{{ agent.title | default('Realtor') }}</div>
+      {% if agent.license_number %}
+      <div class="agent-license">CA BRE#{{ agent.license_number }}</div>
+      {% endif %}
+      
+      <div class="contact-info">
+        {% if agent.phone %}
+        <div class="contact-item">
+          <svg class="contact-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+          </svg>
+          <span>{{ agent.phone }}</span>
+        </div>
+        {% endif %}
+        
+        {% if agent.email %}
+        <div class="contact-item">
+          <svg class="contact-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+          </svg>
+          <span>{{ agent.email }}</span>
+        </div>
+        {% endif %}
+        
+        {% if agent.street %}
+        <div class="contact-item">
+          <svg class="contact-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+          </svg>
+          <span>{{ agent.street }}{% if agent.city %}, {{ agent.city }}, {{ agent.state }} {{ agent.zip_code }}{% endif %}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if agent.logo_url %}
+    <img src="{{ agent.logo_url }}" alt="Company Logo" class="company-logo">
+    {% endif %}
+  </div>
+</div>
+

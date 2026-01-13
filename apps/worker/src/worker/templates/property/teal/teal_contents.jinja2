@@ -1,0 +1,159 @@
+{#
+    Teal Theme - Contents Page
+    ==========================
+    Converted from V0-generated table-of-contents.html
+    
+    Required variables:
+    - contents_items            : Array of {name, page} objects (optional - has defaults)
+#}
+
+<style>
+  /* Teal Contents Page Styles */
+  .teal-contents {
+    width: 8.5in;
+    height: 11in;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+  }
+
+  .teal-contents .background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    z-index: 1;
+  }
+
+  .teal-contents .background::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(147, 147, 179, 0.75) 0%, rgba(179, 166, 195, 0.70) 100%);
+    z-index: 2;
+  }
+
+  .teal-contents .header {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 62%;
+    background-color: #1e3a5f;
+    padding: 50px 60px 30px 60px;
+    z-index: 3;
+  }
+
+  .teal-contents .header h1 {
+    font-size: 72px;
+    font-weight: 900;
+    color: #16d3ba;
+    letter-spacing: 2px;
+    margin-bottom: 5px;
+  }
+
+  .teal-contents .header p {
+    font-size: 16px;
+    font-weight: 600;
+    color: #ffffff;
+    letter-spacing: 1px;
+  }
+
+  .teal-contents .contents-panel {
+    position: absolute;
+    top: 205px;
+    right: 0;
+    width: 62%;
+    background-color: #16d3ba;
+    padding: 60px 60px 80px 60px;
+    z-index: 3;
+    bottom: 0;
+  }
+
+  .teal-contents .contents-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .teal-contents .contents-item {
+    display: flex;
+    align-items: baseline;
+    margin-bottom: 22px;
+    position: relative;
+  }
+
+  .teal-contents .item-name {
+    font-size: 22px;
+    font-weight: 600;
+    color: #1e3a5f;
+    white-space: nowrap;
+    padding-right: 12px;
+    background-color: #16d3ba;
+    position: relative;
+    z-index: 2;
+  }
+
+  .teal-contents .dotted-line {
+    flex-grow: 1;
+    height: 1px;
+    position: relative;
+    margin: 0 8px;
+  }
+
+  .teal-contents .dotted-line::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    border-bottom: 2px dotted rgba(30, 58, 95, 0.4);
+  }
+
+  .teal-contents .page-number {
+    font-size: 38px;
+    font-weight: 900;
+    color: #ffffff;
+    white-space: nowrap;
+    padding-left: 12px;
+    background-color: #16d3ba;
+    position: relative;
+    z-index: 2;
+  }
+</style>
+
+<div class="teal-contents">
+  <div class="background" style="background-color: #a0a0b8;"></div>
+  
+  <div class="header">
+    <h1>CONTENTS</h1>
+    <p>WHAT IS IN YOUR LISTING PROPOSAL</p>
+  </div>
+
+  <div class="contents-panel">
+    <ul class="contents-list">
+      {% set default_contents = [
+        {"name": "Aerial Snapshot", "page": "03"},
+        {"name": "Property Information", "page": "04"},
+        {"name": "Area Sales Analysis", "page": "05"},
+        {"name": "Sales Comparables", "page": "06"},
+        {"name": "Estimated Sales Price", "page": "07"}
+      ] %}
+      
+      {% for item in contents_items | default(default_contents) %}
+      <li class="contents-item">
+        <span class="item-name">{{ item.name }}</span>
+        <div class="dotted-line"></div>
+        <span class="page-number">{{ item.page }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+

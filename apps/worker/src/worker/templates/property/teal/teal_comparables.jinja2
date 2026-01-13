@@ -1,0 +1,330 @@
+{#
+    Teal Theme - Sales Comparables Page
+    ===================================
+    Converted from V0-generated sales-comparables.html
+    
+    Required variables:
+    - comparables               : Array of comparable properties
+      Each comparable has:
+      - address                 : Street address
+      - latitude                : Latitude for map
+      - longitude               : Longitude for map
+      - image_url               : Property image URL (optional)
+      - price                   : Sale price (formatted)
+      - sold_date               : Date sold (optional)
+      - distance                : Distance from subject (e.g., "0.5 mi")
+      - sqft                    : Square footage
+      - price_per_sqft          : Price per square foot
+      - bedrooms                : Number of bedrooms
+      - bathrooms               : Number of bathrooms
+      - year_built              : Year built
+      - lot_size                : Lot size
+      - pool                    : Pool info (Yes/No)
+    - google_maps_api_key       : Google Maps API key
+#}
+
+<style>
+  /* Teal Comparables Page Styles */
+  .teal-comparables {
+    width: 8.5in;
+    min-height: 11in;
+    background: white;
+    padding: 0.5in 0.6in;
+    position: relative;
+    margin: 0 auto;
+    page-break-after: always;
+  }
+
+  .teal-comparables .header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .teal-comparables .header h1 {
+    font-size: 42px;
+    font-weight: 700;
+    color: #16d3ba;
+    letter-spacing: 0.5px;
+    margin: 0;
+  }
+
+  .teal-comparables .header-dash {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+  }
+
+  .teal-comparables .header-dash span {
+    width: 22px;
+    height: 6px;
+    background: #16d3ba;
+  }
+
+  .teal-comparables .subtitle {
+    font-size: 15px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 28px;
+    letter-spacing: 0.3px;
+  }
+
+  .teal-comparables .comparables-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px 24px;
+  }
+
+  .teal-comparables .property-card {
+    display: flex;
+    flex-direction: column;
+    background: white;
+    overflow: hidden;
+  }
+
+  .teal-comparables .map-container {
+    width: 100%;
+    height: 160px;
+    background: #e8e8e8;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .teal-comparables .map-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .teal-comparables .map-pin {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -100%);
+    width: 40px;
+    height: 50px;
+  }
+
+  .teal-comparables .map-pin::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 40px;
+    background: #1e3a5f;
+    border-radius: 50% 50% 50% 0;
+    transform: translateX(-50%) rotate(-45deg);
+    border: 3px solid white;
+  }
+
+  .teal-comparables .map-pin::after {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 16px;
+    height: 16px;
+    background: #16d3ba;
+    border-radius: 50%;
+    z-index: 2;
+  }
+
+  .teal-comparables .address-bar {
+    background: #1e3a5f;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .teal-comparables .address-icon {
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .teal-comparables .address-icon::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 12px;
+    height: 12px;
+    background: #1e3a5f;
+    border-radius: 50% 50% 50% 0;
+    transform: translate(-50%, -50%) rotate(-45deg);
+  }
+
+  .teal-comparables .address-icon::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 5px;
+    height: 5px;
+    background: white;
+    border-radius: 50%;
+    z-index: 2;
+  }
+
+  .teal-comparables .address-text {
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  .teal-comparables .price-section {
+    background: #1e3a5f;
+    padding: 16px 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .teal-comparables .price-label {
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .teal-comparables .price-value {
+    color: #16d3ba;
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+
+  .teal-comparables .details-section {
+    background: #f8f8f8;
+    padding: 16px;
+  }
+
+  .teal-comparables .details-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .teal-comparables .details-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .teal-comparables .detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .teal-comparables .detail-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #2c3e50;
+    letter-spacing: 0.2px;
+  }
+
+  .teal-comparables .detail-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e3a5f;
+  }
+</style>
+
+<div class="teal-comparables">
+  <div class="header">
+    <h1>SALES COMPARABLES</h1>
+    <div class="header-dash">
+      <span></span>
+      <span style="width: 12px;"></span>
+      <span></span>
+    </div>
+  </div>
+
+  <div class="subtitle">PROPERTIES THAT HAVE RECENTLY SOLD</div>
+
+  <div class="comparables-grid">
+    {% for comp in comparables[:4] %}
+    {% set comp_lat = comp.latitude | default(34.1234) %}
+    {% set comp_lng = comp.longitude | default(-117.7654) %}
+    {% set comp_map_url = 'https://maps.googleapis.com/maps/api/staticmap?center=' ~ comp_lat ~ ',' ~ comp_lng ~ '&zoom=16&size=400x200&maptype=roadmap&markers=color:0x1e3a5f%7C' ~ comp_lat ~ ',' ~ comp_lng ~ '&key=' ~ google_maps_api_key %}
+    
+    <div class="property-card">
+      <div class="map-container">
+        {% if comp.image_url %}
+        <img src="{{ comp.image_url }}" alt="Property at {{ comp.address }}">
+        {% else %}
+        <img src="{{ comp_map_url }}" alt="Map of {{ comp.address }}">
+        {% endif %}
+        <div class="map-pin"></div>
+      </div>
+      
+      <div class="address-bar">
+        <div class="address-icon"></div>
+        <div class="address-text">{{ comp.address | default('Address N/A') | truncate(40) }}</div>
+      </div>
+      
+      <div class="price-section">
+        <div class="price-label">Sale Price</div>
+        <div class="price-value">{{ comp.price | default('N/A') }}</div>
+      </div>
+      
+      <div class="details-section">
+        <div class="details-row">
+          <div class="detail-item">
+            <div class="detail-label">Sold Date</div>
+            <div class="detail-value">{{ comp.sold_date | default('N/A') }}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Dist</div>
+            <div class="detail-value">{{ comp.distance | default('N/A') }}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Sq.ft</div>
+            <div class="detail-value">{{ comp.sqft | format_number if comp.sqft else 'N/A' }}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">$/Sqft</div>
+            <div class="detail-value">${{ comp.price_per_sqft | default('N/A') }}</div>
+          </div>
+        </div>
+        
+        <div class="details-row">
+          <div class="detail-item">
+            <div class="detail-label">Bed/Bath</div>
+            <div class="detail-value">{{ comp.bedrooms | default('N/A') }}/{{ comp.bathrooms | default('N/A') }}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Year Blt</div>
+            <div class="detail-value">{{ comp.year_built | default('N/A') }}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Lot Area</div>
+            <div class="detail-value">{{ comp.lot_size | format_number if comp.lot_size else 'N/A' }}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Pool</div>
+            <div class="detail-value">{{ comp.pool | default('No') }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <!-- No comparables available -->
+    <div class="property-card" style="grid-column: span 2; text-align: center; padding: 60px;">
+      <p style="color: #666; font-size: 18px;">No comparable properties available</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+

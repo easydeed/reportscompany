@@ -1,0 +1,330 @@
+{#
+    Teal Theme - Area Sales Analysis Page
+    =====================================
+    Converted from V0-generated area-sales-analysis.html
+    
+    Required variables:
+    - comparables               : Array of comparable properties (used for chart)
+    - area_analysis             : Object with analysis data
+#}
+
+<style>
+  /* Teal Area Analysis Page Styles */
+  .teal-area-analysis {
+    width: 8.5in;
+    height: 11in;
+    background: white;
+    padding: 50px 60px;
+    position: relative;
+    margin: 0 auto;
+    page-break-after: always;
+  }
+
+  .teal-area-analysis .header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 8px;
+  }
+
+  .teal-area-analysis .header h1 {
+    font-size: 48px;
+    font-weight: bold;
+    color: #16d3ba;
+    letter-spacing: 0.5px;
+    margin: 0;
+  }
+
+  .teal-area-analysis .accent-bars {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .teal-area-analysis .accent-bar {
+    height: 6px;
+    background: #16d3ba;
+  }
+
+  .teal-area-analysis .accent-bar:nth-child(1) {
+    width: 25px;
+  }
+
+  .teal-area-analysis .accent-bar:nth-child(2) {
+    width: 15px;
+  }
+
+  .teal-area-analysis .accent-bar:nth-child(3) {
+    width: 400px;
+  }
+
+  .teal-area-analysis .subtitle {
+    font-size: 16px;
+    font-weight: bold;
+    color: #2d2d2d;
+    margin-bottom: 35px;
+  }
+
+  .teal-area-analysis .chart-container {
+    width: 100%;
+    height: 340px;
+    position: relative;
+    margin-bottom: 20px;
+    padding: 20px 0;
+  }
+
+  .teal-area-analysis .chart-grid {
+    position: absolute;
+    left: 60px;
+    right: 20px;
+    top: 20px;
+    bottom: 60px;
+  }
+
+  .teal-area-analysis .grid-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    border-top: 1px dashed #d0d0d0;
+  }
+
+  .teal-area-analysis .y-axis-label {
+    position: absolute;
+    left: -60px;
+    width: 50px;
+    text-align: right;
+    font-size: 13px;
+    color: #666;
+    transform: translateY(-50%);
+  }
+
+  .teal-area-analysis .bars-container {
+    position: absolute;
+    left: 60px;
+    right: 20px;
+    bottom: 60px;
+    height: 260px;
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+    gap: 40px;
+    padding: 0 60px;
+  }
+
+  .teal-area-analysis .bar-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .teal-area-analysis .bar {
+    width: 100%;
+    max-width: 80px;
+    background: #1e3a5f;
+    position: relative;
+  }
+
+  .teal-area-analysis .bar-label {
+    font-size: 13px;
+    font-weight: bold;
+    color: #2d2d2d;
+    margin-top: 5px;
+  }
+
+  .teal-area-analysis .table-container {
+    width: 100%;
+    margin-top: 20px;
+  }
+
+  .teal-area-analysis table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+
+  .teal-area-analysis th {
+    background: #1e3a5f;
+    color: white;
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: bold;
+    border: none;
+  }
+
+  .teal-area-analysis th:first-child {
+    text-align: left;
+  }
+
+  .teal-area-analysis th:not(:first-child) {
+    text-align: center;
+  }
+
+  .teal-area-analysis td {
+    padding: 10px 16px;
+    border: none;
+  }
+
+  .teal-area-analysis td:first-child {
+    text-align: left;
+    font-weight: 500;
+  }
+
+  .teal-area-analysis td:not(:first-child) {
+    text-align: center;
+  }
+
+  .teal-area-analysis tr:nth-child(even) {
+    background: #f5f5f5;
+  }
+
+  .teal-area-analysis tr:nth-child(odd) {
+    background: white;
+  }
+
+  .teal-area-analysis tr.sales-price-row {
+    background: #16d3ba !important;
+  }
+
+  .teal-area-analysis tr.sales-price-row td {
+    color: #2d2d2d;
+    font-weight: bold;
+    font-size: 15px;
+  }
+</style>
+
+<div class="teal-area-analysis">
+  <div class="header">
+    <h1>AREA SALES ANALYSIS</h1>
+    <div class="accent-bars">
+      <div class="accent-bar"></div>
+      <div class="accent-bar"></div>
+      <div class="accent-bar"></div>
+    </div>
+  </div>
+  
+  <div class="subtitle">SALES IN THE PAST 12 MONTHS</div>
+
+  <div class="chart-container">
+    <div class="chart-grid">
+      <div class="grid-line" style="top: 0%;">
+        <div class="y-axis-label">$700K</div>
+      </div>
+      <div class="grid-line" style="top: 25%;">
+        <div class="y-axis-label">$600K</div>
+      </div>
+      <div class="grid-line" style="top: 50%;">
+        <div class="y-axis-label">$500K</div>
+      </div>
+      <div class="grid-line" style="top: 75%;">
+        <div class="y-axis-label">$400K</div>
+      </div>
+      <div class="grid-line" style="top: 100%;">
+        <div class="y-axis-label">$0</div>
+      </div>
+    </div>
+
+    <div class="bars-container">
+      {% for comp in comparables[:4] %}
+      {% set price = comp.price | replace('$', '') | replace(',', '') | int if comp.price else 500000 %}
+      {% set height = ((price / 700000) * 260) | int %}
+      <div class="bar-group">
+        <div class="bar" style="height: {{ height }}px;"></div>
+        <div class="bar-label">Comp {{ loop.index }}</div>
+      </div>
+      {% else %}
+      <div class="bar-group">
+        <div class="bar" style="height: 200px;"></div>
+        <div class="bar-label">Comp 1</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height: 220px;"></div>
+        <div class="bar-label">Comp 2</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height: 180px;"></div>
+        <div class="bar-label">Comp 3</div>
+      </div>
+      <div class="bar-group">
+        <div class="bar" style="height: 210px;"></div>
+        <div class="bar-label">Comp 4</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Monthly Sales Overview</th>
+          <th>PIQ</th>
+          <th>Low</th>
+          <th>Medium</th>
+          <th>High</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Distance</td>
+          <td>{{ area_analysis.area_min_radius | default('0.1 mi') }}</td>
+          <td>{{ area_analysis.area_min_radius | default('0.1 mi') }}</td>
+          <td>{{ area_analysis.area_median_radius | default('0.5 mi') }}</td>
+          <td>{{ area_analysis.area_max_radius | default('1.2 mi') }}</td>
+        </tr>
+        <tr>
+          <td>Living Area</td>
+          <td>{{ property.sqft | format_number if property.sqft else 'N/A' }}</td>
+          <td>{{ area_analysis.living_area_low | format_number if area_analysis.living_area_low else 'N/A' }}</td>
+          <td>{{ area_analysis.living_area_median | format_number if area_analysis.living_area_median else 'N/A' }}</td>
+          <td>{{ area_analysis.living_area_high | format_number if area_analysis.living_area_high else 'N/A' }}</td>
+        </tr>
+        <tr>
+          <td>Price Per Sqft</td>
+          <td>{{ area_analysis.price_per_sqft | default('N/A') }}</td>
+          <td>{{ area_analysis.price_per_sqft_low | default('N/A') }}</td>
+          <td>{{ area_analysis.price_per_sqft_median | default('N/A') }}</td>
+          <td>{{ area_analysis.price_per_sqft_high | default('N/A') }}</td>
+        </tr>
+        <tr>
+          <td>Year Built</td>
+          <td>{{ property.year_built | default('N/A') }}</td>
+          <td>{{ area_analysis.year_low | default('N/A') }}</td>
+          <td>{{ area_analysis.year_median | default('N/A') }}</td>
+          <td>{{ area_analysis.year_high | default('N/A') }}</td>
+        </tr>
+        <tr>
+          <td>Lot Size</td>
+          <td>{{ property.lot_size | format_number if property.lot_size else 'N/A' }}</td>
+          <td>{{ area_analysis.lot_size_low | format_number if area_analysis.lot_size_low else 'N/A' }}</td>
+          <td>{{ area_analysis.lot_size_median | format_number if area_analysis.lot_size_median else 'N/A' }}</td>
+          <td>{{ area_analysis.lot_size_high | format_number if area_analysis.lot_size_high else 'N/A' }}</td>
+        </tr>
+        <tr>
+          <td>Bedrooms</td>
+          <td>{{ property.bedrooms | default('N/A') }}</td>
+          <td>{{ area_analysis.bedrooms_low | default('N/A') }}</td>
+          <td>{{ area_analysis.bedrooms_median | default('N/A') }}</td>
+          <td>{{ area_analysis.bedrooms_high | default('N/A') }}</td>
+        </tr>
+        <tr>
+          <td>Baths</td>
+          <td>{{ property.bathrooms | default('N/A') }}</td>
+          <td>{{ area_analysis.bathrooms_low | default('N/A') }}</td>
+          <td>{{ area_analysis.bathrooms_median | default('N/A') }}</td>
+          <td>{{ area_analysis.bathrooms_high | default('N/A') }}</td>
+        </tr>
+        <tr class="sales-price-row">
+          <td>Sales Price</td>
+          <td>{{ area_analysis.sale_price | default('N/A') }}</td>
+          <td>{{ area_analysis.sale_price_low | default('N/A') }}</td>
+          <td>{{ area_analysis.sale_price_median | default('N/A') }}</td>
+          <td>{{ area_analysis.sale_price_high | default('N/A') }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
