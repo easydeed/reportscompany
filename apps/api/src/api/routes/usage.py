@@ -81,11 +81,10 @@ def get_usage(
             status,
             COALESCE(input_params->>'city', 'Unknown') as city,
             pdf_url,
-            created_at,
             generated_at
           FROM report_generations
           WHERE account_id = %s
-          ORDER BY created_at DESC
+          ORDER BY generated_at DESC
           LIMIT 10
         """, (account_id,))
         recent_reports = [
@@ -95,7 +94,7 @@ def get_usage(
                 "status": r["status"],
                 "city": r["city"],
                 "pdf_url": r["pdf_url"],
-                "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+                "created_at": r["generated_at"].isoformat() if r["generated_at"] else None,
                 "generated_at": r["generated_at"].isoformat() if r["generated_at"] else None,
             }
             for r in fetchall_dicts(cur)
