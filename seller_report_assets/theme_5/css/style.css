@@ -1,0 +1,33 @@
+@font-face {
+    font-family: 'BebasNeue Book';
+    src: url('BebasNeue-Book.otf');
+}
+body{  
+    font-family: "Poppins", sans-serif;
+    margin: 0;
+    padding: 0;
+}
+*{
+    box-sizing: border-box;
+}
+.size_a4 { width: 8.3in; height: 11.7in; }
+/* .size_letter { width: 8.5in; height: 11in; } */
+.size_letter { 
+    
+    width: 816px;
+    height: 1056px;
+}
+.size_executive { width: 7.25in; height: 10.5in; }
+.pdf_page {
+    margin: 0 auto;
+    box-sizing: border-box;
+    background-color: #fff;
+    position: relative;
+}
+.page_container
+{
+    page-break-after: always;
+    page-break-inside: avoid;
+    /* padding: 25px; */
+    margin: 0 auto;
+}

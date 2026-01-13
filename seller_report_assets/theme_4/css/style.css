@@ -1,0 +1,33 @@
+
+body{
+    font-family: "Poppins", sans-serif;
+    margin: 0;
+    padding: 0;
+}
+*{
+    box-sizing: border-box;
+}
+.size_a4 { width: 8.3in; height: 11.7in; }
+/* .size_letter { width: 8.5in; height: 11in; } */
+.size_letter { 
+    width: 816px;
+    height: 1056px;
+}
+.size_executive { width: 7.25in; height: 10.5in; }
+.pdf_page {
+    margin: 0 auto;
+    box-sizing: border-box;
+    background-color: #fff;
+    position: relative;
+}
+.pdf_page > img{
+    height: 870px;
+    width: 100%;
+}
+.page_container
+{
+    page-break-after: always;
+    page-break-inside: avoid;
+    margin: 0 auto;
+    /* padding: 25px; */
+}
