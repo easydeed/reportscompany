@@ -9,7 +9,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --navy: #15216E;
+      /* Primary accent color - can be overridden by theme_color */
+      --navy: {{ theme_color | default('#15216E') }};
       --navy-light: #1E2D8F;
       --gold: #D69649;
       --gold-light: #E5AB5E;

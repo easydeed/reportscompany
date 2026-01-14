@@ -9,7 +9,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --navy: #1B365D;
+      /* Primary accent color - can be overridden by theme_color */
+      --navy: {{ theme_color | default('#1B365D') }};
       --navy-light: #2C4A7C;
       --sky: #4A90A4;
       --sand: #C4B7A6;

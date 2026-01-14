@@ -9,10 +9,11 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --coral:#FF6B5B; --coral-light:#FF8A7D; --coral-dark:#E55A4B;
+      /* Primary accent color - can be overridden by theme_color */
+      --coral:{{ theme_color | default('#FF6B5B') }}; --coral-light:#FF8A7D; --coral-dark:#E55A4B;
       --midnight:#1A1F36; --slate:#4A5568; --silver:#94A3B8;
       --ghost:#F1F5F9; --pure:#FFFFFF;
-      --gradient-coral:linear-gradient(135deg, #FF6B5B 0%, #FF8A7D 50%, #FFB199 100%);
+      --gradient-coral:linear-gradient(135deg, {{ theme_color | default('#FF6B5B') }} 0%, #FF8A7D 50%, #FFB199 100%);
       --gradient-dark:linear-gradient(135deg, #1A1F36 0%, #2D3348 100%);
       --page-w:8.5in; --page-h:11in; --pad:0.55in;
       --radius:20px; --shadow:0 20px 60px rgba(26,31,54,0.15);
