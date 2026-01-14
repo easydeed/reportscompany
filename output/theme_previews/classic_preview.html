@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sellers Report - Classic Theme</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #1B365D;
+      --navy-light: #2C4A7C;
+      --sky: #4A90A4;
+      --sand: #C4B7A6;
+      --cream: #FDFBF7;
+      --warm-white: #FFFFFF;
+      --charcoal: #333333;
+      --slate: #5C6670;
+      --border: #E0DCD4;
+      --page-w: 8.5in;
+      --page-h: 11in;
+      --pad: 0.6in;
+      --shadow: 0 4px 20px rgba(27, 54, 93, 0.1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Source Sans Pro', Georgia, serif;
+      background: #E8E6E1;
+      color: var(--charcoal);
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    @page { size: Letter; margin: 0; }
+    @media print {
+      body { background: #fff; }
+      .sheet { padding: 0; gap: 0; }
+      .page { margin: 0; box-shadow: none; }
+      .page:last-child { page-break-after: avoid; }
+    }
+    .sheet {
+      display: block;
+      width: var(--page-w);
+      margin: 0 auto;
+      padding: 16px 0 50px;
+    }
+    @media print {
+      .sheet { padding: 0; margin: 0; }
+    }
+    @media screen {
+      .sheet {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        width: auto;
+      }
+    }
+    .page {
+      width: var(--page-w);
+      height: var(--page-h);
+      background: var(--warm-white);
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+      page-break-after: always;
+      page-break-inside: avoid;
+      margin: 0 auto 20px;
+    }
+    @media print {
+      .page { margin: 0; border-radius: 0; box-shadow: none; }
+    }
+    .page:last-child { page-break-after: auto; margin-bottom: 0; }
+    .page.cover { padding-top: 0; }
+    .font-serif { font-family: 'Merriweather', Georgia, serif; }
+    .divider {
+      height: 3px;
+      background: var(--navy);
+      position: relative;
+    }
+    .divider::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 40%;
+      height: 100%;
+      background: var(--sky);
+    }
+
+    /* COVER */
+    .cover { background: var(--warm-white); display: flex; flex-direction: column; }
+    .cover-top {
+      background: var(--navy);
+      padding: 0.5in var(--pad);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .cover-brand { display: flex; align-items: center; gap: 15px; }
+    .cover-brand-icon {
+      width: 50px; height: 50px;
+      background: var(--warm-white);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .cover-brand-icon svg { width: 30px; height: 30px; fill: var(--navy); }
+    .cover-brand-text {
+      color: var(--warm-white);
+      font-family: 'Merriweather', serif;
+      font-size: 20px; font-weight: 700;
+    }
+    .cover-contact-strip {
+      display: flex; gap: 25px;
+      color: rgba(255,255,255,0.9); font-size: 13px;
+    }
+    .cover-main {
+      flex: 1;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+      padding: 0.5in 1in;
+      background: linear-gradient(180deg, var(--cream) 0%, var(--warm-white) 100%);
+    }
+    .cover-label {
+      font-size: 14px; letter-spacing: 0.2em;
+      text-transform: uppercase; color: var(--sky);
+      margin-bottom: 20px; font-weight: 600;
+    }
+    .cover-title {
+      font-family: 'Merriweather', serif;
+      font-size: 58px; font-weight: 900;
+      color: var(--navy); line-height: 1.1;
+      margin-bottom: 30px;
+    }
+    .cover-divider-wrap { width: 300px; margin: 0 auto 30px; }
+    .cover-address { text-align: center; }
+    .cover-street {
+      font-family: 'Merriweather', serif;
+      font-size: 28px; font-weight: 700;
+      color: var(--charcoal); margin-bottom: 8px;
+    }
+    .cover-city {
+      font-size: 16px; color: var(--slate); letter-spacing: 0.1em;
+    }
+    .cover-bottom {
+      background: var(--cream);
+      border-top: 1px solid var(--border);
+      padding: 0.4in var(--pad);
+      display: flex; align-items: center; gap: 25px;
+    }
+    .cover-agent-photo {
+      width: 90px; height: 90px;
+      background: var(--border); overflow: hidden; flex-shrink: 0;
+    }
+    .cover-agent-photo img { width: 100%; height: 100%; object-fit: cover; }
+    .cover-agent-info { flex: 1; }
+    .cover-agent-name {
+      font-family: 'Merriweather', serif;
+      font-size: 22px; font-weight: 700;
+      color: var(--navy); margin-bottom: 4px;
+    }
+    .cover-agent-title { font-size: 14px; color: var(--slate); margin-bottom: 10px; }
+    .cover-agent-details { display: flex; gap: 20px; font-size: 13px; color: var(--charcoal); }
+    .cover-agent-details span { display: flex; align-items: center; gap: 6px; }
+    .cover-agent-details svg { width: 14px; height: 14px; fill: var(--sky); }
+    .cover-logo-area { text-align: right; }
+    .cover-logo {
+      font-family: 'Merriweather', serif;
+      font-size: 14px; font-weight: 700;
+      color: var(--navy); letter-spacing: 0.05em;
+    }
+    .cover-logo-sub { font-size: 11px; color: var(--slate); margin-top: 2px; }
+
+    /* CONTENTS */
+    .contents { background: var(--warm-white); padding: var(--pad); }
+    .page-header {
+      border-bottom: 3px solid var(--navy);
+      padding-bottom: 15px; margin-bottom: 30px;
+      position: relative;
+    }
+    .page-header::after {
+      content: '';
+      position: absolute;
+      bottom: -3px; right: 0;
+      width: 35%; height: 3px;
+      background: var(--sky);
+    }
+    .page-header-label {
+      font-size: 12px; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--sky);
+      margin-bottom: 8px; font-weight: 600;
+    }
+    .page-header-title {
+      font-family: 'Merriweather', serif;
+      font-size: 36px; font-weight: 900; color: var(--navy);
+    }
+    .contents-list { margin-top: 40px; }
+    .contents-item {
+      display: flex; align-items: baseline;
+      padding: 20px 0; border-bottom: 1px solid var(--border);
+    }
+    .contents-item:last-child { border-bottom: none; }
+    .contents-num {
+      font-family: 'Merriweather', serif;
+      font-size: 24px; font-weight: 900;
+      color: var(--navy); width: 50px;
+    }
+    .contents-text { flex: 1; font-size: 16px; color: var(--charcoal); }
+    .contents-dots {
+      flex: 1; border-bottom: 2px dotted var(--sand);
+      margin: 0 15px; transform: translateY(-5px);
+    }
+    .contents-page {
+      font-family: 'Merriweather', serif;
+      font-size: 18px; font-weight: 700; color: var(--slate);
+    }
+
+    /* AERIAL */
+    .aerial { background: var(--warm-white); }
+    .aerial-header { background: var(--navy); padding: 0.4in var(--pad); }
+    .aerial-header .page-header-label { color: var(--sand); }
+    .aerial-header .page-header-title { color: var(--warm-white); }
+    .aerial-map { height: 6.5in; background: #ddd; position: relative; }
+    .aerial-map img { width: 100%; height: 100%; object-fit: cover; }
+    .aerial-map-overlay {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: linear-gradient(0deg, rgba(27,54,93,0.95), transparent);
+      padding: 30px var(--pad);
+    }
+    .aerial-info-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .aerial-info-card { background: var(--warm-white); padding: 20px; }
+    .aerial-info-card h3 {
+      font-family: 'Merriweather', serif;
+      font-size: 14px; font-weight: 700;
+      color: var(--navy); margin-bottom: 8px;
+    }
+    .aerial-info-card p { font-size: 13px; line-height: 1.6; color: var(--slate); }
+
+    /* PROPERTY */
+    .property { background: var(--warm-white); padding: var(--pad); }
+    .property-section { margin-bottom: 25px; }
+    .property-section-header {
+      background: var(--navy); color: var(--warm-white);
+      padding: 12px 18px;
+      font-family: 'Merriweather', serif;
+      font-size: 14px; font-weight: 700; margin-bottom: 0;
+    }
+    .property-table {
+      width: 100%; border-collapse: collapse;
+      border: 1px solid var(--border); border-top: none;
+      border-radius: 0 0 8px 8px; overflow: hidden;
+    }
+    .property-table tr:nth-child(even) { background: var(--cream); }
+    .property-table td {
+      padding: 12px 18px; font-size: 13px;
+      border-bottom: 1px solid var(--border);
+    }
+    .property-table td:first-child {
+      color: var(--slate); width: 40%;
+      border-right: 1px solid var(--border);
+    }
+    .property-table td:last-child { color: var(--charcoal); font-weight: 600; }
+    .property-section-header { border-radius: 8px 8px 0 0; }
+    .property-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+
+    /* ANALYSIS */
+    .analysis { background: var(--warm-white); padding: var(--pad); }
+    .analysis-chart {
+      background: var(--cream); border: 1px solid var(--border);
+      padding: 25px; margin-bottom: 25px;
+    }
+    .chart-title {
+      font-family: 'Merriweather', serif;
+      font-size: 14px; font-weight: 700;
+      color: var(--navy); margin-bottom: 20px; text-align: center;
+    }
+    .chart-bars {
+      display: flex; align-items: flex-end; justify-content: space-around;
+      height: 150px; padding: 0 30px; border-bottom: 2px solid var(--navy);
+    }
+    .chart-bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .chart-bar { width: 55px; background: var(--navy); }
+    .chart-bar-label { font-size: 11px; color: var(--slate); font-weight: 600; }
+    .analysis-table {
+      width: 100%; border-collapse: collapse;
+      font-size: 13px; border: 1px solid var(--border);
+      border-radius: 10px; overflow: hidden;
+    }
+    .analysis-table thead { background: var(--navy); color: var(--warm-white); }
+    .analysis-table th {
+      padding: 14px 12px; text-align: left;
+      font-weight: 700; font-size: 12px;
+    }
+    .analysis-table tbody tr:nth-child(even) { background: var(--cream); }
+    .analysis-table tbody tr { border-bottom: 1px solid var(--border); }
+    .analysis-table td { padding: 12px; }
+    .analysis-table tfoot {
+      background: var(--sky); color: var(--warm-white); font-weight: 700;
+    }
+    .analysis-table tfoot td { padding: 14px 12px; }
+
+    /* COMPARABLES */
+    .comparables { background: var(--warm-white); padding: var(--pad); }
+    .comp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 25px; }
+    .comp-card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .comp-card-image { height: 130px; background: var(--slate); position: relative; }
+    .comp-card-image img { width: 100%; height: 100%; object-fit: cover; }
+    .comp-card-price {
+      position: absolute; top: 10px; left: 10px;
+      background: var(--navy); color: var(--warm-white);
+      padding: 6px 14px;
+      font-family: 'Merriweather', serif;
+      font-size: 16px; font-weight: 700;
+    }
+    .comp-card-body { padding: 15px; background: var(--warm-white); }
+    .comp-card-address {
+      font-family: 'Merriweather', serif;
+      font-size: 14px; font-weight: 700;
+      color: var(--navy); margin-bottom: 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .comp-card-address svg { width: 14px; height: 14px; fill: var(--sky); flex-shrink: 0; }
+    .comp-card-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .comp-stat { background: var(--cream); padding: 10px; text-align: center; }
+    .comp-stat-label {
+      font-size: 10px; color: var(--slate);
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;
+    }
+    .comp-stat-value { font-size: 13px; font-weight: 700; color: var(--charcoal); }
+
+    /* RANGE */
+    .range { background: var(--warm-white); padding: var(--pad); }
+    .range-map {
+      height: 4in; background: var(--border);
+      border: 1px solid var(--border); border-radius: 8px; margin: 25px 0; overflow: hidden;
+    }
+    .range-map img { width: 100%; height: 100%; object-fit: cover; }
+    .range-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
+    .range-stat { background: var(--navy); padding: 26px 15px; text-align: center; border-radius: 8px; }
+    .range-stat-num {
+      font-family: 'Merriweather', serif;
+      font-size: 38px; font-weight: 900;
+      color: var(--warm-white); line-height: 1;
+    }
+    .range-stat-label {
+      font-size: 11px; color: var(--sand);
+      text-transform: uppercase; letter-spacing: 0.1em; margin-top: 10px;
+    }
+    .range-slider {
+      background: var(--cream); border: 1px solid var(--border); border-radius: 10px; padding: 25px;
+    }
+    .range-slider-header { display: flex; justify-content: space-between; margin-bottom: 15px; }
+    .range-slider-price {
+      font-family: 'Merriweather', serif;
+      font-size: 22px; font-weight: 900; color: var(--navy);
+    }
+    .range-slider-track {
+      height: 10px;
+      background: linear-gradient(90deg, var(--sky) 0%, var(--navy) 100%);
+      border-radius: 5px; position: relative; margin-bottom: 20px;
+    }
+    .range-slider-dot {
+      width: 22px; height: 22px;
+      background: var(--warm-white); border: 3px solid var(--navy); border-radius: 50%;
+      position: absolute; top: 50%; transform: translate(-50%, -50%); box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    .range-note { font-size: 13px; line-height: 1.7; color: var(--slate); text-align: center; }
+
+    /* Page Footer */
+    .page-footer {
+      position: absolute;
+      bottom: 0.4in; left: var(--pad); right: var(--pad);
+      display: flex; justify-content: space-between; align-items: center;
+      padding-top: 12px; border-top: 1px solid var(--border);
+    }
+    .page-footer .brand { font-size: 11px; color: var(--slate); }
+    .page-footer .num {
+      font-family: 'Merriweather', serif;
+      font-size: 14px; font-weight: 700; color: var(--navy);
+    }
+  </style>
+</head>
+<body>
+  <div class="sheet">
+
+    <!-- PAGE 1: COVER -->
+    <section class="page cover">
+      <div class="cover-top">
+        <div class="cover-brand">
+          <div class="cover-brand-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 3L4 9v12h16V9l-8-6zm0 2.5L18 10v9H6v-9l6-4.5z"/></svg>
+          </div>
+          <div class="cover-brand-text">Premier Real Estate</div>
+        </div>
+        <div class="cover-contact-strip">
+          <span>☎ (310) 555-1234</span>
+          <span>✉ sarah@luxuryhomes.com</span>
+        </div>
+      </div>
+
+      <div class="cover-main">
+        <div class="cover-label">Comprehensive Property Analysis</div>
+        <h1 class="cover-title">Seller's Report</h1>
+        <div class="cover-divider-wrap">
+          <div class="divider"></div>
+        </div>
+        <div class="cover-address">
+          <div class="cover-street">123 Oak Street</div>
+          <div class="cover-city">Beverly Hills, CA 90210</div>
+        </div>
+      </div>
+
+      <div class="cover-bottom">
+        <div class="cover-agent-photo">
+<img src="https://placehold.co/150x150/1e3a5f/white?text=Agent" alt="Sarah Johnson headshot" />        </div>
+        <div class="cover-agent-info">
+          <div class="cover-agent-name">Sarah Johnson</div>
+          <div class="cover-agent-title">Luxury Home Specialist • CA BRE#01234567</div>
+          <div class="cover-agent-details">
+            <span><svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>(310) 555-1234</span>
+            <span><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>sarah@luxuryhomes.com</span>
+          </div>
+        </div>
+        <div class="cover-logo-area">
+          <div class="cover-logo">Premier Real Estate</div>
+          <div class="cover-logo-sub"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE 2: CONTENTS -->
+    <section class="page contents">
+      <div class="page-header">
+        <div class="page-header-label">Report Overview</div>
+        <h2 class="page-header-title">Table of Contents</h2>
+      </div>
+      <div class="contents-list">
+        <div class="contents-item"><div class="contents-num">1</div><div class="contents-text">Aerial Property View</div><div class="contents-dots"></div><div class="contents-page">03</div></div>
+        <div class="contents-item"><div class="contents-num">2</div><div class="contents-text">Property Information</div><div class="contents-dots"></div><div class="contents-page">04</div></div>
+        <div class="contents-item"><div class="contents-num">3</div><div class="contents-text">Area Sales Analysis</div><div class="contents-dots"></div><div class="contents-page">05</div></div>
+        <div class="contents-item"><div class="contents-num">4</div><div class="contents-text">Sales Comparables</div><div class="contents-dots"></div><div class="contents-page">06</div></div>
+        <div class="contents-item"><div class="contents-num">5</div><div class="contents-text">Estimated Value Range</div><div class="contents-dots"></div><div class="contents-page">07</div></div>
+      </div>
+      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">02</div></div>
+    </section>
+
+    <!-- PAGE 3: AERIAL -->
+    <section class="page aerial">
+      <div class="aerial-header">
+        <div class="page-header-label">Location Overview</div>
+        <h2 class="page-header-title">Aerial View</h2>
+      </div>
+      <div class="aerial-map" >
+        <div class="aerial-map-overlay">
+          <div class="aerial-info-cards">
+            <div class="aerial-info-card">
+              <h3>Neighborhood Context</h3>
+              <p>This aerial view showcases your property's prime location within the neighborhood, highlighting proximity to parks, schools, and major thoroughfares.</p>
+            </div>
+            <div class="aerial-info-card">
+              <h3>Quarter-Mile Radius</h3>
+              <p>Properties within this radius provide the most accurate comparables, sharing similar neighborhood characteristics and market dynamics.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="page-footer" style="border-color: rgba(255,255,255,.2);"><div class="brand" style="color:#fff;">Classic Collection • TrendyReports</div><div class="num" style="color:#fff;">03</div></div>
+    </section>
+
+    <!-- PAGE 4: PROPERTY -->
+    <section class="page property">
+      <div class="page-header">
+        <div class="page-header-label">Property Overview</div>
+        <h2 class="page-header-title">Prospective Property</h2>
+      </div>
+      <div class="property-two-col">
+        <div>
+          <div class="property-section">
+            <div class="property-section-header">Owner Information</div>
+            <table class="property-table">
+              <tr><td>Primary Owner</td><td>John &amp; Jane Smith</td></tr>
+              <tr><td>Secondary Owner</td><td>None</td></tr>
+              <tr><td>Site Address</td><td>123 Oak Street, Beverly Hills, CA 90210</td></tr>
+              <tr><td>Mailing Address</td><td>None</td></tr>
+            </table>
+          </div>
+          <div class="property-section">
+            <div class="property-section-header">Tax & Assessment</div>
+            <table class="property-table">
+              <tr><td>Assessed Value</td><td>$1,250,000</td></tr>
+              <tr><td>Land Value</td><td>N/A</td></tr>
+              <tr><td>Annual Tax</td><td>$15,625</td></tr>
+              <tr><td>Tax Year</td><td>None</td></tr>
+            </table>
+          </div>
+        </div>
+        <div>
+          <div class="property-section">
+            <div class="property-section-header">Legal Information</div>
+            <table class="property-table">
+              <tr><td>APN</td><td>4352-012-001</td></tr>
+              <tr><td>County</td><td>Los Angeles</td></tr>
+              <tr><td>Census Tract</td><td>None</td></tr>
+              <tr><td>Legal Description</td><td></td></tr>
+            </table>
+          </div>
+          <div class="property-section">
+            <div class="property-section-header">Property Details</div>
+            <table class="property-table">
+              <tr><td>Bedrooms</td><td>4</td></tr>
+              <tr><td>Bathrooms</td><td>3</td></tr>
+              <tr><td>Square Feet</td><td>2,850</td></tr>
+              <tr><td>Lot Size</td><td>0 sq ft</td></tr>
+              <tr><td>Year Built</td><td>1985</td></tr>
+              <tr><td>Property Type</td><td>Single Family</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">04</div></div>
+    </section>
+
+    <!-- PAGE 5: ANALYSIS -->
+    <section class="page analysis">
+      <div class="page-header">
+        <div class="page-header-label">Market Intelligence</div>
+        <h2 class="page-header-title">Area Sales Analysis</h2>
+      </div>
+      <div class="analysis-chart">
+        <div class="chart-title">Recent Comparable Sales Activity</div>
+        <div class="chart-bars">
+          <div class="chart-bar-wrap">
+            <div class="chart-bar" style="height: 168px;"></div>
+            <div class="chart-bar-label"></div>
+          </div>
+          <div class="chart-bar-wrap">
+            <div class="chart-bar" style="height: 178px;"></div>
+            <div class="chart-bar-label"></div>
+          </div>
+          <div class="chart-bar-wrap">
+            <div class="chart-bar" style="height: 159px;"></div>
+            <div class="chart-bar-label"></div>
+          </div>
+          <div class="chart-bar-wrap">
+            <div class="chart-bar" style="height: 193px;"></div>
+            <div class="chart-bar-label"></div>
+          </div>
+        </div>
+      </div>
+      <table class="analysis-table">
+        <thead>
+          <tr><th>Metric</th><th>Subject</th><th>Low</th><th>Medium</th><th>High</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Distance (mi)</td><td>0</td><td>0.4</td><td>0.5</td><td>0.6</td></tr>
+          <tr><td>Living Area (sf)</td><td>2850</td><td>2400</td><td>3100</td><td>3400</td></tr>
+          <tr><td>Price/Sq.Ft.</td><td>N/A</td><td>$531</td><td>$459</td><td>$455</td></tr>
+          <tr><td>Year Built</td><td>1985</td><td>1992</td><td>1988</td><td>1980</td></tr>
+          <tr><td>Lot Size (sf)</td><td>8,500 sqft</td><td>-</td><td>-</td><td>-</td></tr>
+          <tr><td>Bedrooms</td><td>4</td><td>4</td><td>5</td><td>5</td></tr>
+          <tr><td>Bathrooms</td><td>3</td><td>2</td><td>3</td><td>4</td></tr>
+        </tbody>
+        <tfoot>
+          <tr><td>Sale Price</td><td>-</td><td>$1,275,000</td><td>$1,425,000</td><td>$1,550,000</td></tr>
+        </tfoot>
+      </table>
+      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">05</div></div>
+    </section>
+
+    <!-- PAGE 6: COMPARABLES -->
+    <section class="page comparables">
+      <div class="page-header">
+        <div class="page-header-label">Recent Transactions</div>
+        <h2 class="page-header-title">Sales Comparables</h2>
+      </div>
+      <div class="comp-grid">
+        <div class="comp-card">
+          <div class="comp-card-image" >
+            <div class="comp-card-price">$1,350,000</div>
+          </div>
+          <div class="comp-card-body">
+            <div class="comp-card-address">
+              <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+              456 Maple Drive
+            </div>
+            <div class="comp-card-stats">
+              <div class="comp-stat"><div class="comp-stat-label">Sold</div><div class="comp-stat-value"></div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">2,650</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">4/3</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">$509</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="comp-card">
+          <div class="comp-card-image" >
+            <div class="comp-card-price">$1,425,000</div>
+          </div>
+          <div class="comp-card-body">
+            <div class="comp-card-address">
+              <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+              789 Palm Avenue
+            </div>
+            <div class="comp-card-stats">
+              <div class="comp-stat"><div class="comp-stat-label">Sold</div><div class="comp-stat-value"></div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">3,100</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">5/3</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">$459</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="comp-card">
+          <div class="comp-card-image" >
+            <div class="comp-card-price">$1,275,000</div>
+          </div>
+          <div class="comp-card-body">
+            <div class="comp-card-address">
+              <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+              321 Sunset Blvd
+            </div>
+            <div class="comp-card-stats">
+              <div class="comp-stat"><div class="comp-stat-label">Sold</div><div class="comp-stat-value"></div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">2,400</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">4/2</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">$531</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="comp-card">
+          <div class="comp-card-image" >
+            <div class="comp-card-price">$1,550,000</div>
+          </div>
+          <div class="comp-card-body">
+            <div class="comp-card-address">
+              <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+              555 Rodeo Lane
+            </div>
+            <div class="comp-card-stats">
+              <div class="comp-stat"><div class="comp-stat-label">Sold</div><div class="comp-stat-value"></div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">3,400</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">5/4</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">$455</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">06</div></div>
+    </section>
+
+    <!-- PAGE 7: RANGE -->
+    <section class="page range">
+      <div class="page-header">
+        <div class="page-header-label">Valuation Summary</div>
+        <h2 class="page-header-title">Range of Sales</h2>
+      </div>
+      <div class="range-map" ></div>
+      <div class="range-stats">
+        <div class="range-stat"><div class="range-stat-num">04</div><div class="range-stat-label">Total Comps</div></div>
+        <div class="range-stat"><div class="range-stat-num">2887</div><div class="range-stat-label">Avg. Sq.Ft.</div></div>
+        <div class="range-stat"><div class="range-stat-num">04</div><div class="range-stat-label">Avg. Beds</div></div>
+        <div class="range-stat"><div class="range-stat-num">03</div><div class="range-stat-label">Avg. Baths</div></div>
+      </div>
+      <div class="range-slider">
+        <div class="range-slider-header">
+          <div class="range-slider-price">$1.3M</div>
+          <div class="range-slider-price">$1.6M</div>
+        </div>
+        <div class="range-slider-track">
+          <div class="range-slider-dot" style="left: 5%;"></div>
+          <div class="range-slider-dot" style="left: 95%;"></div>
+        </div>
+        <p class="range-note">The above statistics represent average property details for comparable homes sold within the last 12 months. The price range indicates the low and high sale prices for properties matching your home's characteristics.</p>
+      </div>
+      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">07</div></div>
+    </section>
+
+  </div>
+</body>
+</html>
