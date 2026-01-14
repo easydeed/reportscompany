@@ -313,8 +313,9 @@ This prevents confusion between platform and tenant permissions.
 | Users | `/admin/users` | All users with platform admin + tenant roles |
 | Affiliates | `/admin/affiliates` | Title company management |
 | **Schedules** | `/admin/schedules` | All automated schedules (pause/resume) |
+| **Property Reports** | `/admin/property-reports` | Property report analytics & leaderboards |
 | Plans | `/admin/plans` | Subscription plan configuration |
-| Reports | `/admin/reports` | Report generation monitoring |
+| Market Reports | `/admin/reports` | Market report generation monitoring |
 | Emails | `/admin/emails` | Email delivery logs |
 | Settings | `/admin/settings` | System health, integrations, stats |
 
@@ -472,7 +473,66 @@ All admin API calls go through Next.js proxy routes at `/api/v1/admin/*`:
 /api/v1/admin/emails            → /v1/admin/emails
 /api/v1/admin/plans             → /v1/admin/plans
 /api/v1/admin/system/health     → /v1/admin/system/health
+/api/v1/admin/property-reports/stats         → /v1/admin/property-reports/stats
+/api/v1/admin/property-reports               → /v1/admin/property-reports
+/api/v1/admin/property-reports/top-affiliates → /v1/admin/property-reports/top-affiliates
+/api/v1/admin/property-reports/top-agents    → /v1/admin/property-reports/top-agents
+/api/v1/admin/property-reports/refresh-stats → /v1/admin/property-reports/refresh-stats
 ```
+
+---
+
+---
+
+## 14. Property Reports Analytics
+
+### 14.1 Overview
+
+The Property Reports page (`/admin/property-reports`) provides platform-wide analytics for the single-property CMA report feature.
+
+### 14.2 Metrics Displayed
+
+| Metric | Description |
+|--------|-------------|
+| **Total Reports** | Property reports created in period |
+| **Total Views** | Landing page views |
+| **Leads Captured** | Leads from QR scans and direct links |
+| **Active Accounts** | Accounts using property reports |
+| **Conversion Rate** | (Leads / Unique Visitors) × 100 |
+| **Completion Rate** | (Completed / Total) × 100 |
+
+### 14.3 Breakdowns
+
+- **By Account Type**: Regular agents vs Sponsored agents vs Affiliates
+- **By Theme**: Classic, Modern, Elegant, Teal, Bold distribution
+- **By Lead Source**: QR scans vs Direct links
+
+### 14.4 Leaderboards
+
+| Leaderboard | Ranking By |
+|-------------|------------|
+| **Top Affiliates** | Report count across sponsored agents |
+| **Top Agents** | Individual report count + conversion rate |
+
+### 14.5 API Endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /v1/admin/property-reports/stats` | Platform-wide statistics |
+| `GET /v1/admin/property-reports` | List all property reports |
+| `GET /v1/admin/property-reports/top-affiliates` | Top affiliates by volume |
+| `GET /v1/admin/property-reports/top-agents` | Top agents by volume |
+| `POST /v1/admin/property-reports/refresh-stats` | Manual stats refresh |
+
+### 14.6 Database Tables
+
+| Table | Purpose |
+|-------|---------|
+| `property_report_stats` | Per-account aggregated stats |
+| `property_report_stats_daily` | Daily snapshots for charts |
+| `platform_property_stats` | Platform-wide totals |
+
+Stats are automatically refreshed via database triggers when property reports or leads are created/updated/deleted.
 
 ---
 
@@ -484,3 +544,4 @@ All admin API calls go through Next.js proxy routes at `/api/v1/admin/*`:
 - [Email System](./EMAIL_SYSTEM.md) - Email delivery infrastructure
 - [Title Company Onboarding](./TITLE_COMPANY_ONBOARDING.md) - Affiliate setup
 - [Schedules](./SCHEDULES.md) - Scheduling system documentation
+- [Property Reports Analytics](./PROPERTY_REPORTS_ANALYTICS.md) - Full analytics documentation
