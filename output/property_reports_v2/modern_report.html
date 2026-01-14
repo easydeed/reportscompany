@@ -169,29 +169,29 @@
       <div class="cover-left">
         <div class="cover-brand">
           <div class="cover-brand-dot"></div>
-          <div class="cover-brand-text">{{ agent.company_name | default('TrendyReports') }}</div>
+          <div class="cover-brand-text">TrendyReports</div>
         </div>
         <div class="cover-title-area">
           <div class="cover-label">Prepared Exclusively For You</div>
           <h1 class="cover-title">Seller's<span>Report</span></h1>
           <div class="cover-address-box">
-            <div class="cover-street">{{ property.street_address }}</div>
-            <div class="cover-city">{{ property.city }}, {{ property.state }} {{ property.zip_code }}</div>
+            <div class="cover-street">1358 5th Street</div>
+            <div class="cover-city">La Verne, CA 91750</div>
           </div>
         </div>
       </div>
       <div class="cover-right">
-        <div class="cover-photo-area" {% if images.hero %}style="background-image: url('{{ images.hero }}'); background-size: cover;"{% endif %}></div>
+        <div class="cover-photo-area" style="background-image: url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&amp;h=600&amp;fit=crop'); background-size: cover;"></div>
         <div class="cover-agent-card">
           <div class="cover-agent-photo">
-            {% if agent.photo_url %}<img src="{{ agent.photo_url }}" alt="{{ agent.name }} headshot" />{% endif %}
+            
           </div>
           <div class="cover-agent-info">
-            <div class="cover-agent-name">{{ agent.name }}</div>
-            <div class="cover-agent-title">{{ agent.title | default('Real Estate Specialist') }}</div>
+            <div class="cover-agent-name">Zoe Noelle</div>
+            <div class="cover-agent-title">Real Estate Specialist</div>
             <div class="cover-agent-contacts">
-              <div class="cover-agent-contact"><svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>{{ agent.phone | default('(000) 000-0000') }}</div>
-              <div class="cover-agent-contact"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>{{ agent.email | default('agent@example.com') }}</div>
+              <div class="cover-agent-contact"><svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>(213) 309-7286</div>
+              <div class="cover-agent-contact"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>zoe@trendyreports.com</div>
             </div>
           </div>
         </div>
@@ -220,7 +220,7 @@
       <div class="aerial-header">
         <div><span class="pill">Location Overview</span><h2 class="aerial-title">Aerial View</h2></div>
       </div>
-      <div class="aerial-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}>
+      <div class="aerial-map" style="background-image: url('https://images.unsplash.com/photo-1524813686514-a57563d77965?w=800&amp;h=600&amp;fit=crop'); background-size: cover; background-position: center;">
         <div class="aerial-map-pin"></div>
       </div>
       <div class="aerial-cards">
@@ -240,12 +240,12 @@
             <div class="property-section-title">Owner & Legal Information</div>
           </div>
           <div class="property-grid">
-            <div class="property-item"><span class="property-item-label">Primary Owner</span><span class="property-item-value">{{ property.owner_name | default('-') }}</span></div>
-            <div class="property-item"><span class="property-item-label">APN</span><span class="property-item-value">{{ property.apn | default('-') }}</span></div>
-            <div class="property-item"><span class="property-item-label">Secondary Owner</span><span class="property-item-value">{{ property.secondary_owner | default('-') }}</span></div>
-            <div class="property-item"><span class="property-item-label">County</span><span class="property-item-value">{{ property.county | default('-') }}</span></div>
-            <div class="property-item"><span class="property-item-label">Site Address</span><span class="property-item-value">{{ property.street_address }}, {{ property.city }}</span></div>
-            <div class="property-item"><span class="property-item-label">Legal</span><span class="property-item-value">{{ property.legal_description | default('-') }}</span></div>
+            <div class="property-item"><span class="property-item-label">Primary Owner</span><span class="property-item-value">HERNANDEZ GERARDO J</span></div>
+            <div class="property-item"><span class="property-item-label">APN</span><span class="property-item-value">8381-021-001</span></div>
+            <div class="property-item"><span class="property-item-label">Secondary Owner</span><span class="property-item-value">MENDOZA YESSICA S</span></div>
+            <div class="property-item"><span class="property-item-label">County</span><span class="property-item-value">LOS ANGELES</span></div>
+            <div class="property-item"><span class="property-item-label">Site Address</span><span class="property-item-value">1358 5th Street, La Verne</span></div>
+            <div class="property-item"><span class="property-item-label">Legal</span><span class="property-item-value">LOT 44 TR#6654</span></div>
           </div>
         </div>
         <div class="property-section">
@@ -254,14 +254,14 @@
             <div class="property-section-title">Property Specifications</div>
           </div>
           <div class="property-grid">
-            <div class="property-item"><span class="property-item-label">Bedrooms</span><span class="property-item-value">{{ property.bedrooms | default('-') }}</span></div>
-            <div class="property-item"><span class="property-item-label">Year Built</span><span class="property-item-value">{{ property.year_built | default('-') }}</span></div>
-            <div class="property-item"><span class="property-item-label">Bathrooms</span><span class="property-item-value">{{ property.bathrooms | default('-') }}</span></div>
-            <div class="property-item"><span class="property-item-label">Property Type</span><span class="property-item-value">{{ property.property_type | default('Single Family') }}</span></div>
-            <div class="property-item"><span class="property-item-label">Square Feet</span><span class="property-item-value">{{ property.sqft | default('-') | int | format_number }}</span></div>
-            <div class="property-item"><span class="property-item-label">Zoning</span><span class="property-item-value">{{ property.zoning | default('-') }}</span></div>
-            <div class="property-item"><span class="property-item-label">Lot Size</span><span class="property-item-value">{{ property.lot_size | default('-') | int | format_number }} sq ft</span></div>
-            <div class="property-item"><span class="property-item-label">Pool/Spa</span><span class="property-item-value">{{ property.pool | default('None') }}</span></div>
+            <div class="property-item"><span class="property-item-label">Bedrooms</span><span class="property-item-value">2</span></div>
+            <div class="property-item"><span class="property-item-label">Year Built</span><span class="property-item-value">1949</span></div>
+            <div class="property-item"><span class="property-item-label">Bathrooms</span><span class="property-item-value">1.0</span></div>
+            <div class="property-item"><span class="property-item-label">Property Type</span><span class="property-item-value">Single Family Residential</span></div>
+            <div class="property-item"><span class="property-item-label">Square Feet</span><span class="property-item-value">786</span></div>
+            <div class="property-item"><span class="property-item-label">Zoning</span><span class="property-item-value">LVPR4.5D*</span></div>
+            <div class="property-item"><span class="property-item-label">Lot Size</span><span class="property-item-value">6,155 sq ft</span></div>
+            <div class="property-item"><span class="property-item-label">Pool/Spa</span><span class="property-item-value">None</span></div>
           </div>
         </div>
         <div class="property-section">
@@ -270,10 +270,10 @@
             <div class="property-section-title">Tax & Assessment</div>
           </div>
           <div class="property-grid">
-            <div class="property-item"><span class="property-item-label">Assessed Value</span><span class="property-item-value">{{ property.assessed_value | format_currency }}</span></div>
-            <div class="property-item"><span class="property-item-label">Annual Tax</span><span class="property-item-value">{{ property.tax_amount | format_currency }}</span></div>
-            <div class="property-item"><span class="property-item-label">Land Value</span><span class="property-item-value">{{ property.land_value | format_currency }}</span></div>
-            <div class="property-item"><span class="property-item-label">Tax Year</span><span class="property-item-value">{{ property.tax_year | default('-') }}</span></div>
+            <div class="property-item"><span class="property-item-label">Assessed Value</span><span class="property-item-value">$428,248</span></div>
+            <div class="property-item"><span class="property-item-label">Annual Tax</span><span class="property-item-value">$5,198</span></div>
+            <div class="property-item"><span class="property-item-label">Land Value</span><span class="property-item-value">$337,378</span></div>
+            <div class="property-item"><span class="property-item-label">Tax Year</span><span class="property-item-value">2024</span></div>
           </div>
         </div>
       </div>
@@ -286,25 +286,40 @@
       <div class="analysis-chart">
         <div class="chart-header"><div class="chart-title">Recent Sales Activity</div><span class="pill">Last 12 Months</span></div>
         <div class="chart-bars">
-          {% for comp in comparables[:4] %}
+          
           <div class="chart-bar-wrapper">
-            <div class="chart-bar" style="height: {{ [40, (comp.sale_price / 5000) | int] | max }}px;"></div>
-            <div class="chart-bar-label">{{ comp.sold_date | default('-') }}</div>
+            <div class="chart-bar" style="height: 126px;"></div>
+            <div class="chart-bar-label">5/10/23</div>
           </div>
-          {% endfor %}
+          
+          <div class="chart-bar-wrapper">
+            <div class="chart-bar" style="height: 127px;"></div>
+            <div class="chart-bar-label">3/15/23</div>
+          </div>
+          
+          <div class="chart-bar-wrapper">
+            <div class="chart-bar" style="height: 94px;"></div>
+            <div class="chart-bar-label">4/25/22</div>
+          </div>
+          
+          <div class="chart-bar-wrapper">
+            <div class="chart-bar" style="height: 118px;"></div>
+            <div class="chart-bar-label">4/8/22</div>
+          </div>
+          
         </div>
       </div>
       <div class="analysis-table-wrap">
         <table class="analysis-table">
           <thead><tr><th>Metric</th><th>Subject</th><th>Low</th><th>Medium</th><th>High</th></tr></thead>
           <tbody>
-            <tr><td>Distance</td><td>{{ stats.piq.distance | default('0') }}</td><td>{{ stats.low.distance | default('-') }}</td><td>{{ stats.medium.distance | default('-') }}</td><td>{{ stats.high.distance | default('-') }}</td></tr>
-            <tr><td>Living Area</td><td>{{ stats.piq.sqft | default('-') }}</td><td>{{ stats.low.sqft | default('-') }}</td><td>{{ stats.medium.sqft | default('-') }}</td><td>{{ stats.high.sqft | default('-') }}</td></tr>
-            <tr><td>Price/Sq.Ft.</td><td>{{ stats.piq.price_per_sqft | format_currency }}</td><td>{{ stats.low.price_per_sqft | format_currency }}</td><td>{{ stats.medium.price_per_sqft | format_currency }}</td><td>{{ stats.high.price_per_sqft | format_currency }}</td></tr>
-            <tr><td>Year Built</td><td>{{ stats.piq.year_built | default('-') }}</td><td>{{ stats.low.year_built | default('-') }}</td><td>{{ stats.medium.year_built | default('-') }}</td><td>{{ stats.high.year_built | default('-') }}</td></tr>
-            <tr><td>Bedrooms</td><td>{{ stats.piq.bedrooms | default('-') }}</td><td>{{ stats.low.bedrooms | default('-') }}</td><td>{{ stats.medium.bedrooms | default('-') }}</td><td>{{ stats.high.bedrooms | default('-') }}</td></tr>
+            <tr><td>Distance</td><td>0</td><td>0.24</td><td>0.54</td><td>0.58</td></tr>
+            <tr><td>Living Area</td><td>786</td><td>698</td><td>912</td><td>940</td></tr>
+            <tr><td>Price/Sq.Ft.</td><td>$469</td><td>$610</td><td>$696</td><td>$845</td></tr>
+            <tr><td>Year Built</td><td>1949</td><td>1910</td><td>1952</td><td>1953</td></tr>
+            <tr><td>Bedrooms</td><td>2</td><td>1</td><td>3</td><td>3</td></tr>
           </tbody>
-          <tfoot><tr><td>Sale Price</td><td>{{ stats.piq.price | format_currency }}</td><td>{{ stats.low.price | format_currency }}</td><td>{{ stats.medium.price | format_currency }}</td><td>{{ stats.high.price | format_currency }}</td></tr></tfoot>
+          <tfoot><tr><td>Sale Price</td><td>$369,000</td><td>$470,000</td><td>$610,750</td><td>$635,000</td></tr></tfoot>
         </table>
       </div>
       <div class="page-footer"><div class="brand"><span class="brand-dot"></span>Modern Collection</div><div class="num">05</div></div>
@@ -314,22 +329,67 @@
     <section class="page comparables">
       <div class="property-header"><div><span class="pill">Recent Transactions</span><h2 class="property-title" style="margin-top:12px;">Sales Comparables</h2></div></div>
       <div class="comp-grid">
-        {% for comp in comparables[:4] %}
+        
         <div class="comp-card">
-          <div class="comp-card-image" {% if comp.map_image_url %}style="background-image: url('{{ comp.map_image_url }}'); background-size: cover; background-position: center;"{% endif %}>
-            <div class="comp-card-price">{{ comp.sale_price | format_currency }}</div>
+          <div class="comp-card-image" style="background-image: url('https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=400&amp;h=300&amp;fit=crop'); background-size: cover; background-position: center;">
+            <div class="comp-card-price">$631,500</div>
           </div>
           <div class="comp-card-body">
-            <div class="comp-card-address"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>{{ comp.address }}</div>
+            <div class="comp-card-address"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>1889 Bonita Ave, La Verne</div>
             <div class="comp-card-stats">
-              <div class="comp-stat"><span class="comp-stat-label">Sold</span><span class="comp-stat-value">{{ comp.sold_date }}</span></div>
-              <div class="comp-stat"><span class="comp-stat-label">Sq.Ft.</span><span class="comp-stat-value">{{ comp.sqft | format_number }}</span></div>
-              <div class="comp-stat"><span class="comp-stat-label">Bed/Bath</span><span class="comp-stat-value">{{ comp.bedrooms }}/{{ comp.bathrooms }}</span></div>
-              <div class="comp-stat"><span class="comp-stat-label">$/Sq.Ft.</span><span class="comp-stat-value">{{ comp.price_per_sqft | format_currency }}</span></div>
+              <div class="comp-stat"><span class="comp-stat-label">Sold</span><span class="comp-stat-value">5/10/23</span></div>
+              <div class="comp-stat"><span class="comp-stat-label">Sq.Ft.</span><span class="comp-stat-value">940</span></div>
+              <div class="comp-stat"><span class="comp-stat-label">Bed/Bath</span><span class="comp-stat-value">2/1</span></div>
+              <div class="comp-stat"><span class="comp-stat-label">$/Sq.Ft.</span><span class="comp-stat-value">$671</span></div>
             </div>
           </div>
         </div>
-        {% endfor %}
+        
+        <div class="comp-card">
+          <div class="comp-card-image" style="background-image: url('https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=400&amp;h=300&amp;fit=crop'); background-size: cover; background-position: center;">
+            <div class="comp-card-price">$635,000</div>
+          </div>
+          <div class="comp-card-body">
+            <div class="comp-card-address"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>1507 2nd St, La Verne</div>
+            <div class="comp-card-stats">
+              <div class="comp-stat"><span class="comp-stat-label">Sold</span><span class="comp-stat-value">3/15/23</span></div>
+              <div class="comp-stat"><span class="comp-stat-label">Sq.Ft.</span><span class="comp-stat-value">912</span></div>
+              <div class="comp-stat"><span class="comp-stat-label">Bed/Bath</span><span class="comp-stat-value">3/1</span></div>
+              <div class="comp-stat"><span class="comp-stat-label">$/Sq.Ft.</span><span class="comp-stat-value">$696</span></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="comp-card">
+          <div class="comp-card-image" style="background-image: url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&amp;h=300&amp;fit=crop'); background-size: cover; background-position: center;">
+            <div class="comp-card-price">$470,000</div>
+          </div>
+          <div class="comp-card-body">
+            <div class="comp-card-address"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>1845 Walnut St, La Verne</div>
+            <div class="comp-card-stats">
+              <div class="comp-stat"><span class="comp-stat-label">Sold</span><span class="comp-stat-value">4/25/22</span></div>
+              <div class="comp-stat"><span class="comp-stat-label">Sq.Ft.</span><span class="comp-stat-value">770</span></div>
+              <div class="comp-stat"><span class="comp-stat-label">Bed/Bath</span><span class="comp-stat-value">3/1</span></div>
+              <div class="comp-stat"><span class="comp-stat-label">$/Sq.Ft.</span><span class="comp-stat-value">$610</span></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="comp-card">
+          <div class="comp-card-image" style="background-image: url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&amp;h=300&amp;fit=crop'); background-size: cover; background-position: center;">
+            <div class="comp-card-price">$590,000</div>
+          </div>
+          <div class="comp-card-body">
+            <div class="comp-card-address"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>1848 1st St, La Verne</div>
+            <div class="comp-card-stats">
+              <div class="comp-stat"><span class="comp-stat-label">Sold</span><span class="comp-stat-value">4/8/22</span></div>
+              <div class="comp-stat"><span class="comp-stat-label">Sq.Ft.</span><span class="comp-stat-value">698</span></div>
+              <div class="comp-stat"><span class="comp-stat-label">Bed/Bath</span><span class="comp-stat-value">1/1</span></div>
+              <div class="comp-stat"><span class="comp-stat-label">$/Sq.Ft.</span><span class="comp-stat-value">$845</span></div>
+            </div>
+          </div>
+        </div>
+        
       </div>
       <div class="page-footer"><div class="brand"><span class="brand-dot"></span>Modern Collection</div><div class="num">06</div></div>
     </section>
@@ -337,17 +397,17 @@
     <!-- PAGE 7: RANGE -->
     <section class="page range">
       <div class="property-header"><div><span class="pill">Valuation Summary</span><h2 class="property-title" style="margin-top:12px;">Range of Sales</h2></div></div>
-      <div class="range-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}></div>
+      <div class="range-map" style="background-image: url('https://images.unsplash.com/photo-1524813686514-a57563d77965?w=800&amp;h=600&amp;fit=crop'); background-size: cover; background-position: center;"></div>
       <div class="range-stats">
-        <div class="range-stat"><div class="range-stat-num">{{ '%02d' | format(stats.total_comps | default(0)) }}</div><div class="range-stat-label">Total Comps</div></div>
-        <div class="range-stat"><div class="range-stat-num">{{ stats.avg_sqft | default(0) | int }}</div><div class="range-stat-label">Avg. Sq.Ft.</div></div>
-        <div class="range-stat"><div class="range-stat-num">{{ '%02d' | format(stats.avg_beds | default(0) | int) }}</div><div class="range-stat-label">Avg. Beds</div></div>
-        <div class="range-stat"><div class="range-stat-num">{{ '%02d' | format(stats.avg_baths | default(0) | int) }}</div><div class="range-stat-label">Avg. Baths</div></div>
+        <div class="range-stat"><div class="range-stat-num">04</div><div class="range-stat-label">Total Comps</div></div>
+        <div class="range-stat"><div class="range-stat-num">830</div><div class="range-stat-label">Avg. Sq.Ft.</div></div>
+        <div class="range-stat"><div class="range-stat-num">02</div><div class="range-stat-label">Avg. Beds</div></div>
+        <div class="range-stat"><div class="range-stat-num">01</div><div class="range-stat-label">Avg. Baths</div></div>
       </div>
       <div class="range-slider">
         <div class="range-slider-header">
-          <div class="range-slider-price low">{{ stats.price_low | format_currency_short }}</div>
-          <div class="range-slider-price">{{ stats.price_high | format_currency_short }}</div>
+          <div class="range-slider-price low">$470k</div>
+          <div class="range-slider-price">$635k</div>
         </div>
         <div class="range-slider-track">
           <div class="range-slider-dot" style="left:5%;"></div>

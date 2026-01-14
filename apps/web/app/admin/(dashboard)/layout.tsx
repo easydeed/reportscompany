@@ -13,6 +13,7 @@ import {
   LogOut,
   Calendar,
   Activity,
+  Home,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { createServerApi } from "@/lib/api-server"
@@ -48,8 +49,9 @@ const navItems = [
   { href: "/admin/users", icon: Users, label: "Users" },
   { href: "/admin/affiliates", icon: Building2, label: "Title Companies" },
   { href: "/admin/schedules", icon: Calendar, label: "Schedules" },
+  { href: "/admin/property-reports", icon: Home, label: "Property Reports" },
   { href: "/admin/plans", icon: CreditCard, label: "Plans & Pricing" },
-  { href: "/admin/reports", icon: FileText, label: "Reports" },
+  { href: "/admin/reports", icon: FileText, label: "Market Reports" },
   { href: "/admin/emails", icon: Mail, label: "Email Logs" },
   { href: "/admin/settings", icon: Settings, label: "Settings" },
 ]

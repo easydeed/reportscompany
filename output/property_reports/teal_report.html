@@ -51,20 +51,28 @@
     @media print{
       body{ background:#fff; margin:0; padding:0; }
       .sheet{ padding:0; gap:0; }
-      .page{ box-shadow:none; margin:0; border-radius:0; }
-      .page:last-child{ page-break-after: avoid; }
+      .page{ box-shadow:none; margin:0; border-radius:0; page-break-after: always; page-break-inside: avoid; }
+      .page:last-child{ page-break-after: auto; }
     }
 
     /* ===== SHEET / PAGE ===== */
     .sheet{
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      gap:16px;
-      padding:18px 12px 40px;
+      display:block;
+      width: var(--page-w);
+      margin: 0 auto;
+      padding:16px 0 40px;
     }
     @media print{
-      .sheet{ gap:0; padding:0; }
+      .sheet{ padding:0; margin:0; }
+    }
+    @media screen{
+      .sheet{
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        gap:16px;
+        width: auto;
+      }
     }
     .page{
       width: var(--page-w);
@@ -76,9 +84,17 @@
       overflow: hidden;
       page-break-after: always;
       page-break-inside: avoid;
+      margin: 0 auto 16px;
+    }
+    @media print{
+      .page{ margin:0; border-radius:0; box-shadow:none; }
     }
     .page:last-child{
       page-break-after: auto;
+      margin-bottom: 0;
+    }
+    .page.cover{
+      padding-top: 0;
     }
 
     /* ===== UTIL ===== */
@@ -154,124 +170,112 @@
     .mini-bars span:nth-child(2){ width: 10px; background: rgba(52,209,195,.55); }
 
     /* ===== COVER PAGE ===== */
-    .cover-bg{
-      inset:0;
-      background:
-        linear-gradient(0deg, rgba(9,15,35,.25), rgba(9,15,35,.25)),
-        radial-gradient(1200px 700px at 65% 40%, rgba(255,255,255,.18), rgba(255,255,255,0) 55%),
-        linear-gradient(120deg, rgba(255,255,255,.4), rgba(255,255,255,0));
-    }
     .cover-photo{
       inset:0;
-      background: #cfd6e6; /* placeholder */
-      /* Drop in your real image:
-      background-image: url('cover.jpg');
-      */
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-2) 100%);
       background-size: cover;
       background-position:center;
-      filter: saturate(.95) contrast(.95);
     }
-    .frame{
-      width: 77%;
-      height: 72%;
-      left: 11.5%;
-      top: 9.5%;
-      border: 5px solid rgba(52,209,195,.75);
-      opacity: .85;
+    .cover-photo.has-image{
+      filter: brightness(.6) saturate(1.1);
     }
-
-    .cover-geo{
+    .cover-overlay{
       inset:0;
-      pointer-events:none;
+      background: linear-gradient(180deg, rgba(15,26,69,.3) 0%, rgba(15,26,69,.7) 60%, rgba(15,26,69,.95) 100%);
     }
-    .cover-geo .teal-block{
+    .cover-accent{
+      position:absolute;
       left:0; top:0;
-      width: 50%;
-      height: 30%;
-      background: rgba(52,209,195,.88);
+      width: 100%;
+      height: 4.5in;
+      background: linear-gradient(135deg, rgba(52,209,195,.15) 0%, transparent 60%);
     }
-    .cover-geo .navy-slope{
-      left:0; top: 22%;
-      width: 56%;
-      height: 45%;
-      background: rgba(24,35,92,.92);
-      clip-path: polygon(0 0, 100% 18%, 100% 100%, 0 100%);
+    .cover-stripe{
+      position:absolute;
+      left:0; bottom: 2.4in;
+      width: 100%;
+      height: 4px;
+      background: var(--teal);
     }
 
+    .cover-content{
+      position:absolute;
+      inset: 0.8in 0.7in 2.5in;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+    .cover-label{
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing:.2em;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-bottom: 16px;
+    }
     .cover-title{
-      left: 0.75in;
-      top: 1.2in;
-      color: var(--navy);
+      color:#fff;
+    }
+    .cover-title h1{
+      font-size: 64px;
+      font-weight: 900;
+      line-height: 1;
+      margin:0;
+      text-transform: uppercase;
+      letter-spacing:.02em;
     }
     .cover-title .report{
       display:block;
-      color:#fff;
       font-weight: 300;
-      letter-spacing: .02em;
-      margin-top: 6px;
-    }
-
-    .cover-address{
-      left: 1.25in;
-      top: 3.5in;
-      color:#fff;
-      z-index: 5;
-      width: 4.7in;
-    }
-    .pin-row{
-      display:flex;
-      align-items:center;
-      gap:14px;
-      margin-bottom: 10px;
-    }
-    .pin{
-      width: 38px; height: 38px;
-      border-radius: 50%;
-      background: rgba(255,255,255,.15);
-      display:grid; place-items:center;
-      border: 2px solid rgba(255,255,255,.25);
-    }
-    .pin svg{ width: 18px; height: 18px; fill:#fff; }
-    .addr-big{
-      font-size: 36px;
-      font-weight: 900;
-      letter-spacing:.02em;
+      font-size: 58px;
       color: var(--teal);
+      margin-top: 4px;
+    }
+    .cover-divider{
+      width: 120px;
+      height: 4px;
+      background: var(--teal);
+      margin: 28px 0;
+      border-radius: 4px;
+    }
+    .cover-address{
+      color:#fff;
+    }
+    .addr-big{
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing:.02em;
+      color: #fff;
       margin:0;
     }
     .addr-sub{
       font-size: 14px;
-      letter-spacing:.12em;
+      letter-spacing:.15em;
       text-transform: uppercase;
       margin: 10px 0 0;
-      opacity:.9;
-    }
-    .addr-rule{
-      width: 2.6in;
-      height: 3px;
-      background: rgba(255,255,255,.45);
-      margin-top: 10px;
-      border-radius: 4px;
+      opacity:.8;
+      font-weight: 500;
     }
 
     .cover-footer{
       left:0; right:0;
       bottom:0;
-      height: 2.3in;
+      height: 2.4in;
       background: #fff;
-      padding: 0.45in 0.6in;
+      padding: 0.4in 0.6in;
       display:grid;
-      grid-template-columns: 1.5in 1fr 2.2in;
+      grid-template-columns: 1.1in 1fr auto;
       align-items:center;
-      gap: 18px;
+      gap: 20px;
     }
     .headshot{
-      width: 1.25in;
-      height: 1.25in;
+      width: 1in;
+      height: 1in;
       border-radius: 50%;
       background: #d1d5db;
       overflow:hidden;
       box-shadow: 0 8px 20px rgba(0,0,0,.12);
+      border: 3px solid var(--teal);
     }
     .headshot img{
       width:100%; height:100%;
@@ -280,122 +284,153 @@
     .agent-meta{
       display:flex;
       flex-direction:column;
-      gap: 7px;
+      gap: 5px;
     }
-    .agent-name{ font-weight: 900; letter-spacing:.03em; }
-    .agent-role{ color: var(--teal-2); font-weight: 600; font-size: 13px; margin-top:-2px; }
+    .agent-name{ font-weight: 900; font-size: 15px; letter-spacing:.03em; color: var(--navy); }
+    .agent-role{ color: var(--teal-2); font-weight: 600; font-size: 12px; }
     .agent-line{
       height: 2px;
-      width: 2.25in;
-      background: var(--teal-2);
-      opacity:.85;
+      width: 2in;
+      background: var(--teal);
+      margin: 4px 0;
       border-radius: 6px;
     }
     .contact{
       display:flex;
-      align-items:flex-start;
-      gap:10px;
-      font-size: 12px;
-      color:#111827;
+      align-items:center;
+      gap:8px;
+      font-size: 11px;
+      color:#374151;
     }
     .ico{
-      width: 18px; height: 18px;
+      width: 16px; height: 16px;
       border-radius: 50%;
-      border: 1px solid #e5e7eb;
+      background: var(--teal);
+      color:#fff;
       display:grid; place-items:center;
-      color:#111827;
-      flex: 0 0 18px;
-      font-size: 11px;
+      flex: 0 0 16px;
+      font-size: 9px;
     }
-    .signature{
-      justify-self:end;
-      font-size: 70px;
-      line-height: .9;
-      color: var(--teal-2);
-      font-weight: 300;
-      font-family: "Montserrat", system-ui, sans-serif;
-      opacity:.9;
-      transform: rotate(-2deg);
+    .cover-logo{
+      text-align:right;
+    }
+    .cover-logo-text{
+      font-size: 36px;
+      line-height: 1;
+      color: var(--teal);
+      font-weight: 800;
+      letter-spacing:.02em;
+    }
+    .cover-logo-tagline{
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing:.1em;
+      margin-top: 4px;
     }
 
     /* ===== CONTENTS PAGE ===== */
-    .contents-photo{
+    .contents-bg{
       inset:0;
-      background: #c9ccda;
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-2) 100%);
       background-size: cover;
       background-position:center;
-      filter: grayscale(.25) saturate(.8) contrast(.92);
     }
-    .contents-tint{
+    .contents-bg.has-image{
+      filter: brightness(.4) saturate(1.1);
+    }
+    .contents-overlay{
       inset:0;
-      background: rgba(15,26,69,.55);
+      background: linear-gradient(135deg, rgba(15,26,69,.7) 0%, rgba(15,26,69,.85) 100%);
     }
     .contents-panel{
-      right: .55in;
-      top: .85in;
-      width: 4.35in;
-      height: 9.3in;
-      background: rgba(52,209,195,.78);
-      clip-path: polygon(0 6%, 100% 0, 100% 94%, 0 100%);
-      padding: .55in .45in .55in .45in;
-      color: #0b1228;
-    }
-    .contents-top{
       position:absolute;
-      left:0; right:0;
-      top:0;
-      height: 1.8in;
-      background: rgba(24,35,92,.8);
-      clip-path: polygon(0 0, 100% 0, 100% 70%, 0 100%);
-      padding: .45in .45in 0.2in;
-      color:#fff;
+      right: .6in;
+      top: .7in;
+      bottom: .7in;
+      width: 4.2in;
+      background: rgba(255,255,255,.97);
+      border-radius: 16px;
+      padding: .5in .45in;
+      box-shadow: 0 20px 60px rgba(0,0,0,.3);
     }
-    .contents-top .title{
-      font-size: 44px;
+    .contents-header{
+      margin-bottom: .4in;
+      padding-bottom: .25in;
+      border-bottom: 3px solid var(--teal);
+    }
+    .contents-header .title{
+      font-size: 38px;
       font-weight: 900;
-      color: var(--teal);
+      color: var(--navy);
       letter-spacing:.04em;
       text-transform: uppercase;
       margin:0;
     }
-    .contents-top .subtitle{
+    .contents-header .subtitle{
       margin: 8px 0 0;
-      font-size: 12px;
-      letter-spacing:.14em;
+      font-size: 11px;
+      letter-spacing:.12em;
       text-transform: uppercase;
-      opacity:.9;
+      color: var(--muted);
+      font-weight: 600;
     }
 
     .toc{
-      margin-top: 1.25in;
       display:flex;
       flex-direction:column;
-      gap: 18px;
-      font-weight: 600;
+      gap: 0;
     }
     .toc-item{
-      display:grid;
-      grid-template-columns: 1fr auto;
-      align-items:baseline;
-      gap: 14px;
-      font-size: 18px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
     }
-    .toc-item .dots{
-      border-bottom: 2px dotted rgba(15,26,69,.45);
-      transform: translateY(-6px);
-      margin: 0 10px 0 10px;
+    .toc-item:last-child{
+      border-bottom: none;
+    }
+    .toc-item .name{
+      font-weight: 600;
+      color: var(--ink);
     }
     .toc-item .page{
-      font-size: 30px;
-      font-weight: 900;
-      color: #fff;
-      letter-spacing:.02em;
-      text-shadow: 0 6px 18px rgba(0,0,0,.18);
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--teal);
+      background: rgba(52,209,195,.12);
+      padding: 4px 10px;
+      border-radius: 6px;
     }
-    .toc-left{
-      display:flex;
-      align-items:baseline;
-      gap: 10px;
+    
+    .contents-left{
+      position:absolute;
+      left: .6in;
+      top: 50%;
+      transform: translateY(-50%);
+      color:#fff;
+      width: 2.8in;
+    }
+    .contents-left-label{
+      font-size: 12px;
+      letter-spacing:.2em;
+      text-transform: uppercase;
+      color: var(--teal);
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .contents-left-title{
+      font-size: 42px;
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+    .contents-left-desc{
+      font-size: 13px;
+      line-height: 1.6;
+      opacity: .85;
     }
 
     /* ===== DARK HERO PAGE (Aerial) ===== */
@@ -499,18 +534,18 @@
     }
 
     .block{
-      margin-top: 18px;
+      margin-top: 12px;
     }
     .block-head{
       display:inline-block;
       background: var(--navy);
       color:#fff;
-      padding: 12px 18px;
-      border-radius: 0 0 16px 0;
+      padding: 8px 14px;
+      border-radius: 0 0 12px 0;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing:.06em;
-      font-size: 14px;
+      font-size: 12px;
       width: fit-content;
       clip-path: polygon(0 0, 94% 0, 100% 50%, 94% 100%, 0 100%);
     }
@@ -518,23 +553,55 @@
     .grid-2{
       display:grid;
       grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-top: 12px;
+      gap: 12px;
+      margin-top: 8px;
+    }
+    
+    /* Page footer */
+    .page-footer{
+      position:absolute;
+      bottom: 0.3in;
+      left: var(--pad);
+      right: var(--pad);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      font-size: 10px;
+      color: var(--muted);
+      padding-top: 8px;
+      border-top: 1px solid var(--line);
+    }
+    .page-footer .brand{
+      display:flex;
+      align-items:center;
+      gap: 6px;
+      font-weight: 700;
+      color: var(--teal);
+    }
+    .page-footer .num{
+      font-weight: 800;
+      color: var(--navy);
     }
     .kv-table{
       width:100%;
       border-collapse: separate;
-      border-spacing: 0 10px;
-      font-size: 12px;
+      border-spacing: 0 6px;
+      font-size: 11px;
     }
     .kv-table td{
-      padding: 10px 12px;
+      padding: 7px 10px;
       border-radius: 6px;
+    }
+    .kv-table td:first-child{
+      border-radius: 6px 0 0 6px;
+    }
+    .kv-table td:last-child{
+      border-radius: 0 6px 6px 0;
     }
     .kv-table tr:nth-child(odd) td{ background: var(--rowA); }
     .kv-table tr:nth-child(even) td{ background: var(--rowB); }
     .kv-table td.key{
-      width: 46%;
+      width: 44%;
       color:#111827;
       font-weight: 700;
       opacity:.92;
@@ -608,7 +675,7 @@
     }
     .analysis-table{
       margin-top: 18px;
-      border-radius: 14px;
+      border-radius: 16px;
       overflow:hidden;
       border: 1px solid var(--line);
     }
@@ -625,6 +692,12 @@
       font-weight: 800;
       letter-spacing:.02em;
     }
+    .analysis-table thead th:first-child{
+      border-radius: 14px 0 0 0;
+    }
+    .analysis-table thead th:last-child{
+      border-radius: 0 14px 0 0;
+    }
     .analysis-table tbody td{
       padding: 12px 14px;
       border-top: 1px solid rgba(255,255,255,.35);
@@ -638,6 +711,12 @@
       font-weight: 900;
       border-top: 0;
     }
+    .analysis-table tfoot td:first-child{
+      border-radius: 0 0 0 14px;
+    }
+    .analysis-table tfoot td:last-child{
+      border-radius: 0 0 14px 0;
+    }
 
     /* ===== SALES COMPS PAGE ===== */
     .comps-grid{
@@ -647,18 +726,24 @@
       gap: 18px;
     }
     .comp-card{
-      border-radius: 14px;
+      border-radius: 16px;
       overflow:hidden;
       border: 1px solid var(--line);
       background:#fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,.06);
     }
     .comp-map{
-      height: 1.55in;
+      height: 1.8in;
       background:
         linear-gradient(0deg, rgba(0,0,0,.06), rgba(0,0,0,.06)),
         repeating-linear-gradient(90deg, #f2f4f8 0 18px, #eef1f7 18px 36px),
         repeating-linear-gradient(0deg, #f2f4f8 0 18px, #eef1f7 18px 36px);
       position: relative;
+    }
+    .comp-map img{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
     .comp-pin{
       width: 44px; height: 44px;
@@ -755,27 +840,30 @@
       margin-top: -2px;
       background: var(--navy);
       color:#fff;
-      padding: 18px 22px;
+      padding: 24px 22px;
       display:grid;
       grid-template-columns: repeat(4,1fr);
       gap: 16px;
-      border-radius: 0 0 12px 12px;
+      border-radius: 0 0 14px 14px;
     }
     .metric{
       text-align:center;
+      padding: 12px 8px;
     }
     .metric .num{
       color: var(--teal);
       font-weight: 900;
-      font-size: 46px;
+      font-size: 48px;
       letter-spacing:.02em;
       line-height: 1;
     }
     .metric .lbl{
-      margin-top: 8px;
+      margin-top: 10px;
       font-weight: 700;
       opacity:.9;
       font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
     .range-slider{
@@ -835,51 +923,41 @@
     <!-- =========================================================
       PAGE 1: COVER
     ========================================================== -->
-    <section class="page">
-      <div class="abs cover-photo"></div>
-      <div class="abs cover-bg"></div>
+    <section class="page cover">
+      <div class="abs cover-photo has-image" style="background-image: url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&amp;h=600&amp;fit=crop');"></div>
+      <div class="abs cover-overlay"></div>
+      <div class="cover-accent"></div>
+      <div class="cover-stripe"></div>
 
-      <div class="abs frame"></div>
-
-      <div class="abs cover-geo">
-        <div class="abs teal-block"></div>
-        <div class="abs navy-slope"></div>
-      </div>
-
-      <div class="abs cover-title">
-        <h1 class="h1 u-upper">SELLERS <span class="report">REPORT</span></h1>
-      </div>
-
-      <div class="abs cover-address">
-        <div class="pin-row">
-          <div class="pin" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M12 3l9 7v11a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10l9-7z"/></svg>
-          </div>
-          <div>
-            <p class="addr-big">{{ property.street_address }}</p>
-            <div class="addr-rule"></div>
-            <p class="addr-sub">{{ property.city }}, {{ property.state }} {{ property.zip_code }}</p>
-          </div>
+      <div class="cover-content">
+        <div class="cover-label">Exclusively Prepared For You</div>
+        <div class="cover-title">
+          <h1>SELLER'S <span class="report">REPORT</span></h1>
+        </div>
+        <div class="cover-divider"></div>
+        <div class="cover-address">
+          <p class="addr-big">1358 5th Street</p>
+          <p class="addr-sub">La Verne, CA 91750</p>
         </div>
       </div>
 
       <footer class="abs cover-footer">
         <div class="headshot">
-          {% if agent.photo_url %}<img src="{{ agent.photo_url }}" alt="{{ agent.name }} headshot" />{% endif %}
+          
         </div>
 
         <div class="agent-meta">
-          <div class="agent-name u-upper">{{ agent.name }}</div>
-          <div class="agent-role">{{ agent.title }}</div>
-          <div class="small u-upper" style="font-weight:700;">{{ agent.license }}</div>
+          <div class="agent-name">Zoe Noelle</div>
+          <div class="agent-role">Real Estate Specialist</div>
           <div class="agent-line"></div>
-
-          <div class="contact"><span class="ico">☎</span><span>{{ agent.phone }}</span></div>
-          <div class="contact"><span class="ico">✉</span><span>{{ agent.email }}</span></div>
-          <div class="contact"><span class="ico">⌂</span><span>{{ agent.address }}</span></div>
+          <div class="contact"><span class="ico">☎</span><span>(213) 309-7286</span></div>
+          <div class="contact"><span class="ico">✉</span><span>zoe@trendyreports.com</span></div>
         </div>
 
-        <div class="signature">{{ agent.company_name | default('Flare') }}</div>
+        <div class="cover-logo">
+          <div class="cover-logo-text">TR</div>
+          <div class="cover-logo-tagline">Your Property Partner</div>
+        </div>
       </footer>
     </section>
 
@@ -887,73 +965,27 @@
       PAGE 2: CONTENTS
     ========================================================== -->
     <section class="page">
-      <div class="abs contents-photo"></div>
-      <div class="abs contents-tint"></div>
+      <div class="abs contents-bg has-image" style="background-image: url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&amp;h=600&amp;fit=crop');"></div>
+      <div class="abs contents-overlay"></div>
 
-      <div class="abs contents-panel">
-        <div class="abs contents-top">
+      <div class="contents-left">
+        <div class="contents-left-label">Your Report</div>
+        <div class="contents-left-title">What's Inside</div>
+        <div class="contents-left-desc">A comprehensive analysis of your property, local market trends, and comparable sales to help you make informed decisions.</div>
+      </div>
+
+      <div class="contents-panel">
+        <div class="contents-header">
           <div class="title">CONTENTS</div>
-          <div class="subtitle">WHAT IS IN YOUR LISTING PROPOSAL</div>
+          <div class="subtitle">What's in your listing proposal</div>
         </div>
 
-        <div class="toc" style="margin-top:1.75in;">
-          <!-- You can reorder these; the PDF had these items (03–19) -->
-          <div class="toc-item">
-            <div class="toc-left"><span>Aerial Snapshot</span><span class="dots"></span></div>
-            <div class="page">03</div>
-          </div>
-          <div class="toc-item">
-            <div class="toc-left"><span>Property Information</span><span class="dots"></span></div>
-            <div class="page">04</div>
-          </div>
-          <div class="toc-item">
-            <div class="toc-left"><span>Area Sales Analysis</span><span class="dots"></span></div>
-            <div class="page">05</div>
-          </div>
-          <div class="toc-item">
-            <div class="toc-left"><span>Sales Comparables</span><span class="dots"></span></div>
-            <div class="page">06–07</div>
-          </div>
-          <div class="toc-item">
-            <div class="toc-left"><span>Estimated Sales Price</span><span class="dots"></span></div>
-            <div class="page">08</div>
-          </div>
-          <div class="toc-item">
-            <div class="toc-left"><span>Selling Roadmap</span><span class="dots"></span></div>
-            <div class="page">09</div>
-          </div>
-          <div class="toc-item">
-            <div class="toc-left"><span>How Buyers Find Homes</span><span class="dots"></span></div>
-            <div class="page">10</div>
-          </div>
-          <div class="toc-item">
-            <div class="toc-left"><span>Pricing Correctly</span><span class="dots"></span></div>
-            <div class="page">11</div>
-          </div>
-          <div class="toc-item">
-            <div class="toc-left"><span>Average Days On Market</span><span class="dots"></span></div>
-            <div class="page">12</div>
-          </div>
-          <div class="toc-item">
-            <div class="toc-left"><span>Marketing Your Property</span><span class="dots"></span></div>
-            <div class="page">13</div>
-          </div>
-          <div class="toc-item">
-            <div class="toc-left"><span>Analyze &amp; Optimize</span><span class="dots"></span></div>
-            <div class="page">16</div>
-          </div>
-          <div class="toc-item">
-            <div class="toc-left"><span>Negotiation Offers</span><span class="dots"></span></div>
-            <div class="page">17</div>
-          </div>
-          <div class="toc-item">
-            <div class="toc-left"><span>Transaction Process</span><span class="dots"></span></div>
-            <div class="page">18</div>
-          </div>
-          <div class="toc-item">
-            <div class="toc-left"><span>Our Promise</span><span class="dots"></span></div>
-            <div class="page">19</div>
-          </div>
+        <div class="toc">
+          <div class="toc-item"><span class="name">Aerial Snapshot</span><span class="page">03</span></div>
+          <div class="toc-item"><span class="name">Property Information</span><span class="page">04</span></div>
+          <div class="toc-item"><span class="name">Area Sales Analysis</span><span class="page">05</span></div>
+          <div class="toc-item"><span class="name">Sales Comparables</span><span class="page">06</span></div>
+          <div class="toc-item"><span class="name">Estimated Sales Price</span><span class="page">07</span></div>
         </div>
       </div>
     </section>
@@ -962,7 +994,7 @@
       PAGE 3: AERIAL VIEW
     ========================================================== -->
     <section class="page">
-      <div class="abs hero" {% if images.hero %}style="background-image: url('{{ images.hero }}'); background-size: cover;"{% endif %}></div>
+      <div class="abs hero" style="background-image: url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&amp;h=600&amp;fit=crop'); background-size: cover;"></div>
       <div class="abs hero-overlay"></div>
 
       <div class="hero-pad">
@@ -979,7 +1011,7 @@
       </div>
 
       <div class="map-card">
-        <div class="map-placeholder" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}>
+        <div class="map-placeholder" style="background-image: url('https://images.unsplash.com/photo-1524813686514-a57563d77965?w=800&amp;h=600&amp;fit=crop'); background-size: cover; background-position: center;">
           <div class="pin-big" aria-hidden="true"></div>
         </div>
       </div>
@@ -991,7 +1023,7 @@
     <section class="page pad">
       <div class="topline">
         <div>
-          <h2 class="section-title">
+          <h2 class="section-title" style="font-size:28px;">
             PROSPECTIVE PROPERTY
             <span class="mini-bars"><span></span><span></span></span>
           </h2>
@@ -1000,90 +1032,61 @@
       </div>
 
       <div class="block">
-        <div class="block-head">OWNER, ADDRESS &amp; LEGAL DESCRIPTION</div>
-
+        <div class="block-head">OWNER &amp; ADDRESS</div>
         <div class="grid-2">
-          <table class="kv-table" aria-label="Owner and address (left)">
-            <tr><td class="key">Primary Owner:</td><td class="val">{{ property.owner_name | default('-') }}</td></tr>
-            <tr><td class="key">Secondary Owner:</td><td class="val">{{ property.secondary_owner | default('-') }}</td></tr>
-            <tr><td class="key">Site Address:</td><td class="val">{{ property.full_address }}</td></tr>
-            <tr><td class="key">Mailing Address:</td><td class="val">{{ property.mailing_address | default(property.full_address) }}</td></tr>
+          <table class="kv-table">
+            <tr><td class="key">Primary Owner:</td><td class="val">HERNANDEZ GERARDO J</td></tr>
+            <tr><td class="key">Site Address:</td><td class="val">1358 5th St, La Verne, CA 91750</td></tr>
+            <tr><td class="key">APN:</td><td class="val">8381-021-001</td></tr>
           </table>
-
-          <table class="kv-table" aria-label="Owner and address (right)">
-            <tr><td class="key">APN :</td><td class="val">{{ property.apn | default('-') }}</td></tr>
-            <tr><td class="key">County Name:</td><td class="val">{{ property.county | default('-') }}</td></tr>
-            <tr><td class="key">Census Tract:</td><td class="val">{{ property.census_tract | default('-') }}</td></tr>
-            <tr><td class="key">Housing Tract #:</td><td class="val">{{ property.housing_tract | default('-') }}</td></tr>
-            <tr><td class="key">Lot Number:</td><td class="val">{{ property.lot_number | default('-') }}</td></tr>
-            <tr><td class="key">Page Grid:</td><td class="val">{{ property.page_grid | default('-') }}</td></tr>
+          <table class="kv-table">
+            <tr><td class="key">County:</td><td class="val">LOS ANGELES</td></tr>
+            <tr><td class="key">Census Tract:</td><td class="val">4089.00</td></tr>
+            <tr><td class="key">Legal:</td><td class="val">LOT 44 TR#6654</td></tr>
           </table>
-        </div>
-
-        <div class="wide-row">
-          <div class="legal">
-            <b>Brief Legal Description:</b>
-            {{ property.legal_description | default('-') }}
-          </div>
-          <div class="legal" style="background: var(--rowB);">
-            <b>Notes:</b>
-            {{ property.notes | default('-') }}
-          </div>
         </div>
       </div>
 
       <div class="block">
-        <div class="block-head">BEDS, BATHS, &amp; SQUARE FOOTAGE</div>
-        <table class="kv-table" aria-label="Beds baths sqft">
-          <tr>
-            <td class="key">Bedrooms:</td><td class="val">{{ property.bedrooms | default('-') }}</td>
-            <td class="key">Year:</td><td class="val">{{ property.year_built | default('-') }}</td>
-            <td class="key">Square Feet:</td><td class="val">{{ property.sqft | default('-') | int | format_number }}</td>
-          </tr>
-          <tr>
-            <td class="key">Bathrooms:</td><td class="val">{{ property.bathrooms | default('-') }}</td>
-            <td class="key">Garage:</td><td class="val">{{ property.garage | default('-') }}</td>
-            <td class="key">Lot Size:</td><td class="val">{{ property.lot_size | default('-') | int | format_number }}</td>
-          </tr>
-          <tr>
-            <td class="key">Partial Bath:</td><td class="val">{{ property.partial_bath | default('0') }}</td>
-            <td class="key">Fireplace:</td><td class="val">{{ property.fireplace | default('-') }}</td>
-            <td class="key"># of Units:</td><td class="val">{{ property.units | default('0') }}</td>
-          </tr>
-          <tr>
-            <td class="key">Total Rooms:</td><td class="val">{{ property.total_rooms | default('-') }}</td>
-            <td class="key">Pool/Spa:</td><td class="val">{{ property.pool | default('-') }}</td>
-            <td class="key">Zoning:</td><td class="val">{{ property.zoning | default('-') }}</td>
-          </tr>
-          <tr>
-            <td class="key">Property Type:</td><td class="val" colspan="5">{{ property.property_type | default('Single Family Residential') }}</td>
-          </tr>
-          <tr>
-            <td class="key">Use Code:</td><td class="val" colspan="5">{{ property.use_code | default('Single Family Residential') }}</td>
-          </tr>
+        <div class="block-head">PROPERTY DETAILS</div>
+        <div class="grid-2">
+          <table class="kv-table">
+            <tr><td class="key">Bedrooms:</td><td class="val">2</td></tr>
+            <tr><td class="key">Bathrooms:</td><td class="val">1.0</td></tr>
+            <tr><td class="key">Square Feet:</td><td class="val">786</td></tr>
+            <tr><td class="key">Lot Size:</td><td class="val">6,155 sqft</td></tr>
+          </table>
+          <table class="kv-table">
+            <tr><td class="key">Year Built:</td><td class="val">1949</td></tr>
+            <tr><td class="key">Garage:</td><td class="val">1</td></tr>
+            <tr><td class="key">Pool/Spa:</td><td class="val">None</td></tr>
+            <tr><td class="key">Zoning:</td><td class="val">LVPR4.5D*</td></tr>
+          </table>
+        </div>
+        <table class="kv-table" style="margin-top:8px;">
+          <tr><td class="key" style="width:22%;">Property Type:</td><td class="val">Single Family Residential</td></tr>
         </table>
       </div>
 
       <div class="block">
-        <div class="block-head">ASSESSED VALUE &amp; TAX DETAILS</div>
-        <table class="kv-table" aria-label="Tax details">
-          <tr>
-            <td class="key">Assessed Value:</td><td class="val">{{ property.assessed_value | format_currency }}</td>
-            <td class="key">Tax Amount:</td><td class="val">{{ property.tax_amount | format_currency }}</td>
-          </tr>
-          <tr>
-            <td class="key">Land Value:</td><td class="val">{{ property.land_value | format_currency }}</td>
-            <td class="key">Tax Status:</td><td class="val">{{ property.tax_status | default('Current') }}</td>
-          </tr>
-          <tr>
-            <td class="key">Improvement Value:</td><td class="val">{{ property.improvement_value | format_currency }}</td>
-            <td class="key">Tax Rate Area:</td><td class="val">{{ property.tax_rate_area | default('-') }}</td>
-          </tr>
-          <tr>
-            <td class="key">% Improvement:</td><td class="val">{{ property.improvement_pct | default('-') }}</td>
-            <td class="key">Tax Year:</td><td class="val">{{ property.tax_year | default('-') }}</td>
-          </tr>
-        </table>
+        <div class="block-head">TAX &amp; ASSESSMENT</div>
+        <div class="grid-2">
+          <table class="kv-table">
+            <tr><td class="key">Assessed Value:</td><td class="val">$428,248</td></tr>
+            <tr><td class="key">Land Value:</td><td class="val">$337,378</td></tr>
+            <tr><td class="key">Improvement:</td><td class="val">$90,870</td></tr>
+          </table>
+          <table class="kv-table">
+            <tr><td class="key">Tax Amount:</td><td class="val">$5,198/yr</td></tr>
+            <tr><td class="key">Tax Year:</td><td class="val">2024</td></tr>
+            <tr><td class="key">Tax Status:</td><td class="val">Current</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="page-footer">
+        <div class="brand">TrendyReports</div>
+        <div class="num">04</div>
       </div>
     </section>
 
@@ -1130,23 +1133,23 @@
             </tr>
           </thead>
           <tbody>
-            <tr><td>Distance</td><td>{{ stats.piq.distance | default('0') }}</td><td>{{ stats.low.distance | default('-') }}</td><td>{{ stats.medium.distance | default('-') }}</td><td>{{ stats.high.distance | default('-') }}</td></tr>
-            <tr><td>Living Area</td><td>{{ stats.piq.sqft | default('-') }}</td><td>{{ stats.low.sqft | default('-') }}</td><td>{{ stats.medium.sqft | default('-') }}</td><td>{{ stats.high.sqft | default('-') }}</td></tr>
-            <tr><td>Price Per Sqft</td><td>{{ stats.piq.price_per_sqft | format_currency }}</td><td>{{ stats.low.price_per_sqft | format_currency }}</td><td>{{ stats.medium.price_per_sqft | format_currency }}</td><td>{{ stats.high.price_per_sqft | format_currency }}</td></tr>
-            <tr><td>Year Built</td><td>{{ stats.piq.year_built | default('-') }}</td><td>{{ stats.low.year_built | default('-') }}</td><td>{{ stats.medium.year_built | default('-') }}</td><td>{{ stats.high.year_built | default('-') }}</td></tr>
-            <tr><td>Lot Size</td><td>{{ stats.piq.lot_size | format_number }}</td><td>{{ stats.low.lot_size | format_number }}</td><td>{{ stats.medium.lot_size | format_number }}</td><td>{{ stats.high.lot_size | format_number }}</td></tr>
-            <tr><td>Bedrooms</td><td>{{ stats.piq.bedrooms | default('-') }}</td><td>{{ stats.low.bedrooms | default('-') }}</td><td>{{ stats.medium.bedrooms | default('-') }}</td><td>{{ stats.high.bedrooms | default('-') }}</td></tr>
-            <tr><td>Baths</td><td>{{ stats.piq.bathrooms | default('-') }}</td><td>{{ stats.low.bathrooms | default('-') }}</td><td>{{ stats.medium.bathrooms | default('-') }}</td><td>{{ stats.high.bathrooms | default('-') }}</td></tr>
-            <tr><td>Stories</td><td>{{ stats.piq.stories | default('0') }}</td><td>{{ stats.low.stories | default('0') }}</td><td>{{ stats.medium.stories | default('0') }}</td><td>{{ stats.high.stories | default('0') }}</td></tr>
-            <tr><td>Pools</td><td>{{ stats.piq.pools | default('0') }}</td><td>{{ stats.low.pools | default('0') }}</td><td>{{ stats.medium.pools | default('0') }}</td><td>{{ stats.high.pools | default('0') }}</td></tr>
+            <tr><td>Distance</td><td>0</td><td>0.24</td><td>0.54</td><td>0.58</td></tr>
+            <tr><td>Living Area</td><td>786</td><td>698</td><td>912</td><td>940</td></tr>
+            <tr><td>Price Per Sqft</td><td>$469</td><td>$610</td><td>$696</td><td>$845</td></tr>
+            <tr><td>Year Built</td><td>1949</td><td>1910</td><td>1952</td><td>1953</td></tr>
+            <tr><td>Lot Size</td><td>6,155</td><td>4,917</td><td>6,261</td><td>7,446</td></tr>
+            <tr><td>Bedrooms</td><td>2</td><td>1</td><td>3</td><td>3</td></tr>
+            <tr><td>Baths</td><td>1</td><td>1</td><td>1</td><td>1</td></tr>
+            <tr><td>Stories</td><td>1</td><td>1</td><td>1</td><td>1</td></tr>
+            <tr><td>Pools</td><td>0</td><td>0</td><td>0</td><td>1</td></tr>
           </tbody>
           <tfoot>
             <tr>
               <td>Sales Price</td>
-              <td>{{ stats.piq.price | format_currency }}</td>
-              <td>{{ stats.low.price | format_currency }}</td>
-              <td>{{ stats.medium.price | format_currency }}</td>
-              <td>{{ stats.high.price | format_currency }}</td>
+              <td>$369,000</td>
+              <td>$470,000</td>
+              <td>$610,750</td>
+              <td>$635,000</td>
             </tr>
           </tfoot>
         </table>
@@ -1166,9 +1169,9 @@
       <div class="subtitle">PROPERTIES THAT HAVE RECENTLY SOLD</div>
 
       <div class="comps-grid">
-        {% for comp in comparables[:4] %}
+        
         <article class="comp-card">
-          <div class="comp-map" {% if comp.map_image_url %}style="background-image: url('{{ comp.map_image_url }}'); background-size: cover; background-position: center;"{% endif %}>
+          <div class="comp-map" style="background-image: url('https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=400&amp;h=300&amp;fit=crop'); background-size: cover; background-position: center;">
             <div class="comp-pin" aria-hidden="true"></div>
           </div>
           <div class="comp-body">
@@ -1176,26 +1179,113 @@
               <span class="home-ico" aria-hidden="true">
                 <svg viewBox="0 0 24 24"><path d="M12 3l9 7v11a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10l9-7z"/></svg>
               </span>
-              {{ comp.address }}
+              1889 Bonita Ave, La Verne
             </div>
             <div class="comp-price">
               <span class="lbl">Sale Price</span>
-              <span class="val">{{ comp.sale_price | format_currency }}</span>
+              <span class="val">$631,500</span>
             </div>
             <div class="comp-stats">
-              <div class="stat"><span class="tiny">Sold Date</span><b>{{ comp.sold_date }}</b></div>
-              <div class="stat"><span class="tiny">Dist</span><b>{{ comp.distance_miles | default('-') }}</b></div>
-              <div class="stat"><span class="tiny">Sq.ft</span><b>{{ comp.sqft | format_number }}</b></div>
-              <div class="stat"><span class="tiny">$/Sqft</span><b>{{ comp.price_per_sqft | format_currency }}</b></div>
+              <div class="stat"><span class="tiny">Sold Date</span><b>5/10/23</b></div>
+              <div class="stat"><span class="tiny">Dist</span><b>0.58</b></div>
+              <div class="stat"><span class="tiny">Sq.ft</span><b>940</b></div>
+              <div class="stat"><span class="tiny">$/Sqft</span><b>$671</b></div>
 
-              <div class="stat"><span class="tiny">Bed/Bath</span><b>{{ comp.bedrooms }}/{{ comp.bathrooms }}</b></div>
-              <div class="stat"><span class="tiny">Year Blt</span><b>{{ comp.year_built }}</b></div>
-              <div class="stat"><span class="tiny">Lot Area</span><b>{{ comp.lot_size | format_number }}</b></div>
-              <div class="stat"><span class="tiny">Pool</span><b>{{ 'Yes' if comp.pool else 'No' }}</b></div>
+              <div class="stat"><span class="tiny">Bed/Bath</span><b>2/1</b></div>
+              <div class="stat"><span class="tiny">Year Blt</span><b>1953</b></div>
+              <div class="stat"><span class="tiny">Lot Area</span><b>7,446</b></div>
+              <div class="stat"><span class="tiny">Pool</span><b>No</b></div>
             </div>
           </div>
         </article>
-        {% endfor %}
+        
+        <article class="comp-card">
+          <div class="comp-map" style="background-image: url('https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=400&amp;h=300&amp;fit=crop'); background-size: cover; background-position: center;">
+            <div class="comp-pin" aria-hidden="true"></div>
+          </div>
+          <div class="comp-body">
+            <div class="comp-addr">
+              <span class="home-ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 3l9 7v11a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10l9-7z"/></svg>
+              </span>
+              1507 2nd St, La Verne
+            </div>
+            <div class="comp-price">
+              <span class="lbl">Sale Price</span>
+              <span class="val">$635,000</span>
+            </div>
+            <div class="comp-stats">
+              <div class="stat"><span class="tiny">Sold Date</span><b>3/15/23</b></div>
+              <div class="stat"><span class="tiny">Dist</span><b>0.54</b></div>
+              <div class="stat"><span class="tiny">Sq.ft</span><b>912</b></div>
+              <div class="stat"><span class="tiny">$/Sqft</span><b>$696</b></div>
+
+              <div class="stat"><span class="tiny">Bed/Bath</span><b>3/1</b></div>
+              <div class="stat"><span class="tiny">Year Blt</span><b>1952</b></div>
+              <div class="stat"><span class="tiny">Lot Area</span><b>6,261</b></div>
+              <div class="stat"><span class="tiny">Pool</span><b>No</b></div>
+            </div>
+          </div>
+        </article>
+        
+        <article class="comp-card">
+          <div class="comp-map" style="background-image: url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&amp;h=300&amp;fit=crop'); background-size: cover; background-position: center;">
+            <div class="comp-pin" aria-hidden="true"></div>
+          </div>
+          <div class="comp-body">
+            <div class="comp-addr">
+              <span class="home-ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 3l9 7v11a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10l9-7z"/></svg>
+              </span>
+              1845 Walnut St, La Verne
+            </div>
+            <div class="comp-price">
+              <span class="lbl">Sale Price</span>
+              <span class="val">$470,000</span>
+            </div>
+            <div class="comp-stats">
+              <div class="stat"><span class="tiny">Sold Date</span><b>4/25/22</b></div>
+              <div class="stat"><span class="tiny">Dist</span><b>0.24</b></div>
+              <div class="stat"><span class="tiny">Sq.ft</span><b>770</b></div>
+              <div class="stat"><span class="tiny">$/Sqft</span><b>$610</b></div>
+
+              <div class="stat"><span class="tiny">Bed/Bath</span><b>3/1</b></div>
+              <div class="stat"><span class="tiny">Year Blt</span><b>1910</b></div>
+              <div class="stat"><span class="tiny">Lot Area</span><b>4,917</b></div>
+              <div class="stat"><span class="tiny">Pool</span><b>No</b></div>
+            </div>
+          </div>
+        </article>
+        
+        <article class="comp-card">
+          <div class="comp-map" style="background-image: url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&amp;h=300&amp;fit=crop'); background-size: cover; background-position: center;">
+            <div class="comp-pin" aria-hidden="true"></div>
+          </div>
+          <div class="comp-body">
+            <div class="comp-addr">
+              <span class="home-ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 3l9 7v11a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10l9-7z"/></svg>
+              </span>
+              1848 1st St, La Verne
+            </div>
+            <div class="comp-price">
+              <span class="lbl">Sale Price</span>
+              <span class="val">$590,000</span>
+            </div>
+            <div class="comp-stats">
+              <div class="stat"><span class="tiny">Sold Date</span><b>4/8/22</b></div>
+              <div class="stat"><span class="tiny">Dist</span><b>0.3</b></div>
+              <div class="stat"><span class="tiny">Sq.ft</span><b>698</b></div>
+              <div class="stat"><span class="tiny">$/Sqft</span><b>$845</b></div>
+
+              <div class="stat"><span class="tiny">Bed/Bath</span><b>1/1</b></div>
+              <div class="stat"><span class="tiny">Year Blt</span><b>1950</b></div>
+              <div class="stat"><span class="tiny">Lot Area</span><b>5,500</b></div>
+              <div class="stat"><span class="tiny">Pool</span><b>Yes</b></div>
+            </div>
+          </div>
+        </article>
+        
       </div>
     </section>
 
@@ -1211,21 +1301,21 @@
       </div>
       <div class="subtitle">BASED ON RECENT COMPARABLE SALES.</div>
 
-      <div class="range-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}>
+      <div class="range-map" style="background-image: url('https://images.unsplash.com/photo-1524813686514-a57563d77965?w=800&amp;h=600&amp;fit=crop'); background-size: cover; background-position: center;">
         <div class="pin-big" aria-hidden="true" style="top:52%;"></div>
       </div>
 
       <div class="range-metrics">
-        <div class="metric"><div class="num">{{ '%02d' | format(stats.total_comps | default(0)) }}</div><div class="lbl">Total Comps</div></div>
-        <div class="metric"><div class="num">{{ stats.avg_sqft | default(0) | int }}</div><div class="lbl">Avg. Sqft</div></div>
-        <div class="metric"><div class="num">{{ '%02d' | format(stats.avg_beds | default(0) | int) }}</div><div class="lbl">Avg. #Beds</div></div>
-        <div class="metric"><div class="num">{{ '%02d' | format(stats.avg_baths | default(0) | int) }}</div><div class="lbl">Avg. #Baths</div></div>
+        <div class="metric"><div class="num">04</div><div class="lbl">Total Comps</div></div>
+        <div class="metric"><div class="num">830</div><div class="lbl">Avg. Sqft</div></div>
+        <div class="metric"><div class="num">02</div><div class="lbl">Avg. #Beds</div></div>
+        <div class="metric"><div class="num">01</div><div class="lbl">Avg. #Baths</div></div>
       </div>
 
       <div class="range-slider">
         <div class="tag">
-          <span><span class="caret"></span>{{ stats.price_low | format_currency_short }}</span>
-          <span>{{ stats.price_high | format_currency_short }}<span class="caret"></span></span>
+          <span><span class="caret"></span>$470k</span>
+          <span>$635k<span class="caret"></span></span>
         </div>
 
         <div class="line">

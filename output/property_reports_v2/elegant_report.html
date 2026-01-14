@@ -20,16 +20,27 @@
     body{font-family:'Montserrat',system-ui,sans-serif; background:#E8E4DE; color:var(--charcoal); -webkit-print-color-adjust:exact; print-color-adjust:exact;}
     @page{size:Letter; margin:0;}
     @media print{body{background:#fff;} .sheet{padding:0; gap:0;} .page{margin:0; border-radius:0; box-shadow:none;} .page:last-child{page-break-after:avoid;}}
-    .sheet{display:flex; flex-direction:column; align-items:center; gap:20px; padding:20px 12px 50px;}
-    .page{width:var(--page-w); height:var(--page-h); background:var(--cream); border-radius:4px; box-shadow:var(--shadow); position:relative; overflow:hidden; page-break-after:always; page-break-inside:avoid;}
-    .page:last-child{page-break-after:auto;}
-    .corner-flourish{position:absolute; width:120px; height:120px; opacity:0.15;}
-    .corner-flourish::before,.corner-flourish::after{content:''; position:absolute; background:var(--gold);}
-    .corner-flourish.tl{top:20px; left:20px;} .corner-flourish.tl::before{width:60px; height:2px; top:0; left:0;} .corner-flourish.tl::after{width:2px; height:60px; top:0; left:0;}
-    .corner-flourish.br{bottom:20px; right:20px; transform:rotate(180deg);} .corner-flourish.br::before{width:60px; height:2px; top:0; left:0;} .corner-flourish.br::after{width:2px; height:60px; top:0; left:0;}
+    .sheet{display:block; width:var(--page-w); margin:0 auto; padding:16px 0 50px;}
+    @media print{.sheet{padding:0; margin:0;}}
+    @media screen{.sheet{display:flex; flex-direction:column; align-items:center; gap:20px; width:auto;}}
+    .page{width:var(--page-w); height:var(--page-h); background:var(--cream); border-radius:4px; box-shadow:var(--shadow); position:relative; overflow:hidden; page-break-after:always; page-break-inside:avoid; margin:0 auto 20px;}
+    @media print{.page{margin:0; border-radius:0; box-shadow:none;}}
+    .page:last-child{page-break-after:auto; margin-bottom:0;}
+    .page.cover{padding-top:0;}
+    .corner-flourish{position:absolute; width:120px; height:120px; opacity:0.12;}
+    .corner-flourish-line-h,.corner-flourish-line-v{position:absolute; background:var(--gold);}
+    .corner-flourish-line-h{width:60px; height:2px;}
+    .corner-flourish-line-v{width:2px; height:60px;}
+    .corner-flourish.tl{top:20px; left:20px;}
+    .corner-flourish.tl .corner-flourish-line-h{top:0; left:0;}
+    .corner-flourish.tl .corner-flourish-line-v{top:0; left:0;}
+    .corner-flourish.br{bottom:20px; right:20px;}
+    .corner-flourish.br .corner-flourish-line-h{bottom:0; right:0;}
+    .corner-flourish.br .corner-flourish-line-v{bottom:0; right:0;}
     .gold-rule{width:80px; height:3px; background:linear-gradient(90deg,transparent,var(--gold),transparent); margin:15px auto;}
-    .diamond{width:8px; height:8px; background:var(--gold); transform:rotate(45deg); display:inline-block;}
-    .cover{background:linear-gradient(135deg,var(--burgundy) 0%,var(--burgundy-dark) 100%); display:flex; flex-direction:column;}
+    .diamond{width:6px; height:6px; background:var(--gold); display:inline-block; border-radius:1px; vertical-align:middle;}
+    .cover{background:linear-gradient(135deg,var(--burgundy) 0%,var(--burgundy-dark) 100%); display:flex; flex-direction:column; position:relative;}
+    .cover-bg-image{position:absolute; top:0; left:0; right:0; bottom:0; background-size:cover; background-position:center; opacity:0.12;}
     .cover-header{padding:0.5in 0.6in; display:flex; justify-content:space-between; align-items:center;}
     .cover-brand{display:flex; align-items:center; gap:12px;}
     .cover-brand-icon{width:45px; height:45px; border:2px solid var(--gold); border-radius:50%; display:flex; align-items:center; justify-content:center;}
@@ -40,7 +51,7 @@
     .cover-title{font-family:'Playfair Display',serif; font-size:72px; font-weight:400; color:#fff; line-height:1; margin-bottom:10px;}
     .cover-title span{display:block; font-style:italic; font-size:64px; color:var(--gold-light);}
     .cover-divider{width:200px; height:1px; background:linear-gradient(90deg,transparent,var(--gold),transparent); margin:30px auto; position:relative;}
-    .cover-divider::before{content:'◆'; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); color:var(--gold); font-size:10px; background:var(--burgundy); padding:0 10px;}
+    .cover-divider-diamond{position:absolute; left:50%; top:50%; margin-left:-3px; margin-top:-3px; width:6px; height:6px; background:var(--gold); border-radius:1px;}
     .cover-address{text-align:center; color:#fff;}
     .cover-street{font-family:'Playfair Display',serif; font-size:32px; font-weight:500; letter-spacing:0.05em; margin-bottom:8px;}
     .cover-city{font-size:14px; letter-spacing:0.2em; text-transform:uppercase; opacity:0.85;}
@@ -60,15 +71,15 @@
     .contents-item:last-child{border-bottom:none;}
     .contents-num{font-family:'Playfair Display',serif; font-size:32px; color:var(--burgundy); width:60px; font-weight:500;}
     .contents-text{flex:1; font-size:15px; letter-spacing:0.05em; color:var(--charcoal);}
-    .contents-dots{flex:1; border-bottom:2px dotted var(--gold-light); margin:0 15px; transform:translateY(-5px);}
+    .contents-dots{flex:1; border-bottom:2px dotted var(--gold-light); margin:0 15px; position:relative; top:-5px;}
     .contents-page{font-family:'Playfair Display',serif; font-size:18px; color:var(--slate);}
-    .aerial{background:var(--charcoal); position:relative;}
-    .aerial-header{position:absolute; top:0; left:0; right:0; padding:0.5in var(--pad); background:linear-gradient(180deg,rgba(0,0,0,0.7),transparent); z-index:2;}
+    .aerial{background:var(--charcoal); display:flex; flex-direction:column;}
+    .aerial-header{padding:0.5in var(--pad) 0.3in; background:var(--charcoal);}
     .aerial-label{font-size:11px; letter-spacing:0.25em; text-transform:uppercase; color:var(--gold); margin-bottom:8px;}
     .aerial-title{font-family:'Playfair Display',serif; font-size:42px; color:#fff; font-weight:400;}
-    .aerial-map{position:absolute; inset:0; background:#3a3a3a;}
+    .aerial-map{flex:1; background:#3a3a3a; min-height:5in;}
     .aerial-map img{width:100%; height:100%; object-fit:cover; opacity:0.9;}
-    .aerial-info{position:absolute; bottom:0; left:0; right:0; padding:0.5in var(--pad); background:linear-gradient(0deg,var(--burgundy),transparent); z-index:2;}
+    .aerial-info{padding:0.4in var(--pad); background:var(--burgundy);}
     .aerial-cards{display:flex; gap:20px;}
     .aerial-card{flex:1; background:rgba(255,255,255,0.95); border-radius:8px; padding:20px;}
     .aerial-card h3{font-family:'Playfair Display',serif; font-size:16px; color:var(--burgundy); margin-bottom:8px;}
@@ -101,8 +112,8 @@
     .analysis-table tfoot td{padding:12px 10px; color:var(--burgundy-dark);}
     .comparables{background:var(--cream); padding:var(--pad);}
     .comp-grid{display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:0.3in;}
-    .comp-card{background:#fff; border-radius:12px; overflow:hidden; border:1px solid rgba(201,169,98,0.3); box-shadow:0 4px 15px rgba(0,0,0,0.05);}
-    .comp-card-image{height:120px; background:#ddd; position:relative;}
+    .comp-card{background:#fff; border-radius:14px; overflow:hidden; border:1px solid rgba(201,169,98,0.3); box-shadow:0 4px 15px rgba(0,0,0,0.05);}
+    .comp-card-image{height:140px; background:#ddd; position:relative;}
     .comp-card-image img{width:100%; height:100%; object-fit:cover;}
     .comp-card-badge{position:absolute; top:10px; right:10px; background:var(--burgundy); color:#fff; padding:6px 12px; border-radius:20px; font-size:14px; font-weight:600;}
     .comp-card-body{padding:15px;}
@@ -113,16 +124,16 @@
     .comp-stat-label{color:var(--slate); margin-bottom:3px;}
     .comp-stat-value{color:var(--charcoal); font-weight:600;}
     .range{background:var(--cream); padding:var(--pad);}
-    .range-map{height:4.5in; background:#ddd; border-radius:12px; overflow:hidden; margin:0.3in 0; border:1px solid rgba(201,169,98,0.3);}
+    .range-map{height:4.2in; background:#ddd; border-radius:14px; overflow:hidden; margin:0.25in 0; border:1px solid rgba(201,169,98,0.3);}
     .range-map img{width:100%; height:100%; object-fit:cover;}
-    .range-stats{display:grid; grid-template-columns:repeat(4,1fr); gap:15px; background:var(--burgundy); border-radius:12px; padding:25px; margin-bottom:25px;}
-    .range-stat{text-align:center; color:#fff;}
-    .range-stat-num{font-family:'Playfair Display',serif; font-size:42px; color:var(--gold); line-height:1;}
-    .range-stat-label{font-size:11px; letter-spacing:0.1em; text-transform:uppercase; margin-top:8px; opacity:0.9;}
+    .range-stats{display:grid; grid-template-columns:repeat(4,1fr); gap:15px; background:var(--burgundy); border-radius:14px; padding:28px 20px; margin-bottom:25px;}
+    .range-stat{text-align:center; color:#fff; padding:8px 0;}
+    .range-stat-num{font-family:'Playfair Display',serif; font-size:46px; color:var(--gold); line-height:1;}
+    .range-stat-label{font-size:11px; letter-spacing:0.1em; text-transform:uppercase; margin-top:10px; opacity:0.9;}
     .range-slider{padding:20px 0;}
     .range-slider-labels{display:flex; justify-content:space-between; font-family:'Playfair Display',serif; font-size:20px; color:var(--burgundy);}
     .range-slider-track{height:8px; background:linear-gradient(90deg,var(--gold-light),var(--burgundy)); border-radius:4px; position:relative; margin:30px 0;}
-    .range-slider-dot{width:20px; height:20px; background:var(--burgundy); border:3px solid #fff; border-radius:50%; position:absolute; top:50%; transform:translate(-50%,-50%); box-shadow:0 2px 8px rgba(0,0,0,0.2);}
+    .range-slider-dot{width:20px; height:20px; background:var(--burgundy); border:3px solid #fff; border-radius:50%; position:absolute; top:-6px; margin-left:-10px; box-shadow:0 2px 8px rgba(0,0,0,0.2);}
     .range-note{font-size:12px; line-height:1.7; color:var(--slate); text-align:center; max-width:90%; margin:0 auto;}
     .page-footer{position:absolute; bottom:0.4in; left:var(--pad); right:var(--pad); display:flex; justify-content:space-between; align-items:center; font-size:10px; color:var(--slate);}
     .page-footer .brand{display:flex; align-items:center; gap:8px;}
@@ -133,35 +144,37 @@
   <div class="sheet">
     <!-- PAGE 1: COVER -->
     <section class="page cover">
+      <div class="cover-bg-image" style="background-image: url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&amp;h=600&amp;fit=crop');"></div>
       <div class="cover-header">
         <div class="cover-brand">
           <div class="cover-brand-icon"><svg viewBox="0 0 24 24"><path d="M12 3L4 9v12h16V9l-8-6zm0 2.5L18 10v9H6v-9l6-4.5z"/></svg></div>
-          <div class="cover-brand-text">{{ agent.company_name | default('Luxury Real Estate') }}</div>
+          <div class="cover-brand-text">TrendyReports</div>
         </div>
       </div>
       <div class="cover-main">
         <div class="cover-label">Exclusively Prepared For You</div>
         <h1 class="cover-title">Seller's<span>Report</span></h1>
-        <div class="cover-divider"></div>
+        <div class="cover-divider"><span class="cover-divider-diamond"></span></div>
         <div class="cover-address">
-          <div class="cover-street">{{ property.street_address }}</div>
-          <div class="cover-city">{{ property.city }}, {{ property.state }} {{ property.zip_code }}</div>
+          <div class="cover-street">1358 5th Street</div>
+          <div class="cover-city">La Verne, CA 91750</div>
         </div>
       </div>
       <div class="cover-footer">
-        <div class="cover-agent-photo">{% if agent.photo_url %}<img src="{{ agent.photo_url }}" alt="{{ agent.name }}" />{% endif %}</div>
+        <div class="cover-agent-photo"></div>
         <div class="cover-agent-info">
-          <div class="cover-agent-name">{{ agent.name }}</div>
-          <div class="cover-agent-title">{{ agent.title | default('Luxury Property Specialist') }}</div>
-          <div class="cover-agent-contact"><span>☎ {{ agent.phone | default('(000) 000-0000') }}</span><span>✉ {{ agent.email | default('agent@example.com') }}</span></div>
+          <div class="cover-agent-name">Zoe Noelle</div>
+          <div class="cover-agent-title">Real Estate Specialist</div>
+          <div class="cover-agent-contact"><span>☎ (213) 309-7286</span><span>✉ zoe@trendyreports.com</span></div>
         </div>
-        <div class="cover-logo">{{ agent.company_short | default('Luxe') }}</div>
+        <div class="cover-logo">TR</div>
       </div>
     </section>
 
     <!-- PAGE 2: CONTENTS -->
     <section class="page contents">
-      <div class="corner-flourish tl"></div><div class="corner-flourish br"></div>
+      <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
+      <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="contents-header">
         <div class="contents-label">What's Inside</div>
         <h2 class="contents-title">Contents</h2>
@@ -180,33 +193,37 @@
     <!-- PAGE 3: AERIAL -->
     <section class="page aerial">
       <div class="aerial-header"><div class="aerial-label">Location Overview</div><h2 class="aerial-title">Aerial View</h2></div>
-      <div class="aerial-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}></div>
+      <div class="aerial-map" style="background-image: url('https://images.unsplash.com/photo-1524813686514-a57563d77965?w=800&amp;h=600&amp;fit=crop'); background-size: cover; background-position: center;">
+        <img src="https://images.unsplash.com/photo-1524813686514-a57563d77965?w=800&amp;h=600&amp;fit=crop" alt="Aerial map" />
+      </div>
       <div class="aerial-info">
         <div class="aerial-cards">
           <div class="aerial-card"><h3>Neighborhood Context</h3><p>This aerial view showcases your property's prime location within the neighborhood, highlighting proximity to parks, schools, and major thoroughfares.</p></div>
           <div class="aerial-card"><h3>Quarter-Mile Radius</h3><p>Properties within this radius provide the most accurate comparables, sharing similar neighborhood characteristics and market dynamics.</p></div>
         </div>
       </div>
+      <div class="page-footer" style="border:none;"><div class="brand" style="color:var(--gold-light);"><span class="diamond"></span> Elegant Collection</div><div class="num" style="color:#fff;">03</div></div>
     </section>
 
     <!-- PAGE 4: PROPERTY -->
     <section class="page property">
-      <div class="corner-flourish tl"></div><div class="corner-flourish br"></div>
+      <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
+      <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="property-header"><div class="property-label">Property Overview</div><h2 class="property-title">Prospective Property</h2><div class="gold-rule"></div></div>
       <div class="property-section">
         <div class="property-section-header"><span class="diamond"></span><div class="property-section-title">Owner & Legal Information</div></div>
         <div class="property-grid">
           <table class="property-table">
-            <tr><td class="label">Primary Owner</td><td class="value">{{ property.owner_name | default('-') }}</td></tr>
-            <tr><td class="label">Secondary Owner</td><td class="value">{{ property.secondary_owner | default('-') }}</td></tr>
-            <tr><td class="label">Site Address</td><td class="value">{{ property.full_address }}</td></tr>
-            <tr><td class="label">Mailing Address</td><td class="value">{{ property.mailing_address | default(property.full_address) }}</td></tr>
+            <tr><td class="label">Primary Owner</td><td class="value">HERNANDEZ GERARDO J</td></tr>
+            <tr><td class="label">Secondary Owner</td><td class="value">MENDOZA YESSICA S</td></tr>
+            <tr><td class="label">Site Address</td><td class="value">1358 5th St, La Verne, CA 91750</td></tr>
+            <tr><td class="label">Mailing Address</td><td class="value">1358 5th St, La Verne, CA 91750</td></tr>
           </table>
           <table class="property-table">
-            <tr><td class="label">APN</td><td class="value">{{ property.apn | default('-') }}</td></tr>
-            <tr><td class="label">County</td><td class="value">{{ property.county | default('-') }}</td></tr>
-            <tr><td class="label">Census Tract</td><td class="value">{{ property.census_tract | default('-') }}</td></tr>
-            <tr><td class="label">Legal Description</td><td class="value">{{ property.legal_description | default('-') }}</td></tr>
+            <tr><td class="label">APN</td><td class="value">8381-021-001</td></tr>
+            <tr><td class="label">County</td><td class="value">LOS ANGELES</td></tr>
+            <tr><td class="label">Census Tract</td><td class="value">4089.00</td></tr>
+            <tr><td class="label">Legal Description</td><td class="value">LOT 44 TR#6654</td></tr>
           </table>
         </div>
       </div>
@@ -214,16 +231,16 @@
         <div class="property-section-header"><span class="diamond"></span><div class="property-section-title">Property Specifications</div></div>
         <div class="property-grid">
           <table class="property-table">
-            <tr><td class="label">Bedrooms</td><td class="value">{{ property.bedrooms | default('-') }}</td></tr>
-            <tr><td class="label">Bathrooms</td><td class="value">{{ property.bathrooms | default('-') }}</td></tr>
-            <tr><td class="label">Square Feet</td><td class="value">{{ property.sqft | default('-') | int | format_number }}</td></tr>
-            <tr><td class="label">Lot Size</td><td class="value">{{ property.lot_size | default('-') | int | format_number }} sq ft</td></tr>
+            <tr><td class="label">Bedrooms</td><td class="value">2</td></tr>
+            <tr><td class="label">Bathrooms</td><td class="value">1.0</td></tr>
+            <tr><td class="label">Square Feet</td><td class="value">786</td></tr>
+            <tr><td class="label">Lot Size</td><td class="value">6,155 sq ft</td></tr>
           </table>
           <table class="property-table">
-            <tr><td class="label">Year Built</td><td class="value">{{ property.year_built | default('-') }}</td></tr>
-            <tr><td class="label">Property Type</td><td class="value">{{ property.property_type | default('Single Family') }}</td></tr>
-            <tr><td class="label">Zoning</td><td class="value">{{ property.zoning | default('-') }}</td></tr>
-            <tr><td class="label">Pool/Spa</td><td class="value">{{ property.pool | default('None') }}</td></tr>
+            <tr><td class="label">Year Built</td><td class="value">1949</td></tr>
+            <tr><td class="label">Property Type</td><td class="value">Single Family Residential</td></tr>
+            <tr><td class="label">Zoning</td><td class="value">LVPR4.5D*</td></tr>
+            <tr><td class="label">Pool/Spa</td><td class="value">None</td></tr>
           </table>
         </div>
       </div>
@@ -231,12 +248,12 @@
         <div class="property-section-header"><span class="diamond"></span><div class="property-section-title">Tax & Assessment</div></div>
         <div class="property-grid">
           <table class="property-table">
-            <tr><td class="label">Assessed Value</td><td class="value">{{ property.assessed_value | format_currency }}</td></tr>
-            <tr><td class="label">Land Value</td><td class="value">{{ property.land_value | format_currency }}</td></tr>
+            <tr><td class="label">Assessed Value</td><td class="value">$428,248</td></tr>
+            <tr><td class="label">Land Value</td><td class="value">$337,378</td></tr>
           </table>
           <table class="property-table">
-            <tr><td class="label">Annual Tax</td><td class="value">{{ property.tax_amount | format_currency }}</td></tr>
-            <tr><td class="label">Tax Year</td><td class="value">{{ property.tax_year | default('-') }}</td></tr>
+            <tr><td class="label">Annual Tax</td><td class="value">$5,198</td></tr>
+            <tr><td class="label">Tax Year</td><td class="value">2024</td></tr>
           </table>
         </div>
       </div>
@@ -245,69 +262,123 @@
 
     <!-- PAGE 5: ANALYSIS -->
     <section class="page analysis">
-      <div class="corner-flourish tl"></div><div class="corner-flourish br"></div>
+      <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
+      <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="property-header"><div class="property-label">Market Intelligence</div><h2 class="property-title">Area Sales Analysis</h2><div class="gold-rule"></div></div>
       <div class="analysis-chart">
         <div class="chart-bars">
-          {% for comp in comparables[:4] %}
-          <div class="chart-bar-wrap"><div class="chart-bar" style="height: {{ [40, (comp.sale_price / 8000) | int] | max }}px;"></div><div class="chart-bar-label">{{ comp.sold_date | default('-') }}</div></div>
-          {% endfor %}
+          
+          <div class="chart-bar-wrap"><div class="chart-bar" style="height: 78px;"></div><div class="chart-bar-label">5/10/23</div></div>
+          
+          <div class="chart-bar-wrap"><div class="chart-bar" style="height: 79px;"></div><div class="chart-bar-label">3/15/23</div></div>
+          
+          <div class="chart-bar-wrap"><div class="chart-bar" style="height: 58px;"></div><div class="chart-bar-label">4/25/22</div></div>
+          
+          <div class="chart-bar-wrap"><div class="chart-bar" style="height: 73px;"></div><div class="chart-bar-label">4/8/22</div></div>
+          
         </div>
       </div>
       <table class="analysis-table">
         <thead><tr><th>Metric</th><th>Subject</th><th>Low</th><th>Medium</th><th>High</th></tr></thead>
         <tbody>
-          <tr><td>Distance</td><td>{{ stats.piq.distance | default('0') }}</td><td>{{ stats.low.distance | default('-') }}</td><td>{{ stats.medium.distance | default('-') }}</td><td>{{ stats.high.distance | default('-') }}</td></tr>
-          <tr><td>Living Area</td><td>{{ stats.piq.sqft | default('-') }}</td><td>{{ stats.low.sqft | default('-') }}</td><td>{{ stats.medium.sqft | default('-') }}</td><td>{{ stats.high.sqft | default('-') }}</td></tr>
-          <tr><td>Price/Sq.Ft.</td><td>{{ stats.piq.price_per_sqft | format_currency }}</td><td>{{ stats.low.price_per_sqft | format_currency }}</td><td>{{ stats.medium.price_per_sqft | format_currency }}</td><td>{{ stats.high.price_per_sqft | format_currency }}</td></tr>
-          <tr><td>Year Built</td><td>{{ stats.piq.year_built | default('-') }}</td><td>{{ stats.low.year_built | default('-') }}</td><td>{{ stats.medium.year_built | default('-') }}</td><td>{{ stats.high.year_built | default('-') }}</td></tr>
-          <tr><td>Lot Size</td><td>{{ stats.piq.lot_size | format_number }}</td><td>{{ stats.low.lot_size | format_number }}</td><td>{{ stats.medium.lot_size | format_number }}</td><td>{{ stats.high.lot_size | format_number }}</td></tr>
-          <tr><td>Bedrooms</td><td>{{ stats.piq.bedrooms | default('-') }}</td><td>{{ stats.low.bedrooms | default('-') }}</td><td>{{ stats.medium.bedrooms | default('-') }}</td><td>{{ stats.high.bedrooms | default('-') }}</td></tr>
-          <tr><td>Bathrooms</td><td>{{ stats.piq.bathrooms | default('-') }}</td><td>{{ stats.low.bathrooms | default('-') }}</td><td>{{ stats.medium.bathrooms | default('-') }}</td><td>{{ stats.high.bathrooms | default('-') }}</td></tr>
+          <tr><td>Distance</td><td>0</td><td>0.24</td><td>0.54</td><td>0.58</td></tr>
+          <tr><td>Living Area</td><td>786</td><td>698</td><td>912</td><td>940</td></tr>
+          <tr><td>Price/Sq.Ft.</td><td>$469</td><td>$610</td><td>$696</td><td>$845</td></tr>
+          <tr><td>Year Built</td><td>1949</td><td>1910</td><td>1952</td><td>1953</td></tr>
+          <tr><td>Lot Size</td><td>6,155</td><td>4,917</td><td>6,261</td><td>7,446</td></tr>
+          <tr><td>Bedrooms</td><td>2</td><td>1</td><td>3</td><td>3</td></tr>
+          <tr><td>Bathrooms</td><td>1</td><td>1</td><td>1</td><td>1</td></tr>
         </tbody>
-        <tfoot><tr><td>Sale Price</td><td>{{ stats.piq.price | format_currency }}</td><td>{{ stats.low.price | format_currency }}</td><td>{{ stats.medium.price | format_currency }}</td><td>{{ stats.high.price | format_currency }}</td></tr></tfoot>
+        <tfoot><tr><td>Sale Price</td><td>$369,000</td><td>$470,000</td><td>$610,750</td><td>$635,000</td></tr></tfoot>
       </table>
       <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">05</div></div>
     </section>
 
     <!-- PAGE 6: COMPARABLES -->
     <section class="page comparables">
-      <div class="corner-flourish tl"></div><div class="corner-flourish br"></div>
+      <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
+      <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="property-header"><div class="property-label">Recent Transactions</div><h2 class="property-title">Sales Comparables</h2><div class="gold-rule"></div></div>
       <div class="comp-grid">
-        {% for comp in comparables[:4] %}
+        
         <div class="comp-card">
-          <div class="comp-card-image" {% if comp.map_image_url %}style="background-image: url('{{ comp.map_image_url }}'); background-size: cover; background-position: center;"{% endif %}>
-            <div class="comp-card-badge">{{ comp.sale_price | format_currency }}</div>
+          <div class="comp-card-image" style="background-image: url('https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=400&amp;h=300&amp;fit=crop'); background-size: cover; background-position: center;">
+            <div class="comp-card-badge">$631,500</div>
           </div>
           <div class="comp-card-body">
-            <div class="comp-card-address"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>{{ comp.address }}</div>
+            <div class="comp-card-address"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>1889 Bonita Ave, La Verne</div>
             <div class="comp-card-stats">
-              <div class="comp-stat"><div class="comp-stat-label">Sold</div><div class="comp-stat-value">{{ comp.sold_date }}</div></div>
-              <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">{{ comp.sqft | format_number }}</div></div>
-              <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">{{ comp.bedrooms }}/{{ comp.bathrooms }}</div></div>
-              <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">{{ comp.price_per_sqft | format_currency }}</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Sold</div><div class="comp-stat-value">5/10/23</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">940</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">2/1</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">$671</div></div>
             </div>
           </div>
         </div>
-        {% endfor %}
+        
+        <div class="comp-card">
+          <div class="comp-card-image" style="background-image: url('https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=400&amp;h=300&amp;fit=crop'); background-size: cover; background-position: center;">
+            <div class="comp-card-badge">$635,000</div>
+          </div>
+          <div class="comp-card-body">
+            <div class="comp-card-address"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>1507 2nd St, La Verne</div>
+            <div class="comp-card-stats">
+              <div class="comp-stat"><div class="comp-stat-label">Sold</div><div class="comp-stat-value">3/15/23</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">912</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">3/1</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">$696</div></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="comp-card">
+          <div class="comp-card-image" style="background-image: url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&amp;h=300&amp;fit=crop'); background-size: cover; background-position: center;">
+            <div class="comp-card-badge">$470,000</div>
+          </div>
+          <div class="comp-card-body">
+            <div class="comp-card-address"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>1845 Walnut St, La Verne</div>
+            <div class="comp-card-stats">
+              <div class="comp-stat"><div class="comp-stat-label">Sold</div><div class="comp-stat-value">4/25/22</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">770</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">3/1</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">$610</div></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="comp-card">
+          <div class="comp-card-image" style="background-image: url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&amp;h=300&amp;fit=crop'); background-size: cover; background-position: center;">
+            <div class="comp-card-badge">$590,000</div>
+          </div>
+          <div class="comp-card-body">
+            <div class="comp-card-address"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>1848 1st St, La Verne</div>
+            <div class="comp-card-stats">
+              <div class="comp-stat"><div class="comp-stat-label">Sold</div><div class="comp-stat-value">4/8/22</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">698</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">1/1</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">$845</div></div>
+            </div>
+          </div>
+        </div>
+        
       </div>
       <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">06</div></div>
     </section>
 
     <!-- PAGE 7: RANGE -->
     <section class="page range">
-      <div class="corner-flourish tl"></div><div class="corner-flourish br"></div>
+      <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
+      <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="property-header"><div class="property-label">Valuation Summary</div><h2 class="property-title">Range of Sales</h2><div class="gold-rule"></div></div>
-      <div class="range-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}></div>
+      <div class="range-map" style="background-image: url('https://images.unsplash.com/photo-1524813686514-a57563d77965?w=800&amp;h=600&amp;fit=crop'); background-size: cover; background-position: center;"></div>
       <div class="range-stats">
-        <div class="range-stat"><div class="range-stat-num">{{ '%02d' | format(stats.total_comps | default(0)) }}</div><div class="range-stat-label">Total Comps</div></div>
-        <div class="range-stat"><div class="range-stat-num">{{ stats.avg_sqft | default(0) | int }}</div><div class="range-stat-label">Avg. Sqft</div></div>
-        <div class="range-stat"><div class="range-stat-num">{{ '%02d' | format(stats.avg_beds | default(0) | int) }}</div><div class="range-stat-label">Avg. Beds</div></div>
-        <div class="range-stat"><div class="range-stat-num">{{ '%02d' | format(stats.avg_baths | default(0) | int) }}</div><div class="range-stat-label">Avg. Baths</div></div>
+        <div class="range-stat"><div class="range-stat-num">04</div><div class="range-stat-label">Total Comps</div></div>
+        <div class="range-stat"><div class="range-stat-num">830</div><div class="range-stat-label">Avg. Sqft</div></div>
+        <div class="range-stat"><div class="range-stat-num">02</div><div class="range-stat-label">Avg. Beds</div></div>
+        <div class="range-stat"><div class="range-stat-num">01</div><div class="range-stat-label">Avg. Baths</div></div>
       </div>
       <div class="range-slider">
-        <div class="range-slider-labels"><span>{{ stats.price_low | format_currency_short }}</span><span>{{ stats.price_high | format_currency_short }}</span></div>
+        <div class="range-slider-labels"><span>$470k</span><span>$635k</span></div>
         <div class="range-slider-track"><div class="range-slider-dot" style="left:5%;"></div><div class="range-slider-dot" style="left:95%;"></div></div>
       </div>
       <p class="range-note">The above statistics represent average property details for comparable homes sold within the last 12 months. The price range indicates the low and high sale prices for properties matching your home's characteristics including square footage, bedrooms, bathrooms, and lot size.</p>

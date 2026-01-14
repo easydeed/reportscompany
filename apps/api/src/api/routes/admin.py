@@ -13,6 +13,7 @@ from ..db import db_conn, set_rls
 from ..deps.admin import get_admin_user
 from ..services import get_monthly_usage, resolve_plan_for_account, evaluate_report_limit
 from ..services.email import send_invite_email, send_welcome_email
+from ..services.property_stats import get_platform_stats, refresh_stats
 
 logger = logging.getLogger(__name__)
 
@@ -3059,3 +3060,296 @@ def cleanup_expired_blocks(
             "expired_blocks_removed": expired_blocks,
             "rate_limits_removed": old_rate_limits,
         }
+
+
+# ==================== Property Report Statistics ====================
+
+
+class PlatformPropertyStatsResponse(BaseModel):
+    """Platform-wide property report statistics"""
+    period: dict
+    summary: dict
+    engagement: dict
+    leads: dict
+    by_account_type: dict
+    themes: dict
+    top_affiliates: List[dict]
+    top_agents: List[dict]
+    daily_trend: List[dict]
+    all_time: dict
+
+
+@router.get("/property-reports/stats", response_model=PlatformPropertyStatsResponse)
+def get_admin_property_stats(
+    from_date: Optional[str] = Query(None, description="Start date (ISO format)"),
+    to_date: Optional[str] = Query(None, description="End date (ISO format)"),
+    _admin: dict = Depends(get_admin_user)
+):
+    """
+    Get platform-wide property report statistics.
+    
+    Returns:
+    - Total reports, completion rates, failure rates
+    - Breakdown by account type (regular, sponsored, affiliate)
+    - Theme popularity
+    - Top affiliates by volume
+    - Top agents by volume
+    - Lead metrics and conversion rates
+    - Daily activity trend
+    """
+    # Parse dates
+    from_dt = datetime.fromisoformat(from_date.replace('Z', '')) if from_date else None
+    to_dt = datetime.fromisoformat(to_date.replace('Z', '')) if to_date else None
+    
+    stats = get_platform_stats(from_dt, to_dt)
+    return stats
+
+
+@router.get("/property-reports")
+def list_all_property_reports(
+    status: Optional[str] = Query(None, description="Filter by status"),
+    account_type: Optional[str] = Query(None, description="Filter by account type: regular, sponsored, affiliate"),
+    theme: Optional[int] = Query(None, ge=1, le=5, description="Filter by theme"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    _admin: dict = Depends(get_admin_user)
+):
+    """
+    List all property reports across the platform.
+    
+    Supports filtering by status, account type, and theme.
+    """
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        
+        # Build query with filters
+        where_clauses = []
+        params = []
+        
+        if status:
+            where_clauses.append("pr.status = %s")
+            params.append(status)
+        
+        if theme:
+            where_clauses.append("pr.theme = %s")
+            params.append(theme)
+        
+        if account_type:
+            if account_type == "sponsored":
+                where_clauses.append("a.sponsor_account_id IS NOT NULL")
+            elif account_type == "affiliate":
+                where_clauses.append("a.account_type = 'INDUSTRY_AFFILIATE'")
+            elif account_type == "regular":
+                where_clauses.append("a.account_type = 'REGULAR' AND a.sponsor_account_id IS NULL")
+        
+        where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
+        
+        # Get total count
+        cur.execute(f"""
+            SELECT COUNT(*) FROM property_reports pr
+            JOIN accounts a ON a.id = pr.account_id
+            WHERE {where_sql}
+        """, params)
+        total = cur.fetchone()[0]
+        
+        # Get reports
+        cur.execute(f"""
+            SELECT 
+                pr.id::text,
+                pr.account_id::text,
+                a.name AS account_name,
+                CASE 
+                    WHEN a.account_type = 'INDUSTRY_AFFILIATE' THEN 'affiliate'
+                    WHEN a.sponsor_account_id IS NOT NULL THEN 'sponsored'
+                    ELSE 'regular'
+                END AS account_type,
+                pr.property_address,
+                pr.property_city,
+                pr.property_state,
+                pr.report_type,
+                pr.theme,
+                pr.status,
+                pr.view_count,
+                pr.unique_visitors,
+                pr.short_code,
+                pr.is_active,
+                pr.created_at,
+                (SELECT COUNT(*) FROM leads l WHERE l.property_report_id = pr.id) AS lead_count
+            FROM property_reports pr
+            JOIN accounts a ON a.id = pr.account_id
+            WHERE {where_sql}
+            ORDER BY pr.created_at DESC
+            LIMIT %s OFFSET %s
+        """, params + [limit, offset])
+        
+        reports = []
+        for row in cur.fetchall():
+            reports.append({
+                "id": row[0],
+                "account_id": row[1],
+                "account_name": row[2],
+                "account_type": row[3],
+                "address": row[4],
+                "city": row[5],
+                "state": row[6],
+                "report_type": row[7],
+                "theme": row[8],
+                "status": row[9],
+                "views": row[10],
+                "unique_visitors": row[11],
+                "short_code": row[12],
+                "is_active": row[13],
+                "created_at": row[14].isoformat() if row[14] else None,
+                "leads": row[15]
+            })
+        
+        return {
+            "reports": reports,
+            "total": total,
+            "limit": limit,
+            "offset": offset
+        }
+
+
+@router.get("/property-reports/top-affiliates")
+def get_top_affiliates(
+    limit: int = Query(10, ge=1, le=50),
+    from_date: Optional[str] = Query(None),
+    to_date: Optional[str] = Query(None),
+    _admin: dict = Depends(get_admin_user)
+):
+    """
+    Get top affiliates ranked by property report activity.
+    """
+    from_dt = datetime.fromisoformat(from_date.replace('Z', '')) if from_date else datetime.utcnow() - timedelta(days=30)
+    to_dt = datetime.fromisoformat(to_date.replace('Z', '')) if to_date else datetime.utcnow()
+    
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        
+        cur.execute("""
+            SELECT
+                aff.id::text AS affiliate_id,
+                aff.name AS affiliate_name,
+                COUNT(DISTINCT a.id) AS total_agents,
+                COUNT(DISTINCT CASE WHEN pr.created_at >= %s THEN a.id END) AS active_agents,
+                COUNT(pr.id) AS report_count,
+                COALESCE(SUM(pr.view_count), 0) AS total_views,
+                COALESCE(SUM(pr.unique_visitors), 0) AS unique_visitors,
+                COUNT(l.id) AS total_leads,
+                MAX(pr.created_at) AS last_activity
+            FROM accounts aff
+            JOIN accounts a ON a.sponsor_account_id = aff.id
+            LEFT JOIN property_reports pr ON pr.account_id = a.id 
+                AND pr.created_at >= %s AND pr.created_at < %s
+            LEFT JOIN leads l ON l.account_id = a.id 
+                AND l.created_at >= %s AND l.created_at < %s
+            WHERE aff.account_type = 'INDUSTRY_AFFILIATE'
+            GROUP BY aff.id, aff.name
+            ORDER BY COUNT(pr.id) DESC
+            LIMIT %s
+        """, (from_dt, from_dt, to_dt, from_dt, to_dt, limit))
+        
+        affiliates = []
+        for row in cur.fetchall():
+            affiliates.append({
+                "id": row[0],
+                "name": row[1],
+                "total_agents": row[2],
+                "active_agents": row[3],
+                "reports": row[4],
+                "views": row[5],
+                "unique_visitors": row[6],
+                "leads": row[7],
+                "last_activity": row[8].isoformat() if row[8] else None
+            })
+        
+        return {"affiliates": affiliates}
+
+
+@router.get("/property-reports/top-agents")
+def get_top_agents(
+    limit: int = Query(10, ge=1, le=50),
+    account_type: Optional[str] = Query(None, description="Filter: regular, sponsored, all"),
+    from_date: Optional[str] = Query(None),
+    to_date: Optional[str] = Query(None),
+    _admin: dict = Depends(get_admin_user)
+):
+    """
+    Get top agents ranked by property report activity.
+    """
+    from_dt = datetime.fromisoformat(from_date.replace('Z', '')) if from_date else datetime.utcnow() - timedelta(days=30)
+    to_dt = datetime.fromisoformat(to_date.replace('Z', '')) if to_date else datetime.utcnow()
+    
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        
+        type_filter = ""
+        if account_type == "sponsored":
+            type_filter = "AND a.sponsor_account_id IS NOT NULL"
+        elif account_type == "regular":
+            type_filter = "AND a.sponsor_account_id IS NULL"
+        
+        cur.execute(f"""
+            SELECT
+                a.id::text AS account_id,
+                a.name AS agent_name,
+                u.email,
+                CASE WHEN a.sponsor_account_id IS NOT NULL THEN 'sponsored' ELSE 'regular' END AS account_type,
+                sponsor.name AS sponsor_name,
+                COUNT(pr.id) AS report_count,
+                COALESCE(SUM(pr.view_count), 0) AS total_views,
+                COALESCE(SUM(pr.unique_visitors), 0) AS unique_visitors,
+                COUNT(l.id) AS total_leads,
+                CASE WHEN COALESCE(SUM(pr.unique_visitors), 0) > 0 
+                    THEN ROUND((COUNT(l.id)::DECIMAL / SUM(pr.unique_visitors)) * 100, 2)
+                    ELSE 0 
+                END AS conversion_rate,
+                MAX(pr.created_at) AS last_activity
+            FROM accounts a
+            LEFT JOIN account_users au ON au.account_id = a.id AND au.role = 'OWNER'
+            LEFT JOIN users u ON u.id = au.user_id
+            LEFT JOIN accounts sponsor ON sponsor.id = a.sponsor_account_id
+            LEFT JOIN property_reports pr ON pr.account_id = a.id 
+                AND pr.created_at >= %s AND pr.created_at < %s
+            LEFT JOIN leads l ON l.account_id = a.id 
+                AND l.created_at >= %s AND l.created_at < %s
+            WHERE a.account_type = 'REGULAR' {type_filter}
+            GROUP BY a.id, a.name, u.email, sponsor.name
+            HAVING COUNT(pr.id) > 0
+            ORDER BY COUNT(pr.id) DESC
+            LIMIT %s
+        """, (from_dt, to_dt, from_dt, to_dt, limit))
+        
+        agents = []
+        for row in cur.fetchall():
+            agents.append({
+                "id": row[0],
+                "name": row[1],
+                "email": row[2],
+                "type": row[3],
+                "sponsor": row[4],
+                "reports": row[5],
+                "views": row[6],
+                "unique_visitors": row[7],
+                "leads": row[8],
+                "conversion_rate": float(row[9]) if row[9] else 0,
+                "last_activity": row[10].isoformat() if row[10] else None
+            })
+        
+        return {"agents": agents}
+
+
+@router.post("/property-reports/refresh-stats")
+def refresh_property_stats(
+    account_id: Optional[str] = Query(None, description="Specific account to refresh, or all if omitted"),
+    _admin: dict = Depends(get_admin_user)
+):
+    """
+    Manually trigger a refresh of property report statistics.
+    
+    Use sparingly - stats are automatically refreshed on changes.
+    """
+    result = refresh_stats(account_id)
+    logger.info(f"Property stats refreshed by admin {_admin.get('email')}: {result}")
+    return result

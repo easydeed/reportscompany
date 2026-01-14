@@ -51,6 +51,7 @@ from ..services.simplyrets import (
 )
 from ..worker_client import enqueue_property_report
 from ..services.qr_service import generate_qr_code
+from ..services.property_stats import get_agent_stats, get_affiliate_stats
 
 logger = logging.getLogger(__name__)
 
@@ -546,6 +547,98 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
             total_found=0,
             error=f"Comparable search failed: {str(e)}"
         )
+
+
+# =============================================================================
+# PROPERTY REPORT STATISTICS ENDPOINTS
+# =============================================================================
+
+
+class PropertyStatsResponse(BaseModel):
+    """Property report statistics for dashboard"""
+    period: dict
+    summary: dict
+    report_types: Optional[dict] = None
+    themes: dict
+    engagement: dict
+    leads: dict
+    top_reports: Optional[List[dict]] = None
+    daily_trend: Optional[List[dict]] = None
+    all_time: Optional[dict] = None
+
+
+class AffiliateStatsResponse(BaseModel):
+    """Affiliate-level property report statistics"""
+    period: dict
+    summary: dict
+    aggregate: dict
+    themes: dict
+    leaderboard: List[dict]
+    inactive_agents: List[dict]
+
+
+@router.get("/stats", response_model=PropertyStatsResponse)
+def get_property_stats(
+    request: Request,
+    from_date: Optional[str] = Query(None, description="Start date (ISO format)"),
+    to_date: Optional[str] = Query(None, description="End date (ISO format)")
+):
+    """
+    Get property report statistics for the current user's account.
+    
+    Returns:
+    - Report counts and completion rates
+    - Theme distribution
+    - Lead metrics and conversion rates
+    - Top performing reports
+    - Daily activity trend
+    """
+    account_id = require_account_id(request)
+    
+    # Parse dates
+    from_dt = datetime.fromisoformat(from_date.replace('Z', '')) if from_date else None
+    to_dt = datetime.fromisoformat(to_date.replace('Z', '')) if to_date else None
+    
+    stats = get_agent_stats(account_id, from_dt, to_dt)
+    return stats
+
+
+@router.get("/stats/affiliate", response_model=AffiliateStatsResponse)
+def get_affiliate_property_stats(
+    request: Request,
+    from_date: Optional[str] = Query(None, description="Start date (ISO format)"),
+    to_date: Optional[str] = Query(None, description="End date (ISO format)")
+):
+    """
+    Get property report statistics for all sponsored agents under this affiliate.
+    
+    Only accessible to INDUSTRY_AFFILIATE accounts.
+    
+    Returns:
+    - Aggregate stats across all sponsored agents
+    - Agent leaderboard (by reports + leads)
+    - Inactive agents list
+    - Theme distribution
+    """
+    account_id = require_account_id(request)
+    
+    # Verify this is an affiliate account
+    with db_conn() as (conn, cur):
+        set_rls(cur, account_id)
+        cur.execute("SELECT account_type FROM accounts WHERE id = %s", (account_id,))
+        row = fetchone_dict(cur)
+        if not row or row.get("account_type") != "INDUSTRY_AFFILIATE":
+            raise HTTPException(
+                status_code=403, 
+                detail="This endpoint is only available to affiliate accounts"
+            )
+    
+    # Parse dates
+    from_dt = datetime.fromisoformat(from_date.replace('Z', '')) if from_date else None
+    to_dt = datetime.fromisoformat(to_date.replace('Z', '')) if to_date else None
+    
+    stats = get_affiliate_stats(account_id, from_dt, to_dt)
+    return stats
 
 
 # =============================================================================
