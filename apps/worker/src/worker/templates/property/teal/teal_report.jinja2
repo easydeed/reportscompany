@@ -12,8 +12,9 @@
 
   <style>
     :root{
-      --teal: #34d1c3;
-      --teal-2:#21c7b7;
+      /* Primary accent color - can be overridden by theme_color */
+      --teal: {{ theme_color | default('#34d1c3') }};
+      --teal-2: {{ theme_color | default('#21c7b7') }};
       --navy:#18235c;
       --navy-2:#0f1a45;
       --ink:#0b0f1a;
@@ -996,7 +997,8 @@
       PAGE 1: COVER
     ========================================================== -->
     <section class="page cover">
-      <div class="abs cover-photo{% if images.hero %} has-image{% endif %}" {% if images.hero %}style="background-image: url('{{ images.hero }}');"{% endif %}></div>
+      {# Cover background - gradient only, no external image to avoid loading issues #}
+      <div class="abs cover-photo"></div>
       <div class="abs cover-overlay"></div>
       <div class="cover-accent"></div>
       <div class="cover-stripe"></div>
@@ -1037,7 +1039,8 @@
       PAGE 2: CONTENTS
     ========================================================== -->
     <section class="page">
-      <div class="abs contents-bg{% if images.hero %} has-image{% endif %}" {% if images.hero %}style="background-image: url('{{ images.hero }}');"{% endif %}></div>
+      {# Contents background - gradient only, no external image #}
+      <div class="abs contents-bg"></div>
       <div class="abs contents-overlay"></div>
 
       <div class="contents-left">
@@ -1053,11 +1056,36 @@
         </div>
 
         <div class="toc">
-          <div class="toc-item"><span class="num">01</span><span class="name">Aerial Snapshot</span><span class="dots"></span><span class="page">03</span></div>
-          <div class="toc-item"><span class="num">02</span><span class="name">Property Information</span><span class="dots"></span><span class="page">04</span></div>
-          <div class="toc-item"><span class="num">03</span><span class="name">Area Sales Analysis</span><span class="dots"></span><span class="page">05</span></div>
-          <div class="toc-item"><span class="num">04</span><span class="name">Sales Comparables</span><span class="dots"></span><span class="page">06</span></div>
-          <div class="toc-item"><span class="num">05</span><span class="name">Range of Sales</span><span class="dots"></span><span class="page">07</span></div>
+          <div class="toc-item">
+            <span class="num">01</span>
+            <span class="name">Aerial Snapshot</span>
+            <span class="dots"></span>
+            <span class="page">03</span>
+          </div>
+          <div class="toc-item">
+            <span class="num">02</span>
+            <span class="name">Property Information</span>
+            <span class="dots"></span>
+            <span class="page">04</span>
+          </div>
+          <div class="toc-item">
+            <span class="num">03</span>
+            <span class="name">Area Sales Analysis</span>
+            <span class="dots"></span>
+            <span class="page">05</span>
+          </div>
+          <div class="toc-item">
+            <span class="num">04</span>
+            <span class="name">Sales Comparables</span>
+            <span class="dots"></span>
+            <span class="page">06</span>
+          </div>
+          <div class="toc-item">
+            <span class="num">05</span>
+            <span class="name">Range of Sales</span>
+            <span class="dots"></span>
+            <span class="page">07</span>
+          </div>
         </div>
         <div class="page-footer" style="background:transparent; border:none; color:#fff;">
           <div class="brand" style="color:var(--teal);">TrendyReports</div>
