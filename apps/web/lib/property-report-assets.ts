@@ -18,12 +18,15 @@ export const PROPERTY_ASSETS_PATH = `${R2_BASE_URL}/property-reports`;
 
 export interface ThemeConfig {
   id: number;
+  key: string;  // Theme name for API: "classic", "modern", "elegant", "teal", "bold"
   name: string;
   description: string;
   defaultColor: string;
+  secondaryColor: string;
   pageCount: number;
   previewBg: string; // Fallback gradient class
   fontStyle: string;
+  targetAudience: string;
   pages: PageConfig[];
 }
 
@@ -35,99 +38,27 @@ export interface PageConfig {
   previewNumber: number; // Maps to preview image file number (1.jpg, 2.jpg, etc.)
 }
 
-// Theme 1 (Classic) - 20 pages
-const THEME_1_PAGES: PageConfig[] = [
+// ============================================
+// UNIFIED PAGE STRUCTURE
+// All themes now use the same 7-page layout
+// ============================================
+
+const UNIFIED_PAGES: PageConfig[] = [
   { id: "cover", name: "Cover", description: "Property photo, address, agent info", required: true, previewNumber: 1 },
   { id: "contents", name: "Table of Contents", description: "Report overview", previewNumber: 2 },
-  { id: "introduction", name: "Introduction", description: "Welcome message from agent", previewNumber: 3 },
-  { id: "aerial", name: "Aerial View", description: "Google Maps satellite view", previewNumber: 4 },
-  { id: "property_details", name: "Property Details", description: "Owner, APN, beds/baths, tax info", required: true, previewNumber: 5 },
-  { id: "area_analysis", name: "Area Sales Analysis", description: "Market statistics chart", previewNumber: 6 },
-  { id: "comparables", name: "Sales Comparables", description: "Recently sold properties", required: true, previewNumber: 7 },
-  { id: "range_of_sales", name: "Range of Sales", description: "Price range visualization", previewNumber: 8 },
-  { id: "home_buying_process", name: "Home Buying Process", description: "Step-by-step guide", previewNumber: 9 },
-  { id: "how_buyers_find", name: "How Buyers Find Homes", description: "Marketing channels pie chart", previewNumber: 10 },
-  { id: "pricing_correctly", name: "Pricing Strategy", description: "Pricing guidance", previewNumber: 11 },
-  { id: "avg_days_market", name: "Days on Market", description: "Market timing analysis", previewNumber: 12 },
-  { id: "marketing_online", name: "Digital Marketing", description: "Online marketing plan", previewNumber: 13 },
-  { id: "marketing_print", name: "Print Marketing", description: "Traditional marketing", previewNumber: 14 },
-  { id: "marketing_social", name: "Social Media", description: "Social proof and reach", previewNumber: 15 },
-  { id: "roadmap_1", name: "Seller Roadmap (Part 1)", description: "Process overview", previewNumber: 16 },
-  { id: "roadmap_2", name: "Seller Roadmap (Part 2)", description: "Continued process", previewNumber: 17 },
-  { id: "analyze_optimize", name: "Analyze & Optimize", description: "Ongoing strategy", previewNumber: 18 },
-  { id: "promise", name: "Agent Promise", description: "Fiduciary commitment", previewNumber: 19 },
-  { id: "back_cover", name: "Back Cover", description: "Branded closing page", required: true, previewNumber: 20 },
-];
-
-// Theme 2 (Modern) - 21 pages
-const THEME_2_PAGES: PageConfig[] = [
-  { id: "cover", name: "Cover", description: "Property photo, address, agent info", required: true, previewNumber: 1 },
-  { id: "contents", name: "Table of Contents", description: "Report overview", previewNumber: 2 },
-  { id: "introduction", name: "Introduction", description: "Welcome message from agent", previewNumber: 3 },
-  { id: "aerial", name: "Aerial View", description: "Google Maps satellite view", previewNumber: 4 },
-  { id: "property_details", name: "Property Details", description: "Owner, APN, beds/baths, tax info", required: true, previewNumber: 5 },
-  { id: "area_analysis", name: "Area Sales Analysis", description: "Market statistics chart", previewNumber: 6 },
-  { id: "comparables", name: "Sales Comparables", description: "Recently sold properties", required: true, previewNumber: 7 },
-  { id: "range_of_sales", name: "Range of Sales", description: "Price range visualization", previewNumber: 8 },
-  { id: "neighborhood", name: "Neighborhood Stats", description: "Demographics and averages", previewNumber: 9 },
-  { id: "roadmap", name: "Selling Roadmap", description: "Process overview", previewNumber: 10 },
-  { id: "how_buyers_find", name: "How Buyers Find Homes", description: "Marketing channels pie chart", previewNumber: 11 },
-  { id: "pricing_correctly", name: "Pricing Strategy", description: "Pricing guidance", previewNumber: 12 },
-  { id: "avg_days_market", name: "Days on Market", description: "Market timing analysis", previewNumber: 13 },
-  { id: "marketing_online", name: "Digital Marketing", description: "Online marketing plan", previewNumber: 14 },
-  { id: "marketing_print", name: "Print Marketing", description: "Traditional marketing", previewNumber: 15 },
-  { id: "marketing_social", name: "Social Media", description: "Social proof and reach", previewNumber: 16 },
-  { id: "analyze_optimize", name: "Analyze & Optimize", description: "Ongoing strategy", previewNumber: 17 },
-  { id: "negotiating", name: "Negotiating Offers", description: "Offer handling process", previewNumber: 18 },
-  { id: "typical_transaction", name: "Transaction Timeline", description: "Escrow process flowchart", previewNumber: 19 },
-  { id: "promise", name: "Agent Promise", description: "Fiduciary commitment", previewNumber: 20 },
-  { id: "back_cover", name: "Back Cover", description: "Branded closing page", required: true, previewNumber: 21 },
-];
-
-// Theme 3 (Elegant) - 18 pages
-const THEME_3_PAGES: PageConfig[] = [
-  { id: "cover", name: "Cover", description: "Property photo, address, agent info", required: true, previewNumber: 1 },
-  { id: "contents", name: "Table of Contents", description: "Report overview", previewNumber: 2 },
-  { id: "introduction", name: "Introduction", description: "Welcome message from agent", previewNumber: 3 },
-  { id: "aerial", name: "Aerial View", description: "Google Maps satellite view", previewNumber: 4 },
-  { id: "property_details", name: "Property Details", description: "Owner, APN, beds/baths, tax info", required: true, previewNumber: 5 },
-  { id: "area_analysis", name: "Area Sales Analysis", description: "Market statistics chart", previewNumber: 6 },
-  { id: "comparables", name: "Sales Comparables", description: "Recently sold properties", required: true, previewNumber: 7 },
-  { id: "range_of_sales", name: "Range of Sales", description: "Price range visualization", previewNumber: 8 },
-  { id: "how_buyers_find", name: "How Buyers Find Homes", description: "Marketing channels pie chart", previewNumber: 9 },
-  { id: "pricing_correctly", name: "Pricing Strategy", description: "Pricing guidance", previewNumber: 10 },
-  { id: "avg_days_market", name: "Days on Market", description: "Market timing analysis", previewNumber: 11 },
-  { id: "marketing_online", name: "Digital Marketing", description: "Online marketing plan", previewNumber: 12 },
-  { id: "marketing_print", name: "Print Marketing", description: "Traditional marketing", previewNumber: 13 },
-  { id: "marketing_social", name: "Social Media", description: "Social proof and reach", previewNumber: 14 },
-  { id: "analyze_optimize", name: "Analyze & Optimize", description: "Ongoing strategy", previewNumber: 15 },
-  { id: "negotiating", name: "Negotiating Offers", description: "Offer handling process", previewNumber: 16 },
-  { id: "promise", name: "Agent Promise", description: "Fiduciary commitment", previewNumber: 17 },
-  { id: "back_cover", name: "Back Cover", description: "Branded closing page", required: true, previewNumber: 18 },
-];
-
-// Theme 4 (Teal) - 7 pages (compact)
-const THEME_4_PAGES: PageConfig[] = [
-  { id: "cover", name: "Cover", description: "Property photo, address, agent info", required: true, previewNumber: 1 },
-  { id: "introduction", name: "Introduction", description: "Welcome message from agent", previewNumber: 2 },
-  { id: "property_details", name: "Property Details", description: "Owner, APN, beds/baths, tax info", required: true, previewNumber: 3 },
-  { id: "comparables", name: "Sales Comparables", description: "Recently sold properties", required: true, previewNumber: 4 },
-  { id: "pricing_correctly", name: "Pricing Strategy", description: "Pricing guidance", previewNumber: 5 },
-  { id: "promise", name: "Agent Promise", description: "Fiduciary commitment", previewNumber: 6 },
-  { id: "back_cover", name: "Back Cover", description: "Branded closing page", required: true, previewNumber: 7 },
-];
-
-// Theme 5 (Bold) - 8 pages (compact)
-const THEME_5_PAGES: PageConfig[] = [
-  { id: "cover", name: "Cover", description: "Property photo, address, agent info", required: true, previewNumber: 1 },
-  { id: "introduction", name: "Introduction", description: "Welcome message from agent", previewNumber: 2 },
   { id: "aerial", name: "Aerial View", description: "Google Maps satellite view", previewNumber: 3 },
-  { id: "property_details", name: "Property Details", description: "Owner, APN, beds/baths, tax info", required: true, previewNumber: 4 },
-  { id: "comparables", name: "Sales Comparables", description: "Recently sold properties", required: true, previewNumber: 5 },
-  { id: "pricing_correctly", name: "Pricing Strategy", description: "Pricing guidance", previewNumber: 6 },
-  { id: "promise", name: "Agent Promise", description: "Fiduciary commitment", previewNumber: 7 },
-  { id: "back_cover", name: "Back Cover", description: "Branded closing page", required: true, previewNumber: 8 },
+  { id: "property", name: "Property Details", description: "Owner, APN, beds/baths, tax info", required: true, previewNumber: 4 },
+  { id: "analysis", name: "Area Sales Analysis", description: "Market statistics chart", previewNumber: 5 },
+  { id: "comparables", name: "Sales Comparables", description: "Recently sold properties", required: true, previewNumber: 6 },
+  { id: "range", name: "Range of Sales", description: "Price range visualization", previewNumber: 7 },
 ];
+
+// All themes now reference the unified pages
+const THEME_1_PAGES: PageConfig[] = UNIFIED_PAGES;  // Classic
+const THEME_2_PAGES: PageConfig[] = UNIFIED_PAGES;  // Modern
+const THEME_3_PAGES: PageConfig[] = UNIFIED_PAGES;  // Elegant
+const THEME_4_PAGES: PageConfig[] = UNIFIED_PAGES;  // Teal
+const THEME_5_PAGES: PageConfig[] = UNIFIED_PAGES;  // Bold
 
 // ============================================
 // THEME DEFINITIONS
@@ -136,52 +67,67 @@ const THEME_5_PAGES: PageConfig[] = [
 export const THEMES: ThemeConfig[] = [
   {
     id: 1,
+    key: "classic",
     name: "Classic",
-    description: "Professional navy with elegant fonts",
-    defaultColor: "#0d294b",
-    pageCount: 20,
-    previewBg: "bg-gradient-to-br from-slate-800 to-slate-900",
+    description: "Traditional & trustworthy",
+    defaultColor: "#1B365D",
+    secondaryColor: "#4A90A4",
+    pageCount: 7,
+    previewBg: "bg-gradient-to-br from-slate-800 to-sky-900",
     fontStyle: "font-serif",
-    pages: THEME_1_PAGES,
+    targetAudience: "Traditional market",
+    pages: UNIFIED_PAGES,
   },
   {
     id: 2,
+    key: "modern",
     name: "Modern",
-    description: "Bold orange accents, clean lines",
-    defaultColor: "#f2964a",
-    pageCount: 21,
-    previewBg: "bg-gradient-to-br from-orange-400 to-orange-600",
+    description: "Fresh & contemporary",
+    defaultColor: "#FF6B5B",
+    secondaryColor: "#1A1F36",
+    pageCount: 7,
+    previewBg: "bg-gradient-to-br from-red-400 to-slate-900",
     fontStyle: "font-sans",
-    pages: THEME_2_PAGES,
+    targetAudience: "Urban/young",
+    pages: UNIFIED_PAGES,
   },
   {
     id: 3,
+    key: "elegant",
     name: "Elegant",
-    description: "Sophisticated gradient overlays",
-    defaultColor: "#0d294b",
-    pageCount: 18,
-    previewBg: "bg-gradient-to-br from-slate-700 to-indigo-900",
+    description: "Luxury & sophisticated",
+    defaultColor: "#722F37",
+    secondaryColor: "#C9A962",
+    pageCount: 7,
+    previewBg: "bg-gradient-to-br from-rose-900 to-amber-800",
     fontStyle: "font-serif",
-    pages: THEME_3_PAGES,
+    targetAudience: "High-end luxury",
+    pages: UNIFIED_PAGES,
   },
   {
     id: 4,
+    key: "teal",
     name: "Teal",
-    description: "Modern minimal with teal accent",
-    defaultColor: "#16d3ba",
+    description: "Clean & professional",
+    defaultColor: "#34d1c3",
+    secondaryColor: "#18235c",
     pageCount: 7,
-    previewBg: "bg-gradient-to-br from-teal-400 to-cyan-600",
+    previewBg: "bg-gradient-to-br from-teal-400 to-indigo-900",
     fontStyle: "font-sans",
+    targetAudience: "General market",
     pages: THEME_4_PAGES,
   },
   {
     id: 5,
+    key: "bold",
     name: "Bold",
-    description: "Navy & gold, strong typography",
-    defaultColor: "#d79547",
-    pageCount: 8,
-    previewBg: "bg-gradient-to-br from-slate-800 to-amber-900",
-    fontStyle: "font-bold",
+    description: "Strong & confident",
+    defaultColor: "#15216E",
+    secondaryColor: "#D69649",
+    pageCount: 7,
+    previewBg: "bg-gradient-to-br from-indigo-900 to-amber-700",
+    fontStyle: "font-sans",
+    targetAudience: "Luxury/confident",
     pages: THEME_5_PAGES,
   },
 ];
@@ -207,10 +153,27 @@ export function getPagePreviewUrl(themeId: number, previewNumber: number): strin
 }
 
 /**
- * Get theme configuration by ID
+ * Get theme configuration by ID or key
  */
-export function getTheme(themeId: number): ThemeConfig | undefined {
-  return THEMES.find(t => t.id === themeId);
+export function getTheme(themeIdOrKey: number | string): ThemeConfig | undefined {
+  if (typeof themeIdOrKey === "string") {
+    return THEMES.find(t => t.key === themeIdOrKey);
+  }
+  return THEMES.find(t => t.id === themeIdOrKey);
+}
+
+/**
+ * Get theme key by ID
+ */
+export function getThemeKey(themeId: number): string {
+  return getTheme(themeId)?.key || "teal";
+}
+
+/**
+ * Get theme ID by key
+ */
+export function getThemeId(themeKey: string): number {
+  return getTheme(themeKey)?.id || 4;
 }
 
 /**
@@ -285,6 +248,8 @@ export default {
   getThemeCoverUrl,
   getPagePreviewUrl,
   getTheme,
+  getThemeKey,
+  getThemeId,
   getThemePages,
   getPageConfig,
   isCompactTheme,

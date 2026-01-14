@@ -131,7 +131,8 @@ class ComparablesResponse(BaseModel):
 class PropertyReportCreate(BaseModel):
     """Create a new property report"""
     report_type: Literal["seller", "buyer"] = "seller"
-    theme: int = Field(default=1, ge=1, le=5)
+    # Theme: accepts number (1-5) or name (classic, modern, elegant, teal, bold)
+    theme: Any = Field(default=4, description="Theme ID (1-5) or name (classic, modern, elegant, teal, bold)")
     accent_color: str = Field(default="#0d294b", pattern=r"^#[0-9a-fA-F]{6}$")
     language: Literal["en", "es"] = "en"
     

@@ -2,8 +2,8 @@
 
 ## Complete Documentation
 
-**Version:** 1.0  
-**Date:** January 9, 2026  
+**Version:** 2.0  
+**Date:** January 13, 2026  
 **Status:** Production Ready
 
 ---
@@ -15,37 +15,39 @@
 3. [Database Schema](#database-schema)
 4. [API Endpoints](#api-endpoints)
 5. [Services](#services)
-6. [Frontend Pages](#frontend-pages)
-7. [Environment Variables](#environment-variables)
-8. [User Flows](#user-flows)
-9. [Admin Features](#admin-features)
-10. [Security & Anti-Spam](#security--anti-spam)
-11. [Deployment Checklist](#deployment-checklist)
-12. [Troubleshooting](#troubleshooting)
+6. [PDF Generation System](#pdf-generation-system)
+7. [Frontend Pages](#frontend-pages)
+8. [Environment Variables](#environment-variables)
+9. [User Flows](#user-flows)
+10. [Admin Features](#admin-features)
+11. [Security & Anti-Spam](#security--anti-spam)
+12. [Deployment Checklist](#deployment-checklist)
+13. [Troubleshooting](#troubleshooting)
 
 ---
 
 ## Overview
 
-Property Reports extends TrendyReports with single-property CMA-style reports for real estate agents. This feature was integrated from Modern Agent (MyListingPitch) into the existing TrendyReports platform.
+Property Reports extends TrendyReports with single-property CMA-style reports for real estate agents. This feature provides comprehensive seller/buyer reports with comparables analysis and lead capture capabilities.
 
 ### Key Features
 
 - **Property Lookup**: SiteX Pro API integration for property data (owner, APN, legal description, tax info)
-- **PDF Reports**: Automated generation with customizable themes
+- **Comparables**: SimplyRETS integration for comparable property selection
+- **PDF Reports**: Automated generation with 5 customizable themes via PDFShift
 - **QR Code Lead Capture**: Scannable QR codes link to landing pages for lead generation
 - **SMS Notifications**: Instant alerts when leads are captured
 - **Landing Page Controls**: Expiration, max leads, password protection
 
-### Why Integrated vs Standalone
+### Available Themes
 
-| Factor | Integrated | Standalone |
-|--------|------------|------------|
-| Development time | 2-3 weeks | 8+ weeks |
-| Infrastructure reuse | 70-80% | 0% |
-| Auth/billing | Existing | Build new |
-| Deployment | Single codebase | New deployment |
-| Cross-sell | Built-in | Separate |
+| Theme ID | Name | Description | Pages |
+|----------|------|-------------|-------|
+| 1 | Classic | Traditional professional layout | 20 |
+| 2 | Modern | Clean contemporary design | 21 |
+| 3 | Elegant | Sophisticated premium feel | 18 |
+| 4 | **Teal** | Montserrat font, teal/navy scheme | 7 |
+| 5 | Bold | High-impact visual design | 8 |
 
 ---
 
@@ -96,7 +98,7 @@ Property Reports extends TrendyReports with single-property CMA-style reports fo
 │                        STORAGE                                  │
 ├─────────────────────────────────────────────────────────────────┤
 │  PostgreSQL                 → Reports, Leads, SMS Logs          │
-│  Cloudflare R2              → PDFs, QR Codes                    │
+│  Cloudflare R2              → PDFs, QR Codes, Static Assets     │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -104,27 +106,13 @@ Property Reports extends TrendyReports with single-property CMA-style reports fo
 
 ## Database Schema
 
-### Migration 0034: Property Reports
+### Migrations
 
-```sql
--- Main tables
-property_reports          -- Property report records
-leads                     -- Captured leads
-blocked_ips               -- IP blocklist for spam prevention
-lead_rate_limits          -- Rate limiting tracking
-
--- Extended tables
-accounts.sms_credits      -- SMS credit balance
-plans.property_reports_per_month
-plans.sms_credits_per_month
-plans.lead_capture_enabled
-```
-
-### Migration 0035: SMS Logs
-
-```sql
-sms_logs                  -- SMS message history
-```
+| Migration | Description |
+|-----------|-------------|
+| 0034 | Property reports tables, leads, blocked IPs, rate limits |
+| 0035 | SMS logs table |
+| 0036 | `selected_pages` JSONB column on property_reports |
 
 ### property_reports Table
 
@@ -136,7 +124,7 @@ sms_logs                  -- SMS message history
 | report_type | VARCHAR | 'seller', 'buyer' |
 | theme | INTEGER | 1-5 |
 | accent_color | VARCHAR | Hex color (#2563eb) |
-| property_address | VARCHAR | Full address |
+| property_address | VARCHAR | Street address only |
 | property_city | VARCHAR | City |
 | property_state | VARCHAR | State |
 | property_zip | VARCHAR | ZIP code |
@@ -145,7 +133,8 @@ sms_logs                  -- SMS message history
 | owner_name | VARCHAR | Property owner |
 | legal_description | TEXT | Legal description |
 | sitex_data | JSONB | Cached SiteX response |
-| comparables | JSONB | Selected comparables |
+| comparables | JSONB | **Full comparable objects** (not just IDs) |
+| selected_pages | JSONB | Array of page IDs to include |
 | pdf_url | VARCHAR | R2 URL to PDF |
 | status | VARCHAR | draft/processing/complete/failed |
 | error_message | TEXT | Error details if failed |
@@ -159,6 +148,30 @@ sms_logs                  -- SMS message history
 | access_code | VARCHAR | Password protection |
 | created_at | TIMESTAMPTZ | Created timestamp |
 | updated_at | TIMESTAMPTZ | Updated timestamp |
+
+### Comparables Data Structure
+
+The `comparables` column stores **full comparable objects**, not just MLS IDs:
+
+```json
+[
+  {
+    "id": "231377504",
+    "address": "1889 BONITA AVE, LA VERNE, CA",
+    "lat": 34.1234,
+    "lng": -117.7654,
+    "photo_url": "https://...",
+    "price": 631500,
+    "close_price": 631500,
+    "bedrooms": 2,
+    "bathrooms": 1,
+    "sqft": 940,
+    "year_built": 1952,
+    "distance_miles": 0.5,
+    "days_on_market": 14
+  }
+]
+```
 
 ### leads Table
 
@@ -215,6 +228,39 @@ sms_logs                  -- SMS message history
 | POST | /v1/property/reports/{id}/regenerate-qr | Yes | New QR code |
 | GET | /v1/property/public/{short_code} | No | Public landing page data |
 
+### Create Report Payload
+
+```json
+{
+  "report_type": "seller",
+  "theme": 4,
+  "accent_color": "#34d1c3",
+  "property_address": "1358 5TH ST",
+  "property_city": "LA VERNE",
+  "property_state": "CA",
+  "property_zip": "91750",
+  "apn": "8381-021-001",
+  "owner_name": "HERNANDEZ GERARDO J",
+  "comparables": [
+    {
+      "id": "231377504",
+      "address": "1889 BONITA AVE, LA VERNE, CA",
+      "lat": 34.1234,
+      "lng": -117.7654,
+      "photo_url": "https://...",
+      "price": 631500,
+      "bedrooms": 2,
+      "bathrooms": 1,
+      "sqft": 940,
+      "year_built": 1952,
+      "distance_miles": 0.5
+    }
+  ],
+  "selected_pages": ["cover", "contents", "aerial", "property", "area_sales", "comparables", "range"],
+  "sitex_data": { }
+}
+```
+
 ### Lead Endpoints
 
 | Method | Endpoint | Auth | Description |
@@ -254,7 +300,6 @@ sms_logs                  -- SMS message history
 Property data lookup via ICE SiteX Pro API.
 
 ```python
-# Usage
 from api.services.sitex import lookup_property, lookup_property_by_apn
 
 # By address
@@ -264,18 +309,13 @@ result = await lookup_property("714 Vine St", "Anaheim, CA 92805")
 result = await lookup_property_by_apn("06059", "035-202-10")
 ```
 
-**Features:**
-- OAuth2 token management (auto-refresh)
-- In-memory caching (24-hour TTL)
-- Multi-match handling
-- Correct field mappings (owner, legal description, county)
-
 **Response Fields:**
 - full_address, street, city, state, zip_code, county
 - apn, fips, owner_name, secondary_owner
 - legal_description, property_type
 - bedrooms, bathrooms, sqft, lot_size, year_built
 - assessed_value, tax_amount, land_value, improvement_value
+- latitude, longitude
 
 ### QR Code Service
 
@@ -284,22 +324,14 @@ result = await lookup_property_by_apn("06059", "035-202-10")
 ```python
 from api.services.qr_service import generate_qr_code, generate_short_code
 
-# Generate QR code
 qr_url = await generate_qr_code(
     url="https://trendy.com/p/abc123",
     color="#2563eb",
     report_id="uuid-here"
 )
 
-# Generate short code
 code = generate_short_code(length=8)  # e.g., "x7k2m9p4"
 ```
-
-**Features:**
-- Styled QR codes (rounded modules)
-- Custom colors
-- R2 upload
-- Fallback to external service
 
 ### Twilio SMS Service
 
@@ -315,21 +347,219 @@ result = await send_lead_notification_sms(
 )
 ```
 
-**Features:**
-- E.164 phone formatting
-- Lead notification templates
-- Uses httpx (no SDK dependency)
+---
 
-### Property Report Builder
+## PDF Generation System
+
+### Overview
+
+Property Reports use a **Jinja2 → HTML → PDFShift → PDF** pipeline.
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Report Data    │ ──▶ │ PropertyReport  │ ──▶ │    PDFShift     │
+│  (from DB)      │     │    Builder      │     │    API          │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+                              │                        │
+                              ▼                        ▼
+                        ┌───────────┐           ┌───────────┐
+                        │   HTML    │           │    PDF    │
+                        │ (Jinja2)  │           │   (R2)    │
+                        └───────────┘           └───────────┘
+```
+
+### PropertyReportBuilder
 
 **File:** `apps/worker/src/worker/property_builder.py`
 
-Jinja2-based HTML generation for PDF conversion.
+The builder transforms raw report data into structured contexts for Jinja2 templates.
 
-**Templates:**
-- `seller_base.jinja2` - Base HTML with theme CSS
-- `seller_cover.jinja2` - Cover page
-- `seller_property_details.jinja2` - Property details
+#### Custom Jinja2 Filters
+
+| Filter | Description | Example |
+|--------|-------------|---------|
+| `format_currency` | Full currency format | 428248 → $428,248 |
+| `format_currency_short` | Short format | 470000 → $470k, 1200000 → $1.2M |
+| `format_number` | Number with commas | 6155 → 6,155 |
+
+#### Context Builders
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `_build_property_context()` | dict | Property details from sitex_data |
+| `_build_agent_context()` | dict | Agent info with formatted license/address |
+| `_build_comparables_context()` | list | Normalized comparable data with map URLs |
+| `_build_stats_context()` | dict | Aggregated stats (PIQ, low, medium, high) |
+| `_build_images_context()` | dict | Hero image and aerial map URLs |
+
+### Template Data Structure
+
+The Teal theme template (and future themes) expects this data structure:
+
+```python
+{
+    # Property Information
+    "property": {
+        "street_address": "1358 5TH ST",
+        "city": "LA VERNE",
+        "state": "CA",
+        "zip_code": "91750",
+        "full_address": "1358 5TH ST, LA VERNE, CA 91750",
+        "owner_name": "HERNANDEZ GERARDO J",
+        "secondary_owner": "MENDOZA YESSICA S",
+        "mailing_address": "1358 5TH ST, LA VERNE, CA 91750",
+        "apn": "8381-021-001",
+        "county": "LOS ANGELES",
+        "census_tract": "4089.00",
+        "housing_tract": "6654",
+        "lot_number": "44",
+        "page_grid": "E2",
+        "legal_description": "LOT:44 TR#:6654 TRACT NO 6654 LOT 44",
+        "bedrooms": 2,
+        "bathrooms": 1,
+        "sqft": 786,
+        "lot_size": 6155,
+        "year_built": 1949,
+        "garage": "-",
+        "fireplace": "-",
+        "pool": False,
+        "zoning": "LVPR4.5D*",
+        "property_type": "Single Family Residential",
+        "use_code": "Single Family Residential",
+        "assessed_value": 428248,
+        "tax_amount": 5198,
+        "land_value": 337378,
+        "improvement_value": 90870,
+        "tax_status": "Current",
+        "tax_rate_area": "5-283%",
+        "tax_year": 2024,
+        "latitude": 34.1234,
+        "longitude": -117.7654,
+    },
+    
+    # Agent Information
+    "agent": {
+        "name": "ZOE NOELLE",
+        "title": "Realtor",
+        "license": "CA BRE#0123456789",
+        "phone": "2133097286",
+        "email": "info@modernagent.io",
+        "address": "985 Success Ave, Success, CA 91252",
+        "photo_url": "https://example.com/agent.jpg",
+        "company_name": "Flare",
+    },
+    
+    # Comparables (up to 4 for Teal theme)
+    "comparables": [
+        {
+            "address": "1889 BONITA AVE LA VERNE",
+            "sale_price": 631500,
+            "sold_date": "5/10/2023",
+            "distance_miles": 0.5,
+            "sqft": 940,
+            "price_per_sqft": 671,
+            "bedrooms": 2,
+            "bathrooms": 1,
+            "year_built": 1952,
+            "lot_size": 5246,
+            "pool": False,
+            "map_image_url": "https://maps.googleapis.com/...",
+        },
+        # ... up to 3 more
+    ],
+    
+    # Aggregated Statistics
+    "stats": {
+        "total_comps": 4,
+        "avg_sqft": 830,
+        "avg_beds": 2,
+        "avg_baths": 1,
+        "price_low": 470000,
+        "price_high": 635000,
+        
+        # Area Sales Analysis (PIQ = Property In Question)
+        "piq": {
+            "distance": 0,
+            "sqft": 786,
+            "price_per_sqft": 469,
+            "year_built": 1949,
+            "lot_size": 6155,
+            "bedrooms": 2,
+            "bathrooms": 1,
+            "stories": 0,
+            "pools": 0,
+            "price": 369000,
+        },
+        "low": { ... },
+        "medium": { ... },
+        "high": { ... },
+    },
+    
+    # Image URLs
+    "images": {
+        "hero": "https://example.com/hero-house.jpg",
+        "aerial_map": "https://maps.googleapis.com/...",
+    },
+}
+```
+
+### Templates
+
+**Location:** `apps/worker/src/worker/templates/property/`
+
+| Theme | Template File | Pages |
+|-------|---------------|-------|
+| 4 (Teal) | `teal_report.jinja2` | 7 (self-contained) |
+
+#### Teal Theme Pages
+
+1. **Cover** - Property address, agent signature
+2. **Contents** - Table of contents
+3. **Aerial View** - Google Static Map
+4. **Property Info** - 3 sections of property details
+5. **Area Sales Analysis** - Bar chart + PIQ/Low/Med/High table
+6. **Sales Comparables** - 2x2 grid of comp cards with maps
+7. **Range of Sales** - Summary stats with price slider
+
+### Google Static Maps
+
+The builder generates Google Static Maps URLs for:
+- Aerial view of subject property
+- Individual maps for each comparable
+
+```python
+def _get_static_map_url(
+    self, 
+    lat: float, 
+    lng: float, 
+    zoom: int = 15, 
+    size: str = "800x600"
+) -> str:
+    api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+    return (
+        f"https://maps.googleapis.com/maps/api/staticmap"
+        f"?center={lat},{lng}"
+        f"&zoom={zoom}"
+        f"&size={size}"
+        f"&maptype=roadmap"
+        f"&markers=color:0x1e3a5f%7C{lat},{lng}"
+        f"&key={api_key}"
+    )
+```
+
+### Data Flow: Frontend → API → Worker
+
+1. **Frontend** sends full comparable objects (not just IDs)
+2. **API** stores comparables as JSONB in `property_reports.comparables`
+3. **Worker** reads comparables and normalizes field names:
+
+| Frontend Field | Worker Handles As |
+|----------------|-------------------|
+| `lat` | `latitude` or `lat` |
+| `lng` | `longitude` or `lng` |
+| `photo_url` | `image_url` or `photo_url` |
+| `distance_miles` | `distance` or `distance_miles` |
+| `price` | `price` or `close_price` |
 
 ---
 
@@ -337,48 +567,66 @@ Jinja2-based HTML generation for PDF conversion.
 
 ### Agent/User Pages
 
-| Path | Component | Description |
-|------|-----------|-------------|
-| /app/property | page.tsx | Reports list with stats |
-| /app/property/new | page.tsx | 4-step creation wizard |
-| /app/property/[id] | page.tsx | Report detail view |
-| /app/property/[id]/settings | page.tsx | Landing page controls |
-| /app/leads | page.tsx | Leads management |
-| /p/[code] | page.tsx | Public landing page |
+| Path | Description |
+|------|-------------|
+| /app/property | Reports list with stats |
+| /app/property/new | 4-step creation wizard |
+| /app/property/[id] | Report detail view |
+| /app/property/[id]/settings | Landing page controls |
+| /app/leads | Leads management |
+| /p/[code] | Public landing page |
 
 ### Admin Pages
 
-| Path | Component | Description |
-|------|-----------|-------------|
-| /admin/property-reports | page.tsx | All reports (cross-account) |
-| /admin/property-reports/[id] | page.tsx | Report detail + raw data |
-| /admin/leads | page.tsx | All leads (cross-account) |
-| /admin/sms | page.tsx | SMS credits + logs |
-| /admin/blocked-ips | page.tsx | IP blocklist management |
+| Path | Description |
+|------|-------------|
+| /admin/property-reports | All reports (cross-account) |
+| /admin/property-reports/[id] | Report detail + raw data |
+| /admin/leads | All leads (cross-account) |
+| /admin/sms | SMS credits + logs |
+| /admin/blocked-ips | IP blocklist management |
 
 ### Report Creation Wizard
 
-**Step 1: Find Property**
-- Address input with search
-- Displays: owner, beds/baths, sqft, year built
-- SiteX API lookup
+**File:** `apps/web/app/app/property/new/page.tsx`
 
-**Step 2: Select Comparables**
+The wizard uses dynamic import with `ssr: false` for client-side rendering.
+
+#### Step 1: Find Property
+- Google Places Autocomplete for address input
+- "Search" button triggers SiteX lookup
+- Displays: owner, beds/baths, sqft, year built, APN, county
+
+#### Step 2: Select Comparables
+- Auto-loads comparables based on property location
 - Two-column picker (available ↔ selected)
 - 4-8 comparables required
-- Shows: address, price, beds/baths, distance
-- Optional map modal
+- Shows: address, price, beds/baths, distance, photo
+- Map modal for geographic view
 
-**Step 3: Choose Theme**
-- 5 preset themes
-- Accent color picker
-- Live preview
+#### Step 3: Choose Theme
+- 5 theme cards with preview images
+- Accent color picker (12 preset colors)
+- Page selection toggles
+- "Preview" modal shows all pages in theme
 
-**Step 4: Review & Generate**
-- Summary of selections
+#### Step 4: Review & Generate
+- Summary of all selections
+- Property details display
 - Generate button
-- Progress indicator
+- Progress indicator with stages
 - Auto-redirect on completion
+
+### Key Frontend Files
+
+| File | Purpose |
+|------|---------|
+| `apps/web/app/app/property/new/page.tsx` | Wizard orchestration, API submission |
+| `apps/web/lib/wizard-types.ts` | TypeScript types, themes, pages config |
+| `apps/web/components/property/ComparablesPicker.tsx` | Step 2 comparable selection |
+| `apps/web/components/property/ComparablesMapModal.tsx` | Map view of comparables |
+| `apps/web/components/property/ThemeSelector.tsx` | Step 3 theme/page selection |
+| `apps/web/lib/property-report-assets.ts` | R2 asset URLs manifest |
 
 ---
 
@@ -388,8 +636,7 @@ Jinja2-based HTML generation for PDF conversion.
 
 ```bash
 # SiteX Pro API
-SITEX_BASE_URL=https://api.bkiconnect.com  # Production
-# SITEX_BASE_URL=https://api.uat.bkitest.com  # UAT
+SITEX_BASE_URL=https://api.bkiconnect.com
 SITEX_CLIENT_ID=your_client_id
 SITEX_CLIENT_SECRET=your_client_secret
 SITEX_FEED_ID=100001
@@ -398,6 +645,12 @@ SITEX_FEED_ID=100001
 TWILIO_ACCOUNT_SID=ACxxxxx
 TWILIO_AUTH_TOKEN=xxxxx
 TWILIO_PHONE_NUMBER=+1234567890
+
+# Google Maps (for static maps in PDFs)
+GOOGLE_MAPS_API_KEY=AIzaSy...
+
+# PDFShift
+PDFSHIFT_API_KEY=sk_...
 ```
 
 ### Where to Configure
@@ -416,17 +669,21 @@ TWILIO_PHONE_NUMBER=+1234567890
 
 ```
 1. Agent clicks "Create Report" → /app/property/new
-2. Enters address → SiteX lookup → Property data displayed
-3. Clicks "Continue" → Comparables fetched from SimplyRETS
-4. Selects 4-8 comparables → Clicks "Continue"
-5. Chooses theme + accent color → Clicks "Continue"
-6. Reviews summary → Clicks "Generate Report"
-7. API creates record (status=draft)
-8. QR code generated and uploaded
-9. Celery task queued
-10. Frontend polls for completion
-11. Worker generates PDF via Jinja2 + PDFShift
-12. PDF uploaded to R2
+2. Enters address via Google Places → Clicks "Search"
+3. SiteX lookup → Property data displayed
+4. Clicks "Continue" → Comparables auto-loaded from SimplyRETS
+5. Selects 4-8 comparables → Clicks "Continue"
+6. Chooses theme + accent color + pages → Clicks "Continue"
+7. Reviews summary → Clicks "Generate Report"
+8. API creates record (status=draft)
+9. QR code generated and uploaded
+10. Celery task queued
+11. Frontend polls for completion
+12. Worker:
+    a. Builds template contexts
+    b. Renders Jinja2 template to HTML
+    c. Sends to PDFShift for conversion
+    d. Uploads PDF to R2
 13. Status updated to "complete"
 14. Agent redirected to report detail page
 ```
@@ -520,57 +777,6 @@ If all pass:
 | Expiry Check | Expired pages return 410 |
 | Max Leads Check | Over-limit pages return 410 |
 
-### Implementation
-
-```python
-# Lead capture flow (simplified)
-async def capture_lead(request):
-    # 1. Honeypot check (silent fail)
-    if request.website:  # hidden field
-        return {"success": True}  # Fake success
-    
-    # 2. Get report
-    report = await get_report_by_short_code(request.short_code)
-    
-    # 3. Active check
-    if not report.is_active:
-        raise HTTPException(410, "Page not available")
-    
-    # 4. Expiry check
-    if report.expires_at and report.expires_at < now():
-        raise HTTPException(410, "Page expired")
-    
-    # 5. Max leads check
-    if report.max_leads and lead_count >= report.max_leads:
-        raise HTTPException(410, "No longer accepting submissions")
-    
-    # 6. Access code check
-    if report.access_code and request.access_code != report.access_code:
-        raise HTTPException(403, "Invalid access code")
-    
-    # 7. IP block check
-    if await is_ip_blocked(client_ip):
-        raise HTTPException(403, "Access denied")
-    
-    # 8. Rate limit check
-    if await get_recent_submissions(client_ip) >= 5:
-        raise HTTPException(429, "Too many submissions")
-    
-    # 9. Duplicate check (silent success)
-    if await email_exists_for_report(request.email, report.id):
-        return {"success": True}
-    
-    # 10. Create lead
-    lead = await create_lead(...)
-    
-    # 11. Send SMS if credits available
-    if account.sms_credits > 0 and user.phone:
-        await send_notification(...)
-        await decrement_credits(account)
-    
-    return {"success": True}
-```
-
 ---
 
 ## Deployment Checklist
@@ -578,44 +784,17 @@ async def capture_lead(request):
 ### Pre-Deployment
 
 - [ ] Environment variables set (API + Worker)
-- [ ] Database migrations applied (0034, 0035)
+- [ ] Database migrations applied (0034, 0035, 0036)
 - [ ] SiteX credentials tested
 - [ ] Twilio credentials tested
+- [ ] Google Maps API key set
+- [ ] PDFShift API key set
 - [ ] R2 bucket accessible
-
-### Deployment Steps
-
-1. **Deploy API**
-   ```bash
-   # Render auto-deploys on push, or manual deploy
-   ```
-
-2. **Deploy Worker**
-   ```bash
-   # Ensure worker restarts to pick up new tasks
-   ```
-
-3. **Run Migrations**
-   ```bash
-   # Should auto-run, or manually:
-   python db/migrations/run_migrations.py
-   ```
-
-4. **Verify Deployment**
-   ```bash
-   # Test health
-   curl https://api.trendy.com/health
-   
-   # Test SiteX
-   curl -X POST https://api.trendy.com/v1/property/search \
-     -H "Authorization: Bearer $TOKEN" \
-     -d '{"address": "714 Vine St", "city_state_zip": "Anaheim, CA 92805"}'
-   ```
 
 ### Post-Deployment
 
 - [ ] Create test property report
-- [ ] Verify PDF generates
+- [ ] Verify PDF generates with correct template
 - [ ] Test QR code scanning
 - [ ] Submit test lead
 - [ ] Verify SMS received
@@ -640,14 +819,32 @@ async def capture_lead(request):
 **Problem:** Status stuck on "processing"
 
 **Solution:** 
-1. Check Celery worker logs
-2. Verify worker has SITEX_* env vars
+1. Check Celery worker logs on Render
+2. Verify worker has all required env vars
 3. Check PDFShift API status
 4. Try retry via admin panel
 
-**Problem:** PDF missing content
+**Problem:** PDF missing content / empty pages
 
-**Solution:** Check Jinja2 templates in `apps/worker/src/worker/templates/property/`
+**Solution:** 
+1. Check template exists in `apps/worker/src/worker/templates/property/`
+2. Verify data structure matches template expectations
+3. Check Jinja2 filters are registered
+
+**Problem:** Comparables not rendering
+
+**Solution:**
+1. Verify `comparables` column contains full objects (not just IDs)
+2. Check field name normalization in `_build_comparables_context()`
+3. Frontend sends: `lat`, `lng`, `photo_url`, `distance_miles`
+4. Worker handles: `latitude`/`lat`, `longitude`/`lng`, `image_url`/`photo_url`, `distance`/`distance_miles`
+
+**Problem:** Maps not showing
+
+**Solution:**
+1. Verify GOOGLE_MAPS_API_KEY is set in Worker environment
+2. Check API key has Static Maps API enabled
+3. Verify lat/lng coordinates are present in data
 
 ### SMS Issues
 
@@ -702,6 +899,8 @@ async def capture_lead(request):
     "lot_size": 6113,
     "year_built": 1954,
     "assessed_value": 516112,
+    "latitude": 33.8369,
+    "longitude": -117.9111,
     "source": "sitex"
   }
 }
@@ -733,14 +932,4 @@ async def capture_lead(request):
 
 ---
 
-## Support
-
-For issues or questions:
-- Check this documentation first
-- Review Troubleshooting section
-- Check application logs in Render dashboard
-- Contact Jerry for escalation
-
----
-
-*Documentation generated January 9, 2026*
+*Documentation updated January 13, 2026*

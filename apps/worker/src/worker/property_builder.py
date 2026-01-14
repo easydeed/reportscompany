@@ -2,17 +2,19 @@
 Property Report Builder
 =======================
 
-Renders property reports (seller/buyer) using Jinja2 templates.
-Uses the orchestrator template (seller_report.jinja2) which handles:
-- Theme selection (1-5)
-- Page set configuration (full/compact/custom)
-- All page includes
+Renders property reports (seller/buyer) using self-contained Jinja2 templates.
+All 5 themes use the same unified data contract.
+
+Themes:
+- classic (1): Navy + Sky Blue, Merriweather + Source Sans Pro
+- modern (2): Coral + Midnight, Space Grotesk + DM Sans
+- elegant (3): Burgundy + Gold, Playfair Display + Montserrat
+- teal (4): Teal + Navy, Montserrat
+- bold (5): Navy + Gold, Oswald + Montserrat
 
 Usage:
     builder = PropertyReportBuilder(report_data)
     html = builder.render_html()
-
-Based on SELLER_REPORT_INTEGRATION.md guide.
 """
 
 import os
@@ -23,11 +25,26 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 logger = logging.getLogger(__name__)
 
-# Template directories
-# Old templates: templates/reports/seller (themes 1-3, 5)
-# V0 Teal templates: templates/property/teal (theme 4)
-TEMPLATES_BASE_DIR = Path(__file__).parent / "templates" / "reports"
-TEMPLATES_V0_DIR = Path(__file__).parent / "templates"  # Parent for property/teal includes
+# Template directory (all themes are self-contained in property/)
+TEMPLATES_DIR = Path(__file__).parent / "templates"
+
+# Unified theme template paths
+THEME_TEMPLATES = {
+    "teal": "property/teal/teal_report.jinja2",
+    "bold": "property/bold/bold_report.jinja2",
+    "classic": "property/classic/classic_report.jinja2",
+    "modern": "property/modern/modern_report.jinja2",
+    "elegant": "property/elegant/elegant_report.jinja2",
+}
+
+# Theme number to name mapping (for backward compatibility)
+THEME_NUMBER_MAP = {
+    1: "classic",
+    2: "modern",
+    3: "elegant",
+    4: "teal",
+    5: "bold",
+}
 
 # Configuration from environment
 ASSETS_BASE_URL = os.getenv("ASSETS_BASE_URL", "https://assets.trendyreports.com")
@@ -95,37 +112,36 @@ class PropertyReportBuilder:
     def __init__(self, report_data: Dict[str, Any]):
         self.report_data = report_data
         self.report_type = report_data.get("report_type", "seller")
-        self.theme = report_data.get("theme", 1)
         self.accent_color = report_data.get("accent_color")
         self.language = report_data.get("language", "en")
         
-        # Use selected_pages if provided, otherwise fall back to page_set or default
-        # selected_pages can be:
-        #   - A list of page IDs like ["cover", "property_details", "comparables", ...]
-        #   - None (use default based on theme: compact for themes 4-5, full for 1-3)
+        # Resolve theme: accept either theme name (str) or theme number (int)
+        theme_input = report_data.get("theme", 4)  # Default to teal
+        if isinstance(theme_input, str) and theme_input in THEME_TEMPLATES:
+            self.theme_name = theme_input
+            self.theme_number = {v: k for k, v in THEME_NUMBER_MAP.items()}.get(theme_input, 4)
+        elif isinstance(theme_input, int) and theme_input in THEME_NUMBER_MAP:
+            self.theme_name = THEME_NUMBER_MAP[theme_input]
+            self.theme_number = theme_input
+        else:
+            # Default to teal
+            self.theme_name = "teal"
+            self.theme_number = 4
+        
+        # Legacy compatibility: keep self.theme as the number
+        self.theme = self.theme_number
+        
+        # Use selected_pages if provided, otherwise use default 7-page set
+        # All unified templates use the same 7-page layout
         selected_pages = report_data.get("selected_pages")
         if selected_pages and isinstance(selected_pages, list) and len(selected_pages) > 0:
             self.page_set = selected_pages
         else:
-            # Default based on theme: themes 4-5 use compact, themes 1-3 use full
-            default_page_set = "compact" if self.theme >= 4 else "full"
-            self.page_set = report_data.get("page_set", default_page_set)
+            self.page_set = ["cover", "contents", "aerial", "property", "analysis", "comparables", "range"]
         
-        # Check if using V0 Teal theme (theme 4)
-        self.use_v0_teal = (self.theme == 4)
-        
-        # Template directory based on theme and report type
-        if self.use_v0_teal:
-            # V0 Teal templates use the parent templates directory
-            # to allow includes like 'property/teal/teal_cover.jinja2'
-            template_dir = TEMPLATES_V0_DIR
-        else:
-            # Original templates in templates/reports/seller
-            template_dir = TEMPLATES_BASE_DIR / self.report_type
-        
-        # Initialize Jinja2 environment
+        # Initialize Jinja2 environment - single directory for all templates
         self.env = Environment(
-            loader=FileSystemLoader(str(template_dir)),
+            loader=FileSystemLoader(str(TEMPLATES_DIR)),
             autoescape=select_autoescape(['html', 'xml', 'jinja2']),
             trim_blocks=True,
             lstrip_blocks=True
@@ -673,10 +689,9 @@ class PropertyReportBuilder:
     
     def render_html(self) -> str:
         """
-        Render the complete HTML report using the orchestrator template.
+        Render the complete HTML report using the unified template system.
         
-        For theme 4 (Teal), uses the V0-generated pixel-perfect templates.
-        For other themes, uses the original seller_report.jinja2 orchestrator.
+        All 5 themes use self-contained templates with the same data contract.
         
         Returns:
             Complete HTML string ready for PDF generation
@@ -684,10 +699,11 @@ class PropertyReportBuilder:
         # Determine theme color
         theme_color = self._get_theme_color()
         
-        # Build the complete context as specified in SELLER_REPORT_INTEGRATION.md
+        # Build the unified context (same structure for all themes)
         context = {
             # Theme configuration
-            "theme_number": self.theme,
+            "theme_number": self.theme_number,
+            "theme_name": self.theme_name,
             "theme_color": theme_color,
             "assets_base_url": ASSETS_BASE_URL,
             "google_maps_api_key": GOOGLE_MAPS_API_KEY,
@@ -704,16 +720,16 @@ class PropertyReportBuilder:
             # Comparables
             "comparables": self._build_comparables_context(),
             
-            # Statistics (old-style for themes 1-3, 5)
+            # Statistics (unified format for all themes)
+            "stats": self._build_stats_context(),
+            
+            # Images
+            "images": self._build_images_context(),
+            
+            # Legacy context (for any remaining old templates)
             "neighborhood": self._build_neighborhood_context(),
             "area_analysis": self._build_area_analysis_context(),
             "range_of_sales": self._build_range_of_sales_context(),
-            
-            # Statistics (V0 Teal template style)
-            "stats": self._build_stats_context(),
-            
-            # Images (V0 Teal template)
-            "images": self._build_images_context(),
             
             # Content sections (use template defaults)
             **self._build_default_content_sections(),
@@ -723,22 +739,17 @@ class PropertyReportBuilder:
         }
         
         try:
-            # Select template based on theme
-            if self.use_v0_teal:
-                # V0 Teal theme uses the new pixel-perfect templates
-                template = self.env.get_template("property/teal/teal_report.jinja2")
-                logger.info(f"Using V0 Teal template for theme {self.theme}")
-            else:
-                # Original templates
-                template = self.env.get_template(f"{self.report_type}_report.jinja2")
+            # Simple theme lookup - all templates are self-contained
+            template_path = THEME_TEMPLATES.get(self.theme_name, THEME_TEMPLATES["teal"])
+            template = self.env.get_template(template_path)
             
             html = template.render(**context)
             
-            logger.info(f"Rendered {self.report_type} report: theme={self.theme}, pages={self.page_set}, v0_teal={self.use_v0_teal}")
+            logger.info(f"Rendered {self.report_type} report: theme={self.theme_name} ({self.theme_number}), template={template_path}")
             return html
             
         except Exception as e:
-            logger.error(f"Failed to render report: {e}")
+            logger.error(f"Failed to render report with theme {self.theme_name}: {e}")
             raise
     
     def render_preview(self, pages: List[str] = None) -> str:

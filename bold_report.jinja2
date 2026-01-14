@@ -1,0 +1,1487 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sellers Report (Bold / Navy + Gold)</title>
+
+  <!-- Fonts (optional). If your PDF engine blocks remote fonts, everything still works with system fonts. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Oswald:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --navy:#15216E;
+      --gold:#D69649;
+
+      --ink:#0b0f1a;
+      --muted:#6b7280;
+
+      --paper:#ffffff;
+      --bg:#f4f6fb;
+
+      --cool:#eef0f6;   /* light bluish */
+      --warm:#f4ede3;   /* light beige */
+
+      --line:#e6e9f2;
+
+      /* Letter */
+      --page-w: 8.5in;
+      --page-h: 11in;
+
+      --pad: 0.6in;
+      --radius: 16px;
+
+      /* Triangle pattern (CSS-only) */
+      --tri-a: rgba(255,255,255,.09);
+      --tri-b: rgba(255,255,255,0);
+
+      --shadow: 0 10px 30px rgba(0,0,0,.12);
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Montserrat, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* ===== PRINT ===== */
+    @page { size: Letter; margin: 0; }
+    @media print{
+      body{ background:#fff; margin:0; padding:0; }
+      .sheet{ padding:0; gap:0; }
+      .page{ box-shadow:none; border-radius:0; margin:0; }
+      .page:last-child{ page-break-after: avoid; }
+    }
+
+    /* ===== WRAPPER ===== */
+    .sheet{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:16px;
+      padding:18px 12px 40px;
+    }
+    .page{
+      width: var(--page-w);
+      height: var(--page-h);
+      background: var(--paper);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+      page-break-after: always;
+      page-break-inside: avoid;
+    }
+    .page:last-child{
+      page-break-after: auto;
+    }
+
+    /* ===== UTILS ===== */
+    .abs{ position:absolute; }
+    .u-upper{ text-transform: uppercase; letter-spacing: .06em; }
+    .muted{ color: var(--muted); }
+    .small{ font-size: 12px; }
+    .tiny{ font-size: 11px; }
+
+    .h-condensed{
+      font-family: Oswald, Montserrat, system-ui, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .title-split{
+      display:flex;
+      justify-content:center;
+      align-items:baseline;
+      gap:16px;
+      width:100%;
+    }
+    .title-split .a{
+      color: var(--navy);
+      font-weight: 300;
+      font-size: 54px;
+      letter-spacing: .08em;
+    }
+    .title-split .b{
+      color: var(--gold);
+      font-weight: 800;
+      font-size: 54px;
+      letter-spacing: .04em;
+    }
+
+    /* Triangle pattern helper */
+    .tri{
+      background-image:
+        linear-gradient(60deg, var(--tri-a) 12%, var(--tri-b) 12.5%, var(--tri-b) 87%, var(--tri-a) 87.5%, var(--tri-a)),
+        linear-gradient(-60deg, var(--tri-a) 12%, var(--tri-b) 12.5%, var(--tri-b) 87%, var(--tri-a) 87.5%, var(--tri-a)),
+        linear-gradient(0deg, var(--tri-a) 25%, var(--tri-b) 25.5%, var(--tri-b) 75%, var(--tri-a) 75.5%, var(--tri-a));
+      background-size: 26px 46px;
+      background-position: 0 0, 0 0, 0 0;
+    }
+
+    /* =========================================================
+      PAGE 1: COVER
+    ========================================================== */
+    .cover-titlebar{
+      height: 1.15in;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#fff;
+    }
+    .cover-titlebar .sell{
+      font-family: Oswald, Montserrat, sans-serif;
+      font-weight: 700;
+      font-size: 58px;
+      letter-spacing:.08em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-right: 10px;
+    }
+    .cover-titlebar .rep{
+      font-family: Oswald, Montserrat, sans-serif;
+      font-weight: 300;
+      font-size: 58px;
+      letter-spacing:.12em;
+      color: var(--navy);
+      text-transform: uppercase;
+    }
+
+    .cover-photo{
+      position:absolute;
+      left: .55in;
+      right: .55in;
+      top: 1.15in;
+      height: 6.55in;
+      background: #cfd6e6;
+      background-image: url("assets/cover-house.jpg");
+      background-size: cover;
+      background-position:center;
+      border-radius: 10px;
+      overflow:hidden;
+    }
+
+    .cover-bottom{
+      position:absolute;
+      left:0; right:0;
+      bottom:0;
+      height: 3.3in;
+      background:#fff;
+    }
+
+    .cover-panel{
+      position:absolute;
+      left: .75in;
+      top: 6.15in; /* overlaps photo */
+      bottom: .55in;
+      width: 3.15in;
+      background: var(--navy);
+      border-radius: 6px;
+      overflow:hidden;
+      color:#fff;
+      padding: 18px 18px 16px;
+    }
+    .cover-panel::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      opacity:.55;
+      pointer-events:none;
+    }
+    .cover-panel.tri::before{ /* pattern already in background, we just add a subtle vignette */
+      content:"";
+      position:absolute;
+      inset:0;
+      background: radial-gradient(600px 300px at 70% 30%, rgba(255,255,255,.10), rgba(255,255,255,0) 55%);
+      pointer-events:none;
+    }
+
+    .cover-pin{
+      width: 46px; height: 46px;
+      border-radius: 999px;
+      border: 2px solid rgba(255,255,255,.35);
+      display:grid;
+      place-items:center;
+      margin: 8px auto 14px;
+      background: rgba(255,255,255,.08);
+    }
+    .cover-pin svg{ width: 18px; height: 18px; fill: var(--gold); }
+
+    .cover-addr{
+      text-align:center;
+      font-weight: 900;
+      letter-spacing:.03em;
+      line-height: 1.2;
+      margin:0;
+      font-size: 26px;
+      text-transform: uppercase;
+    }
+    .cover-addr span{ display:block; }
+
+    .cover-note{
+      text-align:center;
+      margin-top: 14px;
+      font-size: 11px;
+      opacity:.9;
+    }
+    .cover-note .rule{
+      width: 72%;
+      height: 2px;
+      background: rgba(255,255,255,.35);
+      margin: 10px auto 0;
+      border-radius: 3px;
+    }
+
+    .cover-agent{
+      position:absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 14px;
+      display:flex;
+      gap: 14px;
+      align-items:flex-start;
+    }
+    .cover-agent .photo{
+      width: 54px; height: 54px;
+      border-radius: 50%;
+      overflow:hidden;
+      border: 2px solid rgba(255,255,255,.25);
+      flex: 0 0 54px;
+      background:#9aa4b5;
+    }
+    .cover-agent .photo img{
+      width:100%; height:100%;
+      object-fit: cover;
+    }
+    .cover-agent .meta{
+      display:flex;
+      flex-direction:column;
+      gap: 6px;
+      min-width: 0;
+    }
+    .cover-agent .name{
+      font-weight: 900;
+      letter-spacing:.02em;
+      margin-top: 2px;
+    }
+    .cover-agent .role{
+      color: var(--gold);
+      font-weight: 700;
+      font-size: 12px;
+      margin-top: -6px;
+    }
+    .contact-row{
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      font-size: 11px;
+      opacity:.95;
+    }
+    .contact-row svg{
+      width: 13px; height: 13px;
+      fill: rgba(255,255,255,.9);
+      flex: 0 0 13px;
+    }
+
+    .cover-disclaimer{
+      position:absolute;
+      left: 4.05in;
+      right: .75in;
+      bottom: .9in;
+      display:flex;
+      gap: 14px;
+      align-items:flex-start;
+      color: #111827;
+    }
+    .cover-disclaimer img{
+      width: 54px; height: 54px;
+      border-radius: 4px;
+      box-shadow: 0 12px 25px rgba(0,0,0,.12);
+    }
+    .cover-disclaimer h3{
+      margin: 4px 0 6px;
+      font-size: 15px;
+      letter-spacing:.02em;
+    }
+    .cover-disclaimer p{
+      margin: 0;
+      font-size: 11px;
+      line-height: 1.5;
+      color: #374151;
+      max-width: 320px;
+    }
+
+    /* =========================================================
+      PAGE 2: DEAR OWNER
+    ========================================================== */
+    .letter{
+      padding: var(--pad);
+    }
+    .letter::before{
+      content:"";
+      position:absolute;
+      left:-.2in;
+      top:-.2in;
+      width: 3.4in;
+      height: 3.4in;
+      background: var(--navy);
+      opacity:.20;
+      transform: rotate(0deg);
+      /* triangle pattern overlay */
+      background-image:
+        linear-gradient(60deg, rgba(21,33,110,.35) 12%, rgba(0,0,0,0) 12.5%, rgba(0,0,0,0) 87%, rgba(21,33,110,.35) 87.5%, rgba(21,33,110,.35)),
+        linear-gradient(-60deg, rgba(21,33,110,.35) 12%, rgba(0,0,0,0) 12.5%, rgba(0,0,0,0) 87%, rgba(21,33,110,.35) 87.5%, rgba(21,33,110,.35));
+      background-size: 28px 48px;
+      clip-path: polygon(0 0, 100% 0, 0 100%);
+      pointer-events:none;
+    }
+
+    .letter-center{
+      position:absolute;
+      left: var(--pad);
+      right: var(--pad);
+      top: 2.25in;
+      text-align:center;
+    }
+    .letter-center .dear{
+      font-family: Oswald, Montserrat, sans-serif;
+      font-weight: 300;
+      letter-spacing:.14em;
+      text-transform: uppercase;
+      color: var(--navy);
+      font-size: 60px;
+      line-height: .9;
+      margin:0;
+    }
+    .letter-center .owner{
+      font-family: Oswald, Montserrat, sans-serif;
+      font-weight: 800;
+      letter-spacing:.10em;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-size: 60px;
+      margin:0;
+      margin-top: 6px;
+    }
+
+    .letter-body{
+      margin: 0 auto;
+      margin-top: 1.1in;
+      max-width: 5.8in;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #111827;
+    }
+    .letter-rule{
+      width: 2.9in;
+      height: 3px;
+      background: var(--gold);
+      margin: 22px auto;
+      border-radius: 4px;
+      opacity:.9;
+    }
+    .thankyou{
+      position:absolute;
+      left: 50%;
+      bottom: 1.05in;
+      transform: translateX(-50%);
+      width: 2.5in;
+      opacity:.95;
+    }
+
+    /* =========================================================
+      PAGE 3: WELCOME / AERIAL
+    ========================================================== */
+    .welcome-hero{
+      position:absolute;
+      left:0; right:0;
+      top:0;
+      height: 2.65in;
+      background: var(--navy);
+      color:#fff;
+      padding: .55in .65in .2in;
+      overflow:hidden;
+    }
+    .welcome-hero::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      opacity:.35;
+      pointer-events:none;
+    }
+    .welcome-hero.tri::after{
+      content:"";
+      position:absolute;
+      inset:-40px;
+      background-image:
+        linear-gradient(60deg, rgba(255,255,255,.12) 12%, rgba(0,0,0,0) 12.5%, rgba(0,0,0,0) 87%, rgba(255,255,255,.12) 87.5%, rgba(255,255,255,.12)),
+        linear-gradient(-60deg, rgba(255,255,255,.12) 12%, rgba(0,0,0,0) 12.5%, rgba(0,0,0,0) 87%, rgba(255,255,255,.12) 87.5%, rgba(255,255,255,.12));
+      background-size: 34px 58px;
+      transform: rotate(0deg);
+      opacity:.35;
+    }
+
+    .welcome-hero .big{
+      position:relative;
+      text-align:center;
+      font-family: Oswald, Montserrat, sans-serif;
+      text-transform: uppercase;
+      letter-spacing:.18em;
+      font-size: 44px;
+      font-weight: 300;
+      margin:0;
+      line-height:1.05;
+    }
+    .welcome-hero .big b{
+      color: var(--gold);
+      font-weight: 800;
+      letter-spacing:.10em;
+      margin-left: 10px;
+    }
+    .welcome-hero .subline{
+      position:relative;
+      margin-top: 18px;
+      text-align:center;
+      font-size: 12px;
+      letter-spacing:.2em;
+      text-transform: uppercase;
+      opacity:.95;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap: 14px;
+    }
+    .welcome-hero .subline:before,
+    .welcome-hero .subline:after{
+      content:"";
+      width: 1.35in;
+      height: 2px;
+      background: rgba(255,255,255,.45);
+      border-radius: 3px;
+    }
+
+    .welcome-divider{
+      position:absolute;
+      left: var(--pad);
+      right: var(--pad);
+      top: 2.8in;
+      height: 32px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap: 18px;
+      color: var(--navy);
+      opacity:.75;
+    }
+    .welcome-divider .line{
+      height: 2px;
+      background: rgba(21,33,110,.35);
+      flex: 1;
+      border-radius: 4px;
+    }
+    .welcome-divider .star{
+      width: 18px; height: 18px;
+      background: var(--navy);
+      clip-path: polygon(50% 0%, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0% 50%, 38% 38%);
+      opacity:.8;
+    }
+
+    .welcome-panels{
+      position:absolute;
+      left: var(--pad);
+      right: var(--pad);
+      top: 3.2in;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      border-radius: 0;
+      overflow:hidden;
+      border: 0;
+    }
+    .panel{
+      padding: 22px 26px;
+      min-height: 1.65in;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      text-align:center;
+    }
+    .panel.left{ background: var(--cool); }
+    .panel.right{ background: var(--warm); }
+    .panel h3{
+      margin:0 0 10px;
+      font-family: Oswald, Montserrat, sans-serif;
+      text-transform: uppercase;
+      letter-spacing:.12em;
+      font-size: 20px;
+      color: var(--navy);
+      font-weight: 700;
+    }
+    .panel.right h3{ color: var(--gold); }
+    .panel p{
+      margin:0;
+      font-size: 12px;
+      line-height: 1.55;
+      color:#374151;
+      max-width: 3.2in;
+      margin-left:auto;
+      margin-right:auto;
+    }
+
+    .welcome-map{
+      position:absolute;
+      left: var(--pad);
+      right: var(--pad);
+      bottom: var(--pad);
+      height: 4.9in;
+      border-radius: 8px;
+      overflow:hidden;
+      border: 1px solid var(--line);
+      background:#e5e7eb;
+    }
+    .welcome-map img{
+      width:100%;
+      height:100%;
+      object-fit: cover;
+      display:block;
+    }
+
+    /* =========================================================
+      PAGE 4: PROSPECTIVE PROPERTY
+    ========================================================== */
+    .property{
+      padding: var(--pad);
+    }
+    .property .title{
+      text-align:center;
+      margin-top: 2px;
+      margin-bottom: 16px;
+    }
+    .property .title .a{
+      font-family: Oswald, Montserrat, sans-serif;
+      text-transform: uppercase;
+      letter-spacing:.14em;
+      color: var(--navy);
+      font-weight: 300;
+      font-size: 52px;
+    }
+    .property .title .b{
+      font-family: Oswald, Montserrat, sans-serif;
+      text-transform: uppercase;
+      letter-spacing:.08em;
+      color: var(--gold);
+      font-weight: 800;
+      font-size: 52px;
+      margin-left: 12px;
+    }
+
+    .ribbon{
+      background: var(--navy);
+      color:#fff;
+      padding: 12px 16px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing:.06em;
+      font-size: 13px;
+      width: fit-content;
+      clip-path: polygon(0 0, 92% 0, 100% 50%, 92% 100%, 0 100%);
+      margin-top: 16px;
+    }
+
+    .two-col{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 12px;
+    }
+    .kv{
+      border-collapse: separate;
+      border-spacing: 0 10px;
+      width:100%;
+      font-size: 12px;
+    }
+    .kv td{
+      padding: 10px 12px;
+      border-radius: 6px;
+      vertical-align: top;
+      background: var(--warm);
+    }
+    .kv tr:nth-child(even) td{ background: var(--cool); }
+    .kv td.key{
+      width: 46%;
+      font-weight: 800;
+      color:#111827;
+      opacity:.9;
+      white-space:nowrap;
+    }
+    .kv td.val{
+      font-weight: 600;
+      color:#111827;
+    }
+
+    .legal-box{
+      margin-top: 10px;
+      padding: 12px 14px;
+      background: var(--cool);
+      border-radius: 8px;
+      font-size: 12px;
+      line-height: 1.55;
+      font-weight: 600;
+      color:#111827;
+    }
+    .legal-box b{ font-weight: 900; }
+
+    .kv-wide{
+      margin-top: 12px;
+      border-collapse: separate;
+      border-spacing: 0 10px;
+      width:100%;
+      font-size: 12px;
+    }
+    .kv-wide td{
+      padding: 10px 12px;
+      border-radius: 6px;
+      background: var(--warm);
+      font-weight: 600;
+    }
+    .kv-wide tr:nth-child(even) td{ background: var(--cool); }
+    .kv-wide td.key{
+      font-weight: 900;
+      opacity:.9;
+      white-space:nowrap;
+    }
+    .kv-wide td.val{ font-weight: 700; }
+
+    /* =========================================================
+      PAGE 5: AREA SALES ANALYSIS
+    ========================================================== */
+    .area-sales{
+      padding: var(--pad);
+    }
+    .area-sales .title{
+      text-align:center;
+      margin-top: 2px;
+      margin-bottom: 10px;
+    }
+    .area-sales .title .a{
+      font-family: Oswald, Montserrat, sans-serif;
+      text-transform: uppercase;
+      letter-spacing:.14em;
+      color: var(--navy);
+      font-weight: 300;
+      font-size: 56px;
+    }
+    .area-sales .title .b{
+      font-family: Oswald, Montserrat, sans-serif;
+      text-transform: uppercase;
+      letter-spacing:.08em;
+      color: var(--gold);
+      font-weight: 800;
+      font-size: 56px;
+      margin-left: 14px;
+    }
+
+    .chart{
+      margin-top: 10px;
+      border-radius: 10px;
+      background:#fff;
+      border: 1px solid var(--line);
+      padding: 10px 10px 2px;
+    }
+    .chart svg{ width:100%; height:auto; display:block; }
+
+    .table-wrap{
+      margin-top: 16px;
+      border-radius: 12px;
+      overflow:hidden;
+      border: 1px solid var(--line);
+    }
+    table.clean{
+      width:100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    table.clean thead th{
+      background: var(--navy);
+      color:#fff;
+      padding: 16px 14px;
+      text-align:left;
+      font-weight: 900;
+      letter-spacing:.02em;
+    }
+    table.clean tbody td{
+      padding: 12px 14px;
+      border-top: 1px solid rgba(0,0,0,.03);
+    }
+    table.clean tbody tr:nth-child(odd) td{ background: #f1f2f7; }
+    table.clean tbody tr:nth-child(even) td{ background: #e9ebf3; }
+    table.clean tfoot td{
+      background: var(--gold);
+      color: #111827;
+      padding: 16px 14px;
+      font-weight: 900;
+    }
+
+    /* =========================================================
+      PAGE 6/7: SALES COMPARABLES
+    ========================================================== */
+    .comps{
+      padding: var(--pad);
+    }
+    .comps .title{
+      text-align:center;
+      margin-top: 2px;
+      margin-bottom: 10px;
+    }
+    .comps .title .a{
+      font-family: Oswald, Montserrat, sans-serif;
+      text-transform: uppercase;
+      letter-spacing:.14em;
+      color: var(--navy);
+      font-weight: 300;
+      font-size: 56px;
+    }
+    .comps .title .b{
+      font-family: Oswald, Montserrat, sans-serif;
+      text-transform: uppercase;
+      letter-spacing:.08em;
+      color: var(--gold);
+      font-weight: 800;
+      font-size: 56px;
+      margin-left: 14px;
+    }
+
+    .comp-grid{
+      margin-top: 18px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    .comp-grid.three .comp-card:last-child{ grid-column: 1 / span 1; }
+    .comp-card{
+      border-radius: 14px;
+      overflow:hidden;
+      border: 1px solid var(--line);
+      background: var(--cool);
+      position: relative;
+    }
+    .comp-card.warm{ background: var(--warm); }
+
+    .comp-photo{
+      height: 1.75in;
+      background:#d1d5db;
+      background-image: url("assets/comp.jpg");
+      background-size: cover;
+      background-position:center;
+      position: relative;
+    }
+    .comp-band{
+      position:absolute;
+      left:0; right:0;
+      bottom:0;
+      padding: 10px 14px;
+      color:#fff;
+      background: var(--navy);
+      display:flex;
+      flex-direction:column;
+      gap: 6px;
+      overflow:hidden;
+    }
+    .comp-band.gold{
+      background: var(--gold);
+      color:#111827;
+    }
+    .comp-band::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      opacity:.28;
+      pointer-events:none;
+      /* pattern */
+      background-image:
+        linear-gradient(60deg, rgba(255,255,255,.32) 12%, rgba(0,0,0,0) 12.5%, rgba(0,0,0,0) 87%, rgba(255,255,255,.32) 87.5%, rgba(255,255,255,.32)),
+        linear-gradient(-60deg, rgba(255,255,255,.32) 12%, rgba(0,0,0,0) 12.5%, rgba(0,0,0,0) 87%, rgba(255,255,255,.32) 87.5%, rgba(255,255,255,.32));
+      background-size: 26px 46px;
+    }
+    .comp-band > *{ position: relative; }
+
+    .addr-row{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      font-weight: 900;
+      letter-spacing:.05em;
+      text-transform: uppercase;
+      font-size: 13px;
+    }
+    .loc{
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.18);
+      display:grid; place-items:center;
+      border: 1px solid rgba(255,255,255,.25);
+      flex: 0 0 22px;
+    }
+    .comp-band.gold .loc{
+      background: rgba(255,255,255,.35);
+      border-color: rgba(0,0,0,.12);
+    }
+    .loc svg{ width: 12px; height: 12px; fill: #fff; }
+    .comp-band.gold .loc svg{ fill: #111827; }
+
+    .price-row{
+      display:flex;
+      align-items:baseline;
+      gap: 12px;
+      font-size: 12px;
+      opacity:.95;
+    }
+    .price-row .price{
+      font-size: 20px;
+      font-weight: 900;
+      margin-left: 6px;
+      color: var(--gold);
+    }
+    .comp-band.gold .price-row .price{
+      color: #111827;
+    }
+
+    .comp-meta{
+      padding: 12px 14px 14px;
+      font-size: 11px;
+      color:#111827;
+    }
+    .meta-grid{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px 14px;
+    }
+    .meta-item{
+      display:flex;
+      flex-direction:column;
+      gap: 4px;
+    }
+    .meta-item .label{ color:#374151; font-size: 10px; text-transform:none; }
+    .meta-item .val{ font-weight: 900; }
+
+    .meta-rule{
+      height: 1px;
+      background: rgba(0,0,0,.18);
+      margin: 10px 0 12px;
+    }
+
+    /* =========================================================
+      PAGE 8: RANGE OF SALES
+    ========================================================== */
+    .range{
+      padding: var(--pad);
+    }
+    .range .title{
+      text-align:center;
+      margin-top: 2px;
+      margin-bottom: 10px;
+    }
+    .range .title .a{
+      font-family: Oswald, Montserrat, sans-serif;
+      text-transform: uppercase;
+      letter-spacing:.14em;
+      color: var(--navy);
+      font-weight: 300;
+      font-size: 56px;
+    }
+    .range .title .b{
+      font-family: Oswald, Montserrat, sans-serif;
+      text-transform: uppercase;
+      letter-spacing:.08em;
+      color: var(--gold);
+      font-weight: 800;
+      font-size: 56px;
+      margin-left: 14px;
+    }
+
+    .range-map{
+      margin-top: 10px;
+      height: 4.6in;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      overflow:hidden;
+      background:#e5e7eb;
+    }
+    .range-map img{
+      width:100%; height:100%;
+      object-fit: cover;
+      display:block;
+    }
+
+    .range-metrics{
+      margin-top: -1px;
+      height: 1.15in;
+      background: var(--navy);
+      color:#fff;
+      border-radius: 0 0 10px 10px;
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      align-items:center;
+      position: relative;
+      overflow:hidden;
+    }
+    .range-metrics::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      opacity:.30;
+      pointer-events:none;
+      background-image:
+        linear-gradient(60deg, rgba(255,255,255,.12) 12%, rgba(0,0,0,0) 12.5%, rgba(0,0,0,0) 87%, rgba(255,255,255,.12) 87.5%, rgba(255,255,255,.12)),
+        linear-gradient(-60deg, rgba(255,255,255,.12) 12%, rgba(0,0,0,0) 12.5%, rgba(0,0,0,0) 87%, rgba(255,255,255,.12) 87.5%, rgba(255,255,255,.12));
+      background-size: 26px 46px;
+    }
+    .metric{
+      position:relative;
+      text-align:center;
+      padding: 10px 6px;
+    }
+    .metric .num{
+      color: var(--gold);
+      font-weight: 900;
+      font-size: 46px;
+      line-height: 1;
+      letter-spacing:.02em;
+      font-family: Oswald, Montserrat, sans-serif;
+    }
+    .metric .lbl{
+      margin-top: 8px;
+      font-weight: 700;
+      opacity:.9;
+      font-size: 12px;
+    }
+
+    .slider{
+      margin-top: 26px;
+      padding: 0 .7in;
+      text-align:center;
+    }
+    .slider-top{
+      display:flex;
+      justify-content:space-between;
+      font-weight: 900;
+      color:#111827;
+      margin-bottom: 8px;
+    }
+    .caret{
+      width:0; height:0;
+      border-left:6px solid transparent;
+      border-right:6px solid transparent;
+      border-top: 10px solid var(--gold);
+      transform: translateY(2px);
+      display:inline-block;
+      margin-left: 8px;
+      margin-right: 8px;
+    }
+    .track{
+      height: 4px;
+      background: #c9cedc;
+      border-radius: 999px;
+      position: relative;
+      margin: 10px auto 14px;
+    }
+    .track .active{
+      position:absolute;
+      left: 22%;
+      right: 22%;
+      top:0; bottom:0;
+      background: var(--navy);
+      border-radius: 999px;
+    }
+    .dot{
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--navy);
+      position:absolute;
+      top: 50%;
+      transform: translate(-50%,-50%);
+      box-shadow: 0 10px 18px rgba(0,0,0,.12);
+    }
+    .dot.left{ left: 22%; }
+    .dot.right{ left: 78%; }
+
+    .range-note{
+      margin-top: 12px;
+      font-size: 11px;
+      line-height: 1.55;
+      color:#374151;
+      max-width: 6.6in;
+      margin-left:auto;
+      margin-right:auto;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="sheet">
+
+    <!-- =========================================================
+      PAGE 1: COVER
+    ========================================================== -->
+    <section class="page">
+      <div class="cover-titlebar">
+        <span class="sell">SELLERS</span>
+        <span class="rep">REPORT</span>
+      </div>
+
+      <div class="cover-photo" {% if images.hero %}style="background-image: url('{{ images.hero }}'); background-size: cover; background-position: center;"{% endif %} aria-label="Cover photo"></div>
+      <div class="cover-bottom"></div>
+
+      <aside class="cover-panel tri">
+        <div class="cover-pin" aria-hidden="true">
+          <!-- location pin -->
+          <svg viewBox="0 0 24 24"><path d="M12 2c-4 0-7 3-7 7 0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5z"/></svg>
+        </div>
+
+        <p class="cover-addr">
+          <span>{{ property.street_address }},</span>
+          <span>{{ property.city }},</span>
+          <span>{{ property.state }}, {{ property.zip_code }}</span>
+        </p>
+
+        <div class="cover-note">
+          For more information, please contact me.
+          <div class="rule"></div>
+        </div>
+
+        <div class="cover-agent">
+          <div class="photo">
+            {% if agent.photo_url %}<img src="{{ agent.photo_url }}" alt="{{ agent.name }} headshot" />{% endif %}
+          </div>
+          <div class="meta">
+            <div class="name">{{ agent.name }}</div>
+            <div class="role">{{ agent.title }}</div>
+
+            <div class="contact-row">
+              <svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.2 2.4 3.2 4.4 5.6 5.6l1.9-1.9c.2-.2.5-.3.8-.2 1 .3 2 .5 3.1.5.4 0 .7.3.7.7V20c0 .4-.3.7-.7.7C10.6 20.7 3.3 13.4 3.3 4.7c0-.4.3-.7.7-.7h3.3c.4 0 .7.3.7.7 0 1.1.2 2.1.5 3.1.1.3 0 .6-.2.8L6.6 10.8z"/></svg>
+              <span>{{ agent.phone }}</span>
+            </div>
+            <div class="contact-row">
+              <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>
+              <span>{{ agent.email }}</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <div class="cover-disclaimer">
+        {% if agent.company_logo_url %}<img src="{{ agent.company_logo_url }}" alt="Company logo" />{% endif %}
+        <div>
+          <h3 class="u-upper">{{ agent.tagline | default('Authenticity Above All.') }}</h3>
+          <p>
+            This is not intended to solicit currently listed properties. This information is deemed reliable, but not guaranteed.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      PAGE 2: DEAR OWNER
+    ========================================================== -->
+    <section class="page letter">
+      <div class="letter-center">
+        <h2 class="dear">DEAR</h2>
+        <h2 class="owner">{{ property.owner_first_name | default('OWNER') | upper }}</h2>
+
+        <div class="letter-body">
+          <p>
+            Thank you for listing your home with us. We pride ourselves on delivering extraordinary service led by expertise,
+            integrity, and a commitment to achieving all of your real estate goals.
+          </p>
+
+          <div class="letter-rule"></div>
+
+          <p>
+            Selling a home is a rewarding experience: From listing to closing and beyond, you have a dedicated real estate
+            expert at your side, guiding you through the transaction and leading the way to incredible results.
+          </p>
+        </div>
+      </div>
+
+      <img class="thankyou" src="{{ images.thank_you | default('assets/thank-you.png') }}" alt="Thank you graphic" />
+    </section>
+
+    <!-- =========================================================
+      PAGE 3: WELCOME / AERIAL MAP
+    ========================================================== -->
+    <section class="page">
+      <header class="welcome-hero tri">
+        <h2 class="big">WELCOME TO <b>OUR FAMILY</b></h2>
+        <div class="subline">YOU ARE IN GREAT HANDS</div>
+      </header>
+
+      <div class="welcome-divider">
+        <div class="line"></div>
+        <div class="star" aria-hidden="true"></div>
+        <div class="line"></div>
+      </div>
+
+      <div class="welcome-panels">
+        <section class="panel left">
+          <h3>Aerial View</h3>
+          <p>
+            This is an aerial view of the neighborhood in which your prospective property is located.
+            This will give you the opportunity to get a birds-eye-view of any local parks, major streets and highways.
+          </p>
+        </section>
+        <section class="panel right">
+          <h3>Why a 5-mile radius</h3>
+          <p>
+            A five mile radius has proven to yield the best results when it comes to properties that match yours.
+          </p>
+        </section>
+      </div>
+
+      <div class="welcome-map">
+        {% if images.aerial_map %}
+        <img src="{{ images.aerial_map }}" alt="Aerial map of {{ property.street_address }}" />
+        {% else %}
+        <div style="width:100%; height:100%; background:#e5e7eb; display:flex; align-items:center; justify-content:center; color:#6b7280;">Map unavailable</div>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- =========================================================
+      PAGE 4: PROSPECTIVE PROPERTY
+    ========================================================== -->
+    <section class="page property">
+      <div class="title">
+        <span class="a">PROSPECTIVE</span>
+        <span class="b">PROPERTY</span>
+      </div>
+
+      <div class="ribbon">OWNER, ADDRESS &amp; LEGAL DESCRIPTION</div>
+
+      <div class="two-col">
+        <div>
+          <table class="kv" aria-label="Owner info left">
+            <tr><td class="key">Primary Owner:</td><td class="val">{{ property.owner_name | default('-') }}</td></tr>
+            <tr><td class="key">Secondary Owner:</td><td class="val">{{ property.secondary_owner | default('-') }}</td></tr>
+            <tr><td class="key">Site Address:</td><td class="val">{{ property.full_address }}</td></tr>
+            <tr><td class="key">Mailing Address:</td><td class="val">{{ property.mailing_address | default(property.full_address) }}</td></tr>
+          </table>
+
+          <div class="legal-box">
+            <b>Brief Legal Description:</b><br/>
+            {{ property.legal_description | default('-') }}
+          </div>
+        </div>
+
+        <div>
+          <table class="kv" aria-label="Owner info right">
+            <tr><td class="key">APN :</td><td class="val">{{ property.apn | default('-') }}</td></tr>
+            <tr><td class="key">County Name:</td><td class="val">{{ property.county | default('-') }}</td></tr>
+            <tr><td class="key">Census Tract:</td><td class="val">{{ property.census_tract | default('-') }}</td></tr>
+            <tr><td class="key">Housing Tract #:</td><td class="val">{{ property.housing_tract | default('-') }}</td></tr>
+            <tr><td class="key">Lot Number:</td><td class="val">{{ property.lot_number | default('-') }}</td></tr>
+            <tr><td class="key">Page Grid:</td><td class="val">{{ property.page_grid | default('-') }}</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="ribbon">BEDS, BATHS &amp; SQUARE FOOTAGE</div>
+      <table class="kv-wide" aria-label="Beds baths square footage">
+        <tr>
+          <td class="key">Bedrooms:</td><td class="val">{{ property.bedrooms | default('-') }}</td>
+          <td class="key">Year:</td><td class="val">{{ property.year_built | default('-') }}</td>
+          <td class="key">Square Feet:</td><td class="val">{{ property.sqft | default('-') | int | format_number }}</td>
+        </tr>
+        <tr>
+          <td class="key">Bathrooms:</td><td class="val">{{ property.bathrooms | default('-') }}</td>
+          <td class="key">Garage:</td><td class="val">{{ property.garage | default('-') }}</td>
+          <td class="key">Lot Size:</td><td class="val">{{ property.lot_size | default('-') | int | format_number }}</td>
+        </tr>
+        <tr>
+          <td class="key">Partial Bath:</td><td class="val">{{ property.partial_bath | default('0') }}</td>
+          <td class="key">Fireplace:</td><td class="val">{{ property.fireplace | default('-') }}</td>
+          <td class="key"># of Units:</td><td class="val">{{ property.units | default('0') }}</td>
+        </tr>
+        <tr>
+          <td class="key">Total Rooms:</td><td class="val">{{ property.total_rooms | default('-') }}</td>
+          <td class="key">Pool/Spa:</td><td class="val">{{ property.pool | default('-') }}</td>
+          <td class="key">Zoning:</td><td class="val">{{ property.zoning | default('-') }}</td>
+        </tr>
+        <tr>
+          <td class="key">Property Type:</td><td class="val" colspan="5">{{ property.property_type | default('Single Family Residential') }}</td>
+        </tr>
+        <tr>
+          <td class="key">Use Code:</td><td class="val" colspan="5">{{ property.use_code | default('Single Family Residential') }}</td>
+        </tr>
+      </table>
+
+      <div class="ribbon">ASSESSED VALUE &amp; TAX DETAILS</div>
+      <table class="kv-wide" aria-label="Tax details">
+        <tr>
+          <td class="key">Assessed Value:</td><td class="val">{{ property.assessed_value | format_currency }}</td>
+          <td class="key">Tax Amount:</td><td class="val">{{ property.tax_amount | format_currency }}</td>
+        </tr>
+        <tr>
+          <td class="key">Improvement Value:</td><td class="val">{{ property.improvement_value | format_currency }}</td>
+          <td class="key">Tax Rate Area:</td><td class="val">{{ property.tax_rate_area | default('-') }}</td>
+        </tr>
+        <tr>
+          <td class="key">Land Value:</td><td class="val">{{ property.land_value | format_currency }}</td>
+          <td class="key">Tax Status:</td><td class="val">{{ property.tax_status | default('Current') }}</td>
+        </tr>
+        <tr>
+          <td class="key">% Improvement:</td><td class="val">{{ property.improvement_pct | default('-') }}</td>
+          <td class="key">Tax Year:</td><td class="val">{{ property.tax_year | default('-') }}</td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- =========================================================
+      PAGE 5: AREA SALES ANALYSIS
+    ========================================================== -->
+    <section class="page area-sales">
+      <div class="title">
+        <span class="a">AREA SALES</span>
+        <span class="b">ANALYSIS</span>
+      </div>
+
+      <div class="chart" aria-label="Bar chart">
+        <!-- Simple static SVG that prints cleanly. Replace with your own values if you want. -->
+        <svg viewBox="0 0 1000 420" role="img" aria-label="Area sales bar chart">
+          <defs>
+            <style>
+              .grid{ stroke: #d8dbea; stroke-width:1; stroke-dasharray:6 6; }
+              .axis{ stroke:#b9bfd3; stroke-width:2; }
+              .bar{ fill: #15216E; }
+              .lbl{ font: 18px Montserrat, Arial, sans-serif; fill:#5b647a; }
+              .xlbl{ font: 20px Montserrat, Arial, sans-serif; fill:#111827; opacity:.8; }
+            </style>
+          </defs>
+
+          <!-- gridlines -->
+          <line class="grid" x1="80" y1="60" x2="980" y2="60"/>
+          <line class="grid" x1="80" y1="120" x2="980" y2="120"/>
+          <line class="grid" x1="80" y1="180" x2="980" y2="180"/>
+          <line class="grid" x1="80" y1="240" x2="980" y2="240"/>
+          <line class="grid" x1="80" y1="300" x2="980" y2="300"/>
+          <line class="grid" x1="80" y1="360" x2="980" y2="360"/>
+
+          <!-- y axis -->
+          <line class="axis" x1="80" y1="40" x2="80" y2="380"/>
+          <line class="axis" x1="80" y1="380" x2="980" y2="380"/>
+
+          <!-- y labels -->
+          <text class="lbl" x="18" y="386">0</text>
+          <text class="lbl" x="10" y="366">50k</text>
+          <text class="lbl" x="6" y="306">150k</text>
+          <text class="lbl" x="6" y="246">250k</text>
+          <text class="lbl" x="6" y="186">350k</text>
+          <text class="lbl" x="6" y="126">450k</text>
+          <text class="lbl" x="6" y="66">650k</text>
+
+          <!-- bars (heights are illustrative) -->
+          <rect class="bar" x="150" y="190" width="70" height="190"/>
+          <rect class="bar" x="270" y="365" width="70" height="15"/>
+          <rect class="bar" x="390" y="365" width="70" height="15"/>
+          <rect class="bar" x="510" y="70" width="70" height="310"/>
+          <rect class="bar" x="630" y="85" width="70" height="295"/>
+          <rect class="bar" x="750" y="365" width="70" height="15"/>
+          <rect class="bar" x="870" y="365" width="70" height="15"/>
+
+          <!-- x labels -->
+          <text class="xlbl" x="150" y="410">Mar’24</text>
+          <text class="xlbl" x="260" y="410">Nov’23</text>
+          <text class="xlbl" x="385" y="410">Jan’24</text>
+          <text class="xlbl" x="505" y="410">Feb’24</text>
+          <text class="xlbl" x="625" y="410">Mar’24</text>
+          <text class="xlbl" x="745" y="410">Feb’24</text>
+          <text class="xlbl" x="865" y="410">Jan’24</text>
+        </svg>
+      </div>
+
+      <div class="table-wrap">
+        <table class="clean" aria-label="Monthly Sales Overview">
+          <thead>
+            <tr>
+              <th>Monthly Sales Overview</th>
+              <th>PIQ</th>
+              <th>Low</th>
+              <th>Medium</th>
+              <th>High</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Distance</td><td>{{ stats.piq.distance | default('0') }}</td><td>{{ stats.low.distance | default('-') }}</td><td>{{ stats.medium.distance | default('-') }}</td><td>{{ stats.high.distance | default('-') }}</td></tr>
+            <tr><td>Living Area</td><td>{{ stats.piq.sqft | default('-') }}</td><td>{{ stats.low.sqft | default('-') }}</td><td>{{ stats.medium.sqft | default('-') }}</td><td>{{ stats.high.sqft | default('-') }}</td></tr>
+            <tr><td>Price Per Sqft</td><td>{{ stats.piq.price_per_sqft | format_currency }}</td><td>{{ stats.low.price_per_sqft | format_currency }}</td><td>{{ stats.medium.price_per_sqft | format_currency }}</td><td>{{ stats.high.price_per_sqft | format_currency }}</td></tr>
+            <tr><td>Year Built</td><td>{{ stats.piq.year_built | default('-') }}</td><td>{{ stats.low.year_built | default('-') }}</td><td>{{ stats.medium.year_built | default('-') }}</td><td>{{ stats.high.year_built | default('-') }}</td></tr>
+            <tr><td>Lot Size</td><td>{{ stats.piq.lot_size | format_number }}</td><td>{{ stats.low.lot_size | format_number }}</td><td>{{ stats.medium.lot_size | format_number }}</td><td>{{ stats.high.lot_size | format_number }}</td></tr>
+            <tr><td>Bedrooms</td><td>{{ stats.piq.bedrooms | default('-') }}</td><td>{{ stats.low.bedrooms | default('-') }}</td><td>{{ stats.medium.bedrooms | default('-') }}</td><td>{{ stats.high.bedrooms | default('-') }}</td></tr>
+            <tr><td>Baths</td><td>{{ stats.piq.bathrooms | default('-') }}</td><td>{{ stats.low.bathrooms | default('-') }}</td><td>{{ stats.medium.bathrooms | default('-') }}</td><td>{{ stats.high.bathrooms | default('-') }}</td></tr>
+            <tr><td>Stories</td><td>{{ stats.piq.stories | default('0') }}</td><td>{{ stats.low.stories | default('0') }}</td><td>{{ stats.medium.stories | default('0') }}</td><td>{{ stats.high.stories | default('0') }}</td></tr>
+            <tr><td>Pools</td><td>{{ stats.piq.pools | default('0') }}</td><td>{{ stats.low.pools | default('0') }}</td><td>{{ stats.medium.pools | default('0') }}</td><td>{{ stats.high.pools | default('0') }}</td></tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td>Sales Price</td>
+              <td>{{ stats.piq.price | format_currency }}</td>
+              <td>{{ stats.low.price | format_currency }}</td>
+              <td>{{ stats.medium.price | format_currency }}</td>
+              <td>{{ stats.high.price | format_currency }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    <!-- =========================================================
+      PAGE 6: SALES COMPARABLES (4 cards)
+    ========================================================== -->
+    <section class="page comps">
+      <div class="title">
+        <span class="a">SALES</span>
+        <span class="b">COMPARABLE</span>
+      </div>
+
+      <div class="comp-grid">
+        {% for comp in comparables[:4] %}
+        <article class="comp-card {{ 'warm' if loop.index in [2, 3] else '' }}">
+          <div class="comp-photo" {% if comp.map_image_url %}style="background-image: url('{{ comp.map_image_url }}'); background-size: cover; background-position: center;"{% endif %}>
+            <div class="comp-band {{ 'gold' if loop.index in [2, 3] else '' }}">
+              <div class="addr-row">
+                <span class="loc" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M12 2c-4 0-7 3-7 7 0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5z"/></svg>
+                </span>
+                {{ comp.address }}
+              </div>
+              <div class="price-row">
+                <span>Sale Price</span>
+                <span class="price">{{ comp.sale_price | format_currency }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="comp-meta">
+            <div class="meta-grid">
+              <div class="meta-item"><span class="label">Sold Date</span><span class="val">{{ comp.sold_date }}</span></div>
+              <div class="meta-item"><span class="label">Dist</span><span class="val">{{ comp.distance_miles | default('-') }}</span></div>
+              <div class="meta-item"><span class="label">Sq.ft</span><span class="val">{{ comp.sqft | format_number }}</span></div>
+              <div class="meta-item"><span class="label">$/Sqft</span><span class="val">{{ comp.price_per_sqft | format_currency }}</span></div>
+            </div>
+            <div class="meta-rule"></div>
+            <div class="meta-grid">
+              <div class="meta-item"><span class="label">Bed/Bath</span><span class="val">{{ comp.bedrooms }}/{{ comp.bathrooms }}</span></div>
+              <div class="meta-item"><span class="label">Year Blt</span><span class="val">{{ comp.year_built }}</span></div>
+              <div class="meta-item"><span class="label">Lot Area</span><span class="val">{{ comp.lot_size | format_number }}</span></div>
+              <div class="meta-item"><span class="label">Pool</span><span class="val">{{ comp.pool_description | default('Yes' if comp.pool else 'None') }}</span></div>
+            </div>
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- =========================================================
+      PAGE 7: SALES COMPARABLES (3 cards)
+    ========================================================== -->
+    <section class="page comps">
+      <div class="title">
+        <span class="a">SALES</span>
+        <span class="b">COMPARABLE</span>
+      </div>
+
+      <div class="comp-grid three">
+        {% for comp in comparables[4:7] %}
+        <article class="comp-card {{ 'warm' if loop.index == 2 else '' }}" {% if loop.index == 3 %}style="grid-column: 1 / span 1;"{% endif %}>
+          <div class="comp-photo" {% if comp.map_image_url %}style="background-image: url('{{ comp.map_image_url }}'); background-size: cover; background-position: center;"{% endif %}>
+            <div class="comp-band {{ 'gold' if loop.index in [2, 3] else '' }}">
+              <div class="addr-row">
+                <span class="loc" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M12 2c-4 0-7 3-7 7 0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5z"/></svg>
+                </span>
+                {{ comp.address }}
+              </div>
+              <div class="price-row">
+                <span>Sale Price</span>
+                <span class="price">{{ comp.sale_price | format_currency }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="comp-meta">
+            <div class="meta-grid">
+              <div class="meta-item"><span class="label">Sold Date</span><span class="val">{{ comp.sold_date }}</span></div>
+              <div class="meta-item"><span class="label">Dist</span><span class="val">{{ comp.distance_miles | default('-') }}</span></div>
+              <div class="meta-item"><span class="label">Sq.ft</span><span class="val">{{ comp.sqft | format_number }}</span></div>
+              <div class="meta-item"><span class="label">$/Sqft</span><span class="val">{{ comp.price_per_sqft | format_currency }}</span></div>
+            </div>
+            <div class="meta-rule"></div>
+            <div class="meta-grid">
+              <div class="meta-item"><span class="label">Bed/Bath</span><span class="val">{{ comp.bedrooms }}/{{ comp.bathrooms }}</span></div>
+              <div class="meta-item"><span class="label">Year Blt</span><span class="val">{{ comp.year_built }}</span></div>
+              <div class="meta-item"><span class="label">Lot Area</span><span class="val">{{ comp.lot_size | format_number }}</span></div>
+              <div class="meta-item"><span class="label">Pool</span><span class="val">{{ comp.pool_description | default('Yes' if comp.pool else 'None') }}</span></div>
+            </div>
+          </div>
+        </article>
+        {% endfor %}
+        
+        <!-- Empty slot to match layout if less than 3 comps on this page -->
+        {% if comparables[4:7] | length < 2 %}
+        <div style="grid-column:2 / span 1;"></div>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- =========================================================
+      PAGE 8: RANGE OF SALES
+    ========================================================== -->
+    <section class="page range">
+      <div class="title">
+        <span class="a">RANGE OF</span>
+        <span class="b">SALES</span>
+      </div>
+
+      <div class="range-map">
+        {% if images.aerial_map %}
+        <img src="{{ images.aerial_map }}" alt="Range map of {{ property.street_address }}" />
+        {% else %}
+        <div style="width:100%; height:100%; background:#e5e7eb; display:flex; align-items:center; justify-content:center; color:#6b7280;">Map unavailable</div>
+        {% endif %}
+      </div>
+
+      <div class="range-metrics">
+        <div class="metric"><div class="num">{{ '%02d' | format(stats.total_comps | default(0)) }}</div><div class="lbl">Total Comps</div></div>
+        <div class="metric"><div class="num">{{ stats.avg_sqft | default(0) | int }}</div><div class="lbl">Avg. Sqft</div></div>
+        <div class="metric"><div class="num">{{ '%02d' | format(stats.avg_beds | default(0) | int) }}</div><div class="lbl">Avg. #Beds</div></div>
+        <div class="metric"><div class="num">{{ '%02d' | format(stats.avg_baths | default(0) | int) }}</div><div class="lbl">Avg. #Baths</div></div>
+      </div>
+
+      <div class="slider">
+        <div class="slider-top">
+          <span>{{ stats.price_low | format_currency_short }} <span class="caret" aria-hidden="true"></span></span>
+          <span><span class="caret" aria-hidden="true"></span> {{ stats.price_high | format_currency_short }}</span>
+        </div>
+
+        <div class="track" aria-hidden="true">
+          <span class="active"></span>
+          <span class="dot left"></span>
+          <span class="dot right"></span>
+        </div>
+
+        <p class="range-note">
+          Above are the average property details for homes that are close in proximity to yours AND have been sold within
+          the last 12-months. The range represents the low AND the high sales price for the properties that were sold in the
+          last 12-months. Only the properties that closely match yours were used. The factors that were analyzed were
+          Square Footage, No. Of Beds, No. of Baths, &amp; Lot Size.
+        </p>
+      </div>
+    </section>
+
+  </div>
+</body>
+</html>
