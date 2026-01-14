@@ -201,6 +201,28 @@ class PropertyReportDetail(BaseModel):
     updated_at: str
 
 
+class PreviewRequest(BaseModel):
+    """Request for live HTML preview of a report"""
+    theme: int = Field(default=4, ge=1, le=5, description="Theme ID (1-5)")
+    accent_color: str = Field(default="#0d294b", pattern=r"^#[0-9a-fA-F]{6}$")
+    
+    # Property data
+    property_address: str
+    property_city: str = ""
+    property_state: str = "CA"
+    property_zip: str = ""
+    
+    # SiteX data (full property details)
+    sitex_data: Optional[dict] = None
+    
+    # Comparables (selected comparables)
+    comparables: Optional[List[dict]] = None
+    
+    # Agent/branding context (optional, will use defaults if not provided)
+    agent: Optional[dict] = None
+    branding: Optional[dict] = None
+
+
 # =============================================================================
 # HELPERS
 # =============================================================================
@@ -639,6 +661,75 @@ def get_affiliate_property_stats(
     
     stats = get_affiliate_stats(account_id, from_dt, to_dt)
     return stats
+
+
+# =============================================================================
+# PREVIEW ENDPOINT
+# =============================================================================
+
+
+@router.post("/preview")
+async def generate_preview_html(payload: PreviewRequest, request: Request):
+    """
+    Generate live HTML preview of a property report.
+    
+    This endpoint renders the report template with the provided data
+    and returns HTML that can be displayed in an iframe for real-time preview.
+    
+    Used by the wizard Step 3 (Theme Selection) to show users
+    exactly what their report will look like.
+    """
+    # Import PropertyReportBuilder here to avoid circular imports
+    import sys
+    import os
+    
+    # Add worker path for importing PropertyReportBuilder
+    worker_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "worker", "src")
+    if worker_path not in sys.path:
+        sys.path.insert(0, worker_path)
+    
+    try:
+        from worker.property_builder import PropertyReportBuilder
+    except ImportError:
+        # If we can't import the worker module, return a fallback response
+        raise HTTPException(
+            status_code=500, 
+            detail="Preview generation is not available in this environment"
+        )
+    
+    # Build report data structure matching PropertyReportBuilder expectations
+    report_data = {
+        "theme": payload.theme,
+        "accent_color": payload.accent_color,
+        "report_type": "seller",
+        "property_address": payload.property_address,
+        "property_city": payload.property_city,
+        "property_state": payload.property_state,
+        "property_zip": payload.property_zip,
+        "sitex_data": payload.sitex_data or {},
+        "comparables": payload.comparables or [],
+        "agent": payload.agent or {
+            "name": "Your Name",
+            "title": "Real Estate Agent",
+            "phone": "(555) 123-4567",
+            "email": "agent@example.com",
+            "company_name": "Your Company",
+        },
+        "branding": payload.branding or {},
+        # Default page set for preview
+        "selected_pages": ["cover", "contents", "aerial", "property", "analysis", "comparables", "range"],
+    }
+    
+    try:
+        builder = PropertyReportBuilder(report_data)
+        html = builder.render_html()
+        
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse(content=html, media_type="text/html")
+        
+    except Exception as e:
+        logger.error(f"Preview generation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate preview: {str(e)}")
 
 
 # =============================================================================

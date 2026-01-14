@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Check, Eye, ChevronLeft, ChevronRight, X, ImageOff } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Check, Eye, ChevronLeft, ChevronRight, X, ImageOff, Loader2, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +24,9 @@ interface ThemeSelectorProps {
   selectedPages: string[];
   onPagesChange: (pages: string[]) => void;
   propertyAddress?: string;
+  // New props for live preview
+  propertyData?: any;
+  comparables?: any[];
 }
 
 export function ThemeSelector({
@@ -34,12 +37,66 @@ export function ThemeSelector({
   selectedPages,
   onPagesChange,
   propertyAddress,
+  propertyData,
+  comparables,
 }: ThemeSelectorProps) {
   const [previewPage, setPreviewPage] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
+  
+  // Live preview state
+  const [showLivePreview, setShowLivePreview] = useState(false);
+  const [livePreviewHtml, setLivePreviewHtml] = useState<string | null>(null);
+  const [livePreviewLoading, setLivePreviewLoading] = useState(false);
+  const [livePreviewExpanded, setLivePreviewExpanded] = useState(false);
 
   const currentTheme = getTheme(selectedTheme) || THEMES[0];
   const availablePages = getThemePages(selectedTheme);
+  
+  // Fetch live preview HTML
+  const fetchLivePreview = useCallback(async () => {
+    if (!propertyData) return;
+    
+    setLivePreviewLoading(true);
+    try {
+      const response = await fetch('/api/proxy/v1/property/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          theme: selectedTheme,
+          accent_color: accentColor,
+          property_address: propertyData.full_address || propertyAddress || '',
+          property_city: propertyData.city || '',
+          property_state: propertyData.state || 'CA',
+          property_zip: propertyData.zip_code || '',
+          sitex_data: propertyData,
+          comparables: comparables || [],
+        }),
+      });
+      
+      if (response.ok) {
+        const html = await response.text();
+        setLivePreviewHtml(html);
+      } else {
+        console.error('Preview failed:', response.status);
+        setLivePreviewHtml(null);
+      }
+    } catch (error) {
+      console.error('Preview error:', error);
+      setLivePreviewHtml(null);
+    } finally {
+      setLivePreviewLoading(false);
+    }
+  }, [selectedTheme, accentColor, propertyData, propertyAddress, comparables]);
+  
+  // Refresh preview when theme or accent color changes
+  useEffect(() => {
+    if (showLivePreview && propertyData) {
+      const debounce = setTimeout(() => {
+        fetchLivePreview();
+      }, 500); // Debounce to avoid too many requests
+      return () => clearTimeout(debounce);
+    }
+  }, [selectedTheme, accentColor, showLivePreview, fetchLivePreview, propertyData]);
 
   // Initialize selected pages when theme changes
   useEffect(() => {
@@ -93,9 +150,113 @@ export function ThemeSelector({
 
   return (
     <div className="space-y-8">
-      {/* Theme Selection */}
+      {/* Theme Selection with Live Preview Toggle */}
       <div>
-        <h3 className="font-semibold text-lg mb-4">Choose Your Theme</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-lg">Choose Your Theme</h3>
+          {propertyData && (
+            <Button
+              variant={showLivePreview ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowLivePreview(!showLivePreview)}
+              className="gap-2"
+            >
+              <Eye className="w-4 h-4" />
+              {showLivePreview ? "Hide Preview" : "Live Preview"}
+            </Button>
+          )}
+        </div>
+        
+        {/* Live Preview Panel */}
+        {showLivePreview && (
+          <div className={`mb-6 border rounded-xl overflow-hidden bg-muted/30 transition-all ${
+            livePreviewExpanded ? "fixed inset-4 z-50 bg-background" : ""
+          }`}>
+            <div className="flex items-center justify-between px-4 py-2 bg-muted border-b">
+              <span className="text-sm font-medium">
+                Live Preview - {currentTheme.name} Theme
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => fetchLivePreview()}
+                  disabled={livePreviewLoading}
+                >
+                  {livePreviewLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => setLivePreviewExpanded(!livePreviewExpanded)}
+                >
+                  {livePreviewExpanded ? (
+                    <Minimize2 className="w-4 h-4" />
+                  ) : (
+                    <Maximize2 className="w-4 h-4" />
+                  )}
+                </Button>
+                {livePreviewExpanded && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => {
+                      setLivePreviewExpanded(false);
+                      setShowLivePreview(false);
+                    }}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+            
+            <div className={`relative ${livePreviewExpanded ? "h-[calc(100%-44px)]" : "h-[500px]"}`}>
+              {livePreviewLoading && !livePreviewHtml && (
+                <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+                  <div className="text-center">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-primary" />
+                    <p className="text-sm text-muted-foreground">Generating preview...</p>
+                  </div>
+                </div>
+              )}
+              
+              {livePreviewHtml ? (
+                <iframe
+                  srcDoc={livePreviewHtml}
+                  className="w-full h-full border-0"
+                  title="Report Preview"
+                  sandbox="allow-same-origin"
+                />
+              ) : !livePreviewLoading && (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  <div className="text-center">
+                    <Eye className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p>Click refresh to load preview</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3"
+                      onClick={() => fetchLivePreview()}
+                    >
+                      Load Preview
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {THEMES.map((theme) => (
             <ThemeCard

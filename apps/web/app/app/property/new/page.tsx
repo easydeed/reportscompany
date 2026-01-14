@@ -757,19 +757,28 @@ export default function NewPropertyReportPage() {
   // RENDER - STEP 3: Theme Selection
   // ============================================
 
-  const renderStep3 = () => (
-    <div className="space-y-6">
-      <ThemeSelector
-        selectedTheme={state.theme}
-        onThemeChange={handleThemeChange}
-        accentColor={state.accentColor}
-        onAccentColorChange={(color) => setState(prev => ({ ...prev, accentColor: color }))}
-        selectedPages={state.selectedPages}
-        onPagesChange={(pages) => setState(prev => ({ ...prev, selectedPages: pages }))}
-        propertyAddress={state.property?.full_address}
-      />
-    </div>
-  );
+  const renderStep3 = () => {
+    // Get selected comparables for preview
+    const selectedComparables = state.comparables.filter(
+      comp => state.selectedCompIds.includes(comp.id)
+    );
+    
+    return (
+      <div className="space-y-6">
+        <ThemeSelector
+          selectedTheme={state.theme}
+          onThemeChange={handleThemeChange}
+          accentColor={state.accentColor}
+          onAccentColorChange={(color) => setState(prev => ({ ...prev, accentColor: color }))}
+          selectedPages={state.selectedPages}
+          onPagesChange={(pages) => setState(prev => ({ ...prev, selectedPages: pages }))}
+          propertyAddress={state.property?.full_address}
+          propertyData={state.property}
+          comparables={selectedComparables}
+        />
+      </div>
+    );
+  };
 
   // ============================================
   // RENDER - STEP 4: Review & Generate
