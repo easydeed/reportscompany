@@ -131,7 +131,7 @@ async def get_report_data(
                 u.company_name
             FROM consumer_reports cr
             JOIN users u ON cr.agent_id = u.id
-            WHERE cr.id = %s AND cr.status = 'ready'
+            WHERE cr.id = %s AND cr.status IN ('ready', 'sent')
             """,
             (str(report_id),)
         )

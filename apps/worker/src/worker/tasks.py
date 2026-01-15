@@ -1035,12 +1035,45 @@ def process_consumer_report(self, report_id: str):
                 base_url = os.environ.get("FRONTEND_URL", "https://www.trendyreports.io")
                 report_url = f"{base_url}/r/{report_id}"
                 
-                # Update status to processing
+                # Populate property_data with what we have
+                property_data = {
+                    "address": prop_address,
+                    "city": prop_city,
+                    "state": prop_state,
+                    "zip": prop_zip,
+                }
+                
+                # Generate a basic placeholder value estimate
+                # (In a real implementation, this would use actual property data)
+                value_estimate = {
+                    "low": 0,
+                    "mid": 0,
+                    "high": 0,
+                    "confidence": "pending"
+                }
+                
+                # Placeholder market stats
+                market_stats = {
+                    "median_price": None,
+                    "avg_price_per_sqft": None,
+                    "avg_days_on_market": None,
+                }
+                
+                # Update status to processing and store property data
                 cur.execute("""
                     UPDATE consumer_reports 
-                    SET status = 'processing' 
+                    SET status = 'processing',
+                        property_data = %s::jsonb,
+                        value_estimate = %s::jsonb,
+                        market_stats = %s::jsonb,
+                        comparables = '[]'::jsonb
                     WHERE id = %s::uuid
-                """, (report_id,))
+                """, (
+                    json.dumps(property_data),
+                    json.dumps(value_estimate),
+                    json.dumps(market_stats),
+                    report_id
+                ))
                 
                 # Send SMS to consumer
                 sms_result = send_report_sms(
