@@ -75,8 +75,7 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
     setError('');
     
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
-      const res = await fetch(`${apiUrl}/v1/cma/${agentCode}/search`, {
+      const res = await fetch(`/api/proxy/v1/cma/${agentCode}/search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address })
@@ -121,8 +120,7 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
     setError('');
     
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
-      const res = await fetch(`${apiUrl}/v1/cma/${agentCode}/request`, {
+      const res = await fetch(`/api/proxy/v1/cma/${agentCode}/request`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
