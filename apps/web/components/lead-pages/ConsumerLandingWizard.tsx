@@ -33,9 +33,15 @@ interface Property {
   year_built?: number;
 }
 
-// Progress stages for animated processing
-const PROGRESS_STAGES = [
-  { id: 'searching', label: 'Finding property records...' },
+// Progress stages for property search
+const SEARCH_STAGES = [
+  { id: 'locating', label: 'Locating property...' },
+  { id: 'verifying', label: 'Verifying ownership records...' },
+  { id: 'fetching', label: 'Fetching property details...' },
+];
+
+// Progress stages for report generation
+const REPORT_STAGES = [
   { id: 'analyzing', label: 'Analyzing market data...' },
   { id: 'comparables', label: 'Finding comparable homes...' },
   { id: 'generating', label: 'Generating your report...' },
@@ -50,8 +56,10 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
   const [currentStage, setCurrentStage] = useState(0);
+  const [searchStage, setSearchStage] = useState(0);
   
   // Google Places autocomplete
   const addressInputRef = useRef<HTMLInputElement>(null);
@@ -91,9 +99,27 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
     setStep('address');
   };
   
+  // Animate through search stages
+  useEffect(() => {
+    if (!searching) {
+      setSearchStage(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setSearchStage((prev) => {
+        if (prev < SEARCH_STAGES.length - 1) return prev + 1;
+        return prev;
+      });
+    }, 800);
+
+    return () => clearInterval(interval);
+  }, [searching]);
+
   // Search with Google Places result
   const handleAddressSearchFromPlace = async (place: PlaceResult) => {
-    setLoading(true);
+    setSearching(true);
+    setSearchStage(0);
     setError('');
     
     try {
@@ -125,7 +151,7 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
     } catch (err: any) {
       setError(err.message || 'Could not search. Please try again.');
     } finally {
-      setLoading(false);
+      setSearching(false);
     }
   };
 
@@ -136,7 +162,8 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
       return;
     }
     
-    setLoading(true);
+    setSearching(true);
+    setSearchStage(0);
     setError('');
     
     try {
@@ -164,7 +191,7 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
     } catch (err: any) {
       setError(err.message || 'Could not search. Please try again.');
     } finally {
-      setLoading(false);
+      setSearching(false);
     }
   };
 
@@ -174,13 +201,13 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
     setStep('confirm');
   };
 
-  // Animate through progress stages while processing
+  // Animate through report stages while processing
   useEffect(() => {
     if (step !== 'processing') return;
 
     const interval = setInterval(() => {
       setCurrentStage((prev) => {
-        if (prev < PROGRESS_STAGES.length - 1) return prev + 1;
+        if (prev < REPORT_STAGES.length - 1) return prev + 1;
         return prev;
       });
     }, 1500);
@@ -302,43 +329,104 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
               <span className="font-medium text-gray-700">Your Property Address</span>
             </div>
             
-            <div className="relative">
-              <Input
-                ref={addressInputRef}
-                type="text"
-                placeholder="Start typing your address..."
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddressSearch()}
-                className="text-base h-12 pr-12"
-                autoComplete="off"
-                autoFocus
-              />
-              <button
-                onClick={handleAddressSearch}
-                disabled={loading}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg hover:bg-gray-100"
-              >
-                {loading ? (
-                  <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                ) : (
-                  <Search className="w-5 h-5 text-gray-400" />
-                )}
-              </button>
-            </div>
-            
-            <p className="text-xs text-gray-500">
-              {!googleLoaded && !placesError && "Loading address suggestions..."}
-              {googleLoaded && !placesError && "Start typing to see address suggestions"}
-              {placesError && "Enter your full address"}
-            </p>
+            {/* Show search animation OR input */}
+            {searching ? (
+              <div className="py-4">
+                {/* Animated Loader */}
+                <div className="flex justify-center mb-4">
+                  <div className="relative">
+                    <div 
+                      className="w-16 h-16 rounded-full border-4"
+                      style={{ borderColor: `${themeColor}30` }}
+                    />
+                    <div 
+                      className="absolute inset-0 w-16 h-16 rounded-full border-4 border-transparent animate-spin"
+                      style={{ borderTopColor: themeColor }}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Search className="w-5 h-5" style={{ color: themeColor }} />
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Search Stages */}
+                <div className="space-y-2">
+                  {SEARCH_STAGES.map((stage, index) => (
+                    <motion.div 
+                      key={stage.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ 
+                        opacity: index <= searchStage ? 1 : 0.3,
+                        x: 0 
+                      }}
+                      transition={{ delay: index * 0.1 }}
+                      className={`flex items-center gap-3 p-2 rounded-lg transition-all duration-300 ${
+                        index < searchStage 
+                          ? 'text-green-600' 
+                          : index === searchStage
+                          ? ''
+                          : 'text-gray-400'
+                      }`}
+                      style={{ 
+                        backgroundColor: index === searchStage ? `${themeColor}15` : 'transparent',
+                        color: index === searchStage ? themeColor : undefined
+                      }}
+                    >
+                      <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
+                        {index < searchStage ? (
+                          <CheckCircle2 className="w-5 h-5 text-green-500" />
+                        ) : index === searchStage ? (
+                          <Loader2 className="w-5 h-5 animate-spin" style={{ color: themeColor }} />
+                        ) : (
+                          <div className="w-2 h-2 rounded-full bg-current opacity-50" />
+                        )}
+                      </div>
+                      <span className="text-sm font-medium">{stage.label}</span>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="relative">
+                  <Input
+                    ref={addressInputRef}
+                    type="text"
+                    placeholder="Start typing your address..."
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddressSearch()}
+                    className="text-base h-12 pr-12"
+                    autoComplete="off"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleAddressSearch}
+                    disabled={loading}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg hover:bg-gray-100"
+                  >
+                    {loading ? (
+                      <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                    ) : (
+                      <Search className="w-5 h-5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+                
+                <p className="text-xs text-gray-500">
+                  {!googleLoaded && !placesError && "Loading address suggestions..."}
+                  {googleLoaded && !placesError && "Start typing to see address suggestions"}
+                  {placesError && "Enter your full address"}
+                </p>
+              </>
+            )}
             
             {error && (
               <p className="text-red-500 text-sm text-center">{error}</p>
             )}
             
             {/* Property Results */}
-            {properties.length > 1 && (
+            {!searching && properties.length > 1 && (
               <div className="space-y-2 mt-4">
                 <p className="text-sm text-gray-600 font-medium">Select your property:</p>
                 {properties.map((prop, i) => (
@@ -357,12 +445,14 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
               </div>
             )}
             
-            <button 
-              onClick={() => { setStep('phone'); setProperties([]); }}
-              className="text-sm text-gray-500 hover:text-gray-700 w-full text-center py-2"
-            >
-              ← Back
-            </button>
+            {!searching && (
+              <button 
+                onClick={() => { setStep('phone'); setProperties([]); }}
+                className="text-sm text-gray-500 hover:text-gray-700 w-full text-center py-2"
+              >
+                ← Back
+              </button>
+            )}
           </motion.div>
         )}
 
@@ -472,7 +562,7 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
             
             {/* Progress Stages */}
             <div className="space-y-2">
-              {PROGRESS_STAGES.map((stage, index) => (
+              {REPORT_STAGES.map((stage, index) => (
                 <motion.div 
                   key={stage.id}
                   initial={{ opacity: 0, x: -10 }}

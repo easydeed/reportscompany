@@ -1053,16 +1053,17 @@ def process_consumer_report(self, report_id: str):
                 # Log SMS
                 cur.execute("""
                     INSERT INTO sms_logs (
-                        account_id, consumer_report_id, phone_number,
-                        message_type, status, provider_message_id, error
+                        account_id, consumer_report_id, to_phone, from_phone,
+                        recipient_type, twilio_sid, status, error_message
                     ) VALUES (
-                        %s::uuid, %s::uuid, %s,
-                        'consumer_report', %s, %s, %s
+                        %s::uuid, %s::uuid, %s, %s,
+                        'consumer', %s, %s, %s
                     )
                 """, (
-                    account_id, report_id, consumer_phone,
-                    'sent' if sms_result.get('success') else 'failed',
+                    account_id, report_id, consumer_phone, 
+                    os.environ.get("TWILIO_PHONE_NUMBER", ""),
                     sms_result.get('message_sid'),
+                    'sent' if sms_result.get('success') else 'failed',
                     sms_result.get('error')
                 ))
                 
