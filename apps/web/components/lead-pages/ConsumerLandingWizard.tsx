@@ -61,21 +61,42 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
   const [currentStage, setCurrentStage] = useState(0);
   const [searchStage, setSearchStage] = useState(0);
   
-  // Google Places autocomplete
-  const addressInputRef = useRef<HTMLInputElement>(null);
+  // Google Places autocomplete - use state for input element to trigger re-renders
+  const [inputElement, setInputElement] = useState<HTMLInputElement | null>(null);
+  const addressInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<PlaceResult | null>(null);
   
+  // Callback ref to track when input mounts/unmounts
+  const setAddressInputRef = useCallback((node: HTMLInputElement | null) => {
+    addressInputRef.current = node;
+    setInputElement(node);
+  }, []);
+  
+  // Handle place selection - search for property
   const handlePlaceSelect = useCallback((place: PlaceResult) => {
+    console.log('Place selected:', place);
     setSelectedPlace(place);
     setAddress(place.fullAddress);
-    // Auto-trigger search when place is selected
-    handleAddressSearchFromPlace(place);
-  }, [agentCode]);
+  }, []);
   
   const { isLoaded: googleLoaded, error: placesError } = useGooglePlaces(
     addressInputRef,
     { onPlaceSelect: handlePlaceSelect }
   );
+  
+  // Reinitialize autocomplete when input element changes
+  useEffect(() => {
+    if (inputElement && googleLoaded && window.google?.maps?.places) {
+      console.log('Initializing Google Places autocomplete');
+    }
+  }, [inputElement, googleLoaded]);
+  
+  // When a place is selected, auto-trigger search
+  useEffect(() => {
+    if (selectedPlace && step === 'address') {
+      handleAddressSearchFromPlace(selectedPlace);
+    }
+  }, [selectedPlace]);
 
   // Format phone as user types
   const formatPhone = (value: string) => {
@@ -390,7 +411,7 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
               <>
                 <div className="relative">
                   <Input
-                    ref={addressInputRef}
+                    ref={setAddressInputRef}
                     type="text"
                     placeholder="Start typing your address..."
                     value={address}

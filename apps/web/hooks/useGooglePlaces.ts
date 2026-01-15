@@ -39,8 +39,15 @@ export function useGooglePlaces(
   const [place, setPlace] = useState<PlaceResult | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inputReady, setInputReady] = useState(false);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const listenerRef = useRef<google.maps.MapsEventListener | null>(null);
+  const onPlaceSelectRef = useRef(onPlaceSelect);
+  
+  // Keep callback ref up to date
+  useEffect(() => {
+    onPlaceSelectRef.current = onPlaceSelect;
+  }, [onPlaceSelect]);
 
   // Check if Google Maps is loaded
   useEffect(() => {
@@ -77,22 +84,54 @@ export function useGooglePlaces(
       clearTimeout(timeout);
     };
   }, []);
+  
+  // Poll for input element to be ready (since refs don't trigger re-renders)
+  useEffect(() => {
+    if (!isLoaded) return;
+    
+    const checkInput = () => {
+      if (inputRef.current) {
+        setInputReady(true);
+        return true;
+      }
+      return false;
+    };
+    
+    // Check immediately
+    if (checkInput()) return;
+    
+    // Poll for input
+    const interval = setInterval(() => {
+      if (checkInput()) {
+        clearInterval(interval);
+      }
+    }, 100);
+    
+    return () => clearInterval(interval);
+  }, [isLoaded, inputRef]);
 
   // Initialize autocomplete when input and Google Maps are ready
   useEffect(() => {
-    if (!isLoaded || !inputRef.current) return;
+    if (!isLoaded || !inputReady || !inputRef.current) {
+      return;
+    }
+    
+    const input = inputRef.current;
+    console.log('Initializing Google Places Autocomplete on input:', input.placeholder);
 
     // Clean up previous instance
     if (listenerRef.current) {
       google.maps.event.removeListener(listenerRef.current);
+      listenerRef.current = null;
     }
     if (autocompleteRef.current) {
       google.maps.event.clearInstanceListeners(autocompleteRef.current);
+      autocompleteRef.current = null;
     }
 
     try {
       // Create new autocomplete instance
-      const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
+      const autocomplete = new google.maps.places.Autocomplete(input, {
         componentRestrictions: { country: countryRestriction },
         types: ["address"],
         fields: ["address_components", "formatted_address", "geometry", "name"],
@@ -101,6 +140,7 @@ export function useGooglePlaces(
       // Add place changed listener
       listenerRef.current = autocomplete.addListener("place_changed", () => {
         const result = autocomplete.getPlace();
+        console.log('Place changed event:', result);
 
         if (!result.address_components) {
           console.warn("No address components in place result");
@@ -108,11 +148,13 @@ export function useGooglePlaces(
         }
 
         const placeResult = parseAddressComponents(result);
+        console.log('Parsed place result:', placeResult);
         setPlace(placeResult);
-        onPlaceSelect?.(placeResult);
+        onPlaceSelectRef.current?.(placeResult);
       });
 
       autocompleteRef.current = autocomplete;
+      console.log('Google Places Autocomplete initialized successfully');
     } catch (err) {
       console.error("Failed to initialize Google Places Autocomplete:", err);
       setError("Failed to initialize address search");
@@ -121,12 +163,15 @@ export function useGooglePlaces(
     return () => {
       if (listenerRef.current) {
         google.maps.event.removeListener(listenerRef.current);
+        listenerRef.current = null;
       }
       if (autocompleteRef.current) {
         google.maps.event.clearInstanceListeners(autocompleteRef.current);
+        autocompleteRef.current = null;
       }
+      setInputReady(false);
     };
-  }, [isLoaded, inputRef, onPlaceSelect, countryRestriction]);
+  }, [isLoaded, inputReady, countryRestriction]);
 
   const reset = useCallback(() => {
     setPlace(null);

@@ -18,16 +18,15 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`antialiased ${plusJakarta.variable}`}>
-      <head>
-        {/* Google Maps API for address autocomplete */}
+      <head />
+      <body className={`min-h-screen ${plusJakarta.className}`}>
+        {/* Google Maps API for address autocomplete - load async */}
         {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
           <Script
-            src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
-            strategy="beforeInteractive"
+            src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`}
+            strategy="afterInteractive"
           />
         )}
-      </head>
-      <body className={`min-h-screen ${plusJakarta.className}`}>
         {children}
       </body>
     </html>
