@@ -104,7 +104,9 @@ Questions? Reply to this text or contact {agent_name} directly.
 
 - TrendyReports"""
     
-    return send_sms(to_phone, message)
+    result = send_sms(to_phone, message)
+    result['message_body'] = message  # Include message for logging
+    return result
 
 
 def send_agent_notification_sms(

@@ -1083,18 +1083,23 @@ def process_consumer_report(self, report_id: str):
                     property_address=full_address
                 )
                 
-                # Log SMS
+                # Log SMS - include 'message' column (NOT NULL in legacy schema)
+                sms_message = sms_result.get('message_body', f"Report link sent to {consumer_phone}")
                 cur.execute("""
                     INSERT INTO sms_logs (
                         account_id, consumer_report_id, to_phone, from_phone,
-                        recipient_type, twilio_sid, status, error_message
+                        message, message_body, recipient_type, twilio_sid, 
+                        status, error_message, direction
                     ) VALUES (
                         %s::uuid, %s::uuid, %s, %s,
-                        'consumer', %s, %s, %s
+                        %s, %s, 'consumer', %s, 
+                        %s, %s, 'outbound'
                     )
                 """, (
                     account_id, report_id, consumer_phone, 
                     os.environ.get("TWILIO_PHONE_NUMBER", ""),
+                    sms_message,  # message column (NOT NULL)
+                    sms_message,  # message_body column
                     sms_result.get('message_sid'),
                     'sent' if sms_result.get('success') else 'failed',
                     sms_result.get('error')
