@@ -31,6 +31,7 @@ from .routes.leads import router as leads_router
 from .routes.property import router as property_router
 from .routes.mobile_reports import router as mobile_reports_router
 from .routes.admin_metrics import router as admin_metrics_router
+from .routes.lead_pages import router as lead_pages_router
 
 app = FastAPI(
     title="Market Reports API",
@@ -84,6 +85,7 @@ app.include_router(leads_router)
 app.include_router(property_router)
 app.include_router(mobile_reports_router)
 app.include_router(admin_metrics_router)
+app.include_router(lead_pages_router)
 
 # Root
 @app.get("/")

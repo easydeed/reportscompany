@@ -36,6 +36,7 @@ import {
   Home,
   UserCheck,
   MessageSquare,
+  Link2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -66,6 +67,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
         { name: "Affiliate Dashboard", href: "/app/affiliate", icon: LayoutDashboard },
         { name: "Market Reports", href: "/app/reports", icon: FileText },
         { name: "Property Reports", href: "/app/property", icon: Home },
+        { name: "Lead Page", href: "/app/lead-page", icon: Link2 },
         { name: "Leads", href: "/app/leads", icon: UserCheck },
         { name: "Scheduled Reports", href: "/app/schedules", icon: Calendar },
         { name: "Agents & Contacts", href: "/app/people", icon: Users },
@@ -77,6 +79,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
         { name: "Dashboard", href: "/app", icon: LayoutDashboard },
         { name: "Market Reports", href: "/app/reports", icon: FileText },
         { name: "Property Reports", href: "/app/property", icon: Home },
+        { name: "Lead Page", href: "/app/lead-page", icon: Link2 },
         { name: "Leads", href: "/app/leads", icon: UserCheck },
         { name: "Scheduled Reports", href: "/app/schedules", icon: Calendar },
         { name: "Contacts", href: "/app/people", icon: Users },
