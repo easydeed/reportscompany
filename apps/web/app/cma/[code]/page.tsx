@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { ConsumerLandingWizard } from '@/components/lead-pages/ConsumerLandingWizard';
+import { getApiBase } from '@/lib/get-api-base';
 
 interface PageProps {
   params: Promise<{ code: string }>;
@@ -19,7 +20,7 @@ interface AgentInfo {
 }
 
 async function getAgentInfo(code: string): Promise<AgentInfo | null> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http://localhost:8000';
+  const apiUrl = getApiBase();
   
   try {
     const res = await fetch(

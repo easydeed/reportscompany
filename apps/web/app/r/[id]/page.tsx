@@ -1,13 +1,14 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { MobileReportViewer } from '@/components/mobile-report/MobileReportViewer';
+import { getApiBase } from '@/lib/get-api-base';
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 async function getReportData(id: string) {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  const apiUrl = getApiBase();
   const res = await fetch(
     `${apiUrl}/v1/r/${id}/data`,
     { cache: 'no-store' }
