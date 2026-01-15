@@ -14,6 +14,7 @@ import {
   Calendar,
   Activity,
   Home,
+  TrendingUp,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { createServerApi } from "@/lib/api-server"
@@ -50,6 +51,7 @@ const navItems = [
   { href: "/admin/affiliates", icon: Building2, label: "Title Companies" },
   { href: "/admin/schedules", icon: Calendar, label: "Schedules" },
   { href: "/admin/property-reports", icon: Home, label: "Property Reports" },
+  { href: "/admin/lead-pages", icon: TrendingUp, label: "Lead Pages" },
   { href: "/admin/plans", icon: CreditCard, label: "Plans & Pricing" },
   { href: "/admin/reports", icon: FileText, label: "Market Reports" },
   { href: "/admin/emails", icon: Mail, label: "Email Logs" },
