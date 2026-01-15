@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { ConsumerLandingWizard } from '@/components/lead-pages/ConsumerLandingWizard';
 
 interface PageProps {
-  params: { code: string };
+  params: Promise<{ code: string }>;
 }
 
 interface AgentInfo {
@@ -45,7 +45,8 @@ async function getAgentInfo(code: string): Promise<AgentInfo | null> {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const agent = await getAgentInfo(params.code);
+  const resolvedParams = await params;
+  const agent = await getAgentInfo(resolvedParams.code);
   
   if (!agent) {
     return { title: 'Page Not Found' };
@@ -63,7 +64,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function ConsumerLandingPage({ params }: PageProps) {
-  const agent = await getAgentInfo(params.code);
+  const resolvedParams = await params;
+  const agent = await getAgentInfo(resolvedParams.code);
   
   if (!agent) {
     notFound();
@@ -115,7 +117,7 @@ export default async function ConsumerLandingPage({ params }: PageProps) {
           </p>
           
           <ConsumerLandingWizard 
-            agentCode={params.code}
+            agentCode={resolvedParams.code}
             themeColor={agent.theme_color}
             agentName={agent.name}
           />
