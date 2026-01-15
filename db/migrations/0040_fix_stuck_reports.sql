@@ -1,5 +1,6 @@
 -- Fix reports stuck in 'processing' status
 -- This can happen if the worker task fails after sending SMS but before updating status
+-- Run: psql $DATABASE_URL -f db/migrations/0040_fix_stuck_reports.sql
 
 UPDATE consumer_reports 
 SET 
@@ -15,11 +16,4 @@ SET
     comparables = COALESCE(comparables, '[]'::jsonb)
 WHERE status = 'processing'
 AND created_at < NOW() - INTERVAL '5 minutes';
-
--- Also fix any stuck at 'pending' for more than 10 minutes
-UPDATE consumer_reports 
-SET status = 'failed', 
-    error = 'Timed out waiting for processing'
-WHERE status = 'pending'
-AND created_at < NOW() - INTERVAL '10 minutes';
 
