@@ -43,6 +43,8 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
             path.startswith("/v1/dev/") or
             path == "/v1/leads/capture" or  # Public lead capture endpoint
             path.startswith("/v1/property/public/") or  # Public property report landing pages
+            path.startswith("/v1/cma/") or  # Public consumer landing pages (Lead Pages)
+            path.startswith("/v1/r/") or  # Public mobile report viewer
             (path.startswith("/v1/reports/") and path.endswith("/data"))  # Allow /v1/reports/{id}/data for PDF generation
         )
         
