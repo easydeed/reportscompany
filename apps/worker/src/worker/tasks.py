@@ -17,6 +17,7 @@ from .report_builders import build_result_json
 from .limit_checker import check_usage_limit, log_limit_decision_worker
 from .utils.photo_proxy import proxy_report_photos_inplace
 from .filter_resolver import compute_market_stats, resolve_filters, build_filters_label, elastic_widen_filters
+from .sms import send_report_sms, send_agent_notification_sms
 import boto3
 from botocore.client import Config
 
@@ -983,6 +984,150 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                             print(f"🛑 Auto-paused schedule {schedule_id} after {consecutive_failures} consecutive failures")
         
         return {"ok": False, "error": error_msg}
+
+
+@celery.task(name="process_consumer_report", bind=True, max_retries=3)
+def process_consumer_report(self, report_id: str):
+    """
+    Process a consumer report request from the lead pages feature.
+    
+    This task:
+    1. Looks up the consumer_report record
+    2. Generates a simple value estimate (or uses existing data)
+    3. Sends SMS to the consumer with report link
+    4. Optionally notifies the agent
+    5. Updates the record status
+    """
+    logger.info(f"Processing consumer report: {report_id}")
+    
+    try:
+        with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
+            with conn.cursor() as cur:
+                # Get report details
+                cur.execute("""
+                    SELECT 
+                        cr.id, cr.agent_id, cr.consumer_phone, 
+                        cr.property_address, cr.property_city, cr.property_state, cr.property_zip,
+                        u.first_name, u.last_name, u.phone as agent_phone,
+                        a.id as account_id
+                    FROM consumer_reports cr
+                    JOIN users u ON u.id = cr.agent_id
+                    JOIN accounts a ON a.id = u.account_id
+                    WHERE cr.id = %s::uuid
+                """, (report_id,))
+                
+                row = cur.fetchone()
+                if not row:
+                    logger.error(f"Consumer report not found: {report_id}")
+                    return {"ok": False, "error": "Report not found"}
+                
+                (
+                    report_id, agent_id, consumer_phone,
+                    prop_address, prop_city, prop_state, prop_zip,
+                    agent_first, agent_last, agent_phone,
+                    account_id
+                ) = row
+                
+                agent_name = f"{agent_first} {agent_last}".strip()
+                full_address = f"{prop_address}, {prop_city}, {prop_state} {prop_zip}"
+                
+                # Build report URL
+                base_url = os.environ.get("FRONTEND_URL", "https://www.trendyreports.io")
+                report_url = f"{base_url}/r/{report_id}"
+                
+                # Update status to processing
+                cur.execute("""
+                    UPDATE consumer_reports 
+                    SET status = 'processing' 
+                    WHERE id = %s::uuid
+                """, (report_id,))
+                
+                # Send SMS to consumer
+                sms_result = send_report_sms(
+                    to_phone=consumer_phone,
+                    report_url=report_url,
+                    agent_name=agent_name,
+                    property_address=full_address
+                )
+                
+                # Log SMS
+                cur.execute("""
+                    INSERT INTO sms_logs (
+                        account_id, consumer_report_id, phone_number,
+                        message_type, status, provider_message_id, error
+                    ) VALUES (
+                        %s::uuid, %s::uuid, %s,
+                        'consumer_report', %s, %s, %s
+                    )
+                """, (
+                    account_id, report_id, consumer_phone,
+                    'sent' if sms_result.get('success') else 'failed',
+                    sms_result.get('message_sid'),
+                    sms_result.get('error')
+                ))
+                
+                if sms_result.get('success'):
+                    # Update report status
+                    cur.execute("""
+                        UPDATE consumer_reports 
+                        SET status = 'sent',
+                            consumer_sms_sent_at = NOW(),
+                            consumer_sms_sid = %s
+                        WHERE id = %s::uuid
+                    """, (sms_result.get('message_sid'), report_id))
+                    
+                    # Send notification to agent (if they have a phone)
+                    if agent_phone:
+                        agent_sms = send_agent_notification_sms(
+                            to_phone=agent_phone,
+                            consumer_phone=consumer_phone,
+                            property_address=full_address,
+                            report_url=report_url
+                        )
+                        
+                        if agent_sms.get('success'):
+                            cur.execute("""
+                                UPDATE consumer_reports 
+                                SET agent_sms_sent_at = NOW(),
+                                    agent_sms_sid = %s
+                                WHERE id = %s::uuid
+                            """, (agent_sms.get('message_sid'), report_id))
+                    
+                    logger.info(f"Consumer report processed successfully: {report_id}")
+                    return {"ok": True, "report_id": report_id}
+                else:
+                    # SMS failed
+                    cur.execute("""
+                        UPDATE consumer_reports 
+                        SET status = 'failed',
+                            error = %s
+                        WHERE id = %s::uuid
+                    """, (sms_result.get('error', 'SMS send failed'), report_id))
+                    
+                    logger.error(f"Failed to send SMS for report {report_id}: {sms_result.get('error')}")
+                    
+                    # Retry if transient error
+                    if self.request.retries < self.max_retries:
+                        raise self.retry(countdown=60 * (self.request.retries + 1))
+                    
+                    return {"ok": False, "error": sms_result.get('error')}
+                    
+    except Exception as e:
+        logger.exception(f"Error processing consumer report {report_id}: {e}")
+        
+        # Update status to failed
+        try:
+            with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        UPDATE consumer_reports 
+                        SET status = 'failed', error = %s 
+                        WHERE id = %s::uuid
+                    """, (str(e)[:500], report_id))
+        except:
+            pass
+        
+        raise
 
 
 def run_redis_consumer_forever():

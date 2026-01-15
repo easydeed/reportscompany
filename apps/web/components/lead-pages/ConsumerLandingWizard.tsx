@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Phone, MapPin, Home, Check, Loader2, 
-  ChevronRight, Search
+  ChevronRight, Search, CheckCircle2
 } from 'lucide-react';
+import { useGooglePlaces, PlaceResult } from '@/hooks/useGooglePlaces';
 
 interface Props {
   agentCode: string;
@@ -32,6 +33,15 @@ interface Property {
   year_built?: number;
 }
 
+// Progress stages for animated processing
+const PROGRESS_STAGES = [
+  { id: 'searching', label: 'Finding property records...' },
+  { id: 'analyzing', label: 'Analyzing market data...' },
+  { id: 'comparables', label: 'Finding comparable homes...' },
+  { id: 'generating', label: 'Generating your report...' },
+  { id: 'sending', label: 'Sending to your phone...' },
+];
+
 export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Props) {
   const [step, setStep] = useState<Step>('phone');
   const [phone, setPhone] = useState('');
@@ -41,6 +51,23 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
   const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [currentStage, setCurrentStage] = useState(0);
+  
+  // Google Places autocomplete
+  const addressInputRef = useRef<HTMLInputElement>(null);
+  const [selectedPlace, setSelectedPlace] = useState<PlaceResult | null>(null);
+  
+  const handlePlaceSelect = useCallback((place: PlaceResult) => {
+    setSelectedPlace(place);
+    setAddress(place.fullAddress);
+    // Auto-trigger search when place is selected
+    handleAddressSearchFromPlace(place);
+  }, [agentCode]);
+  
+  const { isLoaded: googleLoaded, error: placesError } = useGooglePlaces(
+    addressInputRef,
+    { onPlaceSelect: handlePlaceSelect }
+  );
 
   // Format phone as user types
   const formatPhone = (value: string) => {
@@ -63,8 +90,46 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
     setError('');
     setStep('address');
   };
+  
+  // Search with Google Places result
+  const handleAddressSearchFromPlace = async (place: PlaceResult) => {
+    setLoading(true);
+    setError('');
+    
+    try {
+      const res = await fetch(`/api/proxy/v1/cma/${agentCode}/search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          address: place.address,
+          city: place.city,
+          state: place.state
+        })
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Search failed');
+      }
+      
+      const data = await res.json();
+      setProperties(data);
+      
+      if (data.length === 0) {
+        setError('No properties found. Please check the address and try again.');
+      } else if (data.length === 1) {
+        // Auto-select if only one result
+        setSelectedProperty(data[0]);
+        setStep('confirm');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Could not search. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Step 2: Address search
+  // Step 2: Address search (manual fallback)
   const handleAddressSearch = async () => {
     if (!address.trim()) {
       setError('Please enter your property address');
@@ -109,6 +174,20 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
     setStep('confirm');
   };
 
+  // Animate through progress stages while processing
+  useEffect(() => {
+    if (step !== 'processing') return;
+
+    const interval = setInterval(() => {
+      setCurrentStage((prev) => {
+        if (prev < PROGRESS_STAGES.length - 1) return prev + 1;
+        return prev;
+      });
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [step]);
+
   // Step 3: Submit request
   const handleSubmit = async () => {
     if (!consent) {
@@ -117,6 +196,7 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
     }
     
     setStep('processing');
+    setCurrentStage(0);
     setError('');
     
     try {
@@ -140,8 +220,8 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
         throw new Error(data.detail || 'Request failed');
       }
       
-      // Wait a moment for dramatic effect, then show success
-      setTimeout(() => setStep('success'), 1500);
+      // Wait for animation to complete, then show success
+      setTimeout(() => setStep('success'), 3000);
       
     } catch (err: any) {
       setStep('confirm');
@@ -224,12 +304,14 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
             
             <div className="relative">
               <Input
+                ref={addressInputRef}
                 type="text"
-                placeholder="Enter your address..."
+                placeholder="Start typing your address..."
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddressSearch()}
                 className="text-base h-12 pr-12"
+                autoComplete="off"
                 autoFocus
               />
               <button
@@ -244,6 +326,12 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
                 )}
               </button>
             </div>
+            
+            <p className="text-xs text-gray-500">
+              {!googleLoaded && !placesError && "Loading address suggestions..."}
+              {googleLoaded && !placesError && "Start typing to see address suggestions"}
+              {placesError && "Enter your full address"}
+            </p>
             
             {error && (
               <p className="text-red-500 text-sm text-center">{error}</p>
@@ -354,28 +442,73 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
           </motion.div>
         )}
 
-        {/* PROCESSING */}
+        {/* PROCESSING - Interactive Progress */}
         {step === 'processing' && (
           <motion.div
             key="processing"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="py-12 text-center"
+            className="py-6"
           >
-            <div 
-              className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
-              style={{ backgroundColor: `${themeColor}20` }}
-            >
-              <Loader2 
-                className="w-8 h-8 animate-spin" 
-                style={{ color: themeColor }} 
-              />
+            {/* Animated Loader */}
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                {/* Outer ring */}
+                <div 
+                  className="w-20 h-20 rounded-full border-4"
+                  style={{ borderColor: `${themeColor}30` }}
+                />
+                {/* Spinning ring */}
+                <div 
+                  className="absolute inset-0 w-20 h-20 rounded-full border-4 border-transparent animate-spin"
+                  style={{ borderTopColor: themeColor }}
+                />
+                {/* Inner icon */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Home className="w-7 h-7 animate-pulse" style={{ color: themeColor }} />
+                </div>
+              </div>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Generating Your Report...
-            </h3>
-            <p className="text-gray-600 text-sm">
-              Analyzing property data and finding comparables
+            
+            {/* Progress Stages */}
+            <div className="space-y-2">
+              {PROGRESS_STAGES.map((stage, index) => (
+                <motion.div 
+                  key={stage.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ 
+                    opacity: index <= currentStage ? 1 : 0.3,
+                    x: 0 
+                  }}
+                  transition={{ delay: index * 0.1 }}
+                  className={`flex items-center gap-3 p-2.5 rounded-lg transition-all duration-300 ${
+                    index < currentStage 
+                      ? 'text-green-600' 
+                      : index === currentStage
+                      ? ''
+                      : 'text-gray-400'
+                  }`}
+                  style={{ 
+                    backgroundColor: index === currentStage ? `${themeColor}15` : 'transparent',
+                    color: index === currentStage ? themeColor : undefined
+                  }}
+                >
+                  <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
+                    {index < currentStage ? (
+                      <CheckCircle2 className="w-5 h-5 text-green-500" />
+                    ) : index === currentStage ? (
+                      <Loader2 className="w-5 h-5 animate-spin" style={{ color: themeColor }} />
+                    ) : (
+                      <div className="w-2 h-2 rounded-full bg-current opacity-50" />
+                    )}
+                  </div>
+                  <span className="text-sm font-medium">{stage.label}</span>
+                </motion.div>
+              ))}
+            </div>
+            
+            <p className="text-center text-xs text-gray-500 mt-4">
+              This usually takes 10-15 seconds
             </p>
           </motion.div>
         )}
@@ -388,13 +521,17 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
             animate={{ opacity: 1, scale: 1 }}
             className="py-8 text-center"
           >
-            <div 
-              className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
-              style={{ backgroundColor: `${themeColor}20` }}
-            >
-              <Check 
-                className="w-8 h-8" 
-                style={{ color: themeColor }} 
+            <div className="relative inline-block mb-4">
+              <div 
+                className="w-16 h-16 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: `${themeColor}20` }}
+              >
+                <Check className="w-8 h-8" style={{ color: themeColor }} />
+              </div>
+              {/* Celebration ring */}
+              <div 
+                className="absolute inset-0 w-16 h-16 rounded-full border-2 animate-ping"
+                style={{ borderColor: `${themeColor}40` }}
               />
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -433,4 +570,3 @@ function StepIndicator({ current, total, color }: { current: number; total: numb
     </div>
   );
 }
-
