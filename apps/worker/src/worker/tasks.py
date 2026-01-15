@@ -992,22 +992,28 @@ def process_consumer_report(self, report_id: str):
     Process a consumer report request from the lead pages feature.
     
     This task:
-    1. Looks up the consumer_report record
-    2. Generates a simple value estimate (or uses existing data)
-    3. Sends SMS to the consumer with report link
-    4. Optionally notifies the agent
-    5. Updates the record status
+    1. Looks up the consumer_report record (with existing property_data)
+    2. Fetches comparable sales from SimplyRETS
+    3. Calculates value estimate based on comparables
+    4. Calculates market statistics
+    5. Sends SMS to the consumer with report link
+    6. Optionally notifies the agent
+    7. Updates the record with all data
     """
+    from .vendors.simplyrets import fetch_properties
+    from datetime import datetime, timedelta
+    
     logger.info(f"Processing consumer report: {report_id}")
     
     try:
         with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
             with conn.cursor() as cur:
-                # Get report details
+                # Get report details INCLUDING property_data JSON
                 cur.execute("""
                     SELECT 
                         cr.id, cr.agent_id, cr.consumer_phone, 
                         cr.property_address, cr.property_city, cr.property_state, cr.property_zip,
+                        cr.property_data,
                         u.first_name, u.last_name, u.phone as agent_phone,
                         a.id as account_id
                     FROM consumer_reports cr
@@ -1024,6 +1030,7 @@ def process_consumer_report(self, report_id: str):
                 (
                     report_id, agent_id, consumer_phone,
                     prop_address, prop_city, prop_state, prop_zip,
+                    existing_property_data,
                     agent_first, agent_last, agent_phone,
                     account_id
                 ) = row
@@ -1035,47 +1042,197 @@ def process_consumer_report(self, report_id: str):
                 base_url = os.environ.get("FRONTEND_URL", "https://www.trendyreports.io")
                 report_url = f"{base_url}/r/{report_id}"
                 
-                # Populate property_data with what we have
-                property_data = {
-                    "address": prop_address,
-                    "city": prop_city,
-                    "state": prop_state,
-                    "zip": prop_zip,
-                }
+                # Update status to processing
+                cur.execute("""
+                    UPDATE consumer_reports SET status = 'processing' WHERE id = %s::uuid
+                """, (report_id,))
                 
-                # Generate a basic placeholder value estimate
-                # (In a real implementation, this would use actual property data)
-                value_estimate = {
-                    "low": 0,
-                    "mid": 0,
-                    "high": 0,
-                    "confidence": "pending"
-                }
+                # Use existing property_data or build basic one
+                if existing_property_data and isinstance(existing_property_data, dict):
+                    property_data = existing_property_data
+                else:
+                    property_data = {
+                        "address": prop_address,
+                        "city": prop_city,
+                        "state": prop_state,
+                        "zip": prop_zip,
+                    }
                 
-                # Placeholder market stats
-                market_stats = {
-                    "median_price": None,
-                    "avg_price_per_sqft": None,
-                    "avg_days_on_market": None,
-                }
+                # Ensure basic fields are set
+                property_data.setdefault("address", prop_address)
+                property_data.setdefault("city", prop_city)
+                property_data.setdefault("state", prop_state)
+                property_data.setdefault("zip", prop_zip)
                 
-                # Update status to processing and store property data
+                # =============================================
+                # FETCH COMPARABLES FROM SIMPLYRETS
+                # =============================================
+                comparables = []
+                market_stats = {}
+                
+                try:
+                    logger.info(f"Fetching comparables for {prop_city}, {prop_state} {prop_zip}")
+                    
+                    # Build SimplyRETS params for closed sales
+                    six_months_ago = (datetime.now() - timedelta(days=180)).strftime("%Y-%m-%d")
+                    
+                    sr_params = {
+                        "type": "RES",
+                        "status": "Closed",
+                        "postalCodes": prop_zip,
+                        "mindate": six_months_ago,
+                        "sort": "-closeDate",
+                    }
+                    
+                    # Add bedroom/bathroom filters if we have them
+                    if property_data.get("bedrooms"):
+                        beds = property_data["bedrooms"]
+                        sr_params["minbeds"] = max(1, beds - 1)
+                        sr_params["maxbeds"] = beds + 1
+                    
+                    if property_data.get("sqft"):
+                        sqft = property_data["sqft"]
+                        sr_params["minarea"] = int(sqft * 0.75)
+                        sr_params["maxarea"] = int(sqft * 1.25)
+                    
+                    # Fetch from SimplyRETS
+                    raw_comps = fetch_properties(sr_params, limit=10)
+                    logger.info(f"SimplyRETS returned {len(raw_comps)} comparables")
+                    
+                    # Parse comparables
+                    comp_prices = []
+                    comp_ppsf = []
+                    comp_dom = []
+                    
+                    for comp in raw_comps:
+                        prop_info = comp.get("property", {})
+                        addr_info = comp.get("address", {})
+                        geo = comp.get("geo", {})
+                        photos = comp.get("photos", [])
+                        
+                        close_price = comp.get("closePrice") or comp.get("listPrice") or 0
+                        sqft = prop_info.get("area") or 1
+                        close_date = comp.get("closeDate", "")
+                        
+                        # Calculate days ago
+                        days_ago = 0
+                        if close_date:
+                            try:
+                                close_dt = datetime.fromisoformat(close_date.replace("Z", "+00:00"))
+                                days_ago = (datetime.now(close_dt.tzinfo) - close_dt).days
+                            except:
+                                pass
+                        
+                        # Calculate distance (simple approximation)
+                        distance_miles = 0
+                        if geo.get("lat") and geo.get("lng") and property_data.get("latitude"):
+                            # Haversine approximation
+                            lat_diff = abs(geo["lat"] - property_data.get("latitude", 0))
+                            lng_diff = abs(geo["lng"] - property_data.get("longitude", 0))
+                            distance_miles = round(((lat_diff ** 2 + lng_diff ** 2) ** 0.5) * 69, 1)
+                        
+                        parsed_comp = {
+                            "address": addr_info.get("full", ""),
+                            "city": addr_info.get("city", ""),
+                            "state": addr_info.get("state", prop_state),
+                            "zip": addr_info.get("postalCode", ""),
+                            "sold_price": close_price,
+                            "sold_date": close_date[:10] if close_date else "",
+                            "days_ago": days_ago,
+                            "bedrooms": prop_info.get("bedrooms") or 0,
+                            "bathrooms": prop_info.get("bathsFull") or 0,
+                            "sqft": sqft,
+                            "price_per_sqft": int(close_price / sqft) if sqft else 0,
+                            "distance_miles": distance_miles,
+                            "photo_url": photos[0] if photos else None,
+                        }
+                        comparables.append(parsed_comp)
+                        
+                        # Collect stats
+                        if close_price:
+                            comp_prices.append(close_price)
+                            if sqft:
+                                comp_ppsf.append(close_price / sqft)
+                        dom = comp.get("mls", {}).get("daysOnMarket")
+                        if dom is not None:
+                            comp_dom.append(dom)
+                    
+                    # =============================================
+                    # CALCULATE MARKET STATS
+                    # =============================================
+                    if comp_prices:
+                        sorted_prices = sorted(comp_prices)
+                        median_idx = len(sorted_prices) // 2
+                        market_stats = {
+                            "median_price": sorted_prices[median_idx] if sorted_prices else None,
+                            "avg_price_per_sqft": int(sum(comp_ppsf) / len(comp_ppsf)) if comp_ppsf else None,
+                            "avg_days_on_market": int(sum(comp_dom) / len(comp_dom)) if comp_dom else None,
+                            "total_sold_last_6mo": len(comparables),
+                        }
+                        logger.info(f"Market stats calculated: {market_stats}")
+                
+                except Exception as e:
+                    logger.warning(f"Failed to fetch comparables: {e}")
+                    market_stats = {}
+                
+                # =============================================
+                # CALCULATE VALUE ESTIMATE
+                # =============================================
+                value_estimate = {"low": 0, "mid": 0, "high": 0, "confidence": "low"}
+                
+                if comparables:
+                    prices = [c["sold_price"] for c in comparables if c.get("sold_price")]
+                    if prices:
+                        avg_price = sum(prices) / len(prices)
+                        price_range = max(prices) - min(prices) if len(prices) > 1 else avg_price * 0.1
+                        
+                        # Adjust based on sqft if we have it
+                        subject_sqft = property_data.get("sqft")
+                        if subject_sqft and market_stats.get("avg_price_per_sqft"):
+                            # Use price per sqft to estimate
+                            estimated = subject_sqft * market_stats["avg_price_per_sqft"]
+                            value_estimate = {
+                                "low": int(estimated * 0.92),
+                                "mid": int(estimated),
+                                "high": int(estimated * 1.08),
+                                "confidence": "medium" if len(comparables) >= 3 else "low",
+                            }
+                        else:
+                            # Use average of comparables
+                            value_estimate = {
+                                "low": int(avg_price - price_range * 0.5),
+                                "mid": int(avg_price),
+                                "high": int(avg_price + price_range * 0.5),
+                                "confidence": "medium" if len(comparables) >= 5 else "low",
+                            }
+                        
+                        # Boost confidence if we have many good comps
+                        if len(comparables) >= 5:
+                            value_estimate["confidence"] = "high"
+                        
+                        logger.info(f"Value estimate: {value_estimate}")
+                
+                # =============================================
+                # UPDATE DATABASE WITH ALL DATA
+                # =============================================
                 cur.execute("""
                     UPDATE consumer_reports 
-                    SET status = 'processing',
-                        property_data = %s::jsonb,
+                    SET property_data = %s::jsonb,
+                        comparables = %s::jsonb,
                         value_estimate = %s::jsonb,
-                        market_stats = %s::jsonb,
-                        comparables = '[]'::jsonb
+                        market_stats = %s::jsonb
                     WHERE id = %s::uuid
                 """, (
                     json.dumps(property_data),
+                    json.dumps(comparables),
                     json.dumps(value_estimate),
                     json.dumps(market_stats),
                     report_id
                 ))
                 
-                # Send SMS to consumer
+                # =============================================
+                # SEND SMS TO CONSUMER
+                # =============================================
                 sms_result = send_report_sms(
                     to_phone=consumer_phone,
                     report_url=report_url,

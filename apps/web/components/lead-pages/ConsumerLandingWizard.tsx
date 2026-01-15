@@ -259,7 +259,13 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
           property_city: selectedProperty!.city,
           property_state: selectedProperty!.state,
           property_zip: selectedProperty!.zip,
-          consent_given: consent
+          consent_given: consent,
+          // Include property details for the report
+          owner_name: selectedProperty!.owner_name,
+          bedrooms: selectedProperty!.bedrooms,
+          bathrooms: selectedProperty!.bathrooms,
+          sqft: selectedProperty!.sqft,
+          year_built: selectedProperty!.year_built,
         })
       });
       

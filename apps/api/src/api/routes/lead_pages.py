@@ -70,6 +70,13 @@ class ReportRequestPayload(BaseModel):
     property_state: str
     property_zip: str
     consent_given: bool = False
+    # Optional property details from search
+    owner_name: Optional[str] = None
+    bedrooms: Optional[int] = None
+    bathrooms: Optional[float] = None
+    sqft: Optional[int] = None
+    year_built: Optional[int] = None
+    lot_size: Optional[int] = None
     
     @field_validator('phone')
     @classmethod
@@ -235,17 +242,37 @@ async def request_report(
         user_agent = request.headers.get("user-agent", "")
         device_type = detect_device_type(user_agent)
         
-        # Create report record
+        # Build property_data JSON with all available details
+        property_data = {
+            "address": payload.property_address,
+            "city": payload.property_city,
+            "state": payload.property_state,
+            "zip": payload.property_zip,
+            "apn": payload.property_apn,
+            "fips": payload.property_fips,
+            "owner_name": payload.owner_name,
+            "bedrooms": payload.bedrooms,
+            "bathrooms": payload.bathrooms,
+            "sqft": payload.sqft,
+            "year_built": payload.year_built,
+            "lot_size": payload.lot_size,
+        }
+        # Remove None values
+        property_data = {k: v for k, v in property_data.items() if v is not None}
+        
+        # Create report record with full property data
         cur.execute(
             """
             INSERT INTO consumer_reports (
                 agent_id, agent_code, consumer_phone,
                 property_address, property_city, property_state, property_zip,
+                property_data,
                 consent_given, consent_timestamp,
                 ip_address, user_agent, device_type, status
             ) VALUES (
                 %s, %s, %s,
                 %s, %s, %s, %s,
+                %s::jsonb,
                 %s, NOW(),
                 %s, %s, %s, 'pending'
             )
@@ -259,6 +286,7 @@ async def request_report(
                 payload.property_city,
                 payload.property_state,
                 payload.property_zip,
+                json.dumps(property_data),
                 payload.consent_given,
                 ip,
                 user_agent[:500] if user_agent else None,
