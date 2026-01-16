@@ -24,8 +24,6 @@ import {
 import {
   LayoutDashboard,
   FileText,
-  Palette,
-  ChevronDown,
   ChevronRight,
   Shield,
   Calendar,
@@ -71,8 +69,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
         { name: "Leads", href: "/app/leads", icon: UserCheck },
         { name: "Scheduled Reports", href: "/app/schedules", icon: Calendar },
         { name: "Agents & Contacts", href: "/app/people", icon: Users },
-        { name: "Affiliate Branding", href: "/app/branding", icon: Palette },
-        { name: "Settings", href: "/app/account/settings", icon: Settings },
+        { name: "Settings", href: "/app/settings", icon: Settings },
       ]
     : [
         // Agent navigation
@@ -83,8 +80,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
         { name: "Leads", href: "/app/leads", icon: UserCheck },
         { name: "Scheduled Reports", href: "/app/schedules", icon: Calendar },
         { name: "Contacts", href: "/app/people", icon: Users },
-        { name: "Branding", href: "/app/branding", icon: Palette },
-        { name: "Settings", href: "/app/account/settings", icon: Settings },
+        { name: "Settings", href: "/app/settings", icon: Settings },
       ]
   
   // Admin sub-navigation
@@ -239,16 +235,13 @@ function DashboardTopbar({ accountType, isAdmin, isAffiliate }: { accountType?: 
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
-            <Link href="/app/account/settings">Account Settings</Link>
+            <Link href="/app/settings/profile">Profile</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href="/app/account/plan">Plan & Usage</Link>
+            <Link href="/app/settings/branding">Branding</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href="/app/branding">Branding</Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/app/billing">Billing</Link>
+            <Link href="/app/settings/billing">Billing</Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-600">

@@ -3,7 +3,7 @@ User Profile & Settings Routes
 
 Provides endpoints for:
 - GET /v1/users/me - Get current user profile
-- PATCH /v1/users/me - Update user profile (first_name, last_name, company_name, phone, avatar_url)
+- PATCH /v1/users/me - Update user profile (first_name, last_name, job_title, company_name, phone, website, avatar_url)
 - POST /v1/users/me/password - Change password (requires current password)
 - PATCH /v1/users/me/email - Update email (requires current password)
 """
@@ -26,8 +26,10 @@ class UserProfileOut(BaseModel):
     email: str
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    job_title: Optional[str] = None
     company_name: Optional[str] = None
     phone: Optional[str] = None
+    website: Optional[str] = None
     avatar_url: Optional[str] = None
     email_verified: bool = False
     created_at: Optional[datetime] = None
@@ -36,8 +38,10 @@ class UserProfileOut(BaseModel):
 class UserProfileUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    job_title: Optional[str] = None
     company_name: Optional[str] = None
     phone: Optional[str] = None
+    website: Optional[str] = None
     avatar_url: Optional[str] = None
 
 
@@ -72,8 +76,10 @@ def get_user_profile(request: Request):
                 email,
                 first_name,
                 last_name,
+                job_title,
                 company_name,
                 phone,
+                website,
                 avatar_url,
                 email_verified,
                 created_at
@@ -91,11 +97,13 @@ def get_user_profile(request: Request):
             email=row[1],
             first_name=row[2],
             last_name=row[3],
-            company_name=row[4],
-            phone=row[5],
-            avatar_url=row[6],
-            email_verified=row[7] or False,
-            created_at=row[8]
+            job_title=row[4],
+            company_name=row[5],
+            phone=row[6],
+            website=row[7],
+            avatar_url=row[8],
+            email_verified=row[9] or False,
+            created_at=row[10]
         )
 
 
@@ -107,8 +115,10 @@ def update_user_profile(body: UserProfileUpdate, request: Request):
     Updatable fields:
     - first_name
     - last_name
+    - job_title
     - company_name
     - phone
+    - website
     - avatar_url
     """
     user_info = getattr(request.state, "user", None)
@@ -130,6 +140,10 @@ def update_user_profile(body: UserProfileUpdate, request: Request):
         updates.append("last_name = %s")
         params.append(body.last_name.strip() if body.last_name else None)
 
+    if body.job_title is not None:
+        updates.append("job_title = %s")
+        params.append(body.job_title.strip() if body.job_title else None)
+
     if body.company_name is not None:
         updates.append("company_name = %s")
         params.append(body.company_name.strip() if body.company_name else None)
@@ -137,6 +151,10 @@ def update_user_profile(body: UserProfileUpdate, request: Request):
     if body.phone is not None:
         updates.append("phone = %s")
         params.append(body.phone.strip() if body.phone else None)
+
+    if body.website is not None:
+        updates.append("website = %s")
+        params.append(body.website.strip() if body.website else None)
 
     if body.avatar_url is not None:
         updates.append("avatar_url = %s")
@@ -158,8 +176,10 @@ def update_user_profile(body: UserProfileUpdate, request: Request):
                 email,
                 first_name,
                 last_name,
+                job_title,
                 company_name,
                 phone,
+                website,
                 avatar_url,
                 email_verified,
                 created_at
@@ -177,11 +197,13 @@ def update_user_profile(body: UserProfileUpdate, request: Request):
             email=row[1],
             first_name=row[2],
             last_name=row[3],
-            company_name=row[4],
-            phone=row[5],
-            avatar_url=row[6],
-            email_verified=row[7] or False,
-            created_at=row[8]
+            job_title=row[4],
+            company_name=row[5],
+            phone=row[6],
+            website=row[7],
+            avatar_url=row[8],
+            email_verified=row[9] or False,
+            created_at=row[10]
         )
 
 
