@@ -35,6 +35,10 @@ import {
   UserCheck,
   MessageSquare,
   Link2,
+  User,
+  Lock,
+  Palette,
+  CreditCard,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -55,10 +59,11 @@ import { Logo } from "@/components/logo"
 function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffiliate: boolean }) {
   const pathname = usePathname()
   
-  // Check if we're in admin section
+  // Check if we're in admin or settings section
   const isInAdminSection = pathname?.startsWith("/app/admin")
+  const isInSettingsSection = pathname?.startsWith("/app/settings")
   
-  // Build navigation based on user role
+  // Build navigation based on user role (without Settings - it's now a collapsible section)
   const navigation = isAffiliate
     ? [
         // Affiliate navigation
@@ -69,7 +74,6 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
         { name: "Leads", href: "/app/leads", icon: UserCheck },
         { name: "Scheduled Reports", href: "/app/schedules", icon: Calendar },
         { name: "Agents & Contacts", href: "/app/people", icon: Users },
-        { name: "Settings", href: "/app/settings", icon: Settings },
       ]
     : [
         // Agent navigation
@@ -80,8 +84,15 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
         { name: "Leads", href: "/app/leads", icon: UserCheck },
         { name: "Scheduled Reports", href: "/app/schedules", icon: Calendar },
         { name: "Contacts", href: "/app/people", icon: Users },
-        { name: "Settings", href: "/app/settings", icon: Settings },
       ]
+  
+  // Settings sub-navigation
+  const settingsNavigation = [
+    { name: "Profile", href: "/app/settings/profile", icon: User },
+    { name: "Security", href: "/app/settings/security", icon: Lock },
+    { name: "Branding", href: "/app/settings/branding", icon: Palette },
+    { name: "Billing", href: "/app/settings/billing", icon: CreditCard },
+  ]
   
   // Admin sub-navigation
   const adminNavigation = [
@@ -117,15 +128,45 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
             )
           })}
           
+          {/* Settings Section with Collapsible Sub-menu */}
+          <Collapsible defaultOpen={isInSettingsSection} className="group/collapsible-settings">
+            <SidebarMenuItem>
+              <CollapsibleTrigger asChild>
+                <SidebarMenuButton isActive={isInSettingsSection}>
+                  <Settings className="w-4 h-4" />
+                  <span>Settings</span>
+                  <ChevronRight className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible-settings:rotate-90" />
+                </SidebarMenuButton>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <SidebarMenuSub>
+                  {settingsNavigation.map((item) => {
+                    const isSubActive = pathname === item.href
+                    return (
+                      <SidebarMenuSubItem key={item.name}>
+                        <SidebarMenuSubButton asChild isActive={isSubActive}>
+                          <Link href={item.href}>
+                            <item.icon className="w-4 h-4" />
+                            <span>{item.name}</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                    )
+                  })}
+                </SidebarMenuSub>
+              </CollapsibleContent>
+            </SidebarMenuItem>
+          </Collapsible>
+
           {/* Admin Section with Collapsible Sub-menu */}
           {isAdmin && (
-            <Collapsible defaultOpen={isInAdminSection} className="group/collapsible">
+            <Collapsible defaultOpen={isInAdminSection} className="group/collapsible-admin">
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
                   <SidebarMenuButton isActive={isInAdminSection}>
                     <Shield className="w-4 h-4" />
                     <span>Admin</span>
-                    <ChevronRight className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                    <ChevronRight className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible-admin:rotate-90" />
                   </SidebarMenuButton>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
