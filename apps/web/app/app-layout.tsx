@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useState, useEffect } from "react"
+import { Suspense, useState, useEffect, useMemo } from "react"
 import {
   SidebarProvider,
   Sidebar,
@@ -55,6 +55,25 @@ import { usePathname } from "next/navigation"
 import NavAuth from "@/components/NavAuth"
 import { AccountSwitcher } from "@/components/account-switcher"
 import { Logo } from "@/components/logo"
+
+// Routes where sidebar should be hidden (builder modes)
+const BUILDER_ROUTES = [
+  "/app/reports/new",
+  "/app/schedules/new",
+  "/app/schedules/", // Will check for /edit suffix
+]
+
+function isBuilderRoute(pathname: string | null): boolean {
+  if (!pathname) return false
+  
+  // Check direct matches
+  if (BUILDER_ROUTES.includes(pathname)) return true
+  
+  // Check for schedule edit routes: /app/schedules/[id]/edit
+  if (pathname.startsWith("/app/schedules/") && pathname.endsWith("/edit")) return true
+  
+  return false
+}
 
 function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffiliate: boolean }) {
   const pathname = usePathname()
@@ -305,6 +324,19 @@ export default function AppLayoutClient({
   isAffiliate?: boolean
   accountType?: string
 }) {
+  const pathname = usePathname()
+  const inBuilderMode = useMemo(() => isBuilderRoute(pathname), [pathname])
+  
+  // Builder mode: Full-width layout without sidebar
+  if (inBuilderMode) {
+    return (
+      <div className="min-h-screen w-full" style={{ backgroundColor: 'var(--app-bg)', color: 'var(--app-text)' }}>
+        {children}
+      </div>
+    )
+  }
+  
+  // Normal mode: With sidebar
   return (
     <SidebarProvider>
       <Suspense fallback={<div>Loading...</div>}>
