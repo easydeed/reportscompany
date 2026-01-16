@@ -1,7 +1,10 @@
+"use client"
+
 import { ScheduleTable } from "@repo/ui"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Calendar, Plus } from 'lucide-react'
 
 export type SchedulesListShellProps = {
@@ -9,7 +12,45 @@ export type SchedulesListShellProps = {
 }
 
 export function SchedulesListShell(props: SchedulesListShellProps) {
+  const router = useRouter()
   const list = Array.isArray(props.schedules) ? props.schedules : []
+
+  const handleEdit = (id: string) => {
+    router.push(`/app/schedules/${id}/edit`)
+  }
+
+  const handleView = (id: string) => {
+    router.push(`/app/schedules/${id}`)
+  }
+
+  const handleToggleActive = async (id: string, active: boolean) => {
+    try {
+      await fetch(`/api/proxy/v1/schedules/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ active }),
+      })
+      // Refresh the page to show updated state
+      router.refresh()
+    } catch (err) {
+      console.error("Failed to toggle schedule:", err)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this schedule?")) return
+    
+    try {
+      await fetch(`/api/proxy/v1/schedules/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      })
+      router.refresh()
+    } catch (err) {
+      console.error("Failed to delete schedule:", err)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -94,7 +135,13 @@ export function SchedulesListShell(props: SchedulesListShellProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            <ScheduleTable schedules={list} />
+            <ScheduleTable 
+              schedules={list} 
+              onEdit={handleEdit}
+              onView={handleView}
+              onToggleActive={handleToggleActive}
+              onDelete={handleDelete}
+            />
           </CardContent>
         </Card>
     </div>
