@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Mail, Users, Clock } from "lucide-react"
+import { Mail, Users, Clock, Send } from "lucide-react"
 import {
   type ScheduleBuilderState,
   type BrandingContext,
@@ -65,56 +65,64 @@ export function EmailPreviewPanel({
 
   return (
     <div className="sticky top-24">
-      <div className="rounded-xl border bg-card overflow-hidden shadow-sm">
+      {/* Hero Preview Container */}
+      <div className="rounded-2xl border-2 border-muted bg-gradient-to-br from-slate-50 to-slate-100 p-6 shadow-xl dark:from-slate-900 dark:to-slate-800">
         {/* Header */}
-        <div className="flex items-center justify-between border-b px-4 py-3 bg-muted/30">
-          <h3 className="text-sm font-semibold">EMAIL PREVIEW</h3>
-          <span className="text-xs text-muted-foreground">Updates as you build</span>
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Live Email Preview</h3>
+          <span className="flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+            Updates live
+          </span>
         </div>
 
-        {/* Subject Line */}
-        <div className="border-b px-4 py-3">
-          <div className="text-xs text-muted-foreground mb-1">Subject:</div>
-          <div className="text-sm font-medium truncate">{subject}</div>
+        {/* Subject Line Preview */}
+        <div className="mb-4 rounded-lg bg-white/80 p-3 dark:bg-black/20">
+          <div className="text-xs font-medium text-muted-foreground mb-1">Subject Line</div>
+          <div className="font-medium truncate">{subject}</div>
         </div>
 
         {/* Email Preview */}
-        <div className="p-4 bg-stone-100 dark:bg-stone-900 max-h-[calc(100vh-420px)] overflow-y-auto">
-          <EmailPreview state={state} branding={branding} profile={profile} area={area} />
+        <div className="overflow-hidden rounded-xl bg-stone-100 shadow-2xl ring-1 ring-black/5 dark:bg-stone-900">
+          <div className="max-h-[calc(100vh-480px)] overflow-y-auto">
+            <EmailPreview state={state} branding={branding} profile={profile} area={area} />
+          </div>
         </div>
 
-        {/* Schedule Info */}
-        <div className="border-t px-4 py-3 space-y-2 bg-muted/20">
-          <div className="flex items-center gap-2 text-sm">
-            <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="text-muted-foreground">Next send:</span>
-            <span className="font-medium truncate">{getNextRunDate()}</span>
+        {/* Schedule Info Cards */}
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="rounded-lg bg-white/60 p-3 dark:bg-black/20">
+            <div className="flex items-center gap-2 text-muted-foreground mb-1">
+              <Clock className="h-3.5 w-3.5" />
+              <span className="text-xs font-medium">Next Send</span>
+            </div>
+            <div className="text-sm font-semibold truncate">{getNextRunDate()}</div>
           </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Users className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="text-muted-foreground">
+          <div className="rounded-lg bg-white/60 p-3 dark:bg-black/20">
+            <div className="flex items-center gap-2 text-muted-foreground mb-1">
+              <Users className="h-3.5 w-3.5" />
+              <span className="text-xs font-medium">Recipients</span>
+            </div>
+            <div className="text-sm font-semibold">
               {state.recipients.length === 0 
-                ? "No recipients added yet"
-                : `${state.recipients.length} recipient${state.recipients.length !== 1 ? "s" : ""} (${getTotalRecipients()} email${getTotalRecipients() !== 1 ? "s" : ""})`
+                ? "None yet"
+                : `${getTotalRecipients()} email${getTotalRecipients() !== 1 ? "s" : ""}`
               }
-            </span>
+            </div>
           </div>
         </div>
 
         {/* Send Test Button */}
-        <div className="border-t px-4 py-4">
-          <Button 
-            variant="outline" 
-            className="w-full gap-2 bg-transparent" 
-            onClick={onSendTest}
-            disabled={sendingTest}
-          >
-            <Mail className="h-4 w-4" />
-            {sendingTest ? "Sending..." : "Send Test Email to Myself"}
-          </Button>
-        </div>
+        <Button 
+          variant="outline" 
+          className="mt-4 w-full gap-2 bg-white/80 hover:bg-white dark:bg-black/30 dark:hover:bg-black/50" 
+          onClick={onSendTest}
+          disabled={sendingTest}
+        >
+          <Send className="h-4 w-4" />
+          {sendingTest ? "Sending..." : "Send Test Email to Myself"}
+        </Button>
       </div>
     </div>
   )
 }
-

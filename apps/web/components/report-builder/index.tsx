@@ -489,9 +489,9 @@ export function ReportBuilder() {
 
       {/* Main Content */}
       <main className="px-8 py-8">
-        <div className="grid grid-cols-[1fr_480px] gap-8">
-          {/* Left Panel - Configuration */}
-          <div className="space-y-4">
+        <div className="grid grid-cols-[380px_1fr] gap-8">
+          {/* Left Panel - Configuration (Compact) */}
+          <div className="space-y-3">
             {/* Section 1: Report Type */}
             <WizardSection
               stepNumber={1}
@@ -651,9 +651,20 @@ export function ReportBuilder() {
             </WizardSection>
           </div>
 
-          {/* Right Panel - Preview */}
-          <div className="sticky top-24 h-fit">
-            <ReportPreview state={state} branding={branding} profile={profile} />
+          {/* Right Panel - Preview (Hero) */}
+          <div className="sticky top-24">
+            <div className="rounded-2xl border-2 border-muted bg-gradient-to-br from-slate-50 to-slate-100 p-6 shadow-xl dark:from-slate-900 dark:to-slate-800">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Live Preview</h3>
+                <span className="flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                  Updates live
+                </span>
+              </div>
+              <div className="overflow-hidden rounded-xl shadow-2xl ring-1 ring-black/5">
+                <ReportPreview state={state} branding={branding} profile={profile} />
+              </div>
+            </div>
           </div>
         </div>
       </main>
