@@ -468,7 +468,7 @@ export function ReportBuilder() {
     <div className="min-h-screen bg-muted/30">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+        <div className="flex h-16 items-center justify-between px-8">
           <Link
             href="/app/reports"
             className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -492,8 +492,8 @@ export function ReportBuilder() {
       </header>
 
       {/* Main Content */}
-      <main className="mx-auto max-w-7xl px-6 py-8">
-        <div className="grid grid-cols-[1fr_420px] gap-8">
+      <main className="px-8 py-8">
+        <div className="grid grid-cols-[1fr_480px] gap-8">
           {/* Left Panel - Configuration */}
           <div className="space-y-4">
             <Accordion

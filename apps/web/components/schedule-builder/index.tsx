@@ -258,7 +258,7 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
     <div className="min-h-screen bg-muted/30">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+        <div className="flex h-16 items-center justify-between px-8">
           <Link 
             href="/app/schedules" 
             className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -284,7 +284,7 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
 
       {/* Error Display */}
       {error && (
-        <div className="mx-auto max-w-7xl px-6 pt-4">
+        <div className="px-8 pt-4">
           <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
             {error}
           </div>
@@ -292,8 +292,8 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
       )}
 
       {/* Main Content */}
-      <main className="mx-auto max-w-7xl px-6 py-8">
-        <div className="grid grid-cols-[1fr_420px] gap-8">
+      <main className="px-8 py-8">
+        <div className="grid grid-cols-[1fr_480px] gap-8">
           <ConfigurationPanel
             state={state}
             updateState={updateState}
