@@ -29,7 +29,7 @@ class AccountOut(BaseModel):
     # Colors
     primary_color: Optional[str] = None
     secondary_color: Optional[str] = None
-    # Contact info
+    # Contact info - derived from user profile (single source of truth)
     rep_photo_url: Optional[str] = None
     contact_line1: Optional[str] = None
     contact_line2: Optional[str] = None
@@ -43,6 +43,12 @@ class AccountOut(BaseModel):
     stripe_customer_id: Optional[str] = None
 
 class BrandingPatch(BaseModel):
+    """
+    Branding fields that can be updated.
+    
+    Note: Contact info (rep_photo_url, contact_line1, contact_line2) is now 
+    derived from user profile. Update profile at /v1/users/me instead.
+    """
     # Logo fields
     logo_url: Optional[str] = Field(None, description="Header logo URL for PDFs")
     footer_logo_url: Optional[str] = Field(None, description="Footer logo URL for PDFs")
@@ -51,33 +57,116 @@ class BrandingPatch(BaseModel):
     # Colors
     primary_color: Optional[constr(pattern=r'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$')] = None
     secondary_color: Optional[constr(pattern=r'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$')] = None
-    # Contact info
-    rep_photo_url: Optional[str] = Field(None, description="Representative headshot URL")
-    contact_line1: Optional[str] = Field(None, description="Primary contact line")
-    contact_line2: Optional[str] = Field(None, description="Secondary contact line")
-    website_url: Optional[str] = Field(None, description="Website URL")
+
+
+def build_contact_lines(first_name: str, last_name: str, job_title: str, 
+                        phone: str, email: str) -> tuple[str, str]:
+    """Build contact_line1 and contact_line2 from profile fields."""
+    # Line 1: Name • Title (e.g., "Jerry Mendoza • Real Estate Agent")
+    name = f"{first_name or ''} {last_name or ''}".strip()
+    if name and job_title:
+        contact_line1 = f"{name} • {job_title}"
+    else:
+        contact_line1 = name or job_title or ""
+    
+    # Line 2: Phone • Email (e.g., "(626) 555-1234 • jerry@example.com")
+    phone_formatted = phone or ""
+    if phone_formatted and len(phone_formatted) == 10:
+        phone_formatted = f"({phone_formatted[:3]}) {phone_formatted[3:6]}-{phone_formatted[6:]}"
+    
+    if phone_formatted and email:
+        contact_line2 = f"{phone_formatted} • {email}"
+    else:
+        contact_line2 = phone_formatted or email or ""
+    
+    return contact_line1, contact_line2
 
 @router.get("/account", response_model=AccountOut)
 def get_account(request: Request, account_id: str = Depends(require_account_id)):
+    """
+    Get account details with branding.
+    
+    Contact info (rep_photo_url, contact_line1, contact_line2) is derived from
+    the current user's profile - profile is the single source of truth.
+    """
+    user = getattr(request.state, "user", None)
+    user_id = user.get("id") if user else None
+    
     with db_conn() as (conn, cur):
         set_rls(cur, account_id)
+        
+        # Get account data
         cur.execute("""
             SELECT id::text, name, slug, 
                    logo_url, footer_logo_url, email_logo_url, email_footer_logo_url,
                    primary_color, secondary_color,
-                   rep_photo_url, contact_line1, contact_line2, website_url,
                    subscription_status, monthly_report_limit, api_rate_limit,
                    plan_slug, billing_status, stripe_customer_id
             FROM accounts
             WHERE id = %s
         """, (account_id,))
-        row = fetchone_dict(cur)
-        if not row:
+        acc_row = cur.fetchone()
+        if not acc_row:
             raise HTTPException(status_code=404, detail="Account not found")
-        return row
+        
+        # Get user profile for contact info (single source of truth)
+        rep_photo_url = None
+        contact_line1 = ""
+        contact_line2 = ""
+        website_url = ""
+        
+        if user_id:
+            cur.execute("""
+                SELECT avatar_url, first_name, last_name, job_title, 
+                       phone, email, website
+                FROM users
+                WHERE id = %s::uuid AND is_active = TRUE
+            """, (user_id,))
+            user_row = cur.fetchone()
+            if user_row:
+                rep_photo_url = user_row[0]
+                contact_line1, contact_line2 = build_contact_lines(
+                    first_name=user_row[1],
+                    last_name=user_row[2],
+                    job_title=user_row[3],
+                    phone=user_row[4],
+                    email=user_row[5]
+                )
+                website_url = user_row[6]
+        
+        return AccountOut(
+            id=acc_row[0],
+            name=acc_row[1],
+            slug=acc_row[2],
+            logo_url=acc_row[3],
+            footer_logo_url=acc_row[4],
+            email_logo_url=acc_row[5],
+            email_footer_logo_url=acc_row[6],
+            primary_color=acc_row[7],
+            secondary_color=acc_row[8],
+            rep_photo_url=rep_photo_url,
+            contact_line1=contact_line1,
+            contact_line2=contact_line2,
+            website_url=website_url,
+            subscription_status=acc_row[9],
+            monthly_report_limit=acc_row[10],
+            api_rate_limit=acc_row[11],
+            plan_slug=acc_row[12],
+            billing_status=acc_row[13],
+            stripe_customer_id=acc_row[14]
+        )
 
 @router.patch("/account/branding", response_model=AccountOut, status_code=status.HTTP_200_OK)
 def patch_branding(payload: BrandingPatch, request: Request, account_id: str = Depends(require_account_id)):
+    """
+    Update account branding (logos and colors only).
+    
+    Note: Contact info is derived from user profile. To update contact info,
+    use PATCH /v1/users/me to update your profile instead.
+    """
+    user = getattr(request.state, "user", None)
+    user_id = user.get("id") if user else None
+    
     sets = []
     params = []
     
@@ -96,16 +185,6 @@ def patch_branding(payload: BrandingPatch, request: Request, account_id: str = D
         sets.append("primary_color = %s"); params.append(payload.primary_color)
     if payload.secondary_color is not None:
         sets.append("secondary_color = %s"); params.append(payload.secondary_color)
-    
-    # Contact info fields
-    if payload.rep_photo_url is not None:
-        sets.append("rep_photo_url = %s"); params.append(payload.rep_photo_url)
-    if payload.contact_line1 is not None:
-        sets.append("contact_line1 = %s"); params.append(payload.contact_line1)
-    if payload.contact_line2 is not None:
-        sets.append("contact_line2 = %s"); params.append(payload.contact_line2)
-    if payload.website_url is not None:
-        sets.append("website_url = %s"); params.append(payload.website_url)
 
     if not sets:
         raise HTTPException(status_code=400, detail="No branding fields provided.")
@@ -117,17 +196,63 @@ def patch_branding(payload: BrandingPatch, request: Request, account_id: str = D
         if cur.fetchone() is None:
             raise HTTPException(status_code=404, detail="Account not found")
 
+        # Get updated account data
         cur.execute("""
             SELECT id::text, name, slug, 
                    logo_url, footer_logo_url, email_logo_url, email_footer_logo_url,
                    primary_color, secondary_color,
-                   rep_photo_url, contact_line1, contact_line2, website_url,
                    subscription_status, monthly_report_limit, api_rate_limit,
                    plan_slug, billing_status, stripe_customer_id
             FROM accounts WHERE id = %s
         """, (account_id,))
-        row = fetchone_dict(cur)
-        return row
+        acc_row = cur.fetchone()
+        
+        # Get user profile for contact info (single source of truth)
+        rep_photo_url = None
+        contact_line1 = ""
+        contact_line2 = ""
+        website_url = ""
+        
+        if user_id:
+            cur.execute("""
+                SELECT avatar_url, first_name, last_name, job_title, 
+                       phone, email, website
+                FROM users
+                WHERE id = %s::uuid AND is_active = TRUE
+            """, (user_id,))
+            user_row = cur.fetchone()
+            if user_row:
+                rep_photo_url = user_row[0]
+                contact_line1, contact_line2 = build_contact_lines(
+                    first_name=user_row[1],
+                    last_name=user_row[2],
+                    job_title=user_row[3],
+                    phone=user_row[4],
+                    email=user_row[5]
+                )
+                website_url = user_row[6]
+        
+        return AccountOut(
+            id=acc_row[0],
+            name=acc_row[1],
+            slug=acc_row[2],
+            logo_url=acc_row[3],
+            footer_logo_url=acc_row[4],
+            email_logo_url=acc_row[5],
+            email_footer_logo_url=acc_row[6],
+            primary_color=acc_row[7],
+            secondary_color=acc_row[8],
+            rep_photo_url=rep_photo_url,
+            contact_line1=contact_line1,
+            contact_line2=contact_line2,
+            website_url=website_url,
+            subscription_status=acc_row[9],
+            monthly_report_limit=acc_row[10],
+            api_rate_limit=acc_row[11],
+            plan_slug=acc_row[12],
+            billing_status=acc_row[13],
+            stripe_customer_id=acc_row[14]
+        )
 
 
 # Phase 29C: Multi-account support

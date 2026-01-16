@@ -712,11 +712,22 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                                                 "website_url": brand_row[8],
                                             }
                                     else:
-                                        # Un-sponsored regular user: use accounts table branding + user avatar
-                                        # Get user_id for this schedule to fetch their avatar
+                                        # Un-sponsored regular user: use accounts table branding + user profile contact info
+                                        # Profile is the single source of truth for contact info
                                         cur.execute("""
-                                            SELECT u.avatar_url, a.name, a.logo_url, a.primary_color, 
-                                                   a.secondary_color, a.contact_line1, a.contact_line2, a.website_url
+                                            SELECT 
+                                                u.avatar_url, 
+                                                u.first_name, 
+                                                u.last_name, 
+                                                u.job_title, 
+                                                u.phone, 
+                                                u.email,
+                                                u.website,
+                                                a.name, 
+                                                a.logo_url, 
+                                                a.email_logo_url,
+                                                a.primary_color, 
+                                                a.secondary_color
                                             FROM accounts a
                                             LEFT JOIN users u ON u.active_account_id = a.id
                                             WHERE a.id = %s::uuid
@@ -724,15 +735,40 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                                         """, (account_id,))
                                         acc_brand_row = cur.fetchone()
                                         if acc_brand_row:
+                                            # Build contact lines from user profile (single source of truth)
+                                            first_name = acc_brand_row[1] or ""
+                                            last_name = acc_brand_row[2] or ""
+                                            job_title = acc_brand_row[3] or ""
+                                            phone = acc_brand_row[4] or ""
+                                            email = acc_brand_row[5] or ""
+                                            website = acc_brand_row[6] or ""
+                                            
+                                            # Line 1: Name • Title
+                                            name = f"{first_name} {last_name}".strip()
+                                            if name and job_title:
+                                                contact_line1 = f"{name} • {job_title}"
+                                            else:
+                                                contact_line1 = name or job_title or ""
+                                            
+                                            # Line 2: Phone • Email
+                                            phone_fmt = phone
+                                            if phone_fmt and len(phone_fmt) == 10:
+                                                phone_fmt = f"({phone_fmt[:3]}) {phone_fmt[3:6]}-{phone_fmt[6:]}"
+                                            if phone_fmt and email:
+                                                contact_line2 = f"{phone_fmt} • {email}"
+                                            else:
+                                                contact_line2 = phone_fmt or email or ""
+                                            
                                             brand = {
-                                                "display_name": acc_brand_row[1],
-                                                "logo_url": acc_brand_row[2],
-                                                "primary_color": acc_brand_row[3],
-                                                "accent_color": acc_brand_row[4],
+                                                "display_name": acc_brand_row[7],
+                                                "logo_url": acc_brand_row[8],
+                                                "email_logo_url": acc_brand_row[9],
+                                                "primary_color": acc_brand_row[10],
+                                                "accent_color": acc_brand_row[11],
                                                 "rep_photo_url": acc_brand_row[0],  # user's avatar_url
-                                                "contact_line1": acc_brand_row[5],
-                                                "contact_line2": acc_brand_row[6],
-                                                "website_url": acc_brand_row[7],
+                                                "contact_line1": contact_line1,
+                                                "contact_line2": contact_line2,
+                                                "website_url": website,
                                             }
                             except Exception as e:
                                 print(f"⚠️  Error loading brand for email: {e}")
