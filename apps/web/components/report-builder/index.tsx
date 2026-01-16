@@ -489,9 +489,9 @@ export function ReportBuilder() {
 
       {/* Main Content */}
       <main className="px-8 py-8">
-        <div className="grid grid-cols-[380px_1fr] gap-8">
-          {/* Left Panel - Configuration (Compact) */}
-          <div className="space-y-3">
+        <div className="grid grid-cols-[525px_1fr] gap-8">
+          {/* Left Panel - Configuration */}
+          <div className="space-y-3 mx-auto w-full">
             {/* Section 1: Report Type */}
             <WizardSection
               stepNumber={1}

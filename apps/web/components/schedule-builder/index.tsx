@@ -293,7 +293,7 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
 
       {/* Main Content */}
       <main className="px-8 py-8">
-        <div className="grid grid-cols-[380px_1fr] gap-8">
+        <div className="grid grid-cols-[525px_1fr] gap-8">
           <ConfigurationPanel
             state={state}
             updateState={updateState}

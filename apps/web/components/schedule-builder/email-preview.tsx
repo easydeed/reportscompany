@@ -203,6 +203,16 @@ function MarketSnapshotContent() {
   )
 }
 
+// Sample property images
+const SAMPLE_PHOTOS = [
+  "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=200&h=150&fit=crop",
+  "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=200&h=150&fit=crop",
+  "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=200&h=150&fit=crop",
+  "https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=200&h=150&fit=crop",
+  "https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=200&h=150&fit=crop",
+  "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=200&h=150&fit=crop",
+]
+
 function NewListingsContent({ audienceFilter }: { audienceFilter?: string | null }) {
   return (
     <>
@@ -241,7 +251,9 @@ function NewListingsContent({ audienceFilter }: { audienceFilter?: string | null
             { price: "$825K", beds: "3bd/2ba" },
           ].map((listing, i) => (
             <div key={i} className="bg-stone-100 rounded-md overflow-hidden text-center">
-              <div className="h-14 bg-stone-200 flex items-center justify-center text-stone-400 text-xs">IMG</div>
+              <div className="h-14 overflow-hidden">
+                <img src={SAMPLE_PHOTOS[i]} alt={`Property ${i + 1}`} className="w-full h-full object-cover" />
+              </div>
               <div className="p-2">
                 <div className="font-semibold text-xs">{listing.price}</div>
                 <div className="text-[10px] text-stone-500">{listing.beds}</div>
@@ -490,7 +502,9 @@ function FeaturedListingsContent() {
             { price: "$1.6M", beds: "4bd/3ba" },
           ].map((listing, i) => (
             <div key={i} className="bg-stone-100 rounded-md overflow-hidden text-center">
-              <div className="h-14 bg-stone-200 flex items-center justify-center text-stone-400 text-xs">IMG</div>
+              <div className="h-14 overflow-hidden">
+                <img src={SAMPLE_PHOTOS[i]} alt={`Property ${i + 1}`} className="w-full h-full object-cover" />
+              </div>
               <div className="p-2">
                 <div className="font-semibold text-xs">{listing.price}</div>
                 <div className="text-[10px] text-stone-500">{listing.beds}</div>
