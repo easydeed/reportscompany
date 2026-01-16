@@ -7,7 +7,7 @@ import type { AudienceFilter, SectionStatus } from "../types"
 
 interface AudienceFilterSectionProps {
   value: AudienceFilter
-  onChange: (value: AudienceFilter) => void
+  onChange: (value: AudienceFilter, name: string | null) => void
   isExpanded: boolean
   onToggle: () => void
 }
@@ -34,6 +34,12 @@ export function AudienceFilterSection({ value, onChange, isExpanded, onToggle }:
   const status: SectionStatus = "optional"
   const summary = value ? audienceLabels[value] : undefined
 
+  const handleChange = (filterValue: AudienceFilter) => {
+    const option = audienceOptions.find(o => o.value === filterValue)
+    const filterName = filterValue && filterValue !== "all" ? (option?.label || null) : null
+    onChange(filterValue, filterName)
+  }
+
   return (
     <AccordionSection
       title="Audience Filter"
@@ -49,7 +55,7 @@ export function AudienceFilterSection({ value, onChange, isExpanded, onToggle }:
           {audienceOptions.map((option) => (
             <button
               key={option.value}
-              onClick={() => onChange(option.value)}
+              onClick={() => handleChange(option.value)}
               className={cn(
                 "flex w-full items-center justify-between rounded-lg border-2 px-4 py-3 text-left transition-all",
                 value === option.value ? "border-violet-500 bg-violet-50 dark:bg-violet-950/50" : "border-border hover:border-violet-300",
@@ -72,4 +78,3 @@ export function AudienceFilterSection({ value, onChange, isExpanded, onToggle }:
     </AccordionSection>
   )
 }
-

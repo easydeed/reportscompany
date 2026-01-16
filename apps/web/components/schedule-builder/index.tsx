@@ -6,9 +6,15 @@ import { ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ConfigurationPanel } from "./configuration-panel"
-import { PreviewPanel } from "./preview-panel"
-import type { ScheduleBuilderState, ScheduleApiPayload, Recipient } from "./types"
-import { AUDIENCE_FILTER_PRESETS } from "./types"
+import { EmailPreviewPanel } from "./email-preview-panel"
+import type { 
+  ScheduleBuilderState, 
+  ScheduleApiPayload, 
+  Recipient, 
+  BrandingContext, 
+  ProfileContext 
+} from "./types"
+import { AUDIENCE_FILTER_PRESETS, AUDIENCE_FILTERS } from "./types"
 
 const initialState: ScheduleBuilderState = {
   name: "",
@@ -18,6 +24,7 @@ const initialState: ScheduleBuilderState = {
   city: null,
   zipCodes: [],
   audienceFilter: null,
+  audienceFilterName: null,
   cadence: "weekly",
   weeklyDow: 1,
   monthlyDom: 1,
@@ -26,6 +33,21 @@ const initialState: ScheduleBuilderState = {
   timezone: "America/Los_Angeles",
   recipients: [],
   includeAttachment: false,
+}
+
+const defaultBranding: BrandingContext = {
+  primaryColor: "#6366f1",
+  accentColor: "#8b5cf6",
+  emailLogoUrl: null,
+  displayName: null,
+}
+
+const defaultProfile: ProfileContext = {
+  name: "Your Name",
+  jobTitle: "Real Estate Agent",
+  avatarUrl: null,
+  phone: null,
+  email: "you@example.com",
 }
 
 interface ScheduleBuilderProps {
@@ -39,8 +61,56 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(!!scheduleId)
   const [error, setError] = useState<string | null>(null)
+  
+  // Branding and profile for email preview
+  const [branding, setBranding] = useState<BrandingContext>(defaultBranding)
+  const [profile, setProfile] = useState<ProfileContext>(defaultProfile)
+  const [sendingTest, setSendingTest] = useState(false)
 
   const isEditMode = !!scheduleId
+
+  // Load branding and profile data for email preview
+  useEffect(() => {
+    async function loadContextData() {
+      try {
+        // Fetch branding
+        const brandingRes = await fetch("/api/proxy/v1/account/branding", {
+          credentials: "include"
+        })
+        if (brandingRes.ok) {
+          const brandingData = await brandingRes.json()
+          setBranding({
+            primaryColor: brandingData.primary_color || defaultBranding.primaryColor,
+            accentColor: brandingData.secondary_color || defaultBranding.accentColor,
+            emailLogoUrl: brandingData.email_logo_url || null,
+            displayName: brandingData.name || null,
+          })
+        }
+
+        // Fetch profile
+        const profileRes = await fetch("/api/proxy/v1/users/me", {
+          credentials: "include"
+        })
+        if (profileRes.ok) {
+          const profileData = await profileRes.json()
+          const fullName = [profileData.first_name, profileData.last_name]
+            .filter(Boolean)
+            .join(" ") || "Your Name"
+          setProfile({
+            name: fullName,
+            jobTitle: profileData.job_title || null,
+            avatarUrl: profileData.avatar_url || null,
+            phone: profileData.phone || null,
+            email: profileData.email || "you@example.com",
+          })
+        }
+      } catch (err) {
+        console.error("Failed to load branding/profile:", err)
+      }
+    }
+
+    loadContextData()
+  }, [])
 
   // Load existing schedule for edit mode
   useEffect(() => {
@@ -59,6 +129,11 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
         const data = await res.json()
         
         // Map API response to UI state
+        const audienceFilter = mapFiltersToAudienceFilter(data.filters)
+        const audienceFilterName = audienceFilter && audienceFilter !== "all"
+          ? AUDIENCE_FILTERS.find(f => f.id === audienceFilter)?.name || null
+          : null
+
         setState({
           name: data.name || "",
           reportType: data.report_type || "market_snapshot",
@@ -66,7 +141,8 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
           areaType: data.city ? "city" : "zip",
           city: data.city || null,
           zipCodes: data.zip_codes || [],
-          audienceFilter: mapFiltersToAudienceFilter(data.filters),
+          audienceFilter,
+          audienceFilterName,
           cadence: data.cadence || "weekly",
           weeklyDow: data.weekly_dow ?? 1,
           monthlyDom: data.monthly_dom ?? 1,
@@ -152,6 +228,21 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
     }
   }
 
+  const handleSendTest = async () => {
+    setSendingTest(true)
+    try {
+      // TODO: Implement test email endpoint
+      // For now, just show a brief loading state
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      // Could call: POST /api/proxy/v1/schedules/test-email with current state
+      alert("Test email feature coming soon!")
+    } catch (err) {
+      console.error("Failed to send test email:", err)
+    } finally {
+      setSendingTest(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -164,10 +255,10 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-muted/30">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background">
-        <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-6">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
           <Link 
             href="/app/schedules" 
             className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -193,7 +284,7 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
 
       {/* Error Display */}
       {error && (
-        <div className="mx-auto max-w-[1400px] px-6 pt-4">
+        <div className="mx-auto max-w-7xl px-6 pt-4">
           <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
             {error}
           </div>
@@ -201,26 +292,21 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
       )}
 
       {/* Main Content */}
-      <main className="mx-auto max-w-[1400px] px-6 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold">
-            {isEditMode ? "Edit Schedule" : "Create Schedule"}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {isEditMode 
-              ? "Update your scheduled report settings"
-              : "Set up automatic delivery of market reports to your recipients"
-            }
-          </p>
-        </div>
-        <div className="grid grid-cols-[1fr,400px] gap-8">
+      <main className="mx-auto max-w-7xl px-6 py-8">
+        <div className="grid grid-cols-[1fr,420px] gap-8">
           <ConfigurationPanel
             state={state}
             updateState={updateState}
             expandedSection={expandedSection}
             setExpandedSection={setExpandedSection}
           />
-          <PreviewPanel state={state} />
+          <EmailPreviewPanel 
+            state={state} 
+            branding={branding} 
+            profile={profile}
+            onSendTest={handleSendTest}
+            sendingTest={sendingTest}
+          />
         </div>
       </main>
     </div>
@@ -284,5 +370,4 @@ function mapFiltersToAudienceFilter(filters: any): ScheduleBuilderState["audienc
 }
 
 // Re-export types for convenience
-export type { ScheduleBuilderState, ScheduleApiPayload, Recipient }
-
+export type { ScheduleBuilderState, ScheduleApiPayload, Recipient, BrandingContext, ProfileContext }

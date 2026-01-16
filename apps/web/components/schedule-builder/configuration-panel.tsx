@@ -57,7 +57,7 @@ export function ConfigurationPanel({
       {showAudienceFilter && (
         <AudienceFilterSection
           value={state.audienceFilter}
-          onChange={(audienceFilter) => updateState({ audienceFilter })}
+          onChange={(audienceFilter, audienceFilterName) => updateState({ audienceFilter, audienceFilterName })}
           isExpanded={expandedSection === "audience"}
           onToggle={() => handleSectionToggle("audience")}
         />
