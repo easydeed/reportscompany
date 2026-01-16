@@ -493,7 +493,7 @@ export function ReportBuilder() {
 
       {/* Main Content */}
       <main className="mx-auto max-w-7xl px-6 py-8">
-        <div className="grid grid-cols-[1fr,420px] gap-8">
+        <div className="grid grid-cols-[1fr_420px] gap-8">
           {/* Left Panel - Configuration */}
           <div className="space-y-4">
             <Accordion

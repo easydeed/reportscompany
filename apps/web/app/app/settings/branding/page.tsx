@@ -312,7 +312,7 @@ export default function BrandingPage() {
       </div>
 
       {/* Two-column layout: Config + Preview */}
-      <div className="grid grid-cols-[1fr,380px] gap-8">
+      <div className="grid grid-cols-[1fr_380px] gap-8">
         {/* Left: Configuration Accordions */}
         <div className="space-y-3">
           {/* Brand Colors Accordion */}
