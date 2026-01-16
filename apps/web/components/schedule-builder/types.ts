@@ -15,7 +15,7 @@ export interface ScheduleBuilderState {
   city: string | null
   zipCodes: string[]
   audienceFilter: AudienceFilter
-  audienceFilterName: string | null  // Human-readable name for preview
+  audienceFilterName: string | null
   cadence: "weekly" | "monthly"
   weeklyDow: 0 | 1 | 2 | 3 | 4 | 5 | 6
   monthlyDom: number
@@ -45,34 +45,7 @@ export interface ProfileContext {
   email: string
 }
 
-// API payload mapping for schedule creation
-export interface ScheduleApiPayload {
-  name: string
-  report_type: string
-  city: string | null
-  zip_codes: string[] | null
-  lookback_days: number
-  cadence: string
-  weekly_dow: number | null
-  monthly_dom: number | null
-  send_hour: number
-  send_minute: number
-  timezone: string
-  recipients: Array<{ type: string; id?: string; email?: string }>
-  include_attachment: boolean
-  active: boolean
-  filters: {
-    minbeds?: number
-    minbaths?: number
-    minprice?: number
-    maxprice?: number
-    subtype?: string
-    price_strategy?: { mode: string; value: number }
-    preset_display_name?: string
-  } | null
-}
-
-// Map UI audience filter to API filters
+// Map UI audience filter to API filters (SMART PRESETS)
 export const AUDIENCE_FILTER_PRESETS: Record<string, {
   minbeds?: number
   minbaths?: number
@@ -110,7 +83,7 @@ export const AUDIENCE_FILTER_PRESETS: Record<string, {
 
 // Human-readable labels
 export const REPORT_TYPE_LABELS: Record<ReportType, string> = {
-  market_snapshot: "Market Snapshot",
+  market_snapshot: "Market Update",
   new_listings: "New Listings",
   new_listings_gallery: "New Listings",
   closed: "Closed Sales",
@@ -120,68 +93,13 @@ export const REPORT_TYPE_LABELS: Record<ReportType, string> = {
   featured_listings: "Featured Listings",
 }
 
-export const REPORT_TYPE_ICONS: Record<ReportType, string> = {
-  market_snapshot: "📊",
-  new_listings: "📸",
-  new_listings_gallery: "📸",
-  closed: "🏠",
-  inventory: "📦",
-  price_bands: "💰",
-  open_houses: "🚪",
-  featured_listings: "⭐",
-}
-
-export const AUDIENCE_FILTERS = [
-  {
-    id: "all" as const,
-    name: "All Listings",
-    description: "No filters - show everything",
-  },
-  {
-    id: "first_time" as const,
-    name: "First-Time Buyers",
-    description: "2+ beds, 2+ baths, SFR, ≤70% median price",
-  },
-  {
-    id: "luxury" as const,
-    name: "Luxury Clients",
-    description: "SFR, ≥150% median price",
-  },
-  {
-    id: "families" as const,
-    name: "Families",
-    description: "3+ beds, 2+ baths, SFR",
-  },
-  {
-    id: "condo" as const,
-    name: "Condo Buyers",
-    description: "Condos only",
-  },
-  {
-    id: "investors" as const,
-    name: "Investors",
-    description: "≤50% median price",
-  },
-]
-
-export const DAYS_OF_WEEK = ["S", "M", "T", "W", "T", "F", "S"]
-export const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-
-// Helper functions for email preview
+// Helper functions
 export function getAreaDisplay(state: ScheduleBuilderState): string {
-  if (state.city) {
-    return state.city
-  }
-  if (state.zipCodes.length === 1) {
-    return `ZIP ${state.zipCodes[0]}`
-  }
-  if (state.zipCodes.length <= 3) {
-    return `ZIPs ${state.zipCodes.join(", ")}`
-  }
-  if (state.zipCodes.length > 0) {
-    return `${state.zipCodes.length} ZIP codes`
-  }
-  return "Your Area"
+  if (state.city) return state.city
+  if (state.zipCodes.length === 1) return `ZIP ${state.zipCodes[0]}`
+  if (state.zipCodes.length <= 3) return `ZIPs ${state.zipCodes.join(", ")}`
+  if (state.zipCodes.length > 0) return `${state.zipCodes.length} ZIP codes`
+  return "Select an area"
 }
 
 export function getEmailSubject(state: ScheduleBuilderState): string {
@@ -191,9 +109,7 @@ export function getEmailSubject(state: ScheduleBuilderState): string {
     }
     return REPORT_TYPE_LABELS[state.reportType] || state.reportType
   }
-
   const label = getLabel()
   const area = getAreaDisplay(state)
-
-  return `📊 Your ${label} for ${area} is Ready!`
+  return `Your ${label} for ${area} is Ready!`
 }

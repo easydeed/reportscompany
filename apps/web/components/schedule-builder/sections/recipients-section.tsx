@@ -1,293 +1,232 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, X, User, Users, AlertCircle, Plus, Loader2 } from "lucide-react"
+import { Search, X, Users, Mail, AlertCircle, Check } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { AccordionSection } from "../accordion-section"
-import type { Recipient, ScheduleBuilderState, SectionStatus } from "../types"
+import type { ScheduleBuilderState, Recipient } from "../types"
 
 interface RecipientsSectionProps {
-  stepNumber?: number
   recipients: Recipient[]
-  includeAttachment: boolean
   onChange: (updates: Partial<ScheduleBuilderState>) => void
-  isExpanded: boolean
-  onToggle: () => void
+  hasRecipients: boolean
 }
 
-interface ApiContact {
-  id: string
-  name: string
-  email: string | null
-}
+export function RecipientsSection({ recipients, onChange, hasRecipients }: RecipientsSectionProps) {
+  const [searchQuery, setSearchQuery] = useState("")
+  const [contacts, setContacts] = useState<any[]>([])
+  const [groups, setGroups] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-interface ApiGroup {
-  id: string
-  name: string
-  member_count: number
-}
-
-export function RecipientsSection({
-  stepNumber,
-  recipients,
-  includeAttachment,
-  onChange,
-  isExpanded,
-  onToggle,
-}: RecipientsSectionProps) {
-  const [search, setSearch] = useState("")
-  const [showDropdown, setShowDropdown] = useState(false)
-  const [manualEmail, setManualEmail] = useState("")
-  const [contacts, setContacts] = useState<ApiContact[]>([])
-  const [groups, setGroups] = useState<ApiGroup[]>([])
-  const [loading, setLoading] = useState(false)
-
-  // Fetch contacts and groups on mount
+  // Fetch contacts and groups
   useEffect(() => {
-    async function fetchData() {
-      setLoading(true)
+    async function loadData() {
       try {
         const [contactsRes, groupsRes] = await Promise.all([
-          fetch("/api/proxy/v1/contacts", { credentials: "include" }),
-          fetch("/api/proxy/v1/contact-groups", { credentials: "include" })
+          fetch("/api/proxy/v1/contacts"),
+          fetch("/api/proxy/v1/contact-groups"),
         ])
-
+        
         if (contactsRes.ok) {
           const data = await contactsRes.json()
-          setContacts(data.contacts || data || [])
+          setContacts((data.contacts || []).filter((c: any) => c.email))
         }
-
         if (groupsRes.ok) {
           const data = await groupsRes.json()
           setGroups(data.groups || [])
         }
-      } catch (err) {
-        console.error("Failed to fetch contacts/groups:", err)
+      } catch (error) {
+        console.error("Failed to load contacts:", error)
       } finally {
-        setLoading(false)
+        setIsLoading(false)
       }
     }
-    fetchData()
+    loadData()
   }, [])
 
-  const status: SectionStatus = recipients.length > 0 ? "complete" : "warning"
-
-  const totalEmails = recipients.reduce((sum, r) => {
-    if (r.type === "group") return sum + r.memberCount
-    return sum + 1
-  }, 0)
-
-  const summary =
-    recipients.length > 0
-      ? `👥 ${recipients.length} recipient${recipients.length !== 1 ? "s" : ""} (${totalEmails} email${totalEmails !== 1 ? "s" : ""} total)`
-      : undefined
-
-  const filteredContacts = contacts.filter(
-    (c) =>
-      c.email &&
-      (c.name.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase())) &&
-      !recipients.some((r) => r.type === "contact" && r.id === c.id),
+  const filteredContacts = contacts.filter(c =>
+    !searchQuery || 
+    c.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    c.email?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const filteredGroups = groups.filter(
-    (g) =>
-      g.name.toLowerCase().includes(search.toLowerCase()) &&
-      !recipients.some((r) => r.type === "group" && r.id === g.id),
-  )
+  const isContactSelected = (id: string) => recipients.some(r => r.type === "contact" && r.id === id)
+  const isGroupSelected = (id: string) => recipients.some(r => r.type === "group" && r.id === id)
 
-  const addContact = (contact: ApiContact) => {
-    if (!contact.email) return
-    onChange({
-      recipients: [...recipients, { type: "contact", id: contact.id, name: contact.name, email: contact.email }],
-    })
-    setSearch("")
-    setShowDropdown(false)
-  }
-
-  const addGroup = (group: ApiGroup) => {
-    onChange({
-      recipients: [...recipients, { type: "group", id: group.id, name: group.name, memberCount: group.member_count }],
-    })
-    setSearch("")
-    setShowDropdown(false)
-  }
-
-  const addManualEmail = () => {
-    const email = manualEmail.trim()
-    if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      if (!recipients.some((r) => r.type === "manual_email" && r.email === email)) {
-        onChange({
-          recipients: [...recipients, { type: "manual_email", email }],
-        })
-      }
-      setManualEmail("")
+  const toggleContact = (contact: any) => {
+    if (isContactSelected(contact.id)) {
+      onChange({ recipients: recipients.filter(r => !(r.type === "contact" && r.id === contact.id)) })
+    } else {
+      onChange({ 
+        recipients: [...recipients, { 
+          type: "contact", 
+          id: contact.id, 
+          name: contact.name, 
+          email: contact.email 
+        }] 
+      })
     }
   }
 
-  const removeRecipient = (index: number) => {
-    onChange({ recipients: recipients.filter((_, i) => i !== index) })
+  const toggleGroup = (group: any) => {
+    if (isGroupSelected(group.id)) {
+      onChange({ recipients: recipients.filter(r => !(r.type === "group" && r.id === group.id)) })
+    } else {
+      onChange({ 
+        recipients: [...recipients, { 
+          type: "group", 
+          id: group.id, 
+          name: group.name, 
+          memberCount: group.member_count || 0 
+        }] 
+      })
+    }
   }
 
-  return (
-    <AccordionSection stepNumber={stepNumber} title="Recipients" subtitle="Choose who receives this report" summary={summary} status={status} isExpanded={isExpanded} onToggle={onToggle}>
-      <div className="space-y-4">
-        <label className="text-sm text-muted-foreground">Who should receive this report?</label>
+  const removeRecipient = (recipient: Recipient) => {
+    onChange({ 
+      recipients: recipients.filter(r => 
+        !(r.type === recipient.type && 
+          ((r.type === "manual_email" && recipient.type === "manual_email" && r.email === recipient.email) ||
+           ((r as any).id === (recipient as any).id)))
+      ) 
+    })
+  }
 
-        {recipients.length === 0 && (
-          <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
-            <AlertCircle className="h-4 w-4" />
-            Add at least one recipient to activate this schedule
+  const contactCount = recipients.filter(r => r.type === "contact").length
+  const groupCount = recipients.filter(r => r.type === "group").length
+
+  return (
+    <section className="bg-white border border-gray-200 rounded-lg p-4">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-medium text-gray-900">Recipients</h3>
+        {hasRecipients ? (
+          <div className="w-5 h-5 rounded-full bg-green-50 flex items-center justify-center">
+            <Check className="w-3 h-3 text-green-500" />
+          </div>
+        ) : (
+          <div className="w-5 h-5 rounded-full bg-amber-50 flex items-center justify-center">
+            <AlertCircle className="w-3 h-3 text-amber-500" />
           </div>
         )}
+      </div>
 
-        {/* Search Input */}
-        <div className="relative">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value)
-                setShowDropdown(true)
-              }}
-              onFocus={() => setShowDropdown(true)}
-              onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
-              placeholder="Search contacts, groups, or enter email..."
-              className="pl-9"
-            />
-            {loading && <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />}
-          </div>
+      {/* Selected Recipients */}
+      {recipients.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {recipients.map((r, i) => (
+            <span 
+              key={i}
+              className="inline-flex items-center gap-1 px-2 py-1 bg-violet-50 text-violet-700 rounded text-sm"
+            >
+              {r.type === "group" ? <Users className="w-3 h-3" /> : <Mail className="w-3 h-3" />}
+              {r.name || r.email}
+              {r.type === "group" && ` (${r.memberCount})`}
+              <button onClick={() => removeRecipient(r)} className="text-violet-400 hover:text-violet-600">
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
 
-          {showDropdown && search && (
-            <div className="absolute z-10 mt-1 max-h-64 w-full overflow-auto rounded-lg border bg-background shadow-lg">
-              {filteredContacts.length > 0 && (
-                <div>
-                  <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground">Contacts</div>
-                  {filteredContacts.slice(0, 5).map((contact) => (
-                    <button
-                      key={contact.id}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => addContact(contact)}
-                      className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-muted"
-                    >
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <div className="text-sm font-medium">{contact.name}</div>
-                        <div className="text-xs text-muted-foreground">{contact.email}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+      {/* Search Input */}
+      <div className="relative mb-3">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search contacts..."
+          className="pl-9 border-gray-200 focus:border-violet-600 focus:ring-violet-600"
+        />
+      </div>
 
-              {filteredGroups.length > 0 && (
-                <div>
-                  <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground">Groups</div>
-                  {filteredGroups.slice(0, 5).map((group) => (
+      {isLoading ? (
+        <div className="py-4 text-center text-sm text-gray-400">Loading...</div>
+      ) : (
+        <div className="space-y-3">
+          {/* Groups */}
+          {groups.length > 0 && (
+            <div>
+              <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                <Users className="w-3 h-3" />
+                Groups ({groupCount}/{groups.length})
+              </p>
+              <div className="max-h-24 overflow-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
+                {groups.map((group) => {
+                  const selected = isGroupSelected(group.id)
+                  return (
                     <button
                       key={group.id}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => addGroup(group)}
-                      className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-muted"
+                      onClick={() => toggleGroup(group)}
+                      className={cn(
+                        "flex items-center gap-2 w-full px-3 py-2 text-left transition-colors",
+                        selected ? "bg-violet-50" : "hover:bg-gray-50"
+                      )}
                     >
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <div className="text-sm font-medium">{group.name}</div>
-                        <div className="text-xs text-muted-foreground">{group.member_count} members</div>
+                      <div className={cn(
+                        "w-4 h-4 rounded border flex items-center justify-center",
+                        selected ? "bg-violet-600 border-violet-600" : "border-gray-300"
+                      )}>
+                        {selected && <Check className="w-2.5 h-2.5 text-white" />}
                       </div>
+                      <Users className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-gray-700 flex-1">{group.name}</span>
+                      <span className="text-xs text-gray-400">{group.member_count || 0}</span>
                     </button>
-                  ))}
-                </div>
-              )}
-
-              {filteredContacts.length === 0 && filteredGroups.length === 0 && (
-                <div className="px-3 py-2 text-sm text-muted-foreground">
-                  No results found. Add as email manually below.
-                </div>
-              )}
+                  )
+                })}
+              </div>
             </div>
           )}
-        </div>
 
-        {/* Added Recipients */}
-        {recipients.length > 0 && (
-          <div>
-            <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
-              <div className="h-px flex-1 bg-border" />
-              <span>Added Recipients ({recipients.length})</span>
-              <div className="h-px flex-1 bg-border" />
-            </div>
-            <div className="space-y-2">
-              {recipients.map((recipient, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between rounded-lg border bg-background px-3 py-2"
-                >
-                  <div className="flex items-center gap-3">
-                    {recipient.type === "group" ? (
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <User className="h-4 w-4 text-muted-foreground" />
-                    )}
-                    <div>
-                      <div className="text-sm font-medium">
-                        {recipient.type === "manual_email" ? recipient.email : recipient.name}
+          {/* Contacts */}
+          {filteredContacts.length > 0 && (
+            <div>
+              <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                <Mail className="w-3 h-3" />
+                Contacts ({contactCount}/{contacts.length})
+              </p>
+              <div className="max-h-32 overflow-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
+                {filteredContacts.slice(0, 20).map((contact) => {
+                  const selected = isContactSelected(contact.id)
+                  return (
+                    <button
+                      key={contact.id}
+                      onClick={() => toggleContact(contact)}
+                      className={cn(
+                        "flex items-center gap-2 w-full px-3 py-2 text-left transition-colors",
+                        selected ? "bg-violet-50" : "hover:bg-gray-50"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-4 h-4 rounded border flex items-center justify-center",
+                        selected ? "bg-violet-600 border-violet-600" : "border-gray-300"
+                      )}>
+                        {selected && <Check className="w-2.5 h-2.5 text-white" />}
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        {recipient.type === "contact" && `${recipient.email} · Contact`}
-                        {recipient.type === "group" && `${recipient.memberCount} members · Group`}
-                        {recipient.type === "manual_email" && "Manual email"}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-700 truncate">{contact.name}</p>
+                        <p className="text-xs text-gray-400 truncate">{contact.email}</p>
                       </div>
-                    </div>
-                  </div>
-                  <button onClick={() => removeRecipient(index)} className="rounded p-1 hover:bg-muted">
-                    <X className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                </div>
-              ))}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Quick Add */}
-        <div>
-          <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="h-px flex-1 bg-border" />
-            <span>Quick Add</span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Input
-                value={manualEmail}
-                onChange={(e) => setManualEmail(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addManualEmail()}
-                placeholder="Enter email address..."
-                type="email"
-              />
-            </div>
-            <Button variant="outline" size="sm" onClick={addManualEmail} disabled={!manualEmail.trim()}>
-              <Plus className="mr-1 h-4 w-4" />
-              Add
-            </Button>
-          </div>
+          {filteredContacts.length === 0 && groups.length === 0 && (
+            <p className="py-4 text-center text-sm text-gray-400">
+              No contacts found
+            </p>
+          )}
         </div>
+      )}
 
-        {/* Attachment Toggle */}
-        <div className="flex items-center gap-2 pt-2">
-          <Checkbox
-            id="attachment"
-            checked={includeAttachment}
-            onCheckedChange={(checked) => onChange({ includeAttachment: checked as boolean })}
-          />
-          <label htmlFor="attachment" className="text-sm text-muted-foreground cursor-pointer">
-            Include PDF attachment (in addition to email preview)
-          </label>
-        </div>
-      </div>
-    </AccordionSection>
+      {!hasRecipients && (
+        <p className="text-xs text-amber-600 mt-2">Select at least one recipient</p>
+      )}
+    </section>
   )
 }
-

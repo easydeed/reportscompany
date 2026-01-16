@@ -1,10 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, X, Check, MapPin } from "lucide-react"
+import { Search, MapPin, X, Check, Hash } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import type { ReportBuilderState, AreaType } from "../types"
 
 interface AreaSectionProps {
@@ -12,9 +11,10 @@ interface AreaSectionProps {
   city: string | null
   zipCodes: string[]
   onChange: (updates: Partial<ReportBuilderState>) => void
+  isComplete: boolean
 }
 
-// Sample cities for autocomplete - will be enhanced with API later
+// Sample cities for autocomplete
 const SAMPLE_CITIES = [
   "Irvine, CA",
   "Los Angeles, CA",
@@ -32,26 +32,28 @@ const SAMPLE_CITIES = [
   "La Verne, CA",
 ]
 
-export function AreaSection({ areaType, city, zipCodes, onChange }: AreaSectionProps) {
+export function AreaSection({ areaType, city, zipCodes, onChange, isComplete }: AreaSectionProps) {
   const [citySearch, setCitySearch] = useState(city || "")
-  const [showCitySuggestions, setShowCitySuggestions] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
   const [zipInput, setZipInput] = useState("")
 
-  // Sync city search with city prop
   useEffect(() => {
-    if (city) {
-      setCitySearch(city)
-    }
+    if (city) setCitySearch(city)
   }, [city])
 
-  const filteredCities = SAMPLE_CITIES.filter((c) => 
+  const filteredCities = SAMPLE_CITIES.filter((c) =>
     c.toLowerCase().includes(citySearch.toLowerCase())
   )
 
   const handleCitySelect = (selectedCity: string) => {
     setCitySearch(selectedCity)
     onChange({ city: selectedCity })
-    setShowCitySuggestions(false)
+    setShowSuggestions(false)
+  }
+
+  const handleClearCity = () => {
+    setCitySearch("")
+    onChange({ city: null })
   }
 
   const handleZipAdd = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -68,9 +70,9 @@ export function AreaSection({ areaType, city, zipCodes, onChange }: AreaSectionP
     onChange({ zipCodes: zipCodes.filter((z) => z !== zip) })
   }
 
-  const handleAreaTypeChange = (value: AreaType) => {
-    onChange({ areaType: value })
-    if (value === "city") {
+  const handleAreaTypeChange = (type: AreaType) => {
+    onChange({ areaType: type })
+    if (type === "city") {
       onChange({ zipCodes: [] })
     } else {
       onChange({ city: null })
@@ -78,118 +80,137 @@ export function AreaSection({ areaType, city, zipCodes, onChange }: AreaSectionP
     }
   }
 
-  const showDropdown = showCitySuggestions && citySearch && !city && filteredCities.length > 0
+  const showDropdown = showSuggestions && citySearch && !city && filteredCities.length > 0
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground text-center">What area should this report cover?</p>
-
-      {/* Area Type Toggle */}
-      <div className="flex justify-center gap-6">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="radio"
-            name="areaType"
-            checked={areaType === "city"}
-            onChange={() => handleAreaTypeChange("city")}
-            className="h-4 w-4 text-violet-600 accent-violet-600"
-          />
-          <span className="text-sm font-medium">City</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="radio"
-            name="areaType"
-            checked={areaType === "zip"}
-            onChange={() => handleAreaTypeChange("zip")}
-            className="h-4 w-4 text-violet-600 accent-violet-600"
-          />
-          <span className="text-sm font-medium">ZIP Codes</span>
-        </label>
+    <section className="bg-white border border-gray-200 rounded-lg p-4">
+      {/* Section Header */}
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-medium text-gray-900">Area</h3>
+        {isComplete && (
+          <div className="w-5 h-5 rounded-full bg-green-50 flex items-center justify-center">
+            <Check className="w-3 h-3 text-green-500" />
+          </div>
+        )}
       </div>
 
-      {areaType === "city" ? (
-        <div 
+      {/* Area Type Toggle */}
+      <div className="flex gap-2 mb-3">
+        <button
+          onClick={() => handleAreaTypeChange("city")}
           className={cn(
-            "transition-all duration-300 ease-out",
-            showDropdown ? "min-h-[280px]" : "min-h-0"
+            "flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors",
+            areaType === "city"
+              ? "bg-violet-50 border-violet-600 text-violet-700"
+              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
           )}
         >
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={citySearch}
-              onChange={(e) => {
-                setCitySearch(e.target.value)
-                setShowCitySuggestions(true)
-                if (!e.target.value) {
-                  onChange({ city: null })
-                }
-              }}
-              onFocus={() => setShowCitySuggestions(true)}
-              onBlur={() => setTimeout(() => setShowCitySuggestions(false), 200)}
-              placeholder="Search for a city..."
-              className="pl-10 pr-10 h-12 text-base"
-            />
-            {city && <Check className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-emerald-500" />}
-          </div>
+          <MapPin className="w-4 h-4" />
+          City
+        </button>
+        <button
+          onClick={() => handleAreaTypeChange("zip")}
+          className={cn(
+            "flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors",
+            areaType === "zip"
+              ? "bg-violet-50 border-violet-600 text-violet-700"
+              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+          )}
+        >
+          <Hash className="w-4 h-4" />
+          ZIP Codes
+        </button>
+      </div>
 
-          {showDropdown && (
-            <div className="mt-2 rounded-xl border-2 border-violet-100 bg-white shadow-xl overflow-hidden dark:bg-slate-900 dark:border-violet-900">
-              <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-slate-50 dark:bg-slate-800">
-                Select a city
-              </div>
-              <div className="max-h-[200px] overflow-auto">
-                {filteredCities.map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => handleCitySelect(c)}
-                    className={cn(
-                      "flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-colors",
-                      c === city && "bg-violet-50 text-violet-900 dark:bg-violet-900/50",
-                    )}
-                  >
-                    <MapPin className="h-4 w-4 text-violet-500" />
-                    <span className="font-medium">{c}</span>
-                  </button>
-                ))}
-              </div>
+      {/* City Input */}
+      {areaType === "city" && (
+        <div>
+          {city ? (
+            // Selected city display
+            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
+              <MapPin className="w-4 h-4 text-gray-400" />
+              <span className="text-sm text-gray-700 flex-1">{city}</span>
+              <button 
+                onClick={handleClearCity}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            // City search input
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                value={citySearch}
+                onChange={(e) => {
+                  setCitySearch(e.target.value)
+                  setShowSuggestions(true)
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                placeholder="Search city..."
+                className="pl-9 border-gray-200 focus:border-violet-600 focus:ring-violet-600"
+              />
+              
+              {/* Dropdown */}
+              {showDropdown && (
+                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                  <div className="max-h-48 overflow-auto">
+                    {filteredCities.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => handleCitySelect(c)}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left hover:bg-gray-50"
+                      >
+                        <MapPin className="w-4 h-4 text-gray-400" />
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
-      ) : (
-        <div className="space-y-3">
+      )}
+
+      {/* ZIP Input */}
+      {areaType === "zip" && (
+        <div className="space-y-2">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
               value={zipInput}
               onChange={(e) => setZipInput(e.target.value.replace(/\D/g, "").slice(0, 5))}
               onKeyDown={handleZipAdd}
-              placeholder="Add ZIP code (press Enter)..."
-              className="pl-10 h-12 text-base"
+              placeholder="Add ZIP code (press Enter)"
+              className="pl-9 border-gray-200 focus:border-violet-600 focus:ring-violet-600"
+              maxLength={5}
             />
           </div>
-
+          
+          {/* ZIP tags */}
           {zipCodes.length > 0 && (
-            <div className="flex flex-wrap justify-center gap-2">
+            <div className="flex flex-wrap gap-2">
               {zipCodes.map((zip) => (
-                <Badge key={zip} variant="secondary" className="flex items-center gap-1 px-3 py-1.5 text-sm">
+                <span
+                  key={zip}
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-sm text-gray-700"
+                >
                   {zip}
-                  <button onClick={() => handleZipRemove(zip)} className="ml-1 rounded-full hover:bg-muted">
-                    <X className="h-3 w-3" />
+                  <button
+                    onClick={() => handleZipRemove(zip)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-3 h-3" />
                   </button>
-                </Badge>
+                </span>
               ))}
             </div>
           )}
-
-          {zipCodes.length > 0 && (
-            <p className="text-sm text-muted-foreground text-center">
-              {zipCodes.length} ZIP code{zipCodes.length !== 1 ? "s" : ""} selected
-            </p>
-          )}
         </div>
       )}
-    </div>
+    </section>
   )
 }

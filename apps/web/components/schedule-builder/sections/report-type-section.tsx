@@ -1,138 +1,154 @@
 "use client"
 
+import { Images, BarChart3, Home, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { AccordionSection } from "../accordion-section"
-import type { ReportType, ScheduleBuilderState } from "../types"
+import type { ScheduleBuilderState, ReportType, AudienceFilter } from "../types"
 
 interface ReportTypeSectionProps {
-  stepNumber?: number
   reportType: ReportType
-  lookbackDays: ScheduleBuilderState["lookbackDays"]
+  audienceFilter: AudienceFilter
+  audienceFilterName: string | null
   onChange: (updates: Partial<ScheduleBuilderState>) => void
-  isExpanded: boolean
-  onToggle: () => void
+  onAudienceChange: (filter: AudienceFilter, name: string | null) => void
+  isComplete: boolean
 }
 
-const mainReportTypes: { value: ReportType; icon: string; label: string; description: string }[] = [
-  { value: "new_listings_gallery", icon: "📸", label: "New Listings", description: "Photo gallery of new homes" },
-  { value: "market_snapshot", icon: "📊", label: "Market Update", description: "Stats & trends for the area" },
-  { value: "closed", icon: "🏠", label: "Closed Sales", description: "Recently sold properties" },
+// Only 3 report types as per design system
+const REPORT_TYPES = [
+  { 
+    id: "new_listings_gallery" as const, 
+    label: "New Listings", 
+    description: "Photo gallery of new homes",
+    icon: Images 
+  },
+  { 
+    id: "market_snapshot" as const, 
+    label: "Market Update", 
+    description: "Stats & trends for the area",
+    icon: BarChart3 
+  },
+  { 
+    id: "closed" as const, 
+    label: "Closed Sales", 
+    description: "Recent sales in the area",
+    icon: Home 
+  },
 ]
 
-const moreReportTypes: { value: ReportType; icon: string; label: string }[] = [
-  { value: "inventory", icon: "📦", label: "Inventory" },
-  { value: "price_bands", icon: "💰", label: "Price Bands" },
-  { value: "open_houses", icon: "🚪", label: "Open Houses" },
+// Audience presets - only shown for New Listings
+const AUDIENCE_PRESETS = [
+  { id: "all" as const, label: "All Listings", description: "No filters" },
+  { id: "first_time" as const, label: "First-Time Buyers", description: "2+ beds, 2+ baths, SFR, ≤70% median" },
+  { id: "luxury" as const, label: "Luxury Clients", description: "SFR, ≥150% median" },
+  { id: "families" as const, label: "Families", description: "3+ beds, 2+ baths, SFR" },
+  { id: "condo" as const, label: "Condo Buyers", description: "Condos only" },
+  { id: "investors" as const, label: "Investors", description: "≤50% median" },
 ]
-
-const lookbackOptions: ScheduleBuilderState["lookbackDays"][] = [7, 14, 30, 60, 90]
-
-const reportTypeLabels: Record<ReportType, string> = {
-  new_listings: "📸 New Listings",
-  new_listings_gallery: "📸 New Listings",
-  market_snapshot: "📊 Market Update",
-  closed: "🏠 Closed Sales",
-  inventory: "📦 Inventory",
-  price_bands: "💰 Price Bands",
-  open_houses: "🚪 Open Houses",
-  featured_listings: "⭐ Featured Listings",
-}
 
 export function ReportTypeSection({
-  stepNumber,
   reportType,
-  lookbackDays,
+  audienceFilter,
+  audienceFilterName,
   onChange,
-  isExpanded,
-  onToggle,
+  onAudienceChange,
+  isComplete,
 }: ReportTypeSectionProps) {
-  const summary = `${reportTypeLabels[reportType] || reportType} · Last ${lookbackDays} days`
+  const handleTypeSelect = (type: ReportType) => {
+    onChange({ reportType: type })
+    // Reset audience filter when switching away from new_listings_gallery
+    if (type !== "new_listings_gallery") {
+      onAudienceChange(null, null)
+    } else if (!audienceFilter) {
+      // Default to "all" when selecting new listings
+      onAudienceChange("all", "All Listings")
+    }
+  }
+
+  const handleAudienceSelect = (preset: typeof AUDIENCE_PRESETS[0]) => {
+    onAudienceChange(preset.id, preset.label)
+  }
+
+  const selectedAudience = AUDIENCE_PRESETS.find(p => p.id === audienceFilter)
+  const showAudiencePills = reportType === "new_listings_gallery"
 
   return (
-    <AccordionSection
-      stepNumber={stepNumber}
-      title="Report Type"
-      subtitle="Choose the type of market report to generate"
-      summary={summary}
-      status="complete"
-      isExpanded={isExpanded}
-      onToggle={onToggle}
-    >
-      <div className="space-y-6">
-        <div>
-          <label className="text-sm text-muted-foreground">What type of report should be generated?</label>
-
-          {/* Main Report Types */}
-          <div className="mt-3 grid grid-cols-3 gap-3">
-            {mainReportTypes.map((type) => (
-              <button
-                key={type.value}
-                onClick={() => onChange({ reportType: type.value })}
-                className={cn(
-                  "relative rounded-xl border-2 p-4 text-left transition-all hover:border-violet-300",
-                  reportType === type.value ? "border-violet-500 bg-violet-50 dark:bg-violet-950/50" : "border-border",
-                )}
-              >
-                {reportType === type.value && <div className="absolute right-2 top-2 text-sm text-violet-600">✓</div>}
-                <div className="text-2xl">{type.icon}</div>
-                <div className="mt-2 font-medium">{type.label}</div>
-                <div className="mt-1 text-xs text-muted-foreground">{type.description}</div>
-              </button>
-            ))}
+    <section className="bg-white border border-gray-200 rounded-lg p-4">
+      {/* Section Header */}
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-medium text-gray-900">Report Type</h3>
+        {isComplete && (
+          <div className="w-5 h-5 rounded-full bg-green-50 flex items-center justify-center">
+            <Check className="w-3 h-3 text-green-500" />
           </div>
+        )}
+      </div>
 
-          {/* More Report Types */}
-          <div className="mt-4">
-            <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
-              <div className="h-px flex-1 bg-border" />
-              <span>More Report Types</span>
-              <div className="h-px flex-1 bg-border" />
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              {moreReportTypes.map((type) => (
+      {/* 3 Report Type Cards */}
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        {REPORT_TYPES.map((type) => {
+          const isSelected = reportType === type.id
+          const Icon = type.icon
+          return (
+            <button
+              key={type.id}
+              onClick={() => handleTypeSelect(type.id)}
+              className={cn(
+                "flex flex-col items-center p-3 rounded-lg border transition-colors text-center",
+                isSelected
+                  ? "bg-violet-50 border-2 border-violet-600"
+                  : "bg-white border-gray-200 hover:border-gray-300"
+              )}
+            >
+              <Icon className={cn(
+                "w-6 h-6 mb-2",
+                isSelected ? "text-violet-600" : "text-gray-400"
+              )} />
+              <span className={cn(
+                "text-sm font-medium",
+                isSelected ? "text-gray-900" : "text-gray-700"
+              )}>
+                {type.label}
+              </span>
+              <span className="text-xs text-gray-500 mt-0.5 leading-tight">
+                {type.description}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Audience Pills - Only for New Listings */}
+      {showAudiencePills && (
+        <div className="pt-3 border-t border-gray-100">
+          <p className="text-xs text-gray-500 mb-2">Target audience (optional)</p>
+          <div className="flex flex-wrap gap-2">
+            {AUDIENCE_PRESETS.map((preset) => {
+              const isSelected = audienceFilter === preset.id
+              return (
                 <button
-                  key={type.value}
-                  onClick={() => onChange({ reportType: type.value })}
+                  key={preset.id}
+                  onClick={() => handleAudienceSelect(preset)}
                   className={cn(
-                    "rounded-xl border-2 p-3 text-center transition-all hover:border-violet-300",
-                    reportType === type.value ? "border-violet-500 bg-violet-50 dark:bg-violet-950/50" : "border-border",
+                    "inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-full transition-colors",
+                    isSelected
+                      ? "bg-violet-50 text-violet-700 border border-violet-200"
+                      : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
                   )}
                 >
-                  <div className="text-xl">{type.icon}</div>
-                  <div className="mt-1 text-sm font-medium">{type.label}</div>
+                  {isSelected && <Check className="w-3 h-3" />}
+                  {preset.label}
                 </button>
-              ))}
-            </div>
+              )
+            })}
           </div>
+          {/* Hint text showing filter criteria */}
+          {selectedAudience && selectedAudience.id !== "all" && (
+            <p className="text-xs text-gray-400 mt-2">
+              {selectedAudience.description}
+            </p>
+          )}
         </div>
-
-        {/* Lookback Period */}
-        <div>
-          <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="h-px flex-1 bg-border" />
-            <span>Lookback Period</span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
-          <label className="text-sm text-muted-foreground">How far back should the report look for data?</label>
-          <div className="mt-3 flex gap-2">
-            {lookbackOptions.map((days) => (
-              <button
-                key={days}
-                onClick={() => onChange({ lookbackDays: days })}
-                className={cn(
-                  "flex-1 rounded-lg border-2 px-3 py-2 text-sm font-medium transition-all",
-                  lookbackDays === days
-                    ? "border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300"
-                    : "border-border hover:border-violet-300",
-                )}
-              >
-                {days} days
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    </AccordionSection>
+      )}
+    </section>
   )
 }
-

@@ -1,22 +1,26 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ConfigurationPanel } from "./configuration-panel"
-import { EmailPreviewPanel } from "./email-preview-panel"
+import { ReportTypeSection } from "./sections/report-type-section"
+import { AreaSection } from "./sections/area-section"
+import { LookbackSection } from "./sections/lookback-section"
+import { CadenceSection } from "./sections/cadence-section"
+import { RecipientsSection } from "./sections/recipients-section"
+import { EmailPreview } from "./email-preview"
 import type { 
   ScheduleBuilderState, 
-  ScheduleApiPayload, 
-  Recipient, 
   BrandingContext, 
-  ProfileContext 
+  ProfileContext,
+  AudienceFilter,
+  Recipient 
 } from "./types"
-import { AUDIENCE_FILTER_PRESETS, AUDIENCE_FILTERS } from "./types"
+import { AUDIENCE_FILTER_PRESETS, getAreaDisplay, getEmailSubject } from "./types"
 
-const initialState: ScheduleBuilderState = {
+const DEFAULT_STATE: ScheduleBuilderState = {
   name: "",
   reportType: "market_snapshot",
   lookbackDays: 30,
@@ -26,165 +30,121 @@ const initialState: ScheduleBuilderState = {
   audienceFilter: null,
   audienceFilterName: null,
   cadence: "weekly",
-  weeklyDow: 1,
+  weeklyDow: 1, // Monday
   monthlyDom: 1,
   sendHour: 9,
   sendMinute: 0,
   timezone: "America/Los_Angeles",
   recipients: [],
-  includeAttachment: false,
+  includeAttachment: true,
 }
 
-const defaultBranding: BrandingContext = {
-  primaryColor: "#6366f1",
-  accentColor: "#8b5cf6",
+const DEFAULT_BRANDING: BrandingContext = {
+  primaryColor: "#7C3AED",
+  accentColor: "#8B5CF6",
   emailLogoUrl: null,
-  displayName: null,
+  displayName: "TrendyReports",
 }
 
-const defaultProfile: ProfileContext = {
-  name: "Your Name",
+const DEFAULT_PROFILE: ProfileContext = {
+  name: "Agent Name",
   jobTitle: "Real Estate Agent",
   avatarUrl: null,
-  phone: null,
-  email: "you@example.com",
+  phone: "(555) 123-4567",
+  email: "agent@example.com",
 }
 
 interface ScheduleBuilderProps {
-  scheduleId?: string // For edit mode
+  scheduleId?: string
 }
 
 export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
   const router = useRouter()
-  const [state, setState] = useState<ScheduleBuilderState>(initialState)
-  const [expandedSection, setExpandedSection] = useState<string>("name")
-  const [saving, setSaving] = useState(false)
-  const [loading, setLoading] = useState(!!scheduleId)
-  const [error, setError] = useState<string | null>(null)
-  
-  // Branding and profile for email preview
-  const [branding, setBranding] = useState<BrandingContext>(defaultBranding)
-  const [profile, setProfile] = useState<ProfileContext>(defaultProfile)
-  const [sendingTest, setSendingTest] = useState(false)
+  const [state, setState] = useState<ScheduleBuilderState>(DEFAULT_STATE)
+  const [branding, setBranding] = useState<BrandingContext>(DEFAULT_BRANDING)
+  const [profile, setProfile] = useState<ProfileContext>(DEFAULT_PROFILE)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isLoading, setIsLoading] = useState(!!scheduleId)
 
   const isEditMode = !!scheduleId
 
-  // Load branding and profile data for email preview
+  // Fetch branding, profile, and existing schedule (if editing)
   useEffect(() => {
-    async function loadContextData() {
+    async function loadData() {
       try {
-        // Fetch branding
-        const brandingRes = await fetch("/api/proxy/v1/account/branding", {
-          credentials: "include"
-        })
+        const [brandingRes, profileRes] = await Promise.all([
+          fetch("/api/proxy/v1/account/branding"),
+          fetch("/api/proxy/v1/users/me"),
+        ])
+
         if (brandingRes.ok) {
-          const brandingData = await brandingRes.json()
+          const data = await brandingRes.json()
           setBranding({
-            primaryColor: brandingData.primary_color || defaultBranding.primaryColor,
-            accentColor: brandingData.secondary_color || defaultBranding.accentColor,
-            emailLogoUrl: brandingData.email_logo_url || null,
-            displayName: brandingData.name || null,
+            primaryColor: data.primary_color || DEFAULT_BRANDING.primaryColor,
+            accentColor: data.accent_color || DEFAULT_BRANDING.accentColor,
+            emailLogoUrl: data.email_logo_url || null,
+            displayName: data.display_name || null,
           })
         }
 
-        // Fetch profile
-        const profileRes = await fetch("/api/proxy/v1/users/me", {
-          credentials: "include"
-        })
         if (profileRes.ok) {
-          const profileData = await profileRes.json()
-          const fullName = [profileData.first_name, profileData.last_name]
-            .filter(Boolean)
-            .join(" ") || "Your Name"
+          const data = await profileRes.json()
           setProfile({
-            name: fullName,
-            jobTitle: profileData.job_title || null,
-            avatarUrl: profileData.avatar_url || null,
-            phone: profileData.phone || null,
-            email: profileData.email || "you@example.com",
+            name: [data.first_name, data.last_name].filter(Boolean).join(" ") || DEFAULT_PROFILE.name,
+            jobTitle: data.job_title || null,
+            avatarUrl: data.avatar_url || null,
+            phone: data.phone || null,
+            email: data.email || DEFAULT_PROFILE.email,
           })
         }
-      } catch (err) {
-        console.error("Failed to load branding/profile:", err)
-      }
-    }
 
-    loadContextData()
-  }, [])
-
-  // Load existing schedule for edit mode
-  useEffect(() => {
-    if (!scheduleId) return
-
-    async function loadSchedule() {
-      try {
-        const res = await fetch(`/api/proxy/v1/schedules/${scheduleId}`, {
-          credentials: "include"
-        })
-
-        if (!res.ok) {
-          throw new Error("Failed to load schedule")
+        // Load existing schedule if editing
+        if (scheduleId) {
+          const scheduleRes = await fetch(`/api/proxy/v1/schedules/${scheduleId}`)
+          if (scheduleRes.ok) {
+            const schedule = await scheduleRes.json()
+            setState(mapApiToState(schedule))
+          }
         }
-
-        const data = await res.json()
-        
-        // Map API response to UI state
-        const audienceFilter = mapFiltersToAudienceFilter(data.filters)
-        const audienceFilterName = audienceFilter && audienceFilter !== "all"
-          ? AUDIENCE_FILTERS.find(f => f.id === audienceFilter)?.name || null
-          : null
-
-        setState({
-          name: data.name || "",
-          reportType: data.report_type || "market_snapshot",
-          lookbackDays: data.lookback_days || 30,
-          areaType: data.city ? "city" : "zip",
-          city: data.city || null,
-          zipCodes: data.zip_codes || [],
-          audienceFilter,
-          audienceFilterName,
-          cadence: data.cadence || "weekly",
-          weeklyDow: data.weekly_dow ?? 1,
-          monthlyDom: data.monthly_dom ?? 1,
-          sendHour: data.send_hour ?? 9,
-          sendMinute: data.send_minute ?? 0,
-          timezone: data.timezone || "America/Los_Angeles",
-          recipients: mapApiRecipientsToState(data.recipients || []),
-          includeAttachment: data.include_attachment || false,
-        })
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load schedule")
+      } catch (error) {
+        console.error("Failed to load data:", error)
       } finally {
-        setLoading(false)
+        setIsLoading(false)
       }
     }
-
-    loadSchedule()
+    loadData()
   }, [scheduleId])
 
-  const updateState = useCallback((updates: Partial<ScheduleBuilderState>) => {
+  const updateState = (updates: Partial<ScheduleBuilderState>) => {
     setState((prev) => ({ ...prev, ...updates }))
-  }, [])
+  }
 
-  const isValid =
-    state.name.trim().length > 0 &&
-    (state.areaType === "city" ? state.city !== null : state.zipCodes.length > 0) &&
-    state.recipients.length > 0
+  // Handle audience filter change
+  const handleAudienceChange = (filter: AudienceFilter, name: string | null) => {
+    updateState({ audienceFilter: filter, audienceFilterName: name })
+  }
 
+  // Check section completion
+  const isNameComplete = !!state.name.trim()
+  const isReportTypeComplete = !!state.reportType
+  const isAreaComplete = state.areaType === "city" ? !!state.city : state.zipCodes.length > 0
+  const isLookbackComplete = !!state.lookbackDays
+  const isCadenceComplete = !!state.cadence && !!state.timezone
+  const hasRecipients = state.recipients.length > 0
+
+  const canSave = isNameComplete && isReportTypeComplete && isAreaComplete && isCadenceComplete && hasRecipients
+
+  // Handle save
   const handleSave = async () => {
-    if (!isValid) return
-
-    setSaving(true)
-    setError(null)
+    if (!canSave) return
+    setIsSaving(true)
 
     try {
-      // Build filters from audience filter selection
-      const filters = state.audienceFilter && state.audienceFilter !== "all"
-        ? AUDIENCE_FILTER_PRESETS[state.audienceFilter]
+      const filters = state.audienceFilter && state.audienceFilter !== "all" 
+        ? AUDIENCE_FILTER_PRESETS[state.audienceFilter] 
         : null
 
-      // Map UI state to API payload
-      const payload: ScheduleApiPayload = {
+      const payload = {
         name: state.name,
         report_type: state.reportType,
         city: state.areaType === "city" ? state.city : null,
@@ -196,178 +156,223 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
         send_hour: state.sendHour,
         send_minute: state.sendMinute,
         timezone: state.timezone,
-        recipients: mapRecipientsToApi(state.recipients),
+        recipients: state.recipients.map(r => ({
+          type: r.type,
+          id: r.type === "contact" || r.type === "group" ? r.id : undefined,
+          email: r.type === "manual_email" ? r.email : undefined,
+        })),
         include_attachment: state.includeAttachment,
         active: true,
-        filters: filters,
+        filters,
       }
 
       const url = isEditMode 
         ? `/api/proxy/v1/schedules/${scheduleId}`
         : "/api/proxy/v1/schedules"
       
-      const method = isEditMode ? "PATCH" : "POST"
-
       const res = await fetch(url, {
-        method,
+        method: isEditMode ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify(payload),
       })
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}))
-        throw new Error(errorData.detail || `Failed to ${isEditMode ? "update" : "create"} schedule`)
-      }
-
+      if (!res.ok) throw new Error("Failed to save schedule")
+      
       router.push("/app/schedules")
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred")
+    } catch (error) {
+      console.error("Save error:", error)
     } finally {
-      setSaving(false)
+      setIsSaving(false)
     }
   }
 
-  const handleSendTest = async () => {
-    setSendingTest(true)
-    try {
-      // TODO: Implement test email endpoint
-      // For now, just show a brief loading state
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      // Could call: POST /api/proxy/v1/schedules/test-email with current state
-      alert("Test email feature coming soon!")
-    } catch (err) {
-      console.error("Failed to send test email:", err)
-    } finally {
-      setSendingTest(false)
-    }
-  }
+  const areaDisplay = getAreaDisplay(state)
+  const emailSubject = getEmailSubject(state)
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-violet-600 mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading schedule...</p>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background">
-        <div className="flex h-16 items-center justify-between px-8">
-          <Link 
-            href="/app/schedules" 
-            className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Schedules
-          </Link>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" onClick={() => router.push("/app/schedules")}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSave} 
-              disabled={!isValid || saving} 
-              className="bg-violet-600 hover:bg-violet-700 text-white"
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-8 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link 
+              href="/app/schedules" 
+              className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
             >
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditMode ? "Update Schedule" : "Save Schedule"}
+              <ArrowLeft className="w-4 h-4" />
+              Back to Schedules
+            </Link>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link href="/app/schedules">
+              <Button variant="outline" className="bg-white border-gray-200 text-gray-700 hover:bg-gray-50">
+                Cancel
+              </Button>
+            </Link>
+            <Button 
+              onClick={handleSave}
+              disabled={!canSave || isSaving}
+              className="bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : isEditMode ? (
+                "Update Schedule"
+              ) : (
+                "Create Schedule"
+              )}
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Error Display */}
-      {error && (
-        <div className="px-8 pt-4">
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
-            {error}
-          </div>
-        </div>
-      )}
+      {/* Main Content - 400px config / flexible preview */}
+      <main className="px-8 py-6">
+        <div className="grid grid-cols-[400px_1fr] gap-8">
+          {/* Left: Config Panel (fixed 400px) */}
+          <div className="space-y-4">
+            {/* Schedule Name Section */}
+            <section className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-medium text-gray-900">Schedule Name</h3>
+                {isNameComplete && (
+                  <div className="w-5 h-5 rounded-full bg-green-50 flex items-center justify-center">
+                    <svg className="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+              <input
+                type="text"
+                value={state.name}
+                onChange={(e) => updateState({ name: e.target.value })}
+                placeholder="e.g., Weekly Market Update"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-violet-600 focus:ring-1 focus:ring-violet-600"
+              />
+            </section>
 
-      {/* Main Content */}
-      <main className="px-8 py-8">
-        <div className="grid grid-cols-[525px_1fr] gap-8">
-          <ConfigurationPanel
-            state={state}
-            updateState={updateState}
-            expandedSection={expandedSection}
-            setExpandedSection={setExpandedSection}
-          />
-          <EmailPreviewPanel 
-            state={state} 
-            branding={branding} 
-            profile={profile}
-            onSendTest={handleSendTest}
-            sendingTest={sendingTest}
-          />
+            {/* Report Type Section */}
+            <ReportTypeSection
+              reportType={state.reportType}
+              audienceFilter={state.audienceFilter}
+              audienceFilterName={state.audienceFilterName}
+              onChange={updateState}
+              onAudienceChange={handleAudienceChange}
+              isComplete={isReportTypeComplete}
+            />
+
+            {/* Area Section */}
+            <AreaSection
+              areaType={state.areaType}
+              city={state.city}
+              zipCodes={state.zipCodes}
+              onChange={updateState}
+              isComplete={isAreaComplete}
+            />
+
+            {/* Lookback Section */}
+            <LookbackSection
+              lookbackDays={state.lookbackDays}
+              onChange={updateState}
+              isComplete={isLookbackComplete}
+            />
+
+            {/* Cadence Section */}
+            <CadenceSection
+              cadence={state.cadence}
+              weeklyDow={state.weeklyDow}
+              monthlyDom={state.monthlyDom}
+              sendHour={state.sendHour}
+              sendMinute={state.sendMinute}
+              timezone={state.timezone}
+              onChange={updateState}
+              isComplete={isCadenceComplete}
+            />
+
+            {/* Recipients Section */}
+            <RecipientsSection
+              recipients={state.recipients}
+              onChange={updateState}
+              hasRecipients={hasRecipients}
+            />
+          </div>
+
+          {/* Right: Preview Panel (flexible, takes remaining space) */}
+          <div className="sticky top-24">
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-medium text-gray-900">Preview</h3>
+                <span className="text-xs text-gray-400">Updates as you build</span>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">
+                Subject: {emailSubject}
+              </p>
+              <EmailPreview 
+                state={state} 
+                branding={branding} 
+                profile={profile}
+                area={areaDisplay}
+              />
+              <div className="mt-4 text-center text-xs text-gray-500">
+                {state.cadence === "weekly" 
+                  ? `Every ${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][state.weeklyDow]} at ${state.sendHour}:${state.sendMinute.toString().padStart(2, "0")}`
+                  : `Monthly on day ${state.monthlyDom} at ${state.sendHour}:${state.sendMinute.toString().padStart(2, "0")}`
+                }
+              </div>
+            </div>
+          </div>
         </div>
       </main>
     </div>
   )
 }
 
-// Helper: Map UI recipients to API format
-function mapRecipientsToApi(recipients: Recipient[]): ScheduleApiPayload["recipients"] {
-  return recipients.map((r) => {
-    if (r.type === "manual_email") {
-      return { type: "manual_email", email: r.email }
-    } else if (r.type === "group") {
-      return { type: "group", id: r.id }
-    } else {
-      return { type: "contact", id: r.id }
-    }
-  })
+// Helper to map API response to state
+function mapApiToState(schedule: any): ScheduleBuilderState {
+  return {
+    name: schedule.name || "",
+    reportType: schedule.report_type || "market_snapshot",
+    lookbackDays: schedule.lookback_days || 30,
+    areaType: schedule.city ? "city" : "zip",
+    city: schedule.city || null,
+    zipCodes: schedule.zip_codes || [],
+    audienceFilter: mapFiltersToAudience(schedule.filters),
+    audienceFilterName: schedule.filters?.preset_display_name || null,
+    cadence: schedule.cadence || "weekly",
+    weeklyDow: schedule.weekly_dow ?? 1,
+    monthlyDom: schedule.monthly_dom ?? 1,
+    sendHour: schedule.send_hour ?? 9,
+    sendMinute: schedule.send_minute ?? 0,
+    timezone: schedule.timezone || "America/Los_Angeles",
+    recipients: (schedule.recipients || []).map((r: any) => ({
+      type: r.type,
+      id: r.id,
+      name: r.name || r.email,
+      email: r.email,
+      memberCount: r.member_count,
+    })),
+    includeAttachment: schedule.include_attachment ?? true,
+  }
 }
 
-// Helper: Map API recipients to UI state
-function mapApiRecipientsToState(apiRecipients: any[]): Recipient[] {
-  return apiRecipients.map((r) => {
-    if (typeof r === "string") {
-      // Legacy email string
-      return { type: "manual_email", email: r }
-    }
-    if (r.type === "manual_email") {
-      return { type: "manual_email", email: r.email }
-    }
-    if (r.type === "group") {
-      return { 
-        type: "group", 
-        id: r.id, 
-        name: r.name || "Group", 
-        memberCount: r.member_count || 0 
-      }
-    }
-    // contact
-    return { 
-      type: "contact", 
-      id: r.id, 
-      name: r.name || "Contact", 
-      email: r.email || "" 
-    }
-  })
-}
-
-// Helper: Map API filters back to audience filter selection
-function mapFiltersToAudienceFilter(filters: any): ScheduleBuilderState["audienceFilter"] {
-  if (!filters || !filters.preset_display_name) return null
-
-  const displayName = filters.preset_display_name.toLowerCase()
-  
-  if (displayName.includes("first-time") || displayName.includes("first time")) return "first_time"
-  if (displayName.includes("luxury")) return "luxury"
-  if (displayName.includes("family") || displayName.includes("families")) return "families"
-  if (displayName.includes("condo")) return "condo"
-  if (displayName.includes("investor")) return "investors"
-  
+function mapFiltersToAudience(filters: any): AudienceFilter {
+  if (!filters) return null
+  if (filters.preset_display_name === "First-Time Buyer") return "first_time"
+  if (filters.preset_display_name === "Luxury") return "luxury"
+  if (filters.preset_display_name === "Family Homes") return "families"
+  if (filters.preset_display_name === "Condo Watch") return "condo"
+  if (filters.preset_display_name === "Investor Deals") return "investors"
   return "all"
 }
-
-// Re-export types for convenience
-export type { ScheduleBuilderState, ScheduleApiPayload, Recipient, BrandingContext, ProfileContext }
