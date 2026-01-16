@@ -9,6 +9,7 @@ import { AccordionSection } from "../accordion-section"
 import type { Recipient, ScheduleBuilderState, SectionStatus } from "../types"
 
 interface RecipientsSectionProps {
+  stepNumber?: number
   recipients: Recipient[]
   includeAttachment: boolean
   onChange: (updates: Partial<ScheduleBuilderState>) => void
@@ -29,6 +30,7 @@ interface ApiGroup {
 }
 
 export function RecipientsSection({
+  stepNumber,
   recipients,
   includeAttachment,
   onChange,
@@ -129,7 +131,7 @@ export function RecipientsSection({
   }
 
   return (
-    <AccordionSection title="Recipients" summary={summary} status={status} isExpanded={isExpanded} onToggle={onToggle}>
+    <AccordionSection stepNumber={stepNumber} title="Recipients" subtitle="Choose who receives this report" summary={summary} status={status} isExpanded={isExpanded} onToggle={onToggle}>
       <div className="space-y-4">
         <label className="text-sm text-muted-foreground">Who should receive this report?</label>
 

@@ -6,6 +6,7 @@ import { AccordionSection } from "../accordion-section"
 import type { AudienceFilter, SectionStatus } from "../types"
 
 interface AudienceFilterSectionProps {
+  stepNumber?: number
   value: AudienceFilter
   onChange: (value: AudienceFilter, name: string | null) => void
   isExpanded: boolean
@@ -30,7 +31,7 @@ const audienceLabels: Record<string, string> = {
   investors: "🎯 Investors",
 }
 
-export function AudienceFilterSection({ value, onChange, isExpanded, onToggle }: AudienceFilterSectionProps) {
+export function AudienceFilterSection({ stepNumber, value, onChange, isExpanded, onToggle }: AudienceFilterSectionProps) {
   const status: SectionStatus = "optional"
   const summary = value ? audienceLabels[value] : undefined
 
@@ -42,7 +43,9 @@ export function AudienceFilterSection({ value, onChange, isExpanded, onToggle }:
 
   return (
     <AccordionSection
+      stepNumber={stepNumber}
       title="Audience Filter"
+      subtitle="Target specific buyer segments for your listings"
       summary={summary}
       status={status}
       isExpanded={isExpanded}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
@@ -15,14 +15,10 @@ import {
   ArrowRight,
   Download,
   Eye,
+  ChevronDown,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
+import { cn } from "@/lib/utils"
 import { ReportTypeSection } from "./sections/report-type-section"
 import { AreaSection } from "./sections/area-section"
 import { AudienceSection } from "./sections/audience-section"
@@ -496,106 +492,163 @@ export function ReportBuilder() {
         <div className="grid grid-cols-[1fr_480px] gap-8">
           {/* Left Panel - Configuration */}
           <div className="space-y-4">
-            <Accordion
-              type="multiple"
-              value={openSections}
-              onValueChange={setOpenSections}
-              className="space-y-4"
+            {/* Section 1: Report Type */}
+            <WizardSection
+              stepNumber={1}
+              title="Report Type"
+              subtitle="Choose the type of market report you want to generate"
+              status="complete"
+              isOpen={openSections.includes("report-type")}
+              onToggle={() => {
+                setOpenSections(prev => 
+                  prev.includes("report-type") 
+                    ? prev.filter(s => s !== "report-type")
+                    : [...prev, "report-type"]
+                )
+              }}
+              summary={
+                <>
+                  {(() => {
+                    const Icon = REPORT_TYPE_CONFIG[state.reportType].icon
+                    return <Icon className="h-4 w-4" />
+                  })()}
+                  <span>{REPORT_TYPE_CONFIG[state.reportType].label}</span>
+                  <span className="text-muted-foreground">·</span>
+                  <span className="text-muted-foreground">{state.lookbackDays} days</span>
+                </>
+              }
             >
-              {/* Section 1: Report Type */}
-              <AccordionSection
-                value="report-type"
-                title="Report Type"
-                status="complete"
-                summary={
-                  !openSections.includes("report-type") ? (
-                    <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                      {(() => {
-                        const Icon = REPORT_TYPE_CONFIG[state.reportType].icon
-                        return <Icon className="h-4 w-4" />
-                      })()}
-                      {REPORT_TYPE_CONFIG[state.reportType].label} · Last {state.lookbackDays} days
-                    </span>
-                  ) : null
-                }
-              >
-                <ReportTypeSection
-                  reportType={state.reportType}
-                  lookbackDays={state.lookbackDays}
-                  onChange={updateState}
-                />
-              </AccordionSection>
+              <ReportTypeSection
+                reportType={state.reportType}
+                lookbackDays={state.lookbackDays}
+                onChange={(updates) => {
+                  updateState(updates)
+                  // Auto-advance to next section after a brief delay
+                  setTimeout(() => {
+                    if (!openSections.includes("area")) {
+                      setOpenSections(prev => [...prev.filter(s => s !== "report-type"), "area"])
+                    }
+                  }, 300)
+                }}
+              />
+            </WizardSection>
 
-              {/* Section 2: Area */}
-              <AccordionSection
-                value="area"
-                title="Area"
-                status={getAreaStatus()}
-                summary={
-                  !openSections.includes("area") && areaDisplay ? (
-                    <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
-                      {areaDisplay}
-                    </span>
-                  ) : null
-                }
-              >
-                <AreaSection
-                  areaType={state.areaType}
-                  city={state.city}
-                  zipCodes={state.zipCodes}
-                  onChange={updateState}
-                />
-              </AccordionSection>
-
-              {/* Section 3: Audience Filter (Conditional) */}
-              {state.reportType === "new_listings_gallery" && (
-                <AccordionSection
-                  value="audience"
-                  title="Audience Filter"
-                  status={getAudienceStatus()}
-                  summary={
-                    !openSections.includes("audience") && audienceLabel ? (
-                      <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                        🎯 {audienceLabel}
-                      </span>
-                    ) : null
+            {/* Section 2: Area */}
+            <WizardSection
+              stepNumber={2}
+              title="Area"
+              subtitle="Define the geographic region for your report"
+              status={getAreaStatus()}
+              isOpen={openSections.includes("area")}
+              onToggle={() => {
+                setOpenSections(prev => 
+                  prev.includes("area") 
+                    ? prev.filter(s => s !== "area")
+                    : [...prev, "area"]
+                )
+              }}
+              summary={
+                areaDisplay ? (
+                  <>
+                    <MapPin className="h-4 w-4" />
+                    <span>{areaDisplay}</span>
+                  </>
+                ) : null
+              }
+            >
+              <AreaSection
+                areaType={state.areaType}
+                city={state.city}
+                zipCodes={state.zipCodes}
+                onChange={(updates) => {
+                  updateState(updates)
+                  // Auto-advance when city is selected or first ZIP added
+                  const willBeValid = updates.city || (updates.zipCodes && updates.zipCodes.length > 0)
+                  if (willBeValid) {
+                    setTimeout(() => {
+                      const nextSection = state.reportType === "new_listings_gallery" ? "audience" : "delivery"
+                      if (!openSections.includes(nextSection)) {
+                        setOpenSections(prev => [...prev.filter(s => s !== "area"), nextSection])
+                      }
+                    }, 300)
                   }
-                >
-                  <AudienceSection audienceFilter={state.audienceFilter} onChange={updateState} />
-                </AccordionSection>
-              )}
+                }}
+              />
+            </WizardSection>
 
-              {/* Section 4: Delivery Options */}
-              <AccordionSection
-                value="delivery"
-                title="Delivery Options"
-                status={getDeliveryStatus()}
+            {/* Section 3: Audience Filter (Conditional) */}
+            {state.reportType === "new_listings_gallery" && (
+              <WizardSection
+                stepNumber={3}
+                title="Audience Filter"
+                subtitle="Target specific buyer segments for your listings"
+                status={getAudienceStatus()}
+                isOpen={openSections.includes("audience")}
+                onToggle={() => {
+                  setOpenSections(prev => 
+                    prev.includes("audience") 
+                      ? prev.filter(s => s !== "audience")
+                      : [...prev, "audience"]
+                  )
+                }}
                 summary={
-                  !openSections.includes("delivery") ? (
-                    <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                      {[
-                        state.viewInBrowser && "🌐 Browser",
-                        state.downloadPdf && "📄 PDF",
-                        state.downloadSocialImage && "📱 Social",
-                        state.sendViaEmail && "📧 Email",
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
+                  audienceLabel ? (
+                    <>
+                      <span className="text-lg">🎯</span>
+                      <span>{audienceLabel}</span>
+                    </>
                   ) : null
                 }
               >
-                <DeliverySection
-                  viewInBrowser={state.viewInBrowser}
-                  downloadPdf={state.downloadPdf}
-                  downloadSocialImage={state.downloadSocialImage}
-                  sendViaEmail={state.sendViaEmail}
-                  emailRecipients={state.emailRecipients}
-                  onChange={updateState}
+                <AudienceSection 
+                  audienceFilter={state.audienceFilter} 
+                  onChange={(updates) => {
+                    updateState(updates)
+                    // Auto-advance to delivery
+                    if (updates.audienceFilter) {
+                      setTimeout(() => {
+                        if (!openSections.includes("delivery")) {
+                          setOpenSections(prev => [...prev.filter(s => s !== "audience"), "delivery"])
+                        }
+                      }, 300)
+                    }
+                  }} 
                 />
-              </AccordionSection>
-            </Accordion>
+              </WizardSection>
+            )}
+
+            {/* Section 4: Delivery Options */}
+            <WizardSection
+              stepNumber={state.reportType === "new_listings_gallery" ? 4 : 3}
+              title="Delivery Options"
+              subtitle="How would you like to receive your report?"
+              status={getDeliveryStatus()}
+              isOpen={openSections.includes("delivery")}
+              onToggle={() => {
+                setOpenSections(prev => 
+                  prev.includes("delivery") 
+                    ? prev.filter(s => s !== "delivery")
+                    : [...prev, "delivery"]
+                )
+              }}
+              summary={
+                <>
+                  {state.viewInBrowser && <span>🌐 Browser</span>}
+                  {state.downloadPdf && <span>📄 PDF</span>}
+                  {state.downloadSocialImage && <span>📱 Social</span>}
+                  {state.sendViaEmail && <span>📧 Email</span>}
+                </>
+              }
+            >
+              <DeliverySection
+                viewInBrowser={state.viewInBrowser}
+                downloadPdf={state.downloadPdf}
+                downloadSocialImage={state.downloadSocialImage}
+                sendViaEmail={state.sendViaEmail}
+                emailRecipients={state.emailRecipients}
+                onChange={updateState}
+              />
+            </WizardSection>
           </div>
 
           {/* Right Panel - Preview */}
@@ -608,56 +661,139 @@ export function ReportBuilder() {
   )
 }
 
-// Accordion Section Component
-interface AccordionSectionProps {
-  value: string
+// Enhanced Wizard Section Component
+interface WizardSectionProps {
+  stepNumber: number
   title: string
+  subtitle: string
   status: "complete" | "warning" | "optional"
+  isOpen: boolean
+  onToggle: () => void
   summary?: React.ReactNode
   children: React.ReactNode
 }
 
-function AccordionSection({
-  value,
+function WizardSection({
+  stepNumber,
   title,
+  subtitle,
   status,
+  isOpen,
+  onToggle,
   summary,
   children,
-}: AccordionSectionProps) {
+}: WizardSectionProps) {
+  const contentRef = useRef<HTMLDivElement>(null)
+  const [contentHeight, setContentHeight] = useState(0)
+
+  useEffect(() => {
+    if (contentRef.current) {
+      setContentHeight(contentRef.current.scrollHeight)
+    }
+  }, [children, isOpen])
+
   return (
-    <AccordionItem value={value} className="rounded-xl border bg-card shadow-sm">
-      <AccordionTrigger className="px-6 py-4 hover:no-underline [&[data-state=open]>div>svg]:rotate-180">
-        <div className="flex flex-1 items-center gap-3">
-          <StatusIndicator status={status} />
-          <span className="font-medium">{title}</span>
-          {summary && <div className="ml-auto mr-4">{summary}</div>}
+    <div 
+      className={cn(
+        "rounded-2xl border-2 bg-card shadow-sm transition-all duration-300",
+        isOpen ? "border-violet-200 shadow-md" : "border-border hover:border-violet-100",
+        status === "complete" && !isOpen && "border-emerald-100 bg-emerald-50/30"
+      )}
+    >
+      {/* Header */}
+      <button
+        onClick={onToggle}
+        className="flex w-full items-center gap-4 p-5 text-left"
+      >
+        {/* Step Number / Status */}
+        <div className="relative">
+          <StepIndicator stepNumber={stepNumber} status={status} isOpen={isOpen} />
         </div>
-      </AccordionTrigger>
-      <AccordionContent className="px-6 pb-6">{children}</AccordionContent>
-    </AccordionItem>
+
+        {/* Title & Summary */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-semibold tracking-tight">{title}</h3>
+            {!isOpen && status === "complete" && summary && (
+              <div className="flex items-center gap-2 text-sm text-emerald-700 font-medium animate-in fade-in slide-in-from-left-2 duration-300">
+                {summary}
+              </div>
+            )}
+          </div>
+          {isOpen && (
+            <p className="mt-0.5 text-sm text-muted-foreground animate-in fade-in duration-200">
+              {subtitle}
+            </p>
+          )}
+        </div>
+
+        {/* Chevron */}
+        <ChevronDown 
+          className={cn(
+            "h-5 w-5 text-muted-foreground transition-transform duration-300",
+            isOpen && "rotate-180"
+          )} 
+        />
+      </button>
+
+      {/* Content */}
+      <div 
+        className="overflow-hidden transition-all duration-300 ease-out"
+        style={{ height: isOpen ? contentHeight : 0 }}
+      >
+        <div ref={contentRef} className="px-5 pb-6 pt-2">
+          <div className="ml-12">
+            {children}
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
-function StatusIndicator({
+function StepIndicator({
+  stepNumber,
   status,
+  isOpen,
 }: {
+  stepNumber: number
   status: "complete" | "warning" | "optional"
+  isOpen: boolean
 }) {
-  if (status === "complete") {
+  if (status === "complete" && !isOpen) {
     return (
-      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white">
-        <Check className="h-3 w-3" />
+      <div className="relative flex h-8 w-8 items-center justify-center">
+        {/* Animated ring */}
+        <div className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping" style={{ animationDuration: '1.5s', animationIterationCount: '1' }} />
+        {/* Check circle */}
+        <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 animate-in zoom-in duration-300">
+          <Check className="h-4 w-4" strokeWidth={3} />
+        </div>
       </div>
     )
   }
+
   if (status === "warning") {
     return (
-      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-white">
-        <AlertCircle className="h-3 w-3" />
+      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500 text-white shadow-lg shadow-amber-500/30">
+        <AlertCircle className="h-4 w-4" />
       </div>
     )
   }
-  return <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30" />
+
+  // Default: Show step number
+  return (
+    <div 
+      className={cn(
+        "flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold transition-all duration-300",
+        isOpen 
+          ? "bg-violet-600 text-white shadow-lg shadow-violet-600/30" 
+          : "bg-muted text-muted-foreground"
+      )}
+    >
+      {stepNumber}
+    </div>
+  )
 }
 
 // Re-export types for convenience

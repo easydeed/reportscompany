@@ -6,18 +6,21 @@ import { AccordionSection } from "../accordion-section"
 import type { SectionStatus } from "../types"
 
 interface ScheduleNameSectionProps {
+  stepNumber?: number
   value: string
   onChange: (value: string) => void
   isExpanded: boolean
   onToggle: () => void
 }
 
-export function ScheduleNameSection({ value, onChange, isExpanded, onToggle }: ScheduleNameSectionProps) {
+export function ScheduleNameSection({ stepNumber, value, onChange, isExpanded, onToggle }: ScheduleNameSectionProps) {
   const status: SectionStatus = value.trim().length > 0 ? "complete" : "warning"
 
   return (
     <AccordionSection
+      stepNumber={stepNumber}
       title="Schedule Name"
+      subtitle="Give your schedule a memorable name"
       summary={value || undefined}
       status={status}
       isExpanded={isExpanded}

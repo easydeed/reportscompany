@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { ScheduleBuilderState } from "../types"
 
 interface CadenceSectionProps {
+  stepNumber?: number
   cadence: ScheduleBuilderState["cadence"]
   weeklyDow: ScheduleBuilderState["weeklyDow"]
   monthlyDom: number
@@ -28,6 +29,7 @@ const timezones = [
 ]
 
 export function CadenceSection({
+  stepNumber,
   cadence,
   weeklyDow,
   monthlyDom,
@@ -57,7 +59,9 @@ export function CadenceSection({
 
   return (
     <AccordionSection
+      stepNumber={stepNumber}
       title="Cadence & Timing"
+      subtitle="Set the frequency and delivery time for your reports"
       summary={summary}
       status="complete"
       isExpanded={isExpanded}

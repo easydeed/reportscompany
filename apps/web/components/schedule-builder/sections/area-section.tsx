@@ -7,6 +7,7 @@ import { AccordionSection } from "../accordion-section"
 import type { ScheduleBuilderState, SectionStatus } from "../types"
 
 interface AreaSectionProps {
+  stepNumber?: number
   areaType: ScheduleBuilderState["areaType"]
   city: string | null
   zipCodes: string[]
@@ -34,7 +35,7 @@ const citySuggestions = [
   "San Diego, CA",
 ]
 
-export function AreaSection({ areaType, city, zipCodes, onChange, isExpanded, onToggle }: AreaSectionProps) {
+export function AreaSection({ stepNumber, areaType, city, zipCodes, onChange, isExpanded, onToggle }: AreaSectionProps) {
   const [citySearch, setCitySearch] = useState(city || "")
   const [zipInput, setZipInput] = useState("")
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -72,7 +73,7 @@ export function AreaSection({ areaType, city, zipCodes, onChange, isExpanded, on
   }
 
   return (
-    <AccordionSection title="Area" summary={summary} status={status} isExpanded={isExpanded} onToggle={onToggle}>
+    <AccordionSection stepNumber={stepNumber} title="Area" subtitle="Define the geographic region for your report" summary={summary} status={status} isExpanded={isExpanded} onToggle={onToggle}>
       <div className="space-y-4">
         <label className="text-sm text-muted-foreground">What area should this report cover?</label>
 

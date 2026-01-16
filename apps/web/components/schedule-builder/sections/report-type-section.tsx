@@ -5,6 +5,7 @@ import { AccordionSection } from "../accordion-section"
 import type { ReportType, ScheduleBuilderState } from "../types"
 
 interface ReportTypeSectionProps {
+  stepNumber?: number
   reportType: ReportType
   lookbackDays: ScheduleBuilderState["lookbackDays"]
   onChange: (updates: Partial<ScheduleBuilderState>) => void
@@ -38,6 +39,7 @@ const reportTypeLabels: Record<ReportType, string> = {
 }
 
 export function ReportTypeSection({
+  stepNumber,
   reportType,
   lookbackDays,
   onChange,
@@ -48,7 +50,9 @@ export function ReportTypeSection({
 
   return (
     <AccordionSection
+      stepNumber={stepNumber}
       title="Report Type"
+      subtitle="Choose the type of market report to generate"
       summary={summary}
       status="complete"
       isExpanded={isExpanded}
