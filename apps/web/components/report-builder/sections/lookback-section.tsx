@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 import type { ReportBuilderState, LookbackDays } from "../types"
 
 interface LookbackSectionProps {
-  lookbackDays: LookbackDays
+  lookbackDays: LookbackDays | null
   onChange: (updates: Partial<ReportBuilderState>) => void
   isComplete: boolean
 }

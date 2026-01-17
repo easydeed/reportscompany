@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 import type { ReportBuilderState, ReportType, AudienceFilter } from "../types"
 
 interface ReportTypeSectionProps {
-  reportType: ReportType
+  reportType: ReportType | null
   audienceFilter: AudienceFilter
   audienceFilterName: string | null
   onChange: (updates: Partial<ReportBuilderState>) => void

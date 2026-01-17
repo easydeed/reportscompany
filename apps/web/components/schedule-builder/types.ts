@@ -9,8 +9,8 @@ export type Recipient =
 
 export interface ScheduleBuilderState {
   name: string
-  reportType: ReportType
-  lookbackDays: 7 | 14 | 30 | 60 | 90
+  reportType: ReportType | null
+  lookbackDays: 7 | 14 | 30 | 60 | 90 | null
   areaType: "city" | "zip"
   city: string | null
   zipCodes: string[]
@@ -104,6 +104,7 @@ export function getAreaDisplay(state: ScheduleBuilderState): string {
 
 export function getEmailSubject(state: ScheduleBuilderState): string {
   const getLabel = () => {
+    if (!state.reportType) return "Report"
     if (state.reportType === "new_listings_gallery" && state.audienceFilter && state.audienceFilter !== "all") {
       return state.audienceFilterName || "New Listings"
     }

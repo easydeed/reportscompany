@@ -23,8 +23,8 @@ export interface EmailRecipient {
 }
 
 export interface ReportBuilderState {
-  reportType: ReportType
-  lookbackDays: LookbackDays
+  reportType: ReportType | null
+  lookbackDays: LookbackDays | null
   areaType: AreaType
   city: string | null
   zipCodes: string[]
@@ -173,6 +173,7 @@ export function getAreaDisplay(state: ReportBuilderState): string {
 }
 
 export function getReportTitle(state: ReportBuilderState): string {
+  if (!state.reportType) return "Select Report Type"
   const config = REPORT_TYPE_CONFIG[state.reportType]
   if (state.reportType === "new_listings_gallery" && state.audienceFilterName && state.audienceFilter !== "all") {
     return state.audienceFilterName

@@ -18,14 +18,14 @@ import type {
 import { AUDIENCE_FILTER_PRESETS } from "./types"
 
 const DEFAULT_STATE: ReportBuilderState = {
-  reportType: "market_snapshot",
-  lookbackDays: 30,
+  reportType: null,
+  lookbackDays: null,
   areaType: "city",
   city: null,
   zipCodes: [],
   audienceFilter: null,
   audienceFilterName: null,
-  viewInBrowser: true,
+  viewInBrowser: false,
   downloadPdf: false,
   downloadSocialImage: false,
   sendViaEmail: false,

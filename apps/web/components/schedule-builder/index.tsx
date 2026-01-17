@@ -22,8 +22,8 @@ import { AUDIENCE_FILTER_PRESETS, getAreaDisplay, getEmailSubject } from "./type
 
 const DEFAULT_STATE: ScheduleBuilderState = {
   name: "",
-  reportType: "market_snapshot",
-  lookbackDays: 30,
+  reportType: null,
+  lookbackDays: null,
   areaType: "city",
   city: null,
   zipCodes: [],

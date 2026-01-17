@@ -10,7 +10,7 @@ interface LookbackSectionProps {
   isComplete: boolean
 }
 
-const LOOKBACK_OPTIONS: ScheduleBuilderState["lookbackDays"][] = [7, 14, 30, 60, 90]
+const LOOKBACK_OPTIONS: NonNullable<ScheduleBuilderState["lookbackDays"]>[] = [7, 14, 30, 60, 90]
 
 export function LookbackSection({ lookbackDays, onChange, isComplete }: LookbackSectionProps) {
   return (
