@@ -65,6 +65,16 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
   const [profile, setProfile] = useState<ProfileContext>(DEFAULT_PROFILE)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(!!scheduleId)
+  
+  // Track which sections user has interacted with
+  const [touched, setTouched] = useState({
+    name: false,
+    reportType: false,
+    area: false,
+    lookback: false,
+    cadence: false,
+    recipients: false,
+  })
 
   const isEditMode = !!scheduleId
 
@@ -104,6 +114,15 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
           if (scheduleRes.ok) {
             const schedule = await scheduleRes.json()
             setState(mapApiToState(schedule))
+            // Mark all sections as touched when editing existing schedule
+            setTouched({
+              name: true,
+              reportType: true,
+              area: true,
+              lookback: true,
+              cadence: true,
+              recipients: true,
+            })
           }
         }
       } catch (error) {
@@ -117,6 +136,27 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
 
   const updateState = (updates: Partial<ScheduleBuilderState>) => {
     setState((prev) => ({ ...prev, ...updates }))
+    
+    // Mark sections as touched based on what was updated
+    if ('name' in updates) {
+      setTouched(prev => ({ ...prev, name: true }))
+    }
+    if ('reportType' in updates || 'audienceFilter' in updates) {
+      setTouched(prev => ({ ...prev, reportType: true }))
+    }
+    if ('city' in updates || 'zipCodes' in updates || 'areaType' in updates) {
+      setTouched(prev => ({ ...prev, area: true }))
+    }
+    if ('lookbackDays' in updates) {
+      setTouched(prev => ({ ...prev, lookback: true }))
+    }
+    if ('cadence' in updates || 'weeklyDow' in updates || 'monthlyDom' in updates ||
+        'sendHour' in updates || 'sendMinute' in updates || 'timezone' in updates) {
+      setTouched(prev => ({ ...prev, cadence: true }))
+    }
+    if ('recipients' in updates) {
+      setTouched(prev => ({ ...prev, recipients: true }))
+    }
   }
 
   // Handle audience filter change
@@ -124,15 +164,20 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
     updateState({ audienceFilter: filter, audienceFilterName: name })
   }
 
-  // Check section completion
-  const isNameComplete = !!state.name.trim()
-  const isReportTypeComplete = !!state.reportType
-  const isAreaComplete = state.areaType === "city" ? !!state.city : state.zipCodes.length > 0
-  const isLookbackComplete = !!state.lookbackDays
-  const isCadenceComplete = !!state.cadence && !!state.timezone
-  const hasRecipients = state.recipients.length > 0
+  // Check section completion - only show complete if touched AND filled
+  const isNameComplete = touched.name && !!state.name.trim()
+  const isReportTypeComplete = touched.reportType && !!state.reportType
+  const isAreaComplete = touched.area && (state.areaType === "city" ? !!state.city : state.zipCodes.length > 0)
+  const isLookbackComplete = touched.lookback && !!state.lookbackDays
+  const isCadenceComplete = touched.cadence && !!state.cadence && !!state.timezone
+  const hasRecipients = touched.recipients && state.recipients.length > 0
 
-  const canSave = isNameComplete && isReportTypeComplete && isAreaComplete && isCadenceComplete && hasRecipients
+  // Can save only requires actual data, not touched state
+  const canSave = !!state.name.trim() && 
+    !!state.reportType && 
+    (state.areaType === "city" ? !!state.city : state.zipCodes.length > 0) && 
+    !!state.cadence && !!state.timezone && 
+    state.recipients.length > 0
 
   // Handle save
   const handleSave = async () => {

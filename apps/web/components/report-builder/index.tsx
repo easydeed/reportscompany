@@ -52,6 +52,14 @@ export function ReportBuilder() {
   const [branding, setBranding] = useState<BrandingContext>(DEFAULT_BRANDING)
   const [profile, setProfile] = useState<ProfileContext>(DEFAULT_PROFILE)
   const [isGenerating, setIsGenerating] = useState(false)
+  
+  // Track which sections user has interacted with
+  const [touched, setTouched] = useState({
+    reportType: false,
+    area: false,
+    lookback: false,
+    delivery: false,
+  })
 
   // Fetch branding and profile on mount
   useEffect(() => {
@@ -91,6 +99,22 @@ export function ReportBuilder() {
 
   const updateState = (updates: Partial<ReportBuilderState>) => {
     setState((prev) => ({ ...prev, ...updates }))
+    
+    // Mark sections as touched based on what was updated
+    if ('reportType' in updates || 'audienceFilter' in updates) {
+      setTouched(prev => ({ ...prev, reportType: true }))
+    }
+    if ('city' in updates || 'zipCodes' in updates || 'areaType' in updates) {
+      setTouched(prev => ({ ...prev, area: true }))
+    }
+    if ('lookbackDays' in updates) {
+      setTouched(prev => ({ ...prev, lookback: true }))
+    }
+    if ('viewInBrowser' in updates || 'downloadPdf' in updates || 
+        'downloadSocialImage' in updates || 'sendViaEmail' in updates ||
+        'emailRecipients' in updates) {
+      setTouched(prev => ({ ...prev, delivery: true }))
+    }
   }
 
   // Handle audience filter change
@@ -98,13 +122,17 @@ export function ReportBuilder() {
     updateState({ audienceFilter: filter, audienceFilterName: name })
   }
 
-  // Check section completion
-  const isReportTypeComplete = !!state.reportType
-  const isAreaComplete = state.areaType === "city" ? !!state.city : state.zipCodes.length > 0
-  const isLookbackComplete = !!state.lookbackDays
-  const hasDeliveryOption = state.viewInBrowser || state.downloadPdf || state.downloadSocialImage || state.sendViaEmail
+  // Check section completion - only show complete if touched AND filled
+  const isReportTypeComplete = touched.reportType && !!state.reportType
+  const isAreaComplete = touched.area && (state.areaType === "city" ? !!state.city : state.zipCodes.length > 0)
+  const isLookbackComplete = touched.lookback && !!state.lookbackDays
+  const hasDeliveryOption = touched.delivery && (state.viewInBrowser || state.downloadPdf || state.downloadSocialImage || state.sendViaEmail)
 
-  const canGenerate = isReportTypeComplete && isAreaComplete && isLookbackComplete && hasDeliveryOption
+  // Can generate only requires actual data, not touched state
+  const canGenerate = !!state.reportType && 
+    (state.areaType === "city" ? !!state.city : state.zipCodes.length > 0) && 
+    !!state.lookbackDays && 
+    (state.viewInBrowser || state.downloadPdf || state.downloadSocialImage || state.sendViaEmail)
 
   // Poll for report completion
   const pollReportStatus = async (reportId: string): Promise<any> => {
