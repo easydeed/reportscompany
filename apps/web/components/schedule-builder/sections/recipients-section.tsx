@@ -120,7 +120,7 @@ export function RecipientsSection({ recipients, onChange, hasRecipients }: Recip
               className="inline-flex items-center gap-1 px-2 py-1 bg-violet-50 text-violet-700 rounded text-sm"
             >
               {r.type === "group" ? <Users className="w-3 h-3" /> : <Mail className="w-3 h-3" />}
-              {r.name || r.email}
+              {r.type === "manual_email" ? r.email : (r.name || r.email)}
               {r.type === "group" && ` (${r.memberCount})`}
               <button onClick={() => removeRecipient(r)} className="text-violet-400 hover:text-violet-600">
                 <X className="w-3 h-3" />
