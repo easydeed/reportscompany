@@ -106,6 +106,32 @@ export function ReportBuilder() {
 
   const canGenerate = isReportTypeComplete && isAreaComplete && isLookbackComplete && hasDeliveryOption
 
+  // Poll for report completion
+  const pollReportStatus = async (reportId: string): Promise<any> => {
+    const maxAttempts = 60 // 2 minutes max
+    const pollInterval = 2000 // 2 seconds
+    
+    for (let i = 0; i < maxAttempts; i++) {
+      const res = await fetch(`/api/proxy/v1/reports/${reportId}`)
+      if (!res.ok) throw new Error("Failed to check report status")
+      
+      const report = await res.json()
+      
+      if (report.status === "ready" || report.status === "completed") {
+        return report
+      }
+      
+      if (report.status === "failed") {
+        throw new Error(report.error_message || "Report generation failed")
+      }
+      
+      // Wait before next poll
+      await new Promise(resolve => setTimeout(resolve, pollInterval))
+    }
+    
+    throw new Error("Report generation timed out")
+  }
+
   // Handle generate
   const handleGenerate = async () => {
     if (!canGenerate) return
@@ -120,30 +146,42 @@ export function ReportBuilder() {
       const payload = {
         report_type: state.reportType,
         city: state.areaType === "city" ? state.city : null,
-        zip_codes: state.areaType === "zip" ? state.zipCodes : null,
+        zips: state.areaType === "zip" ? state.zipCodes : null,
         lookback_days: state.lookbackDays,
         filters,
       }
 
+      // Step 1: Create report request
       const res = await fetch("/api/proxy/v1/reports", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
 
-      if (!res.ok) throw new Error("Failed to generate report")
-      
-      const data = await res.json()
-      
-      // Handle delivery based on options
-      if (state.viewInBrowser && data.web_url) {
-        window.open(data.web_url, "_blank")
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.detail?.message || errorData.detail || "Failed to create report")
       }
-      if (state.downloadPdf && data.pdf_url) {
-        window.open(data.pdf_url, "_blank")
+      
+      const { report_id } = await res.json()
+      
+      // Step 2: Poll for completion
+      const completedReport = await pollReportStatus(report_id)
+      
+      // Step 3: Handle delivery based on options
+      if (state.viewInBrowser && completedReport.html_url) {
+        window.open(completedReport.html_url, "_blank")
       }
+      if (state.downloadPdf && completedReport.pdf_url) {
+        window.open(completedReport.pdf_url, "_blank")
+      }
+      
+      // Success - could show a toast or navigate to reports list
+      console.log("Report generated successfully:", completedReport)
+      
     } catch (error) {
       console.error("Generation error:", error)
+      alert(error instanceof Error ? error.message : "Failed to generate report")
     } finally {
       setIsGenerating(false)
     }
