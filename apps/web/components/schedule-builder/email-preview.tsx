@@ -25,11 +25,16 @@ const SAMPLE_PHOTOS = [
 ]
 
 export function EmailPreview({ state, branding, profile, area }: EmailPreviewProps) {
+  const getReportLabel = () => {
+    if (!state.reportType) return "Report"
+    return REPORT_TYPE_LABELS[state.reportType] || "Report"
+  }
+
   const getHeaderTitle = () => {
     if (state.reportType === "new_listings_gallery" && state.audienceFilter && state.audienceFilter !== "all") {
       return `${state.audienceFilterName || "New Listings"} – ${area || "Your Area"}`
     }
-    return `${REPORT_TYPE_LABELS[state.reportType]} – ${area || "Your Area"}`
+    return `${getReportLabel()} – ${area || "Your Area"}`
   }
 
   return (
@@ -53,10 +58,10 @@ export function EmailPreview({ state, branding, profile, area }: EmailPreviewPro
           </div>
         )}
         <div className="inline-block bg-white/20 px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wide mb-1">
-          {REPORT_TYPE_LABELS[state.reportType]}
+          {getReportLabel()}
         </div>
         <h1 className="text-base font-bold">{getHeaderTitle()}</h1>
-        <p className="text-[10px] opacity-90 mt-1">Last {state.lookbackDays} days • Live MLS Data</p>
+        <p className="text-[10px] opacity-90 mt-1">Last {state.lookbackDays || 30} days • Live MLS Data</p>
       </div>
 
       {/* Email Body */}

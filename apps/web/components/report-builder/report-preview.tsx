@@ -33,6 +33,7 @@ function getAreaDisplay(state: ReportBuilderState): string {
 }
 
 function getReportTitle(state: ReportBuilderState): string {
+  if (!state.reportType) return "Select Report Type"
   if (state.reportType === "new_listings_gallery" && state.audienceFilterName && state.audienceFilter !== "all") {
     return state.audienceFilterName
   }
@@ -76,7 +77,7 @@ export function ReportPreview({ state, branding, profile }: ReportPreviewProps) 
           <h2 className="text-lg font-bold">{reportTitle}</h2>
           <p className="mt-1 text-sm opacity-90">{areaDisplay}</p>
           <div className="mt-2 inline-block rounded-full bg-white/20 px-3 py-1 text-xs">
-            Last {state.lookbackDays} days
+            Last {state.lookbackDays || 30} days
           </div>
         </div>
 
@@ -114,7 +115,7 @@ export function ReportPreview({ state, branding, profile }: ReportPreviewProps) 
 
       {/* Info Summary */}
       <div className="text-center text-xs text-gray-500">
-        {reportTitle} · {areaDisplay} · Last {state.lookbackDays} days
+        {reportTitle} · {areaDisplay} · Last {state.lookbackDays || 30} days
       </div>
     </div>
   )
