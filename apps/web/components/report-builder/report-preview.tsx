@@ -83,11 +83,17 @@ export function ReportPreview({ state, branding, profile }: ReportPreviewProps) 
 
         {/* Content based on report type */}
         <div className="p-4">
-          <ReportContent 
-            reportType={state.reportType} 
-            primaryColor={branding.primaryColor}
-            accentColor={branding.accentColor}
-          />
+          {state.reportType ? (
+            <ReportContent 
+              reportType={state.reportType} 
+              primaryColor={branding.primaryColor}
+              accentColor={branding.accentColor}
+            />
+          ) : (
+            <div className="py-8 text-center text-sm text-gray-400">
+              Select a report type to preview
+            </div>
+          )}
         </div>
 
         {/* Agent Footer */}

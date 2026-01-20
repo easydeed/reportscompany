@@ -208,6 +208,13 @@ function ReportContent({ state, branding }: { state: ScheduleBuilderState; brand
         </>
       )
 
+    case null:
+      return (
+        <div className="text-center py-6 text-gray-400 text-xs">
+          Select a report type to preview
+        </div>
+      )
+
     default:
       return (
         <div className="text-center py-6 text-gray-400 text-xs">
