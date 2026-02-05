@@ -17,14 +17,14 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
   return (
-    <div className={cn("glass rounded-xl border border-border p-12 text-center", className)}>
-      <div className="w-16 h-16 rounded-full bg-secondary mx-auto mb-4 flex items-center justify-center text-muted-foreground">
-        {icon}
+    <div className={cn("bg-card border border-border rounded-xl p-12 text-center shadow-sm", className)}>
+      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+        <div className="w-6 h-6 text-primary">{icon}</div>
       </div>
-      <h3 className="font-display font-semibold text-lg mb-2">{title}</h3>
-      <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto text-pretty">{description}</p>
+      <h3 className="text-lg font-semibold text-foreground mb-1">{title}</h3>
+      <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">{description}</p>
       {action && (
-        <Button onClick={action.onClick} className="bg-primary hover:bg-primary/90">
+        <Button onClick={action.onClick}>
           {action.label}
         </Button>
       )}

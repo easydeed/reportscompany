@@ -243,8 +243,8 @@ export default function SecurityPage() {
     <div className="space-y-8 max-w-2xl">
       {/* Section Header */}
       <div>
-        <h2 className="text-xl font-semibold">Security</h2>
-        <p className="text-muted-foreground text-sm mt-1">
+        <h2 className="text-lg font-semibold">Security</h2>
+        <p className="text-sm text-muted-foreground mt-1">
           Manage your password and account security.
         </p>
       </div>

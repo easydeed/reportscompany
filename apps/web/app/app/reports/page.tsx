@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Plus, Download, Eye, FileJson, FileText as FileTextIcon, Share2 } from "lucide-react"
+import { Plus, Download, Eye, FileJson, Share2, FileText, Loader2 } from "lucide-react"
 import {
   Tooltip,
   TooltipContent,
@@ -12,6 +11,10 @@ import {
 } from "@/components/ui/tooltip"
 import Link from "next/link"
 import { apiFetch } from "@/lib/api"
+import { PageHeader } from "@/components/page-header"
+import { StatusBadge } from "@/components/status-badge"
+import { EmptyState } from "@/components/empty-state"
+import { TableSkeleton } from "@/components/page-skeleton"
 import {
   Table,
   TableBody,
@@ -24,6 +27,7 @@ import {
 type Report = {
   id: string
   report_type: string
+  city?: string
   status: string
   html_url?: string
   json_url?: string
@@ -48,90 +52,84 @@ export default function ReportsPage() {
       })
   }, [])
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "completed":
-        return <Badge className="bg-green-500/10 text-green-700 hover:bg-green-500/20">Completed</Badge>
-      case "processing":
-        return <Badge className="bg-blue-500/10 text-blue-700 hover:bg-blue-500/20">Processing</Badge>
-      case "failed":
-        return <Badge className="bg-red-500/10 text-red-700 hover:bg-red-500/20">Failed</Badge>
-      case "pending":
-        return <Badge className="bg-yellow-500/10 text-yellow-700 hover:bg-yellow-500/20">Pending</Badge>
-      default:
-        return <Badge variant="outline">{status}</Badge>
-    }
-  }
-
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1 className="font-bold text-3xl">Reports</h1>
-        <p className="text-muted-foreground">Loading...</p>
+        <PageHeader
+          title="Market Reports"
+          description="Manage and generate your market reports"
+          action={
+            <Button disabled>
+              <Plus className="w-4 h-4 mr-2" />
+              New Report
+            </Button>
+          }
+        />
+        <TableSkeleton rows={5} />
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-bold text-3xl mb-2">Reports</h1>
-          <p className="text-muted-foreground">Manage and generate your market reports</p>
-        </div>
-        <Link href="/app/reports/new">
-          <Button className="gap-2">
-            <Plus className="w-4 h-4" />
-            New Report
+      <PageHeader
+        title="Market Reports"
+        description="Manage and generate your market reports"
+        action={
+          <Button asChild>
+            <Link href="/app/reports/new">
+              <Plus className="w-4 h-4 mr-2" />
+              New Report
+            </Link>
           </Button>
-        </Link>
-      </div>
+        }
+      />
 
       {offline && (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
           API temporarily unavailable. Please try again in a moment.
         </div>
       )}
 
-      <div className="rounded-lg border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Report</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Files</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {reports.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="h-32 text-center">
-                  <div className="flex flex-col items-center gap-2">
-                    <p className="text-sm text-muted-foreground">
-                      {offline ? "API offline. Try again shortly." : "No reports yet"}
-                    </p>
-                    {!offline && (
-                      <Link href="/app/reports/new">
-                        <Button size="sm" variant="outline">Create your first report</Button>
-                      </Link>
-                    )}
-                  </div>
-                </TableCell>
+      {reports.length === 0 && !offline ? (
+        <EmptyState
+          icon={<FileText className="w-6 h-6" />}
+          title="No reports yet"
+          description="Create your first market report to get started with data-driven insights."
+          action={{
+            label: "Create Report",
+            onClick: () => window.location.href = "/app/reports/new"
+          }}
+        />
+      ) : (
+        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Report</TableHead>
+                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Area</TableHead>
+                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Created</TableHead>
+                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</TableHead>
+                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</TableHead>
               </TableRow>
-            ) : (
-              reports.map((r) => (
-                <TableRow key={r.id}>
+            </TableHeader>
+            <TableBody>
+              {reports.map((r) => (
+                <TableRow key={r.id} className="hover:bg-muted/30 transition-colors">
                   <TableCell>
-                    <div>
-                      <p className="font-medium text-sm capitalize">{r.report_type.replace(/_/g, " ")}</p>
-                      <p className="text-xs text-muted-foreground">ID: {r.id.slice(0, 8)}</p>
-                    </div>
+                    <p className="text-sm font-medium capitalize">{r.report_type.replace(/_/g, " ")}</p>
                   </TableCell>
                   <TableCell>
-                    <span className="text-sm">{new Date(r.generated_at).toLocaleString()}</span>
+                    <p className="text-sm text-muted-foreground">{r.city || 'N/A'}</p>
                   </TableCell>
-                  <TableCell>{getStatusBadge(r.status)}</TableCell>
+                  <TableCell>
+                    <span className="text-sm text-muted-foreground">
+                      {new Date(r.generated_at).toLocaleDateString()}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={r.status} />
+                  </TableCell>
                   <TableCell>
                     <TooltipProvider delayDuration={300}>
                       <div className="flex gap-1">
@@ -167,7 +165,7 @@ export default function ReportsPage() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <a href={`/social/${r.id}`} target="_blank" rel="noopener noreferrer">
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-pink-600 hover:text-pink-700 hover:bg-pink-50">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:text-primary/80">
                                   <Share2 className="w-4 h-4" />
                                 </Button>
                               </a>
@@ -196,11 +194,18 @@ export default function ReportsPage() {
                     </TooltipProvider>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ))}
+            </TableBody>
+          </Table>
+          
+          {/* Footer */}
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+            <p className="text-xs text-muted-foreground">
+              Showing {reports.length} report{reports.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

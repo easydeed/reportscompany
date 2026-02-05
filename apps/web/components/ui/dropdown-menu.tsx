@@ -179,7 +179,7 @@ function DropdownMenuSeparator({
 function DropdownMenuShortcut({
   className,
   ...props
-}: React.ComponentProps<'span'>) {
+}: React.ComponentPropsWithoutRef<'span'>) {
   return (
     <span
       data-slot="dropdown-menu-shortcut"
@@ -255,3 +255,4 @@ export {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 }
+

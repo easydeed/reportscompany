@@ -9,16 +9,16 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-[var(--app-primary)] text-white hover:bg-violet-500 focus-visible:ring-[var(--app-primary)]',
+        default: 'bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-primary/20',
         destructive:
-          'bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20',
+          'bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/20',
         outline:
-          'border border-[var(--app-border)] bg-background text-[var(--app-text)] shadow-xs hover:bg-slate-100',
+          'border border-border bg-background text-foreground shadow-xs hover:bg-muted',
         secondary:
           'bg-secondary text-secondary-foreground hover:bg-secondary/80',
         ghost:
-          'text-[var(--app-muted)] hover:bg-slate-100 hover:text-[var(--app-text)]',
-        link: 'text-[var(--app-primary)] underline-offset-4 hover:underline',
+          'text-muted-foreground hover:bg-muted hover:text-foreground',
+        link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {
         default: 'h-9 px-4 py-2 has-[>svg]:px-3',
@@ -36,25 +36,25 @@ const buttonVariants = cva(
   },
 )
 
-function Button({
-  className,
-  variant,
-  size,
-  asChild = false,
-  ...props
-}: React.ComponentProps<'button'> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean
-  }) {
+const Button = React.forwardRef<
+  HTMLButtonElement,
+  React.ComponentPropsWithoutRef<'button'> &
+    VariantProps<typeof buttonVariants> & {
+      asChild?: boolean
+    }
+>(({ className, variant, size, asChild = false, ...props }, ref) => {
   const Comp = asChild ? Slot : 'button'
 
   return (
     <Comp
+      ref={ref}
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />
   )
-}
+})
+Button.displayName = 'Button'
 
 export { Button, buttonVariants }
+

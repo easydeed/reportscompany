@@ -177,8 +177,8 @@ export default function ProfilePage() {
     <div className="space-y-8 max-w-2xl">
       {/* Section Header */}
       <div>
-        <h2 className="text-xl font-semibold">Profile</h2>
-        <p className="text-muted-foreground text-sm mt-1">
+        <h2 className="text-lg font-semibold">Profile</h2>
+        <p className="text-sm text-muted-foreground mt-1">
           Your personal information. This appears on your reports and emails.
         </p>
       </div>

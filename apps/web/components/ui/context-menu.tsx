@@ -220,7 +220,7 @@ function ContextMenuSeparator({
 function ContextMenuShortcut({
   className,
   ...props
-}: React.ComponentProps<'span'>) {
+}: React.ComponentPropsWithoutRef<'span'>) {
   return (
     <span
       data-slot="context-menu-shortcut"
@@ -250,3 +250,4 @@ export {
   ContextMenuSubTrigger,
   ContextMenuRadioGroup,
 }
+

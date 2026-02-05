@@ -291,8 +291,8 @@ export default function BrandingPage() {
       {/* Section Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Branding</h2>
-          <p className="text-muted-foreground text-sm mt-1">
+          <h2 className="text-lg font-semibold">Branding</h2>
+          <p className="text-sm text-muted-foreground mt-1">
             Customize how your reports and emails look.
           </p>
         </div>

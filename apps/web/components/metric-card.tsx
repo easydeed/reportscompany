@@ -19,20 +19,20 @@ export function MetricCard({ label, value, change, trend = "neutral", icon, clas
   const getTrendIcon = () => {
     switch (trend) {
       case "up":
-        return <TrendingUp className="w-4 h-4" />
+        return <TrendingUp className="w-3 h-3" />
       case "down":
-        return <TrendingDown className="w-4 h-4" />
+        return <TrendingDown className="w-3 h-3" />
       default:
-        return <Minus className="w-4 h-4" />
+        return <Minus className="w-3 h-3" />
     }
   }
 
   const getTrendColor = () => {
     switch (trend) {
       case "up":
-        return "text-green-600 dark:text-green-400"
+        return "text-emerald-600"
       case "down":
-        return "text-red-600 dark:text-red-400"
+        return "text-red-600"
       default:
         return "text-muted-foreground"
     }
@@ -45,25 +45,30 @@ export function MetricCard({ label, value, change, trend = "neutral", icon, clas
       viewport={{ once: true }}
       transition={{ duration: 0.2, delay: index * 0.05 }}
       className={cn(
-        "glass rounded-xl p-6 border border-border hover:border-primary/30 transition-all duration-200",
+        "bg-card border border-border rounded-xl p-5 shadow-sm",
         className,
       )}
     >
-      <div className="flex items-start justify-between mb-4">
-        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          {label}
+        </span>
         {icon && (
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">{icon}</div>
-        )}
-      </div>
-      <div className="space-y-2">
-        <p className="font-display text-3xl font-bold text-foreground">{value}</p>
-        {change !== undefined && (
-          <div className={cn("flex items-center gap-1 text-sm font-medium", getTrendColor())}>
-            {getTrendIcon()}
-            <span>{Math.abs(change)}%</span>
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+            {icon}
           </div>
         )}
       </div>
+      <div className="text-2xl font-bold text-foreground">{value}</div>
+      {change !== undefined && (
+        <div className="flex items-center gap-1 mt-1">
+          <div className={cn("flex items-center gap-1", getTrendColor())}>
+            {getTrendIcon()}
+            <span className="text-xs font-medium">{Math.abs(change)}%</span>
+          </div>
+          <span className="text-xs text-muted-foreground">vs last period</span>
+        </div>
+      )}
     </motion.div>
   )
 }

@@ -39,6 +39,7 @@ import {
   Lock,
   Palette,
   CreditCard,
+  Plus,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -55,6 +56,10 @@ import { usePathname } from "next/navigation"
 import NavAuth from "@/components/NavAuth"
 import { AccountSwitcher } from "@/components/account-switcher"
 import { Logo } from "@/components/logo"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { Separator } from "@/components/ui/separator"
+import { SidebarGroup, SidebarGroupLabel } from "@/components/ui/sidebar"
 
 // Routes where sidebar should be hidden (builder modes)
 const BUILDER_ROUTES = [
@@ -77,6 +82,23 @@ function isBuilderRoute(pathname: string | null): boolean {
 
 function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffiliate: boolean }) {
   const pathname = usePathname()
+  const [planInfo, setPlanInfo] = useState<{ plan_name: string; reports_used: number; reports_limit: number } | null>(null)
+  
+  // Fetch plan usage
+  useEffect(() => {
+    fetch("/api/proxy/v1/account/plan-usage", { credentials: "include" })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.plan) {
+          setPlanInfo({
+            plan_name: data.plan.plan_name || "Free",
+            reports_used: data.info?.reports_this_period || 0,
+            reports_limit: data.plan.monthly_reports_limit || 10,
+          })
+        }
+      })
+      .catch(() => {})
+  }, [])
   
   // Check if we're in admin or settings section
   const isInAdminSection = pathname?.startsWith("/app/admin")
@@ -209,15 +231,26 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
-        <div className="p-2">
-          <div className="glass rounded-lg border border-border p-3">
-            <p className="text-xs font-semibold mb-1">Professional Plan</p>
-            <p className="text-xs text-muted-foreground mb-2">Ready to generate reports</p>
-            <Link href="/app/reports/new">
-              <Button size="sm" className="w-full">
+        <div className="px-3 py-3">
+          <div className="bg-muted rounded-lg p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Badge variant="secondary" className="text-xs">
+                {planInfo?.plan_name || "Free"} Plan
+              </Badge>
+              <span className="text-xs text-muted-foreground">
+                {planInfo?.reports_used || 0}/{planInfo?.reports_limit || 10} reports
+              </span>
+            </div>
+            <Progress 
+              value={planInfo ? (planInfo.reports_used / planInfo.reports_limit) * 100 : 0} 
+              className="h-1.5 mb-3" 
+            />
+            <Button size="sm" className="w-full" asChild>
+              <Link href="/app/reports/new">
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
                 New Report
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </div>
       </SidebarFooter>
@@ -256,7 +289,7 @@ function DashboardTopbar({ accountType, isAdmin, isAffiliate }: { accountType?: 
   const initials = displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || "U"
   
   return (
-    <header className="flex h-12 shrink-0 items-center gap-4 border-b border-[var(--app-border)] bg-[var(--app-surface)] px-4">
+    <header className="flex h-12 shrink-0 items-center gap-4 border-b border-border bg-card px-4">
       <SidebarTrigger />
       <div className="flex-1" />
 
@@ -328,7 +361,7 @@ export default function AppLayoutClient({
   // Builder mode: Full-width layout without sidebar
   if (inBuilderMode) {
     return (
-      <div className="min-h-screen w-full" style={{ backgroundColor: 'var(--app-bg)', color: 'var(--app-text)' }}>
+      <div className="min-h-screen w-full bg-background text-foreground">
         {children}
       </div>
     )
@@ -338,11 +371,11 @@ export default function AppLayoutClient({
   return (
     <SidebarProvider>
       <Suspense fallback={<div>Loading...</div>}>
-        <div className="flex min-h-screen w-full" style={{ backgroundColor: 'var(--app-bg)', color: 'var(--app-text)' }}>
+        <div className="flex min-h-screen w-full bg-background text-foreground">
           <DashboardSidebar isAdmin={isAdmin} isAffiliate={isAffiliate} />
           <SidebarInset className="flex flex-col">
             <DashboardTopbar accountType={accountType} isAdmin={isAdmin} isAffiliate={isAffiliate} />
-            <main className="flex-1 p-6 bg-[var(--app-bg)]">{children}</main>
+            <main className="flex-1 p-6 bg-background">{children}</main>
           </SidebarInset>
         </div>
       </Suspense>

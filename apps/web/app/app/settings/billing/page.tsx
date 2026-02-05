@@ -195,8 +195,8 @@ export default function BillingPage() {
     <div className="space-y-8 max-w-2xl">
       {/* Section Header */}
       <div>
-        <h2 className="text-xl font-semibold">Billing</h2>
-        <p className="text-muted-foreground text-sm mt-1">
+        <h2 className="text-lg font-semibold">Billing</h2>
+        <p className="text-sm text-muted-foreground mt-1">
           Manage your subscription and view usage.
         </p>
       </div>

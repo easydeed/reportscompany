@@ -181,8 +181,8 @@ export default function AgentLeadPageDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Lead Page</h1>
-          <p className="text-gray-600">Share your link to capture leads automatically</p>
+          <h1 className="text-2xl font-bold tracking-tight">My Leads</h1>
+          <p className="text-sm text-muted-foreground mt-1">Share your link to capture leads automatically</p>
         </div>
         <Button 
           variant="outline" 
