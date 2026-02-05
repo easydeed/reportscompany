@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Loader2 } from "lucide-react"
+import { ArrowLeft, Loader2, Sparkles, Check } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { ReportTypeSection } from "./sections/report-type-section"
 import { AreaSection } from "./sections/area-section"
 import { LookbackSection } from "./sections/lookback-section"
@@ -65,6 +66,7 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
   const [profile, setProfile] = useState<ProfileContext>(DEFAULT_PROFILE)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(!!scheduleId)
+  const [scrolled, setScrolled] = useState(false)
   
   // Track which sections user has interacted with
   const [touched, setTouched] = useState({
@@ -77,6 +79,13 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
   })
 
   const isEditMode = !!scheduleId
+
+  // Scroll shadow detection
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8)
+    window.addEventListener("scroll", onScroll)
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
 
   // Fetch branding, profile, and existing schedule (if editing)
   useEffect(() => {
@@ -179,6 +188,10 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
     !!state.cadence && !!state.timezone && 
     state.recipients.length > 0
 
+  // Progress counter for header
+  const completedCount = [isNameComplete, isReportTypeComplete, isAreaComplete, isLookbackComplete, isCadenceComplete, hasRecipients].filter(Boolean).length
+  const totalSections = 6
+
   // Handle save
   const handleSave = async () => {
     if (!canSave) return
@@ -244,38 +257,58 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-8 py-4">
+      {/* Header - with scroll shadow and backdrop blur */}
+      <header className={cn(
+        "sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b px-8 py-3 transition-shadow duration-200",
+        scrolled ? "shadow-sm border-gray-200" : "border-transparent"
+      )}>
         <div className="flex items-center justify-between">
+          {/* Left: Back + Title */}
           <div className="flex items-center gap-4">
-            <Link 
-              href="/app/schedules" 
-              className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
+            <Link
+              href="/app/schedules"
+              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to Schedules
             </Link>
+            <div>
+              <h1 className="text-sm font-semibold text-gray-900">
+                {isEditMode ? "Edit Schedule" : "New Schedule"}
+              </h1>
+              <p className="text-xs text-gray-500">
+                {completedCount} of {totalSections} sections complete
+              </p>
+            </div>
           </div>
+
+          {/* Right: Actions */}
           <div className="flex items-center gap-3">
-            <Link href="/app/schedules">
-              <Button variant="outline" className="bg-white border-gray-200 text-gray-700 hover:bg-gray-50">
-                Cancel
-              </Button>
-            </Link>
-            <Button 
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/app/schedules">Cancel</Link>
+            </Button>
+            <Button
               onClick={handleSave}
               disabled={!canSave || isSaving}
-              className="bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50"
+              size="sm"
+              className={cn(
+                "transition-all duration-300",
+                canSave && !isSaving && [
+                  "shadow-md shadow-primary/20",
+                  "hover:shadow-lg hover:shadow-primary/30",
+                  "hover:-translate-y-0.5",
+                ]
+              )}
             >
               {isSaving ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   Saving...
-                </>
-              ) : isEditMode ? (
-                "Update Schedule"
+                </span>
               ) : (
-                "Create Schedule"
+                <span className="flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  {isEditMode ? "Update Schedule" : "Create Schedule"}
+                </span>
               )}
             </Button>
           </div>
@@ -286,95 +319,125 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
       <main className="px-8 py-6">
         <div className="grid grid-cols-[400px_1fr] gap-8">
           {/* Left: Config Panel (fixed 400px) */}
-          <div className="space-y-4">
-            {/* Schedule Name Section */}
-            <section className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-medium text-gray-900">Schedule Name</h3>
-                {isNameComplete && (
-                  <div className="w-5 h-5 rounded-full bg-green-50 flex items-center justify-center">
-                    <svg className="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
+          <div className="relative">
+            {/* Vertical progress line */}
+            <div className="absolute left-[19px] top-8 bottom-8 w-px bg-gray-200" />
+            <div
+              className="absolute left-[19px] top-8 w-px bg-primary transition-all duration-500"
+              style={{ height: `${(completedCount / totalSections) * 100}%` }}
+            />
+
+            <div className="space-y-3 relative">
+              {/* Schedule Name Section */}
+              <section className={cn(
+                "bg-white rounded-xl border transition-all duration-200",
+                isNameComplete ? "border-gray-200 shadow-sm" : "border-gray-200/80 shadow-sm"
+              )}>
+                <div className="flex items-center gap-3 px-5 py-4">
+                  <div className={cn(
+                    "w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold transition-colors",
+                    isNameComplete
+                      ? "bg-emerald-500 text-white"
+                      : "bg-gray-100 text-gray-500"
+                  )}>
+                    {isNameComplete ? <Check className="w-3.5 h-3.5" /> : 1}
                   </div>
-                )}
-              </div>
-              <input
-                type="text"
-                value={state.name}
-                onChange={(e) => updateState({ name: e.target.value })}
-                placeholder="e.g., Weekly Market Update"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-violet-600 focus:ring-1 focus:ring-violet-600"
+                  <h3 className="text-sm font-medium text-gray-900">Schedule Name</h3>
+                </div>
+                <div className="px-5 pb-5">
+                  <input
+                    type="text"
+                    value={state.name}
+                    onChange={(e) => updateState({ name: e.target.value })}
+                    placeholder="e.g., Weekly Market Update"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </section>
+
+              {/* Report Type Section */}
+              <ReportTypeSection
+                reportType={state.reportType}
+                audienceFilter={state.audienceFilter}
+                audienceFilterName={state.audienceFilterName}
+                onChange={updateState}
+                onAudienceChange={handleAudienceChange}
+                isComplete={isReportTypeComplete}
+                stepNumber={2}
               />
-            </section>
 
-            {/* Report Type Section */}
-            <ReportTypeSection
-              reportType={state.reportType}
-              audienceFilter={state.audienceFilter}
-              audienceFilterName={state.audienceFilterName}
-              onChange={updateState}
-              onAudienceChange={handleAudienceChange}
-              isComplete={isReportTypeComplete}
-            />
+              {/* Area Section */}
+              <AreaSection
+                areaType={state.areaType}
+                city={state.city}
+                zipCodes={state.zipCodes}
+                onChange={updateState}
+                isComplete={isAreaComplete}
+                stepNumber={3}
+              />
 
-            {/* Area Section */}
-            <AreaSection
-              areaType={state.areaType}
-              city={state.city}
-              zipCodes={state.zipCodes}
-              onChange={updateState}
-              isComplete={isAreaComplete}
-            />
+              {/* Lookback Section */}
+              <LookbackSection
+                lookbackDays={state.lookbackDays}
+                onChange={updateState}
+                isComplete={isLookbackComplete}
+                stepNumber={4}
+              />
 
-            {/* Lookback Section */}
-            <LookbackSection
-              lookbackDays={state.lookbackDays}
-              onChange={updateState}
-              isComplete={isLookbackComplete}
-            />
+              {/* Cadence Section */}
+              <CadenceSection
+                cadence={state.cadence}
+                weeklyDow={state.weeklyDow}
+                monthlyDom={state.monthlyDom}
+                sendHour={state.sendHour}
+                sendMinute={state.sendMinute}
+                timezone={state.timezone}
+                onChange={updateState}
+                isComplete={isCadenceComplete}
+                stepNumber={5}
+              />
 
-            {/* Cadence Section */}
-            <CadenceSection
-              cadence={state.cadence}
-              weeklyDow={state.weeklyDow}
-              monthlyDom={state.monthlyDom}
-              sendHour={state.sendHour}
-              sendMinute={state.sendMinute}
-              timezone={state.timezone}
-              onChange={updateState}
-              isComplete={isCadenceComplete}
-            />
-
-            {/* Recipients Section */}
-            <RecipientsSection
-              recipients={state.recipients}
-              onChange={updateState}
-              hasRecipients={hasRecipients}
-            />
+              {/* Recipients Section */}
+              <RecipientsSection
+                recipients={state.recipients}
+                onChange={updateState}
+                hasRecipients={hasRecipients}
+                stepNumber={6}
+              />
+            </div>
           </div>
 
           {/* Right: Preview Panel (flexible, takes remaining space) */}
-          <div className="sticky top-24">
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-medium text-gray-900">Preview</h3>
+          <div className="sticky top-20">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              {/* Preview header — distinct treatment */}
+              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50/50">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Email Preview
+                  </h3>
+                </div>
                 <span className="text-xs text-gray-400">Updates as you build</span>
               </div>
-              <p className="text-xs text-gray-500 mb-4">
-                Subject: {emailSubject}
-              </p>
-              <EmailPreview 
-                state={state} 
-                branding={branding} 
-                profile={profile}
-                area={areaDisplay}
-              />
-              <div className="mt-4 text-center text-xs text-gray-500">
-                {state.cadence === "weekly" 
-                  ? `Every ${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][state.weeklyDow]} at ${state.sendHour}:${state.sendMinute.toString().padStart(2, "0")}`
-                  : `Monthly on day ${state.monthlyDom} at ${state.sendHour}:${state.sendMinute.toString().padStart(2, "0")}`
-                }
+
+              {/* Preview content */}
+              <div className="p-4">
+                <p className="text-xs text-gray-500 mb-4">
+                  Subject: {emailSubject}
+                </p>
+                <EmailPreview 
+                  state={state} 
+                  branding={branding} 
+                  profile={profile}
+                  area={areaDisplay}
+                />
+                <div className="mt-4 text-center text-xs text-gray-500">
+                  {state.cadence === "weekly" 
+                    ? `Every ${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][state.weeklyDow]} at ${state.sendHour}:${state.sendMinute.toString().padStart(2, "0")}`
+                    : `Monthly on day ${state.monthlyDom} at ${state.sendHour}:${state.sendMinute.toString().padStart(2, "0")}`
+                  }
+                </div>
               </div>
             </div>
           </div>

@@ -11,6 +11,7 @@ interface ReportTypeSectionProps {
   onChange: (updates: Partial<ScheduleBuilderState>) => void
   onAudienceChange: (filter: AudienceFilter, name: string | null) => void
   isComplete: boolean
+  stepNumber?: number
 }
 
 // Only 3 report types as per design system
@@ -52,14 +53,13 @@ export function ReportTypeSection({
   onChange,
   onAudienceChange,
   isComplete,
+  stepNumber = 2,
 }: ReportTypeSectionProps) {
   const handleTypeSelect = (type: ReportType) => {
     onChange({ reportType: type })
-    // Reset audience filter when switching away from new_listings_gallery
     if (type !== "new_listings_gallery") {
       onAudienceChange(null, null)
     } else if (!audienceFilter) {
-      // Default to "all" when selecting new listings
       onAudienceChange("all", "All Listings")
     }
   }
@@ -72,83 +72,91 @@ export function ReportTypeSection({
   const showAudiencePills = reportType === "new_listings_gallery"
 
   return (
-    <section className="bg-white border border-gray-200 rounded-lg p-4">
-      {/* Section Header */}
-      <div className="flex items-center justify-between mb-4">
+    <section className={cn(
+      "bg-white rounded-xl border transition-all duration-200",
+      isComplete ? "border-gray-200 shadow-sm" : "border-gray-200/80 shadow-sm"
+    )}>
+      <div className="flex items-center gap-3 px-5 py-4">
+        <div className={cn(
+          "w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold transition-colors",
+          isComplete ? "bg-emerald-500 text-white" : "bg-gray-100 text-gray-500"
+        )}>
+          {isComplete ? <Check className="w-3.5 h-3.5" /> : stepNumber}
+        </div>
         <h3 className="text-sm font-medium text-gray-900">Report Type</h3>
-        {isComplete && (
-          <div className="w-5 h-5 rounded-full bg-green-50 flex items-center justify-center">
-            <Check className="w-3 h-3 text-green-500" />
+      </div>
+
+      <div className="px-5 pb-5">
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          {REPORT_TYPES.map((type) => {
+            const isSelected = reportType === type.id
+            const Icon = type.icon
+            return (
+              <button
+                key={type.id}
+                onClick={() => handleTypeSelect(type.id)}
+                className={cn(
+                  "group relative flex flex-col items-center p-4 rounded-xl border-2 transition-all duration-150 text-center",
+                  isSelected
+                    ? "bg-primary/5 border-primary shadow-sm shadow-primary/10"
+                    : "bg-white border-transparent shadow-sm hover:shadow-md hover:-translate-y-0.5"
+                )}
+              >
+                <div className={cn(
+                  "w-10 h-10 rounded-lg flex items-center justify-center mb-2.5 transition-colors",
+                  isSelected ? "bg-primary/10" : "bg-gray-50 group-hover:bg-gray-100"
+                )}>
+                  <Icon className={cn(
+                    "w-5 h-5 transition-colors",
+                    isSelected ? "text-primary" : "text-gray-400 group-hover:text-gray-600"
+                  )} />
+                </div>
+                <span className={cn(
+                  "text-sm font-medium transition-colors",
+                  isSelected ? "text-foreground" : "text-gray-600"
+                )}>
+                  {type.label}
+                </span>
+                <span className="text-xs text-gray-400 mt-0.5 leading-tight">
+                  {type.description}
+                </span>
+                {isSelected && (
+                  <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary" />
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        {showAudiencePills && (
+          <div className="pt-3 border-t border-gray-100">
+            <p className="text-xs text-gray-500 mb-2">Target audience (optional)</p>
+            <div className="flex flex-wrap gap-2">
+              {AUDIENCE_PRESETS.map((preset) => {
+                const isSelected = audienceFilter === preset.id
+                return (
+                  <button
+                    key={preset.id}
+                    onClick={() => handleAudienceSelect(preset)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-150",
+                      isSelected
+                        ? "bg-primary/10 text-primary border-primary/20 shadow-sm shadow-primary/5"
+                        : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700"
+                    )}
+                  >
+                    {isSelected && <Check className="w-3 h-3" strokeWidth={2.5} />}
+                    {preset.label}
+                  </button>
+                )
+              })}
+            </div>
+            {selectedAudience && selectedAudience.id !== "all" && (
+              <p className="text-xs text-gray-400 mt-2">{selectedAudience.description}</p>
+            )}
           </div>
         )}
       </div>
-
-      {/* 3 Report Type Cards */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        {REPORT_TYPES.map((type) => {
-          const isSelected = reportType === type.id
-          const Icon = type.icon
-          return (
-            <button
-              key={type.id}
-              onClick={() => handleTypeSelect(type.id)}
-              className={cn(
-                "flex flex-col items-center p-3 rounded-lg border transition-colors text-center",
-                isSelected
-                  ? "bg-violet-50 border-2 border-violet-600"
-                  : "bg-white border-gray-200 hover:border-gray-300"
-              )}
-            >
-              <Icon className={cn(
-                "w-6 h-6 mb-2",
-                isSelected ? "text-violet-600" : "text-gray-400"
-              )} />
-              <span className={cn(
-                "text-sm font-medium",
-                isSelected ? "text-gray-900" : "text-gray-700"
-              )}>
-                {type.label}
-              </span>
-              <span className="text-xs text-gray-500 mt-0.5 leading-tight">
-                {type.description}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Audience Pills - Only for New Listings */}
-      {showAudiencePills && (
-        <div className="pt-3 border-t border-gray-100">
-          <p className="text-xs text-gray-500 mb-2">Target audience (optional)</p>
-          <div className="flex flex-wrap gap-2">
-            {AUDIENCE_PRESETS.map((preset) => {
-              const isSelected = audienceFilter === preset.id
-              return (
-                <button
-                  key={preset.id}
-                  onClick={() => handleAudienceSelect(preset)}
-                  className={cn(
-                    "inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-full transition-colors",
-                    isSelected
-                      ? "bg-violet-50 text-violet-700 border border-violet-200"
-                      : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
-                  )}
-                >
-                  {isSelected && <Check className="w-3 h-3" />}
-                  {preset.label}
-                </button>
-              )
-            })}
-          </div>
-          {/* Hint text showing filter criteria */}
-          {selectedAudience && selectedAudience.id !== "all" && (
-            <p className="text-xs text-gray-400 mt-2">
-              {selectedAudience.description}
-            </p>
-          )}
-        </div>
-      )}
     </section>
   )
 }

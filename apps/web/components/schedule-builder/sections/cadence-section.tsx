@@ -1,6 +1,6 @@
 "use client"
 
-import { Check, Calendar, Clock } from "lucide-react"
+import { Check, Calendar } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { ScheduleBuilderState } from "../types"
@@ -14,6 +14,7 @@ interface CadenceSectionProps {
   timezone: string
   onChange: (updates: Partial<ScheduleBuilderState>) => void
   isComplete: boolean
+  stepNumber?: number
 }
 
 const DAYS_OF_WEEK = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
@@ -34,6 +35,7 @@ export function CadenceSection({
   timezone,
   onChange,
   isComplete,
+  stepNumber = 5,
 }: CadenceSectionProps) {
   const formatHour = (h: number) => {
     const ampm = h >= 12 ? "PM" : "AM"
@@ -42,93 +44,97 @@ export function CadenceSection({
   }
 
   return (
-    <section className="bg-white border border-gray-200 rounded-lg p-4">
-      <div className="flex items-center justify-between mb-4">
+    <section className={cn(
+      "bg-white rounded-xl border transition-all duration-200",
+      isComplete ? "border-gray-200 shadow-sm" : "border-gray-200/80 shadow-sm"
+    )}>
+      <div className="flex items-center gap-3 px-5 py-4">
+        <div className={cn(
+          "w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold transition-colors",
+          isComplete ? "bg-emerald-500 text-white" : "bg-gray-100 text-gray-500"
+        )}>
+          {isComplete ? <Check className="w-3.5 h-3.5" /> : stepNumber}
+        </div>
         <h3 className="text-sm font-medium text-gray-900">Cadence</h3>
-        {isComplete && (
-          <div className="w-5 h-5 rounded-full bg-green-50 flex items-center justify-center">
-            <Check className="w-3 h-3 text-green-500" />
-          </div>
-        )}
       </div>
 
-      {/* Frequency Toggle */}
-      <div className="flex gap-2 mb-4">
-        <button
-          onClick={() => onChange({ cadence: "weekly" })}
-          className={cn(
-            "flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors",
-            cadence === "weekly"
-              ? "bg-violet-50 border-violet-600 text-violet-700"
-              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-          )}
-        >
-          <Calendar className="w-4 h-4" />
-          Weekly
-        </button>
-        <button
-          onClick={() => onChange({ cadence: "monthly" })}
-          className={cn(
-            "flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors",
-            cadence === "monthly"
-              ? "bg-violet-50 border-violet-600 text-violet-700"
-              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-          )}
-        >
-          <Calendar className="w-4 h-4" />
-          Monthly
-        </button>
-      </div>
+      <div className="px-5 pb-5">
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => onChange({ cadence: "weekly" })}
+            className={cn(
+              "flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-all duration-150",
+              cadence === "weekly"
+                ? "bg-primary/5 border-primary text-primary shadow-sm shadow-primary/10"
+                : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300"
+            )}
+          >
+            <Calendar className="w-4 h-4" />
+            Weekly
+          </button>
+          <button
+            onClick={() => onChange({ cadence: "monthly" })}
+            className={cn(
+              "flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-all duration-150",
+              cadence === "monthly"
+                ? "bg-primary/5 border-primary text-primary shadow-sm shadow-primary/10"
+                : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300"
+            )}
+          >
+            <Calendar className="w-4 h-4" />
+            Monthly
+          </button>
+        </div>
 
-      {/* Timing Dropdowns */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {cadence === "weekly" ? (
-          <Select value={weeklyDow.toString()} onValueChange={(v) => onChange({ weeklyDow: parseInt(v) as any })}>
-            <SelectTrigger className="w-28 h-9 text-sm border-gray-200">
+        <div className="flex items-center gap-2 flex-wrap">
+          {cadence === "weekly" ? (
+            <Select value={weeklyDow.toString()} onValueChange={(v) => onChange({ weeklyDow: parseInt(v) as any })}>
+              <SelectTrigger className="w-28 h-9 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DAYS_OF_WEEK.map((day, i) => (
+                  <SelectItem key={i} value={i.toString()}>{day}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Select value={monthlyDom.toString()} onValueChange={(v) => onChange({ monthlyDom: parseInt(v) })}>
+              <SelectTrigger className="w-20 h-9 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
+                  <SelectItem key={day} value={day.toString()}>Day {day}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          <span className="text-gray-400 text-sm">at</span>
+
+          <Select value={sendHour.toString()} onValueChange={(v) => onChange({ sendHour: parseInt(v) })}>
+            <SelectTrigger className="w-24 h-9 text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {DAYS_OF_WEEK.map((day, i) => (
-                <SelectItem key={i} value={i.toString()}>{day}</SelectItem>
+              {HOURS.map((h) => (
+                <SelectItem key={h} value={h.toString()}>{formatHour(h)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-        ) : (
-          <Select value={monthlyDom.toString()} onValueChange={(v) => onChange({ monthlyDom: parseInt(v) })}>
-            <SelectTrigger className="w-20 h-9 text-sm border-gray-200">
+
+          <Select value={timezone} onValueChange={(v) => onChange({ timezone: v })}>
+            <SelectTrigger className="w-24 h-9 text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
-                <SelectItem key={day} value={day.toString()}>Day {day}</SelectItem>
+              {TIMEZONES.map((tz) => (
+                <SelectItem key={tz.value} value={tz.value}>{tz.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-        )}
-
-        <span className="text-gray-400 text-sm">at</span>
-
-        <Select value={sendHour.toString()} onValueChange={(v) => onChange({ sendHour: parseInt(v) })}>
-          <SelectTrigger className="w-24 h-9 text-sm border-gray-200">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {HOURS.map((h) => (
-              <SelectItem key={h} value={h.toString()}>{formatHour(h)}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={timezone} onValueChange={(v) => onChange({ timezone: v })}>
-          <SelectTrigger className="w-24 h-9 text-sm border-gray-200">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {TIMEZONES.map((tz) => (
-              <SelectItem key={tz.value} value={tz.value}>{tz.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        </div>
       </div>
     </section>
   )

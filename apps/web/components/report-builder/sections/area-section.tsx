@@ -12,6 +12,7 @@ interface AreaSectionProps {
   zipCodes: string[]
   onChange: (updates: Partial<ReportBuilderState>) => void
   isComplete: boolean
+  stepNumber?: number
 }
 
 // Sample cities for autocomplete
@@ -32,7 +33,7 @@ const SAMPLE_CITIES = [
   "La Verne, CA",
 ]
 
-export function AreaSection({ areaType, city, zipCodes, onChange, isComplete }: AreaSectionProps) {
+export function AreaSection({ areaType, city, zipCodes, onChange, isComplete, stepNumber = 2 }: AreaSectionProps) {
   const [citySearch, setCitySearch] = useState(city || "")
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [zipInput, setZipInput] = useState("")
@@ -83,44 +84,51 @@ export function AreaSection({ areaType, city, zipCodes, onChange, isComplete }: 
   const showDropdown = showSuggestions && citySearch && !city && filteredCities.length > 0
 
   return (
-    <section className="bg-white border border-gray-200 rounded-lg p-4">
+    <section className={cn(
+      "bg-white rounded-xl border transition-all duration-200",
+      isComplete ? "border-gray-200 shadow-sm" : "border-gray-200/80 shadow-sm"
+    )}>
       {/* Section Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center gap-3 px-5 py-4">
+        <div className={cn(
+          "w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold transition-colors",
+          isComplete
+            ? "bg-emerald-500 text-white"
+            : "bg-gray-100 text-gray-500"
+        )}>
+          {isComplete ? <Check className="w-3.5 h-3.5" /> : stepNumber}
+        </div>
         <h3 className="text-sm font-medium text-gray-900">Area</h3>
-        {isComplete && (
-          <div className="w-5 h-5 rounded-full bg-green-50 flex items-center justify-center">
-            <Check className="w-3 h-3 text-green-500" />
-          </div>
-        )}
       </div>
 
-      {/* Area Type Toggle */}
-      <div className="flex gap-2 mb-3">
-        <button
-          onClick={() => handleAreaTypeChange("city")}
-          className={cn(
-            "flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors",
-            areaType === "city"
-              ? "bg-violet-50 border-violet-600 text-violet-700"
-              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-          )}
-        >
-          <MapPin className="w-4 h-4" />
-          City
-        </button>
-        <button
-          onClick={() => handleAreaTypeChange("zip")}
-          className={cn(
-            "flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors",
-            areaType === "zip"
-              ? "bg-violet-50 border-violet-600 text-violet-700"
-              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-          )}
-        >
-          <Hash className="w-4 h-4" />
-          ZIP Codes
-        </button>
-      </div>
+      <div className="px-5 pb-5">
+        {/* Area Type Toggle */}
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={() => handleAreaTypeChange("city")}
+            className={cn(
+              "flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-all duration-150",
+              areaType === "city"
+                ? "bg-primary/5 border-primary text-primary shadow-sm shadow-primary/10"
+                : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300"
+            )}
+          >
+            <MapPin className="w-4 h-4" />
+            City
+          </button>
+          <button
+            onClick={() => handleAreaTypeChange("zip")}
+            className={cn(
+              "flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-all duration-150",
+              areaType === "zip"
+                ? "bg-primary/5 border-primary text-primary shadow-sm shadow-primary/10"
+                : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300"
+            )}
+          >
+            <Hash className="w-4 h-4" />
+            ZIP Codes
+          </button>
+        </div>
 
       {/* City Input */}
       {areaType === "city" && (
@@ -211,6 +219,7 @@ export function AreaSection({ areaType, city, zipCodes, onChange, isComplete }: 
           )}
         </div>
       )}
+      </div>
     </section>
   )
 }

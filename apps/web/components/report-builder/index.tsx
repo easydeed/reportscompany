@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Loader2 } from "lucide-react"
+import { ArrowLeft, Loader2, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { ReportTypeSection } from "./sections/report-type-section"
 import { AreaSection } from "./sections/area-section"
 import { LookbackSection } from "./sections/lookback-section"
@@ -52,6 +53,7 @@ export function ReportBuilder() {
   const [branding, setBranding] = useState<BrandingContext>(DEFAULT_BRANDING)
   const [profile, setProfile] = useState<ProfileContext>(DEFAULT_PROFILE)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   
   // Track which sections user has interacted with
   const [touched, setTouched] = useState({
@@ -60,6 +62,13 @@ export function ReportBuilder() {
     lookback: false,
     delivery: false,
   })
+
+  // Scroll shadow detection
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8)
+    window.addEventListener("scroll", onScroll)
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
 
   // Fetch branding and profile on mount
   useEffect(() => {
@@ -133,6 +142,10 @@ export function ReportBuilder() {
     (state.areaType === "city" ? !!state.city : state.zipCodes.length > 0) && 
     !!state.lookbackDays && 
     (state.viewInBrowser || state.downloadPdf || state.downloadSocialImage || state.sendViaEmail)
+
+  // Progress counter for header
+  const completedCount = [isReportTypeComplete, isAreaComplete, isLookbackComplete, hasDeliveryOption].filter(Boolean).length
+  const totalSections = 4
 
   // Poll for report completion
   const pollReportStatus = async (reportId: string): Promise<any> => {
@@ -217,36 +230,56 @@ export function ReportBuilder() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-8 py-4">
+      {/* Header - with scroll shadow and backdrop blur */}
+      <header className={cn(
+        "sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b px-8 py-3 transition-shadow duration-200",
+        scrolled ? "shadow-sm border-gray-200" : "border-transparent"
+      )}>
         <div className="flex items-center justify-between">
+          {/* Left: Back + Title */}
           <div className="flex items-center gap-4">
-            <Link 
-              href="/app/reports" 
-              className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
+            <Link
+              href="/app/reports"
+              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to Reports
             </Link>
+            <div>
+              <h1 className="text-sm font-semibold text-gray-900">New Market Report</h1>
+              <p className="text-xs text-gray-500">
+                {completedCount} of {totalSections} sections complete
+              </p>
+            </div>
           </div>
+
+          {/* Right: Actions */}
           <div className="flex items-center gap-3">
-            <Link href="/app/reports">
-              <Button variant="outline" className="bg-white border-gray-200 text-gray-700 hover:bg-gray-50">
-                Cancel
-              </Button>
-            </Link>
-            <Button 
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/app/reports">Cancel</Link>
+            </Button>
+            <Button
               onClick={handleGenerate}
               disabled={!canGenerate || isGenerating}
-              className="bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50"
+              size="sm"
+              className={cn(
+                "transition-all duration-300",
+                canGenerate && !isGenerating && [
+                  "shadow-md shadow-primary/20",
+                  "hover:shadow-lg hover:shadow-primary/30",
+                  "hover:-translate-y-0.5",
+                ]
+              )}
             >
               {isGenerating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   Generating...
-                </>
+                </span>
               ) : (
-                "Generate Report"
+                <span className="flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Generate Report
+                </span>
               )}
             </Button>
           </div>
@@ -257,57 +290,80 @@ export function ReportBuilder() {
       <main className="px-8 py-6">
         <div className="grid grid-cols-[400px_1fr] gap-8">
           {/* Left: Config Panel (fixed 400px) */}
-          <div className="space-y-4">
-            {/* Report Type Section */}
-            <ReportTypeSection
-              reportType={state.reportType}
-              audienceFilter={state.audienceFilter}
-              audienceFilterName={state.audienceFilterName}
-              onChange={updateState}
-              onAudienceChange={handleAudienceChange}
-              isComplete={isReportTypeComplete}
+          <div className="relative">
+            {/* Vertical progress line */}
+            <div className="absolute left-[19px] top-8 bottom-8 w-px bg-gray-200" />
+            <div
+              className="absolute left-[19px] top-8 w-px bg-primary transition-all duration-500"
+              style={{ height: `${(completedCount / totalSections) * 100}%` }}
             />
 
-            {/* Area Section */}
-            <AreaSection
-              areaType={state.areaType}
-              city={state.city}
-              zipCodes={state.zipCodes}
-              onChange={updateState}
-              isComplete={isAreaComplete}
-            />
+            <div className="space-y-3 relative">
+              {/* Report Type Section */}
+              <ReportTypeSection
+                reportType={state.reportType}
+                audienceFilter={state.audienceFilter}
+                audienceFilterName={state.audienceFilterName}
+                onChange={updateState}
+                onAudienceChange={handleAudienceChange}
+                isComplete={isReportTypeComplete}
+                stepNumber={1}
+              />
 
-            {/* Lookback Section */}
-            <LookbackSection
-              lookbackDays={state.lookbackDays}
-              onChange={updateState}
-              isComplete={isLookbackComplete}
-            />
+              {/* Area Section */}
+              <AreaSection
+                areaType={state.areaType}
+                city={state.city}
+                zipCodes={state.zipCodes}
+                onChange={updateState}
+                isComplete={isAreaComplete}
+                stepNumber={2}
+              />
 
-            {/* Delivery Section */}
-            <DeliverySection
-              viewInBrowser={state.viewInBrowser}
-              downloadPdf={state.downloadPdf}
-              downloadSocialImage={state.downloadSocialImage}
-              sendViaEmail={state.sendViaEmail}
-              emailRecipients={state.emailRecipients}
-              onChange={updateState}
-              hasOption={hasDeliveryOption}
-            />
+              {/* Lookback Section */}
+              <LookbackSection
+                lookbackDays={state.lookbackDays}
+                onChange={updateState}
+                isComplete={isLookbackComplete}
+                stepNumber={3}
+              />
+
+              {/* Delivery Section */}
+              <DeliverySection
+                viewInBrowser={state.viewInBrowser}
+                downloadPdf={state.downloadPdf}
+                downloadSocialImage={state.downloadSocialImage}
+                sendViaEmail={state.sendViaEmail}
+                emailRecipients={state.emailRecipients}
+                onChange={updateState}
+                hasOption={hasDeliveryOption}
+                stepNumber={4}
+              />
+            </div>
           </div>
 
           {/* Right: Preview Panel (flexible, takes remaining space) */}
-          <div className="sticky top-24">
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-medium text-gray-900">Preview</h3>
+          <div className="sticky top-20">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              {/* Preview header — distinct treatment */}
+              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50/50">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Live Preview
+                  </h3>
+                </div>
                 <span className="text-xs text-gray-400">Updates as you build</span>
               </div>
-              <ReportPreview 
-                state={state} 
-                branding={branding} 
-                profile={profile} 
-              />
+
+              {/* Preview content */}
+              <div className="p-4">
+                <ReportPreview 
+                  state={state} 
+                  branding={branding} 
+                  profile={profile} 
+                />
+              </div>
             </div>
           </div>
         </div>
