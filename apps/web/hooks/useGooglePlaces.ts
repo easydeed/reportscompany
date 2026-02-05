@@ -23,8 +23,45 @@ interface UseGooglePlacesOptions {
   countryRestriction?: string;
 }
 
+// Track if script is being/has been loaded globally
+let scriptLoadPromise: Promise<void> | null = null;
+
+/**
+ * Dynamically load Google Maps script if not already loaded
+ */
+function loadGoogleMapsScript(): Promise<void> {
+  // Already loaded
+  if (window.google?.maps?.places) {
+    return Promise.resolve();
+  }
+
+  // Already loading
+  if (scriptLoadPromise) {
+    return scriptLoadPromise;
+  }
+
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    return Promise.reject(new Error("Google Maps API key not configured"));
+  }
+
+  // Start loading
+  scriptLoadPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Failed to load Google Maps script"));
+    document.head.appendChild(script);
+  });
+
+  return scriptLoadPromise;
+}
+
 /**
  * Hook for Google Places Autocomplete integration
+ * Automatically loads Google Maps script on-demand if not already loaded
  *
  * @param inputRef - Ref to the input element
  * @param options - Configuration options
@@ -49,39 +86,35 @@ export function useGooglePlaces(
     onPlaceSelectRef.current = onPlaceSelect;
   }, [onPlaceSelect]);
 
-  // Check if Google Maps is loaded
+  // Load Google Maps script on-demand
   useEffect(() => {
-    const checkGoogleMaps = () => {
-      if (window.google?.maps?.places) {
-        setIsLoaded(true);
-        setError(null);
-        return true;
+    let cancelled = false;
+
+    const loadMaps = async () => {
+      try {
+        await loadGoogleMapsScript();
+        if (!cancelled && window.google?.maps?.places) {
+          setIsLoaded(true);
+          setError(null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.warn("Google Maps failed to load:", err);
+          setError("Address suggestions unavailable");
+        }
       }
-      return false;
     };
 
-    // Check immediately
-    if (checkGoogleMaps()) return;
+    // Check if already loaded
+    if (window.google?.maps?.places) {
+      setIsLoaded(true);
+      return;
+    }
 
-    // Poll for Google Maps to load
-    const interval = setInterval(() => {
-      if (checkGoogleMaps()) {
-        clearInterval(interval);
-      }
-    }, 100);
-
-    // Timeout after 10 seconds
-    const timeout = setTimeout(() => {
-      clearInterval(interval);
-      if (!window.google?.maps?.places) {
-        console.warn("Google Maps failed to load within 10 seconds");
-        setError("Address suggestions unavailable");
-      }
-    }, 10000);
+    loadMaps();
 
     return () => {
-      clearInterval(interval);
-      clearTimeout(timeout);
+      cancelled = true;
     };
   }, []);
   
