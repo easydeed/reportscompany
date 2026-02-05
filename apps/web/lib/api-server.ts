@@ -15,6 +15,9 @@ import { cookies } from 'next/headers'
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'https://reportscompany.onrender.com').replace(/\/$/, '')
 
+/** Maximum time to wait for an API response before aborting */
+const API_TIMEOUT_MS = 10000 // 10 seconds - fail fast rather than hang
+
 export type ApiResponse<T> = {
   data: T | null
   error: string | null
@@ -48,6 +51,10 @@ export async function createServerApi() {
       return { data: null, error: 'Unauthorized', status: 401 }
     }
 
+    // Create abort controller for timeout protection
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS)
+
     try {
       let url = `${API_BASE}${path}`
       
@@ -65,6 +72,7 @@ export async function createServerApi() {
           ...(options?.body && { 'Content-Type': 'application/json' }),
         },
         body: options?.body ? JSON.stringify(options.body) : undefined,
+        signal: controller.signal, // Enable timeout abort
       }
 
       // Apply caching options (Next.js specific)
@@ -93,12 +101,23 @@ export async function createServerApi() {
 
       return { data, error: null, status: response.status }
     } catch (error) {
+      // Handle timeout abort specifically
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        console.error(`[API] ${method} ${path} timed out after ${API_TIMEOUT_MS}ms`)
+        return {
+          data: null,
+          error: `Request timed out (${API_TIMEOUT_MS / 1000}s)`,
+          status: 408
+        }
+      }
       console.error(`[API] ${method} ${path} error:`, error)
       return { 
         data: null, 
         error: error instanceof Error ? error.message : 'Network error',
         status: 500 
       }
+    } finally {
+      clearTimeout(timeoutId)
     }
   }
 
