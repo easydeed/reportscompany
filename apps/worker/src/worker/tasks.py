@@ -1366,17 +1366,74 @@ def run_redis_consumer_forever():
     """
     Redis consumer bridge - polls Redis queue and dispatches to Celery worker.
     Uses proper SSL configuration for secure Redis connections (Upstash).
+    
+    Includes retry logic with exponential backoff for:
+    - Rate limiting (Upstash free tier: 10k commands/day)
+    - Connection errors
+    - Temporary failures
     """
-    r = create_redis_connection(REDIS_URL)
+    import time
+    from redis.exceptions import ConnectionError, ResponseError
+    
+    r = None
+    backoff = 1  # Initial backoff in seconds
+    max_backoff = 60  # Maximum backoff
+    consecutive_errors = 0
+    
     print(f"🔄 Redis consumer started, polling queue: {QUEUE_KEY}")
+    
     while True:
-        item = r.blpop(QUEUE_KEY, timeout=5)
-        if not item:
-            continue
-        _, payload = item
-        data = json.loads(payload)
-        print(f"📥 Received job: run_id={data['run_id']}, type={data['report_type']}")
-        generate_report.delay(data["run_id"], data["account_id"], data["report_type"], data.get("params") or {})
+        try:
+            # Create/reconnect if needed
+            if r is None:
+                r = create_redis_connection(REDIS_URL)
+                print(f"✅ Redis connected")
+                backoff = 1  # Reset backoff on successful connection
+                consecutive_errors = 0
+            
+            item = r.blpop(QUEUE_KEY, timeout=5)
+            
+            if not item:
+                continue
+            
+            _, payload = item
+            data = json.loads(payload)
+            print(f"📥 Received job: run_id={data['run_id']}, type={data['report_type']}")
+            generate_report.delay(data["run_id"], data["account_id"], data["report_type"], data.get("params") or {})
+            
+            # Reset backoff on successful operation
+            backoff = 1
+            consecutive_errors = 0
+            
+        except ResponseError as e:
+            error_msg = str(e).lower()
+            consecutive_errors += 1
+            
+            if "rate-limited" in error_msg or "rate limit" in error_msg:
+                print(f"⚠️  Redis rate-limited! Backing off for {backoff}s (error #{consecutive_errors})")
+                print(f"   Consider upgrading your Upstash plan or contact support@upstash.com")
+                time.sleep(backoff)
+                backoff = min(backoff * 2, max_backoff)
+                r = None  # Force reconnection
+            else:
+                print(f"❌ Redis response error: {e}")
+                time.sleep(backoff)
+                backoff = min(backoff * 2, max_backoff)
+                r = None
+                
+        except ConnectionError as e:
+            consecutive_errors += 1
+            print(f"❌ Redis connection error (#{consecutive_errors}): {e}")
+            print(f"   Reconnecting in {backoff}s...")
+            time.sleep(backoff)
+            backoff = min(backoff * 2, max_backoff)
+            r = None  # Force reconnection
+            
+        except Exception as e:
+            consecutive_errors += 1
+            print(f"❌ Unexpected error in consumer (#{consecutive_errors}): {e}")
+            time.sleep(min(5, backoff))
+            # Don't reset connection for non-Redis errors
 
 # NOTE: To start the consumer alongside the worker, we will run a second process
 # in dev (e.g., `poetry run python -c "from worker.tasks import run_redis_consumer_forever as c;c()"`)

@@ -1,0 +1,360 @@
+{# =============================================================================
+   PROPERTY REPORT MACROS
+   Reusable components for all property report themes
+   ============================================================================= #}
+
+{# -----------------------------------------------------------------------------
+   PAGE HEADER
+   Consistent header for internal pages (not cover)
+   Usage: {{ macros.page_header(title, subtitle) }}
+   ----------------------------------------------------------------------------- #}
+{% macro page_header(title, subtitle=None) %}
+<header class="page-header">
+  <div class="page-header-content">
+    <h1 class="page-title">{{ title }}</h1>
+    {% if subtitle %}
+    <p class="page-subtitle">{{ subtitle }}</p>
+    {% endif %}
+  </div>
+  <div class="page-header-accent"></div>
+</header>
+{% endmacro %}
+
+{# -----------------------------------------------------------------------------
+   PAGE FOOTER
+   Consistent footer for all pages
+   Usage: {{ macros.page_footer(agent, page_num) }}
+   ----------------------------------------------------------------------------- #}
+{% macro page_footer(agent, page_num=None) %}
+<footer class="page-footer">
+  <div class="footer-left">
+    {% if agent.photo_url %}
+    <img src="{{ agent.photo_url }}" alt="{{ agent.name }}" class="footer-agent-photo">
+    {% else %}
+    <div class="footer-agent-photo footer-agent-photo--placeholder">
+      {{ agent.name[0] | upper }}
+    </div>
+    {% endif %}
+    <div class="footer-agent-info">
+      <span class="footer-agent-name">{{ agent.name }}</span>
+      <span class="footer-agent-contact">{{ agent.phone }}</span>
+    </div>
+  </div>
+  <div class="footer-right">
+    {% if agent.logo_url %}
+    <img src="{{ agent.logo_url }}" alt="{{ agent.company_name }}" class="footer-logo">
+    {% else %}
+    <span class="footer-company">{{ agent.company_name }}</span>
+    {% endif %}
+  </div>
+</footer>
+{% endmacro %}
+
+{# -----------------------------------------------------------------------------
+   COVER FOOTER (Agent Block)
+   Larger agent display for cover page
+   Usage: {{ macros.cover_agent_block(agent) }}
+   ----------------------------------------------------------------------------- #}
+{% macro cover_agent_block(agent) %}
+<div class="cover-footer">
+  <div class="cover-agent">
+    {% if agent.photo_url %}
+    <img src="{{ agent.photo_url }}" alt="{{ agent.name }}" class="cover-agent-photo">
+    {% else %}
+    <div class="cover-agent-photo cover-agent-photo--placeholder">
+      {{ agent.name[0] | upper }}
+    </div>
+    {% endif %}
+    <div class="cover-agent-info">
+      <h3 class="cover-agent-name">{{ agent.name }}</h3>
+      <p class="cover-agent-title">{{ agent.title | default('Realtor®') }}{% if agent.license %} · {{ agent.license }}{% endif %}</p>
+      <p class="cover-agent-contact">{{ agent.phone }}{% if agent.email %} · {{ agent.email }}{% endif %}</p>
+    </div>
+  </div>
+  <div class="cover-branding">
+    {% if agent.logo_url %}
+    <img src="{{ agent.logo_url }}" alt="{{ agent.company_name }}" class="cover-logo">
+    {% else %}
+    <div class="cover-company-text">
+      <span class="cover-company-name">{{ agent.company_name }}</span>
+      {% if agent.company_tagline %}
+      <span class="cover-company-tagline">{{ agent.company_tagline }}</span>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endmacro %}
+
+{# -----------------------------------------------------------------------------
+   PROPERTY STATS ROW
+   Horizontal stats display (beds, baths, sqft, year)
+   Usage: {{ macros.property_stats(property) }}
+   ----------------------------------------------------------------------------- #}
+{% macro property_stats(property) %}
+<div class="property-stats">
+  {% if property.bedrooms %}
+  <div class="stat-item">
+    <span class="stat-value">{{ property.bedrooms }}</span>
+    <span class="stat-label">Beds</span>
+  </div>
+  {% endif %}
+  {% if property.bathrooms %}
+  <div class="stat-item">
+    <span class="stat-value">{{ property.bathrooms }}</span>
+    <span class="stat-label">Baths</span>
+  </div>
+  {% endif %}
+  {% if property.sqft %}
+  <div class="stat-item">
+    <span class="stat-value">{{ property.sqft | format_number }}</span>
+    <span class="stat-label">Sq Ft</span>
+  </div>
+  {% endif %}
+  {% if property.year_built %}
+  <div class="stat-item">
+    <span class="stat-value">{{ property.year_built }}</span>
+    <span class="stat-label">Built</span>
+  </div>
+  {% endif %}
+  {% if property.lot_size %}
+  <div class="stat-item">
+    <span class="stat-value">{{ property.lot_size | format_number }}</span>
+    <span class="stat-label">Lot Sq Ft</span>
+  </div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{# -----------------------------------------------------------------------------
+   DATA TABLE
+   Generic two-column data table
+   Usage: {{ macros.data_table(rows) }}
+   rows = [{'label': 'APN', 'value': '1234-567'}, ...]
+   ----------------------------------------------------------------------------- #}
+{% macro data_table(rows, title=None) %}
+{% if title %}
+<h3 class="table-title">{{ title }}</h3>
+{% endif %}
+<table class="data-table">
+  <tbody>
+    {% for row in rows %}
+    {% if row.value %}
+    <tr>
+      <td class="data-label">{{ row.label }}</td>
+      <td class="data-value">{{ row.value }}</td>
+    </tr>
+    {% endif %}
+    {% endfor %}
+  </tbody>
+</table>
+{% endmacro %}
+
+{# -----------------------------------------------------------------------------
+   PROPERTY DETAILS TABLE
+   Pre-built property details using data_table
+   Usage: {{ macros.property_details_table(property) }}
+   ----------------------------------------------------------------------------- #}
+{% macro property_details_table(property) %}
+{{ data_table([
+  {'label': 'Property Type', 'value': property.property_type},
+  {'label': 'Bedrooms', 'value': property.bedrooms},
+  {'label': 'Bathrooms', 'value': property.bathrooms},
+  {'label': 'Square Feet', 'value': property.sqft | format_number if property.sqft else None},
+  {'label': 'Lot Size', 'value': (property.lot_size | format_number ~ ' sq ft') if property.lot_size else None},
+  {'label': 'Year Built', 'value': property.year_built},
+  {'label': 'Garage', 'value': (property.garage ~ ' Car') if property.garage else None},
+  {'label': 'Pool', 'value': property.pool},
+  {'label': 'Zoning', 'value': property.zoning}
+], 'Property Details') }}
+{% endmacro %}
+
+{# -----------------------------------------------------------------------------
+   TAX & ASSESSMENT TABLE
+   Pre-built tax details
+   Usage: {{ macros.tax_table(property) }}
+   ----------------------------------------------------------------------------- #}
+{% macro tax_table(property) %}
+{{ data_table([
+  {'label': 'APN', 'value': property.apn},
+  {'label': 'Assessed Value', 'value': property.assessed_value | format_currency if property.assessed_value else None},
+  {'label': 'Land Value', 'value': property.land_value | format_currency if property.land_value else None},
+  {'label': 'Improvement Value', 'value': property.improvement_value | format_currency if property.improvement_value else None},
+  {'label': 'Annual Taxes', 'value': property.tax_amount | format_currency if property.tax_amount else None},
+  {'label': 'Tax Year', 'value': property.tax_year}
+], 'Tax Information') }}
+{% endmacro %}
+
+{# -----------------------------------------------------------------------------
+   LOCATION TABLE
+   Pre-built location details
+   Usage: {{ macros.location_table(property) }}
+   ----------------------------------------------------------------------------- #}
+{% macro location_table(property) %}
+{{ data_table([
+  {'label': 'Address', 'value': property.street_address},
+  {'label': 'City', 'value': property.city},
+  {'label': 'State', 'value': property.state},
+  {'label': 'ZIP Code', 'value': property.zip_code},
+  {'label': 'County', 'value': property.county},
+  {'label': 'Census Tract', 'value': property.census_tract}
+], 'Location') }}
+{% endmacro %}
+
+{# -----------------------------------------------------------------------------
+   COMP CARD
+   Individual comparable property card
+   Usage: {{ macros.comp_card(comp, index) }}
+   ----------------------------------------------------------------------------- #}
+{% macro comp_card(comp, index=1) %}
+<div class="comp-card">
+  <div class="comp-card-header">
+    <span class="comp-number">{{ index }}</span>
+    <span class="comp-price">{{ comp.sale_price | format_currency }}</span>
+  </div>
+  {% if comp.map_image_url %}
+  <div class="comp-image">
+    <img src="{{ comp.map_image_url }}" alt="{{ comp.address }}">
+  </div>
+  {% endif %}
+  <div class="comp-details">
+    <h4 class="comp-address">{{ comp.address }}</h4>
+    <div class="comp-meta">
+      <span>{{ comp.bedrooms }} bd</span>
+      <span class="comp-meta-divider">·</span>
+      <span>{{ comp.bathrooms }} ba</span>
+      <span class="comp-meta-divider">·</span>
+      <span>{{ comp.sqft | format_number }} sqft</span>
+    </div>
+    <div class="comp-stats">
+      <div class="comp-stat">
+        <span class="comp-stat-value">{{ comp.price_per_sqft | format_currency }}</span>
+        <span class="comp-stat-label">$/sqft</span>
+      </div>
+      <div class="comp-stat">
+        <span class="comp-stat-value">{{ comp.sold_date }}</span>
+        <span class="comp-stat-label">Sold</span>
+      </div>
+      <div class="comp-stat">
+        <span class="comp-stat-value">{{ comp.distance_miles }} mi</span>
+        <span class="comp-stat-label">Distance</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+{# -----------------------------------------------------------------------------
+   COMP GRID
+   Grid of comparable cards
+   Usage: {{ macros.comp_grid(comparables) }}
+   ----------------------------------------------------------------------------- #}
+{% macro comp_grid(comparables) %}
+<div class="comp-grid">
+  {% for comp in comparables[:4] %}
+  {{ comp_card(comp, loop.index) }}
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{# -----------------------------------------------------------------------------
+   ANALYSIS SUMMARY
+   Price range summary with subject property comparison
+   Usage: {{ macros.analysis_summary(stats, property) }}
+   ----------------------------------------------------------------------------- #}
+{% macro analysis_summary(stats, property) %}
+<div class="analysis-summary">
+  <div class="analysis-range">
+    <div class="range-item range-low">
+      <span class="range-label">Low</span>
+      <span class="range-value">{{ stats.price_low | format_currency }}</span>
+    </div>
+    <div class="range-item range-median">
+      <span class="range-label">Median</span>
+      <span class="range-value">{{ stats.medium.price | format_currency }}</span>
+    </div>
+    <div class="range-item range-high">
+      <span class="range-label">High</span>
+      <span class="range-value">{{ stats.price_high | format_currency }}</span>
+    </div>
+  </div>
+  <div class="analysis-stats">
+    <div class="analysis-stat">
+      <span class="analysis-stat-value">{{ stats.total_comps }}</span>
+      <span class="analysis-stat-label">Comparables</span>
+    </div>
+    <div class="analysis-stat">
+      <span class="analysis-stat-value">{{ stats.avg_sqft | format_number }}</span>
+      <span class="analysis-stat-label">Avg Sq Ft</span>
+    </div>
+    <div class="analysis-stat">
+      <span class="analysis-stat-value">{{ stats.avg_beds }}</span>
+      <span class="analysis-stat-label">Avg Beds</span>
+    </div>
+    <div class="analysis-stat">
+      <span class="analysis-stat-value">{{ stats.avg_baths }}</span>
+      <span class="analysis-stat-label">Avg Baths</span>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+{# -----------------------------------------------------------------------------
+   CONTENTS ITEM
+   Single item for table of contents
+   Usage: {{ macros.contents_item(number, title, subtitle) }}
+   ----------------------------------------------------------------------------- #}
+{% macro contents_item(number, title, subtitle=None) %}
+<div class="contents-item">
+  <span class="contents-number">{{ '%02d' | format(number) }}</span>
+  <div class="contents-text">
+    <span class="contents-title">{{ title }}</span>
+    {% if subtitle %}
+    <span class="contents-subtitle">{{ subtitle }}</span>
+    {% endif %}
+  </div>
+</div>
+{% endmacro %}
+
+{# -----------------------------------------------------------------------------
+   MAP CARD
+   Styled container for map images
+   Usage: {{ macros.map_card(image_url, title) }}
+   ----------------------------------------------------------------------------- #}
+{% macro map_card(image_url, title=None) %}
+<div class="map-card">
+  {% if title %}
+  <div class="map-card-header">{{ title }}</div>
+  {% endif %}
+  <div class="map-card-image">
+    {% if image_url %}
+    <img src="{{ image_url }}" alt="{{ title | default('Map') }}">
+    {% else %}
+    <div class="map-placeholder">Map not available</div>
+    {% endif %}
+  </div>
+</div>
+{% endmacro %}
+
+{# -----------------------------------------------------------------------------
+   PRICE RANGE BAR
+   Visual price range indicator
+   Usage: {{ macros.price_range_bar(low, high, subject_estimate) }}
+   ----------------------------------------------------------------------------- #}
+{% macro price_range_bar(low, high, subject_estimate=None) %}
+<div class="price-range-bar">
+  <div class="price-range-track">
+    {% if subject_estimate %}
+    {% set range = high - low %}
+    {% set position = ((subject_estimate - low) / range * 100) | int %}
+    <div class="price-range-marker" style="left: {{ position }}%">
+      <span class="price-range-marker-label">{{ subject_estimate | format_currency }}</span>
+    </div>
+    {% endif %}
+  </div>
+  <div class="price-range-labels">
+    <span class="price-range-low">{{ low | format_currency }}</span>
+    <span class="price-range-high">{{ high | format_currency }}</span>
+  </div>
+</div>
+{% endmacro %}

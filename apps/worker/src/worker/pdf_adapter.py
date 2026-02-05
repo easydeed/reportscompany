@@ -60,15 +60,18 @@ def _generate_via_playwright(url: str, output_path: str, wait_for_network: bool)
         wait_option = "networkidle" if wait_for_network else "domcontentloaded"
         page.goto(url, wait_until=wait_option)
         
+        # CRITICAL: Set margins to 0 - CSS handles all margins internally
+        # Templates use @page { margin: 0 } and .page { padding: 0.5in }
+        # This ensures identical output between Playwright (local) and PDFShift (production)
         page.pdf(
             path=output_path,
             format="Letter",
             print_background=True,
             margin={
-                "top": "0.5in",
-                "right": "0.5in",
-                "bottom": "0.5in",
-                "left": "0.5in"
+                "top": "0",
+                "right": "0",
+                "bottom": "0",
+                "left": "0"
             }
         )
         browser.close()

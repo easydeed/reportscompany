@@ -1,0 +1,553 @@
+{# =============================================================================
+   MODERN THEME
+   Fresh, tech-forward, energetic contemporary aesthetic
+   
+   Typography: Space Grotesk (display) + DM Sans (body)
+   Colors: Midnight blue + coral
+   Style: Rounded corners, playful geometry, gradient accents
+   ============================================================================= #}
+
+{% extends '_base/base.jinja2' %}
+
+{% block fonts %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block theme_styles %}
+<style>
+  :root {
+    /* Modern Theme Colors - Primary is customizable */
+    --color-primary: {{ theme_color | default('#FF6B5B') }};
+    --color-primary-light: #FF8A7D;
+    --color-accent: #1A1F36;
+    --color-accent-light: #2D3348;
+    --color-background: #FFFFFF;
+    --color-surface: #F1F5F9;
+    --color-text: #1A1F36;
+    --color-text-muted: #64748B;
+    --color-border: #E2E8F0;
+    
+    /* Typography */
+    --font-display: 'Space Grotesk', system-ui, sans-serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    
+    /* Modern-specific - larger radius */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+    --radius-xl: 28px;
+    
+    --shadow-sm: 0 2px 8px rgba(26, 31, 54, 0.06);
+    --shadow-md: 0 8px 24px rgba(26, 31, 54, 0.1);
+    --shadow-lg: 0 20px 50px rgba(26, 31, 54, 0.15);
+  }
+  
+  /* Global border-radius override */
+  .page {
+    border-radius: var(--radius-lg);
+  }
+  
+  /* ==========================================================================
+     MODERN: Cover Page
+     ========================================================================== */
+  
+  .page-cover {
+    background: var(--color-accent);
+    border-radius: var(--radius-lg);
+  }
+  
+  .page-cover .cover-bg {
+    position: absolute;
+    inset: 0;
+    background: 
+      linear-gradient(135deg, 
+        rgba(26, 31, 54, 0.7) 0%,
+        rgba(26, 31, 54, 0.4) 50%,
+        rgba(255, 107, 91, 0.1) 100%
+      ){% if images.hero %},
+      url('{{ images.hero }}') center/cover no-repeat{% endif %};
+    border-radius: var(--radius-lg);
+  }
+  
+  /* Top accent bar - gradient */
+  .page-cover::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+    z-index: 10;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+  
+  /* Decorative circles */
+  .page-cover .circle-1 {
+    position: absolute;
+    top: -40px;
+    right: -40px;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    opacity: 0.15;
+    z-index: 1;
+  }
+  
+  .page-cover .circle-2 {
+    position: absolute;
+    bottom: 180px;
+    right: 60px;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 3px solid var(--color-primary);
+    opacity: 0.4;
+    z-index: 1;
+  }
+  
+  .page-cover .circle-3 {
+    position: absolute;
+    top: 200px;
+    left: -20px;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    opacity: 0.08;
+    z-index: 1;
+  }
+  
+  /* Branding header */
+  .page-cover .cover-branding-header {
+    position: absolute;
+    top: var(--page-margin);
+    left: var(--page-margin);
+    right: var(--page-margin);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 5;
+  }
+  
+  .page-cover .logo-pill {
+    background: white;
+    padding: 10px 16px;
+    border-radius: var(--radius-xl);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .page-cover .logo-pill img {
+    max-height: 28px;
+    max-width: 100px;
+    object-fit: contain;
+  }
+  
+  .page-cover .report-badge {
+    background: var(--color-primary);
+    color: white;
+    padding: 10px 20px;
+    border-radius: var(--radius-xl);
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  
+  /* Main content area */
+  .page-cover .cover-content {
+    position: absolute;
+    bottom: 160px;
+    left: var(--page-margin);
+    right: var(--page-margin);
+    z-index: 5;
+  }
+  
+  .page-cover .cover-property-type {
+    display: inline-block;
+    background: rgba(255, 107, 91, 0.2);
+    color: var(--color-primary-light);
+    padding: 6px 14px;
+    border-radius: var(--radius-xl);
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  
+  .page-cover .cover-address {
+    font-family: var(--font-display);
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: white;
+    margin-bottom: 12px;
+  }
+  
+  .page-cover .cover-location {
+    font-family: var(--font-body);
+    font-size: 16px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.75);
+  }
+  
+  .page-cover .cover-accent-line {
+    width: 60px;
+    height: 4px;
+    background: var(--color-primary);
+    border-radius: var(--radius-full);
+    margin: 24px 0;
+  }
+  
+  .page-cover .property-stats {
+    margin-top: 20px;
+    gap: var(--space-lg);
+  }
+  
+  .page-cover .stat-item {
+    background: rgba(255,255,255,0.1);
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+  }
+  
+  .page-cover .stat-value {
+    color: white;
+    font-size: 24px;
+  }
+  
+  .page-cover .stat-label {
+    color: rgba(255,255,255,0.6);
+  }
+  
+  /* Footer override for cover */
+  .page-cover .cover-footer {
+    height: 130px;
+    padding: 0 var(--page-margin);
+    background: white;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  }
+  
+  .page-cover .cover-agent-photo {
+    border: 3px solid var(--color-primary);
+    width: 64px;
+    height: 64px;
+  }
+  
+  .page-cover .cover-agent-name {
+    font-size: 18px;
+    font-weight: 700;
+  }
+  
+  /* ==========================================================================
+     MODERN: Page Header Overrides
+     ========================================================================== */
+  
+  .page-header {
+    border-bottom: none;
+    background: var(--color-surface);
+    margin: calc(-1 * var(--page-margin));
+    margin-bottom: var(--space-lg);
+    padding: var(--space-lg) var(--page-margin);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+  
+  .page-title {
+    font-size: 28px;
+    font-weight: 700;
+  }
+  
+  .page-header-accent {
+    background: var(--color-primary);
+    border-radius: var(--radius-full);
+  }
+  
+  /* ==========================================================================
+     MODERN: Contents Page
+     ========================================================================== */
+  
+  .page-contents .contents-list {
+    gap: var(--space-sm);
+  }
+  
+  .page-contents .contents-item {
+    border: none;
+    background: var(--color-surface);
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-md);
+    transition: background 0.2s;
+  }
+  
+  .page-contents .contents-number {
+    background: var(--color-primary);
+    color: white;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 700;
+  }
+  
+  .page-contents .contents-title {
+    font-size: 16px;
+    font-weight: 600;
+  }
+  
+  /* ==========================================================================
+     MODERN: Data Tables
+     ========================================================================== */
+  
+  .data-table {
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  
+  .data-table tr {
+    border-bottom: 1px solid var(--color-border);
+  }
+  
+  .data-table tr:last-child {
+    border-bottom: none;
+  }
+  
+  .data-table td {
+    padding: 14px var(--space-md);
+  }
+  
+  .table-title {
+    background: var(--color-accent);
+    color: white;
+    padding: 14px var(--space-md);
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    margin-bottom: 0;
+    font-size: 13px;
+  }
+  
+  /* ==========================================================================
+     MODERN: Comp Cards
+     ========================================================================== */
+  
+  .comp-card {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  
+  .comp-card-header {
+    background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-light) 100%);
+    padding: 14px var(--space-md);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+  
+  .comp-number {
+    background: rgba(255,255,255,0.2);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+  }
+  
+  .comp-price {
+    font-size: 18px;
+    font-weight: 700;
+  }
+  
+  .comp-image {
+    height: 100px;
+  }
+  
+  .comp-details {
+    padding: var(--space-md);
+  }
+  
+  .comp-stats {
+    background: var(--color-surface);
+    margin: var(--space-md) calc(-1 * var(--space-md)) calc(-1 * var(--space-md));
+    padding: var(--space-sm) var(--space-md);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  }
+  
+  /* ==========================================================================
+     MODERN: Analysis Summary
+     ========================================================================== */
+  
+  .analysis-summary {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+  }
+  
+  .analysis-range {
+    background: var(--color-surface);
+    margin: calc(-1 * var(--space-lg));
+    margin-bottom: var(--space-lg);
+    padding: var(--space-lg);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+  
+  .range-item {
+    background: white;
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+  }
+  
+  .range-median {
+    background: var(--color-primary);
+  }
+  
+  .range-median .range-label,
+  .range-median .range-value {
+    color: white;
+  }
+  
+  .analysis-stat-value {
+    color: var(--color-primary);
+  }
+  
+  /* ==========================================================================
+     MODERN: Map Card
+     ========================================================================== */
+  
+  .map-card {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  
+  .map-card-header {
+    background: var(--color-surface);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  
+  .map-card-image {
+    height: 430px;
+  }
+  
+  /* ==========================================================================
+     MODERN: Price Range
+     ========================================================================== */
+  
+  .price-range-track {
+    height: 12px;
+    background: linear-gradient(90deg, 
+      var(--color-surface) 0%, 
+      var(--color-primary) 30%,
+      var(--color-primary-light) 70%,
+      var(--color-surface) 100%
+    );
+    border-radius: var(--radius-full);
+  }
+  
+  .price-range-marker-label {
+    background: var(--color-accent);
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: var(--radius-md);
+  }
+  
+  /* Range comps list */
+  .range-comps-list {
+    margin-top: var(--space-xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  
+  .range-comp-item {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--space-md) var(--space-lg);
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+  }
+  
+  .range-comp-address {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  
+  .range-comp-price {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-primary);
+  }
+  
+  /* ==========================================================================
+     MODERN: Footer Overrides
+     ========================================================================== */
+  
+  .page-footer {
+    border-top: none;
+    background: var(--color-surface);
+    margin: 0 calc(-1 * var(--page-margin));
+    margin-bottom: calc(-1 * var(--footer-bottom));
+    padding: var(--space-md) var(--page-margin);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  }
+  
+  .footer-agent-photo {
+    border-color: var(--color-primary);
+  }
+  
+  @media print {
+    .page {
+      border-radius: 0;
+    }
+    
+    .page-cover,
+    .page-cover .cover-bg,
+    .page-cover::before,
+    .page-cover .cover-footer,
+    .page-header,
+    .page-footer {
+      border-radius: 0;
+    }
+  }
+</style>
+{% endblock %}
+
+{# =============================================================================
+   COVER PAGE OVERRIDE
+   ============================================================================= #}
+{% block cover %}
+<div class="cover-bg"></div>
+<div class="circle-1"></div>
+<div class="circle-2"></div>
+<div class="circle-3"></div>
+
+<div class="cover-branding-header">
+  <div class="logo-pill">
+    {% if agent.logo_url %}
+    <img src="{{ agent.logo_url }}" alt="{{ agent.company_name }}">
+    {% else %}
+    <span style="font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--color-accent);">{{ agent.company_name }}</span>
+    {% endif %}
+  </div>
+  <div class="report-badge">Property Report</div>
+</div>
+
+<div class="cover-content">
+  <div class="cover-property-type">{{ property.property_type | default('Single Family Residence') }}</div>
+  <h1 class="cover-address">{{ property.street_address }}</h1>
+  <p class="cover-location">{{ property.city }}, {{ property.state }} {{ property.zip_code }}</p>
+  <div class="cover-accent-line"></div>
+  {{ macros.property_stats(property) }}
+</div>
+
+{{ macros.cover_agent_block(agent) }}
+{% endblock %}

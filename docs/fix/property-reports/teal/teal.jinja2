@@ -1,0 +1,559 @@
+{# =============================================================================
+   TEAL THEME
+   Vibrant, coastal, contemporary aesthetic
+   
+   Typography: Montserrat (display + body)
+   Colors: Vibrant teal + deep navy
+   Style: Bold weights, clean geometry, colorful accents
+   ============================================================================= #}
+
+{% extends '_base/base.jinja2' %}
+
+{% block fonts %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block theme_styles %}
+<style>
+  :root {
+    /* Teal Theme Colors - Primary is customizable */
+    --color-primary: {{ theme_color | default('#34D1C3') }};
+    --color-primary-dark: #21C7B7;
+    --color-accent: #18235C;
+    --color-accent-light: #2A3875;
+    --color-background: #FFFFFF;
+    --color-surface: #F4F6FB;
+    --color-text: #0B0F1A;
+    --color-text-muted: #6B7280;
+    --color-border: #E6E9F2;
+    
+    /* Table row colors */
+    --color-row-a: #DFF6F3;
+    --color-row-b: #ECEAF7;
+    
+    /* Typography */
+    --font-display: 'Montserrat', system-ui, sans-serif;
+    --font-body: 'Montserrat', system-ui, sans-serif;
+    
+    /* Teal-specific */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    
+    --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.12);
+  }
+  
+  /* ==========================================================================
+     TEAL: Cover Page
+     ========================================================================== */
+  
+  .page-cover {
+    background: var(--color-accent);
+  }
+  
+  .page-cover .cover-bg {
+    position: absolute;
+    inset: 0;
+    background: 
+      linear-gradient(180deg, 
+        rgba(24, 35, 92, 0.1) 0%,
+        rgba(24, 35, 92, 0.5) 60%,
+        rgba(24, 35, 92, 0.95) 100%
+      ){% if images.hero %},
+      url('{{ images.hero }}') center/cover no-repeat{% endif %};
+  }
+  
+  /* Top accent bar - split */
+  .page-cover::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-dark) 50%, var(--color-accent) 50%);
+    z-index: 10;
+  }
+  
+  /* Diagonal stripe */
+  .page-cover .stripe {
+    position: absolute;
+    bottom: 120px;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background: var(--color-primary);
+    transform: skewY(-2deg);
+    z-index: 3;
+  }
+  
+  /* Branding header */
+  .page-cover .cover-branding-header {
+    position: absolute;
+    top: var(--page-margin);
+    left: var(--page-margin);
+    right: var(--page-margin);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 5;
+  }
+  
+  .page-cover .logo-container {
+    background: white;
+    padding: 12px 20px;
+    border-radius: var(--radius-md);
+  }
+  
+  .page-cover .logo-container img {
+    max-height: 32px;
+    max-width: 120px;
+    object-fit: contain;
+  }
+  
+  .page-cover .report-badge {
+    background: var(--color-primary);
+    color: var(--color-accent);
+    padding: 10px 20px;
+    border-radius: var(--radius-md);
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  
+  /* Main content area */
+  .page-cover .cover-content {
+    position: absolute;
+    bottom: 170px;
+    left: var(--page-margin);
+    right: var(--page-margin);
+    z-index: 5;
+  }
+  
+  .page-cover .cover-property-type {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--color-primary);
+    margin-bottom: 16px;
+  }
+  
+  .page-cover .cover-address {
+    font-family: var(--font-display);
+    font-size: 52px;
+    font-weight: 900;
+    line-height: 1.0;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: -1px;
+    margin-bottom: 12px;
+  }
+  
+  .page-cover .cover-location {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.8);
+    letter-spacing: 1px;
+  }
+  
+  .page-cover .cover-accent-line {
+    width: 60px;
+    height: 4px;
+    background: var(--color-primary);
+    border-radius: var(--radius-full);
+    margin: 24px 0;
+  }
+  
+  /* Mini decorative bars */
+  .page-cover .mini-bars {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+  }
+  
+  .page-cover .mini-bars span {
+    width: 4px;
+    height: 20px;
+    background: var(--color-primary);
+    border-radius: 2px;
+  }
+  
+  .page-cover .mini-bars span:nth-child(2) {
+    height: 28px;
+  }
+  
+  .page-cover .mini-bars span:nth-child(3) {
+    height: 16px;
+  }
+  
+  .page-cover .property-stats {
+    margin-top: 20px;
+    gap: var(--space-lg);
+  }
+  
+  .page-cover .stat-value {
+    color: white;
+    font-size: 28px;
+    font-weight: 800;
+  }
+  
+  .page-cover .stat-label {
+    color: rgba(255,255,255,0.6);
+    font-weight: 600;
+  }
+  
+  /* Footer override for cover */
+  .page-cover .cover-footer {
+    height: 120px;
+    padding: 0 var(--page-margin);
+    background: white;
+  }
+  
+  .page-cover .cover-agent-photo {
+    border: 3px solid var(--color-primary);
+    width: 68px;
+    height: 68px;
+  }
+  
+  .page-cover .cover-agent-name {
+    font-size: 18px;
+    font-weight: 800;
+  }
+  
+  /* ==========================================================================
+     TEAL: Page Header Overrides
+     ========================================================================== */
+  
+  .page-header {
+    border-bottom: 3px solid var(--color-accent);
+  }
+  
+  .page-title {
+    font-size: 32px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.5px;
+  }
+  
+  .page-header-accent {
+    background: var(--color-primary);
+    height: 4px;
+    border-radius: var(--radius-full);
+  }
+  
+  /* ==========================================================================
+     TEAL: Contents Page
+     ========================================================================== */
+  
+  .page-contents .contents-item {
+    border-bottom: 2px solid var(--color-border);
+    padding: var(--space-md) 0;
+  }
+  
+  .page-contents .contents-number {
+    background: var(--color-primary);
+    color: var(--color-accent);
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 800;
+  }
+  
+  .page-contents .contents-title {
+    font-size: 18px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  
+  /* ==========================================================================
+     TEAL: Data Tables
+     ========================================================================== */
+  
+  .data-table {
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+  }
+  
+  .data-table tr:nth-child(odd) {
+    background: var(--color-row-a);
+  }
+  
+  .data-table tr:nth-child(even) {
+    background: var(--color-row-b);
+  }
+  
+  .data-table td {
+    padding: 12px var(--space-md);
+    border-bottom: none;
+  }
+  
+  .data-label {
+    font-weight: 600;
+    color: var(--color-text);
+  }
+  
+  .data-value {
+    font-weight: 700;
+  }
+  
+  .table-title {
+    background: var(--color-accent);
+    color: white;
+    padding: 14px var(--space-md);
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    margin-bottom: 0;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+  }
+  
+  /* ==========================================================================
+     TEAL: Comp Cards
+     ========================================================================== */
+  
+  .comp-card {
+    background: white;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  
+  .comp-card-header {
+    background: var(--color-accent);
+    padding: 12px var(--space-md);
+  }
+  
+  .comp-number {
+    background: var(--color-primary);
+    color: var(--color-accent);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 800;
+  }
+  
+  .comp-price {
+    font-size: 18px;
+    font-weight: 800;
+  }
+  
+  .comp-address {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+  }
+  
+  .comp-image {
+    height: 100px;
+  }
+  
+  /* ==========================================================================
+     TEAL: Analysis Summary
+     ========================================================================== */
+  
+  .analysis-summary {
+    background: var(--color-surface);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+  }
+  
+  .analysis-range {
+    border-bottom: 2px solid var(--color-border);
+  }
+  
+  .range-item {
+    padding: var(--space-md);
+    border-radius: var(--radius-sm);
+  }
+  
+  .range-low {
+    background: var(--color-row-a);
+  }
+  
+  .range-high {
+    background: var(--color-row-b);
+  }
+  
+  .range-median {
+    background: var(--color-accent);
+    color: white;
+  }
+  
+  .range-median .range-label {
+    color: rgba(255,255,255,0.7);
+  }
+  
+  .range-median .range-value {
+    color: var(--color-primary);
+    font-weight: 800;
+  }
+  
+  .range-value {
+    font-weight: 800;
+  }
+  
+  .analysis-stat-value {
+    font-weight: 800;
+    color: var(--color-accent);
+  }
+  
+  /* ==========================================================================
+     TEAL: Map Card
+     ========================================================================== */
+  
+  .map-card {
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  
+  .map-card-header {
+    background: var(--color-accent);
+    color: white;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .map-card-image {
+    height: 440px;
+  }
+  
+  /* ==========================================================================
+     TEAL: Price Range
+     ========================================================================== */
+  
+  .price-range-track {
+    height: 14px;
+    background: linear-gradient(90deg, 
+      var(--color-row-a) 0%, 
+      var(--color-primary) 25%,
+      var(--color-primary-dark) 50%,
+      var(--color-accent) 75%,
+      var(--color-row-b) 100%
+    );
+    border-radius: var(--radius-full);
+    border: 2px solid var(--color-border);
+  }
+  
+  .price-range-marker-label {
+    background: var(--color-accent);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+  }
+  
+  /* Range comps list */
+  .range-comps-list {
+    margin-top: var(--space-xl);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  
+  .range-comp-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-md) var(--space-lg);
+  }
+  
+  .range-comp-item:nth-child(odd) {
+    background: var(--color-row-a);
+  }
+  
+  .range-comp-item:nth-child(even) {
+    background: var(--color-row-b);
+  }
+  
+  .range-comp-address {
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+  }
+  
+  .range-comp-price {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--color-accent);
+  }
+  
+  /* ==========================================================================
+     TEAL: Footer Overrides
+     ========================================================================== */
+  
+  .page-footer {
+    border-top: 3px solid var(--color-accent);
+  }
+  
+  .page-footer::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: 0;
+    width: 80px;
+    height: 3px;
+    background: var(--color-primary);
+  }
+  
+  .footer-agent-name {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  
+  .footer-agent-photo {
+    border-color: var(--color-primary);
+  }
+</style>
+{% endblock %}
+
+{# =============================================================================
+   COVER PAGE OVERRIDE
+   ============================================================================= #}
+{% block cover %}
+<div class="cover-bg"></div>
+<div class="stripe"></div>
+
+<div class="cover-branding-header">
+  <div class="logo-container">
+    {% if agent.logo_url %}
+    <img src="{{ agent.logo_url }}" alt="{{ agent.company_name }}">
+    {% else %}
+    <span style="font-family: var(--font-display); font-weight: 800; font-size: 14px; color: var(--color-accent);">{{ agent.company_name }}</span>
+    {% endif %}
+  </div>
+  <div class="report-badge">Property Report</div>
+</div>
+
+<div class="cover-content">
+  <div class="mini-bars">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+  <div class="cover-property-type">{{ property.property_type | default('Single Family Residence') }}</div>
+  <h1 class="cover-address">{{ property.street_address }}</h1>
+  <p class="cover-location">{{ property.city }}, {{ property.state }} {{ property.zip_code }}</p>
+  <div class="cover-accent-line"></div>
+  {{ macros.property_stats(property) }}
+</div>
+
+{{ macros.cover_agent_block(agent) }}
+{% endblock %}

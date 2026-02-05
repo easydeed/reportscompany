@@ -1,0 +1,509 @@
+{# =============================================================================
+   ELEGANT THEME
+   Sophisticated, refined, boutique luxury aesthetic
+   
+   Typography: Cormorant Garamond (display) + Montserrat (body)
+   Colors: Deep charcoal + champagne gold
+   Style: Delicate flourishes, refined typography, understated luxury
+   ============================================================================= #}
+
+{% extends '_base/base.jinja2' %}
+
+{% block fonts %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block theme_styles %}
+<style>
+  :root {
+    /* Elegant Theme Colors - Primary is customizable */
+    --color-primary: {{ theme_color | default('#1A1A1A') }};
+    --color-primary-light: #333333;
+    --color-accent: #B8977E;
+    --color-accent-light: #D4C4B0;
+    --color-background: #FFFFFF;
+    --color-surface: #FAF8F5;
+    --color-text: #1A1A1A;
+    --color-text-muted: #6B6B6B;
+    --color-border: #E8E4DE;
+    
+    /* Typography */
+    --font-display: 'Cormorant Garamond', Georgia, serif;
+    --font-body: 'Montserrat', system-ui, sans-serif;
+    
+    /* Elegant-specific */
+    --radius-sm: 0;
+    --radius-md: 0;
+    --radius-lg: 0;
+    
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.08);
+  }
+  
+  /* ==========================================================================
+     ELEGANT: Cover Page
+     ========================================================================== */
+  
+  .page-cover {
+    background: var(--color-primary);
+  }
+  
+  .page-cover .cover-bg {
+    position: absolute;
+    inset: 0;
+    background: 
+      linear-gradient(180deg, 
+        rgba(26, 26, 26, 0.0) 0%,
+        rgba(26, 26, 26, 0.1) 40%,
+        rgba(26, 26, 26, 0.88) 100%
+      ){% if images.hero %},
+      url('{{ images.hero }}') center/cover no-repeat{% endif %};
+  }
+  
+  /* Top accent line */
+  .page-cover::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--color-accent);
+    z-index: 10;
+  }
+  
+  /* Corner flourishes */
+  .page-cover .flourish-tl,
+  .page-cover .flourish-br {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    z-index: 5;
+  }
+  
+  .page-cover .flourish-tl {
+    top: 20px;
+    left: 20px;
+    border-top: 1px solid var(--color-accent);
+    border-left: 1px solid var(--color-accent);
+    opacity: 0.6;
+  }
+  
+  .page-cover .flourish-br {
+    bottom: 130px;
+    right: 20px;
+    border-bottom: 1px solid var(--color-accent);
+    border-right: 1px solid var(--color-accent);
+    opacity: 0.6;
+  }
+  
+  /* Branding header */
+  .page-cover .cover-branding-header {
+    position: absolute;
+    top: calc(var(--page-margin) + 20px);
+    left: var(--page-margin);
+    right: var(--page-margin);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 5;
+  }
+  
+  .page-cover .report-badge {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.7);
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 8px 16px;
+  }
+  
+  /* Main content area */
+  .page-cover .cover-content {
+    position: absolute;
+    bottom: 150px;
+    left: var(--page-margin);
+    right: var(--page-margin);
+    z-index: 5;
+  }
+  
+  .page-cover .cover-property-type {
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    margin-bottom: 20px;
+  }
+  
+  .page-cover .cover-address {
+    font-family: var(--font-display);
+    font-size: 56px;
+    font-weight: 400;
+    font-style: italic;
+    line-height: 1.1;
+    color: white;
+    margin-bottom: 16px;
+  }
+  
+  .page-cover .cover-location {
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 400;
+    letter-spacing: 2px;
+    color: rgba(255,255,255,0.8);
+  }
+  
+  .page-cover .cover-accent-line {
+    width: 40px;
+    height: 1px;
+    background: var(--color-accent);
+    margin: 30px 0;
+  }
+  
+  .page-cover .property-stats {
+    margin-top: 20px;
+    gap: var(--space-2xl);
+  }
+  
+  .page-cover .stat-value {
+    color: white;
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 500;
+  }
+  
+  .page-cover .stat-label {
+    color: rgba(255,255,255,0.6);
+    font-weight: 400;
+    letter-spacing: 2px;
+  }
+  
+  /* Footer override for cover */
+  .page-cover .cover-footer {
+    height: 120px;
+    padding: 0 var(--page-margin);
+    background: white;
+  }
+  
+  .page-cover .cover-agent-photo {
+    border: 2px solid var(--color-accent);
+    width: 70px;
+    height: 70px;
+  }
+  
+  .page-cover .cover-agent-name {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 500;
+    font-style: italic;
+  }
+  
+  .page-cover .cover-agent-title {
+    font-weight: 400;
+    letter-spacing: 1px;
+  }
+  
+  /* ==========================================================================
+     ELEGANT: Page Header Overrides
+     ========================================================================== */
+  
+  .page-header {
+    border-bottom: none;
+    padding-bottom: var(--space-lg);
+    position: relative;
+  }
+  
+  .page-header::after {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 1px;
+    background: var(--color-accent);
+    margin-top: var(--space-md);
+  }
+  
+  .page-title {
+    font-size: 38px;
+    font-weight: 400;
+    font-style: italic;
+    letter-spacing: 0;
+  }
+  
+  .page-subtitle {
+    font-weight: 400;
+    letter-spacing: 1px;
+  }
+  
+  .page-header-accent {
+    display: none;
+  }
+  
+  /* ==========================================================================
+     ELEGANT: Contents Page
+     ========================================================================== */
+  
+  .page-contents .contents-item {
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--space-lg) 0;
+  }
+  
+  .page-contents .contents-number {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 400;
+    color: var(--color-accent);
+    min-width: 60px;
+  }
+  
+  .page-contents .contents-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 500;
+    font-style: italic;
+  }
+  
+  .page-contents .contents-subtitle {
+    font-weight: 400;
+    letter-spacing: 1px;
+  }
+  
+  /* ==========================================================================
+     ELEGANT: Data Tables
+     ========================================================================== */
+  
+  .data-table tr:nth-child(even) {
+    background: var(--color-surface);
+  }
+  
+  .data-table td {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  
+  .data-label {
+    font-weight: 400;
+    letter-spacing: 0.5px;
+  }
+  
+  .data-value {
+    font-weight: 500;
+  }
+  
+  .table-title {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    font-size: 18px;
+    color: var(--color-primary);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--color-accent);
+    margin-bottom: var(--space-md);
+  }
+  
+  /* ==========================================================================
+     ELEGANT: Comp Cards
+     ========================================================================== */
+  
+  .comp-card {
+    border: 1px solid var(--color-border);
+  }
+  
+  .comp-card-header {
+    background: var(--color-primary);
+    padding: 12px var(--space-md);
+  }
+  
+  .comp-number {
+    font-family: var(--font-display);
+    font-style: italic;
+  }
+  
+  .comp-price {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 500;
+  }
+  
+  .comp-address {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 500;
+  }
+  
+  .comp-details {
+    background: var(--color-surface);
+  }
+  
+  .comp-image {
+    height: 100px;
+  }
+  
+  /* ==========================================================================
+     ELEGANT: Analysis Summary
+     ========================================================================== */
+  
+  .analysis-summary {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+  }
+  
+  .range-value {
+    font-family: var(--font-display);
+    font-weight: 500;
+  }
+  
+  .range-label {
+    letter-spacing: 2px;
+  }
+  
+  .range-median .range-value {
+    color: var(--color-accent);
+    font-size: 26px;
+  }
+  
+  .analysis-stat-value {
+    font-family: var(--font-display);
+    font-weight: 500;
+  }
+  
+  .analysis-stat-label {
+    letter-spacing: 1px;
+  }
+  
+  /* ==========================================================================
+     ELEGANT: Map Card
+     ========================================================================== */
+  
+  .map-card {
+    border: 1px solid var(--color-border);
+  }
+  
+  .map-card-header {
+    background: var(--color-surface);
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    font-size: 18px;
+  }
+  
+  .map-card-image {
+    height: 440px;
+  }
+  
+  /* ==========================================================================
+     ELEGANT: Price Range
+     ========================================================================== */
+  
+  .price-range-track {
+    height: 6px;
+    background: linear-gradient(90deg, 
+      var(--color-surface) 0%, 
+      var(--color-accent) 50%,
+      var(--color-surface) 100%
+    );
+    border-radius: 0;
+  }
+  
+  .price-range-marker-label {
+    background: var(--color-primary);
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 0;
+  }
+  
+  /* Range comps list */
+  .range-comps-list {
+    margin-top: var(--space-xl);
+    border: 1px solid var(--color-border);
+  }
+  
+  .range-comp-item {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+  }
+  
+  .range-comp-item:last-child {
+    border-bottom: none;
+  }
+  
+  .range-comp-item:nth-child(even) {
+    background: var(--color-surface);
+  }
+  
+  .range-comp-address {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 500;
+    font-style: italic;
+  }
+  
+  .range-comp-price {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--color-primary);
+  }
+  
+  /* ==========================================================================
+     ELEGANT: Footer Overrides
+     ========================================================================== */
+  
+  .page-footer {
+    border-top: 1px solid var(--color-border);
+  }
+  
+  .footer-agent-name {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 13px;
+  }
+  
+  .footer-agent-photo {
+    border-color: var(--color-accent);
+  }
+</style>
+{% endblock %}
+
+{# =============================================================================
+   COVER PAGE OVERRIDE
+   ============================================================================= #}
+{% block cover %}
+<div class="cover-bg"></div>
+<div class="flourish-tl"></div>
+<div class="flourish-br"></div>
+
+<div class="cover-branding-header">
+  <div class="report-badge">Property Report</div>
+  {% if agent.logo_url %}
+  <img src="{{ agent.logo_url }}" alt="{{ agent.company_name }}" style="max-height: 45px; max-width: 150px; object-fit: contain;">
+  {% else %}
+  <span style="font-family: var(--font-display); font-size: 18px; font-weight: 500; font-style: italic; color: rgba(255,255,255,0.8);">{{ agent.company_name }}</span>
+  {% endif %}
+</div>
+
+<div class="cover-content">
+  <div class="cover-property-type">{{ property.property_type | default('Single Family Residence') }}</div>
+  <h1 class="cover-address">{{ property.street_address }}</h1>
+  <p class="cover-location">{{ property.city }}, {{ property.state }} {{ property.zip_code }}</p>
+  <div class="cover-accent-line"></div>
+  {{ macros.property_stats(property) }}
+</div>
+
+{{ macros.cover_agent_block(agent) }}
+{% endblock %}

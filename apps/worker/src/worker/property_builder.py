@@ -25,16 +25,18 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 logger = logging.getLogger(__name__)
 
-# Template directory (all themes are self-contained in property/)
-TEMPLATES_DIR = Path(__file__).parent / "templates"
+# Template directory - points to property/ for Jinja2 inheritance to work
+# This allows templates to use {% extends '_base/base.jinja2' %}
+TEMPLATES_DIR = Path(__file__).parent / "templates" / "property"
 
-# Unified theme template paths
+# Theme template paths (relative to templates/property/)
+# v2.0: Templates now use inheritance from _base/base.jinja2
 THEME_TEMPLATES = {
-    "teal": "property/teal/teal_report.jinja2",
-    "bold": "property/bold/bold_report.jinja2",
-    "classic": "property/classic/classic_report.jinja2",
-    "modern": "property/modern/modern_report.jinja2",
-    "elegant": "property/elegant/elegant_report.jinja2",
+    "teal": "teal/teal.jinja2",
+    "bold": "bold/bold.jinja2",
+    "classic": "classic/classic.jinja2",
+    "modern": "modern/modern.jinja2",
+    "elegant": "elegant/elegant.jinja2",
 }
 
 # Theme number to name mapping (for backward compatibility)

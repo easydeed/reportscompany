@@ -1,0 +1,893 @@
+{# =============================================================================
+   BASE PROPERTY REPORT TEMPLATE
+   All themes extend this template and override blocks as needed
+   
+   Page Structure (7 pages):
+   1. Cover        - Property hero image, address, agent info
+   2. Contents     - Table of contents
+   3. Aerial       - Aerial/satellite map view
+   4. Property     - Property details and tax info
+   5. Analysis     - Market analysis summary
+   6. Comparables  - Comparable sales grid
+   7. Range        - Price range visualization
+   ============================================================================= #}
+
+{% import '_base/_macros.jinja2' as macros %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Property Report - {{ property.full_address }}</title>
+  
+  {# Theme-specific fonts #}
+  {% block fonts %}{% endblock %}
+  
+  <style>
+    {# =========================================================================
+       BASE STYLES - Shared across all themes
+       ========================================================================= #}
+    
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    :root {
+      /* Page Dimensions - DO NOT CHANGE */
+      --page-width: 8.5in;
+      --page-height: 11in;
+      
+      /* Standardized Spacing - All themes use these */
+      --page-margin: 0.5in;
+      --footer-height: 0.6in;
+      --footer-bottom: 0.4in;
+      --header-height: 0.8in;
+      
+      /* Spacing Scale */
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 16px;
+      --space-lg: 24px;
+      --space-xl: 40px;
+      --space-2xl: 60px;
+      
+      /* Base Border Radius */
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-full: 9999px;
+      
+      /* Theme Variables - Override in each theme */
+      --color-primary: #1a1a1a;
+      --color-primary-light: #333333;
+      --color-accent: #666666;
+      --color-accent-light: #888888;
+      --color-background: #ffffff;
+      --color-surface: #f5f5f5;
+      --color-text: #1a1a1a;
+      --color-text-muted: #666666;
+      --color-border: #e5e5e5;
+      
+      --font-display: system-ui, sans-serif;
+      --font-body: system-ui, sans-serif;
+      
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+      --shadow-lg: 0 10px 40px rgba(0,0,0,0.15);
+    }
+    
+    html {
+      font-size: 16px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    
+    body {
+      font-family: var(--font-body);
+      color: var(--color-text);
+      background: #e5e5e5;
+      line-height: 1.5;
+    }
+    
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+    
+    {# =========================================================================
+       PAGE STRUCTURE
+       ========================================================================= #}
+    
+    .sheet {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px;
+      gap: 40px;
+    }
+    
+    .page {
+      width: var(--page-width);
+      height: var(--page-height);
+      background: var(--color-background);
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .page-content {
+      position: absolute;
+      top: var(--page-margin);
+      left: var(--page-margin);
+      right: var(--page-margin);
+      bottom: calc(var(--footer-height) + var(--footer-bottom));
+    }
+    
+    .page-content--full {
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+    }
+    
+    {# =========================================================================
+       PAGE HEADER COMPONENT
+       ========================================================================= #}
+    
+    .page-header {
+      margin-bottom: var(--space-lg);
+      padding-bottom: var(--space-md);
+      border-bottom: 2px solid var(--color-border);
+    }
+    
+    .page-title {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--color-primary);
+      line-height: 1.2;
+      margin-bottom: var(--space-xs);
+    }
+    
+    .page-subtitle {
+      font-size: 13px;
+      color: var(--color-text-muted);
+    }
+    
+    .page-header-accent {
+      width: 60px;
+      height: 3px;
+      background: var(--color-accent);
+      margin-top: var(--space-sm);
+    }
+    
+    {# =========================================================================
+       PAGE FOOTER COMPONENT
+       ========================================================================= #}
+    
+    .page-footer {
+      position: absolute;
+      bottom: var(--footer-bottom);
+      left: var(--page-margin);
+      right: var(--page-margin);
+      height: var(--footer-height);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--color-border);
+      padding-top: var(--space-md);
+    }
+    
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+    
+    .footer-agent-photo {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-full);
+      object-fit: cover;
+      border: 2px solid var(--color-accent);
+    }
+    
+    .footer-agent-photo--placeholder {
+      background: var(--color-primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .footer-agent-info {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    
+    .footer-agent-name {
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+    
+    .footer-agent-contact {
+      font-size: 10px;
+      color: var(--color-text-muted);
+    }
+    
+    .footer-right {
+      display: flex;
+      align-items: center;
+    }
+    
+    .footer-logo {
+      max-height: 40px;
+      max-width: 140px;
+      object-fit: contain;
+    }
+    
+    .footer-company {
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-primary);
+    }
+    
+    {# =========================================================================
+       COVER FOOTER (Agent Block)
+       ========================================================================= #}
+    
+    .cover-footer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--color-background);
+      padding: var(--space-lg) var(--page-margin);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .cover-agent {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+    }
+    
+    .cover-agent-photo {
+      width: 60px;
+      height: 60px;
+      border-radius: var(--radius-full);
+      object-fit: cover;
+      border: 3px solid var(--color-accent);
+    }
+    
+    .cover-agent-photo--placeholder {
+      background: var(--color-primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 24px;
+    }
+    
+    .cover-agent-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    
+    .cover-agent-name {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+    
+    .cover-agent-title {
+      font-size: 12px;
+      color: var(--color-text-muted);
+    }
+    
+    .cover-agent-contact {
+      font-size: 12px;
+      color: var(--color-text);
+      font-weight: 500;
+    }
+    
+    .cover-branding {
+      display: flex;
+      align-items: center;
+    }
+    
+    .cover-logo {
+      max-height: 50px;
+      max-width: 180px;
+      object-fit: contain;
+    }
+    
+    .cover-company-text {
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    
+    .cover-company-name {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--color-primary);
+    }
+    
+    .cover-company-tagline {
+      font-size: 11px;
+      color: var(--color-text-muted);
+    }
+    
+    {# =========================================================================
+       DATA TABLES
+       ========================================================================= #}
+    
+    .table-title {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-primary);
+      margin-bottom: var(--space-sm);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    
+    .data-table tr {
+      border-bottom: 1px solid var(--color-border);
+    }
+    
+    .data-table tr:last-child {
+      border-bottom: none;
+    }
+    
+    .data-table td {
+      padding: 10px 0;
+    }
+    
+    .data-label {
+      color: var(--color-text-muted);
+      width: 40%;
+    }
+    
+    .data-value {
+      color: var(--color-text);
+      font-weight: 500;
+    }
+    
+    {# =========================================================================
+       PROPERTY STATS
+       ========================================================================= #}
+    
+    .property-stats {
+      display: flex;
+      gap: var(--space-xl);
+    }
+    
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    
+    .stat-value {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+    
+    .stat-label {
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--color-text-muted);
+    }
+    
+    {# =========================================================================
+       COMP CARDS
+       ========================================================================= #}
+    
+    .comp-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-md);
+    }
+    
+    .comp-card {
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    
+    .comp-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-sm) var(--space-md);
+      background: var(--color-primary);
+      color: white;
+    }
+    
+    .comp-number {
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 600;
+      opacity: 0.7;
+    }
+    
+    .comp-price {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+    }
+    
+    .comp-image {
+      height: 100px;
+      overflow: hidden;
+    }
+    
+    .comp-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .comp-details {
+      padding: var(--space-md);
+    }
+    
+    .comp-address {
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: var(--space-xs);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .comp-meta {
+      font-size: 11px;
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-sm);
+    }
+    
+    .comp-meta-divider {
+      margin: 0 4px;
+      opacity: 0.5;
+    }
+    
+    .comp-stats {
+      display: flex;
+      gap: var(--space-md);
+    }
+    
+    .comp-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    
+    .comp-stat-value {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+    
+    .comp-stat-label {
+      font-size: 9px;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+    }
+    
+    {# =========================================================================
+       ANALYSIS COMPONENTS
+       ========================================================================= #}
+    
+    .analysis-summary {
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      padding: var(--space-lg);
+    }
+    
+    .analysis-range {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: var(--space-lg);
+      padding-bottom: var(--space-lg);
+      border-bottom: 1px solid var(--color-border);
+    }
+    
+    .range-item {
+      text-align: center;
+    }
+    
+    .range-label {
+      display: block;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-xs);
+    }
+    
+    .range-value {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--color-text);
+    }
+    
+    .range-median .range-value {
+      color: var(--color-accent);
+    }
+    
+    .analysis-stats {
+      display: flex;
+      justify-content: space-around;
+    }
+    
+    .analysis-stat {
+      text-align: center;
+    }
+    
+    .analysis-stat-value {
+      display: block;
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--color-primary);
+    }
+    
+    .analysis-stat-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--color-text-muted);
+    }
+    
+    {# =========================================================================
+       CONTENTS PAGE
+       ========================================================================= #}
+    
+    .contents-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+    
+    .contents-item {
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-md);
+      padding-bottom: var(--space-md);
+      border-bottom: 1px solid var(--color-border);
+    }
+    
+    .contents-number {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-accent);
+      min-width: 30px;
+    }
+    
+    .contents-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    
+    .contents-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+    
+    .contents-subtitle {
+      font-size: 12px;
+      color: var(--color-text-muted);
+    }
+    
+    {# =========================================================================
+       MAP CARD
+       ========================================================================= #}
+    
+    .map-card {
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    
+    .map-card-header {
+      padding: var(--space-md);
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-primary);
+      background: var(--color-background);
+      border-bottom: 1px solid var(--color-border);
+    }
+    
+    .map-card-image {
+      height: 400px;
+    }
+    
+    .map-card-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .map-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--color-surface);
+      color: var(--color-text-muted);
+      font-size: 14px;
+    }
+    
+    {# =========================================================================
+       PRICE RANGE BAR
+       ========================================================================= #}
+    
+    .price-range-bar {
+      margin: var(--space-lg) 0;
+    }
+    
+    .price-range-track {
+      height: 8px;
+      background: linear-gradient(90deg, var(--color-surface) 0%, var(--color-accent) 50%, var(--color-surface) 100%);
+      border-radius: var(--radius-full);
+      position: relative;
+    }
+    
+    .price-range-marker {
+      position: absolute;
+      top: -30px;
+      transform: translateX(-50%);
+    }
+    
+    .price-range-marker::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2px;
+      height: 38px;
+      background: var(--color-primary);
+    }
+    
+    .price-range-marker-label {
+      background: var(--color-primary);
+      color: white;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    
+    .price-range-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: var(--space-sm);
+      font-size: 12px;
+      color: var(--color-text-muted);
+    }
+    
+    {# =========================================================================
+       TWO COLUMN LAYOUT
+       ========================================================================= #}
+    
+    .two-column {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-xl);
+    }
+    
+    .two-column > * {
+      min-width: 0;
+    }
+    
+    {# =========================================================================
+       PRINT STYLES
+       ========================================================================= #}
+    
+    @page {
+      size: Letter;
+      margin: 0;
+    }
+    
+    @media print {
+      html, body {
+        background: white;
+        margin: 0;
+        padding: 0;
+      }
+      
+      .sheet {
+        padding: 0;
+        gap: 0;
+      }
+      
+      .page {
+        box-shadow: none;
+        page-break-after: always;
+        page-break-inside: avoid;
+      }
+      
+      .page:last-child {
+        page-break-after: auto;
+      }
+    }
+    
+    {# =========================================================================
+       THEME-SPECIFIC STYLES
+       Override these in each theme
+       ========================================================================= #}
+    {% block theme_styles %}{% endblock %}
+  </style>
+</head>
+<body>
+  <div class="sheet">
+    
+    {# =========================================================================
+       PAGE 1: COVER
+       ========================================================================= #}
+    <div class="page page-cover">
+      {% block cover %}
+      <div class="page-content page-content--full">
+        <div class="cover-bg" style="background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%){% if images.hero %}, url('{{ images.hero }}') center/cover{% endif %};"></div>
+        <div class="cover-content">
+          <div class="cover-property-type">{{ property.property_type | default('Residential') }}</div>
+          <h1 class="cover-address">{{ property.street_address }}</h1>
+          <p class="cover-location">{{ property.city }}, {{ property.state }} {{ property.zip_code }}</p>
+          <div class="cover-accent-line"></div>
+          {{ macros.property_stats(property) }}
+        </div>
+        {{ macros.cover_agent_block(agent) }}
+      </div>
+      {% endblock %}
+    </div>
+    
+    {# =========================================================================
+       PAGE 2: CONTENTS
+       ========================================================================= #}
+    <div class="page page-contents">
+      {% block contents %}
+      <div class="page-content">
+        {{ macros.page_header('Contents', 'Property Report Overview') }}
+        <div class="contents-list">
+          {{ macros.contents_item(1, 'Cover', property.street_address) }}
+          {{ macros.contents_item(2, 'Contents', 'Report Overview') }}
+          {{ macros.contents_item(3, 'Aerial View', 'Property Location Map') }}
+          {{ macros.contents_item(4, 'Property Details', 'Specifications & Tax Information') }}
+          {{ macros.contents_item(5, 'Area Sales Analysis', 'Market Statistics') }}
+          {{ macros.contents_item(6, 'Sales Comparables', 'Recent Comparable Sales') }}
+          {{ macros.contents_item(7, 'Range of Sales', 'Price Range Analysis') }}
+        </div>
+      </div>
+      {{ macros.page_footer(agent, 2) }}
+      {% endblock %}
+    </div>
+    
+    {# =========================================================================
+       PAGE 3: AERIAL VIEW
+       ========================================================================= #}
+    <div class="page page-aerial">
+      {% block aerial %}
+      <div class="page-content">
+        {{ macros.page_header('Aerial View', property.full_address) }}
+        {{ macros.map_card(images.aerial_map, 'Property Location') }}
+      </div>
+      {{ macros.page_footer(agent, 3) }}
+      {% endblock %}
+    </div>
+    
+    {# =========================================================================
+       PAGE 4: PROPERTY DETAILS
+       ========================================================================= #}
+    <div class="page page-property">
+      {% block property_details %}
+      <div class="page-content">
+        {{ macros.page_header('Property Details', property.full_address) }}
+        <div class="two-column">
+          <div>
+            {{ macros.property_details_table(property) }}
+          </div>
+          <div>
+            {{ macros.tax_table(property) }}
+            <div style="margin-top: var(--space-xl);">
+              {{ macros.location_table(property) }}
+            </div>
+          </div>
+        </div>
+      </div>
+      {{ macros.page_footer(agent, 4) }}
+      {% endblock %}
+    </div>
+    
+    {# =========================================================================
+       PAGE 5: AREA SALES ANALYSIS
+       ========================================================================= #}
+    <div class="page page-analysis">
+      {% block analysis %}
+      <div class="page-content">
+        {{ macros.page_header('Area Sales Analysis', 'Comparable Sales Summary') }}
+        {{ macros.analysis_summary(stats, property) }}
+      </div>
+      {{ macros.page_footer(agent, 5) }}
+      {% endblock %}
+    </div>
+    
+    {# =========================================================================
+       PAGE 6: SALES COMPARABLES
+       ========================================================================= #}
+    <div class="page page-comparables">
+      {% block comparables %}
+      <div class="page-content">
+        {{ macros.page_header('Sales Comparables', 'Recent Comparable Sales') }}
+        {{ macros.comp_grid(comparables) }}
+      </div>
+      {{ macros.page_footer(agent, 6) }}
+      {% endblock %}
+    </div>
+    
+    {# =========================================================================
+       PAGE 7: RANGE OF SALES
+       ========================================================================= #}
+    <div class="page page-range">
+      {% block range %}
+      <div class="page-content">
+        {{ macros.page_header('Range of Sales', 'Price Range Analysis') }}
+        {{ macros.price_range_bar(stats.price_low, stats.price_high) }}
+        <div class="range-comps-list">
+          {% for comp in comparables[:4] %}
+          <div class="range-comp-item">
+            <span class="range-comp-address">{{ comp.address }}</span>
+            <span class="range-comp-price">{{ comp.sale_price | format_currency }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {{ macros.page_footer(agent, 7) }}
+      {% endblock %}
+    </div>
+    
+  </div>
+</body>
+</html>

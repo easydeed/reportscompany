@@ -1,0 +1,456 @@
+{# =============================================================================
+   CLASSIC THEME
+   Timeless, trustworthy, traditional elegance
+   
+   Typography: Playfair Display (display) + Source Sans Pro (body)
+   Colors: Deep navy + warm tan
+   Style: Refined serif typography, classic layouts, understated luxury
+   ============================================================================= #}
+
+{% extends '_base/base.jinja2' %}
+
+{% block fonts %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;900&family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block theme_styles %}
+<style>
+  :root {
+    /* Classic Theme Colors - Primary is customizable */
+    --color-primary: {{ theme_color | default('#1B365D') }};
+    --color-primary-light: #2C4A7C;
+    --color-accent: #8B7355;
+    --color-accent-light: #A89070;
+    --color-background: #FFFFFF;
+    --color-surface: #FDFBF7;
+    --color-text: #1B365D;
+    --color-text-muted: #5C6670;
+    --color-border: #E0DCD4;
+    
+    /* Typography */
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-body: 'Source Sans Pro', system-ui, sans-serif;
+    
+    /* Classic-specific */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    
+    --shadow-sm: 0 2px 6px rgba(27, 54, 93, 0.06);
+    --shadow-md: 0 4px 16px rgba(27, 54, 93, 0.1);
+    --shadow-lg: 0 8px 30px rgba(27, 54, 93, 0.12);
+  }
+  
+  /* ==========================================================================
+     CLASSIC: Cover Page
+     ========================================================================== */
+  
+  .page-cover {
+    background: var(--color-surface);
+  }
+  
+  .page-cover .cover-bg {
+    position: absolute;
+    inset: 0;
+    background: 
+      linear-gradient(180deg, 
+        rgba(27, 54, 93, 0.0) 0%,
+        rgba(27, 54, 93, 0.15) 50%,
+        rgba(27, 54, 93, 0.85) 100%
+      ){% if images.hero %},
+      url('{{ images.hero }}') center/cover no-repeat{% endif %};
+  }
+  
+  /* Top accent bar - two-tone */
+  .page-cover::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary) 60%, var(--color-accent) 60%);
+    z-index: 10;
+  }
+  
+  /* Branding header */
+  .page-cover .cover-branding-header {
+    position: absolute;
+    top: var(--page-margin);
+    left: var(--page-margin);
+    right: var(--page-margin);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 5;
+  }
+  
+  .page-cover .report-badge {
+    background: var(--color-primary);
+    color: white;
+    padding: 8px 20px;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  
+  /* Main content area */
+  .page-cover .cover-content {
+    position: absolute;
+    bottom: 140px;
+    left: var(--page-margin);
+    right: var(--page-margin);
+    z-index: 5;
+  }
+  
+  .page-cover .cover-property-type {
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--color-accent-light);
+    margin-bottom: 16px;
+  }
+  
+  .page-cover .cover-address {
+    font-family: var(--font-display);
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: white;
+    margin-bottom: 12px;
+  }
+  
+  .page-cover .cover-location {
+    font-family: var(--font-body);
+    font-size: 18px;
+    font-weight: 400;
+    color: rgba(255,255,255,0.85);
+    letter-spacing: 0.5px;
+  }
+  
+  .page-cover .cover-accent-line {
+    width: 60px;
+    height: 3px;
+    background: var(--color-accent);
+    margin: 28px 0;
+  }
+  
+  .page-cover .property-stats {
+    margin-top: 20px;
+  }
+  
+  .page-cover .stat-value {
+    color: white;
+    font-size: 26px;
+    font-weight: 600;
+  }
+  
+  .page-cover .stat-label {
+    color: rgba(255,255,255,0.65);
+    font-family: var(--font-body);
+  }
+  
+  /* Footer override for cover */
+  .page-cover .cover-footer {
+    height: 110px;
+    padding: 0 var(--page-margin);
+    border-top: 1px solid var(--color-border);
+    background: white;
+  }
+  
+  .page-cover .cover-agent-photo {
+    border-color: var(--color-accent);
+    width: 64px;
+    height: 64px;
+  }
+  
+  .page-cover .cover-agent-name {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 600;
+  }
+  
+  /* ==========================================================================
+     CLASSIC: Page Header Overrides
+     ========================================================================== */
+  
+  .page-header {
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: var(--space-md);
+  }
+  
+  .page-header::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 3px;
+    background: var(--color-accent);
+    margin-top: var(--space-md);
+  }
+  
+  .page-title {
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  
+  .page-header-accent {
+    display: none;
+  }
+  
+  /* ==========================================================================
+     CLASSIC: Contents Page
+     ========================================================================== */
+  
+  .page-contents .contents-item {
+    border-bottom: 1px dotted var(--color-border);
+    padding: var(--space-lg) 0;
+  }
+  
+  .page-contents .contents-number {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--color-primary);
+    min-width: 50px;
+  }
+  
+  .page-contents .contents-title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 500;
+  }
+  
+  /* ==========================================================================
+     CLASSIC: Data Tables
+     ========================================================================== */
+  
+  .data-table {
+    border: 1px solid var(--color-border);
+  }
+  
+  .data-table tr:nth-child(even) {
+    background: var(--color-surface);
+  }
+  
+  .data-table td {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--color-border);
+  }
+  
+  .data-table tr:last-child td {
+    border-bottom: none;
+  }
+  
+  .table-title {
+    background: var(--color-surface);
+    color: var(--color-primary);
+    padding: 14px 18px;
+    border: 1px solid var(--color-border);
+    border-bottom: none;
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    font-size: 16px;
+  }
+  
+  /* ==========================================================================
+     CLASSIC: Comp Cards
+     ========================================================================== */
+  
+  .comp-card {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .comp-card-header {
+    background: var(--color-primary);
+    padding: 14px var(--space-md);
+  }
+  
+  .comp-number {
+    font-family: var(--font-display);
+  }
+  
+  .comp-price {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 700;
+  }
+  
+  .comp-address {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 14px;
+  }
+  
+  .comp-image {
+    height: 110px;
+  }
+  
+  /* ==========================================================================
+     CLASSIC: Analysis Summary
+     ========================================================================== */
+  
+  .analysis-summary {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .range-value {
+    font-family: var(--font-display);
+    font-weight: 700;
+  }
+  
+  .range-median .range-value {
+    color: var(--color-primary);
+    font-size: 24px;
+  }
+  
+  .analysis-stat-value {
+    font-family: var(--font-display);
+    color: var(--color-primary);
+  }
+  
+  /* ==========================================================================
+     CLASSIC: Map Card
+     ========================================================================== */
+  
+  .map-card {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .map-card-header {
+    background: var(--color-surface);
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    font-size: 16px;
+  }
+  
+  .map-card-image {
+    height: 440px;
+  }
+  
+  /* ==========================================================================
+     CLASSIC: Price Range
+     ========================================================================== */
+  
+  .price-range-track {
+    height: 10px;
+    background: linear-gradient(90deg, 
+      var(--color-surface) 0%, 
+      var(--color-accent) 50%,
+      var(--color-surface) 100%
+    );
+    border-radius: var(--radius-full);
+    border: 1px solid var(--color-border);
+  }
+  
+  .price-range-marker-label {
+    background: var(--color-primary);
+    font-family: var(--font-display);
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+  }
+  
+  /* Range comps list */
+  .range-comps-list {
+    margin-top: var(--space-xl);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  
+  .range-comp-item {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+  }
+  
+  .range-comp-item:last-child {
+    border-bottom: none;
+  }
+  
+  .range-comp-item:nth-child(even) {
+    background: var(--color-surface);
+  }
+  
+  .range-comp-address {
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  
+  .range-comp-price {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-primary);
+  }
+  
+  /* ==========================================================================
+     CLASSIC: Footer Overrides
+     ========================================================================== */
+  
+  .page-footer {
+    border-top: 1px solid var(--color-border);
+  }
+  
+  .page-footer::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: 0;
+    width: 60px;
+    height: 3px;
+    background: var(--color-accent);
+  }
+  
+  .footer-agent-name {
+    font-family: var(--font-display);
+    font-weight: 600;
+  }
+</style>
+{% endblock %}
+
+{# =============================================================================
+   COVER PAGE OVERRIDE
+   ============================================================================= #}
+{% block cover %}
+<div class="cover-bg"></div>
+
+<div class="cover-branding-header">
+  <div class="report-badge">Property Report</div>
+  {% if agent.logo_url %}
+  <img src="{{ agent.logo_url }}" alt="{{ agent.company_name }}" style="max-height: 50px; max-width: 160px; object-fit: contain;">
+  {% else %}
+  <span style="font-family: var(--font-display); font-size: 18px; font-weight: 600; color: var(--color-primary);">{{ agent.company_name }}</span>
+  {% endif %}
+</div>
+
+<div class="cover-content">
+  <div class="cover-property-type">{{ property.property_type | default('Single Family Residence') }}</div>
+  <h1 class="cover-address">{{ property.street_address }}</h1>
+  <p class="cover-location">{{ property.city }}, {{ property.state }} {{ property.zip_code }}</p>
+  <div class="cover-accent-line"></div>
+  {{ macros.property_stats(property) }}
+</div>
+
+{{ macros.cover_agent_block(agent) }}
+{% endblock %}

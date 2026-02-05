@@ -1,0 +1,436 @@
+{# =============================================================================
+   BOLD THEME
+   Confident, powerful, modern aesthetic with gold accents
+   
+   Typography: Oswald (display) + Inter (body)
+   Colors: Deep navy + gold
+   Style: Strong geometric shapes, bold type, high contrast
+   ============================================================================= #}
+
+{% extends '_base/base.jinja2' %}
+
+{% block fonts %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block theme_styles %}
+<style>
+  :root {
+    /* Bold Theme Colors - Primary is customizable via theme_color */
+    --color-primary: {{ theme_color | default('#0F1629') }};
+    --color-primary-light: {{ theme_color | default('#1a2744') }};
+    --color-accent: #C9A227;
+    --color-accent-light: #dbb94a;
+    --color-background: #FFFFFF;
+    --color-surface: #F8F7F4;
+    --color-text: #0F1629;
+    --color-text-muted: #64748B;
+    --color-border: #E2E8F0;
+    
+    /* Typography */
+    --font-display: 'Oswald', system-ui, sans-serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+    
+    /* Bold-specific */
+    --radius-sm: 2px;
+    --radius-md: 4px;
+    --radius-lg: 6px;
+    
+    --shadow-sm: 0 2px 4px rgba(15, 22, 41, 0.08);
+    --shadow-md: 0 4px 12px rgba(15, 22, 41, 0.12);
+    --shadow-lg: 0 12px 40px rgba(15, 22, 41, 0.18);
+  }
+  
+  /* ==========================================================================
+     BOLD: Cover Page
+     ========================================================================== */
+  
+  .page-cover {
+    background: var(--color-primary);
+  }
+  
+  .page-cover .cover-bg {
+    position: absolute;
+    inset: 0;
+    background: 
+      linear-gradient(180deg, 
+        rgba(15, 22, 41, 0.05) 0%,
+        rgba(15, 22, 41, 0.3) 40%,
+        rgba(15, 22, 41, 0.92) 100%
+      ){% if images.hero %},
+      url('{{ images.hero }}') center/cover no-repeat{% endif %};
+  }
+  
+  /* Top accent bar */
+  .page-cover::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: linear-gradient(90deg, var(--color-accent) 0%, var(--color-accent) 40%, var(--color-primary) 40%);
+    z-index: 10;
+  }
+  
+  /* Branding header */
+  .page-cover .cover-branding-header {
+    position: absolute;
+    top: var(--page-margin);
+    left: var(--page-margin);
+    right: var(--page-margin);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    z-index: 5;
+  }
+  
+  .page-cover .logo-mark {
+    width: 48px;
+    height: 48px;
+    background: var(--color-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--color-primary);
+  }
+  
+  .page-cover .report-badge {
+    background: rgba(255,255,255,0.95);
+    padding: 10px 20px;
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--color-primary);
+  }
+  
+  /* Main content area */
+  .page-cover .cover-content {
+    position: absolute;
+    bottom: 140px;
+    left: var(--page-margin);
+    right: var(--page-margin);
+    z-index: 5;
+  }
+  
+  .page-cover .cover-property-type {
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    margin-bottom: 12px;
+  }
+  
+  .page-cover .cover-address {
+    font-family: var(--font-display);
+    font-size: 52px;
+    font-weight: 700;
+    line-height: 1.05;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: -1px;
+    margin-bottom: 16px;
+  }
+  
+  .page-cover .cover-location {
+    font-family: var(--font-body);
+    font-size: 16px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.8);
+    letter-spacing: 0.5px;
+  }
+  
+  .page-cover .cover-accent-line {
+    width: 80px;
+    height: 4px;
+    background: var(--color-accent);
+    margin: 24px 0;
+  }
+  
+  .page-cover .property-stats {
+    margin-top: 20px;
+  }
+  
+  .page-cover .stat-value {
+    color: white;
+    font-size: 28px;
+  }
+  
+  .page-cover .stat-label {
+    color: rgba(255,255,255,0.6);
+  }
+  
+  /* Corner accent */
+  .page-cover::after {
+    content: '';
+    position: absolute;
+    bottom: 110px;
+    right: 0;
+    width: 120px;
+    height: 120px;
+    background: var(--color-accent);
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    opacity: 0.9;
+    z-index: 4;
+  }
+  
+  /* Footer override for cover */
+  .page-cover .cover-footer {
+    height: 110px;
+    padding: 0 var(--page-margin);
+    border-top: none;
+  }
+  
+  .page-cover .cover-agent-photo {
+    border-color: var(--color-accent);
+    width: 64px;
+    height: 64px;
+  }
+  
+  .page-cover .cover-agent-name {
+    font-size: 18px;
+    font-weight: 700;
+  }
+  
+  /* ==========================================================================
+     BOLD: Page Header Overrides
+     ========================================================================== */
+  
+  .page-header {
+    border-bottom: 3px solid var(--color-primary);
+  }
+  
+  .page-title {
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 32px;
+  }
+  
+  .page-header-accent {
+    display: none; /* Using border instead */
+  }
+  
+  /* ==========================================================================
+     BOLD: Contents Page
+     ========================================================================== */
+  
+  .page-contents .contents-item {
+    border-bottom: 2px solid var(--color-border);
+    padding: var(--space-md) 0;
+  }
+  
+  .page-contents .contents-number {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-accent);
+    min-width: 40px;
+  }
+  
+  .page-contents .contents-title {
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 18px;
+  }
+  
+  /* ==========================================================================
+     BOLD: Data Tables
+     ========================================================================== */
+  
+  .data-table tr:nth-child(odd) {
+    background: var(--color-surface);
+  }
+  
+  .data-table td {
+    padding: 12px 16px;
+  }
+  
+  .table-title {
+    background: var(--color-primary);
+    color: white;
+    padding: 12px 16px;
+    margin-bottom: 0;
+  }
+  
+  /* ==========================================================================
+     BOLD: Comp Cards
+     ========================================================================== */
+  
+  .comp-card {
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+  }
+  
+  .comp-card-header {
+    background: var(--color-primary);
+    padding: 12px var(--space-md);
+  }
+  
+  .comp-price {
+    font-size: 18px;
+    letter-spacing: -0.5px;
+  }
+  
+  .comp-address {
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  
+  /* ==========================================================================
+     BOLD: Analysis Summary
+     ========================================================================== */
+  
+  .analysis-summary {
+    background: var(--color-surface);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+  }
+  
+  .range-value {
+    letter-spacing: -1px;
+  }
+  
+  .range-median {
+    background: var(--color-primary);
+    color: white;
+    padding: var(--space-md);
+    margin: calc(-1 * var(--space-lg));
+    margin-bottom: var(--space-lg);
+  }
+  
+  .range-median .range-label {
+    color: rgba(255,255,255,0.7);
+  }
+  
+  .range-median .range-value {
+    color: var(--color-accent);
+    font-size: 28px;
+  }
+  
+  /* ==========================================================================
+     BOLD: Map Card
+     ========================================================================== */
+  
+  .map-card {
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+  }
+  
+  .map-card-header {
+    background: var(--color-primary);
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  .map-card-image {
+    height: 450px;
+  }
+  
+  /* ==========================================================================
+     BOLD: Price Range
+     ========================================================================== */
+  
+  .price-range-track {
+    height: 12px;
+    background: linear-gradient(90deg, 
+      var(--color-surface) 0%, 
+      var(--color-accent) 35%,
+      var(--color-primary) 65%,
+      var(--color-surface) 100%
+    );
+    border-radius: 2px;
+  }
+  
+  .price-range-marker-label {
+    background: var(--color-primary);
+    font-size: 14px;
+    padding: 6px 14px;
+  }
+  
+  /* Range comps list */
+  .range-comps-list {
+    margin-top: var(--space-xl);
+    background: var(--color-surface);
+    border: 2px solid var(--color-border);
+  }
+  
+  .range-comp-item {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+  }
+  
+  .range-comp-item:last-child {
+    border-bottom: none;
+  }
+  
+  .range-comp-item:nth-child(odd) {
+    background: white;
+  }
+  
+  .range-comp-address {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  
+  .range-comp-price {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-primary);
+  }
+  
+  /* ==========================================================================
+     BOLD: Footer Overrides
+     ========================================================================== */
+  
+  .page-footer {
+    border-top: 3px solid var(--color-primary);
+  }
+  
+  .footer-agent-name {
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+</style>
+{% endblock %}
+
+{# =============================================================================
+   COVER PAGE OVERRIDE
+   Bold has a unique cover layout
+   ============================================================================= #}
+{% block cover %}
+<div class="cover-bg"></div>
+
+<div class="cover-branding-header">
+  {% if agent.logo_url %}
+  <img src="{{ agent.logo_url }}" alt="{{ agent.company_name }}" style="max-height: 48px; max-width: 140px; object-fit: contain;">
+  {% else %}
+  <div class="logo-mark">{{ agent.company_short | default(agent.company_name[:2] | upper) }}</div>
+  {% endif %}
+  <div class="report-badge">Property Report</div>
+</div>
+
+<div class="cover-content">
+  <div class="cover-property-type">{{ property.property_type | default('Single Family Residence') }}</div>
+  <h1 class="cover-address">{{ property.street_address }}</h1>
+  <p class="cover-location">{{ property.city }}, {{ property.state }} {{ property.zip_code }}</p>
+  <div class="cover-accent-line"></div>
+  {{ macros.property_stats(property) }}
+</div>
+
+{{ macros.cover_agent_block(agent) }}
+{% endblock %}
