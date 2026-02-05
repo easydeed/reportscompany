@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { motion } from "framer-motion"
+import Image from "next/image"
 import {
   ArrowRight,
   Check,
@@ -21,7 +22,6 @@ import {
   CalendarCheck,
 } from "lucide-react"
 import Link from "next/link"
-import Image from "next/image"
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
 
 export function MarketingHome() {
@@ -102,9 +102,12 @@ export function MarketingHome() {
               transition={{ duration: 0.4, delay: 0.1 }}
               className="relative lg:scale-[1.15] lg:translate-x-4"
             >
-              <img
+              <Image
                 src="/images/hero-dashboard.png"
                 alt="TrendyReports dashboard showing market reports, analytics, and automated email delivery"
+                width={1200}
+                height={800}
+                priority
                 className="w-full h-auto drop-shadow-2xl"
               />
             </motion.div>
