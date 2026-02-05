@@ -158,7 +158,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
             return (
               <SidebarMenuItem key={item.name}>
                 <SidebarMenuButton asChild isActive={isActive}>
-                  <Link href={item.href}>
+                  <Link href={item.href} prefetch={true}>
                     <item.icon className="w-4 h-4" />
                     <span>{item.name}</span>
                   </Link>
@@ -184,7 +184,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
                     return (
                       <SidebarMenuSubItem key={item.name}>
                         <SidebarMenuSubButton asChild isActive={isSubActive}>
-                          <Link href={item.href}>
+                          <Link href={item.href} prefetch={true}>
                             <item.icon className="w-4 h-4" />
                             <span>{item.name}</span>
                           </Link>
@@ -215,7 +215,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
                       return (
                         <SidebarMenuSubItem key={item.name}>
                           <SidebarMenuSubButton asChild isActive={isSubActive}>
-                            <Link href={item.href}>
+                            <Link href={item.href} prefetch={true}>
                               <item.icon className="w-4 h-4" />
                               <span>{item.name}</span>
                             </Link>

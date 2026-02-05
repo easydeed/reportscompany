@@ -18,12 +18,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     const token = cookieStore.get('mr_token')?.value
     
     if (token) {
-      // Call /v1/me with the JWT cookie
+      // Fetch user info with 5-minute cache to avoid re-fetching on every navigation
       const response = await fetch(`${API_BASE}/v1/me`, {
         headers: {
           'Cookie': `mr_token=${token}`,
         },
-        cache: 'no-store',
+        next: {
+          revalidate: 300, // 5 minute cache
+          tags: ['user-profile'],
+        },
       })
       
       if (response.ok) {
