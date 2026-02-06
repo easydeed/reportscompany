@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -24,13 +24,27 @@ import {
   Eye,
   QrCode,
   ExternalLink,
+  Sparkles,
+  RotateCcw,
+  Copy,
+  Bed,
+  Bath,
+  Maximize,
+  ChevronDown,
+  X,
+  BarChart3,
+  AlertCircle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
 import { apiFetch } from "@/lib/api";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 
 // Import our existing components
 import { ThemeSelector } from "@/components/property/ThemeSelector";
@@ -102,8 +116,8 @@ const initialState: WizardState = {
   property: null,
   comparables: [],
   selectedCompIds: [],
-  theme: 1,
-  accentColor: "#0d294b",
+  theme: 5, // Bold as default
+  accentColor: "#15216E",
   selectedPages: ALL_PAGES.map(p => p.id),
   reportId: null,
 };
@@ -117,6 +131,24 @@ const STEPS = [
   { id: 2, name: "Comparables", icon: Map },
   { id: 3, name: "Theme", icon: Palette },
   { id: 4, name: "Generate", icon: FileText },
+];
+
+// Theme data for preview
+const THEME_GRADIENTS: Record<number, string> = {
+  1: "linear-gradient(135deg, #1B365D 0%, #0f2040 100%)", // Classic
+  2: "linear-gradient(135deg, #1A1F36 0%, #FF6B5B 100%)", // Modern
+  3: "linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)", // Elegant
+  4: "linear-gradient(135deg, #18235c 0%, #34d1c3 100%)", // Teal
+  5: "linear-gradient(135deg, #15216E 0%, #0a1145 100%)", // Bold
+};
+
+// Generation stages
+const GENERATION_STAGES = [
+  "Fetching property data...",
+  "Analyzing comparables...",
+  "Rendering report pages...",
+  "Generating PDF...",
+  "Finalizing...",
 ];
 
 // ============================================
@@ -146,6 +178,24 @@ function validateStep(state: WizardState, step: number): { valid: boolean; error
 }
 
 // ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+const formatCurrency = (value: number | null | undefined): string => {
+  if (value == null) return "N/A";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
+const formatNumber = (value: number | null | undefined): string => {
+  if (value == null) return "—";
+  return new Intl.NumberFormat("en-US").format(value);
+};
+
+// ============================================
 // MAIN COMPONENT
 // ============================================
 
@@ -154,6 +204,7 @@ export default function NewPropertyReportPage() {
   
   // Core state
   const [currentStep, setCurrentStep] = useState(1);
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [state, setState] = useState<WizardState>(initialState);
   const [error, setError] = useState<string | null>(null);
   
@@ -164,6 +215,7 @@ export default function NewPropertyReportPage() {
   
   // Generation state
   const [generationState, setGenerationState] = useState<"idle" | "generating" | "completed" | "failed">("idle");
+  const [generationStage, setGenerationStage] = useState(0);
   const [generatedReport, setGeneratedReport] = useState<{ 
     id: string; 
     pdf_url: string | null;
@@ -173,6 +225,9 @@ export default function NewPropertyReportPage() {
 
   // Map modal
   const [showMapModal, setShowMapModal] = useState(false);
+  
+  // Copy state
+  const [copied, setCopied] = useState(false);
 
   // Google Places for Step 1
   const addressInputRef = useRef<HTMLInputElement>(null);
@@ -187,7 +242,6 @@ export default function NewPropertyReportPage() {
       cityStateZip: cityStateZip,
     }));
 
-    // Update input value after Google manipulates it
     requestAnimationFrame(() => {
       if (addressInputRef.current) {
         addressInputRef.current.value = streetAddress;
@@ -210,9 +264,28 @@ export default function NewPropertyReportPage() {
     }
   }, [currentStep, state.property, compsFetched, compsLoading]);
 
+  // Update completed steps
+  useEffect(() => {
+    const newCompleted: number[] = [];
+    if (state.property) newCompleted.push(1);
+    if (state.selectedCompIds.length >= 4) newCompleted.push(2);
+    if (state.theme >= 1 && state.theme <= 5) newCompleted.push(3);
+    setCompletedSteps(newCompleted);
+  }, [state.property, state.selectedCompIds, state.theme]);
+
   // ============================================
   // NAVIGATION
   // ============================================
+
+  const canNavigateTo = (stepId: number): boolean => {
+    if (stepId === 1) return true;
+    if (stepId <= currentStep) return true;
+    // Can only go forward if current step is complete
+    for (let i = 1; i < stepId; i++) {
+      if (!completedSteps.includes(i)) return false;
+    }
+    return true;
+  };
 
   const handleNext = () => {
     const validation = validateStep(state, currentStep);
@@ -229,6 +302,13 @@ export default function NewPropertyReportPage() {
   const handleBack = () => {
     setError(null);
     setCurrentStep(Math.max(1, currentStep - 1));
+  };
+
+  const goToStep = (stepId: number) => {
+    if (canNavigateTo(stepId)) {
+      setError(null);
+      setCurrentStep(stepId);
+    }
   };
 
   // ============================================
@@ -257,7 +337,6 @@ export default function NewPropertyReportPage() {
         setState(prev => ({ 
           ...prev, 
           property: response.data,
-          // Reset comparables when property changes
           comparables: [],
           selectedCompIds: [],
         }));
@@ -271,6 +350,18 @@ export default function NewPropertyReportPage() {
     } finally {
       setSearchLoading(false);
     }
+  };
+
+  const clearProperty = () => {
+    setState(prev => ({ 
+      ...prev, 
+      property: null,
+      address: "",
+      cityStateZip: "",
+      comparables: [],
+      selectedCompIds: [],
+    }));
+    setCompsFetched(false);
   };
 
   // ============================================
@@ -355,13 +446,16 @@ export default function NewPropertyReportPage() {
     if (!state.property) return;
 
     setGenerationState("generating");
+    setGenerationStage(0);
     setError(null);
 
+    // Simulate stage progression
+    const stageInterval = setInterval(() => {
+      setGenerationStage(prev => Math.min(prev + 1, GENERATION_STAGES.length - 1));
+    }, 4000);
+
     try {
-      // Use street address (not full_address which includes city/state/zip)
       const streetAddress = state.property.street || state.property.full_address.split(",")[0].trim();
-      
-      // Get the full comparable objects for the selected IDs
       const selectedComparables = state.comparables.filter(c => 
         state.selectedCompIds.includes(c.id)
       );
@@ -379,7 +473,7 @@ export default function NewPropertyReportPage() {
           apn: state.property.apn || "",
           owner_name: state.property.owner_name || "",
           selected_comp_ids: state.selectedCompIds,
-          comparables: selectedComparables,  // Send full comparable objects
+          comparables: selectedComparables,
           selected_pages: state.selectedPages,
           sitex_data: state.property,
         }),
@@ -399,17 +493,22 @@ export default function NewPropertyReportPage() {
           const statusResponse = await apiFetch(`/v1/property/reports/${reportId}`);
 
           if (statusResponse.status === "complete") {
-            setGenerationState("completed");
-            setGeneratedReport({
-              id: reportId,
-              pdf_url: statusResponse.pdf_url || null,
-              qr_code_url: statusResponse.qr_code_url || null,
-              short_code: statusResponse.short_code || null,
-            });
+            clearInterval(stageInterval);
+            setGenerationStage(GENERATION_STAGES.length - 1);
+            setTimeout(() => {
+              setGenerationState("completed");
+              setGeneratedReport({
+                id: reportId,
+                pdf_url: statusResponse.pdf_url || null,
+                qr_code_url: statusResponse.qr_code_url || null,
+                short_code: statusResponse.short_code || null,
+              });
+            }, 500);
             return;
           }
 
           if (statusResponse.status === "failed" || attempts > 60) {
+            clearInterval(stageInterval);
             setGenerationState("failed");
             setError(statusResponse.error_message || "Report generation failed");
             return;
@@ -421,6 +520,7 @@ export default function NewPropertyReportPage() {
           if (attempts < 5) {
             setTimeout(poll, 3000);
           } else {
+            clearInterval(stageInterval);
             setGenerationState("failed");
             setError("Connection lost while generating. Check your reports list.");
           }
@@ -428,217 +528,218 @@ export default function NewPropertyReportPage() {
       };
       poll();
     } catch (err) {
+      clearInterval(stageInterval);
       console.error("Generation error:", err);
       setGenerationState("failed");
       setError(err instanceof Error ? err.message : "Failed to generate report");
     }
   };
 
+  const handleRetry = () => {
+    setGenerationState("idle");
+    setGenerationStage(0);
+    setError(null);
+  };
+
+  const copyUrl = async () => {
+    if (!generatedReport?.short_code) return;
+    const url = `https://trendyreports.io/p/${generatedReport.short_code}`;
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   // ============================================
-  // HELPER: Format Currency
+  // RENDER - STEP PROGRESS
   // ============================================
 
-  const formatCurrency = (value: number | null | undefined): string => {
-    if (value == null) return "N/A";
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
+  const renderStepProgress = () => (
+    <div className="bg-white rounded-xl border border-[var(--border)] p-4 shadow-[var(--shadow-card)]">
+      <div className="flex items-center gap-2">
+        {STEPS.map((step, index) => {
+          const Icon = step.icon;
+          const isActive = currentStep === step.id;
+          const isComplete = completedSteps.includes(step.id);
+          const isLast = index === STEPS.length - 1;
+
+          return (
+            <Fragment key={step.id}>
+              <button
+                onClick={() => canNavigateTo(step.id) && goToStep(step.id)}
+                disabled={!canNavigateTo(step.id)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200",
+                  isActive && "bg-primary/10 ring-1 ring-primary/20",
+                  isComplete && !isActive && "hover:bg-muted/50 cursor-pointer",
+                  !isActive && !isComplete && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                <div className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300",
+                  isComplete && "bg-emerald-500 text-white",
+                  isActive && !isComplete && "bg-primary text-white",
+                  !isActive && !isComplete && "bg-muted text-muted-foreground"
+                )}>
+                  {isComplete ? (
+                    <Check className="w-4 h-4" />
+                  ) : (
+                    <Icon className="w-4 h-4" />
+                  )}
+                </div>
+                <span className={cn(
+                  "text-sm font-medium hidden sm:block",
+                  isActive && "text-primary",
+                  isComplete && !isActive && "text-foreground",
+                  !isActive && !isComplete && "text-muted-foreground"
+                )}>
+                  {step.name}
+                </span>
+              </button>
+
+              {!isLast && (
+                <div className={cn(
+                  "h-px flex-1 transition-colors duration-300",
+                  isComplete ? "bg-emerald-300" : "bg-border"
+                )} />
+              )}
+            </Fragment>
+          );
+        })}
+      </div>
+    </div>
+  );
 
   // ============================================
   // RENDER - STEP 1: Property Search
   // ============================================
 
   const renderStep1 = () => (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold mb-2">Find Your Property</h2>
-        <p className="text-muted-foreground">
-          Enter the property address. We&apos;ll pull all the details from public records.
-        </p>
-      </div>
+    <div className="space-y-4">
+      {/* Search Card */}
+      <div className="bg-white rounded-xl border border-[var(--border)] p-5 shadow-[var(--shadow-card)]">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-base font-semibold text-foreground">Find Property</h3>
+            <p className="text-sm text-muted-foreground mt-0.5">Search by address to pull property records</p>
+          </div>
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Search className="w-5 h-5 text-primary" />
+          </div>
+        </div>
 
-      {/* Search Form */}
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="address">Property Address</Label>
+        <div className="space-y-3">
           <div className="relative">
-            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               ref={addressInputRef}
-              id="address"
               type="text"
-              placeholder="Start typing an address..."
+              placeholder="Enter property address..."
               value={state.address}
               onChange={(e) => setState(prev => ({ ...prev, address: e.target.value }))}
               onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
-              className="w-full pl-10 pr-4 py-3 rounded-lg border bg-background text-base"
+              className="w-full pl-10 h-11 text-sm bg-muted/30 border border-border rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
               autoComplete="off"
             />
           </div>
+          
+          <input
+            type="text"
+            placeholder="City, State ZIP (e.g., Anaheim, CA 92805)"
+            value={state.cityStateZip}
+            onChange={(e) => setState(prev => ({ ...prev, cityStateZip: e.target.value }))}
+            onKeyDown={(e) => e.key === "Enter" && handlePropertySearch()}
+            className="w-full px-3 h-11 text-sm bg-muted/30 border border-border rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+          />
+          
           <p className="text-xs text-muted-foreground">
             {!googleLoaded && !placesError && "Loading address suggestions..."}
             {googleLoaded && !placesError && "Start typing to see suggestions"}
             {placesError && <span className="text-amber-600">{placesError}</span>}
           </p>
-        </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="cityStateZip">City, State ZIP</Label>
-          <input
-            id="cityStateZip"
-            type="text"
-            placeholder="e.g., Anaheim, CA 92805"
-            value={state.cityStateZip}
-            onChange={(e) => setState(prev => ({ ...prev, cityStateZip: e.target.value }))}
-            onKeyDown={(e) => e.key === "Enter" && handlePropertySearch()}
-            className="w-full px-4 py-3 rounded-lg border bg-background"
-          />
+          {!state.property && (
+            <Button
+              onClick={handlePropertySearch}
+              disabled={searchLoading || !state.address.trim()}
+              className="w-full h-11"
+            >
+              {searchLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Searching...
+                </>
+              ) : (
+                <>
+                  <Search className="w-4 h-4 mr-2" />
+                  Search Property
+                </>
+              )}
+            </Button>
+          )}
         </div>
-
-        {/* Search Button - Only show when no property selected */}
-        {!state.property && (
-          <Button
-            onClick={handlePropertySearch}
-            disabled={searchLoading || !state.address.trim()}
-            className="w-full py-6 text-base"
-          >
-            {searchLoading ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Searching...
-              </>
-            ) : (
-              <>
-                <Search className="w-5 h-5 mr-2" />
-                Search Property
-              </>
-            )}
-          </Button>
-        )}
       </div>
 
-      {/* Property Result Card - Full SiteX Details */}
+      {/* Property Result Card */}
       {state.property && (
-        <div className="border-2 border-green-500 rounded-xl overflow-hidden">
+        <div className="bg-white rounded-xl border-2 border-emerald-500 overflow-hidden animate-in slide-in-from-bottom-2 duration-300 shadow-[var(--shadow-card)]">
           {/* Success Header */}
-          <div className="bg-green-50 dark:bg-green-950/30 px-4 py-3 flex items-center justify-between border-b border-green-200">
-            <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+          <div className="bg-emerald-50 px-4 py-3 flex items-center justify-between border-b border-emerald-200">
+            <div className="flex items-center gap-2 text-emerald-700">
               <CheckCircle2 className="w-5 h-5" />
-              <span className="font-semibold">Property Found</span>
+              <span className="font-semibold text-sm">Property Found</span>
             </div>
-            <button
-              onClick={() => {
-                setState(prev => ({ 
-                  ...prev, 
-                  property: null,
-                  comparables: [],
-                  selectedCompIds: [],
-                }));
-                setCompsFetched(false);
-              }}
-              className="text-sm text-green-700 hover:text-green-900 hover:underline"
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearProperty}
+              className="text-emerald-700 hover:text-emerald-900 hover:bg-emerald-100"
             >
-              Search Different Property
-            </button>
+              <X className="w-4 h-4 mr-1" />
+              Clear
+            </Button>
           </div>
 
-          <div className="p-5 space-y-5">
+          <div className="p-5">
             {/* Address */}
-            <div className="flex items-start gap-4">
+            <div className="flex items-start gap-4 mb-4">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <Home className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <p className="text-xl font-bold">{state.property.full_address}</p>
-                <p className="text-muted-foreground">
+                <p className="text-lg font-bold text-foreground">{state.property.full_address}</p>
+                <p className="text-sm text-muted-foreground">
                   {state.property.city}, {state.property.state} {state.property.zip_code}
                 </p>
-                {state.property.county && (
-                  <p className="text-sm text-muted-foreground">{state.property.county} County</p>
-                )}
               </div>
             </div>
 
-            {/* Key Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Beds</p>
-                <p className="text-lg font-bold">{state.property.bedrooms ?? "N/A"}</p>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Baths</p>
-                <p className="text-lg font-bold">{state.property.bathrooms ?? "N/A"}</p>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Sqft</p>
-                <p className="text-lg font-bold">{state.property.sqft?.toLocaleString() ?? "N/A"}</p>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Year Built</p>
-                <p className="text-lg font-bold">{state.property.year_built || "N/A"}</p>
-              </div>
+            {/* Key Stats */}
+            <div className="grid grid-cols-4 gap-3 mb-4">
+              <StatBadge icon={Bed} label="Beds" value={state.property.bedrooms} />
+              <StatBadge icon={Bath} label="Baths" value={state.property.bathrooms} />
+              <StatBadge icon={Maximize} label="Sqft" value={formatNumber(state.property.sqft)} />
+              <StatBadge icon={Calendar} label="Built" value={state.property.year_built} />
             </div>
 
-            {/* Additional Details */}
-            <div className="grid md:grid-cols-3 gap-4 pt-4 border-t">
-              <div className="flex items-start gap-3">
-                <User className="w-4 h-4 text-muted-foreground mt-1" />
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase">Owner</p>
-                  <p className="font-medium">{state.property.owner_name || "Not available"}</p>
+            {/* Collapsible Details */}
+            <Collapsible>
+              <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full pt-3 border-t border-border">
+                <ChevronDown className="w-4 h-4" />
+                More property details
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-3 mt-3 border-t border-border">
+                <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm">
+                  <DetailRow label="Owner" value={state.property.owner_name} />
+                  <DetailRow label="APN" value={state.property.apn} mono />
+                  <DetailRow label="Assessed Value" value={formatCurrency(state.property.assessed_value)} />
+                  <DetailRow label="Lot Size" value={state.property.lot_size} />
+                  <DetailRow label="Property Type" value={state.property.property_type || "Residential"} />
+                  {state.property.tax_amount && (
+                    <DetailRow label="Annual Taxes" value={formatCurrency(state.property.tax_amount)} />
+                  )}
                 </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <FileText className="w-4 h-4 text-muted-foreground mt-1" />
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase">APN</p>
-                  <p className="font-medium font-mono text-sm">{state.property.apn || "N/A"}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <DollarSign className="w-4 h-4 text-muted-foreground mt-1" />
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase">Assessed Value</p>
-                  <p className="font-medium">{formatCurrency(state.property.assessed_value)}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Property Type & Lot */}
-            <div className="grid md:grid-cols-2 gap-4 pt-4 border-t">
-              <div className="flex items-start gap-3">
-                <Building className="w-4 h-4 text-muted-foreground mt-1" />
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase">Property Type</p>
-                  <p className="font-medium">{state.property.property_type || "Residential"}</p>
-                </div>
-              </div>
-              {state.property.lot_size && (
-                <div className="flex items-start gap-3">
-                  <MapPin className="w-4 h-4 text-muted-foreground mt-1" />
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase">Lot Size</p>
-                    <p className="font-medium">{state.property.lot_size}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Tax Info */}
-            {state.property.tax_amount && (
-              <div className="pt-4 border-t">
-                <div className="flex items-start gap-3">
-                  <Calendar className="w-4 h-4 text-muted-foreground mt-1" />
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase">Annual Taxes</p>
-                    <p className="font-medium">{formatCurrency(state.property.tax_amount)}</p>
-                  </div>
-                </div>
-              </div>
-            )}
+              </CollapsibleContent>
+            </Collapsible>
           </div>
         </div>
       )}
@@ -649,122 +750,116 @@ export default function NewPropertyReportPage() {
   // RENDER - STEP 2: Comparables
   // ============================================
 
-  const renderStep2 = () => {
-    const selectedCount = state.selectedCompIds.length;
-    
-    return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Select Comparables</h2>
-          <p className="text-muted-foreground">
-            Choose 4-8 comparable properties for your report
+  const renderStep2 = () => (
+    <div className="space-y-4">
+      {/* Header Card */}
+      <div className="bg-white rounded-xl border border-[var(--border)] p-5 shadow-[var(--shadow-card)]">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-foreground">Select Comparables</h3>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Choose 4-8 comparable properties for your report
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={cn(
+              "text-sm font-medium px-2 py-1 rounded-full",
+              state.selectedCompIds.length >= 4 
+                ? "bg-emerald-100 text-emerald-700" 
+                : "bg-amber-100 text-amber-700"
+            )}>
+              {state.selectedCompIds.length}/4+ selected
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Loading State */}
+      {compsLoading && (
+        <div className="bg-white rounded-xl border border-[var(--border)] p-12 text-center shadow-[var(--shadow-card)]">
+          <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Finding comparable properties...</p>
+          <p className="text-sm text-muted-foreground/70 mt-1">
+            Searching within 1 mile, ±25% sqft
           </p>
         </div>
+      )}
 
-        {/* Loading State */}
-        {compsLoading && (
-          <div className="text-center py-12">
-            <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4" />
-            <p className="text-muted-foreground">Finding comparable properties...</p>
-            <p className="text-sm text-muted-foreground/70 mt-1">
-              Searching within 1 mile, ±25% sqft
-            </p>
-          </div>
-        )}
-
-        {/* Comparables Picker */}
-        {!compsLoading && state.comparables.length > 0 && (
-          <>
-            <ComparablesPicker
-              availableComps={state.comparables}
-              selectedIds={state.selectedCompIds}
-              onSelectionChange={(ids) => setState(prev => ({ ...prev, selectedCompIds: ids }))}
-              onOpenMap={() => setShowMapModal(true)}
-              minSelections={4}
-              maxSelections={8}
-              subjectProperty={state.property ? {
-                bedrooms: state.property.bedrooms,
-                bathrooms: state.property.bathrooms,
-                sqft: state.property.sqft,
-              } : undefined}
-              mapDisabled={!state.property?.latitude || !state.property?.longitude}
-            />
-
-            {/* Info bar */}
-            <div className="text-sm text-muted-foreground flex items-center justify-between border-t pt-4">
-              <span>
-                Found {state.comparables.length} properties within search area
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setCompsFetched(false);
-                  fetchComparables();
-                }}
-              >
-                Refresh Search
-              </Button>
-            </div>
-          </>
-        )}
-
-        {/* No Results */}
-        {!compsLoading && compsFetched && state.comparables.length === 0 && (
-          <div className="text-center py-12">
-            <Map className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="font-medium">No comparables found</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Try a different property or expand the search area
-            </p>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setCompsFetched(false);
-                fetchComparables();
-              }}
-              className="mt-4"
-            >
-              Try Again
-            </Button>
-          </div>
-        )}
-
-        {/* Map Modal */}
-        {state.property?.latitude && state.property?.longitude && (
-          <ComparablesMapModal
-            isOpen={showMapModal}
-            onClose={() => setShowMapModal(false)}
-            subjectProperty={{
-              lat: state.property.latitude,
-              lng: state.property.longitude,
-              address: state.property.full_address,
+      {/* Comparables Picker */}
+      {!compsLoading && state.comparables.length > 0 && (
+        <div className="bg-white rounded-xl border border-[var(--border)] p-5 shadow-[var(--shadow-card)]">
+          <ComparablesPicker
+            availableComps={state.comparables}
+            selectedIds={state.selectedCompIds}
+            onSelectionChange={(ids) => setState(prev => ({ ...prev, selectedCompIds: ids }))}
+            onOpenMap={() => setShowMapModal(true)}
+            minSelections={4}
+            maxSelections={8}
+            subjectProperty={state.property ? {
               bedrooms: state.property.bedrooms,
               bathrooms: state.property.bathrooms,
               sqft: state.property.sqft,
-            }}
-            comparables={state.comparables}
-            selectedIds={state.selectedCompIds}
-            onSelectionChange={(ids) => setState(prev => ({ ...prev, selectedCompIds: ids }))}
-            maxSelections={8}
+            } : undefined}
+            mapDisabled={!state.property?.latitude || !state.property?.longitude}
           />
-        )}
-      </div>
-    );
-  };
+        </div>
+      )}
+
+      {/* No Results */}
+      {!compsLoading && compsFetched && state.comparables.length === 0 && (
+        <div className="bg-white rounded-xl border border-[var(--border)] p-12 text-center shadow-[var(--shadow-card)]">
+          <Map className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <p className="font-medium">No comparables found</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Try a different property or expand the search area
+          </p>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setCompsFetched(false);
+              fetchComparables();
+            }}
+            className="mt-4"
+          >
+            <RotateCcw className="w-4 h-4 mr-2" />
+            Try Again
+          </Button>
+        </div>
+      )}
+
+      {/* Map Modal */}
+      {state.property?.latitude && state.property?.longitude && (
+        <ComparablesMapModal
+          isOpen={showMapModal}
+          onClose={() => setShowMapModal(false)}
+          subjectProperty={{
+            lat: state.property.latitude,
+            lng: state.property.longitude,
+            address: state.property.full_address,
+            bedrooms: state.property.bedrooms,
+            bathrooms: state.property.bathrooms,
+            sqft: state.property.sqft,
+          }}
+          comparables={state.comparables}
+          selectedIds={state.selectedCompIds}
+          onSelectionChange={(ids) => setState(prev => ({ ...prev, selectedCompIds: ids }))}
+          maxSelections={8}
+        />
+      )}
+    </div>
+  );
 
   // ============================================
   // RENDER - STEP 3: Theme Selection
   // ============================================
 
   const renderStep3 = () => {
-    // Get selected comparables for preview
     const selectedComparables = state.comparables.filter(
       comp => state.selectedCompIds.includes(comp.id)
     );
     
     return (
-      <div className="space-y-6">
+      <div className="bg-white rounded-xl border border-[var(--border)] p-5 shadow-[var(--shadow-card)]">
         <ThemeSelector
           selectedTheme={state.theme}
           onThemeChange={handleThemeChange}
@@ -781,104 +876,125 @@ export default function NewPropertyReportPage() {
   };
 
   // ============================================
-  // RENDER - STEP 4: Review & Generate
+  // RENDER - STEP 4: Generate
   // ============================================
 
   const renderStep4 = () => {
-    const propertyAddress = state.property?.full_address || "Unknown";
-    const propertyLocation = state.property 
-      ? `${state.property.city}, ${state.property.state} ${state.property.zip_code}`
-      : "";
     const selectedTheme = getThemeById(state.theme);
-    const pageCount = state.selectedPages.length;
-    const compCount = state.selectedCompIds.length;
 
     // Generating state
     if (generationState === "generating") {
       return (
-        <div className="text-center py-16">
-          <div className="relative inline-block mb-6">
-            <div className="w-24 h-24 rounded-full border-4 border-primary/20" />
-            <div className="absolute inset-0 w-24 h-24 rounded-full border-4 border-transparent border-t-primary animate-spin" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <FileText className="w-8 h-8 text-primary" />
-            </div>
+        <div className="bg-white rounded-xl border border-[var(--border)] p-8 text-center shadow-[var(--shadow-card)]">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
           </div>
-          <h3 className="text-xl font-semibold mb-2">Generating Your Report</h3>
-          <p className="text-muted-foreground">This usually takes 15-30 seconds...</p>
-          <div className="mt-6 max-w-xs mx-auto">
-            <Progress value={33} className="h-2" />
+          <h3 className="text-lg font-semibold text-foreground mb-2">Generating Your Report</h3>
+          
+          <div className="max-w-xs mx-auto space-y-2 mt-6 text-left">
+            {GENERATION_STAGES.map((stage, i) => {
+              const isActive = generationStage === i;
+              const isComplete = generationStage > i;
+              return (
+                <div key={stage} className={cn(
+                  "flex items-center gap-3 text-sm transition-all duration-300",
+                  isComplete && "text-emerald-600",
+                  isActive && "text-foreground font-medium",
+                  !isActive && !isComplete && "text-muted-foreground/50"
+                )}>
+                  {isComplete ? (
+                    <Check className="w-4 h-4 text-emerald-500" />
+                  ) : isActive ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  ) : (
+                    <div className="w-4 h-4 rounded-full border border-border" />
+                  )}
+                  {stage}
+                </div>
+              );
+            })}
           </div>
         </div>
       );
     }
 
-    // Success state
+    // Completed state
     if (generationState === "completed" && generatedReport) {
       return (
-        <div className="text-center py-12">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 className="w-10 h-10 text-green-600" />
-          </div>
-          <h3 className="text-2xl font-bold mb-2">Report Ready!</h3>
-          <p className="text-muted-foreground mb-8">
-            Your seller report for {propertyAddress} is complete
-          </p>
-
-          {/* Download & View Actions */}
-          <div className="grid sm:grid-cols-2 gap-4 max-w-lg mx-auto mb-8">
-            {generatedReport.pdf_url && (
-              <a
-                href={generatedReport.pdf_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 px-6 py-4 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors"
-              >
-                <Download className="w-5 h-5" />
-                Download PDF
-              </a>
-            )}
-            {generatedReport.qr_code_url && (
-              <a
-                href={generatedReport.qr_code_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 px-6 py-4 border-2 border-border rounded-xl hover:bg-muted transition-colors"
-              >
-                <QrCode className="w-5 h-5" />
-                View QR Code
-              </a>
-            )}
-          </div>
-
-          {/* Landing Page Link */}
-          {generatedReport.short_code && (
-            <div className="p-4 bg-muted/50 rounded-xl max-w-md mx-auto mb-8">
-              <p className="text-sm text-muted-foreground mb-2">Public Landing Page:</p>
-              <a
-                href={`https://trendyreports.io/p/${generatedReport.short_code}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-primary hover:underline font-medium"
-              >
-                trendyreports.io/p/{generatedReport.short_code}
-                <ExternalLink className="w-4 h-4" />
-              </a>
+        <div className="bg-white rounded-xl border border-[var(--border)] overflow-hidden shadow-[var(--shadow-card)]">
+          {/* Success Header */}
+          <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-5 text-white">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                <Check className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg">Report Generated!</h3>
+                <p className="text-sm text-emerald-100">Your property report is ready to share</p>
+              </div>
             </div>
-          )}
+          </div>
 
-          {/* Actions */}
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Button variant="outline" onClick={() => router.push("/app/property")}>
-              View All Reports
-            </Button>
-            <Button onClick={() => {
-              setState(initialState);
-              setCurrentStep(1);
-              setGenerationState("idle");
-              setGeneratedReport(null);
-              setCompsFetched(false);
-            }}>
+          <div className="p-6 space-y-4">
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-3">
+              {generatedReport.pdf_url && (
+                <a
+                  href={generatedReport.pdf_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 h-12 border-2 border-border rounded-xl hover:bg-muted transition-colors font-medium"
+                >
+                  <Download className="w-4 h-4" />
+                  Download PDF
+                </a>
+              )}
+              <Button 
+                className="h-12 bg-primary"
+                onClick={() => router.push("/app/property")}
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                View All Reports
+              </Button>
+            </div>
+
+            {/* QR Code + Short URL */}
+            {generatedReport.short_code && (
+              <div className="flex items-center gap-4 pt-4 border-t border-border">
+                {generatedReport.qr_code_url && (
+                  <img 
+                    src={generatedReport.qr_code_url} 
+                    alt="QR Code" 
+                    className="w-20 h-20 rounded-lg border border-border" 
+                  />
+                )}
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground mb-1">Share Link</p>
+                  <div className="flex items-center gap-2">
+                    <code className="text-xs bg-muted px-3 py-1.5 rounded-md flex-1 truncate">
+                      trendyreports.io/p/{generatedReport.short_code}
+                    </code>
+                    <Button variant="outline" size="sm" onClick={copyUrl}>
+                      {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Create Another */}
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setState(initialState);
+                setCurrentStep(1);
+                setGenerationState("idle");
+                setGeneratedReport(null);
+                setCompsFetched(false);
+              }}
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
               Create Another Report
             </Button>
           </div>
@@ -889,114 +1005,224 @@ export default function NewPropertyReportPage() {
     // Failed state
     if (generationState === "failed") {
       return (
-        <div className="text-center py-12">
-          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <XCircle className="w-10 h-10 text-red-600" />
+        <div className="bg-white rounded-xl border border-destructive/20 p-6 text-center shadow-[var(--shadow-card)]">
+          <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-3">
+            <AlertCircle className="w-6 h-6 text-destructive" />
           </div>
-          <h3 className="text-xl font-semibold mb-2">Generation Failed</h3>
-          <p className="text-red-600 mb-6">{error || "An error occurred"}</p>
-          <div className="flex justify-center gap-4">
-            <Button variant="outline" onClick={() => router.push("/app/property")}>
-              View Reports
-            </Button>
-            <Button onClick={() => setGenerationState("idle")}>
-              Try Again
-            </Button>
-          </div>
+          <h3 className="font-semibold text-foreground mb-1">Generation Failed</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            {error || "Something went wrong. Please try again."}
+          </p>
+          <Button onClick={handleRetry} variant="outline">
+            <RotateCcw className="w-4 h-4 mr-2" />
+            Try Again
+          </Button>
         </div>
       );
     }
 
     // Review state (idle)
     return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Review & Generate</h2>
-          <p className="text-muted-foreground">
-            Review your selections before generating the report
-          </p>
+      <div className="space-y-4">
+        {/* Summary Card */}
+        <div className="bg-white rounded-xl border border-[var(--border)] p-5 shadow-[var(--shadow-card)]">
+          <h3 className="text-base font-semibold text-foreground mb-4">Report Summary</h3>
+          
+          <div className="space-y-3">
+            <SummaryRow 
+              icon={Home} 
+              label="Property" 
+              value={state.property?.full_address || ""}
+              action={<Button variant="ghost" size="sm" onClick={() => goToStep(1)}>Edit</Button>}
+            />
+            <SummaryRow 
+              icon={BarChart3} 
+              label="Comparables" 
+              value={`${state.selectedCompIds.length} properties selected`}
+              action={<Button variant="ghost" size="sm" onClick={() => goToStep(2)}>Edit</Button>}
+            />
+            <SummaryRow 
+              icon={Palette} 
+              label="Theme" 
+              value={selectedTheme.name}
+              extra={
+                <div 
+                  className="w-4 h-4 rounded-full border border-border" 
+                  style={{ backgroundColor: state.accentColor }}
+                />
+              }
+              action={<Button variant="ghost" size="sm" onClick={() => goToStep(3)}>Edit</Button>}
+            />
+            <SummaryRow 
+              icon={FileText} 
+              label="Pages" 
+              value={`${state.selectedPages.length} pages included`}
+            />
+          </div>
         </div>
 
-        {/* Summary Card */}
-        <div className="border-2 rounded-xl overflow-hidden">
-          {/* Header */}
-          <div className="p-4 border-b bg-muted/30 flex items-center gap-4">
-            <div 
-              className="w-14 h-14 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: state.accentColor }}
-            >
-              <FileText className="w-7 h-7 text-white" />
-            </div>
-            <div>
-              <h3 className="font-bold text-lg">Seller Report</h3>
-              <p className="text-sm text-muted-foreground">{selectedTheme.name} Theme</p>
-            </div>
-          </div>
+        {/* Generate CTA */}
+        <div className="bg-gradient-to-br from-primary/5 to-amber-500/5 rounded-xl border border-primary/10 p-6 text-center">
+          <Sparkles className="w-8 h-8 text-primary mx-auto mb-3" />
+          <h3 className="text-lg font-semibold text-foreground mb-1">Ready to Generate</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Your property report will be ready in about 30 seconds
+          </p>
+          <Button 
+            onClick={handleGenerate}
+            size="lg"
+            className="bg-primary text-white hover:bg-primary/90 px-8"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            Generate Report
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
-          {/* Details Grid */}
-          <div className="p-5 space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              {/* Property */}
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Property</p>
-                <p className="font-semibold">{propertyAddress}</p>
-                <p className="text-sm text-muted-foreground">{propertyLocation}</p>
+  // ============================================
+  // RENDER - PREVIEW PANEL
+  // ============================================
+
+  const renderPreviewPanel = () => {
+    const selectedTheme = getThemeById(state.theme);
+    
+    return (
+      <div className="bg-white rounded-xl border border-[var(--border)] overflow-hidden shadow-[var(--shadow-card)]">
+        {/* Preview Header */}
+        <div className="px-5 py-3 border-b border-border flex items-center justify-between bg-muted/30">
+          <div className="flex items-center gap-2">
+            <Eye className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-foreground">Preview</span>
+          </div>
+          <span className="text-xs text-muted-foreground">Updates as you build</span>
+        </div>
+
+        {/* Preview Content */}
+        <div className="p-5">
+          {/* Mini Report Cover */}
+          <div 
+            className="aspect-[8.5/11] rounded-lg overflow-hidden shadow-lg mx-auto max-w-[240px] transition-all duration-500"
+            style={{ background: THEME_GRADIENTS[state.theme] || THEME_GRADIENTS[5] }}
+          >
+            <div className="h-full p-5 flex flex-col justify-between text-white">
+              {/* Top */}
+              <div>
+                <div className="text-[8px] uppercase tracking-widest text-white/60 mb-1">
+                  Property Report
+                </div>
+                <div className="text-xs font-bold leading-tight">
+                  {state.property?.full_address || 'Select a Property'}
+                </div>
+                <div className="text-[7px] text-white/70 mt-0.5">
+                  {state.property?.city || 'City'}, {state.property?.state || 'ST'}
+                </div>
               </div>
 
-              {/* Configuration */}
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Configuration</p>
-                <div className="flex flex-wrap gap-2">
-                  <span className="px-2 py-1 bg-muted rounded text-sm">
-                    {compCount} Comparables
-                  </span>
-                  <span className="px-2 py-1 bg-muted rounded text-sm">
-                    {pageCount} Pages
-                  </span>
-                  <span 
-                    className="px-2 py-1 rounded text-sm text-white"
-                    style={{ backgroundColor: state.accentColor }}
-                  >
-                    {selectedTheme.name}
-                  </span>
+              {/* Middle: Stats */}
+              {state.property && (
+                <div className="flex gap-1.5 flex-wrap">
+                  {state.property.bedrooms && (
+                    <div className="bg-white/10 rounded px-1.5 py-0.5 text-[6px]">
+                      {state.property.bedrooms} BD
+                    </div>
+                  )}
+                  {state.property.bathrooms && (
+                    <div className="bg-white/10 rounded px-1.5 py-0.5 text-[6px]">
+                      {state.property.bathrooms} BA
+                    </div>
+                  )}
+                  {state.property.sqft && (
+                    <div className="bg-white/10 rounded px-1.5 py-0.5 text-[6px]">
+                      {formatNumber(state.property.sqft)} SF
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Bottom */}
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full bg-white/20" />
+                <div>
+                  <div className="text-[7px] font-semibold">Your Name</div>
+                  <div className="text-[5px] text-white/60">Company</div>
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Selected Pages Preview */}
-            <div className="pt-4 border-t">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Pages Included</p>
-              <div className="flex flex-wrap gap-1">
-                {state.selectedPages.slice(0, 10).map((pageId) => {
-                  const page = ALL_PAGES.find(p => p.id === pageId);
-                  return (
-                    <span key={pageId} className="px-2 py-0.5 bg-muted/50 rounded text-xs">
-                      {page?.name || pageId}
-                    </span>
-                  );
-                })}
+          {/* Details Under Preview */}
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-muted/50 rounded-full text-xs text-muted-foreground">
+              <Palette className="w-3 h-3" />
+              {selectedTheme.name}
+            </div>
+            {state.selectedCompIds.length > 0 && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-muted/50 rounded-full text-xs text-muted-foreground">
+                <BarChart3 className="w-3 h-3" />
+                {state.selectedCompIds.length} Comps
+              </div>
+            )}
+          </div>
+
+          {/* Page Thumbnails */}
+          {currentStep >= 3 && state.selectedPages.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <p className="text-xs text-muted-foreground mb-2 text-center">
+                {state.selectedPages.length} pages
+              </p>
+              <div className="grid grid-cols-5 gap-1">
+                {state.selectedPages.slice(0, 10).map((pageId, i) => (
+                  <div 
+                    key={pageId}
+                    className="aspect-[8.5/11] bg-muted/50 rounded border border-border flex items-center justify-center"
+                  >
+                    <span className="text-[6px] text-muted-foreground font-medium">{i + 1}</span>
+                  </div>
+                ))}
                 {state.selectedPages.length > 10 && (
-                  <span className="px-2 py-0.5 bg-muted/50 rounded text-xs">
-                    +{state.selectedPages.length - 10} more
-                  </span>
+                  <div className="aspect-[8.5/11] bg-muted/30 rounded border border-dashed border-border flex items-center justify-center">
+                    <span className="text-[6px] text-muted-foreground">+{state.selectedPages.length - 10}</span>
+                  </div>
                 )}
               </div>
             </div>
-          </div>
+          )}
         </div>
+      </div>
+    );
+  };
 
-        {/* Generate Button */}
+  // ============================================
+  // RENDER - NAVIGATION
+  // ============================================
+
+  const renderNavigation = () => {
+    if (currentStep === 4 && generationState !== 'idle') return null;
+
+    return (
+      <div className="flex items-center justify-between pt-2">
         <Button
-          onClick={handleGenerate}
-          className="w-full py-6 text-lg bg-green-600 hover:bg-green-700"
+          variant="ghost"
+          onClick={handleBack}
+          disabled={currentStep === 1}
+          className="text-muted-foreground hover:text-foreground"
         >
-          <FileText className="w-5 h-5 mr-2" />
-          Generate Report
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
         </Button>
-
-        <p className="text-xs text-center text-muted-foreground">
-          Generation typically takes 15-30 seconds
-        </p>
+        
+        {currentStep < STEPS.length && (
+          <Button
+            onClick={handleNext}
+            disabled={!validateStep(state, currentStep).valid}
+            className="bg-primary text-white hover:bg-primary/90 min-w-[120px]"
+          >
+            Continue
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        )}
       </div>
     );
   };
@@ -1005,93 +1231,131 @@ export default function NewPropertyReportPage() {
   // MAIN RENDER
   // ============================================
 
-  const progressPercent = (currentStep / STEPS.length) * 100;
-
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-12">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/app/property">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="font-bold text-2xl">Create Property Report</h1>
-          <p className="text-muted-foreground text-sm">
-            Generate a professional seller presentation
-          </p>
+    <div className="min-h-screen bg-[var(--background)]">
+      {/* Sticky Header */}
+      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-[var(--border)] px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/app/property" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Property Reports</span>
+            </Link>
+            <div className="h-4 w-px bg-border" />
+            <h1 className="text-sm font-semibold text-foreground">New Property Report</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link href="/app/property">
+              <Button variant="outline" size="sm">Cancel</Button>
+            </Link>
+            {currentStep === 4 && generationState === 'idle' && (
+              <Button 
+                onClick={handleGenerate}
+                disabled={!validateStep(state, 4).valid}
+                size="sm"
+                className="bg-primary text-white hover:bg-primary/90"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Generate Report
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
+      </header>
 
-      {/* Progress */}
-      <div>
-        <Progress value={progressPercent} className="h-2" />
-        <div className="flex justify-between mt-4">
-          {STEPS.map((step) => {
-            const Icon = step.icon;
-            const isActive = currentStep === step.id;
-            const isComplete = currentStep > step.id;
-
-            return (
-              <div key={step.id} className="flex flex-col items-center gap-2">
-                <div
-                  className={`
-                    w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors
-                    ${isComplete ? "bg-primary border-primary text-primary-foreground" : ""}
-                    ${isActive ? "border-primary bg-primary/10" : ""}
-                    ${!isActive && !isComplete ? "border-muted-foreground/30 bg-muted/30" : ""}
-                  `}
-                >
-                  {isComplete ? <Check className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
-                </div>
-                <span className={`text-xs font-medium hidden sm:block ${isActive || isComplete ? "text-foreground" : "text-muted-foreground"}`}>
-                  {step.name}
-                </span>
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-6 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(400px,520px)_1fr] gap-8">
+          {/* Left: Steps Panel */}
+          <div className="space-y-5">
+            {/* Step Progress */}
+            {renderStepProgress()}
+            
+            {/* Error */}
+            {error && (
+              <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                <span>{error}</span>
               </div>
-            );
-          })}
+            )}
+            
+            {/* Active Step Content */}
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              {currentStep === 1 && renderStep1()}
+              {currentStep === 2 && renderStep2()}
+              {currentStep === 3 && renderStep3()}
+              {currentStep === 4 && renderStep4()}
+            </div>
+            
+            {/* Navigation */}
+            {renderNavigation()}
+          </div>
+
+          {/* Right: Live Preview - Hidden on mobile, sticky on desktop */}
+          <div className="hidden lg:block">
+            <div className="sticky top-24 self-start">
+              {renderPreviewPanel()}
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// ============================================
+// HELPER COMPONENTS
+// ============================================
+
+function StatBadge({ icon: Icon, label, value }: { icon: any; label: string; value: string | number | null | undefined }) {
+  return (
+    <div className="text-center">
+      <div className="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center mx-auto mb-1.5">
+        <Icon className="w-4 h-4 text-muted-foreground" />
+      </div>
+      <div className="text-sm font-semibold text-foreground">{value ?? '—'}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
+function DetailRow({ label, value, mono }: { label: string; value: string | number | null | undefined; mono?: boolean }) {
+  return (
+    <div>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={cn("text-sm font-medium", mono && "font-mono")}>{value || "—"}</p>
+    </div>
+  );
+}
+
+function SummaryRow({ 
+  icon: Icon, 
+  label, 
+  value, 
+  extra, 
+  action 
+}: { 
+  icon: any; 
+  label: string; 
+  value: string; 
+  extra?: React.ReactNode;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between py-2 border-b border-border last:border-0">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center">
+          <Icon className="w-4 h-4 text-muted-foreground" />
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">{label}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium text-foreground">{value}</p>
+            {extra}
+          </div>
         </div>
       </div>
-
-      {/* Error */}
-      {error && (
-        <div className="p-4 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">
-          {error}
-        </div>
-      )}
-
-      {/* Step Content */}
-      <Card>
-        <CardContent className="pt-6">
-          {currentStep === 1 && renderStep1()}
-          {currentStep === 2 && renderStep2()}
-          {currentStep === 3 && renderStep3()}
-          {currentStep === 4 && renderStep4()}
-        </CardContent>
-      </Card>
-
-      {/* Navigation - Hide during generation */}
-      {generationState === "idle" && (
-        <div className="flex justify-between">
-          <Button
-            variant="outline"
-            onClick={handleBack}
-            disabled={currentStep === 1}
-            className="gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </Button>
-
-          {currentStep < STEPS.length && (
-            <Button onClick={handleNext} className="gap-2">
-              Continue
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
-      )}
+      {action}
     </div>
   );
 }
