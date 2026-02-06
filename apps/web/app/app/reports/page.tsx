@@ -1,8 +1,5 @@
-"use client"
-
-import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Plus, Download, Eye, FileJson, Share2, FileText, Loader2 } from "lucide-react"
+import { Plus, Download, Eye, FileJson, Share2, FileText } from "lucide-react"
 import {
   Tooltip,
   TooltipContent,
@@ -10,11 +7,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import Link from "next/link"
-import { apiFetch } from "@/lib/api"
+import { cookies } from "next/headers"
+import { getApiBase } from "@/lib/get-api-base"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { EmptyState } from "@/components/empty-state"
-import { TableSkeleton } from "@/components/page-skeleton"
 import {
   Table,
   TableBody,
@@ -28,47 +25,41 @@ type Report = {
   id: string
   report_type: string
   city?: string
-  status: string
+  status: "completed" | "processing" | "pending" | "failed"
   html_url?: string
   json_url?: string
   pdf_url?: string
   generated_at: string
 }
 
-export default function ReportsPage() {
-  const [reports, setReports] = useState<Report[]>([])
-  const [loading, setLoading] = useState(true)
-  const [offline, setOffline] = useState(false)
+async function getReports(): Promise<{ reports: Report[], error: boolean }> {
+  try {
+    const API_BASE = getApiBase()
+    const cookieStore = await cookies()
+    const token = cookieStore.get("mr_token")?.value
 
-  useEffect(() => {
-    apiFetch("/v1/reports")
-      .then((data: any) => {
-        setReports(data.reports || [])
-        setLoading(false)
-      })
-      .catch(() => {
-        setOffline(true)
-        setLoading(false)
-      })
-  }, [])
+    if (!token) {
+      return { reports: [], error: false }
+    }
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title="Market Reports"
-          description="Manage and generate your market reports"
-          action={
-            <Button disabled>
-              <Plus className="w-4 h-4 mr-2" />
-              New Report
-            </Button>
-          }
-        />
-        <TableSkeleton rows={5} />
-      </div>
-    )
+    const res = await fetch(`${API_BASE}/v1/reports`, {
+      headers: { Cookie: `mr_token=${token}` },
+      cache: "no-store",
+    })
+
+    if (!res.ok) {
+      return { reports: [], error: true }
+    }
+
+    const data = await res.json()
+    return { reports: data.reports || [], error: false }
+  } catch {
+    return { reports: [], error: true }
   }
+}
+
+export default async function ReportsPage() {
+  const { reports, error } = await getReports()
 
   return (
     <div className="space-y-6">
@@ -85,20 +76,20 @@ export default function ReportsPage() {
         }
       />
 
-      {offline && (
+      {error && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
           API temporarily unavailable. Please try again in a moment.
         </div>
       )}
 
-      {reports.length === 0 && !offline ? (
+      {reports.length === 0 && !error ? (
         <EmptyState
           icon={<FileText className="w-6 h-6" />}
           title="No reports yet"
           description="Create your first market report to get started with data-driven insights."
           action={{
             label: "Create Report",
-            onClick: () => window.location.href = "/app/reports/new"
+            onClick: () => {} // Client-side navigation handled by Link below
           }}
         />
       ) : (

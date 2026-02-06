@@ -96,31 +96,30 @@ export default function PropertyReportsPage() {
   async function loadReports() {
     try {
       setLoading(true)
-      const params = new URLSearchParams()
-      if (statusFilter && statusFilter !== "all") {
-        params.set("status", statusFilter)
-      }
-      params.set("limit", "100")
-
-      const data = await apiFetch(`/v1/property/reports?${params.toString()}`)
-      const fetchedReports = data.reports || []
-      setReports(fetchedReports)
-      setTotal(data.total || fetchedReports.length)
-
-      // Calculate stats from all reports
-      const allData = await apiFetch("/v1/property/reports?limit=100")
-      const allReports = allData.reports || []
       
+      // Always fetch ALL reports first (for stats), then filter client-side
+      // This eliminates the duplicate API call we were making before
+      const allData = await apiFetch("/v1/property/reports?limit=100")
+      const allReports: PropertyReport[] = allData.reports || []
+      
+      // Calculate stats from all reports (single API call)
       const now = new Date()
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
       setStats({
         total: allReports.length,
-        thisMonth: allReports.filter((r: PropertyReport) => new Date(r.created_at) >= startOfMonth).length,
-        processing: allReports.filter((r: PropertyReport) => r.status === "processing").length,
-        complete: allReports.filter((r: PropertyReport) => r.status === "complete").length,
+        thisMonth: allReports.filter((r) => new Date(r.created_at) >= startOfMonth).length,
+        processing: allReports.filter((r) => r.status === "processing").length,
+        complete: allReports.filter((r) => r.status === "complete").length,
       })
 
+      // Filter client-side based on status (no second API call needed)
+      const filteredReports = statusFilter && statusFilter !== "all"
+        ? allReports.filter((r) => r.status === statusFilter)
+        : allReports
+
+      setReports(filteredReports)
+      setTotal(allData.total || allReports.length)
       setError(null)
     } catch (e: any) {
       setError(e.message || "Failed to load reports")

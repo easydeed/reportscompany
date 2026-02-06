@@ -141,17 +141,13 @@ export default function PeoplePage() {
   async function loadData() {
     setLoading(true)
     try {
-      // Fetch ALL data in parallel for faster loading
-      const [meRes, contactsRes, groupsRes] = await Promise.all([
-        fetch("/api/proxy/v1/me", { cache: "no-store", credentials: "include" }),
+      // Fetch ALL data in parallel - including affiliate data (will 403 for non-affiliates, that's fine)
+      // This eliminates the sequential fetch that was blocking page load
+      const [contactsRes, groupsRes, affiliateRes] = await Promise.all([
         fetch("/api/proxy/v1/contacts", { cache: "no-store", credentials: "include" }),
         fetch("/api/proxy/v1/contact-groups", { cache: "no-store", credentials: "include" }),
+        fetch("/api/proxy/v1/affiliate/overview", { cache: "no-store", credentials: "include" }),
       ])
-
-      // Process user info
-      const me = meRes.ok ? await meRes.json() : {}
-      const isAff = me.account_type === "INDUSTRY_AFFILIATE"
-      setIsAffiliate(isAff)
 
       // Process contacts
       if (contactsRes.ok) {
@@ -165,16 +161,15 @@ export default function PeoplePage() {
         setGroups(data.groups || [])
       }
 
-      // If affiliate, fetch sponsored accounts (can't be in initial parallel since we need to know if affiliate)
-      if (isAff) {
-        const overviewRes = await fetch("/api/proxy/v1/affiliate/overview", { 
-          cache: "no-store", 
-          credentials: "include" 
-        })
-        if (overviewRes.ok) {
-          const overview = await overviewRes.json()
-          setSponsoredAccounts(overview.sponsored_accounts || [])
-        }
+      // Process affiliate data (will be 403 for non-affiliates - that's expected)
+      if (affiliateRes.ok) {
+        const overview = await affiliateRes.json()
+        setSponsoredAccounts(overview.sponsored_accounts || [])
+        setIsAffiliate(true)
+      } else {
+        // Not an affiliate or API error - that's fine
+        setIsAffiliate(false)
+        setSponsoredAccounts([])
       }
     } catch (error) {
       console.error("Failed to load people:", error)
