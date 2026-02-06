@@ -372,14 +372,12 @@ def get_current_account_plan_usage(request: Request, account_id: str = Depends(r
             "billing_status": acc_row[6],  # PASS 2: Expose billing_status
         }
         
-        # Get plan details
-        plan = resolve_plan_for_account(cur, account_id)
-        
-        # Get usage
-        usage = get_monthly_usage(cur, account_id)
-        
-        # Evaluate limit
+        # FIX (H1): evaluate_report_limit already calls resolve_plan + get_monthly_usage
+        # internally. We read plan and usage from its returned info dict
+        # instead of calling them separately (was 6-8 queries, now 3-4).
         decision, info = evaluate_report_limit(cur, account_id)
+        plan = info["plan"]
+        usage = info["usage"]
         
         # Get Stripe billing info from plan catalog
         catalog = get_plan_catalog(cur)

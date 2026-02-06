@@ -2,12 +2,16 @@
 Usage Tracking & Plan Limit Enforcement
 
 Phase 29B: Calculate monthly usage and enforce plan limits
+Performance fix: Correlated subquery replaced with JOIN (M1)
 """
 
 from datetime import datetime, date
 from typing import Dict, Any, Tuple
 from enum import Enum
 import calendar
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class LimitDecision(str, Enum):
@@ -57,25 +61,24 @@ def get_monthly_usage(cur, account_id: str, now: datetime | None = None) -> Dict
     report_row = cur.fetchone()
     report_count = report_row[0] if report_row else 0
     
-    # Count schedule_runs for this month (if table exists)
+    # FIX (M1): Count schedule_runs using JOIN instead of correlated subquery
     schedule_run_count = 0
     try:
         cur.execute("""
-            SELECT COUNT(*) as schedule_run_count
-            FROM schedule_runs
-            WHERE schedule_id IN (
-                SELECT id FROM schedules WHERE account_id = %s
-            )
-            AND created_at >= %s::date
-            AND created_at < (%s::date + INTERVAL '1 day')
-            AND status IN ('completed', 'processing')
+            SELECT COUNT(*)
+            FROM schedule_runs sr
+            JOIN schedules s ON sr.schedule_id = s.id
+            WHERE s.account_id = %s
+              AND sr.created_at >= %s::date
+              AND sr.created_at < (%s::date + INTERVAL '1 day')
+              AND sr.status IN ('completed', 'processing')
         """, (account_id, period_start, period_end))
         
         schedule_row = cur.fetchone()
         schedule_run_count = schedule_row[0] if schedule_row else 0
-    except Exception:
+    except Exception as e:
         # schedule_runs table might not exist yet
-        pass
+        logger.warning(f"schedule_runs query failed (table may not exist): {e}")
     
     return {
         "report_count": report_count,
@@ -245,16 +248,11 @@ def evaluate_report_limit(cur, account_id: str, now: datetime | None = None) -> 
 def log_limit_decision(account_id: str, decision: LimitDecision, info: Dict[str, Any]):
     """
     Log usage limit decision for monitoring and debugging.
-    
-    Args:
-        account_id: Account UUID
-        decision: LimitDecision enum value
-        info: Info dict from evaluate_report_limit
     """
     plan = info.get("plan", {})
     usage = info.get("usage", {})
     
-    print(
+    logger.info(
         f"[usage] account={account_id} "
         f"plan={plan.get('plan_slug', 'unknown')} "
         f"decision={decision.value} "
@@ -262,4 +260,3 @@ def log_limit_decision(account_id: str, decision: LimitDecision, info: Dict[str,
         f"limit={plan.get('monthly_report_limit', 0)} "
         f"ratio={info.get('ratio', 0):.2f}"
     )
-

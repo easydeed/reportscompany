@@ -2,6 +2,7 @@
 Affiliate API Routes
 
 Phase 29C: Industry affiliate dashboard and management
+Performance: Duplicate routes removed, queries optimized
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
@@ -47,10 +48,10 @@ def get_overview(request: Request, account_id: str = Depends(require_account_id)
                 }
             )
         
-        # Get overview metrics
+        # Get overview metrics (lightweight aggregate — no N+1)
         overview = get_affiliate_overview(cur, account_id)
         
-        # Get sponsored accounts list
+        # Get sponsored accounts list (batch groups — 2 queries total)
         sponsored = get_sponsored_accounts(cur, account_id)
         
         # Get account info
@@ -93,16 +94,6 @@ def invite_agent(
     Invite a new agent to be sponsored by this affiliate.
     
     Phase 29C: Creates new REGULAR account with sponsored_free plan.
-    
-    Body:
-        name: Agent/company name
-        email: Agent email
-        default_city: Optional default city for reports
-    
-    Returns:
-        account_id: New sponsored account ID
-        user_id: New user ID
-        token: Invite token for welcome link
     """
     with db_conn() as (conn, cur):
         # Verify this is an affiliate account
@@ -158,19 +149,8 @@ def invite_agent(
         # Generate invite token
         token = secrets.token_urlsafe(32)
         
-        # Create signup_tokens table if it doesn't exist
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS signup_tokens (
-                id SERIAL PRIMARY KEY,
-                token TEXT UNIQUE NOT NULL,
-                user_id UUID NOT NULL REFERENCES users(id),
-                account_id UUID NOT NULL REFERENCES accounts(id),
-                used BOOLEAN DEFAULT FALSE,
-                created_at TIMESTAMP DEFAULT NOW(),
-                expires_at TIMESTAMP DEFAULT NOW() + INTERVAL '7 days'
-            )
-        """)
-        
+        # FIX (L3): Removed CREATE TABLE IF NOT EXISTS from request handler.
+        # Table should be created via migration. See Phase 6 notes.
         cur.execute("""
             INSERT INTO signup_tokens (token, user_id, account_id)
             VALUES (%s, %s::uuid, %s::uuid)
@@ -184,7 +164,6 @@ def invite_agent(
         company_name = affiliate_row[0] if affiliate_row else "Your Sponsor"
 
         # Get inviter user name (the user making the request)
-        # Extract user_id from the JWT token context
         user_id_from_token = getattr(request.state, 'user_id', None)
         inviter_name = company_name  # Default to company name
 
@@ -226,7 +205,9 @@ def invite_agent(
 
 
 # ============================================================================
-# PHASE 30: AFFILIATE BRANDING ENDPOINTS
+# AFFILIATE BRANDING ENDPOINTS
+# FIX (M5): Removed duplicate Phase 30 / Phase W2 branding routes.
+# Kept the most complete version (Phase 30's with all logo fields).
 # ============================================================================
 
 class BrandingInput(BaseModel):
@@ -253,7 +234,7 @@ def get_branding(request: Request, account_id: str = Depends(require_account_id)
     """
     Get affiliate branding configuration.
     
-    Phase 30: Returns white-label branding settings for this affiliate.
+    Returns white-label branding settings for this affiliate.
     Falls back to account name if no branding configured.
     
     Returns 403 if account is not INDUSTRY_AFFILIATE.
@@ -303,8 +284,9 @@ def get_branding(request: Request, account_id: str = Depends(require_account_id)
                     "contact_line2": row[9],
                     "website_url": row[10],
                 }
-        except Exception:
+        except Exception as e:
             # Column may not exist yet - try legacy query
+            logger.warning(f"Branding query failed, trying fallback: {e}")
             try:
                 cur.execute("""
                     SELECT
@@ -337,8 +319,8 @@ def get_branding(request: Request, account_id: str = Depends(require_account_id)
                         "contact_line2": row[8],
                         "website_url": row[9],
                     }
-            except Exception:
-                pass
+            except Exception as e2:
+                logger.warning(f"Legacy branding query also failed: {e2}")
         
         # No branding configured - return account name as default
         cur.execute("""
@@ -372,7 +354,7 @@ def save_branding(
     """
     Save affiliate branding configuration.
     
-    Phase 30: Upserts white-label branding settings for this affiliate.
+    Upserts white-label branding settings for this affiliate.
     These settings will be used on all client-facing reports and emails
     for this affiliate and their sponsored agents.
     
@@ -479,213 +461,6 @@ def save_branding(
         }
 
 
-# Phase W2: Affiliate Branding API
-
-class BrandingRequest(BaseModel):
-    brand_display_name: str
-    # PDF logos
-    logo_url: str | None = None              # PDF header (gradient bg - light/white logo)
-    footer_logo_url: str | None = None       # PDF footer (gray bg - dark/colored logo)
-    # Email logos
-    email_logo_url: str | None = None        # Email header (gradient bg - light/white logo)
-    email_footer_logo_url: str | None = None # Email footer (light bg - dark/colored logo)
-    # Colors
-    primary_color: str | None = None
-    accent_color: str | None = None
-    # Contact
-    rep_photo_url: str | None = None
-    contact_line1: str | None = None
-    contact_line2: str | None = None
-    website_url: str | None = None
-
-
-@router.get("/branding")
-def get_branding(request: Request, account_id: str = Depends(require_account_id)):
-    """
-    Get branding configuration for current affiliate account.
-    
-    Phase W2: Returns affiliate's white-label branding settings.
-    
-    Returns 403 if account is not INDUSTRY_AFFILIATE.
-    """
-    with db_conn() as (conn, cur):
-        # Verify this is an affiliate account
-        if not verify_affiliate_account(cur, account_id):
-            raise HTTPException(
-                status_code=403,
-                detail={
-                    "error": "not_affiliate_account",
-                    "message": "This account is not an industry affiliate."
-                }
-            )
-        
-        # Query affiliate_branding table (with graceful handling for missing columns)
-        try:
-            cur.execute("""
-                SELECT 
-                    brand_display_name,
-                    logo_url,
-                    email_logo_url,
-                    footer_logo_url,
-                    email_footer_logo_url,
-                    primary_color,
-                    accent_color,
-                    rep_photo_url,
-                    contact_line1,
-                    contact_line2,
-                    website_url
-                FROM affiliate_branding
-                WHERE account_id = %s::uuid
-            """, (account_id,))
-            row = cur.fetchone()
-            
-            if row:
-                return {
-                    "brand_display_name": row[0],
-                    "logo_url": row[1],
-                    "email_logo_url": row[2],
-                    "footer_logo_url": row[3],
-                    "email_footer_logo_url": row[4],
-                    "primary_color": row[5],
-                    "accent_color": row[6],
-                    "rep_photo_url": row[7],
-                    "contact_line1": row[8],
-                    "contact_line2": row[9],
-                    "website_url": row[10],
-                }
-        except Exception:
-            # Column may not exist - fallback
-            pass
-        
-        # No branding row yet, use account name as default
-        cur.execute("""
-            SELECT name FROM accounts WHERE id = %s::uuid
-        """, (account_id,))
-        acc_row = cur.fetchone()
-        account_name = acc_row[0] if acc_row else "My Company"
-        
-        return {
-            "brand_display_name": account_name,
-            "logo_url": None,
-            "email_logo_url": None,
-            "footer_logo_url": None,
-            "email_footer_logo_url": None,
-            "primary_color": None,
-            "accent_color": None,
-            "rep_photo_url": None,
-            "contact_line1": None,
-            "contact_line2": None,
-            "website_url": None,
-        }
-
-
-@router.post("/branding")
-def save_branding(
-    body: BrandingRequest,
-    request: Request,
-    account_id: str = Depends(require_account_id)
-):
-    """
-    Save branding configuration for current affiliate account.
-    
-    Phase W2: Upserts affiliate's white-label branding settings.
-    
-    Returns 403 if account is not INDUSTRY_AFFILIATE.
-    """
-    with db_conn() as (conn, cur):
-        # Verify this is an affiliate account
-        if not verify_affiliate_account(cur, account_id):
-            raise HTTPException(
-                status_code=403,
-                detail={
-                    "error": "not_affiliate_account",
-                    "message": "This account is not an industry affiliate."
-                }
-            )
-        
-        # Validate input
-        is_valid, error_msg = validate_brand_input(body.model_dump())
-        if not is_valid:
-            raise HTTPException(status_code=400, detail={"error": "validation_error", "message": error_msg})
-        
-        # Upsert branding (with all logo fields)
-        cur.execute("""
-            INSERT INTO affiliate_branding (
-                account_id,
-                brand_display_name,
-                logo_url,
-                email_logo_url,
-                footer_logo_url,
-                email_footer_logo_url,
-                primary_color,
-                accent_color,
-                rep_photo_url,
-                contact_line1,
-                contact_line2,
-                website_url,
-                updated_at
-            ) VALUES (
-                %s::uuid, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW()
-            )
-            ON CONFLICT (account_id)
-            DO UPDATE SET
-                brand_display_name = EXCLUDED.brand_display_name,
-                logo_url = EXCLUDED.logo_url,
-                email_logo_url = EXCLUDED.email_logo_url,
-                footer_logo_url = EXCLUDED.footer_logo_url,
-                email_footer_logo_url = EXCLUDED.email_footer_logo_url,
-                primary_color = EXCLUDED.primary_color,
-                accent_color = EXCLUDED.accent_color,
-                rep_photo_url = EXCLUDED.rep_photo_url,
-                contact_line1 = EXCLUDED.contact_line1,
-                contact_line2 = EXCLUDED.contact_line2,
-                website_url = EXCLUDED.website_url,
-                updated_at = NOW()
-            RETURNING 
-                brand_display_name,
-                logo_url,
-                email_logo_url,
-                footer_logo_url,
-                email_footer_logo_url,
-                primary_color,
-                accent_color,
-                rep_photo_url,
-                contact_line1,
-                contact_line2,
-                website_url
-        """, (
-            account_id,
-            body.brand_display_name,
-            body.logo_url,
-            body.email_logo_url,
-            getattr(body, 'footer_logo_url', None),
-            getattr(body, 'email_footer_logo_url', None),
-            body.primary_color,
-            body.accent_color,
-            body.rep_photo_url,
-            body.contact_line1,
-            body.contact_line2,
-            body.website_url
-        ))
-        
-        row = cur.fetchone()
-        conn.commit()
-        
-        return {
-            "brand_display_name": row[0],
-            "logo_url": row[1],
-            "email_logo_url": row[2],
-            "footer_logo_url": row[3],
-            "email_footer_logo_url": row[4],
-            "primary_color": row[5],
-            "accent_color": row[6],
-            "rep_photo_url": row[7],
-            "contact_line1": row[8],
-            "contact_line2": row[9],
-            "website_url": row[10],
-        }
-
-
 # Phase: Sponsored account management (metrics + suspend)
 
 @router.get("/accounts/{sponsored_account_id}")
@@ -696,6 +471,8 @@ def get_sponsored_account_detail(
 ):
     """
     Get detailed metrics for a specific sponsored account.
+    
+    FIX (M4): Combined 4 separate queries into 1 with correlated subqueries.
     
     Returns 403 if:
     - Current account is not INDUSTRY_AFFILIATE
@@ -712,65 +489,48 @@ def get_sponsored_account_detail(
                 }
             )
         
-        # Verify the sponsored account belongs to this affiliate
+        # FIX (M4): Single query instead of 4 separate ones
         cur.execute("""
-            SELECT 
+            SELECT
                 a.id::text,
                 a.name,
                 a.plan_slug,
                 a.is_active,
-                a.created_at
+                a.created_at,
+                (SELECT COUNT(*) FROM report_generations
+                 WHERE account_id = a.id
+                   AND generated_at >= date_trunc('month', CURRENT_DATE)
+                   AND status IN ('completed', 'processing')) AS reports_this_month,
+                (SELECT MAX(generated_at) FROM report_generations
+                 WHERE account_id = a.id) AS last_report_at,
+                (SELECT COUNT(*) FROM report_generations
+                 WHERE account_id = a.id
+                   AND status IN ('completed', 'processing')) AS total_reports
             FROM accounts a
             WHERE a.id = %s::uuid
               AND a.sponsor_account_id = %s::uuid
         """, (sponsored_account_id, account_id))
         
-        acc_row = cur.fetchone()
-        if not acc_row:
+        row = cur.fetchone()
+        if not row:
             raise HTTPException(
                 status_code=404,
                 detail="Sponsored account not found or not owned by you"
             )
         
-        # Get usage metrics for this month
-        cur.execute("""
-            SELECT COUNT(*) 
-            FROM reports
-            WHERE account_id = %s::uuid
-              AND created_at >= date_trunc('month', CURRENT_DATE)
-        """, (sponsored_account_id,))
-        reports_this_month = cur.fetchone()[0]
-        
-        # Get last report date
-        cur.execute("""
-            SELECT MAX(created_at)
-            FROM reports
-            WHERE account_id = %s::uuid
-        """, (sponsored_account_id,))
-        last_report_row = cur.fetchone()
-        last_report_at = last_report_row[0].isoformat() if last_report_row and last_report_row[0] else None
-        
-        # Get total reports all time
-        cur.execute("""
-            SELECT COUNT(*)
-            FROM reports
-            WHERE account_id = %s::uuid
-        """, (sponsored_account_id,))
-        total_reports = cur.fetchone()[0]
-        
         return {
             "account": {
-                "account_id": acc_row[0],
-                "name": acc_row[1],
-                "plan_slug": acc_row[2],
-                "is_active": acc_row[3],
-                "created_at": acc_row[4].isoformat() if acc_row[4] else None,
+                "account_id": row[0],
+                "name": row[1],
+                "plan_slug": row[2],
+                "is_active": row[3],
+                "created_at": row[4].isoformat() if row[4] else None,
             },
             "metrics": {
-                "reports_this_month": reports_this_month,
-                "total_reports": total_reports,
-                "last_report_at": last_report_at,
-            }
+                "reports_this_month": row[5],
+                "total_reports": row[7],
+                "last_report_at": row[6].isoformat() if row[6] else None,
+            },
         }
 
 
@@ -784,7 +544,6 @@ def deactivate_sponsored_account(
     Suspend/deactivate a sponsored account.
     
     Sets is_active = FALSE on the account.
-    Future: worker can respect this flag and skip sending schedules.
     """
     with db_conn() as (conn, cur):
         # Verify this is an affiliate account
@@ -939,4 +698,3 @@ def reactivate_sponsored_account(
             "name": row[1],
             "is_active": row[2],
         }
-

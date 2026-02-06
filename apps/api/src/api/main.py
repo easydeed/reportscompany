@@ -1,8 +1,10 @@
+import time as _time
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .settings import settings
-from .middleware.rls import RLSContextMiddleware
 from .middleware.authn import AuthContextMiddleware, RateLimitMiddleware
 from .routes.health import router as health_router
 from .routes.reports import router as reports_router
@@ -50,12 +52,40 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Auth & Rate Limiting (must be after CORS, before routes)
-app.add_middleware(AuthContextMiddleware)
+# ============================================================================
+# MIDDLEWARE REGISTRATION
+# 
+# CRITICAL: Starlette add_middleware() uses LIFO (stack).
+# Last added = first to execute.
+# We want: Timing → Auth → RateLimit → Route
+# So register in REVERSE order:
+# ============================================================================
+
+# 1. Register RateLimit FIRST (executes LAST, after auth sets account_id)
 app.add_middleware(RateLimitMiddleware)
 
-# RLS placeholder middleware (kept for backward compat)
-app.add_middleware(RLSContextMiddleware)
+# 2. Register Auth SECOND (executes SECOND, sets account_id)
+app.add_middleware(AuthContextMiddleware)
+
+# REMOVED: RLSContextMiddleware (L1 — was a no-op, auth handles X-Demo-Account)
+# DO NOT add: app.add_middleware(RLSContextMiddleware)
+
+# 3. Timing middleware (executes FIRST via @app.middleware, wraps everything)
+
+@app.middleware("http")
+async def timing_middleware(request, call_next):
+    start = _time.perf_counter()
+    response = await call_next(request)
+    elapsed = _time.perf_counter() - start
+    
+    level = logging.WARNING if elapsed > 1.0 else logging.DEBUG
+    logging.getLogger("api.timing").log(
+        level,
+        f"[TIMING] {request.method} {request.url.path} "
+        f"→ {response.status_code} in {elapsed:.3f}s"
+    )
+    response.headers["Server-Timing"] = f"total;dur={elapsed * 1000:.0f}"
+    return response
 
 # Routes
 app.include_router(health_router)
@@ -91,4 +121,3 @@ app.include_router(lead_pages_router)
 @app.get("/")
 def root():
     return {"message": "Market Reports API"}
-
