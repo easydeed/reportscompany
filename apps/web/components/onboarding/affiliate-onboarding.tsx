@@ -186,6 +186,7 @@ export function AffiliateOnboarding({
               <li key={step.key}>
                 <Link
                   href={step.href}
+                  prefetch={false}
                   className={cn(
                     "flex items-center gap-3 p-3 rounded-lg transition-all",
                     step.completed
@@ -330,7 +331,7 @@ export function AffiliateOnboardingBanner({ className }: { className?: string })
         </span>
       </div>
       {nextStep && (
-        <Link href={nextStep.href}>
+        <Link href={nextStep.href} prefetch={false}>
           <Button size="sm" className="gap-1">
             {nextStep.title}
             <ArrowRight className="w-4 h-4" />

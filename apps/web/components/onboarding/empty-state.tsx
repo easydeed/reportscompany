@@ -118,7 +118,7 @@ export function EmptyState({
       </p>
 
       <div className="flex flex-col sm:flex-row items-center gap-3">
-        <Link href={finalActionHref}>
+        <Link href={finalActionHref} prefetch={false}>
           <Button className="gap-2">
             <Plus className="w-4 h-4" />
             {finalActionLabel}
@@ -126,7 +126,7 @@ export function EmptyState({
         </Link>
 
         {finalSecondaryLabel && finalSecondaryHref && (
-          <Link href={finalSecondaryHref}>
+          <Link href={finalSecondaryHref} prefetch={false}>
             <Button variant="outline" className="gap-2">
               <PlayCircle className="w-4 h-4" />
               {finalSecondaryLabel}
@@ -163,7 +163,7 @@ export function EmptyStateInline({
         )}
       </div>
       {actionLabel && actionHref && (
-        <Link href={actionHref}>
+        <Link href={actionHref} prefetch={false}>
           <Button size="sm" variant="outline" className="gap-1">
             {actionLabel}
             <ArrowRight className="w-3 h-3" />

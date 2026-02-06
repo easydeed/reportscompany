@@ -7,6 +7,7 @@ import { AlertCircle, AlertTriangle, FileText, Mail, Calendar, Clock, Plus } fro
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DashboardOnboarding } from "@/components/onboarding"
+import type { OnboardingStatus } from "@/components/onboarding/onboarding-checklist"
 import { PageHeader } from "@/components/page-header"
 import { MetricCard } from "@/components/metric-card"
 import { StatusBadge } from "@/components/status-badge"
@@ -46,18 +47,10 @@ interface PlanUsageData {
   }
 }
 
-interface OnboardingData {
-  is_dismissed?: boolean
-  completed_steps?: string[]
-  profile_completed?: boolean
-  branding_completed?: boolean
-  first_report_completed?: boolean
-}
-
 interface DashboardData {
   usage: UsageData | null
   planUsage: PlanUsageData | null
-  onboarding: OnboardingData | null
+  onboarding: OnboardingStatus | null
 }
 
 // Format relative time
@@ -160,7 +153,7 @@ export function DashboardContent() {
         description="Your account activity and key metrics"
         action={
           <Button asChild size="sm">
-            <Link href="/app/reports/new">
+            <Link href="/app/reports/new" prefetch={false}>
               <Plus className="w-4 h-4 mr-1.5" />
               New Report
             </Link>
@@ -178,7 +171,7 @@ export function DashboardContent() {
               You're approaching your monthly report limit for the <strong>{data.planUsage.plan?.plan_name}</strong> plan. {data.planUsage.info?.message}
             </span>
             <Button asChild variant="outline" size="sm" className="ml-4 border-amber-600 text-amber-700 hover:bg-amber-100">
-              <Link href="/app/settings/billing">View Plan</Link>
+              <Link href="/app/settings/billing" prefetch={false}>View Plan</Link>
             </Button>
           </AlertDescription>
         </Alert>
@@ -193,7 +186,7 @@ export function DashboardContent() {
               You've reached your monthly report limit. New reports are blocked until the period resets.
             </span>
             <Button asChild variant="outline" size="sm" className="ml-4 border-red-600 text-red-700 hover:bg-red-100">
-              <Link href="/app/settings/billing">Upgrade Plan</Link>
+              <Link href="/app/settings/billing" prefetch={false}>Upgrade Plan</Link>
             </Button>
           </AlertDescription>
         </Alert>
@@ -244,7 +237,7 @@ export function DashboardContent() {
         <div className="lg:col-span-2 bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <h3 className="text-[13px] font-semibold text-foreground">Recent Activity</h3>
-            <Link href="/app/reports" className="text-xs text-primary hover:text-primary/80 font-medium">
+            <Link href="/app/reports" prefetch={false} className="text-xs text-primary hover:text-primary/80 font-medium">
               View all →
             </Link>
           </div>
@@ -261,7 +254,7 @@ export function DashboardContent() {
                 Create your first report to get started
               </p>
               <Button size="sm" asChild>
-                <Link href="/app/reports/new">
+                <Link href="/app/reports/new" prefetch={false}>
                   <Plus className="w-3.5 h-3.5 mr-1.5" />
                   Create Report
                 </Link>

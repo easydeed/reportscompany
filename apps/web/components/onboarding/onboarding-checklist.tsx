@@ -153,7 +153,7 @@ export function OnboardingChecklist({
           </span>
         </div>
         {status.current_step && (
-          <Link href={status.steps.find((s) => s.key === status.current_step)?.href || "/app"}>
+          <Link href={status.steps.find((s) => s.key === status.current_step)?.href || "/app"} prefetch={false}>
             <Button size="sm" className="gap-1">
               Continue
               <ChevronRight className="w-4 h-4" />
@@ -220,6 +220,7 @@ export function OnboardingChecklist({
               <li key={step.key}>
                 <Link
                   href={step.href}
+                  prefetch={false}
                   className={cn(
                     "flex items-center gap-3 p-3 rounded-lg transition-all",
                     step.completed

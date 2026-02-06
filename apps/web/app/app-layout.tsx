@@ -137,7 +137,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
   return (
     <Sidebar>
       <SidebarHeader>
-        <Link href="/app" className="flex items-center px-3 py-4">
+        <Link href="/app" prefetch={false} className="flex items-center px-3 py-4">
           <Logo className="h-7 brightness-0 invert" />
         </Link>
       </SidebarHeader>
@@ -146,7 +146,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
         {/* Quick Action */}
         <div className="px-3 mb-2">
           <Button size="sm" className="w-full bg-indigo-500 hover:bg-indigo-400 text-white shadow-sm" asChild>
-            <Link href="/app/reports/new">
+            <Link href="/app/reports/new" prefetch={false}>
               <Plus className="w-3.5 h-3.5 mr-1.5" />
               New Report
             </Link>
@@ -164,7 +164,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
               return (
                 <SidebarMenuItem key={item.name}>
                   <SidebarMenuButton asChild isActive={isActive}>
-                    <Link href={item.href} prefetch={true}>
+                    <Link href={item.href} prefetch={false}>
                       <item.icon className="w-4 h-4" />
                       <span className="text-[13px]">{item.name}</span>
                     </Link>
@@ -186,7 +186,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
               return (
                 <SidebarMenuItem key={item.name}>
                   <SidebarMenuButton asChild isActive={isActive}>
-                    <Link href={item.href} prefetch={true}>
+                    <Link href={item.href} prefetch={false}>
                       <item.icon className="w-4 h-4" />
                       <span className="text-[13px]">{item.name}</span>
                     </Link>
@@ -217,7 +217,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
                     {settingsNavigation.map((item) => (
                       <SidebarMenuSubItem key={item.name}>
                         <SidebarMenuSubButton asChild isActive={pathname === item.href}>
-                          <Link href={item.href} prefetch={true}>
+                          <Link href={item.href} prefetch={false}>
                             <item.icon className="w-3.5 h-3.5" />
                             <span className="text-[13px]">{item.name}</span>
                           </Link>
@@ -245,7 +245,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
                       {adminNavigation.map((item) => (
                         <SidebarMenuSubItem key={item.name}>
                           <SidebarMenuSubButton asChild isActive={pathname === item.href}>
-                            <Link href={item.href} prefetch={true}>
+                            <Link href={item.href} prefetch={false}>
                               <item.icon className="w-3.5 h-3.5" />
                               <span className="text-[13px]">{item.name}</span>
                             </Link>
@@ -348,17 +348,17 @@ function DashboardTopbar({ accountType, isAdmin, isAffiliate }: { accountType?: 
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
-            <Link href="/app/settings/profile">
+            <Link href="/app/settings/profile" prefetch={false}>
               <User className="w-3.5 h-3.5 mr-2" />Profile
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href="/app/settings/branding">
+            <Link href="/app/settings/branding" prefetch={false}>
               <Palette className="w-3.5 h-3.5 mr-2" />Branding
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href="/app/settings/billing">
+            <Link href="/app/settings/billing" prefetch={false}>
               <CreditCard className="w-3.5 h-3.5 mr-2" />Billing
             </Link>
           </DropdownMenuItem>
