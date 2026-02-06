@@ -521,6 +521,22 @@
   .footer-agent-photo {
     border-color: var(--color-primary);
   }
+  
+  /* V0 overrides — Teal */
+  .comparison-row-stripe {
+    background: var(--color-row-a);
+  }
+  
+  .comparison-row:nth-child(even) {
+    background: var(--color-row-b);
+  }
+  
+  .range-bar-track {
+    background: linear-gradient(90deg, var(--color-row-a) 0%, var(--color-primary) 50%, var(--color-row-b) 100%);
+  }
+  
+  .range-comp-item:nth-child(odd) { background: var(--color-row-a); }
+  .range-comp-item:nth-child(even) { background: var(--color-row-b); }
 </style>
 {% endblock %}
 
