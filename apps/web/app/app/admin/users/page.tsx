@@ -1,9 +1,13 @@
-import { apiFetch } from "@/lib/api"
+'use client'
+
+import { useEffect, useState } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -22,8 +26,6 @@ import {
 import { Users, ArrowLeft, CheckCircle, XCircle, Mail } from "lucide-react"
 import { ResendInviteButton } from "./resend-invite-button"
 
-export const dynamic = 'force-dynamic'
-
 interface User {
   user_id: string
   email: string
@@ -39,42 +41,89 @@ interface User {
   role: string
 }
 
-interface UsersResponse {
-  users: User[]
-  count: number
-  total: number
-}
+export default function AdminUsersPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const [users, setUsers] = useState<User[]>([])
+  const [count, setCount] = useState(0)
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(true)
 
-async function getUsers(params: {
-  search?: string
-  is_active?: string
-  role?: string
-}): Promise<UsersResponse> {
-  try {
-    const searchParams = new URLSearchParams()
-    if (params.search) searchParams.set("search", params.search)
-    if (params.is_active && params.is_active !== "all") searchParams.set("is_active", params.is_active)
-    if (params.role && params.role !== "all") searchParams.set("role", params.role)
+  // Local filter state
+  const [search, setSearch] = useState(searchParams.get('search') || '')
+  const [isActive, setIsActive] = useState(searchParams.get('is_active') || 'all')
+  const [role, setRole] = useState(searchParams.get('role') || 'all')
 
-    const url = `/v1/admin/users?${searchParams.toString()}`
-    const data = await apiFetch(url)
-    return data || { users: [], count: 0, total: 0 }
-  } catch (error) {
-    console.error("Failed to fetch users:", error)
-    return { users: [], count: 0, total: 0 }
+  useEffect(() => {
+    async function fetchUsers() {
+      setLoading(true)
+      try {
+        const params = new URLSearchParams()
+        const s = searchParams.get('search')
+        const ia = searchParams.get('is_active')
+        const r = searchParams.get('role')
+
+        if (s) params.set('search', s)
+        if (ia && ia !== 'all') params.set('is_active', ia)
+        if (r && r !== 'all') params.set('role', r)
+
+        const res = await fetch(`/api/proxy/v1/admin/users?${params.toString()}`, {
+          credentials: 'include',
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setUsers(data?.users || [])
+          setCount(data?.count || 0)
+          setTotal(data?.total || 0)
+        }
+      } catch (err) {
+        console.error('Failed to fetch users:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchUsers()
+  }, [searchParams])
+
+  function handleFilter(e: React.FormEvent) {
+    e.preventDefault()
+    const params = new URLSearchParams()
+    if (search) params.set('search', search)
+    if (isActive !== 'all') params.set('is_active', isActive)
+    if (role !== 'all') params.set('role', role)
+    router.push(`/app/admin/users?${params.toString()}`)
   }
-}
-
-export default async function AdminUsersPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ search?: string; is_active?: string; role?: string }>
-}) {
-  const params = await searchParams
-  const { users, count, total } = await getUsers(params)
 
   const activeCount = users.filter(u => u.is_active).length
   const verifiedCount = users.filter(u => u.email_verified).length
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-10 w-10 rounded" />
+          <div>
+            <Skeleton className="h-9 w-36 mb-2" />
+            <Skeleton className="h-5 w-64" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <Card key={i}><CardContent className="pt-6"><Skeleton className="h-8 w-16" /></CardContent></Card>
+          ))}
+        </div>
+        <Card><CardContent className="pt-6">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="py-3 flex gap-4">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+            </div>
+          ))}
+        </CardContent></Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -133,14 +182,14 @@ export default async function AdminUsersPage({
       {/* Filters */}
       <Card className="mb-6">
         <CardContent className="pt-6">
-          <form method="GET" className="flex flex-wrap gap-4">
+          <form onSubmit={handleFilter} className="flex flex-wrap gap-4">
             <Input
-              name="search"
               placeholder="Search by email or name..."
-              defaultValue={params.search}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               className="w-64"
             />
-            <Select name="is_active" defaultValue={params.is_active || "all"}>
+            <Select value={isActive} onValueChange={setIsActive}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
@@ -150,7 +199,7 @@ export default async function AdminUsersPage({
                 <SelectItem value="false">Inactive</SelectItem>
               </SelectContent>
             </Select>
-            <Select name="role" defaultValue={params.role || "all"}>
+            <Select value={role} onValueChange={setRole}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="All Roles" />
               </SelectTrigger>
@@ -162,9 +211,9 @@ export default async function AdminUsersPage({
               </SelectContent>
             </Select>
             <Button type="submit" variant="secondary">Filter</Button>
-            {(params.search || params.is_active || params.role) && (
+            {(searchParams.get('search') || searchParams.get('is_active') || searchParams.get('role')) && (
               <Link href="/app/admin/users">
-                <Button variant="ghost">Clear</Button>
+                <Button variant="ghost" type="button">Clear</Button>
               </Link>
             )}
           </form>
@@ -179,7 +228,7 @@ export default async function AdminUsersPage({
               <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">No users found</h3>
               <p className="text-muted-foreground">
-                {params.search || params.is_active || params.role
+                {searchParams.toString()
                   ? "No users match your filters"
                   : "No users in the system yet"}
               </p>

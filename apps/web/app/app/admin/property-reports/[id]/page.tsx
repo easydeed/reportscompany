@@ -1,9 +1,12 @@
-import { cookies } from "next/headers"
-import { redirect, notFound } from "next/navigation"
+'use client'
+
+import { useState, useEffect } from "react"
+import { useParams } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -29,11 +32,11 @@ import {
   Unlock,
   CheckCircle,
   XCircle,
+  AlertTriangle,
+  Loader2,
 } from "lucide-react"
 import { PropertyReportActions } from "../actions"
 import { RawDataViewer } from "./raw-data-viewer"
-
-export const dynamic = 'force-dynamic'
 
 interface Lead {
   id: string
@@ -83,53 +86,81 @@ interface PropertyReport {
   leads: Lead[]
 }
 
-async function fetchWithAuth(path: string, token: string) {
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://reportscompany.onrender.com'
-
-  try {
-    const response = await fetch(`${API_BASE}${path}`, {
-      headers: { 'Cookie': `mr_token=${token}` },
-      cache: 'no-store',
-    })
-    if (!response.ok) return null
-    return response.json()
-  } catch {
-    return null
-  }
+const statusColors: Record<string, string> = {
+  complete: "bg-green-100 text-green-800",
+  processing: "bg-blue-100 text-blue-800",
+  draft: "bg-yellow-100 text-yellow-800",
+  failed: "bg-red-100 text-red-800",
 }
 
-export default async function AdminPropertyReportDetailPage({
-  params,
-}: {
-  params: { id: string }
-}) {
-  const cookieStore = await cookies()
-  const token = cookieStore.get('mr_token')?.value
+const leadStatusColors: Record<string, string> = {
+  new: "bg-blue-100 text-blue-800",
+  contacted: "bg-yellow-100 text-yellow-800",
+  converted: "bg-green-100 text-green-800",
+}
 
-  if (!token) {
-    redirect('/login')
+export default function AdminPropertyReportDetailPage() {
+  const params = useParams()
+  const id = params.id as string
+  const [report, setReport] = useState<PropertyReport | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    async function fetchReport() {
+      try {
+        const res = await fetch(`/api/proxy/v1/admin/property-reports/${id}`, {
+          credentials: 'include',
+        })
+        if (!res.ok) {
+          setError(true)
+          return
+        }
+        const data = await res.json()
+        setReport(data)
+      } catch {
+        setError(true)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchReport()
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-10 w-10 rounded" />
+          <div>
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-5 w-48" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <Card><CardContent className="pt-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
+            <Card><CardContent className="pt-6"><Skeleton className="h-48 w-full" /></CardContent></Card>
+          </div>
+          <div className="space-y-6">
+            <Card><CardContent className="pt-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
+            <Card><CardContent className="pt-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
+          </div>
+        </div>
+      </div>
+    )
   }
 
-  const report: PropertyReport | null = await fetchWithAuth(
-    `/v1/admin/property-reports/${params.id}`,
-    token
-  )
-
-  if (!report) {
-    notFound()
-  }
-
-  const statusColors: Record<string, string> = {
-    complete: "bg-green-100 text-green-800",
-    processing: "bg-blue-100 text-blue-800",
-    draft: "bg-yellow-100 text-yellow-800",
-    failed: "bg-red-100 text-red-800",
-  }
-
-  const leadStatusColors: Record<string, string> = {
-    new: "bg-blue-100 text-blue-800",
-    contacted: "bg-yellow-100 text-yellow-800",
-    converted: "bg-green-100 text-green-800",
+  if (error || !report) {
+    return (
+      <div className="text-center py-12">
+        <AlertTriangle className="h-12 w-12 mx-auto text-red-500 mb-4" />
+        <h3 className="text-lg font-semibold mb-2">Report not found</h3>
+        <Link href="/app/admin/property-reports">
+          <Button variant="outline">Back to Property Reports</Button>
+        </Link>
+      </div>
+    )
   }
 
   const publicUrl = report.short_code ? `/p/${report.short_code}` : null
@@ -454,7 +485,6 @@ export default async function AdminPropertyReportDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Active Status */}
               <div className="flex items-center justify-between">
                 <span className="text-sm">Status</span>
                 {report.is_active ? (
@@ -469,8 +499,6 @@ export default async function AdminPropertyReportDetailPage({
                   </Badge>
                 )}
               </div>
-
-              {/* Expiration */}
               <div className="flex items-center justify-between">
                 <span className="text-sm flex items-center gap-1">
                   <Clock className="w-3 h-3" />
@@ -483,8 +511,6 @@ export default async function AdminPropertyReportDetailPage({
                   }
                 </span>
               </div>
-
-              {/* Max Leads */}
               <div className="flex items-center justify-between">
                 <span className="text-sm">Max Leads</span>
                 <span className="text-sm font-medium">
@@ -494,8 +520,6 @@ export default async function AdminPropertyReportDetailPage({
                   }
                 </span>
               </div>
-
-              {/* Access Code */}
               <div className="flex items-center justify-between">
                 <span className="text-sm flex items-center gap-1">
                   {report.access_code ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
@@ -552,4 +576,3 @@ export default async function AdminPropertyReportDetailPage({
     </div>
   )
 }
-

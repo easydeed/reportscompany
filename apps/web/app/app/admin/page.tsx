@@ -1,8 +1,10 @@
-import { cookies } from "next/headers"
-import { redirect } from "next/navigation"
+'use client'
+
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -24,11 +26,8 @@ import {
   Clock,
   Zap,
   XCircle,
-  TrendingUp,
   Activity,
 } from "lucide-react"
-
-export const dynamic = 'force-dynamic'
 
 interface Report {
   id: string
@@ -59,48 +58,11 @@ interface EmailLog {
   created_at: string
 }
 
-async function fetchWithAuth(path: string, token: string) {
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://reportscompany.onrender.com'
-
-  try {
-    const response = await fetch(`${API_BASE}${path}`, {
-      headers: { 'Cookie': `mr_token=${token}` },
-      cache: 'no-store',
-    })
-    if (!response.ok) return null
-    return response.json()
-  } catch {
-    return null
-  }
-}
-
-async function getAdminData(token: string) {
-  try {
-    const [metricsRes, timeseriesRes, reportsRes, schedulesRes, emailLogsRes] = await Promise.all([
-      fetchWithAuth("/v1/admin/metrics", token),
-      fetchWithAuth("/v1/admin/metrics/timeseries", token),
-      fetchWithAuth("/v1/admin/reports?limit=10", token),
-      fetchWithAuth("/v1/admin/schedules?limit=10", token),
-      fetchWithAuth("/v1/admin/emails?limit=10", token),
-    ])
-
-    const metrics = metricsRes || {}
-    const timeseries = timeseriesRes || {}
-    const reports: Report[] = reportsRes?.reports || []
-    const schedules: Schedule[] = schedulesRes?.schedules || []
-    const emailLogs: EmailLog[] = emailLogsRes?.emails || []
-
-    return { metrics, timeseries, reports, schedules, emailLogs }
-  } catch (error) {
-    console.error("Failed to fetch admin data:", error)
-    return {
-      metrics: {},
-      timeseries: {},
-      reports: [],
-      schedules: [],
-      emailLogs: [],
-    }
-  }
+interface AdminData {
+  metrics: Record<string, any>
+  reports: Report[]
+  schedules: Schedule[]
+  emailLogs: EmailLog[]
 }
 
 function formatTimeAgo(dateString: string | null): string {
@@ -118,23 +80,58 @@ function formatTimeAgo(dateString: string | null): string {
   return `${diffDays}d ago`
 }
 
-export default async function AdminPage() {
-  const cookieStore = await cookies()
-  const token = cookieStore.get('mr_token')?.value
+const statusColors: Record<string, string> = {
+  completed: "bg-green-100 text-green-800",
+  processing: "bg-blue-100 text-blue-800",
+  pending: "bg-yellow-100 text-yellow-800",
+  failed: "bg-red-100 text-red-800",
+  success: "bg-green-100 text-green-800",
+}
 
-  if (!token) {
-    redirect('/login')
+export default function AdminPage() {
+  const [data, setData] = useState<AdminData>({
+    metrics: {},
+    reports: [],
+    schedules: [],
+    emailLogs: [],
+  })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchAdminData() {
+      try {
+        const [metricsRes, reportsRes, schedulesRes, emailsRes] = await Promise.all([
+          fetch('/api/proxy/v1/admin/metrics/overview', { credentials: 'include' }),
+          fetch('/api/proxy/v1/admin/reports?limit=10', { credentials: 'include' }),
+          fetch('/api/proxy/v1/admin/schedules?limit=10', { credentials: 'include' }),
+          fetch('/api/proxy/v1/admin/emails?limit=10', { credentials: 'include' }),
+        ])
+
+        const metrics = metricsRes.ok ? await metricsRes.json() : {}
+        const reportsData = reportsRes.ok ? await reportsRes.json() : {}
+        const schedulesData = schedulesRes.ok ? await schedulesRes.json() : {}
+        const emailsData = emailsRes.ok ? await emailsRes.json() : {}
+
+        setData({
+          metrics,
+          reports: reportsData?.reports || [],
+          schedules: schedulesData?.schedules || [],
+          emailLogs: emailsData?.emails || [],
+        })
+      } catch (err) {
+        console.error('Failed to fetch admin data:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchAdminData()
+  }, [])
+
+  if (loading) {
+    return <AdminSkeleton />
   }
 
-  const { metrics, reports, schedules, emailLogs } = await getAdminData(token)
-
-  const statusColors: Record<string, string> = {
-    completed: "bg-green-100 text-green-800",
-    processing: "bg-blue-100 text-blue-800",
-    pending: "bg-yellow-100 text-yellow-800",
-    failed: "bg-red-100 text-red-800",
-    success: "bg-green-100 text-green-800",
-  }
+  const { metrics, reports, schedules, emailLogs } = data
 
   return (
     <div className="space-y-8">
@@ -463,6 +460,57 @@ export default async function AdminPage() {
           </CardContent>
         </Card>
       </div>
+    </div>
+  )
+}
+
+function AdminSkeleton() {
+  return (
+    <div className="space-y-8">
+      <div>
+        <Skeleton className="h-9 w-48 mb-2" />
+        <Skeleton className="h-5 w-64" />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <Card key={i}>
+            <CardHeader className="pb-2">
+              <Skeleton className="h-4 w-20" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-8 w-16 mb-1" />
+              <Skeleton className="h-3 w-20" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <div className="grid grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i}>
+            <CardContent className="pt-6">
+              <Skeleton className="h-4 w-20 mb-2" />
+              <Skeleton className="h-8 w-12" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-5 w-32 mb-1" />
+          <Skeleton className="h-4 w-48" />
+        </CardHeader>
+        <CardContent>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="py-3 flex gap-4">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+              <Skeleton className="h-4 w-12 font-mono" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   )
 }

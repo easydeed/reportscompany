@@ -1,9 +1,12 @@
-import { apiFetch } from "@/lib/api"
+'use client'
+
+import { useState, useEffect } from "react"
+import { useParams } from "next/navigation"
 import Link from "next/link"
-import { notFound } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -26,13 +29,12 @@ import {
   XCircle,
   FileUp,
   User,
+  AlertTriangle,
 } from "lucide-react"
 import { InviteAgentForm } from "./invite-agent-form"
 import { AffiliateActions } from "./affiliate-actions"
 import { BulkImportForm } from "./bulk-import-form"
 import { AgentHeadshotUpload } from "./agent-headshot-upload"
-
-export const dynamic = 'force-dynamic'
 
 interface Agent {
   account_id: string
@@ -80,26 +82,68 @@ interface AffiliateDetail {
   reports_this_month: number
 }
 
-async function getAffiliate(id: string): Promise<AffiliateDetail | null> {
-  try {
-    const data = await apiFetch(`/v1/admin/affiliates/${id}`)
-    return data
-  } catch (error) {
-    console.error("Failed to fetch affiliate:", error)
-    return null
+export default function AffiliateDetailPage() {
+  const params = useParams()
+  const id = params.id as string
+  const [affiliate, setAffiliate] = useState<AffiliateDetail | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const res = await fetch(`/api/proxy/v1/admin/affiliates/${id}`, {
+          credentials: 'include',
+        })
+        if (!res.ok) {
+          setError(true)
+          return
+        }
+        setAffiliate(await res.json())
+      } catch {
+        setError(true)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-10 w-10 rounded" />
+          <Skeleton className="h-12 w-12 rounded" />
+          <div>
+            <Skeleton className="h-9 w-48 mb-2" />
+            <Skeleton className="h-5 w-32" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <Card key={i}><CardContent className="pt-6"><Skeleton className="h-8 w-16" /></CardContent></Card>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card><CardContent className="pt-6"><Skeleton className="h-24 w-full" /></CardContent></Card>
+          <Card className="lg:col-span-2"><CardContent className="pt-6"><Skeleton className="h-24 w-full" /></CardContent></Card>
+        </div>
+        <Card><CardContent className="pt-6"><Skeleton className="h-48 w-full" /></CardContent></Card>
+      </div>
+    )
   }
-}
 
-export default async function AffiliateDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
-  const { id } = await params
-  const affiliate = await getAffiliate(id)
-
-  if (!affiliate) {
-    notFound()
+  if (error || !affiliate) {
+    return (
+      <div className="text-center py-12">
+        <AlertTriangle className="h-12 w-12 mx-auto text-red-500 mb-4" />
+        <h3 className="text-lg font-semibold mb-2">Affiliate not found</h3>
+        <Link href="/app/admin/affiliates">
+          <Button variant="outline">Back to Affiliates</Button>
+        </Link>
+      </div>
+    )
   }
 
   return (

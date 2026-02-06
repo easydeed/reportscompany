@@ -81,7 +81,7 @@ export default function AdminAccountDetailPage() {
   async function fetchAccount() {
     try {
       setLoading(true)
-      const res = await fetch(`/api/v1/admin/accounts/${accountId}/plan-usage`, {
+      const res = await fetch(`/api/proxy/v1/admin/accounts/${accountId}/plan-usage`, {
         credentials: "include",
       })
       if (!res.ok) throw new Error("Failed to fetch account")
@@ -124,7 +124,7 @@ export default function AdminAccountDetailPage() {
         queryParams.set(key, String(value))
       })
 
-      const res = await fetch(`/api/v1/admin/accounts/${accountId}?${queryParams.toString()}`, {
+      const res = await fetch(`/api/proxy/v1/admin/accounts/${accountId}?${queryParams.toString()}`, {
         method: "PATCH",
         credentials: "include",
       })

@@ -1,3 +1,6 @@
+'use client'
+
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Plus, Download, Eye, FileJson, Share2, FileText } from "lucide-react"
 import {
@@ -7,11 +10,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import Link from "next/link"
-import { cookies } from "next/headers"
-import { getApiBase } from "@/lib/get-api-base"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { EmptyState } from "@/components/empty-state"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -32,34 +34,32 @@ type Report = {
   generated_at: string
 }
 
-async function getReports(): Promise<{ reports: Report[], error: boolean }> {
-  try {
-    const API_BASE = getApiBase()
-    const cookieStore = await cookies()
-    const token = cookieStore.get("mr_token")?.value
+export default function ReportsPage() {
+  const [reports, setReports] = useState<Report[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
-    if (!token) {
-      return { reports: [], error: false }
+  useEffect(() => {
+    async function fetchReports() {
+      try {
+        const res = await fetch('/api/proxy/v1/reports', {
+          credentials: 'include',
+          cache: 'no-store',
+        })
+        if (!res.ok) {
+          setError(true)
+          return
+        }
+        const data = await res.json()
+        setReports(data.reports || [])
+      } catch {
+        setError(true)
+      } finally {
+        setLoading(false)
+      }
     }
-
-    const res = await fetch(`${API_BASE}/v1/reports`, {
-      headers: { Cookie: `mr_token=${token}` },
-      cache: "no-store",
-    })
-
-    if (!res.ok) {
-      return { reports: [], error: true }
-    }
-
-    const data = await res.json()
-    return { reports: data.reports || [], error: false }
-  } catch {
-    return { reports: [], error: true }
-  }
-}
-
-export default async function ReportsPage() {
-  const { reports, error } = await getReports()
+    fetchReports()
+  }, [])
 
   return (
     <div className="space-y-5">
@@ -82,14 +82,16 @@ export default async function ReportsPage() {
         </div>
       )}
 
-      {reports.length === 0 && !error ? (
+      {loading ? (
+        <ReportsTableSkeleton />
+      ) : reports.length === 0 && !error ? (
         <EmptyState
           icon={<FileText className="w-6 h-6" />}
           title="No reports yet"
           description="Create your first market report to get started with data-driven insights."
           action={{
             label: "Create Report",
-            onClick: () => {} // Client-side navigation handled by Link below
+            onClick: () => { window.location.href = '/app/reports/new' }
           }}
         />
       ) : (
@@ -197,6 +199,32 @@ export default async function ReportsPage() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function ReportsTableSkeleton() {
+  return (
+    <div className="bg-card border border-border rounded-xl overflow-hidden shadow-[var(--shadow-card)]">
+      <div className="px-4 py-3 border-b border-border bg-muted/40">
+        <div className="grid grid-cols-5 gap-4">
+          {['Report', 'Area', 'Created', 'Status', 'Actions'].map((h) => (
+            <Skeleton key={h} className="h-3 w-16" />
+          ))}
+        </div>
+      </div>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="px-4 py-3 border-b border-border/50 flex items-center gap-4">
+          <Skeleton className="h-4 w-32 flex-1" />
+          <Skeleton className="h-4 w-20 flex-1" />
+          <Skeleton className="h-4 w-24 flex-1" />
+          <Skeleton className="h-5 w-16 rounded-full flex-1" />
+          <div className="flex gap-1 flex-1">
+            <Skeleton className="h-8 w-8 rounded" />
+            <Skeleton className="h-8 w-8 rounded" />
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

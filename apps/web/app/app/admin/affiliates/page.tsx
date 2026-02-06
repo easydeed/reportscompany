@@ -1,9 +1,13 @@
-import { apiFetch } from "@/lib/api"
+'use client'
+
+import { useEffect, useState } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -13,8 +17,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Building2, Users, FileText, Plus, ArrowLeft, ExternalLink } from "lucide-react"
-
-export const dynamic = 'force-dynamic'
 
 interface Affiliate {
   account_id: string
@@ -30,26 +32,77 @@ interface Affiliate {
   reports_this_month: number
 }
 
-async function getAffiliates(search?: string): Promise<{ affiliates: Affiliate[], count: number }> {
-  try {
-    const url = search
-      ? `/v1/admin/affiliates?search=${encodeURIComponent(search)}`
-      : '/v1/admin/affiliates'
-    const data = await apiFetch(url)
-    return data || { affiliates: [], count: 0 }
-  } catch (error) {
-    console.error("Failed to fetch affiliates:", error)
-    return { affiliates: [], count: 0 }
-  }
-}
+export default function AdminAffiliatesPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const [affiliates, setAffiliates] = useState<Affiliate[]>([])
+  const [count, setCount] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState(searchParams.get('search') || '')
 
-export default async function AdminAffiliatesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ search?: string }>
-}) {
-  const params = await searchParams
-  const { affiliates, count } = await getAffiliates(params.search)
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true)
+      try {
+        const params = new URLSearchParams()
+        const s = searchParams.get('search')
+        if (s) params.set('search', s)
+
+        const res = await fetch(`/api/proxy/v1/admin/affiliates?${params.toString()}`, {
+          credentials: 'include',
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setAffiliates(data?.affiliates || [])
+          setCount(data?.count || 0)
+        }
+      } catch (err) {
+        console.error('Failed to fetch affiliates:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [searchParams])
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault()
+    const params = new URLSearchParams()
+    if (search) params.set('search', search)
+    router.push(`/app/admin/affiliates?${params.toString()}`)
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-10 w-10 rounded" />
+            <div>
+              <Skeleton className="h-9 w-48 mb-2" />
+              <Skeleton className="h-5 w-72" />
+            </div>
+          </div>
+          <Skeleton className="h-10 w-40" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[1, 2, 3].map(i => (
+            <Card key={i}><CardContent className="pt-6"><Skeleton className="h-8 w-16" /></CardContent></Card>
+          ))}
+        </div>
+        <Card><CardContent className="pt-6">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="py-3 flex gap-4">
+              <Skeleton className="h-8 w-8 rounded" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+              <Skeleton className="h-4 w-12" />
+            </div>
+          ))}
+        </CardContent></Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -111,17 +164,17 @@ export default async function AdminAffiliatesPage({
       {/* Search */}
       <Card className="mb-6">
         <CardContent className="pt-6">
-          <form method="GET" className="flex gap-4">
+          <form onSubmit={handleSearch} className="flex gap-4">
             <Input
-              name="search"
               placeholder="Search by company name..."
-              defaultValue={params.search}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               className="max-w-sm"
             />
             <Button type="submit" variant="secondary">Search</Button>
-            {params.search && (
+            {searchParams.get('search') && (
               <Link href="/app/admin/affiliates">
-                <Button variant="ghost">Clear</Button>
+                <Button variant="ghost" type="button">Clear</Button>
               </Link>
             )}
           </form>
@@ -136,7 +189,7 @@ export default async function AdminAffiliatesPage({
               <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">No affiliates found</h3>
               <p className="text-muted-foreground mb-4">
-                {params.search
+                {searchParams.get('search')
                   ? "No affiliates match your search criteria"
                   : "Get started by adding your first title company"}
               </p>

@@ -1,10 +1,13 @@
-import { cookies } from "next/headers"
-import { redirect } from "next/navigation"
+'use client'
+
+import { useEffect, useState } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -22,8 +25,6 @@ import {
 } from "@/components/ui/select"
 import { Building, Users, FileText, ArrowLeft, Settings } from "lucide-react"
 
-export const dynamic = 'force-dynamic'
-
 interface Account {
   account_id: string
   name: string
@@ -38,69 +39,93 @@ interface Account {
   reports_this_month: number
 }
 
-interface AccountsResponse {
-  accounts: Account[]
-  count: number
-  total: number
-}
+export default function AdminAccountsPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [count, setCount] = useState(0)
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(true)
 
-async function fetchWithAuth(path: string, token: string) {
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://reportscompany.onrender.com'
+  // Local filter state
+  const [search, setSearch] = useState(searchParams.get('search') || '')
+  const [accountType, setAccountType] = useState(searchParams.get('account_type') || 'all')
+  const [planSlug, setPlanSlug] = useState(searchParams.get('plan_slug') || 'all')
 
-  try {
-    const response = await fetch(`${API_BASE}${path}`, {
-      headers: { 'Cookie': `mr_token=${token}` },
-      cache: 'no-store',
-    })
-    if (!response.ok) return null
-    return response.json()
-  } catch {
-    return null
+  useEffect(() => {
+    async function fetchAccounts() {
+      setLoading(true)
+      try {
+        const params = new URLSearchParams()
+        const s = searchParams.get('search')
+        const at = searchParams.get('account_type')
+        const ps = searchParams.get('plan_slug')
+
+        if (s) params.set('search', s)
+        if (at && at !== 'all') params.set('account_type', at)
+        if (ps && ps !== 'all') params.set('plan_slug', ps)
+
+        const res = await fetch(`/api/proxy/v1/admin/accounts?${params.toString()}`, {
+          credentials: 'include',
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setAccounts(data?.accounts || [])
+          setCount(data?.count || 0)
+          setTotal(data?.total || 0)
+        }
+      } catch (err) {
+        console.error('Failed to fetch accounts:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchAccounts()
+  }, [searchParams])
+
+  function handleFilter(e: React.FormEvent) {
+    e.preventDefault()
+    const params = new URLSearchParams()
+    if (search) params.set('search', search)
+    if (accountType !== 'all') params.set('account_type', accountType)
+    if (planSlug !== 'all') params.set('plan_slug', planSlug)
+    router.push(`/app/admin/accounts?${params.toString()}`)
   }
-}
 
-async function getAccounts(params: {
-  search?: string
-  account_type?: string
-  plan_slug?: string
-}, token: string): Promise<AccountsResponse> {
-  try {
-    const searchParams = new URLSearchParams()
-    if (params.search) searchParams.set("search", params.search)
-    if (params.account_type && params.account_type !== "all") searchParams.set("account_type", params.account_type)
-    if (params.plan_slug && params.plan_slug !== "all") searchParams.set("plan_slug", params.plan_slug)
-
-    const url = `/v1/admin/accounts?${searchParams.toString()}`
-    const data = await fetchWithAuth(url, token)
-    return data || { accounts: [], count: 0, total: 0 }
-  } catch (error) {
-    console.error("Failed to fetch accounts:", error)
-    return { accounts: [], count: 0, total: 0 }
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-8 w-8 rounded" />
+          <div>
+            <Skeleton className="h-9 w-48 mb-2" />
+            <Skeleton className="h-5 w-72" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <Card key={i}><CardContent className="pt-6"><Skeleton className="h-8 w-16" /></CardContent></Card>
+          ))}
+        </div>
+        <Card><CardContent className="pt-6">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="py-3 flex gap-4">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+              <Skeleton className="h-5 w-12 rounded-full" />
+              <Skeleton className="h-4 w-12" />
+            </div>
+          ))}
+        </CardContent></Card>
+      </div>
+    )
   }
-}
-
-export default async function AdminAccountsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ search?: string; account_type?: string; plan_slug?: string }>
-}) {
-  const cookieStore = await cookies()
-  const token = cookieStore.get('mr_token')?.value
-
-  if (!token) {
-    redirect('/login')
-  }
-
-  const params = await searchParams
-  const { accounts, count, total } = await getAccounts(params, token)
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link href="/app/admin">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+          <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
         </Link>
         <div>
           <h1 className="text-3xl font-display font-bold text-foreground">All Accounts</h1>
@@ -108,25 +133,20 @@ export default async function AdminAccountsPage({
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Accounts</CardTitle>
             <Building className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{total}</div>
-          </CardContent>
+          <CardContent><div className="text-2xl font-bold">{total}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Showing</CardTitle>
             <Building className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{count}</div>
-          </CardContent>
+          <CardContent><div className="text-2xl font-bold">{count}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -134,9 +154,7 @@ export default async function AdminAccountsPage({
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {accounts.reduce((sum, a) => sum + a.user_count, 0)}
-            </div>
+            <div className="text-2xl font-bold">{accounts.reduce((sum, a) => sum + a.user_count, 0)}</div>
           </CardContent>
         </Card>
         <Card>
@@ -145,37 +163,30 @@ export default async function AdminAccountsPage({
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {accounts.reduce((sum, a) => sum + a.reports_this_month, 0)}
-            </div>
+            <div className="text-2xl font-bold">{accounts.reduce((sum, a) => sum + a.reports_this_month, 0)}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
       <Card className="mb-6">
         <CardContent className="pt-6">
-          <form method="GET" className="flex flex-wrap gap-4">
+          <form onSubmit={handleFilter} className="flex flex-wrap gap-4">
             <Input
-              name="search"
               placeholder="Search by name..."
-              defaultValue={params.search}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               className="w-64"
             />
-            <Select name="account_type" defaultValue={params.account_type || "all"}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
+            <Select value={accountType} onValueChange={setAccountType}>
+              <SelectTrigger className="w-48"><SelectValue placeholder="All Types" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="REGULAR">Regular</SelectItem>
                 <SelectItem value="INDUSTRY_AFFILIATE">Affiliate</SelectItem>
               </SelectContent>
             </Select>
-            <Select name="plan_slug" defaultValue={params.plan_slug || "all"}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="All Plans" />
-              </SelectTrigger>
+            <Select value={planSlug} onValueChange={setPlanSlug}>
+              <SelectTrigger className="w-48"><SelectValue placeholder="All Plans" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Plans</SelectItem>
                 <SelectItem value="free">Free</SelectItem>
@@ -186,16 +197,13 @@ export default async function AdminAccountsPage({
               </SelectContent>
             </Select>
             <Button type="submit" variant="secondary">Filter</Button>
-            {(params.search || params.account_type || params.plan_slug) && (
-              <Link href="/app/admin/accounts">
-                <Button variant="ghost">Clear</Button>
-              </Link>
+            {(searchParams.get('search') || searchParams.get('account_type') || searchParams.get('plan_slug')) && (
+              <Link href="/app/admin/accounts"><Button variant="ghost">Clear</Button></Link>
             )}
           </form>
         </CardContent>
       </Card>
 
-      {/* Table */}
       <Card>
         <CardContent className="pt-6">
           {accounts.length === 0 ? (
@@ -203,9 +211,7 @@ export default async function AdminAccountsPage({
               <Building className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">No accounts found</h3>
               <p className="text-muted-foreground">
-                {params.search || params.account_type || params.plan_slug
-                  ? "No accounts match your filters"
-                  : "No accounts in the system yet"}
+                {searchParams.toString() ? "No accounts match your filters" : "No accounts in the system yet"}
               </p>
             </div>
           ) : (
@@ -237,15 +243,9 @@ export default async function AdminAccountsPage({
                         {account.account_type === "INDUSTRY_AFFILIATE" ? "Affiliate" : "Regular"}
                       </Badge>
                     </TableCell>
+                    <TableCell><Badge variant="outline">{account.plan_slug}</Badge></TableCell>
                     <TableCell>
-                      <Badge variant="outline">{account.plan_slug}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {account.sponsor_name ? (
-                        <span className="text-sm">{account.sponsor_name}</span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
+                      {account.sponsor_name ? <span className="text-sm">{account.sponsor_name}</span> : <span className="text-muted-foreground">-</span>}
                     </TableCell>
                     <TableCell>{account.user_count}</TableCell>
                     <TableCell>{account.reports_this_month}</TableCell>
@@ -255,15 +255,11 @@ export default async function AdminAccountsPage({
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {account.created_at
-                        ? new Date(account.created_at).toLocaleDateString()
-                        : '-'}
+                      {account.created_at ? new Date(account.created_at).toLocaleDateString() : '-'}
                     </TableCell>
                     <TableCell>
                       <Link href={`/app/admin/accounts/${account.account_id}`}>
-                        <Button variant="ghost" size="icon">
-                          <Settings className="h-4 w-4" />
-                        </Button>
+                        <Button variant="ghost" size="icon"><Settings className="h-4 w-4" /></Button>
                       </Link>
                     </TableCell>
                   </TableRow>

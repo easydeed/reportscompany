@@ -1,8 +1,11 @@
-import { cookies } from "next/headers"
-import { redirect } from "next/navigation"
+'use client'
+
+import { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -21,8 +24,6 @@ import {
 } from "lucide-react"
 import { LeadsFilters } from "./filters"
 import { LeadsActions } from "./actions"
-
-export const dynamic = 'force-dynamic'
 
 interface Lead {
   id: string
@@ -50,21 +51,6 @@ interface Stats {
   conversion_rate: number
 }
 
-async function fetchWithAuth(path: string, token: string) {
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://reportscompany.onrender.com'
-
-  try {
-    const response = await fetch(`${API_BASE}${path}`, {
-      headers: { 'Cookie': `mr_token=${token}` },
-      cache: 'no-store',
-    })
-    if (!response.ok) return null
-    return response.json()
-  } catch {
-    return null
-  }
-}
-
 function formatTimeAgo(dateString: string | null): string {
   if (!dateString) return "Never"
   const date = new Date(dateString)
@@ -80,43 +66,83 @@ function formatTimeAgo(dateString: string | null): string {
   return `${diffDays}d ago`
 }
 
-export default async function AdminLeadsPage({
-  searchParams,
-}: {
-  searchParams: { status?: string; account?: string; from?: string; to?: string }
-}) {
-  const cookieStore = await cookies()
-  const token = cookieStore.get('mr_token')?.value
+const statusColors: Record<string, string> = {
+  new: "bg-blue-100 text-blue-800",
+  contacted: "bg-yellow-100 text-yellow-800",
+  converted: "bg-green-100 text-green-800",
+}
 
-  if (!token) {
-    redirect('/login')
-  }
+const sourceColors: Record<string, string> = {
+  qr_scan: "border-indigo-300 text-indigo-700",
+  direct_link: "border-blue-300 text-blue-700",
+}
 
-  // Build query params
-  const params = new URLSearchParams()
-  if (searchParams.status && searchParams.status !== 'all') params.set('status', searchParams.status)
-  if (searchParams.account) params.set('account', searchParams.account)
-  if (searchParams.from) params.set('from_date', searchParams.from)
-  if (searchParams.to) params.set('to_date', searchParams.to)
-  params.set('limit', '100')
+export default function AdminLeadsPage() {
+  const searchParams = useSearchParams()
+  const [leads, setLeads] = useState<Lead[]>([])
+  const [stats, setStats] = useState<Stats>({ total: 0, new_this_week: 0, contacted: 0, converted: 0, conversion_rate: 0 })
+  const [loading, setLoading] = useState(true)
 
-  const [leadsRes, statsRes] = await Promise.all([
-    fetchWithAuth(`/v1/admin/leads?${params.toString()}`, token),
-    fetchWithAuth('/v1/admin/stats/leads', token),
-  ])
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true)
+      try {
+        const params = new URLSearchParams()
+        const status = searchParams.get('status')
+        const account = searchParams.get('account')
+        const from = searchParams.get('from')
+        const to = searchParams.get('to')
 
-  const leads: Lead[] = leadsRes?.leads || []
-  const stats: Stats = statsRes || { total: 0, new_this_week: 0, contacted: 0, converted: 0, conversion_rate: 0 }
+        if (status && status !== 'all') params.set('status', status)
+        if (account) params.set('account', account)
+        if (from) params.set('from_date', from)
+        if (to) params.set('to_date', to)
+        params.set('limit', '100')
 
-  const statusColors: Record<string, string> = {
-    new: "bg-blue-100 text-blue-800",
-    contacted: "bg-yellow-100 text-yellow-800",
-    converted: "bg-green-100 text-green-800",
-  }
+        const [leadsRes, statsRes] = await Promise.all([
+          fetch(`/api/proxy/v1/admin/leads?${params.toString()}`, { credentials: 'include' }),
+          fetch('/api/proxy/v1/admin/stats/leads', { credentials: 'include' }),
+        ])
 
-  const sourceColors: Record<string, string> = {
-    qr_scan: "border-indigo-300 text-indigo-700",
-    direct_link: "border-blue-300 text-blue-700",
+        if (leadsRes.ok) {
+          const data = await leadsRes.json()
+          setLeads(data?.leads || [])
+        }
+        if (statsRes.ok) {
+          setStats(await statsRes.json())
+        }
+      } catch (err) {
+        console.error('Failed to fetch leads:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [searchParams])
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <Skeleton className="h-9 w-32 mb-2" />
+          <Skeleton className="h-5 w-64" />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <Card key={i}><CardContent className="pt-6"><Skeleton className="h-8 w-16" /></CardContent></Card>
+          ))}
+        </div>
+        <Card><CardContent className="pt-6">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="py-3 flex gap-4">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+            </div>
+          ))}
+        </CardContent></Card>
+      </div>
+    )
   }
 
   return (
@@ -126,55 +152,41 @@ export default async function AdminLeadsPage({
         <p className="text-muted-foreground mt-2">Manage leads captured from property reports</p>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
+          <CardContent><div className="text-2xl font-bold">{stats.total}</div></CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">New This Week</CardTitle>
             <UserPlus className="h-4 w-4 text-blue-500" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.new_this_week}</div>
-          </CardContent>
+          <CardContent><div className="text-2xl font-bold">{stats.new_this_week}</div></CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Converted</CardTitle>
             <TrendingUp className="h-4 w-4 text-green-500" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.converted}</div>
-          </CardContent>
+          <CardContent><div className="text-2xl font-bold">{stats.converted}</div></CardContent>
         </Card>
-
         <Card className={(stats.conversion_rate ?? 0) > 0 ? "bg-green-50 border-green-200" : ""}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
             <TrendingUp className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {(stats.conversion_rate ?? 0).toFixed(1)}%
-            </div>
+            <div className="text-2xl font-bold text-green-600">{(stats.conversion_rate ?? 0).toFixed(1)}%</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
       <LeadsFilters />
 
-      {/* Leads Table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -205,54 +217,37 @@ export default async function AdminLeadsPage({
                       <div>
                         <p className="font-medium text-sm">{lead.name}</p>
                         <a href={`mailto:${lead.email}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:underline">
-                          <Mail className="w-3 h-3" />
-                          {lead.email}
+                          <Mail className="w-3 h-3" />{lead.email}
                         </a>
                         {lead.phone && (
                           <a href={`tel:${lead.phone}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:underline">
-                            <Phone className="w-3 h-3" />
-                            {lead.phone}
+                            <Phone className="w-3 h-3" />{lead.phone}
                           </a>
                         )}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Link 
-                        href={`/app/admin/accounts/${lead.account_id}`}
-                        className="text-sm hover:underline"
-                      >
+                      <Link href={`/app/admin/accounts/${lead.account_id}`} className="text-sm hover:underline">
                         {lead.account_name}
                       </Link>
                     </TableCell>
                     <TableCell>
                       {lead.property_address ? (
-                        <Link 
-                          href={`/app/admin/property-reports/${lead.property_report_id}`}
-                          className="text-sm hover:underline flex items-center gap-1"
-                        >
-                          {lead.property_address.slice(0, 25)}...
-                          <ExternalLink className="w-3 h-3" />
+                        <Link href={`/app/admin/property-reports/${lead.property_report_id}`} className="text-sm hover:underline flex items-center gap-1">
+                          {lead.property_address.slice(0, 25)}...<ExternalLink className="w-3 h-3" />
                         </Link>
                       ) : (
                         <span className="text-sm text-muted-foreground">N/A</span>
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={sourceColors[lead.source] || ""}>
-                        {lead.source.replace('_', ' ')}
-                      </Badge>
+                      <Badge variant="outline" className={sourceColors[lead.source] || ""}>{lead.source.replace('_', ' ')}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge className={statusColors[lead.status] || "bg-gray-100"}>
-                        {lead.status}
-                      </Badge>
+                      <Badge className={statusColors[lead.status] || "bg-gray-100"}>{lead.status}</Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {formatTimeAgo(lead.created_at)}
-                    </TableCell>
-                    <TableCell>
-                      <LeadsActions leadId={lead.id} />
-                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{formatTimeAgo(lead.created_at)}</TableCell>
+                    <TableCell><LeadsActions leadId={lead.id} /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -263,4 +258,3 @@ export default async function AdminLeadsPage({
     </div>
   )
 }
-
