@@ -1,37 +1,18 @@
 'use client'
 
-import { useEffect, useState } from "react"
 import { SchedulesListShell } from "@/components/v0-styling/SchedulesListShell"
 import { Skeleton } from "@/components/ui/skeleton"
-import { PageHeader } from "@/components/page-header"
+import { useSchedules } from "@/hooks/use-api"
 
 export default function SchedulesPage() {
-  const [schedules, setSchedules] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data, isLoading } = useSchedules()
+  const schedules = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.schedules)
+    ? data.schedules
+    : []
 
-  useEffect(() => {
-    async function fetchSchedules() {
-      try {
-        const res = await fetch('/api/proxy/v1/schedules', {
-          credentials: 'include',
-          cache: 'no-store',
-        })
-        if (res.ok) {
-          const data = await res.json()
-          setSchedules(
-            Array.isArray(data) ? data : Array.isArray(data?.schedules) ? data.schedules : []
-          )
-        }
-      } catch (err) {
-        console.error('Failed to fetch schedules:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchSchedules()
-  }, [])
-
-  if (loading) {
+  if (isLoading) {
     return <SchedulesSkeleton />
   }
 

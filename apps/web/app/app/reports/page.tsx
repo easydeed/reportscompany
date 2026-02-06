@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Plus, Download, Eye, FileJson, Share2, FileText } from "lucide-react"
 import {
@@ -22,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useReports } from "@/hooks/use-api"
 
 type Report = {
   id: string
@@ -35,31 +35,9 @@ type Report = {
 }
 
 export default function ReportsPage() {
-  const [reports, setReports] = useState<Report[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
-
-  useEffect(() => {
-    async function fetchReports() {
-      try {
-        const res = await fetch('/api/proxy/v1/reports', {
-          credentials: 'include',
-          cache: 'no-store',
-        })
-        if (!res.ok) {
-          setError(true)
-          return
-        }
-        const data = await res.json()
-        setReports(data.reports || [])
-      } catch {
-        setError(true)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchReports()
-  }, [])
+  const { data, isLoading: loading, error: queryError } = useReports()
+  const reports: Report[] = data?.reports || []
+  const error = !!queryError
 
   return (
     <div className="space-y-5">

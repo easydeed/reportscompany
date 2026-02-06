@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useState, useEffect, useMemo } from "react"
+import { Suspense, useMemo } from "react"
 import { QueryProvider } from "@/components/providers/query-provider"
 import {
   SidebarProvider,
@@ -59,6 +59,7 @@ import { usePathname } from "next/navigation"
 import { AccountSwitcher } from "@/components/account-switcher"
 import { Logo } from "@/components/logo"
 import { Separator } from "@/components/ui/separator"
+import { usePlanUsage, useMe } from "@/hooks/use-api"
 
 // Routes where sidebar should be hidden (builder modes)
 const BUILDER_ROUTES = [
@@ -76,23 +77,17 @@ function isBuilderRoute(pathname: string | null): boolean {
 
 function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffiliate: boolean }) {
   const pathname = usePathname()
-  const [planInfo, setPlanInfo] = useState<{ plan_name: string; reports_used: number; reports_limit: number } | null>(null)
-  
-  useEffect(() => {
-    fetch("/api/proxy/v1/account/plan-usage", { credentials: "include" })
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data?.plan) {
-          setPlanInfo({
-            plan_name: data.plan.plan_name || "Free",
-            reports_used: data.info?.reports_this_period || 0,
-            reports_limit: data.plan.monthly_reports_limit || 10,
-          })
-        }
-      })
-      .catch(() => {})
-  }, [])
-  
+  const { data: planUsage } = usePlanUsage()
+
+  const planInfo = useMemo(() => {
+    if (!planUsage?.plan) return null
+    return {
+      plan_name: planUsage.plan.plan_name || "Free",
+      reports_used: planUsage.info?.reports_this_period || 0,
+      reports_limit: planUsage.plan.monthly_reports_limit || 10,
+    }
+  }, [planUsage])
+
   const isInAdminSection = pathname?.startsWith("/app/admin")
   const isInSettingsSection = pathname?.startsWith("/app/settings")
   
@@ -286,15 +281,8 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
 }
 
 function DashboardTopbar({ accountType, isAdmin, isAffiliate }: { accountType?: string; isAdmin: boolean; isAffiliate: boolean }) {
-  const [user, setUser] = useState<{ email: string; first_name?: string; last_name?: string } | null>(null)
-  
-  useEffect(() => {
-    fetch("/api/proxy/v1/users/me", { credentials: "include" })
-      .then(res => res.ok ? res.json() : null)
-      .then(data => { if (data) setUser(data) })
-      .catch(() => {})
-  }, [])
-  
+  const { data: user } = useMe()
+
   async function handleLogout() {
     try {
       await fetch("/api/proxy/v1/auth/logout", { method: "POST", credentials: "include" })
@@ -306,7 +294,7 @@ function DashboardTopbar({ accountType, isAdmin, isAffiliate }: { accountType?: 
     ? `${user.first_name} ${user.last_name}`
     : user?.first_name || user?.email?.split('@')[0] || "User"
   const displayEmail = user?.email || ""
-  const initials = displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || "U"
+  const initials = displayName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || "U"
   
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-white px-4">

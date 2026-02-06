@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
@@ -54,6 +54,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { usePropertyReports, useInvalidate } from "@/hooks/use-api"
 
 type PropertyReport = {
   id: string
@@ -70,69 +71,40 @@ type PropertyReport = {
   created_at: string
 }
 
-type Stats = {
-  total: number
-  thisMonth: number
-  processing: number
-  complete: number
-}
-
 export default function PropertyReportsPage() {
   const searchParams = useSearchParams()
+  const { data, isLoading: loading, error: queryError } = usePropertyReports()
+  const invalidate = useInvalidate()
+  const [error, setError] = useState<string | null>(queryError ? String(queryError) : null)
 
-  const [reports, setReports] = useState<PropertyReport[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [total, setTotal] = useState(0)
-  const [stats, setStats] = useState<Stats>({ total: 0, thisMonth: 0, processing: 0, complete: 0 })
+  const allReports: PropertyReport[] = data?.reports || []
+  const total = data?.total || allReports.length
 
   // Filter
   const [statusFilter, setStatusFilter] = useState<string>(searchParams.get("status") || "all")
 
-  useEffect(() => {
-    loadReports()
-  }, [statusFilter])
-
-  async function loadReports() {
-    try {
-      setLoading(true)
-      
-      // Always fetch ALL reports first (for stats), then filter client-side
-      // This eliminates the duplicate API call we were making before
-      const allData = await apiFetch("/v1/property/reports?limit=100")
-      const allReports: PropertyReport[] = allData.reports || []
-      
-      // Calculate stats from all reports (single API call)
-      const now = new Date()
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-
-      setStats({
-        total: allReports.length,
-        thisMonth: allReports.filter((r) => new Date(r.created_at) >= startOfMonth).length,
-        processing: allReports.filter((r) => r.status === "processing").length,
-        complete: allReports.filter((r) => r.status === "complete").length,
-      })
-
-      // Filter client-side based on status (no second API call needed)
-      const filteredReports = statusFilter && statusFilter !== "all"
-        ? allReports.filter((r) => r.status === statusFilter)
-        : allReports
-
-      setReports(filteredReports)
-      setTotal(allData.total || allReports.length)
-      setError(null)
-    } catch (e: any) {
-      setError(e.message || "Failed to load reports")
-    } finally {
-      setLoading(false)
+  // Stats computed from cached data (no second API call)
+  const stats = useMemo(() => {
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    return {
+      total: allReports.length,
+      thisMonth: allReports.filter((r) => new Date(r.created_at) >= startOfMonth).length,
+      processing: allReports.filter((r) => r.status === "processing").length,
+      complete: allReports.filter((r) => r.status === "complete").length,
     }
-  }
+  }, [allReports])
+
+  // Client-side filter (no API call)
+  const reports = statusFilter !== "all"
+    ? allReports.filter((r) => r.status === statusFilter)
+    : allReports
 
   async function deleteReport(id: string) {
     try {
       await apiFetch(`/v1/property/reports/${id}`, { method: "DELETE" })
-      setReports((prev) => prev.filter((r) => r.id !== id))
-      setStats((prev) => ({ ...prev, total: prev.total - 1 }))
+      invalidate.propertyReports() // Refreshes the list from cache
+      invalidate.planUsage()
     } catch (e: any) {
       setError(e.message || "Failed to delete report")
     }

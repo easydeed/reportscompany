@@ -1,83 +1,25 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Building2, Loader2 } from 'lucide-react'
+import { Building2 } from 'lucide-react'
 import { AffiliateDashboardShell, type AffiliateDashboardShellProps } from '@/components/v0-styling/AffiliateDashboardShell'
-import { AffiliateOnboarding, type OnboardingStatus } from '@/components/onboarding/affiliate-onboarding'
+import { AffiliateOnboarding } from '@/components/onboarding/affiliate-onboarding'
 import { Skeleton } from '@/components/ui/skeleton'
-
-interface AffiliateData {
-  account: {
-    account_id: string
-    name: string
-    account_type: string
-    plan_slug: string
-  }
-  overview: {
-    sponsored_count: number
-    total_reports_this_month: number
-  }
-  sponsored_accounts: Array<{
-    account_id: string
-    name: string
-    plan_slug: string
-    account_type: string
-    created_at: string
-    reports_this_month: number
-    last_report_at: string | null
-  }>
-}
+import { useAffiliateOverview, usePlanUsage, useOnboarding } from '@/hooks/use-api'
 
 export default function AffiliateDashboardPage() {
-  const [loading, setLoading] = useState(true)
-  const [affiliateData, setAffiliateData] = useState<AffiliateData | null>(null)
-  const [planUsage, setPlanUsage] = useState<any>(null)
-  const [onboardingData, setOnboardingData] = useState<OnboardingStatus | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const { data: affiliateData, isLoading: affLoading, error: affError } = useAffiliateOverview()
+  const { data: planUsage } = usePlanUsage()
+  const { data: onboardingData } = useOnboarding()
 
-  useEffect(() => {
-    async function fetchAll() {
-      try {
-        const [affiliateRes, planRes, onboardingRes] = await Promise.all([
-          fetch('/api/proxy/v1/affiliate/overview', { credentials: 'include' }),
-          fetch('/api/proxy/v1/account/plan-usage', { credentials: 'include' }),
-          fetch('/api/proxy/v1/onboarding', { credentials: 'include' }),
-        ])
-
-        if (affiliateRes.status === 403) {
-          setError('not_affiliate')
-          return
-        }
-        if (!affiliateRes.ok) {
-          setError('load_failed')
-          return
-        }
-
-        const affiliateJson = await affiliateRes.json()
-        setAffiliateData(affiliateJson)
-
-        if (planRes.ok) {
-          setPlanUsage(await planRes.json())
-        }
-        if (onboardingRes.ok) {
-          setOnboardingData(await onboardingRes.json())
-        }
-      } catch (err) {
-        console.error('Failed to fetch affiliate data:', err)
-        setError('load_failed')
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchAll()
-  }, [])
+  const loading = affLoading
 
   if (loading) {
     return <AffiliateSkeleton />
   }
 
-  if (error === 'not_affiliate') {
+  // Check for 403 (not affiliate)
+  if (affError && String(affError).includes('403')) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
         <Building2 className="h-16 w-16 text-muted-foreground mb-4" />
@@ -93,7 +35,7 @@ export default function AffiliateDashboardPage() {
     )
   }
 
-  if (error || !affiliateData) {
+  if (affError || !affiliateData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
         <h1 className="text-2xl font-bold mb-2">Error Loading Affiliate Data</h1>

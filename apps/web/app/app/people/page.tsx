@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -33,6 +33,7 @@ import { Badge } from "@/components/ui/badge"
 import { UserPlus, Mail, Trash2, Users, Shield, Pencil } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useContacts, useContactGroups, useAffiliateOverview, useInvalidate } from "@/hooks/use-api"
 
 type Contact = {
   id: string
@@ -76,10 +77,19 @@ type ContactGroup = {
 }
 
 export default function PeoplePage() {
-  const [contacts, setContacts] = useState<Contact[]>([])
-  const [sponsoredAccounts, setSponsoredAccounts] = useState<SponsoredAccount[]>([])
-  const [isAffiliate, setIsAffiliate] = useState(false)
-  const [loading, setLoading] = useState(true)
+  // React Query hooks for data fetching
+  const { data: contactsData, isLoading: contactsLoading } = useContacts()
+  const { data: groupsData, isLoading: groupsLoading } = useContactGroups()
+  const { data: affiliateData, isError: affiliateError } = useAffiliateOverview()
+  const invalidate = useInvalidate()
+
+  // Derive state from React Query data
+  const contacts: Contact[] = contactsData?.contacts || []
+  const groups: ContactGroup[] = groupsData?.groups || []
+  const sponsoredAccounts: SponsoredAccount[] = affiliateData?.sponsored_accounts || []
+  const isAffiliate = !affiliateError && !!affiliateData
+  const loading = contactsLoading
+
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [editingContact, setEditingContact] = useState<Contact | null>(null)
@@ -90,8 +100,6 @@ export default function PeoplePage() {
     notes: "",
     isSponsored: true,
   })
-  const [groups, setGroups] = useState<ContactGroup[]>([])
-  const [groupsLoading, setGroupsLoading] = useState(false)
   const [groupDialogOpen, setGroupDialogOpen] = useState(false)
   const [groupForm, setGroupForm] = useState({ name: "", description: "" })
   const [addToGroupDialogOpen, setAddToGroupDialogOpen] = useState(false)
@@ -134,68 +142,9 @@ export default function PeoplePage() {
     notes: "",
   })
 
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  async function loadData() {
-    setLoading(true)
-    try {
-      // Fetch ALL data in parallel - including affiliate data (will 403 for non-affiliates, that's fine)
-      // This eliminates the sequential fetch that was blocking page load
-      const [contactsRes, groupsRes, affiliateRes] = await Promise.all([
-        fetch("/api/proxy/v1/contacts", { cache: "no-store", credentials: "include" }),
-        fetch("/api/proxy/v1/contact-groups", { cache: "no-store", credentials: "include" }),
-        fetch("/api/proxy/v1/affiliate/overview", { cache: "no-store", credentials: "include" }),
-      ])
-
-      // Process contacts
-      if (contactsRes.ok) {
-        const data = await contactsRes.json()
-        setContacts(data.contacts || [])
-      }
-
-      // Process groups
-      if (groupsRes.ok) {
-        const data = await groupsRes.json()
-        setGroups(data.groups || [])
-      }
-
-      // Process affiliate data (will be 403 for non-affiliates - that's expected)
-      if (affiliateRes.ok) {
-        const overview = await affiliateRes.json()
-        setSponsoredAccounts(overview.sponsored_accounts || [])
-        setIsAffiliate(true)
-      } else {
-        // Not an affiliate or API error - that's fine
-        setIsAffiliate(false)
-        setSponsoredAccounts([])
-      }
-    } catch (error) {
-      console.error("Failed to load people:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load people data",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function loadGroups() {
-    setGroupsLoading(true)
-    try {
-      const res = await fetch("/api/proxy/v1/contact-groups", { cache: "no-store" })
-      if (res.ok) {
-        const data = await res.json()
-        setGroups(data.groups || [])
-      }
-    } catch (error) {
-      console.error("Failed to load groups:", error)
-    } finally {
-      setGroupsLoading(false)
-    }
+  /** Invalidate both contacts and groups to refresh all data */
+  function refreshAll() {
+    invalidate.contacts()
   }
 
   async function handleAddContact() {
@@ -263,7 +212,7 @@ export default function PeoplePage() {
 
       setDialogOpen(false)
       setFormData({ name: "", email: "", type: "", phone: "", notes: "" })
-      loadData()
+      refreshAll()
     } catch (error) {
       toast({
         title: "Error",
@@ -304,7 +253,7 @@ export default function PeoplePage() {
 
       setEditDialogOpen(false)
       setEditingContact(null)
-      await loadData()
+      refreshAll()
     } catch (error) {
       toast({
         title: "Error",
@@ -325,7 +274,7 @@ export default function PeoplePage() {
         title: "Success",
         description: `Deleted ${name}`,
       })
-      loadData()
+      refreshAll()
     } catch (error) {
       toast({
         title: "Error",
@@ -360,7 +309,7 @@ export default function PeoplePage() {
       
       setEditSponsoredDialogOpen(false)
       setEditingSponsoredAgent(null)
-      loadData()
+      refreshAll()
     } catch (error) {
       toast({
         title: "Error",
@@ -402,7 +351,7 @@ export default function PeoplePage() {
 
       setGroupDialogOpen(false)
       setGroupForm({ name: "", description: "" })
-      await loadGroups()
+      refreshAll()
     } catch (error) {
       toast({
         title: "Error",
@@ -444,7 +393,7 @@ export default function PeoplePage() {
       setAddToGroupDialogOpen(false)
       setSelectedPersonForGroup(null)
       setSelectedGroupIds([])
-      await loadGroups()
+      refreshAll()
     } catch (error) {
       toast({
         title: "Error",
@@ -487,8 +436,7 @@ export default function PeoplePage() {
         description: `Created ${summary.created_contacts} contacts and ${summary.created_groups} groups`,
       })
 
-      await loadData()
-      await loadGroups()
+      refreshAll()
     } catch (error) {
       toast({
         title: "Error",
@@ -539,7 +487,7 @@ export default function PeoplePage() {
       })
 
       await loadGroupMembers(groupId)
-      await loadGroups()
+      refreshAll()
     } catch (error) {
       toast({
         title: "Error",
@@ -587,7 +535,7 @@ export default function PeoplePage() {
       setAddMembersOpen(false)
       setSelectedMemberIds([])
       await loadGroupMembers(groupId)
-      await loadGroups()
+      refreshAll()
     } catch (error) {
       toast({
         title: "Error",
@@ -615,7 +563,7 @@ export default function PeoplePage() {
         description: `Removed from ${groupName}`,
       })
 
-      await loadData()
+      refreshAll()
     } catch (error) {
       toast({
         title: "Error",
@@ -652,7 +600,7 @@ export default function PeoplePage() {
       })
 
       setSelectedGroupIds([])
-      await loadData()
+      refreshAll()
     } catch (error) {
       toast({
         title: "Error",

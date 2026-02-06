@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useMemo } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -55,6 +55,7 @@ import {
   Trophy,
 } from "lucide-react"
 import { apiFetch } from "@/lib/api"
+import { useAllLeads, usePropertyReports, useInvalidate } from "@/hooks/use-api"
 
 type Lead = {
   id: string
@@ -87,75 +88,54 @@ type LeadStats = {
 export default function LeadsPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const invalidate = useInvalidate()
   
-  const [leads, setLeads] = useState<Lead[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [total, setTotal] = useState(0)
-  const [stats, setStats] = useState<LeadStats>({ total: 0, newThisWeek: 0, contacted: 0, converted: 0 })
+  // React Query hooks
+  const { data: allLeadsData, isLoading: loading, error: queryError } = useAllLeads()
+  const { data: propertyData } = usePropertyReports()
+  
+  const allLeads: Lead[] = allLeadsData?.leads || []
+  const properties: PropertyReport[] = propertyData?.reports || []
+  const error = queryError ? String(queryError) : null
   
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>(searchParams.get("status") || "all")
   const [propertyFilter, setPropertyFilter] = useState<string>(searchParams.get("property_report_id") || "all")
   const [searchQuery, setSearchQuery] = useState("")
   
-  // Properties for filter dropdown
-  const [properties, setProperties] = useState<PropertyReport[]>([])
-  
   // Lead detail modal
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   
   // Export loading
   const [exporting, setExporting] = useState(false)
-
-  useEffect(() => {
-    loadLeads()
-    loadProperties()
-  }, [statusFilter, propertyFilter])
-
-  async function loadLeads() {
-    try {
-      setLoading(true)
-      const params = new URLSearchParams()
-      if (statusFilter && statusFilter !== "all") params.set("status", statusFilter)
-      if (propertyFilter && propertyFilter !== "all") params.set("property_report_id", propertyFilter)
-      
-      const data = await apiFetch(`/v1/leads?${params.toString()}`)
-      setLeads(data.leads || [])
-      setTotal(data.total || 0)
-      
-      // Load all leads for stats
-      const allData = await apiFetch("/v1/leads?limit=100")
-      const allLeads = allData.leads || []
-      
-      const now = new Date()
-      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      
-      setStats({
-        total: allLeads.length,
-        newThisWeek: allLeads.filter((l: Lead) => 
-          l.status === "new" && new Date(l.created_at) >= oneWeekAgo
-        ).length,
-        contacted: allLeads.filter((l: Lead) => l.status === "contacted").length,
-        converted: allLeads.filter((l: Lead) => l.status === "converted").length,
-      })
-      
-      setError(null)
-    } catch (e: any) {
-      setError(e.message || "Failed to load leads")
-    } finally {
-      setLoading(false)
+  
+  // Compute leads based on filters (client-side)
+  const leads = useMemo(() => {
+    let filtered = allLeads
+    if (statusFilter && statusFilter !== "all") {
+      filtered = filtered.filter((l) => l.status === statusFilter)
     }
-  }
-
-  async function loadProperties() {
-    try {
-      const data = await apiFetch("/v1/property/reports?limit=100")
-      setProperties(data.reports || [])
-    } catch {
-      // Ignore error
+    if (propertyFilter && propertyFilter !== "all") {
+      filtered = filtered.filter((l) => l.property_report_id === propertyFilter)
     }
-  }
+    return filtered
+  }, [allLeads, statusFilter, propertyFilter])
+  
+  const total = leads.length
+  
+  // Compute stats from all leads (cached data, no extra API call)
+  const stats = useMemo<LeadStats>(() => {
+    const now = new Date()
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+    return {
+      total: allLeads.length,
+      newThisWeek: allLeads.filter((l) => 
+        l.status === "new" && new Date(l.created_at) >= oneWeekAgo
+      ).length,
+      contacted: allLeads.filter((l) => l.status === "contacted").length,
+      converted: allLeads.filter((l) => l.status === "converted").length,
+    }
+  }, [allLeads])
 
   async function updateLeadStatus(leadId: string, status: string) {
     try {
@@ -163,14 +143,14 @@ export default function LeadsPage() {
         method: "PATCH",
         body: JSON.stringify({ status }),
       })
-      setLeads((prev) =>
-        prev.map((l) => (l.id === leadId ? { ...l, status: status as Lead["status"] } : l))
-      )
+      // Invalidate leads cache to refresh data
+      invalidate.leads()
       if (selectedLead?.id === leadId) {
         setSelectedLead({ ...selectedLead, status: status as Lead["status"] })
       }
     } catch (e: any) {
-      setError(e.message || "Failed to update lead")
+      // Show error inline if needed
+      console.error("Failed to update lead:", e)
     }
   }
 
@@ -193,7 +173,7 @@ export default function LeadsPage() {
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
     } catch (e: any) {
-      setError(e.message || "Failed to export")
+      console.error("Export failed:", e)
     } finally {
       setExporting(false)
     }

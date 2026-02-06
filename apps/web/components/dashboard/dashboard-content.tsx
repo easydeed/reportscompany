@@ -1,16 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, AlertTriangle, FileText, Mail, Calendar, Clock, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DashboardOnboarding } from "@/components/onboarding"
-import type { OnboardingStatus } from "@/components/onboarding/onboarding-checklist"
 import { PageHeader } from "@/components/page-header"
 import { MetricCard } from "@/components/metric-card"
 import { StatusBadge } from "@/components/status-badge"
+import { useUsage, usePlanUsage, useOnboarding } from "@/hooks/use-api"
 
 interface UsageData {
   summary?: {
@@ -37,22 +36,6 @@ interface UsageData {
   }>
 }
 
-interface PlanUsageData {
-  decision?: 'ALLOW' | 'ALLOW_WITH_WARNING' | 'BLOCK'
-  plan?: {
-    plan_name?: string
-  }
-  info?: {
-    message?: string
-  }
-}
-
-interface DashboardData {
-  usage: UsageData | null
-  planUsage: PlanUsageData | null
-  onboarding: OnboardingStatus | null
-}
-
 // Format relative time
 function formatRelativeTime(timestamp: string): string {
   const now = new Date()
@@ -70,59 +53,17 @@ function formatRelativeTime(timestamp: string): string {
 }
 
 export function DashboardContent() {
-  const [data, setData] = useState<DashboardData>({
-    usage: null,
-    planUsage: null,
-    onboarding: null,
-  })
-  const [loading, setLoading] = useState(true)
+  const { data: usageData, isLoading: usageLoading } = useUsage()
+  const { data: planUsageData, isLoading: planLoading } = usePlanUsage()
+  const { data: onboardingData, isLoading: onboardingLoading } = useOnboarding()
 
-  useEffect(() => {
-    async function fetchDashboard() {
-      const fetchStart = Date.now()
-      console.log('[PERF] Dashboard client fetch starting...')
-      
-      try {
-        const [usageRes, planRes, onboardingRes] = await Promise.all([
-          (async () => {
-            const start = Date.now()
-            const res = await fetch('/api/proxy/v1/usage', { credentials: 'include' })
-            console.log(`[PERF] /v1/usage: ${Date.now() - start}ms`)
-            return res.ok ? res.json() : null
-          })(),
-          (async () => {
-            const start = Date.now()
-            const res = await fetch('/api/proxy/v1/account/plan-usage', { credentials: 'include' })
-            console.log(`[PERF] /v1/account/plan-usage: ${Date.now() - start}ms`)
-            return res.ok ? res.json() : null
-          })(),
-          (async () => {
-            const start = Date.now()
-            const res = await fetch('/api/proxy/v1/onboarding', { credentials: 'include' })
-            console.log(`[PERF] /v1/onboarding: ${Date.now() - start}ms`)
-            return res.ok ? res.json() : null
-          })(),
-        ])
-        
-        console.log(`[PERF] Dashboard client fetch TOTAL: ${Date.now() - fetchStart}ms`)
-        
-        setData({
-          usage: usageRes,
-          planUsage: planRes,
-          onboarding: onboardingRes,
-        })
-      } catch (err) {
-        console.error('Dashboard fetch failed:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    
-    fetchDashboard()
-  }, [])
+  const loading = usageLoading || planLoading || onboardingLoading
+  const usage: UsageData | null = usageData || null
+  const planUsage = planUsageData || null
+  const onboarding = onboardingData || null
 
   // Build recent activity from fetched data
-  const recentReports = (data.usage?.recent_reports ?? []).map((r) => ({
+  const recentReports = (usage?.recent_reports ?? []).map((r) => ({
     id: r.id,
     type: 'report' as const,
     title: `${r.type?.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}`,
@@ -132,7 +73,7 @@ export function DashboardContent() {
     url: r.pdf_url,
   }))
   
-  const recentEmails = (data.usage?.recent_emails ?? []).map((e) => ({
+  const recentEmails = (usage?.recent_emails ?? []).map((e) => ({
     id: e.id,
     type: 'email' as const,
     title: e.subject || 'Email sent',
@@ -162,13 +103,13 @@ export function DashboardContent() {
       />
 
       {/* Usage Warning Banners — only show after data loads */}
-      {!loading && data.planUsage?.decision === 'ALLOW_WITH_WARNING' && (
+      {!loading && planUsage?.decision === 'ALLOW_WITH_WARNING' && (
         <Alert className="border-amber-200 bg-amber-50">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertTitle className="text-amber-800">Approaching Limit</AlertTitle>
           <AlertDescription className="flex items-center justify-between text-amber-700">
             <span>
-              You're approaching your monthly report limit for the <strong>{data.planUsage.plan?.plan_name}</strong> plan. {data.planUsage.info?.message}
+              You're approaching your monthly report limit for the <strong>{planUsage.plan?.plan_name}</strong> plan. {planUsage.info?.message}
             </span>
             <Button asChild variant="outline" size="sm" className="ml-4 border-amber-600 text-amber-700 hover:bg-amber-100">
               <Link href="/app/settings/billing" prefetch={false}>View Plan</Link>
@@ -177,7 +118,7 @@ export function DashboardContent() {
         </Alert>
       )}
       
-      {!loading && data.planUsage?.decision === 'BLOCK' && (
+      {!loading && planUsage?.decision === 'BLOCK' && (
         <Alert className="border-red-200 bg-red-50">
           <AlertCircle className="h-4 w-4 text-red-600" />
           <AlertTitle className="text-red-800">Monthly Limit Reached</AlertTitle>
@@ -205,25 +146,25 @@ export function DashboardContent() {
           <>
             <MetricCard 
               label="Reports" 
-              value={data.usage?.summary?.total_reports ?? 0} 
+              value={usage?.summary?.total_reports ?? 0} 
               icon={<FileText className="w-4 h-4" />} 
               index={0} 
             />
             <MetricCard 
               label="Emails Sent" 
-              value={data.usage?.recent_emails?.length ?? 0} 
+              value={usage?.recent_emails?.length ?? 0} 
               icon={<Mail className="w-4 h-4" />} 
               index={1} 
             />
             <MetricCard 
               label="Active Schedules" 
-              value={data.usage?.limits?.active_schedules ?? 0} 
+              value={usage?.limits?.active_schedules ?? 0} 
               icon={<Calendar className="w-4 h-4" />} 
               index={2} 
             />
             <MetricCard 
               label="Avg. Render" 
-              value={data.usage?.summary?.avg_ms ? `${Math.round(data.usage.summary.avg_ms)}ms` : '—'} 
+              value={usage?.summary?.avg_ms ? `${Math.round(usage.summary.avg_ms)}ms` : '—'} 
               icon={<Clock className="w-4 h-4" />} 
               index={3} 
             />
@@ -299,7 +240,7 @@ export function DashboardContent() {
           {loading ? (
             <OnboardingSkeleton />
           ) : (
-            <DashboardOnboarding initialStatus={data.onboarding} />
+            <DashboardOnboarding initialStatus={onboarding} />
           )}
         </div>
       </div>
