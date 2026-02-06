@@ -3,7 +3,7 @@
 import { useMemo, memo } from "react";
 import {
   MapPin,
-  ArrowLeft,
+  ArrowDown,
   Check,
   Home,
   Bed,
@@ -28,7 +28,7 @@ const formatPrice = (price: number) => {
 };
 
 // ============================================
-// CompCard - Memoized card component
+// CompCard - Memoized horizontal card component
 // ============================================
 
 interface CompCardProps {
@@ -47,39 +47,40 @@ const CompCard = memo(function CompCard({
   return (
     <div
       className={`
-        relative border rounded-lg p-4 cursor-pointer transition-colors
+        relative border rounded-lg p-3 cursor-pointer transition-all group
         ${
           isSelected
-            ? "border-green-500 bg-green-50/50 dark:bg-green-950/20"
-            : "border-border hover:border-primary/50 hover:bg-muted/50"
+            ? "border-green-500 bg-green-50/50 dark:bg-green-950/20 shadow-sm"
+            : "border-border hover:border-primary/50 hover:bg-muted/30 hover:shadow-sm"
         }
       `}
       onClick={onAction}
     >
+      {/* Order number badge for selected items */}
+      {orderNumber !== undefined && (
+        <div className="absolute -left-2 -top-2 w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-sm z-10">
+          {orderNumber}
+        </div>
+      )}
+
       {/* Selection indicator */}
       <div
         className={`
-          absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold
+          absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors
           ${
             isSelected
               ? "bg-green-500 text-white"
-              : "bg-muted text-muted-foreground"
+              : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
           }
         `}
       >
         {isSelected ? <Check className="w-3.5 h-3.5" /> : "+"}
       </div>
 
-      {/* Order number badge for selected items */}
-      {orderNumber !== undefined && (
-        <div className="absolute -left-2 top-2 w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-sm z-10">
-          {orderNumber}
-        </div>
-      )}
-
-      {/* Photo and details */}
-      <div className="flex gap-4">
-        <div className="w-28 h-20 flex-shrink-0 rounded-md overflow-hidden bg-muted">
+      {/* Horizontal layout: photo | details | stats */}
+      <div className="flex gap-3 items-center">
+        {/* Photo */}
+        <div className="w-20 h-16 flex-shrink-0 rounded-md overflow-hidden bg-muted">
           {comp.photo_url ? (
             <img
               src={comp.photo_url}
@@ -89,38 +90,57 @@ const CompCard = memo(function CompCard({
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
-              <Home className="w-6 h-6 text-muted-foreground/50" />
+              <Home className="w-5 h-5 text-muted-foreground/50" />
             </div>
           )}
         </div>
 
+        {/* Address + City */}
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-base truncate pr-6">{comp.address}</p>
+          <p className="font-semibold text-sm truncate pr-8">{comp.address}</p>
           {comp.city && (
             <p className="text-xs text-muted-foreground truncate">{comp.city}</p>
           )}
-
-          <p className="text-lg font-bold text-primary mt-1">
+          <p className="text-sm font-bold text-primary mt-0.5">
             {formatPrice(comp.price)}
           </p>
-
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mt-1">
-            <span className="flex items-center gap-1">
-              <Bed className="w-3 h-3" /> {comp.bedrooms ?? "—"}
-            </span>
-            <span className="flex items-center gap-1">
-              <Bath className="w-3 h-3" /> {comp.bathrooms ?? "—"}
-            </span>
-            <span className="flex items-center gap-1">
-              <Square className="w-3 h-3" /> {comp.sqft?.toLocaleString() ?? "—"}
-            </span>
-            {comp.distance_miles != null && (
-              <span className="flex items-center gap-1">
-                <MapPin className="w-3 h-3" /> {Number(comp.distance_miles).toFixed(2)} mi
-              </span>
-            )}
-          </div>
         </div>
+
+        {/* Stats column */}
+        <div className="hidden sm:flex flex-shrink-0 gap-3 text-xs text-muted-foreground pr-8">
+          <span className="flex items-center gap-1" title="Bedrooms">
+            <Bed className="w-3 h-3" /> {comp.bedrooms ?? "—"}
+          </span>
+          <span className="flex items-center gap-1" title="Bathrooms">
+            <Bath className="w-3 h-3" /> {comp.bathrooms ?? "—"}
+          </span>
+          <span className="flex items-center gap-1" title="Square feet">
+            <Square className="w-3 h-3" /> {comp.sqft?.toLocaleString() ?? "—"}
+          </span>
+          {comp.distance_miles != null && (
+            <span className="flex items-center gap-1" title="Distance">
+              <MapPin className="w-3 h-3" /> {Number(comp.distance_miles).toFixed(1)} mi
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Mobile stats row (visible on small screens) */}
+      <div className="flex sm:hidden flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-2 pl-[calc(5rem+0.75rem)]">
+        <span className="flex items-center gap-1">
+          <Bed className="w-3 h-3" /> {comp.bedrooms ?? "—"}
+        </span>
+        <span className="flex items-center gap-1">
+          <Bath className="w-3 h-3" /> {comp.bathrooms ?? "—"}
+        </span>
+        <span className="flex items-center gap-1">
+          <Square className="w-3 h-3" /> {comp.sqft?.toLocaleString() ?? "—"}
+        </span>
+        {comp.distance_miles != null && (
+          <span className="flex items-center gap-1">
+            <MapPin className="w-3 h-3" /> {Number(comp.distance_miles).toFixed(1)} mi
+          </span>
+        )}
       </div>
 
       {/* Status badge */}
@@ -313,27 +333,29 @@ export function ComparablesPicker({
         </Button>
       </div>
 
-      {/* Two-column layout */}
-      <div className="grid lg:grid-cols-[1.15fr_0.85fr] gap-6">
+      {/* Stacked layout: Available on top, Selected on bottom */}
+      <div className="space-y-4">
         {/* Available (Unselected) */}
         <div className="border rounded-lg overflow-hidden">
-          <div className="p-3 border-b bg-muted/50">
-            <h4 className="font-medium text-sm flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-orange-500"></span>
-              Available ({unselectedComps.length})
-            </h4>
-            <p className="text-xs text-muted-foreground">Click to add to report</p>
+          <div className="p-3 border-b bg-muted/50 flex items-center justify-between">
+            <div>
+              <h4 className="font-medium text-sm flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
+                Available Comparables ({unselectedComps.length})
+              </h4>
+              <p className="text-xs text-muted-foreground mt-0.5">Click a property to add it to your report</p>
+            </div>
           </div>
 
-          <div className="p-4 max-h-[560px] overflow-y-auto">
+          <div className="p-3 max-h-[380px] overflow-y-auto">
             {unselectedComps.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
                 {availableComps.length === 0
                   ? "No comparables found"
-                  : "All comparables selected"}
+                  : "All comparables selected ✓"}
               </p>
             ) : (
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-2">
                 {unselectedComps.map((comp) => (
                   <CompCard
                     key={comp.id}
@@ -347,33 +369,35 @@ export function ComparablesPicker({
           </div>
         </div>
 
-        {/* Selected */}
+        {/* Selected — In Report */}
         <div className="border rounded-lg overflow-hidden border-green-300 dark:border-green-800">
-          <div className="p-3 border-b bg-green-50/50 dark:bg-green-950/20">
-            <h4 className="font-medium text-sm flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-green-500"></span>
-              In Report ({selectedComps.length}/{maxSelections})
-            </h4>
-            <p className="text-xs text-muted-foreground">
-              Click to remove from report
-            </p>
+          <div className="p-3 border-b bg-green-50/50 dark:bg-green-950/20 flex items-center justify-between">
+            <div>
+              <h4 className="font-medium text-sm flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                In Report ({selectedComps.length}/{maxSelections})
+              </h4>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Click to remove from report
+              </p>
+            </div>
           </div>
 
-          <div className="p-4 max-h-[560px] overflow-y-auto">
+          <div className="p-3 max-h-[380px] overflow-y-auto">
             {selectedComps.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-14 h-14 bg-muted rounded-full flex items-center justify-center mx-auto mb-3">
-                  <ArrowLeft className="w-7 h-7 text-muted-foreground/50" />
+              <div className="text-center py-10">
+                <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-3">
+                  <ArrowDown className="w-6 h-6 text-muted-foreground/40 animate-bounce" />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Select comparables from the left
+                  Select comparables from above
                 </p>
                 <p className="text-xs text-muted-foreground/70 mt-1">
-                  or use "Auto-Select Best" above
+                  or use &ldquo;Auto-Select Best&rdquo;
                 </p>
               </div>
             ) : (
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-2">
                 {selectedComps.map((comp, index) => (
                   <CompCard
                     key={comp.id}
