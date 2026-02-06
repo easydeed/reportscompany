@@ -24,7 +24,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-type OnboardingStep = {
+export type OnboardingStep = {
   key: string
   title: string
   description: string
@@ -36,7 +36,7 @@ type OnboardingStep = {
   completed_at: string | null
 }
 
-type OnboardingStatus = {
+export type OnboardingStatus = {
   user_id: string
   is_complete: boolean
   is_dismissed: boolean
@@ -56,19 +56,25 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 interface AffiliateOnboardingProps {
   className?: string
   sponsoredCount?: number
+  /** Server-fetched onboarding status to avoid client-side loading flash */
+  initialStatus?: OnboardingStatus | null
 }
 
 export function AffiliateOnboarding({
   className,
   sponsoredCount = 0,
+  initialStatus,
 }: AffiliateOnboardingProps) {
-  const [status, setStatus] = useState<OnboardingStatus | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [status, setStatus] = useState<OnboardingStatus | null>(initialStatus ?? null)
+  // If we have initial status, no loading needed
+  const [loading, setLoading] = useState(!initialStatus)
   const [dismissing, setDismissing] = useState(false)
 
   useEffect(() => {
+    // Skip fetch if we already have initial status
+    if (initialStatus) return
     loadOnboardingStatus()
-  }, [])
+  }, [initialStatus])
 
   async function loadOnboardingStatus() {
     try {

@@ -20,28 +20,9 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-type OnboardingStep = {
-  key: string
-  title: string
-  description: string
-  href: string
-  icon: string
-  required: boolean
-  completed: boolean
-  skipped: boolean
-  completed_at: string | null
-}
-
-type OnboardingStatus = {
-  user_id: string
-  is_complete: boolean
-  is_dismissed: boolean
-  current_step: string | null
-  progress_percent: number
-  steps: OnboardingStep[]
-  completed_count: number
-  total_count: number
-}
+// Re-export types from affiliate-onboarding for consistency
+export type { OnboardingStep, OnboardingStatus } from './affiliate-onboarding'
+import type { OnboardingStatus } from './affiliate-onboarding'
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   user: User,
@@ -56,6 +37,8 @@ interface OnboardingChecklistProps {
   variant?: "card" | "inline" | "minimal"
   onComplete?: () => void
   onOpenWizard?: () => void
+  /** Server-fetched onboarding status to avoid client-side loading flash */
+  initialStatus?: OnboardingStatus | null
 }
 
 export function OnboardingChecklist({
@@ -63,14 +46,24 @@ export function OnboardingChecklist({
   variant = "card",
   onComplete,
   onOpenWizard,
+  initialStatus,
 }: OnboardingChecklistProps) {
-  const [status, setStatus] = useState<OnboardingStatus | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [status, setStatus] = useState<OnboardingStatus | null>(initialStatus ?? null)
+  // If we have initial status, no loading needed
+  const [loading, setLoading] = useState(!initialStatus)
   const [dismissing, setDismissing] = useState(false)
 
   useEffect(() => {
+    // Skip fetch if we already have initial status
+    if (initialStatus) {
+      // Still call onComplete if needed
+      if (initialStatus.is_complete && onComplete) {
+        onComplete()
+      }
+      return
+    }
     loadOnboardingStatus()
-  }, [])
+  }, [initialStatus, onComplete])
 
   async function loadOnboardingStatus() {
     try {

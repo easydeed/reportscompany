@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { Button } from '@/components/ui/button';
 import { Building2 } from 'lucide-react';
 import { AffiliateDashboardShell, type AffiliateDashboardShellProps } from '@/components/v0-styling/AffiliateDashboardShell';
-import { AffiliateOnboarding } from '@/components/onboarding';
+import { AffiliateOnboarding, type OnboardingStatus } from '@/components/onboarding/affiliate-onboarding';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
@@ -61,10 +61,11 @@ export default async function AffiliateDashboardPage() {
     );
   }
 
-  // Fetch ALL data in parallel
-  const [affiliateData, planUsage] = await Promise.all([
+  // Fetch ALL data in parallel (including onboarding to avoid client fetch)
+  const [affiliateData, planUsage, onboardingData] = await Promise.all([
     fetchWithAuth("/v1/affiliate/overview", token),
     fetchWithAuth("/v1/account/plan-usage", token),
+    fetchWithAuth("/v1/onboarding", token),
   ]);
 
   // Handle errors
@@ -111,10 +112,16 @@ export default async function AffiliateDashboardPage() {
     sponsoredAccounts: data.sponsored_accounts,
   };
 
+  // Cast onboarding data to proper type (may be null/error)
+  const onboardingStatus = (onboardingData && !('error' in onboardingData)) 
+    ? onboardingData as OnboardingStatus 
+    : null;
+
   return (
     <div className="space-y-6">
       <AffiliateOnboarding
         sponsoredCount={data.overview.sponsored_count}
+        initialStatus={onboardingStatus}
       />
       <AffiliateDashboardShell {...shellProps} />
     </div>

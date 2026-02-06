@@ -35,15 +35,17 @@ export default async function Overview() {
   }
 
   // Fetch ALL data in parallel using the shared API utility
-  const [meRes, dataRes, planUsageRes] = await Promise.all([
+  const [meRes, dataRes, planUsageRes, onboardingRes] = await Promise.all([
     api.get<any>("/v1/me"),
     api.get<any>("/v1/usage"),
     api.get<any>("/v1/account/plan-usage"),
+    api.get<any>("/v1/onboarding"),
   ])
 
   const me = meRes.data
   const data = dataRes.data
   const planUsage = planUsageRes.data
+  const onboardingStatus = onboardingRes.data
   
   // Check if affiliate and redirect
   if (me?.account_type === "INDUSTRY_AFFILIATE") {
@@ -212,7 +214,7 @@ export default async function Overview() {
 
         {/* Onboarding Checklist - takes 1 col */}
         <div className="lg:col-span-1">
-          <DashboardOnboarding />
+          <DashboardOnboarding initialStatus={onboardingStatus} />
         </div>
       </div>
     </div>
