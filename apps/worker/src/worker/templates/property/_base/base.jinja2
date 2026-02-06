@@ -756,6 +756,22 @@
        CONTENTS PAGE
        ========================================================================= #}
     
+    .contents-layout {
+      display: flex;
+    }
+    
+    .contents-sidebar-accent {
+      width: 3px;
+      background: var(--color-accent);
+      margin-right: 24px;
+      opacity: 0.4;
+      border-radius: 2px;
+    }
+    
+    .contents-main {
+      flex: 1;
+    }
+    
     .contents-list {
       display: flex;
       flex-direction: column;
@@ -1251,16 +1267,19 @@
        ========================================================================= #}
     <div class="page page-contents">
       {% block contents %}
-      <div class="page-content">
-        {{ macros.page_header('Contents', 'Property Report Overview') }}
-        <div class="contents-list">
-          {{ macros.contents_item(1, 'Cover', property.street_address) }}
-          {{ macros.contents_item(2, 'Contents', 'Report Overview') }}
-          {{ macros.contents_item(3, 'Aerial View', 'Property Location Map') }}
-          {{ macros.contents_item(4, 'Property Details', 'Specifications & Tax Information') }}
-          {{ macros.contents_item(5, 'Area Sales Analysis', 'Market Statistics') }}
-          {{ macros.contents_item(6, 'Sales Comparables', 'Recent Comparable Sales') }}
-          {{ macros.contents_item(7, 'Range of Sales', 'Price Range Analysis') }}
+      <div class="page-content contents-layout">
+        <div class="contents-sidebar-accent"></div>
+        <div class="contents-main">
+          {{ macros.page_header('Contents', 'Property Report Overview') }}
+          <div class="contents-list">
+            {{ macros.contents_item(1, 'Cover', property.street_address) }}
+            {{ macros.contents_item(2, 'Contents', 'Report Overview') }}
+            {{ macros.contents_item(3, 'Aerial View', 'Property Location Map') }}
+            {{ macros.contents_item(4, 'Property Details', 'Specifications & Tax Information') }}
+            {{ macros.contents_item(5, 'Area Sales Analysis', 'Market Statistics') }}
+            {{ macros.contents_item(6, 'Sales Comparables', 'Recent Comparable Sales') }}
+            {{ macros.contents_item(7, 'Range of Sales', 'Price Range Analysis') }}
+          </div>
         </div>
       </div>
       {{ macros.page_footer(agent, 2) }}
