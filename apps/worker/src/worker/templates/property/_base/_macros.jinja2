@@ -347,11 +347,40 @@
 {% endmacro %}
 
 {# -----------------------------------------------------------------------------
-   MAP CARD
-   Styled container for map images
-   Usage: {{ macros.map_card(image_url, title) }}
+   AERIAL INFO BAR
+   Info bar below aerial map with neighborhood, coordinates, ZIP, county
+   Usage: {{ macros.aerial_info_bar(property) }}
    ----------------------------------------------------------------------------- #}
-{% macro map_card(image_url, title=None) %}
+{% macro aerial_info_bar(property) %}
+<div class="aerial-info-bar">
+  <div class="aerial-info-item">
+    <span class="aerial-info-label">Neighborhood</span>
+    <span class="aerial-info-value">{{ property.neighborhood | default(property.city) }}</span>
+  </div>
+  <div class="aerial-info-divider"></div>
+  <div class="aerial-info-item">
+    <span class="aerial-info-label">Coordinates</span>
+    <span class="aerial-info-value">{{ property.latitude }}, {{ property.longitude }}</span>
+  </div>
+  <div class="aerial-info-divider"></div>
+  <div class="aerial-info-item">
+    <span class="aerial-info-label">ZIP Code</span>
+    <span class="aerial-info-value">{{ property.zip_code }}</span>
+  </div>
+  <div class="aerial-info-divider"></div>
+  <div class="aerial-info-item">
+    <span class="aerial-info-label">County</span>
+    <span class="aerial-info-value">{{ property.county | default('—') }}</span>
+  </div>
+</div>
+{% endmacro %}
+
+{# -----------------------------------------------------------------------------
+   MAP CARD
+   Styled container for map images with optional property marker overlay
+   Usage: {{ macros.map_card(image_url, title, property) }}
+   ----------------------------------------------------------------------------- #}
+{% macro map_card(image_url, title=None, property=None) %}
 <div class="map-card">
   {% if title %}
   <div class="map-card-header">{{ title }}</div>
@@ -359,6 +388,16 @@
   <div class="map-card-image">
     {% if image_url %}
     <img src="{{ image_url }}" alt="{{ title | default('Map') }}">
+    {# Property marker overlay #}
+    {% if property %}
+    <div class="map-marker">
+      <span class="map-marker-label">{{ property.street_address }}</span>
+      <svg class="map-marker-pin" width="12" height="16" viewBox="0 0 12 16">
+        <path d="M6 0C2.7 0 0 2.7 0 6c0 4.5 6 10 6 10s6-5.5 6-10c0-3.3-2.7-6-6-6z" fill="var(--color-accent)"/>
+        <circle cx="6" cy="6" r="2.5" fill="white"/>
+      </svg>
+    </div>
+    {% endif %}
     {% else %}
     <div class="map-placeholder">Map not available</div>
     {% endif %}

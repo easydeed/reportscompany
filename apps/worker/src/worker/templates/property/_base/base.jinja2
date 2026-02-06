@@ -682,6 +682,7 @@
     
     .map-card-image {
       height: 400px;
+      position: relative;
     }
     
     .map-card-image img {
@@ -699,6 +700,75 @@
       background: var(--color-surface);
       color: var(--color-text-muted);
       font-size: 14px;
+    }
+    
+    /* Aerial map marker overlay */
+    .map-marker {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -100%);
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .map-marker-label {
+      font-family: var(--font-body);
+      font-size: 9px;
+      font-weight: 700;
+      color: white;
+      background: var(--color-accent);
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      white-space: nowrap;
+      letter-spacing: 0.5px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    
+    .map-marker-pin {
+      margin-top: -1px;
+    }
+    
+    /* Aerial info bar */
+    .aerial-info-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 14px;
+      padding: 12px 16px;
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-border);
+    }
+    
+    .aerial-info-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .aerial-info-label {
+      font-family: var(--font-body);
+      font-size: 8px;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 2px;
+    }
+    
+    .aerial-info-value {
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--color-primary);
+    }
+    
+    .aerial-info-divider {
+      width: 1px;
+      height: 24px;
+      background: var(--color-border);
     }
     
     {# =========================================================================
@@ -855,7 +925,8 @@
       {% block aerial %}
       <div class="page-content">
         {{ macros.page_header('Aerial View', property.full_address) }}
-        {{ macros.map_card(images.aerial_map, 'Property Location') }}
+        {{ macros.map_card(images.aerial_map, 'Property Location', property) }}
+        {{ macros.aerial_info_bar(property) }}
       </div>
       {{ macros.page_footer(agent, 3) }}
       {% endblock %}
