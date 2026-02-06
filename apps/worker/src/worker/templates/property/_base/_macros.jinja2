@@ -330,6 +330,73 @@
 {% endmacro %}
 
 {# -----------------------------------------------------------------------------
+   COMPARISON TABLE
+   Subject vs Comp Average table with green/red indicators
+   Usage: {{ macros.comparison_table(stats, property) }}
+   ----------------------------------------------------------------------------- #}
+{% macro comparison_table(stats, property) %}
+<div class="comparison-section">
+  <h3 class="section-title">Subject Property vs. Comparable Averages</h3>
+  <div class="comparison-table">
+    <div class="comparison-header">
+      <span>Metric</span>
+      <span>Subject Property</span>
+      <span>Comp Average</span>
+      <span>Difference</span>
+    </div>
+    {% set rows = [
+      {'metric': 'Price', 'subject': stats.piq.price | format_currency, 'comp': stats.medium.price | format_currency, 'diff': stats.piq.price - stats.medium.price, 'is_currency': true},
+      {'metric': 'Sq Ft', 'subject': property.sqft | format_number, 'comp': stats.avg_sqft | format_number, 'diff': property.sqft - stats.avg_sqft, 'is_currency': false},
+      {'metric': 'Beds', 'subject': property.bedrooms, 'comp': stats.avg_beds, 'diff': property.bedrooms - stats.avg_beds, 'is_currency': false},
+      {'metric': 'Baths', 'subject': property.bathrooms, 'comp': stats.avg_baths, 'diff': property.bathrooms - stats.avg_baths, 'is_currency': false},
+      {'metric': '$/Sq Ft', 'subject': stats.piq.price_per_sqft | format_currency, 'comp': stats.avg_price_per_sqft | format_currency, 'diff': stats.piq.price_per_sqft - stats.avg_price_per_sqft, 'is_currency': true}
+    ] %}
+    {% for row in rows %}
+    <div class="comparison-row {% if loop.index is odd %}comparison-row-stripe{% endif %}">
+      <span class="comparison-metric">{{ row.metric }}</span>
+      <span class="comparison-subject">{{ row.subject }}</span>
+      <span class="comparison-comp">{{ row.comp }}</span>
+      <span class="comparison-diff {% if row.diff >= 0 %}diff-positive{% else %}diff-negative{% endif %}">
+        {% if row.is_currency %}{{ row.diff | abs | format_currency }}{% else %}{{ row.diff | abs }}{% endif %}
+        {% if row.diff >= 0 %}↑{% else %}↓{% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endmacro %}
+
+{# -----------------------------------------------------------------------------
+   PRICE POSITION BAR
+   Shows subject property position in price range
+   Usage: {{ macros.price_position_bar(stats) }}
+   ----------------------------------------------------------------------------- #}
+{% macro price_position_bar(stats) %}
+{% set low = stats.price_low %}
+{% set high = stats.price_high %}
+{% set subject = stats.piq.price | default(stats.medium.price) %}
+{% set range = high - low %}
+{% if range > 0 %}
+{% set position = ((subject - low) / range * 100) | int %}
+<div class="price-position-section">
+  <div class="price-position-label">Subject property position in price range</div>
+  <div class="price-position-container">
+    <div class="price-position-track">
+      <div class="price-position-marker" style="left: {{ position }}%">
+        <span class="price-position-value">{{ subject | format_currency }}</span>
+        <span class="price-position-tick"></span>
+      </div>
+    </div>
+    <div class="price-position-range-labels">
+      <span>{{ low | format_currency }}</span>
+      <span>{{ high | format_currency }}</span>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endmacro %}
+
+{# -----------------------------------------------------------------------------
    CONTENTS ITEM
    Single item for table of contents
    Usage: {{ macros.contents_item(number, title, subtitle) }}

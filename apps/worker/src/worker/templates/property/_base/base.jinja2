@@ -617,6 +617,142 @@
     }
     
     {# =========================================================================
+       COMPARISON TABLE
+       ========================================================================= #}
+    
+    .comparison-section { margin-top: 16px; }
+    
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--color-primary);
+      margin-bottom: 8px;
+    }
+    
+    .comparison-table {
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 1px solid var(--color-border);
+    }
+    
+    .comparison-header {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      padding: 8px 12px;
+      background: var(--color-primary);
+      font-family: var(--font-body);
+      font-size: 9px;
+      font-weight: 700;
+      color: white;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .comparison-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      padding: 7px 12px;
+      font-size: 10px;
+    }
+    
+    .comparison-row-stripe {
+      background: var(--color-surface);
+    }
+    
+    .comparison-metric {
+      font-family: var(--font-body);
+      font-weight: 600;
+      color: var(--color-primary);
+    }
+    
+    .comparison-subject {
+      font-family: var(--font-body);
+      color: var(--color-text);
+    }
+    
+    .comparison-comp {
+      font-family: var(--font-body);
+      color: var(--color-text-muted);
+    }
+    
+    .comparison-diff {
+      font-family: var(--font-body);
+      font-weight: 700;
+    }
+    
+    .diff-positive { color: #16A34A; }
+    .diff-negative { color: #DC2626; }
+    
+    {# =========================================================================
+       PRICE POSITION BAR
+       ========================================================================= #}
+    
+    .price-position-section { margin-top: 4px; }
+    
+    .price-position-label {
+      font-family: var(--font-body);
+      font-size: 9px;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+    
+    .price-position-container {
+      position: relative;
+      height: 36px;
+    }
+    
+    .price-position-track {
+      position: absolute;
+      top: 12px;
+      left: 0;
+      right: 0;
+      height: 12px;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(90deg, var(--color-border) 0%, var(--color-accent) 100%);
+    }
+    
+    .price-position-marker {
+      position: absolute;
+      top: -12px;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .price-position-value {
+      font-family: var(--font-body);
+      font-size: 8px;
+      font-weight: 700;
+      color: var(--color-primary);
+      white-space: nowrap;
+      margin-bottom: 1px;
+    }
+    
+    .price-position-tick {
+      display: block;
+      width: 3px;
+      height: 24px;
+      background: var(--color-primary);
+      border-radius: 2px;
+    }
+    
+    .price-position-range-labels {
+      position: absolute;
+      bottom: -14px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-body);
+      font-size: 8px;
+      color: var(--color-text-muted);
+    }
+    
+    {# =========================================================================
        CONTENTS PAGE
        ========================================================================= #}
     
@@ -962,8 +1098,10 @@
     <div class="page page-analysis">
       {% block analysis %}
       <div class="page-content">
-        {{ macros.page_header('Area Sales Analysis', 'Comparable Sales Summary') }}
+        {{ macros.page_header('Area Sales Analysis', 'Comparable market statistics and pricing') }}
         {{ macros.analysis_summary(stats, property) }}
+        {{ macros.price_position_bar(stats) }}
+        {{ macros.comparison_table(stats, property) }}
       </div>
       {{ macros.page_footer(agent, 5) }}
       {% endblock %}
