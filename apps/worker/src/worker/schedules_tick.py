@@ -15,6 +15,7 @@ import os
 import time
 import logging
 import json
+import httpx
 from datetime import datetime, timedelta, date
 from typing import Optional, Dict, Any
 from zoneinfo import ZoneInfo
@@ -81,6 +82,35 @@ if not DATABASE_URL:
 
 # Ticker interval (seconds)
 TICK_INTERVAL = int(os.getenv("TICK_INTERVAL", "60"))
+
+# API keep-alive settings
+API_BASE_URL = os.getenv("API_BASE_URL", "https://reportscompany.onrender.com")
+KEEP_ALIVE_INTERVAL = int(os.getenv("KEEP_ALIVE_INTERVAL", "300"))  # 5 minutes default
+_last_keep_alive = 0  # Track last ping time
+
+
+def keep_api_warm():
+    """
+    Ping the API health endpoint to prevent Render cold starts.
+    Called periodically from the ticker loop.
+    """
+    global _last_keep_alive
+    
+    now = time.time()
+    
+    # Only ping every KEEP_ALIVE_INTERVAL seconds
+    if now - _last_keep_alive < KEEP_ALIVE_INTERVAL:
+        return
+    
+    _last_keep_alive = now
+    
+    try:
+        response = httpx.get(f"{API_BASE_URL}/health", timeout=10.0)
+        logger.info(f"🔥 API keep-alive ping: {response.status_code}")
+    except httpx.TimeoutException:
+        logger.warning("⚠️ API keep-alive ping timed out")
+    except Exception as e:
+        logger.warning(f"⚠️ API keep-alive ping failed: {e}")
 
 
 def compute_next_run(
@@ -394,12 +424,17 @@ def process_due_schedules():
 def run_forever():
     """
     Main ticker loop: process due schedules every TICK_INTERVAL seconds.
+    Also pings the API periodically to prevent cold starts.
     """
     logger.info(f"Schedules ticker started (interval: {TICK_INTERVAL}s)")
     logger.info(f"Database: {DATABASE_URL.split('@')[-1]}")  # Log host without credentials
+    logger.info(f"API keep-alive target: {API_BASE_URL} (every {KEEP_ALIVE_INTERVAL}s)")
     
     while True:
         try:
+            # Keep API warm to prevent Render cold starts
+            keep_api_warm()
+            
             logger.debug("Tick: Checking for due schedules...")
             process_due_schedules()
         except Exception as e:
