@@ -20,20 +20,29 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
 
   const nextPath = searchParams.get("next") || "/app";
+  
+  // Debug: log the redirect target
+  console.log('[LOGIN] nextPath from URL:', searchParams.get("next"), '→ will redirect to:', nextPath);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
+    const startTime = performance.now();
+    console.log('[LOGIN] Starting login...');
+
     try {
       // Use proxy route to ensure Set-Cookie works (same-origin)
+      console.log('[LOGIN] Calling /api/proxy/v1/auth/login...');
+      const fetchStart = performance.now();
       const res = await fetch("/api/proxy/v1/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
         credentials: "include", // Allow browser to accept Set-Cookie
       });
+      console.log(`[LOGIN] API response received in ${(performance.now() - fetchStart).toFixed(0)}ms, status: ${res.status}`);
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -44,6 +53,8 @@ function LoginForm() {
 
       // Backend sets mr_token cookie via Set-Cookie header
       // Redirect to next path or dashboard
+      console.log(`[LOGIN] Success! Redirecting to: ${nextPath}`);
+      console.log(`[LOGIN] Total login time: ${(performance.now() - startTime).toFixed(0)}ms`);
       router.push(nextPath);
     } catch (err: any) {
       console.error("Login failed", err);
