@@ -107,7 +107,7 @@ export default function AccountsPage() {
                 <p className="text-sm text-slate-500">Total Accounts</p>
                 <p className="text-2xl font-bold text-slate-900">{total}</p>
               </div>
-              <Building className="h-8 w-8 text-violet-200" />
+              <Building className="h-8 w-8 text-indigo-200" />
             </div>
           </CardContent>
         </Card>
@@ -236,7 +236,7 @@ export default function AccountsPage() {
                         variant="outline"
                         className={
                           account.account_type === "INDUSTRY_AFFILIATE"
-                            ? "border-violet-300 text-violet-700 bg-violet-50"
+                            ? "border-indigo-300 text-indigo-700 bg-indigo-50"
                             : "border-slate-300 text-slate-600"
                         }
                       >
@@ -250,7 +250,7 @@ export default function AccountsPage() {
                           account.plan_slug === "free" ? "border-slate-300 text-slate-600" :
                           account.plan_slug === "pro" ? "border-blue-300 text-blue-700 bg-blue-50" :
                           account.plan_slug === "team" ? "border-emerald-300 text-emerald-700 bg-emerald-50" :
-                          account.plan_slug === "affiliate" ? "border-violet-300 text-violet-700 bg-violet-50" :
+                          account.plan_slug === "affiliate" ? "border-indigo-300 text-indigo-700 bg-indigo-50" :
                           "border-amber-300 text-amber-700 bg-amber-50"
                         }
                       >

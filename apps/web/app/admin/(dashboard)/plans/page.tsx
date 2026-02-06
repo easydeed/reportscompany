@@ -150,7 +150,7 @@ export default function PlansPage() {
         </div>
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
-            <Button className="bg-violet-600 hover:bg-violet-700 text-white">
+            <Button className="bg-indigo-600 hover:bg-indigo-700 text-white">
               <Plus className="h-4 w-4 mr-2" />
               Create Plan
             </Button>
@@ -222,7 +222,7 @@ export default function PlansPage() {
               <Button
                 onClick={createPlan}
                 disabled={saving === "new" || !newPlan.plan_slug || !newPlan.plan_name}
-                className="w-full bg-violet-600 hover:bg-violet-700 text-white"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
               >
                 {saving === "new" ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -257,7 +257,7 @@ export default function PlansPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-slate-500 text-sm">Accounts</span>
-                  <span className="text-violet-600 font-medium">{plan.account_count}</span>
+                  <span className="text-indigo-600 font-medium">{plan.account_count}</span>
                 </div>
                 {plan.allow_overage && (
                   <div className="flex items-center justify-between">
@@ -372,7 +372,7 @@ export default function PlansPage() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <span className="text-violet-600 font-medium">{plan.account_count}</span>
+                    <span className="text-indigo-600 font-medium">{plan.account_count}</span>
                   </TableCell>
                   <TableCell>
                     {editingPlan?.plan_slug === plan.plan_slug ? (

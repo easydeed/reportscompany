@@ -40,7 +40,7 @@ const THEME_NAMES: Record<number, string> = {
 const THEME_COLORS: Record<number, string> = {
   1: 'bg-slate-100 text-slate-700 border-slate-300',
   2: 'bg-blue-100 text-blue-700 border-blue-300',
-  3: 'bg-purple-100 text-purple-700 border-purple-300',
+  3: 'bg-indigo-100 text-indigo-700 border-indigo-300',
   4: 'bg-teal-100 text-teal-700 border-teal-300',
   5: 'bg-amber-100 text-amber-700 border-amber-300',
 }
@@ -112,7 +112,7 @@ export default async function PropertyReportsAdminPage() {
           <CardContent>
             <div className="text-3xl font-bold text-slate-900">{engagement.total_views || 0}</div>
             <p className="text-xs text-slate-500 mt-1">
-              <span className="text-violet-600 font-medium">{engagement.unique_visitors || 0}</span> unique visitors
+              <span className="text-indigo-600 font-medium">{engagement.unique_visitors || 0}</span> unique visitors
             </p>
           </CardContent>
         </Card>
@@ -133,12 +133,12 @@ export default async function PropertyReportsAdminPage() {
         <Card className="bg-white border-slate-200 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-slate-500">Active Accounts</CardTitle>
-            <Users className="h-4 w-4 text-violet-500" />
+            <Users className="h-4 w-4 text-indigo-500" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-slate-900">{summary.accounts_with_reports || 0}</div>
             <p className="text-xs text-slate-500 mt-1">
-              <span className="text-violet-600 font-medium">{summary.active_landing_pages || 0}</span> active landing pages
+              <span className="text-indigo-600 font-medium">{summary.active_landing_pages || 0}</span> active landing pages
             </p>
           </CardContent>
         </Card>
@@ -170,12 +170,12 @@ export default async function PropertyReportsAdminPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-violet-50 border-violet-200">
+        <Card className="bg-indigo-50 border-indigo-200">
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-violet-600">Affiliates</p>
-                <p className="text-xl font-bold text-violet-700">{byType.affiliate || 0}</p>
+                <p className="text-xs text-indigo-600">Affiliates</p>
+                <p className="text-xl font-bold text-indigo-700">{byType.affiliate || 0}</p>
               </div>
               <Building2 className="h-5 w-5 text-violet-300" />
             </div>
@@ -206,12 +206,12 @@ export default async function PropertyReportsAdminPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-purple-50 border-purple-200">
+        <Card className="bg-indigo-50 border-indigo-200">
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-purple-600">Converted</p>
-                <p className="text-xl font-bold text-purple-700">{leads.converted || 0}</p>
+                <p className="text-xs text-indigo-600">Converted</p>
+                <p className="text-xl font-bold text-indigo-700">{leads.converted || 0}</p>
               </div>
               <CheckCircle className="h-5 w-5 text-purple-300" />
             </div>
@@ -261,7 +261,7 @@ export default async function PropertyReportsAdminPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-slate-900">Top Affiliates</CardTitle>
-              <Link href="/admin/affiliates" className="text-sm text-violet-600 hover:text-violet-700 font-medium">
+              <Link href="/admin/affiliates" className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
                 View all →
               </Link>
             </div>
@@ -309,7 +309,7 @@ export default async function PropertyReportsAdminPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-slate-900">Top Agents</CardTitle>
-              <Link href="/admin/users" className="text-sm text-violet-600 hover:text-violet-700 font-medium">
+              <Link href="/admin/users" className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
                 View all →
               </Link>
             </div>
@@ -401,7 +401,7 @@ export default async function PropertyReportsAdminPage() {
                           report.account_type === 'sponsored' 
                             ? 'border-blue-200 text-blue-600 text-xs' 
                             : report.account_type === 'affiliate'
-                            ? 'border-violet-200 text-violet-600 text-xs'
+                            ? 'border-indigo-200 text-indigo-600 text-xs'
                             : 'border-slate-200 text-slate-500 text-xs'
                         }>
                           {report.account_type}
@@ -467,7 +467,7 @@ export default async function PropertyReportsAdminPage() {
           <CardContent className="pt-6">
             <p className="text-sm text-violet-100">Active Accounts</p>
             <p className="text-2xl font-bold text-white mt-1">{allTime.accounts_with_reports || 0}</p>
-            <p className="text-xs text-violet-200 mt-1">using property reports</p>
+            <p className="text-xs text-indigo-200 mt-1">using property reports</p>
           </CardContent>
         </Card>
       </div>

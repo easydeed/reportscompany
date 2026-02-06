@@ -161,7 +161,7 @@ function generatePreviewHtml(
   data: any,
   branding: BrandingData
 ): string {
-  const primaryColor = branding.primary_color || "#7C3AED";
+  const primaryColor = branding.primary_color || "#4F46E5";
   const accentColor = branding.accent_color || "#F26B2B";
   const brandName = branding.brand_display_name || "Your Brand";
   const logoUrl = branding.logo_url || "";

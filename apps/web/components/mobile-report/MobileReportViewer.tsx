@@ -221,7 +221,7 @@ export function MobileReportViewer({ report, reportId }: Props) {
               onClick={() => setActiveTab(tab.id)}
               className={`flex flex-col items-center px-3 py-1 rounded-lg transition-colors ${
                 isActive 
-                  ? 'text-violet-600 bg-violet-50' 
+                  ? 'text-indigo-600 bg-indigo-50' 
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -244,7 +244,7 @@ function OverviewTab({ report, formatPrice }: { report: ReportData; formatPrice:
   return (
     <div className="p-4 space-y-4">
       {/* Hero Card */}
-      <div className="bg-gradient-to-br from-violet-600 to-purple-700 rounded-2xl p-6 text-white">
+      <div className="bg-gradient-to-br from-violet-600 to-indigo-700 rounded-2xl p-6 text-white">
         <p className="text-violet-200 text-sm mb-1">Estimated Value Range</p>
         <p className="text-3xl font-bold mb-2">
           {formatPrice(report.value_estimate.low)} - {formatPrice(report.value_estimate.high)}
@@ -290,8 +290,8 @@ function OverviewTab({ report, formatPrice }: { report: ReportData; formatPrice:
       {/* Address Card */}
       <div className="bg-white rounded-xl p-4 shadow-sm">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0">
-            <MapPin className="w-5 h-5 text-violet-600" />
+          <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+            <MapPin className="w-5 h-5 text-indigo-600" />
           </div>
           <div>
             <p className="font-semibold text-gray-900">{report.property.address}</p>
@@ -328,9 +328,9 @@ function OverviewTab({ report, formatPrice }: { report: ReportData; formatPrice:
           {report.agent.phone && (
             <a 
               href={`tel:${report.agent.phone}`}
-              className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center"
+              className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center"
             >
-              <Phone className="w-5 h-5 text-violet-600" />
+              <Phone className="w-5 h-5 text-indigo-600" />
             </a>
           )}
         </div>
@@ -475,7 +475,7 @@ function CompsTab({
           </div>
 
           <div className="mt-3 pt-3 border-t">
-            <p className="text-center text-violet-600 font-semibold">
+            <p className="text-center text-indigo-600 font-semibold">
               ${comp.price_per_sqft}/sqft
             </p>
           </div>
@@ -489,7 +489,7 @@ function CompsTab({
             key={i}
             onClick={() => setCompIndex(i)}
             className={`w-2 h-2 rounded-full transition-colors ${
-              i === compIndex ? 'bg-violet-600' : 'bg-gray-300'
+              i === compIndex ? 'bg-indigo-600' : 'bg-gray-300'
             }`}
           />
         ))}
@@ -527,7 +527,7 @@ function MarketTab({ report, formatPrice }: { report: ReportData; formatPrice: (
         </div>
       </div>
 
-      <div className="bg-violet-50 rounded-xl p-4">
+      <div className="bg-indigo-50 rounded-xl p-4">
         <p className="text-sm text-violet-800">
           Based on {report.comparables.length} comparable sales within 2 miles 
           of your property in the last 12 months.
@@ -560,7 +560,7 @@ function AgentTab({
             className="w-24 h-24 rounded-full mx-auto mb-4 object-cover border-4 border-violet-100"
           />
         ) : (
-          <div className="w-24 h-24 rounded-full mx-auto mb-4 bg-violet-100 flex items-center justify-center">
+          <div className="w-24 h-24 rounded-full mx-auto mb-4 bg-indigo-100 flex items-center justify-center">
             <User className="w-12 h-12 text-violet-400" />
           </div>
         )}
@@ -580,7 +580,7 @@ function AgentTab({
           <a
             href={`tel:${report.agent.phone}`}
             onClick={() => onContactClick('call')}
-            className="flex items-center justify-center gap-3 w-full py-4 bg-violet-600 text-white rounded-xl font-semibold hover:bg-violet-700 transition"
+            className="flex items-center justify-center gap-3 w-full py-4 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition"
           >
             <Phone className="w-5 h-5" />
             Call {report.agent.name.split(' ')[0]}
@@ -591,7 +591,7 @@ function AgentTab({
           <a
             href={`sms:${report.agent.phone}`}
             onClick={() => onContactClick('text')}
-            className="flex items-center justify-center gap-3 w-full py-4 bg-white border-2 border-violet-600 text-violet-600 rounded-xl font-semibold hover:bg-violet-50 transition"
+            className="flex items-center justify-center gap-3 w-full py-4 bg-white border-2 border-violet-600 text-indigo-600 rounded-xl font-semibold hover:bg-indigo-50 transition"
           >
             <MessageSquare className="w-5 h-5" />
             Send Text
@@ -637,7 +637,7 @@ function AgentTab({
 function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) {
   return (
     <div className="bg-white rounded-xl p-3 shadow-sm text-center">
-      <div className="text-violet-600 mb-1 flex justify-center">{icon}</div>
+      <div className="text-indigo-600 mb-1 flex justify-center">{icon}</div>
       <p className="text-lg font-semibold text-gray-900">{value}</p>
       <p className="text-xs text-gray-500">{label}</p>
     </div>

@@ -185,7 +185,7 @@ export default function TermsPage() {
               </p>
               <p className="text-slate-600">
                 Email:{" "}
-                <a href="mailto:legal@trendyreports.com" className="text-purple-600 hover:underline">
+                <a href="mailto:legal@trendyreports.com" className="text-indigo-600 hover:underline">
                   legal@trendyreports.com
                 </a>
               </p>

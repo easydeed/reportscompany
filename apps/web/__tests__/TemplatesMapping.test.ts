@@ -282,7 +282,7 @@ describe('Template Mapping - Fallback Brand', () => {
 
   it('should use default colors when brand not provided', () => {
     const html = buildMarketSnapshotHtml(mockMarketSnapshotTemplate, dataWithoutBrand);
-    expect(html).toContain("--pct-blue: #7C3AED"); // DEFAULT_PRIMARY_COLOR
+    expect(html).toContain("--pct-blue: #4F46E5"); // DEFAULT_PRIMARY_COLOR
     expect(html).toContain("--pct-accent: #F26B2B"); // DEFAULT_ACCENT_COLOR
   });
 });

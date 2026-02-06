@@ -159,7 +159,7 @@ export function Navbar() {
               Sign in
             </Link>
             <Button
-              className="hidden lg:inline-flex bg-purple-600 hover:bg-purple-700 text-white border-0 shadow-sm hover:shadow-md transition-all"
+              className="hidden lg:inline-flex bg-indigo-600 hover:bg-indigo-700 text-white border-0 shadow-sm hover:shadow-md transition-all"
               asChild
             >
               <Link href="/register">Start Free Trial</Link>
@@ -229,7 +229,7 @@ export function Navbar() {
                   Sign in
                 </Link>
                 <Button
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
                   asChild
                 >
                   <Link href="/register" onClick={() => setIsMobileMenuOpen(false)}>

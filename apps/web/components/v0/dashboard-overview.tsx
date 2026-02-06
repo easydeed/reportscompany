@@ -61,7 +61,7 @@ function KPICard({
         <CardContent className="p-6">
           <div className="flex items-start justify-between mb-3">
             <p className="text-sm font-medium text-slate-600">{label}</p>
-            <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
+            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600">
               {icon}
             </div>
           </div>
@@ -88,11 +88,11 @@ function StatusDot({ status }: { status: "success" | "pending" | "failed" }) {
 
 export function DashboardOverview({ kpis, reports30d, emails30d, recent }: DashboardOverviewProps) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50/30 via-white to-white">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50/30 via-white to-white">
       <div className="border-b border-slate-200 bg-white/80 backdrop-blur-sm mb-6">
         <div className="px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-purple-700 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-600 to-indigo-700 flex items-center justify-center">
               <TrendingUp className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -122,8 +122,8 @@ export function DashboardOverview({ kpis, reports30d, emails30d, recent }: Dashb
                 <AreaChart data={reports30d}>
                   <defs>
                     <linearGradient id="colorReportsTrendy" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#7C3AED" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#7C3AED" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#4F46E5" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
@@ -149,7 +149,7 @@ export function DashboardOverview({ kpis, reports30d, emails30d, recent }: Dashb
                   <Area
                     type="monotone"
                     dataKey="value"
-                    stroke="#7C3AED"
+                    stroke="#4F46E5"
                     strokeWidth={3}
                     fill="url(#colorReportsTrendy)"
                     animationDuration={600}
@@ -235,7 +235,7 @@ export function DashboardOverview({ kpis, reports30d, emails30d, recent }: Dashb
                       <td className="py-3 px-4 text-sm text-slate-600 whitespace-nowrap">{item.date}</td>
                       <td className="py-3 px-4 text-sm text-slate-900 font-medium">{item.event}</td>
                       <td className="py-3 px-4">
-                        <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700 border-purple-200">
+                        <Badge variant="secondary" className="text-xs bg-indigo-100 text-indigo-700 border-indigo-200">
                           {item.type}
                         </Badge>
                       </td>
@@ -250,7 +250,7 @@ export function DashboardOverview({ kpis, reports30d, emails30d, recent }: Dashb
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 text-xs text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                            className="h-8 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
                           >
                             {item.linkType === "report" ? "View Report" : "View Email"}
                             <ExternalLink className="w-3 h-3 ml-1" />
@@ -271,7 +271,7 @@ export function DashboardOverview({ kpis, reports30d, emails30d, recent }: Dashb
 
 export function DashboardOverviewEmpty() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50/30 via-white to-white">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50/30 via-white to-white">
       <div className="border-b border-slate-200 bg-white/80 backdrop-blur-sm mb-6">
         <div className="px-6 py-4">
           <h1 className="font-display text-2xl font-bold text-slate-900">Market Control Center</h1>

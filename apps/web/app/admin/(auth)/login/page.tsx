@@ -95,7 +95,7 @@ export default function AdminLoginPage() {
                 placeholder="admin@example.com"
                 required
                 disabled={loading}
-                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-violet-500 focus:ring-violet-500/20"
+                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-indigo-500/20"
               />
             </div>
             
@@ -110,7 +110,7 @@ export default function AdminLoginPage() {
                   placeholder="••••••••"
                   required
                   disabled={loading}
-                  className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-violet-500 focus:ring-violet-500/20 pr-10"
+                  className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-indigo-500/20 pr-10"
                 />
                 <button
                   type="button"
@@ -125,7 +125,7 @@ export default function AdminLoginPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-medium py-2.5 shadow-lg shadow-violet-500/25 transition-all"
+              className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-indigo-700 text-white font-medium py-2.5 shadow-lg shadow-violet-500/25 transition-all"
             >
               {loading ? (
                 <>

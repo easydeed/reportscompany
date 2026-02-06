@@ -41,8 +41,8 @@ const DEFAULT_STATE: ScheduleBuilderState = {
 }
 
 const DEFAULT_BRANDING: BrandingContext = {
-  primaryColor: "#7C3AED",
-  accentColor: "#8B5CF6",
+  primaryColor: "#4F46E5",
+  accentColor: "#818CF8",
   emailLogoUrl: null,
   displayName: "TrendyReports",
 }

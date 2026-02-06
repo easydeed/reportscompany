@@ -11,7 +11,7 @@
  */
 
 // Default TrendyReports brand colors (Phase 26)
-const DEFAULT_PRIMARY_COLOR = "#7C3AED"; // Trendy violet
+const DEFAULT_PRIMARY_COLOR = "#4F46E5"; // Trendy violet
 const DEFAULT_ACCENT_COLOR = "#F26B2B";  // Trendy coral
 
 /**

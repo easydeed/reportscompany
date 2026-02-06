@@ -133,8 +133,8 @@ export default function CareersPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {benefits.map((benefit) => (
               <div key={benefit.title} className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center shrink-0">
-                  <benefit.icon className="w-5 h-5 text-purple-600" />
+                <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center shrink-0">
+                  <benefit.icon className="w-5 h-5 text-indigo-600" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-slate-900 mb-1">{benefit.title}</h3>
@@ -154,7 +154,7 @@ export default function CareersPage() {
           </h2>
           <p className="text-slate-600 text-center mb-12">
             Don't see a perfect fit? Email us at{" "}
-            <a href="mailto:careers@trendyreports.com" className="text-purple-600 hover:underline">
+            <a href="mailto:careers@trendyreports.com" className="text-indigo-600 hover:underline">
               careers@trendyreports.com
             </a>
           </p>
@@ -164,11 +164,11 @@ export default function CareersPage() {
               <a
                 key={position.title}
                 href={`mailto:careers@trendyreports.com?subject=Application: ${position.title}`}
-                className="block bg-white rounded-xl p-6 border border-slate-200 hover:border-purple-300 hover:shadow-md transition-all group"
+                className="block bg-white rounded-xl p-6 border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all group"
               >
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
-                    <h3 className="font-display font-semibold text-lg text-slate-900 mb-1 group-hover:text-purple-600 transition-colors">
+                    <h3 className="font-display font-semibold text-lg text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors">
                       {position.title}
                     </h3>
                     <p className="text-slate-600 text-sm mb-2">{position.description}</p>
@@ -184,7 +184,7 @@ export default function CareersPage() {
                       </span>
                     </div>
                   </div>
-                  <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-purple-600 transition-colors shrink-0" />
+                  <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-indigo-600 transition-colors shrink-0" />
                 </div>
               </a>
             ))}
@@ -205,7 +205,7 @@ export default function CareersPage() {
             href="https://linkedin.com/company/trendyreports"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center border border-slate-300 hover:border-purple-300 hover:bg-purple-50 text-slate-700 text-lg px-8 h-14 rounded-lg transition-all font-medium"
+            className="inline-flex items-center justify-center border border-slate-300 hover:border-indigo-300 hover:bg-indigo-50 text-slate-700 text-lg px-8 h-14 rounded-lg transition-all font-medium"
           >
             Follow on LinkedIn
           </a>

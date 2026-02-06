@@ -140,13 +140,13 @@ export default function PropertyReportsPage() {
 
   if (loading && reports.length === 0) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-5">
         <PageHeader
           title="Property Reports"
           description="Generate seller and buyer property reports with QR codes"
           action={
-            <Button disabled>
-              <Plus className="w-4 h-4 mr-2" />
+            <Button disabled size="sm">
+              <Plus className="w-4 h-4 mr-1.5" />
               Create Report
             </Button>
           }
@@ -165,15 +165,15 @@ export default function PropertyReportsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
       <PageHeader
         title="Property Reports"
         description="Generate seller and buyer property reports with QR codes"
         action={
-          <Button asChild>
+          <Button asChild size="sm">
             <Link href="/app/property/new">
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="w-4 h-4 mr-1.5" />
               Create Report
             </Link>
           </Button>
@@ -181,7 +181,7 @@ export default function PropertyReportsPage() {
       />
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <MetricCard
           label="Total Reports"
           value={stats.total}
@@ -251,16 +251,16 @@ export default function PropertyReportsPage() {
           </div>
 
           {/* Table */}
-          <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+          <div className="bg-card border border-border rounded-xl overflow-hidden shadow-[var(--shadow-card)]">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Property</TableHead>
-                  <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Type</TableHead>
-                  <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</TableHead>
-                  <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Views</TableHead>
-                  <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Created</TableHead>
-                  <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</TableHead>
+                <TableRow className="bg-muted/40 hover:bg-muted/40 border-b border-border">
+                  <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em] py-2.5">Property</TableHead>
+                  <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em] py-2.5">Type</TableHead>
+                  <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em] py-2.5">Status</TableHead>
+                  <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em] py-2.5">Views</TableHead>
+                  <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em] py-2.5">Created</TableHead>
+                  <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em] py-2.5">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -289,7 +289,7 @@ export default function PropertyReportsPage() {
                       <TableCell>
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
                           report.report_type === "seller" 
-                            ? "bg-purple-50 text-purple-700 border-purple-200" 
+                            ? "bg-indigo-50 text-indigo-700 border-indigo-200" 
                             : "bg-blue-50 text-blue-700 border-blue-200"
                         }`}>
                           {report.report_type === "seller" ? "Seller" : "Buyer"}

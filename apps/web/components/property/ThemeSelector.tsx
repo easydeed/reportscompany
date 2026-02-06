@@ -138,7 +138,7 @@ export function ThemeSelector({
   const presetColors = [
     "#0d294b", // Navy
     "#1e40af", // Blue
-    "#7c3aed", // Purple
+    "#4F46E5", // Purple
     "#059669", // Green
     "#16d3ba", // Teal
     "#d97706", // Amber

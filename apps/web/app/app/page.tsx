@@ -78,15 +78,15 @@ export default async function Overview() {
     .slice(0, 8)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
       <PageHeader
         title="Overview"
         description="Your account activity and key metrics"
         action={
-          <Button asChild>
+          <Button asChild size="sm">
             <Link href="/app/reports/new">
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="w-4 h-4 mr-1.5" />
               New Report
             </Link>
           </Button>
@@ -125,41 +125,21 @@ export default async function Overview() {
       )}
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard
-          label="Reports"
-          value={data?.summary?.total_reports ?? 0}
-          icon={<FileText className="w-4 h-4" />}
-          index={0}
-        />
-        <MetricCard
-          label="Emails Sent"
-          value={data?.recent_emails?.length ?? 0}
-          icon={<Mail className="w-4 h-4" />}
-          index={1}
-        />
-        <MetricCard
-          label="Active Schedules"
-          value={data?.limits?.active_schedules ?? 0}
-          icon={<Calendar className="w-4 h-4" />}
-          index={2}
-        />
-        <MetricCard
-          label="Avg. Render Time"
-          value={data?.summary?.avg_ms ? `${Math.round(data.summary.avg_ms)}ms` : '0ms'}
-          icon={<Clock className="w-4 h-4" />}
-          index={3}
-        />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <MetricCard label="Reports" value={data?.summary?.total_reports ?? 0} icon={<FileText className="w-4 h-4" />} index={0} />
+        <MetricCard label="Emails Sent" value={data?.recent_emails?.length ?? 0} icon={<Mail className="w-4 h-4" />} index={1} />
+        <MetricCard label="Active Schedules" value={data?.limits?.active_schedules ?? 0} icon={<Calendar className="w-4 h-4" />} index={2} />
+        <MetricCard label="Avg. Render" value={data?.summary?.avg_ms ? `${Math.round(data.summary.avg_ms)}ms` : '—'} icon={<Clock className="w-4 h-4" />} index={3} />
       </div>
 
       {/* Two-column layout: Recent Activity + Onboarding */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Recent Activity - takes 2 cols */}
-        <div className="lg:col-span-2 bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+        <div className="lg:col-span-2 bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-            <h3 className="text-sm font-medium text-foreground">Recent Activity</h3>
-            <Link href="/app/reports" className="text-xs text-primary hover:underline">
-              View all
+            <h3 className="text-[13px] font-semibold text-foreground">Recent Activity</h3>
+            <Link href="/app/reports" className="text-xs text-primary hover:text-primary/80 font-medium">
+              View all →
             </Link>
           </div>
           {recentActivity.length === 0 ? (

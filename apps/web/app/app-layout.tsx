@@ -15,6 +15,8 @@ import {
   SidebarFooter,
   SidebarInset,
   SidebarTrigger,
+  SidebarGroup,
+  SidebarGroupLabel,
 } from "@/components/ui/sidebar"
 import {
   Collapsible,
@@ -53,13 +55,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import NavAuth from "@/components/NavAuth"
 import { AccountSwitcher } from "@/components/account-switcher"
 import { Logo } from "@/components/logo"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
-import { SidebarGroup, SidebarGroupLabel } from "@/components/ui/sidebar"
 
 // Routes where sidebar should be hidden (builder modes)
 const BUILDER_ROUTES = [
@@ -70,13 +68,8 @@ const BUILDER_ROUTES = [
 
 function isBuilderRoute(pathname: string | null): boolean {
   if (!pathname) return false
-  
-  // Check direct matches
   if (BUILDER_ROUTES.includes(pathname)) return true
-  
-  // Check for schedule edit routes: /app/schedules/[id]/edit
   if (pathname.startsWith("/app/schedules/") && pathname.endsWith("/edit")) return true
-  
   return false
 }
 
@@ -84,7 +77,6 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
   const pathname = usePathname()
   const [planInfo, setPlanInfo] = useState<{ plan_name: string; reports_used: number; reports_limit: number } | null>(null)
   
-  // Fetch plan usage
   useEffect(() => {
     fetch("/api/proxy/v1/account/plan-usage", { credentials: "include" })
       .then(res => res.ok ? res.json() : null)
@@ -100,32 +92,30 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
       .catch(() => {})
   }, [])
   
-  // Check if we're in admin or settings section
   const isInAdminSection = pathname?.startsWith("/app/admin")
   const isInSettingsSection = pathname?.startsWith("/app/settings")
   
-  // Build navigation based on user role (without Settings - it's now a collapsible section)
-  const navigation = isAffiliate
+  const usagePercent = planInfo ? Math.min((planInfo.reports_used / planInfo.reports_limit) * 100, 100) : 0
+
+  const mainNavigation = isAffiliate
     ? [
-        // Affiliate navigation
-        { name: "Affiliate Dashboard", href: "/app/affiliate", icon: LayoutDashboard },
+        { name: "Dashboard", href: "/app/affiliate", icon: LayoutDashboard },
         { name: "Market Reports", href: "/app/reports", icon: FileText },
         { name: "Property Reports", href: "/app/property", icon: Home },
-        { name: "Scheduled Reports", href: "/app/schedules", icon: Calendar },
-        { name: "My Leads", href: "/app/lead-page", icon: Link2 },
-        { name: "My Contacts", href: "/app/people", icon: Users },
+        { name: "Schedules", href: "/app/schedules", icon: Calendar },
       ]
     : [
-        // Agent navigation
         { name: "Dashboard", href: "/app", icon: LayoutDashboard },
         { name: "Market Reports", href: "/app/reports", icon: FileText },
         { name: "Property Reports", href: "/app/property", icon: Home },
-        { name: "Scheduled Reports", href: "/app/schedules", icon: Calendar },
-        { name: "My Leads", href: "/app/lead-page", icon: Link2 },
-        { name: "My Contacts", href: "/app/people", icon: Users },
+        { name: "Schedules", href: "/app/schedules", icon: Calendar },
       ]
   
-  // Settings sub-navigation
+  const engageNavigation = [
+    { name: "Lead Pages", href: "/app/lead-page", icon: Link2 },
+    { name: "Contacts", href: "/app/people", icon: Users },
+  ]
+
   const settingsNavigation = [
     { name: "Profile", href: "/app/settings/profile", icon: User },
     { name: "Security", href: "/app/settings/security", icon: Lock },
@@ -133,124 +123,160 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
     { name: "Billing", href: "/app/settings/billing", icon: CreditCard },
   ]
   
-  // Admin sub-navigation
   const adminNavigation = [
     { name: "Overview", href: "/app/admin", icon: LayoutDashboard },
     { name: "Title Companies", href: "/app/admin/affiliates", icon: Building2 },
-    { name: "All Accounts", href: "/app/admin/accounts", icon: Building },
-    { name: "All Users", href: "/app/admin/users", icon: Users },
+    { name: "Accounts", href: "/app/admin/accounts", icon: Building },
+    { name: "Users", href: "/app/admin/users", icon: Users },
     { name: "Property Reports", href: "/app/admin/property-reports", icon: Home },
     { name: "Leads", href: "/app/admin/leads", icon: UserCheck },
-    { name: "SMS Management", href: "/app/admin/sms", icon: MessageSquare },
+    { name: "SMS", href: "/app/admin/sms", icon: MessageSquare },
   ]
 
   return (
     <Sidebar>
       <SidebarHeader>
-        <Link href="/app" className="flex items-center px-2 py-4">
-          <Logo className="h-8" />
+        <Link href="/app" className="flex items-center px-3 py-4">
+          <Logo className="h-7 invert brightness-200" />
         </Link>
       </SidebarHeader>
-      <SidebarContent>
-        <SidebarMenu>
-          {navigation.map((item) => {
-            const isActive = pathname === item.href || (item.href !== "/app" && pathname?.startsWith(item.href))
-            return (
-              <SidebarMenuItem key={item.name}>
-                <SidebarMenuButton asChild isActive={isActive}>
-                  <Link href={item.href} prefetch={true}>
-                    <item.icon className="w-4 h-4" />
-                    <span>{item.name}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )
-          })}
-          
-          {/* Settings Section with Collapsible Sub-menu */}
-          <Collapsible defaultOpen={isInSettingsSection} className="group/collapsible-settings">
-            <SidebarMenuItem>
-              <CollapsibleTrigger asChild>
-                <SidebarMenuButton isActive={isInSettingsSection}>
-                  <Settings className="w-4 h-4" />
-                  <span>Settings</span>
-                  <ChevronRight className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible-settings:rotate-90" />
-                </SidebarMenuButton>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <SidebarMenuSub>
-                  {settingsNavigation.map((item) => {
-                    const isSubActive = pathname === item.href
-                    return (
-                      <SidebarMenuSubItem key={item.name}>
-                        <SidebarMenuSubButton asChild isActive={isSubActive}>
-                          <Link href={item.href} prefetch={true}>
-                            <item.icon className="w-4 h-4" />
-                            <span>{item.name}</span>
-                          </Link>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                    )
-                  })}
-                </SidebarMenuSub>
-              </CollapsibleContent>
-            </SidebarMenuItem>
-          </Collapsible>
 
-          {/* Admin Section with Collapsible Sub-menu */}
-          {isAdmin && (
-            <Collapsible defaultOpen={isInAdminSection} className="group/collapsible-admin">
+      <SidebarContent>
+        {/* Quick Action */}
+        <div className="px-3 mb-2">
+          <Button size="sm" className="w-full bg-indigo-500 hover:bg-indigo-400 text-white shadow-sm" asChild>
+            <Link href="/app/reports/new">
+              <Plus className="w-3.5 h-3.5 mr-1.5" />
+              New Report
+            </Link>
+          </Button>
+        </div>
+
+        {/* Main Navigation */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.08em] font-semibold text-sidebar-muted px-3">
+            Reports
+          </SidebarGroupLabel>
+          <SidebarMenu>
+            {mainNavigation.map((item) => {
+              const isActive = pathname === item.href || (item.href !== "/app" && item.href !== "/app/affiliate" && pathname?.startsWith(item.href))
+              return (
+                <SidebarMenuItem key={item.name}>
+                  <SidebarMenuButton asChild isActive={isActive}>
+                    <Link href={item.href} prefetch={true}>
+                      <item.icon className="w-4 h-4" />
+                      <span className="text-[13px]">{item.name}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )
+            })}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        {/* Engage */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.08em] font-semibold text-sidebar-muted px-3">
+            Engage
+          </SidebarGroupLabel>
+          <SidebarMenu>
+            {engageNavigation.map((item) => {
+              const isActive = pathname === item.href || pathname?.startsWith(item.href)
+              return (
+                <SidebarMenuItem key={item.name}>
+                  <SidebarMenuButton asChild isActive={isActive}>
+                    <Link href={item.href} prefetch={true}>
+                      <item.icon className="w-4 h-4" />
+                      <span className="text-[13px]">{item.name}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )
+            })}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        {/* Settings */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.08em] font-semibold text-sidebar-muted px-3">
+            Account
+          </SidebarGroupLabel>
+          <SidebarMenu>
+            <Collapsible defaultOpen={isInSettingsSection} className="group/collapsible-settings">
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
-                  <SidebarMenuButton isActive={isInAdminSection}>
-                    <Shield className="w-4 h-4" />
-                    <span>Admin</span>
-                    <ChevronRight className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible-admin:rotate-90" />
+                  <SidebarMenuButton isActive={isInSettingsSection}>
+                    <Settings className="w-4 h-4" />
+                    <span className="text-[13px]">Settings</span>
+                    <ChevronRight className="ml-auto h-3.5 w-3.5 transition-transform group-data-[state=open]/collapsible-settings:rotate-90" />
                   </SidebarMenuButton>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <SidebarMenuSub>
-                    {adminNavigation.map((item) => {
-                      const isSubActive = pathname === item.href
-                      return (
-                        <SidebarMenuSubItem key={item.name}>
-                          <SidebarMenuSubButton asChild isActive={isSubActive}>
-                            <Link href={item.href} prefetch={true}>
-                              <item.icon className="w-4 h-4" />
-                              <span>{item.name}</span>
-                            </Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      )
-                    })}
+                    {settingsNavigation.map((item) => (
+                      <SidebarMenuSubItem key={item.name}>
+                        <SidebarMenuSubButton asChild isActive={pathname === item.href}>
+                          <Link href={item.href} prefetch={true}>
+                            <item.icon className="w-3.5 h-3.5" />
+                            <span className="text-[13px]">{item.name}</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                    ))}
                   </SidebarMenuSub>
                 </CollapsibleContent>
               </SidebarMenuItem>
             </Collapsible>
-          )}
-        </SidebarMenu>
+
+            {/* Admin Section */}
+            {isAdmin && (
+              <Collapsible defaultOpen={isInAdminSection} className="group/collapsible-admin">
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton isActive={isInAdminSection}>
+                      <Shield className="w-4 h-4" />
+                      <span className="text-[13px]">Admin</span>
+                      <ChevronRight className="ml-auto h-3.5 w-3.5 transition-transform group-data-[state=open]/collapsible-admin:rotate-90" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      {adminNavigation.map((item) => (
+                        <SidebarMenuSubItem key={item.name}>
+                          <SidebarMenuSubButton asChild isActive={pathname === item.href}>
+                            <Link href={item.href} prefetch={true}>
+                              <item.icon className="w-3.5 h-3.5" />
+                              <span className="text-[13px]">{item.name}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
+            )}
+          </SidebarMenu>
+        </SidebarGroup>
       </SidebarContent>
+
       <SidebarFooter>
         <div className="px-3 py-3">
-          <div className="bg-muted rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <Badge variant="secondary" className="text-xs">
+          <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/50 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-sidebar-muted">
                 {planInfo?.plan_name || "Free"} Plan
-              </Badge>
-              <span className="text-xs text-muted-foreground">
-                {planInfo?.reports_used || 0}/{planInfo?.reports_limit || 10} reports
+              </span>
+              <span className="text-[11px] text-sidebar-foreground/70">
+                {planInfo?.reports_used || 0}/{planInfo?.reports_limit || 10}
               </span>
             </div>
-            <Progress 
-              value={planInfo ? (planInfo.reports_used / planInfo.reports_limit) * 100 : 0} 
-              className="h-1.5 mb-3" 
-            />
-            <Button size="sm" className="w-full" asChild>
-              <Link href="/app/reports/new">
-                <Plus className="w-3.5 h-3.5 mr-1.5" />
-                New Report
-              </Link>
-            </Button>
+            <div className="h-1 bg-sidebar-border rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-indigo-400 rounded-full transition-all duration-500"
+                style={{ width: `${usagePercent}%` }}
+              />
+            </div>
           </div>
         </div>
       </SidebarFooter>
@@ -262,21 +288,15 @@ function DashboardTopbar({ accountType, isAdmin, isAffiliate }: { accountType?: 
   const [user, setUser] = useState<{ email: string; first_name?: string; last_name?: string } | null>(null)
   
   useEffect(() => {
-    // Fetch actual user info for the dropdown
     fetch("/api/proxy/v1/users/me", { credentials: "include" })
       .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data) setUser(data)
-      })
+      .then(data => { if (data) setUser(data) })
       .catch(() => {})
   }, [])
   
   async function handleLogout() {
     try {
-      await fetch("/api/proxy/v1/auth/logout", { 
-        method: "POST",
-        credentials: "include"
-      })
+      await fetch("/api/proxy/v1/auth/logout", { method: "POST", credentials: "include" })
     } catch {}
     window.location.href = "/login"
   }
@@ -284,55 +304,62 @@ function DashboardTopbar({ accountType, isAdmin, isAffiliate }: { accountType?: 
   const displayName = user?.first_name && user?.last_name 
     ? `${user.first_name} ${user.last_name}`
     : user?.first_name || user?.email?.split('@')[0] || "User"
-  
   const displayEmail = user?.email || ""
   const initials = displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || "U"
   
   return (
-    <header className="flex h-12 shrink-0 items-center gap-4 border-b border-border bg-card px-4">
-      <SidebarTrigger />
+    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-white px-4">
+      <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
+      
+      <Separator orientation="vertical" className="h-5" />
+      
       <div className="flex-1" />
 
       {/* Account Type Badge */}
       {accountType === "INDUSTRY_AFFILIATE" && (
-        <span className="rounded-full bg-purple-50 text-purple-700 text-xs font-medium px-3 py-1 border border-purple-200 flex items-center gap-1.5">
-          <Shield className="h-3 w-3" />
-          Affiliate Account
+        <span className="rounded-full bg-amber-50 text-amber-700 text-[11px] font-semibold px-2.5 py-0.5 border border-amber-200 flex items-center gap-1.5 uppercase tracking-wide">
+          <Building2 className="h-3 w-3" />
+          Title Rep
         </span>
       )}
       {accountType === "REGULAR" && (
-        <span className="rounded-full bg-slate-50 text-slate-600 text-xs font-medium px-3 py-1 border border-slate-200">
-          Agent Account
+        <span className="rounded-full bg-indigo-50 text-indigo-600 text-[11px] font-semibold px-2.5 py-0.5 border border-indigo-200 uppercase tracking-wide">
+          Agent
         </span>
       )}
 
       <AccountSwitcher />
-      <NavAuth />
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-            <Avatar className="h-9 w-9">
-              <AvatarFallback className="bg-primary text-primary-foreground">{initials}</AvatarFallback>
+          <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+            <Avatar className="h-8 w-8">
+              <AvatarFallback className="bg-indigo-600 text-white text-xs font-semibold">{initials}</AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>
-            <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium">{displayName}</p>
+            <div className="flex flex-col space-y-0.5">
+              <p className="text-sm font-semibold">{displayName}</p>
               <p className="text-xs text-muted-foreground">{displayEmail}</p>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
-            <Link href="/app/settings/profile">Profile</Link>
+            <Link href="/app/settings/profile">
+              <User className="w-3.5 h-3.5 mr-2" />Profile
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href="/app/settings/branding">Branding</Link>
+            <Link href="/app/settings/branding">
+              <Palette className="w-3.5 h-3.5 mr-2" />Branding
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href="/app/settings/billing">Billing</Link>
+            <Link href="/app/settings/billing">
+              <CreditCard className="w-3.5 h-3.5 mr-2" />Billing
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-600">
@@ -370,12 +397,12 @@ export default function AppLayoutClient({
   // Normal mode: With sidebar
   return (
     <SidebarProvider>
-      <Suspense fallback={<div>Loading...</div>}>
+      <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
         <div className="flex min-h-screen w-full bg-background text-foreground">
           <DashboardSidebar isAdmin={isAdmin} isAffiliate={isAffiliate} />
           <SidebarInset className="flex flex-col">
             <DashboardTopbar accountType={accountType} isAdmin={isAdmin} isAffiliate={isAffiliate} />
-            <main className="flex-1 p-6 bg-background">{children}</main>
+            <main className="flex-1 px-6 py-5 bg-background">{children}</main>
           </SidebarInset>
         </div>
       </Suspense>

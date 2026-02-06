@@ -115,7 +115,7 @@ export default async function AdminLeadsPage({
   }
 
   const sourceColors: Record<string, string> = {
-    qr_scan: "border-purple-300 text-purple-700",
+    qr_scan: "border-indigo-300 text-indigo-700",
     direct_link: "border-blue-300 text-blue-700",
   }
 

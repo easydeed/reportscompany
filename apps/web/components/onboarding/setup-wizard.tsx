@@ -83,7 +83,7 @@ export function SetupWizard({ open, onOpenChange, onComplete, isAffiliate = fals
 
   const [branding, setBranding] = useState<BrandingData>({
     logo_url: null,
-    primary_color: "#7C3AED",
+    primary_color: "#4F46E5",
     accent_color: "#F26B2B",
   })
 
@@ -138,7 +138,7 @@ export function SetupWizard({ open, onOpenChange, onComplete, isAffiliate = fals
         const data = await brandingRes.json()
         setBranding({
           logo_url: data.logo_url || null,
-          primary_color: data.primary_color || "#7C3AED",
+          primary_color: data.primary_color || "#4F46E5",
           accent_color: data.secondary_color || "#F26B2B",
         })
         setAccountType(data.account_type || null)
@@ -495,7 +495,7 @@ export function SetupWizard({ open, onOpenChange, onComplete, isAffiliate = fals
                         value={branding.primary_color}
                         onChange={(e) => setBranding({ ...branding, primary_color: e.target.value })}
                         className="font-mono text-xs h-8"
-                        placeholder="#7C3AED"
+                        placeholder="#4F46E5"
                       />
                     </div>
                   </div>

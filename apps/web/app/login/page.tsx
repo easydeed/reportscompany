@@ -53,7 +53,7 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center">
         {/* Left side - Branding & Benefits */}
         <div className="hidden lg:block space-y-8">
@@ -65,7 +65,7 @@ function LoginForm() {
             <h1 className="text-4xl font-display font-semibold text-slate-900 leading-tight">
               Beautiful market reports.
               <br />
-              <span className="bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-indigo-600 to-indigo-700 bg-clip-text text-transparent">
                 Zero effort.
               </span>
             </h1>
@@ -82,8 +82,8 @@ function LoginForm() {
               "Print-perfect PDFs in seconds",
             ].map((benefit, idx) => (
               <div key={idx} className="flex items-center gap-3">
-                <div className="h-6 w-6 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-                  <Check className="h-4 w-4 text-purple-600" />
+                <div className="h-6 w-6 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                  <Check className="h-4 w-4 text-indigo-600" />
                 </div>
                 <span className="text-slate-700">{benefit}</span>
               </div>
@@ -170,12 +170,12 @@ function LoginForm() {
                 <label className="flex items-center gap-2 text-slate-600 cursor-pointer">
                   <input
                     type="checkbox"
-                    className="rounded border-slate-300 text-purple-600 focus:ring-purple-500"
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                     disabled={loading}
                   />
                   Remember me
                 </label>
-                <Link href="/forgot-password" className="text-purple-600 hover:text-purple-700 font-medium">
+                <Link href="/forgot-password" className="text-indigo-600 hover:text-indigo-700 font-medium">
                   Forgot password?
                 </Link>
               </div>
@@ -183,7 +183,7 @@ function LoginForm() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full h-11 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-medium shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full h-11 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-medium shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? "Signing in..." : "Sign In"}
                 {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
@@ -194,7 +194,7 @@ function LoginForm() {
             <div className="pt-4 border-t border-slate-200 text-center">
               <p className="text-sm text-slate-600">
                 Don&apos;t have an account?{" "}
-                <Link href="/register" className="text-purple-600 hover:text-purple-700 font-medium">
+                <Link href="/register" className="text-indigo-600 hover:text-indigo-700 font-medium">
                   Create one for free
                 </Link>
               </p>
@@ -220,7 +220,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center">
           <div className="text-slate-600">Loading...</div>
         </div>
       }

@@ -242,7 +242,7 @@ export default async function AdminPropertyReportsPage({
                         )}
                         {report.short_code && (
                           <a href={`/p/${report.short_code}`} target="_blank" rel="noopener noreferrer">
-                            <button className="p-2 hover:bg-muted rounded-md text-purple-600">
+                            <button className="p-2 hover:bg-muted rounded-md text-indigo-600">
                               <ExternalLink className="w-4 h-4" />
                             </button>
                           </a>

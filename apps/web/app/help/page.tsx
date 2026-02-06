@@ -84,7 +84,7 @@ export default function HelpPage() {
       <Navbar />
 
       {/* Hero with Search */}
-      <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-purple-50 to-white">
+      <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-50 to-white">
         <div className="max-w-[800px] mx-auto text-center">
           <h1 className="font-display font-semibold text-4xl sm:text-5xl text-slate-900 mb-6">
             How can we help?
@@ -94,7 +94,7 @@ export default function HelpPage() {
             <input
               type="text"
               placeholder="Search for answers..."
-              className="w-full pl-12 pr-4 py-4 rounded-xl border border-slate-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all text-lg"
+              className="w-full pl-12 pr-4 py-4 rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all text-lg"
             />
           </div>
         </div>
@@ -106,13 +106,13 @@ export default function HelpPage() {
           <div className="grid md:grid-cols-3 gap-6">
             <a
               href="mailto:support@trendyreports.com"
-              className="flex items-center gap-4 p-6 bg-white rounded-xl border border-slate-200 hover:border-purple-300 hover:shadow-md transition-all group"
+              className="flex items-center gap-4 p-6 bg-white rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all group"
             >
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center shrink-0">
-                <MessageCircle className="w-6 h-6 text-purple-600" />
+              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center shrink-0">
+                <MessageCircle className="w-6 h-6 text-indigo-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-slate-900 group-hover:text-purple-600 transition-colors">
+                <h3 className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
                   Contact Support
                 </h3>
                 <p className="text-sm text-slate-600">Get help from our team</p>
@@ -120,13 +120,13 @@ export default function HelpPage() {
             </a>
             <a
               href="#"
-              className="flex items-center gap-4 p-6 bg-white rounded-xl border border-slate-200 hover:border-purple-300 hover:shadow-md transition-all group"
+              className="flex items-center gap-4 p-6 bg-white rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all group"
             >
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center shrink-0">
-                <Video className="w-6 h-6 text-purple-600" />
+              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center shrink-0">
+                <Video className="w-6 h-6 text-indigo-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-slate-900 group-hover:text-purple-600 transition-colors">
+                <h3 className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
                   Video Tutorials
                 </h3>
                 <p className="text-sm text-slate-600">Watch step-by-step guides</p>
@@ -134,13 +134,13 @@ export default function HelpPage() {
             </a>
             <a
               href="/docs"
-              className="flex items-center gap-4 p-6 bg-white rounded-xl border border-slate-200 hover:border-purple-300 hover:shadow-md transition-all group"
+              className="flex items-center gap-4 p-6 bg-white rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all group"
             >
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center shrink-0">
-                <Book className="w-6 h-6 text-purple-600" />
+              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center shrink-0">
+                <Book className="w-6 h-6 text-indigo-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-slate-900 group-hover:text-purple-600 transition-colors">
+                <h3 className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
                   API Documentation
                 </h3>
                 <p className="text-sm text-slate-600">For developers</p>
@@ -165,8 +165,8 @@ export default function HelpPage() {
               >
                 <div className="p-6 border-b border-slate-100">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                      <category.icon className="w-5 h-5 text-purple-600" />
+                    <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                      <category.icon className="w-5 h-5 text-indigo-600" />
                     </div>
                     <div>
                       <h3 className="font-display font-semibold text-lg text-slate-900">
@@ -183,10 +183,10 @@ export default function HelpPage() {
                       href="#"
                       className="flex items-center justify-between px-6 py-3 hover:bg-slate-50 transition-colors group"
                     >
-                      <span className="text-slate-700 group-hover:text-purple-600 transition-colors">
+                      <span className="text-slate-700 group-hover:text-indigo-600 transition-colors">
                         {article}
                       </span>
-                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-purple-600 transition-colors" />
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition-colors" />
                     </a>
                   ))}
                 </div>
@@ -208,13 +208,13 @@ export default function HelpPage() {
               <a
                 key={article.title}
                 href="#"
-                className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-200 hover:border-purple-300 hover:shadow-md transition-all group"
+                className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all group"
               >
                 <div className="flex items-center gap-4">
                   <span className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-sm font-medium text-slate-600">
                     {index + 1}
                   </span>
-                  <span className="font-medium text-slate-900 group-hover:text-purple-600 transition-colors">
+                  <span className="font-medium text-slate-900 group-hover:text-indigo-600 transition-colors">
                     {article.title}
                   </span>
                 </div>
@@ -236,7 +236,7 @@ export default function HelpPage() {
           </p>
           <a
             href="mailto:support@trendyreports.com"
-            className="inline-flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white font-medium px-6 py-3 rounded-lg transition-colors"
+            className="inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-lg transition-colors"
           >
             <Mail className="w-5 h-5 mr-2" />
             Contact Support

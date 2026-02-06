@@ -17,7 +17,7 @@ interface BrandingPreviewProps {
 export function BrandingPreview({
   brandDisplayName = "Your Company Name",
   logoUrl,
-  primaryColor = "#7C3AED",
+  primaryColor = "#4F46E5",
   accentColor = "#F26B2B",
   repPhotoUrl,
   contactLine1 = "Your Name | (555) 123-4567",

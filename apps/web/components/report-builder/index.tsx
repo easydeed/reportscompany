@@ -34,8 +34,8 @@ const DEFAULT_STATE: ReportBuilderState = {
 }
 
 const DEFAULT_BRANDING: BrandingContext = {
-  primaryColor: "#7C3AED",
-  accentColor: "#8B5CF6",
+  primaryColor: "#4F46E5",
+  accentColor: "#818CF8",
   pdfHeaderLogoUrl: null,
   displayName: "TrendyReports",
 }

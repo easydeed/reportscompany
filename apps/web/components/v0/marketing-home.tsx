@@ -82,18 +82,18 @@ console.log('PDF:', data.pdf_url);`
       {/* Hero */}
       <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <div className="absolute inset-0 opacity-30 pointer-events-none">
-          <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-purple-400 rounded-full blur-[140px]" />
+          <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-indigo-400 rounded-full blur-[140px]" />
           <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] bg-orange-300 rounded-full blur-[140px]" />
         </div>
 
         <div className="max-w-[1200px] mx-auto relative z-10">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-100 border border-purple-200 mb-6">
-                <TrendingUp className="w-4 h-4 text-purple-600" />
-                <span className="text-sm font-medium text-purple-700">Data that ships itself</span>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-100 border border-indigo-200 mb-6">
+                <TrendingUp className="w-4 h-4 text-indigo-600" />
+                <span className="text-sm font-medium text-indigo-700">Data that ships itself</span>
               </div>
-              <h1 className="font-display font-bold text-5xl sm:text-6xl lg:text-7xl mb-6 text-balance bg-gradient-to-r from-purple-600 via-purple-500 to-orange-500 bg-clip-text text-transparent">
+              <h1 className="font-display font-bold text-5xl sm:text-6xl lg:text-7xl mb-6 text-balance bg-gradient-to-r from-indigo-600 via-purple-500 to-orange-500 bg-clip-text text-transparent">
                 MLS data.
                 <br />
                 Beautiful reports.
@@ -106,7 +106,7 @@ console.log('PDF:', data.pdf_url);`
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button
                   size="lg"
-                  className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white text-lg px-8 shadow-lg shadow-purple-500/25"
+                  className="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-lg px-8 shadow-lg shadow-indigo-500/25"
                 >
                   Start Free Trial
                 </Button>
@@ -129,18 +129,18 @@ console.log('PDF:', data.pdf_url);`
             >
               {/* Main report card with visible chart content */}
               <div className="absolute top-0 right-0 w-80 aspect-[8.5/11] bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 rotate-[2deg] z-20">
-                <div className="w-full h-full bg-gradient-to-br from-purple-50 to-transparent rounded-xl overflow-hidden p-4 space-y-3">
+                <div className="w-full h-full bg-gradient-to-br from-slate-50 to-transparent rounded-xl overflow-hidden p-4 space-y-3">
                   <div className="space-y-2">
-                    <div className="h-3 bg-purple-200 rounded w-1/2" />
-                    <div className="h-6 bg-purple-600 rounded w-3/4" />
+                    <div className="h-3 bg-indigo-200 rounded w-1/2" />
+                    <div className="h-6 bg-indigo-600 rounded w-3/4" />
                   </div>
                   <div className="h-40 bg-gradient-to-t from-purple-100 to-transparent rounded-lg relative overflow-hidden">
                     <div className="absolute bottom-0 left-0 right-0 flex items-end justify-around gap-1 p-2">
-                      <div className="w-8 h-16 bg-purple-400 rounded" />
-                      <div className="w-8 h-24 bg-purple-500 rounded" />
-                      <div className="w-8 h-20 bg-purple-400 rounded" />
-                      <div className="w-8 h-32 bg-purple-600 rounded" />
-                      <div className="w-8 h-28 bg-purple-500 rounded" />
+                      <div className="w-8 h-16 bg-indigo-400 rounded" />
+                      <div className="w-8 h-24 bg-indigo-500 rounded" />
+                      <div className="w-8 h-20 bg-indigo-400 rounded" />
+                      <div className="w-8 h-32 bg-indigo-600 rounded" />
+                      <div className="w-8 h-28 bg-indigo-500 rounded" />
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -174,9 +174,9 @@ console.log('PDF:', data.pdf_url);`
               transition={{ duration: 0.2 }}
               className="relative group"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-purple-50 rounded-2xl transform group-hover:scale-105 transition-transform" />
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-slate-50 rounded-2xl transform group-hover:scale-105 transition-transform" />
               <div className="relative p-8 space-y-4">
-                <div className="w-12 h-12 rounded-xl bg-purple-600 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center">
                   <TrendingUp className="w-6 h-6 text-white" />
                 </div>
                 <h3 className="font-display font-bold text-2xl">Accurate MLS data</h3>
@@ -295,7 +295,7 @@ console.log('PDF:', data.pdf_url);`
       </section>
 
       {/* Samples carousel */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-purple-50/50 to-white">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-50/50 to-white">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-12">
             <h2 className="font-display font-bold text-4xl sm:text-5xl mb-4">Sample Reports</h2>
@@ -313,8 +313,8 @@ console.log('PDF:', data.pdf_url);`
                 onClick={() => setCurrentSample(idx)}
                 className={`cursor-pointer bg-white rounded-xl border-2 transition-all hover:shadow-lg p-3 ${
                   currentSample === idx
-                    ? "border-purple-500 shadow-lg shadow-purple-500/20"
-                    : "border-slate-200 hover:border-purple-300"
+                    ? "border-indigo-500 shadow-lg shadow-indigo-500/20"
+                    : "border-slate-200 hover:border-indigo-300"
                 }`}
               >
                 <div className="aspect-[8.5/11] bg-slate-100 rounded-lg overflow-hidden mb-3">
@@ -379,9 +379,9 @@ console.log('PDF:', data.pdf_url);`
               viewport={{ once: true }}
               transition={{ duration: 0.2 }}
             >
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-100 border border-purple-200 mb-4">
-                <Sparkles className="w-4 h-4 text-purple-600" />
-                <span className="text-sm font-medium text-purple-700">Transparent pricing, no surprises</span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-100 border border-indigo-200 mb-4">
+                <Sparkles className="w-4 h-4 text-indigo-600" />
+                <span className="text-sm font-medium text-indigo-700">Transparent pricing, no surprises</span>
               </div>
               <h2 className="font-pricing font-bold text-5xl sm:text-6xl mb-6 text-slate-900">Pick your plan</h2>
               <p className="text-xl text-slate-600 max-w-2xl mx-auto">Start free. Scale as you grow. Cancel anytime.</p>
@@ -394,7 +394,7 @@ console.log('PDF:', data.pdf_url);`
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.2 }}
-              className="bg-white rounded-2xl border-2 border-slate-200 p-8 hover:border-purple-300 hover:shadow-xl transition-all"
+              className="bg-white rounded-2xl border-2 border-slate-200 p-8 hover:border-indigo-300 hover:shadow-xl transition-all"
             >
               <div className="mb-6">
                 <h3 className="font-pricing font-bold text-xl mb-2 text-slate-900">Starter</h3>
@@ -406,19 +406,19 @@ console.log('PDF:', data.pdf_url);`
               </div>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-start gap-2 text-sm text-slate-700">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span>50 reports per month</span>
                 </li>
                 <li className="flex items-start gap-2 text-sm text-slate-700">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span>3 scheduled reports</span>
                 </li>
                 <li className="flex items-start gap-2 text-sm text-slate-700">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span>Your logo & branding</span>
                 </li>
                 <li className="flex items-start gap-2 text-sm text-slate-700">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span>Email delivery</span>
                 </li>
               </ul>
@@ -432,18 +432,18 @@ console.log('PDF:', data.pdf_url);`
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.2, delay: 0.05 }}
-              className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-2xl border-2 border-purple-500 p-8 relative overflow-hidden shadow-2xl shadow-purple-500/25 transform md:scale-105"
+              className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl border-2 border-indigo-500 p-8 relative overflow-hidden shadow-2xl shadow-indigo-500/25 transform md:scale-105"
             >
               <div className="absolute top-4 right-4 bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full">
                 POPULAR
               </div>
               <div className="mb-6">
                 <h3 className="font-pricing font-bold text-xl mb-2 text-white">Professional</h3>
-                <p className="text-sm text-purple-100">For growing teams</p>
+                <p className="text-sm text-indigo-100">For growing teams</p>
               </div>
               <div className="mb-6">
                 <span className="font-pricing font-bold text-5xl text-white">$299</span>
-                <span className="text-purple-100">/mo</span>
+                <span className="text-indigo-100">/mo</span>
               </div>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-start gap-2 text-sm text-white">
@@ -467,7 +467,7 @@ console.log('PDF:', data.pdf_url);`
                   <span>Webhook integrations</span>
                 </li>
               </ul>
-              <Button className="w-full bg-white hover:bg-purple-50 text-purple-700 font-pricing font-bold">
+              <Button className="w-full bg-white hover:bg-indigo-50 text-indigo-700 font-pricing font-bold">
                 Start Free Trial
               </Button>
             </motion.div>
@@ -477,7 +477,7 @@ console.log('PDF:', data.pdf_url);`
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.2, delay: 0.1 }}
-              className="bg-white rounded-2xl border-2 border-slate-200 p-8 hover:border-purple-300 hover:shadow-xl transition-all"
+              className="bg-white rounded-2xl border-2 border-slate-200 p-8 hover:border-indigo-300 hover:shadow-xl transition-all"
             >
               <div className="mb-6">
                 <h3 className="font-pricing font-bold text-xl mb-2 text-slate-900">Enterprise</h3>
@@ -489,23 +489,23 @@ console.log('PDF:', data.pdf_url);`
               </div>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-start gap-2 text-sm text-slate-700">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span>Unlimited reports</span>
                 </li>
                 <li className="flex items-start gap-2 text-sm text-slate-700">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span>Team management</span>
                 </li>
                 <li className="flex items-start gap-2 text-sm text-slate-700">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span>Advanced analytics</span>
                 </li>
                 <li className="flex items-start gap-2 text-sm text-slate-700">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span>Dedicated support</span>
                 </li>
                 <li className="flex items-start gap-2 text-sm text-slate-700">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span>Custom integrations</span>
                 </li>
               </ul>
@@ -603,7 +603,7 @@ console.log('PDF:', data.pdf_url);`
       </section>
 
       {/* CTA Footer */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-purple-600 via-purple-700 to-orange-600 relative overflow-hidden">
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-600 via-purple-700 to-orange-600 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-white rounded-full blur-[120px]" />
           <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-orange-300 rounded-full blur-[120px]" />
@@ -619,11 +619,11 @@ console.log('PDF:', data.pdf_url);`
             <h2 className="font-display font-bold text-4xl sm:text-5xl lg:text-6xl mb-6 text-balance text-white">
               Report once. Repeat forever.
             </h2>
-            <p className="text-xl text-purple-100 mb-8 text-pretty max-w-3xl mx-auto">
+            <p className="text-xl text-indigo-100 mb-8 text-pretty max-w-3xl mx-auto">
               Your brand. Every report. Schedules that never forget. From MLS to inbox in one tap.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button size="lg" className="bg-white text-purple-700 hover:bg-purple-50 text-lg px-8 shadow-xl">
+              <Button size="lg" className="bg-white text-indigo-700 hover:bg-indigo-50 text-lg px-8 shadow-xl">
                 Start Free Trial
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
@@ -635,7 +635,7 @@ console.log('PDF:', data.pdf_url);`
                 Schedule Demo
               </Button>
             </div>
-            <p className="text-sm text-purple-100 mt-6">Agents love it. Title teams scale it.</p>
+            <p className="text-sm text-indigo-100 mt-6">Agents love it. Title teams scale it.</p>
           </motion.div>
         </div>
       </section>

@@ -64,7 +64,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex flex-col items-center">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex flex-col items-center">
       {/* Top nav strip */}
       <div className="w-full max-w-5xl flex items-center justify-between px-4 pt-6 pb-4">
         <Link href="/" className="flex items-center gap-2 group">
@@ -83,7 +83,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-5xl flex-1 flex flex-col md:flex-row items-center justify-center px-4 pb-10 gap-10">
         {/* Left side: benefits (hidden on small screens) */}
         <div className="hidden md:flex flex-1 flex-col gap-4">
-          <p className="inline-flex items-center text-xs font-semibold uppercase tracking-wide text-purple-700/80">
+          <p className="inline-flex items-center text-xs font-semibold uppercase tracking-wide text-indigo-700/80">
             For busy real estate agents
           </p>
           <h1 className="text-3xl md:text-4xl font-display font-semibold text-slate-900">
@@ -101,8 +101,8 @@ export default function RegisterPage() {
               "Your name and logo on every report — we stay invisible.",
             ].map((benefit, idx) => (
               <li key={idx} className="flex items-start gap-3">
-                <div className="h-6 w-6 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Check className="h-4 w-4 text-purple-600" />
+                <div className="h-6 w-6 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Check className="h-4 w-4 text-indigo-600" />
                 </div>
                 <span className="text-slate-700">{benefit}</span>
               </li>
@@ -110,7 +110,7 @@ export default function RegisterPage() {
           </ul>
           <p className="mt-4 text-xs text-slate-500">
             Industry affiliate (title, lender, brokerage)?{" "}
-            <Link href="/#for-affiliates" className="text-purple-700 hover:underline">
+            <Link href="/#for-affiliates" className="text-indigo-700 hover:underline">
               Book an affiliate demo instead.
             </Link>
           </p>
@@ -197,7 +197,7 @@ export default function RegisterPage() {
                 </div>
 
                 <Button
-                  className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-medium shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-medium shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   type="submit"
                   disabled={loading}
                 >
@@ -207,11 +207,11 @@ export default function RegisterPage() {
 
               <p className="mt-4 text-xs text-center text-slate-500">
                 By creating an account, you agree to our{" "}
-                <Link href="/terms" className="text-purple-700 hover:underline">
+                <Link href="/terms" className="text-indigo-700 hover:underline">
                   Terms
                 </Link>{" "}
                 and{" "}
-                <Link href="/privacy" className="text-purple-700 hover:underline">
+                <Link href="/privacy" className="text-indigo-700 hover:underline">
                   Privacy Policy
                 </Link>
                 .
@@ -222,7 +222,7 @@ export default function RegisterPage() {
           {/* Mobile-only small note for affiliates */}
           <p className="mt-4 text-xs text-center text-slate-500 md:hidden">
             Industry affiliate?{" "}
-            <Link href="/#for-affiliates" className="text-purple-700 hover:underline">
+            <Link href="/#for-affiliates" className="text-indigo-700 hover:underline">
               Book an affiliate demo instead.
             </Link>
           </p>

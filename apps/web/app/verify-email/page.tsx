@@ -54,7 +54,7 @@ function VerifyEmailContent() {
   if (status === "loading") {
     return (
       <div className="text-center space-y-4">
-        <Loader2 className="w-12 h-12 text-purple-600 animate-spin mx-auto" />
+        <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto" />
         <h2 className="text-xl font-semibold text-slate-900">Verifying your email...</h2>
         <p className="text-slate-600">Please wait a moment.</p>
       </div>
@@ -95,7 +95,7 @@ function VerifyEmailContent() {
         <p className="text-sm text-slate-500">Redirecting to your dashboard...</p>
         <div className="pt-4">
           <Link href="/app">
-            <Button className="bg-gradient-to-r from-purple-600 to-purple-700">
+            <Button className="bg-gradient-to-r from-indigo-600 to-indigo-700">
               Go to Dashboard
             </Button>
           </Link>
@@ -119,7 +119,7 @@ function VerifyEmailContent() {
           <Button variant="outline">Go to Login</Button>
         </Link>
         <Link href="/app">
-          <Button className="bg-gradient-to-r from-purple-600 to-purple-700">
+          <Button className="bg-gradient-to-r from-indigo-600 to-indigo-700">
             Go to Dashboard
           </Button>
         </Link>
@@ -130,7 +130,7 @@ function VerifyEmailContent() {
 
 export default function VerifyEmailPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-block">
@@ -142,7 +142,7 @@ export default function VerifyEmailPage() {
           <Suspense
             fallback={
               <div className="text-center py-8">
-                <Loader2 className="w-8 h-8 text-purple-600 animate-spin mx-auto" />
+                <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
                 <p className="mt-4 text-slate-600">Loading...</p>
               </div>
             }

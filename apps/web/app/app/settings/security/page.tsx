@@ -232,7 +232,7 @@ export default function SecurityPage() {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-violet-600 mx-auto mb-4" />
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto mb-4" />
           <p className="text-muted-foreground">Loading security settings...</p>
         </div>
       </div>
@@ -274,7 +274,7 @@ export default function SecurityPage() {
 
           <Dialog open={emailModalOpen} onOpenChange={setEmailModalOpen}>
             <DialogTrigger asChild>
-              <Button variant="ghost" className="text-violet-600 hover:text-violet-700 hover:bg-violet-50">
+              <Button variant="ghost" className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
                 Change Email
                 <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
@@ -348,7 +348,7 @@ export default function SecurityPage() {
 
           <Dialog open={passwordModalOpen} onOpenChange={setPasswordModalOpen}>
             <DialogTrigger asChild>
-              <Button variant="ghost" className="text-violet-600 hover:text-violet-700 hover:bg-violet-50">
+              <Button variant="ghost" className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
                 Change Password
                 <ChevronRight className="w-4 h-4 ml-1" />
               </Button>

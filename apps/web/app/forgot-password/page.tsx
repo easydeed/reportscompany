@@ -45,7 +45,7 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-block">
@@ -73,7 +73,7 @@ export default function ForgotPasswordPage() {
                     setSuccess(false);
                     setEmail("");
                   }}
-                  className="text-purple-600 hover:text-purple-700 font-medium"
+                  className="text-indigo-600 hover:text-indigo-700 font-medium"
                 >
                   try again
                 </button>
@@ -133,7 +133,7 @@ export default function ForgotPasswordPage() {
                 <Button
                   type="submit"
                   disabled={loading || !email}
-                  className="w-full h-11 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-medium shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full h-11 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-medium shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? "Sending..." : "Send reset link"}
                 </Button>

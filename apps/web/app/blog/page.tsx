@@ -96,7 +96,7 @@ export default function BlogPage() {
                 key={category}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                   category === "All"
-                    ? "bg-purple-600 text-white"
+                    ? "bg-indigo-600 text-white"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 }`}
               >
@@ -110,7 +110,7 @@ export default function BlogPage() {
       {/* Featured Post */}
       <section className="py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1000px] mx-auto">
-          <div className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-2xl p-8 md:p-12 text-white">
+          <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl p-8 md:p-12 text-white">
             <div className="flex items-center gap-2 mb-4">
               <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-medium">
                 Featured
@@ -122,11 +122,11 @@ export default function BlogPage() {
             <h2 className="font-display font-semibold text-2xl md:text-3xl mb-4">
               {featuredPost.title}
             </h2>
-            <p className="text-purple-100 text-lg mb-6 max-w-2xl">
+            <p className="text-indigo-100 text-lg mb-6 max-w-2xl">
               {featuredPost.excerpt}
             </p>
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-4 text-purple-200 text-sm">
+              <div className="flex items-center gap-4 text-indigo-200 text-sm">
                 <span className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
                   {featuredPost.date}
@@ -152,16 +152,16 @@ export default function BlogPage() {
             {posts.map((post) => (
               <article
                 key={post.slug}
-                className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-purple-200 transition-all group cursor-pointer"
+                className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-indigo-200 transition-all group cursor-pointer"
               >
                 <div className="aspect-[16/9] bg-gradient-to-br from-slate-100 to-slate-200" />
                 <div className="p-6">
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-medium">
+                    <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs font-medium">
                       {post.category}
                     </span>
                   </div>
-                  <h3 className="font-display font-semibold text-lg text-slate-900 mb-2 group-hover:text-purple-600 transition-colors line-clamp-2">
+                  <h3 className="font-display font-semibold text-lg text-slate-900 mb-2 group-hover:text-indigo-600 transition-colors line-clamp-2">
                     {post.title}
                   </h3>
                   <p className="text-slate-600 text-sm mb-4 line-clamp-2">
@@ -198,11 +198,11 @@ export default function BlogPage() {
             <input
               type="email"
               placeholder="you@example.com"
-              className="flex-1 px-4 py-3 rounded-lg border border-slate-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all"
+              className="flex-1 px-4 py-3 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
             />
             <button
               type="submit"
-              className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-6 py-3 rounded-lg transition-colors"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-lg transition-colors"
             >
               Subscribe
             </button>

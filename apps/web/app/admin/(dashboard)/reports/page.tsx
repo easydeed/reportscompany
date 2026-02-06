@@ -296,7 +296,7 @@ export default function ReportsPage() {
                           href={report.pdf_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-violet-600 hover:text-violet-700"
+                          className="text-indigo-600 hover:text-indigo-700"
                         >
                           <ExternalLink className="h-4 w-4" />
                         </a>

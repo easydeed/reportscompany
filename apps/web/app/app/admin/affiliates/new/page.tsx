@@ -23,7 +23,7 @@ export default function NewAffiliatePage() {
   } | null>(null)
   const [copied, setCopied] = useState(false)
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
-  const [primaryColor, setPrimaryColor] = useState("#7C3AED")
+  const [primaryColor, setPrimaryColor] = useState("#4F46E5")
   const [accentColor, setAccentColor] = useState("#F26B2B")
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -251,7 +251,7 @@ export default function NewAffiliatePage() {
                     id="primary_color"
                     value={primaryColor}
                     onChange={(e) => setPrimaryColor(e.target.value)}
-                    placeholder="#7C3AED"
+                    placeholder="#4F46E5"
                     disabled={loading}
                     className="flex-1"
                   />

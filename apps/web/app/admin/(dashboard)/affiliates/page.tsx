@@ -59,7 +59,7 @@ export default function AffiliatesPage() {
     admin_email: "",
     admin_first_name: "",
     admin_last_name: "",
-    primary_color: "#7C3AED",
+    primary_color: "#4F46E5",
   })
 
   useEffect(() => {
@@ -103,7 +103,7 @@ export default function AffiliatesPage() {
           admin_email: "",
           admin_first_name: "",
           admin_last_name: "",
-          primary_color: "#7C3AED",
+          primary_color: "#4F46E5",
         })
       }
     } catch (error) {
@@ -129,7 +129,7 @@ export default function AffiliatesPage() {
         </div>
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
-            <Button className="bg-violet-600 hover:bg-violet-700 text-white">
+            <Button className="bg-indigo-600 hover:bg-indigo-700 text-white">
               <Plus className="h-4 w-4 mr-2" />
               Add Title Company
             </Button>
@@ -198,7 +198,7 @@ export default function AffiliatesPage() {
               <Button
                 onClick={createAffiliate}
                 disabled={creating || !newAffiliate.company_name || !newAffiliate.admin_email}
-                className="w-full bg-violet-600 hover:bg-violet-700 text-white"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
               >
                 {creating ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -221,7 +221,7 @@ export default function AffiliatesPage() {
                 <p className="text-sm text-slate-500">Title Companies</p>
                 <p className="text-2xl font-bold text-slate-900">{affiliates.length}</p>
               </div>
-              <Building2 className="h-8 w-8 text-violet-200" />
+              <Building2 className="h-8 w-8 text-indigo-200" />
             </div>
           </CardContent>
         </Card>
@@ -325,7 +325,7 @@ export default function AffiliatesPage() {
                         ) : (
                           <div
                             className="w-8 h-8 rounded flex items-center justify-center text-white font-bold"
-                            style={{ backgroundColor: affiliate.primary_color || "#7C3AED" }}
+                            style={{ backgroundColor: affiliate.primary_color || "#4F46E5" }}
                           >
                             {affiliate.name[0]}
                           </div>
@@ -340,13 +340,13 @@ export default function AffiliatesPage() {
                       <div className="flex items-center gap-2">
                         <div
                           className="w-4 h-4 rounded-full border border-slate-200"
-                          style={{ backgroundColor: affiliate.primary_color || "#7C3AED" }}
+                          style={{ backgroundColor: affiliate.primary_color || "#4F46E5" }}
                         />
                         <span className="text-xs text-slate-400">{affiliate.primary_color}</span>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="border-violet-300 text-violet-700 bg-violet-50">
+                      <Badge variant="outline" className="border-indigo-300 text-indigo-700 bg-indigo-50">
                         {affiliate.plan_slug}
                       </Badge>
                     </TableCell>

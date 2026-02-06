@@ -74,7 +74,7 @@ interface AffiliateStats {
 const THEME_COLORS: Record<string, string> = {
   classic: 'bg-slate-100 text-slate-700 border-slate-300',
   modern: 'bg-blue-100 text-blue-700 border-blue-300',
-  elegant: 'bg-purple-100 text-purple-700 border-purple-300',
+  elegant: 'bg-indigo-100 text-indigo-700 border-indigo-300',
   teal: 'bg-teal-100 text-teal-700 border-teal-300',
   bold: 'bg-amber-100 text-amber-700 border-amber-300',
 }
@@ -245,7 +245,7 @@ export default function AffiliatePropertyReportsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Conversion Rate</CardTitle>
-            <Target className="h-4 w-4 text-violet-500" />
+            <Target className="h-4 w-4 text-indigo-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{aggregate.conversion_rate}%</div>

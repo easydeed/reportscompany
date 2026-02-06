@@ -14,13 +14,13 @@ export function PageHeader({ title, description, action, className }: PageHeader
   return (
     <div className={cn("flex items-center justify-between", className)}>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">{title}</h1>
         {description && (
-          <p className="text-sm text-muted-foreground mt-1">{description}</p>
+          <p className="text-[13px] text-muted-foreground mt-0.5">{description}</p>
         )}
       </div>
       {action && (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {action}
         </div>
       )}

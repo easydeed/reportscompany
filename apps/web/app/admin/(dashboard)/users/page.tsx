@@ -230,9 +230,9 @@ export default function UsersPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-500">Platform Admins</p>
-                <p className="text-2xl font-bold text-violet-600">{platformAdmins}</p>
+                <p className="text-2xl font-bold text-indigo-600">{platformAdmins}</p>
               </div>
-              <Shield className="h-8 w-8 text-violet-200" />
+              <Shield className="h-8 w-8 text-indigo-200" />
             </div>
           </CardContent>
         </Card>
@@ -332,7 +332,7 @@ export default function UsersPage() {
                     </TableCell>
                     <TableCell>
                       {user.is_platform_admin ? (
-                        <Badge className="bg-violet-100 text-violet-700 border-violet-200">
+                        <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200">
                           <Shield className="h-3 w-3 mr-1" />
                           Yes
                         </Badge>
@@ -457,7 +457,7 @@ export default function UsersPage() {
                                     updateUser(user.user_id, { is_platform_admin: true })
                                   }
                                 }}
-                                className="h-8 px-2 text-violet-600 hover:text-violet-700 hover:bg-violet-50"
+                                className="h-8 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
                                 title="Grant platform admin"
                               >
                                 <Shield className="h-4 w-4" />
@@ -483,7 +483,7 @@ export default function UsersPage() {
               <p className="text-sm text-slate-500 mb-2 font-medium">Role Definitions:</p>
               <div className="flex flex-wrap gap-6 text-sm">
                 <div className="flex items-center gap-2">
-                  <Badge className="bg-violet-100 text-violet-700 border-violet-200">
+                  <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200">
                     <Shield className="h-3 w-3 mr-1" />
                     Platform Admin
                   </Badge>
@@ -527,7 +527,7 @@ export default function UsersPage() {
                   <span className="text-slate-600">Password Reset</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-violet-600" />
+                  <Shield className="h-4 w-4 text-indigo-600" />
                   <span className="text-slate-600">Grant Admin</span>
                 </div>
                 <div className="flex items-center gap-2">

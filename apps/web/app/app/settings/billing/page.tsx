@@ -181,7 +181,7 @@ export default function BillingPage() {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-violet-600 mx-auto mb-4" />
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto mb-4" />
           <p className="text-muted-foreground">Loading billing information...</p>
         </div>
       </div>
@@ -214,7 +214,7 @@ export default function BillingPage() {
                 {billingData?.plan.plan_name || currentPlanSlug}
               </h4>
               {currentPlanSlug !== "free" && (
-                <Badge className="bg-violet-100 text-violet-700 border-0">Active</Badge>
+                <Badge className="bg-indigo-100 text-indigo-700 border-0">Active</Badge>
               )}
             </div>
             {billingData?.stripe_billing && (
@@ -297,7 +297,7 @@ export default function BillingPage() {
             </div>
             <div className="h-2 bg-muted rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-violet-500 to-violet-600 rounded-full transition-all"
+                className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all"
                 style={{ width: isUnlimited ? "15%" : `${getUsagePercentage()}%` }}
               />
             </div>
@@ -319,12 +319,12 @@ export default function BillingPage() {
                 key={plan.slug}
                 className={cn(
                   "border rounded-xl p-5 relative",
-                  plan.popular && "border-violet-300 ring-1 ring-violet-200 dark:border-violet-700 dark:ring-violet-800",
+                  plan.popular && "border-indigo-300 ring-1 ring-violet-200 dark:border-violet-700 dark:ring-violet-800",
                   isCurrent && "bg-muted/30"
                 )}
               >
                 {plan.popular && (
-                  <Badge className="absolute -top-2.5 right-4 bg-violet-600 text-white border-0">
+                  <Badge className="absolute -top-2.5 right-4 bg-indigo-600 text-white border-0">
                     <Sparkles className="w-3 h-3 mr-1" />
                     Popular
                   </Badge>

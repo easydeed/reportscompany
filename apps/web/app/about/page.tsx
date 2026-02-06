@@ -47,23 +47,23 @@ export default function AboutPage() {
                 </p>
               </div>
             </div>
-            <div className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-2xl p-8 text-white">
+            <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl p-8 text-white">
               <div className="grid grid-cols-2 gap-8">
                 <div>
                   <div className="text-4xl font-display font-bold mb-2">1,200+</div>
-                  <div className="text-purple-200">Active Users</div>
+                  <div className="text-indigo-200">Active Users</div>
                 </div>
                 <div>
                   <div className="text-4xl font-display font-bold mb-2">50K+</div>
-                  <div className="text-purple-200">Reports Generated</div>
+                  <div className="text-indigo-200">Reports Generated</div>
                 </div>
                 <div>
                   <div className="text-4xl font-display font-bold mb-2">3hrs</div>
-                  <div className="text-purple-200">Saved Weekly/User</div>
+                  <div className="text-indigo-200">Saved Weekly/User</div>
                 </div>
                 <div>
                   <div className="text-4xl font-display font-bold mb-2">99.9%</div>
-                  <div className="text-purple-200">Uptime</div>
+                  <div className="text-indigo-200">Uptime</div>
                 </div>
               </div>
             </div>
@@ -84,8 +84,8 @@ export default function AboutPage() {
 
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center">
-              <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <Zap className="w-7 h-7 text-purple-600" />
+              <div className="w-14 h-14 bg-indigo-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <Zap className="w-7 h-7 text-indigo-600" />
               </div>
               <h3 className="font-display font-semibold text-lg text-slate-900 mb-2">Speed</h3>
               <p className="text-slate-600">
@@ -93,8 +93,8 @@ export default function AboutPage() {
               </p>
             </div>
             <div className="text-center">
-              <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <Target className="w-7 h-7 text-purple-600" />
+              <div className="w-14 h-14 bg-indigo-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <Target className="w-7 h-7 text-indigo-600" />
               </div>
               <h3 className="font-display font-semibold text-lg text-slate-900 mb-2">Quality</h3>
               <p className="text-slate-600">
@@ -102,8 +102,8 @@ export default function AboutPage() {
               </p>
             </div>
             <div className="text-center">
-              <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <Heart className="w-7 h-7 text-purple-600" />
+              <div className="w-14 h-14 bg-indigo-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <Heart className="w-7 h-7 text-indigo-600" />
               </div>
               <h3 className="font-display font-semibold text-lg text-slate-900 mb-2">Simplicity</h3>
               <p className="text-slate-600">
@@ -122,8 +122,8 @@ export default function AboutPage() {
           <div className="grid md:grid-cols-2 gap-8">
             <div className="bg-white rounded-xl p-6 border border-slate-200">
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center shrink-0">
-                  <Users className="w-5 h-5 text-purple-600" />
+                <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center shrink-0">
+                  <Users className="w-5 h-5 text-indigo-600" />
                 </div>
                 <div>
                   <h3 className="font-display font-semibold text-lg text-slate-900 mb-2">Customer First</h3>
@@ -135,8 +135,8 @@ export default function AboutPage() {
             </div>
             <div className="bg-white rounded-xl p-6 border border-slate-200">
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center shrink-0">
-                  <Shield className="w-5 h-5 text-purple-600" />
+                <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center shrink-0">
+                  <Shield className="w-5 h-5 text-indigo-600" />
                 </div>
                 <div>
                   <h3 className="font-display font-semibold text-lg text-slate-900 mb-2">Trust & Security</h3>
@@ -148,8 +148,8 @@ export default function AboutPage() {
             </div>
             <div className="bg-white rounded-xl p-6 border border-slate-200">
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center shrink-0">
-                  <Zap className="w-5 h-5 text-purple-600" />
+                <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center shrink-0">
+                  <Zap className="w-5 h-5 text-indigo-600" />
                 </div>
                 <div>
                   <h3 className="font-display font-semibold text-lg text-slate-900 mb-2">Continuous Improvement</h3>
@@ -161,8 +161,8 @@ export default function AboutPage() {
             </div>
             <div className="bg-white rounded-xl p-6 border border-slate-200">
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center shrink-0">
-                  <Building2 className="w-5 h-5 text-purple-600" />
+                <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center shrink-0">
+                  <Building2 className="w-5 h-5 text-indigo-600" />
                 </div>
                 <div>
                   <h3 className="font-display font-semibold text-lg text-slate-900 mb-2">Industry Expertise</h3>
@@ -187,7 +187,7 @@ export default function AboutPage() {
           </p>
           <a
             href="/login"
-            className="inline-flex items-center justify-center bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white text-lg px-8 h-14 rounded-lg shadow-lg hover:shadow-xl transition-all font-medium"
+            className="inline-flex items-center justify-center bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-lg px-8 h-14 rounded-lg shadow-lg hover:shadow-xl transition-all font-medium"
           >
             Start Your Free Trial
           </a>

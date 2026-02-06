@@ -138,7 +138,7 @@ export default function PrivacyPage() {
             </ul>
             <p className="text-slate-600 mb-6">
               To exercise these rights, please contact us at{" "}
-              <a href="mailto:privacy@trendyreports.com" className="text-purple-600 hover:underline">
+              <a href="mailto:privacy@trendyreports.com" className="text-indigo-600 hover:underline">
                 privacy@trendyreports.com
               </a>
               .
@@ -180,7 +180,7 @@ export default function PrivacyPage() {
               </p>
               <p className="text-slate-600">
                 Email:{" "}
-                <a href="mailto:privacy@trendyreports.com" className="text-purple-600 hover:underline">
+                <a href="mailto:privacy@trendyreports.com" className="text-indigo-600 hover:underline">
                   privacy@trendyreports.com
                 </a>
               </p>

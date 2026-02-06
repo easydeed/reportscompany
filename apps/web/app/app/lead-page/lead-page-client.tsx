@@ -64,7 +64,7 @@ export function LeadPageClient({ initialSettings, initialLeads }: LeadPageClient
   // Editable settings
   const [headline, setHeadline] = useState(initialSettings?.headline || '');
   const [subheadline, setSubheadline] = useState(initialSettings?.subheadline || '');
-  const [themeColor, setThemeColor] = useState(initialSettings?.theme_color || '#8B5CF6');
+  const [themeColor, setThemeColor] = useState(initialSettings?.theme_color || '#818CF8');
   const [enabled, setEnabled] = useState(initialSettings?.enabled !== false);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -171,7 +171,7 @@ export function LeadPageClient({ initialSettings, initialLeads }: LeadPageClient
 
       {/* Settings Panel (Collapsible) */}
       {showSettings && (
-        <Card className="border-violet-200 bg-violet-50/50">
+        <Card className="border-indigo-200 bg-indigo-50/50">
           <CardHeader>
             <CardTitle className="text-lg">Customize Your Lead Page</CardTitle>
           </CardHeader>
@@ -235,7 +235,7 @@ export function LeadPageClient({ initialSettings, initialLeads }: LeadPageClient
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-violet-600" />
+            <TrendingUp className="w-5 h-5 text-indigo-600" />
             Your Shareable Lead Page
           </CardTitle>
         </CardHeader>
@@ -449,14 +449,14 @@ function LeadRow({ lead }: { lead: ConsumerLead }) {
             </Badge>
           )}
           {lead.pdf_downloaded && (
-            <Badge variant="outline" className="border-violet-300 text-violet-700">
+            <Badge variant="outline" className="border-indigo-300 text-indigo-700">
               <FileText className="w-3 h-3 mr-1" />
               PDF
             </Badge>
           )}
           <a 
             href={`tel:${lead.consumer_phone}`}
-            className="p-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
+            className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
           >
             <Phone className="w-4 h-4" />
           </a>

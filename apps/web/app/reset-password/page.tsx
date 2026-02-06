@@ -39,7 +39,7 @@ function ResetPasswordForm() {
         </p>
         <div className="pt-4">
           <Link href="/forgot-password">
-            <Button className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800">
+            <Button className="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800">
               Request a new link
             </Button>
           </Link>
@@ -192,7 +192,7 @@ function ResetPasswordForm() {
         <Button
           type="submit"
           disabled={loading || !password || !confirmPassword}
-          className="w-full h-11 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-medium shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full h-11 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-medium shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? "Resetting..." : "Reset password"}
         </Button>
@@ -213,7 +213,7 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-block">
@@ -225,7 +225,7 @@ export default function ResetPasswordPage() {
           <Suspense
             fallback={
               <div className="text-center py-8">
-                <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto"></div>
+                <div className="animate-spin h-8 w-8 border-4 border-indigo-600 border-t-transparent rounded-full mx-auto"></div>
                 <p className="mt-4 text-slate-600">Loading...</p>
               </div>
             }

@@ -62,14 +62,14 @@ export default async function ReportsPage() {
   const { reports, error } = await getReports()
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Market Reports"
         description="Manage and generate your market reports"
         action={
-          <Button asChild>
+          <Button asChild size="sm">
             <Link href="/app/reports/new">
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="w-4 h-4 mr-1.5" />
               New Report
             </Link>
           </Button>
@@ -93,20 +93,20 @@ export default async function ReportsPage() {
           }}
         />
       ) : (
-        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-[var(--shadow-card)]">
           <Table>
             <TableHeader>
-              <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Report</TableHead>
-                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Area</TableHead>
-                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Created</TableHead>
-                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</TableHead>
-                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</TableHead>
+              <TableRow className="bg-muted/40 hover:bg-muted/40 border-b border-border">
+                <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em] py-2.5">Report</TableHead>
+                <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em] py-2.5">Area</TableHead>
+                <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em] py-2.5">Created</TableHead>
+                <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em] py-2.5">Status</TableHead>
+                <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em] py-2.5">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {reports.map((r) => (
-                <TableRow key={r.id} className="hover:bg-muted/30 transition-colors">
+                <TableRow key={r.id} className="hover:bg-muted/30 transition-colors border-b border-border/50 last:border-0">
                   <TableCell>
                     <p className="text-sm font-medium capitalize">{r.report_type.replace(/_/g, " ")}</p>
                   </TableCell>
@@ -190,8 +190,8 @@ export default async function ReportsPage() {
           </Table>
           
           {/* Footer */}
-          <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-            <p className="text-xs text-muted-foreground">
+          <div className="flex items-center justify-between px-4 py-2.5 border-t border-border bg-muted/20">
+            <p className="text-[11px] text-muted-foreground">
               Showing {reports.length} report{reports.length !== 1 ? 's' : ''}
             </p>
           </div>

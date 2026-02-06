@@ -2,111 +2,104 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Smooth scrolling */
 html {
   scroll-behavior: smooth;
 }
 
 :root {
   /* ── Backgrounds ── */
-  --background: #f5f5f7;          /* Page background (light gray) */
-  --card: #ffffff;                /* Card/surface background */
-  --popover: #ffffff;
-  --muted: #f3f4f6;               /* Muted/secondary background */
+  --background: #F8FAFC;            /* Slate-50: cooler, more professional */
+  --card: #FFFFFF;
+  --popover: #FFFFFF;
+  --muted: #F1F5F9;                 /* Slate-100: subtle differentiation */
 
   /* ── Text ── */
-  --foreground: #111827;          /* Primary text (gray-900) */
-  --card-foreground: #111827;
-  --popover-foreground: #111827;
-  --muted-foreground: #6b7280;    /* Secondary text (gray-500) */
+  --foreground: #0F172A;            /* Slate-900: strongest contrast */
+  --card-foreground: #0F172A;
+  --popover-foreground: #0F172A;
+  --muted-foreground: #64748B;      /* Slate-500: readable secondary */
 
   /* ── Brand ── */
-  --primary: #7c3aed;             /* Violet-600 */
-  --primary-foreground: #ffffff;
-  --accent: #f26b2b;              /* Coral (for special moments) */
-  --accent-foreground: #ffffff;
-  --accent-blue: #3b82f6;         /* Bright blue for data viz */
+  --primary: #4F46E5;               /* Indigo-600: authority + sophistication */
+  --primary-foreground: #FFFFFF;
+  --accent: #D97706;                /* Amber-600: warm gold, real estate DNA */
+  --accent-foreground: #FFFFFF;
+  --accent-blue: #3B82F6;           /* Blue-500: data viz accent */
 
   /* ── Secondary ── */
-  --secondary: #f3f4f6;           /* Matches muted */
-  --secondary-foreground: #111827;
+  --secondary: #F1F5F9;
+  --secondary-foreground: #0F172A;
 
   /* ── Interactive ── */
-  --ring: #7c3aed;                /* Focus ring = primary */
-  --border: #e5e7eb;              /* Default border (gray-200) */
-  --input: #e5e7eb;               /* Input border */
+  --ring: #4F46E5;
+  --border: #E2E8F0;                /* Slate-200: softer than gray-200 */
+  --input: #E2E8F0;
 
   /* ── Status ── */
-  --success: #22c55e;             /* Green-500 */
-  --warning: #f59e0b;             /* Amber-500 */
-  --destructive: #ef4444;         /* Red-500 */
-  --destructive-foreground: #ffffff;
+  --success: #059669;               /* Emerald-600: professional green */
+  --warning: #D97706;               /* Amber-600: consistent with accent */
+  --destructive: #DC2626;           /* Red-600: clear danger */
+  --destructive-foreground: #FFFFFF;
 
   /* ── Chart colors ── */
-  --chart-1: #7c3aed;             /* Violet */
-  --chart-2: #f26b2b;             /* Coral */
-  --chart-3: #3b82f6;             /* Blue */
-  --chart-4: #22c55e;             /* Green */
-  --chart-5: #f59e0b;             /* Amber */
+  --chart-1: #4F46E5;               /* Indigo */
+  --chart-2: #D97706;               /* Amber */
+  --chart-3: #3B82F6;               /* Blue */
+  --chart-4: #059669;               /* Emerald */
+  --chart-5: #818CF8;               /* Violet */
 
   /* ── Radius ── */
-  --radius: 0.5rem;               /* 8px — matches rounded-lg */
+  --radius: 0.5rem;
 
-  /* ── Sidebar ── */
-  --sidebar: #ffffff;
-  --sidebar-foreground: #374151;  /* gray-700 */
-  --sidebar-border: #e5e7eb;
-  --sidebar-accent: #f3f4f6;
-  --sidebar-accent-foreground: #111827;
-  --sidebar-primary: #7c3aed;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-ring: #7c3aed;
+  /* ── Sidebar (DARK) ── */
+  --sidebar: #0F172A;               /* Slate-900 */
+  --sidebar-foreground: #CBD5E1;    /* Slate-300 */
+  --sidebar-border: #1E293B;        /* Slate-800 */
+  --sidebar-accent: #1E293B;        /* Slate-800 hover */
+  --sidebar-accent-foreground: #F1F5F9; /* Slate-100 */
+  --sidebar-primary: #818CF8;       /* Indigo-400: bright on dark */
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-ring: #818CF8;
+  --sidebar-muted: #475569;         /* Slate-600: section labels */
+
+  /* ── Extended tokens ── */
+  --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.03);
+  --shadow-card: 0 1px 3px 0 rgba(0,0,0,0.04), 0 1px 2px -1px rgba(0,0,0,0.04);
+  --shadow-elevated: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05);
 }
 
+/* Dark mode - keep this for potential future use but sidebar is always dark */
 .dark {
-  /* ── Backgrounds ── */
-  --background: #0f172a;          /* Slate-900 */
-  --card: #1e293b;                /* Slate-800 */
-  --popover: #1e293b;
-  --muted: #334155;               /* Slate-700 */
-
-  /* ── Text ── */
-  --foreground: #f8fafc;          /* Slate-50 */
-  --card-foreground: #f8fafc;
-  --popover-foreground: #f8fafc;
-  --muted-foreground: #94a3b8;    /* Slate-400 */
-
-  /* ── Brand ── */
-  --primary: #a78bfa;             /* Violet-400 (brighter in dark) */
-  --primary-foreground: #0f172a;
-  --accent: #fb923c;              /* Orange-400 */
-  --accent-foreground: #0f172a;
-  --accent-blue: #60a5fa;         /* Blue-400 */
-
-  /* ── Secondary ── */
+  --background: #0F172A;
+  --card: #1E293B;
+  --popover: #1E293B;
+  --muted: #334155;
+  --foreground: #F8FAFC;
+  --card-foreground: #F8FAFC;
+  --popover-foreground: #F8FAFC;
+  --muted-foreground: #94A3B8;
+  --primary: #818CF8;
+  --primary-foreground: #0F172A;
+  --accent: #FBBF24;
+  --accent-foreground: #0F172A;
+  --accent-blue: #60A5FA;
   --secondary: #334155;
-  --secondary-foreground: #f8fafc;
-
-  /* ── Interactive ── */
-  --ring: #a78bfa;
+  --secondary-foreground: #F8FAFC;
+  --ring: #818CF8;
   --border: #334155;
   --input: #334155;
-
-  /* ── Status ── */
-  --success: #4ade80;             /* Green-400 */
-  --warning: #fbbf24;             /* Amber-400 */
-  --destructive: #f87171;         /* Red-400 */
-  --destructive-foreground: #0f172a;
-
-  /* ── Sidebar ── */
-  --sidebar: #1e293b;
-  --sidebar-foreground: #e2e8f0;
+  --success: #34D399;
+  --warning: #FBBF24;
+  --destructive: #F87171;
+  --destructive-foreground: #0F172A;
+  --sidebar: #0F172A;
+  --sidebar-foreground: #E2E8F0;
   --sidebar-border: #334155;
   --sidebar-accent: #334155;
-  --sidebar-accent-foreground: #f8fafc;
-  --sidebar-primary: #a78bfa;
-  --sidebar-primary-foreground: #0f172a;
-  --sidebar-ring: #a78bfa;
+  --sidebar-accent-foreground: #F8FAFC;
+  --sidebar-primary: #818CF8;
+  --sidebar-primary-foreground: #0F172A;
+  --sidebar-ring: #818CF8;
 }
 
 @theme inline {
@@ -151,6 +144,7 @@ html {
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-muted: var(--sidebar-muted);
 }
 
 @layer base {
@@ -160,38 +154,25 @@ html {
 
   body {
     @apply bg-background text-foreground;
-    font-size: 15px;
+    font-size: 14px;        /* Tighter than 15px for density */
     line-height: 1.6;
   }
 
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
+  h1, h2, h3, h4, h5, h6 {
     @apply font-display;
   }
 
-  /* Only page titles get tracking-tight */
   h1 {
     @apply tracking-tight;
   }
 
-  @media (prefers-reduced-motion: no-preference) {
-    * {
-      transition-duration: 180ms;
-      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    }
-  }
-
-  /* Brand gradient for special moments */
+  /* Brand gradient - updated to indigo */
   .gradient-trendy {
-    background: linear-gradient(135deg, #7c3aed 0%, #f26b2b 100%);
+    background: linear-gradient(135deg, #4F46E5 0%, #D97706 100%);
   }
 
   .gradient-chart {
-    background: linear-gradient(180deg, rgba(124, 58, 237, 0.1) 0%, transparent 100%);
+    background: linear-gradient(180deg, rgba(79, 70, 229, 0.08) 0%, transparent 100%);
   }
 
   *:focus-visible {
@@ -199,28 +180,18 @@ html {
   }
 
   @keyframes shimmer {
-    0% {
-      background-position: -1000px 0;
-    }
-    100% {
-      background-position: 1000px 0;
-    }
+    0% { background-position: -1000px 0; }
+    100% { background-position: 1000px 0; }
   }
 
   .shimmer {
     animation: shimmer 2s infinite linear;
-    background: linear-gradient(to right, transparent 0%, rgba(124, 58, 237, 0.1) 50%, transparent 100%);
+    background: linear-gradient(to right, transparent 0%, rgba(79, 70, 229, 0.06) 50%, transparent 100%);
     background-size: 1000px 100%;
   }
 
-  /* Trend emphasis styles */
-  .trend-up {
-    @apply text-success;
-  }
-
-  .trend-down {
-    @apply text-destructive;
-  }
+  .trend-up { @apply text-emerald-600; }
+  .trend-down { @apply text-red-600; }
 }
 
 /* Google Places Autocomplete dropdown - ensure it appears above modals */
@@ -240,11 +211,11 @@ html {
 }
 
 .pac-item:hover {
-  background-color: #f5f5f7;
+  background-color: #F8FAFC;
 }
 
 .pac-item-selected {
-  background-color: #f0e6ff;
+  background-color: #EEF2FF;
 }
 
 .pac-icon {

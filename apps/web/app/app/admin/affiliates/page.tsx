@@ -174,7 +174,7 @@ export default async function AdminAffiliatesPage({
                         ) : (
                           <div
                             className="h-8 w-8 rounded flex items-center justify-center text-white text-xs font-bold"
-                            style={{ backgroundColor: affiliate.primary_color || '#7C3AED' }}
+                            style={{ backgroundColor: affiliate.primary_color || '#4F46E5' }}
                           >
                             {affiliate.name.charAt(0)}
                           </div>

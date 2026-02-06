@@ -131,7 +131,7 @@ export function BrandingForm({ initialData }: BrandingFormProps) {
     }
   };
 
-  const primaryColor = formData.primary_color || '#7C3AED';
+  const primaryColor = formData.primary_color || '#4F46E5';
   const accentColor = formData.accent_color || '#F26B2B';
 
   return (
@@ -141,8 +141,8 @@ export function BrandingForm({ initialData }: BrandingFormProps) {
         <Card className="mb-6">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-violet-100 rounded-lg">
-                <ImageIcon className="h-5 w-5 text-violet-600" />
+              <div className="p-2 bg-indigo-100 rounded-lg">
+                <ImageIcon className="h-5 w-5 text-indigo-600" />
               </div>
               <div>
                 <CardTitle className="text-lg">Brand Identity</CardTitle>
@@ -190,8 +190,8 @@ export function BrandingForm({ initialData }: BrandingFormProps) {
                   placeholder="https://example.com/logo-white.png"
                   className="text-sm"
                 />
-                <div className="flex items-start gap-2 text-xs text-muted-foreground bg-violet-50 p-2 rounded">
-                  <Info className="h-3.5 w-3.5 mt-0.5 text-violet-500 flex-shrink-0" />
+                <div className="flex items-start gap-2 text-xs text-muted-foreground bg-indigo-50 p-2 rounded">
+                  <Info className="h-3.5 w-3.5 mt-0.5 text-indigo-500 flex-shrink-0" />
                   <span>Use a <strong>white or light-colored</strong> logo version for best visibility on the gradient header</span>
                 </div>
                 {formData.logo_url && (
@@ -266,7 +266,7 @@ export function BrandingForm({ initialData }: BrandingFormProps) {
                     <Input
                       value={formData.primary_color || ''}
                       onChange={(e) => handleChange('primary_color', e.target.value)}
-                      placeholder="#7C3AED"
+                      placeholder="#4F46E5"
                       maxLength={7}
                       className="font-mono"
                     />
@@ -447,10 +447,10 @@ export function BrandingForm({ initialData }: BrandingFormProps) {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">
             {/* Sample PDF */}
-            <div className="p-5 rounded-xl border-2 border-dashed hover:border-violet-300 hover:bg-violet-50/50 transition-colors">
+            <div className="p-5 rounded-xl border-2 border-dashed hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors">
               <div className="flex items-start gap-4">
-                <div className="p-3 bg-violet-100 rounded-lg">
-                  <FileText className="h-6 w-6 text-violet-600" />
+                <div className="p-3 bg-indigo-100 rounded-lg">
+                  <FileText className="h-6 w-6 text-indigo-600" />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold mb-1">Sample PDF Report</h3>

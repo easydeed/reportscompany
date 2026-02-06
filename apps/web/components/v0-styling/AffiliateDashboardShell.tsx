@@ -59,14 +59,14 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
         </div>
 
         {planSummary && (
-          <Card className="border-violet-200/60 bg-gradient-to-br from-violet-50/50 to-white shadow-sm hover:shadow-md transition-shadow">
+          <Card className="border-indigo-200/60 bg-gradient-to-br from-indigo-50/50 to-white shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
               <div>
                 <CardTitle className="text-base font-semibold text-slate-900">
                   Your Affiliate Plan
                 </CardTitle>
                 <div className="mt-3">
-                  <div className="text-2xl font-display font-bold text-violet-600">
+                  <div className="text-2xl font-display font-bold text-indigo-600">
                     {planSummary.plan_name}
                   </div>
                   <p className="text-sm text-slate-600 mt-1">
@@ -74,8 +74,8 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
                   </p>
                 </div>
               </div>
-              <div className="rounded-xl bg-violet-100 p-2.5">
-                <TrendingUp className="h-5 w-5 text-violet-600" />
+              <div className="rounded-xl bg-indigo-100 p-2.5">
+                <TrendingUp className="h-5 w-5 text-indigo-600" />
               </div>
             </CardHeader>
           </Card>
@@ -179,14 +179,14 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
                       <tr key={account.account_id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="py-4 px-6">
                           <div className="flex items-center gap-3">
-                            <div className="rounded-lg bg-violet-100 p-2">
-                              <Building2 className="h-4 w-4 text-violet-600" />
+                            <div className="rounded-lg bg-indigo-100 p-2">
+                              <Building2 className="h-4 w-4 text-indigo-600" />
                             </div>
                             <span className="font-medium text-slate-900">{account.name}</span>
                           </div>
                         </td>
                         <td className="py-4 px-6">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-violet-100 text-violet-700 border border-violet-200/50">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 border border-indigo-200/50">
                             {account.plan_slug}
                           </span>
                         </td>

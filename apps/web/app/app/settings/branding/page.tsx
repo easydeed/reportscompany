@@ -59,7 +59,7 @@ export default function BrandingPage() {
   const { toast } = useToast()
 
   const [branding, setBranding] = useState<BrandingData>({
-    primary_color: "#8B5CF6",
+    primary_color: "#818CF8",
     accent_color: "#F59E0B",
     pdf_header_logo_url: null,
     pdf_footer_logo_url: null,
@@ -102,7 +102,7 @@ export default function BrandingPage() {
       if (accountRes.ok) {
         const data = await accountRes.json()
         setBranding({
-          primary_color: data.primary_color || "#8B5CF6",
+          primary_color: data.primary_color || "#818CF8",
           accent_color: data.secondary_color || "#F59E0B",
           pdf_header_logo_url: data.logo_url || null,
           pdf_footer_logo_url: data.footer_logo_url || null,
@@ -279,7 +279,7 @@ export default function BrandingPage() {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-violet-600 mx-auto mb-4" />
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto mb-4" />
           <p className="text-muted-foreground">Loading branding settings...</p>
         </div>
       </div>
@@ -323,8 +323,8 @@ export default function BrandingPage() {
             <div className="bg-card border rounded-xl overflow-hidden">
               <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="p-1.5 rounded-lg bg-violet-100 dark:bg-violet-900/30">
-                    <Palette className="w-4 h-4 text-violet-600" />
+                  <div className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/30">
+                    <Palette className="w-4 h-4 text-indigo-600" />
                   </div>
                   <div className="text-left">
                     <p className="font-medium">Brand Colors</p>
@@ -508,8 +508,8 @@ export default function BrandingPage() {
             <div className="bg-card border rounded-xl overflow-hidden">
               <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/30">
-                    <Mail className="w-4 h-4 text-purple-600" />
+                  <div className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/30">
+                    <Mail className="w-4 h-4 text-indigo-600" />
                   </div>
                   <div className="text-left">
                     <p className="font-medium">Email Logos</p>
@@ -789,7 +789,7 @@ export default function BrandingPage() {
           {/* Email Preview */}
           <div>
             <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
-              <Mail className="w-3.5 h-3.5 text-purple-500" />
+              <Mail className="w-3.5 h-3.5 text-indigo-500" />
               Email
             </div>
             <div className="rounded-xl border shadow-lg overflow-hidden bg-white dark:bg-zinc-900">

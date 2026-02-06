@@ -76,12 +76,12 @@ export default async function AdminDashboard() {
         <Card className="bg-white border-slate-200 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-slate-500">Total Accounts</CardTitle>
-            <Building className="h-4 w-4 text-violet-500" />
+            <Building className="h-4 w-4 text-indigo-500" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-slate-900">{m.total_accounts || 0}</div>
             <p className="text-xs text-slate-500 mt-1">
-              <span className="text-violet-600 font-medium">{m.total_affiliates || 0}</span> affiliates
+              <span className="text-indigo-600 font-medium">{m.total_affiliates || 0}</span> affiliates
             </p>
           </CardContent>
         </Card>
@@ -166,12 +166,12 @@ export default async function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-violet-50 border-violet-200">
+        <Card className="bg-indigo-50 border-indigo-200">
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-violet-600">Avg Render</p>
-                <p className="text-xl font-bold text-violet-700">{avgRenderSec}s</p>
+                <p className="text-xs text-indigo-600">Avg Render</p>
+                <p className="text-xl font-bold text-indigo-700">{avgRenderSec}s</p>
               </div>
               <TrendingUp className="h-6 w-6 text-violet-300" />
             </div>
@@ -186,7 +186,7 @@ export default async function AdminDashboard() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-slate-900">Recent Reports</CardTitle>
-              <Link href="/admin/reports" className="text-sm text-violet-600 hover:text-violet-700 font-medium">
+              <Link href="/admin/reports" className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
                 View all →
               </Link>
             </div>
@@ -231,7 +231,7 @@ export default async function AdminDashboard() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-slate-900">Recent Accounts</CardTitle>
-              <Link href="/admin/accounts" className="text-sm text-violet-600 hover:text-violet-700 font-medium">
+              <Link href="/admin/accounts" className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
                 View all →
               </Link>
             </div>
@@ -278,7 +278,7 @@ export default async function AdminDashboard() {
           <CardContent className="pt-6">
             <p className="text-sm text-violet-100">Active Schedules</p>
             <p className="text-2xl font-bold text-white mt-1">{m.schedules_active || 0}</p>
-            <p className="text-xs text-violet-200 mt-1">of {m.schedules_total || 0} total</p>
+            <p className="text-xs text-indigo-200 mt-1">of {m.schedules_total || 0} total</p>
           </CardContent>
         </Card>
 

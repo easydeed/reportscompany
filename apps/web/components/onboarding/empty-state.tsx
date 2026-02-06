@@ -44,7 +44,7 @@ const variants: Record<EmptyStateVariant, {
     actionHref: "/app/reports/new",
     secondaryLabel: "Watch Tutorial",
     secondaryHref: "#",
-    gradient: "from-violet-500/10 to-violet-500/5",
+    gradient: "from-indigo-500/10 to-indigo-500/5",
   },
   schedules: {
     icon: Calendar,

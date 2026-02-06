@@ -108,7 +108,7 @@ export default async function AdminLayout({
         {/* User/Logout */}
         <div className="p-4 border-t border-slate-200">
           <div className="flex items-center gap-3 px-3 py-2 mb-2">
-            <div className="w-8 h-8 bg-violet-100 text-violet-700 rounded-full flex items-center justify-center text-sm font-medium">
+            <div className="w-8 h-8 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center text-sm font-medium">
               {admin.first_name?.[0] || admin.email?.[0]?.toUpperCase() || 'A'}
             </div>
             <div className="flex-1 min-w-0">

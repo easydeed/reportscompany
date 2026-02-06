@@ -36,18 +36,18 @@ export function MarketingHome() {
         <div className="max-w-[1200px] mx-auto">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-              <div className="inline-flex items-center gap-2 bg-purple-50 border border-purple-200 rounded-full px-4 py-2 mb-6">
-                <div className="w-2 h-2 bg-purple-600 rounded-full animate-pulse" />
-                <span className="text-sm font-semibold text-purple-900">
+              <div className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-full px-4 py-2 mb-6">
+                <div className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse" />
+                <span className="text-sm font-semibold text-indigo-900">
                   Trusted by 1,200+ agents at KW, RE/MAX, Coldwell Banker
                 </span>
               </div>
               <h1 className="font-display font-black text-5xl sm:text-6xl lg:text-7xl mb-6 leading-[1.05]">
-                <span className="bg-gradient-to-r from-purple-600 via-violet-600 to-purple-500 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-slate-500 bg-clip-text text-transparent">
                   Beautiful market reports.
                 </span>
                 <br />
-                <span className="bg-gradient-to-r from-purple-500 via-fuchsia-500 to-orange-500 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-slate-500 via-fuchsia-500 to-orange-500 bg-clip-text text-transparent">
                   Zero effort.
                 </span>
               </h1>
@@ -58,7 +58,7 @@ export function MarketingHome() {
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
                 <Button
                   size="lg"
-                  className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white text-lg px-8 h-14 shadow-lg hover:shadow-xl transition-all"
+                  className="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-lg px-8 h-14 shadow-lg hover:shadow-xl transition-all"
                   asChild
                 >
                   <Link href="/register">
@@ -155,7 +155,7 @@ export function MarketingHome() {
           <div className="grid md:grid-cols-3 gap-8 mb-16">
             <div className="relative">
               <div className="bg-slate-800 rounded-2xl border border-slate-700 p-8 h-full">
-                <div className="w-12 h-12 rounded-full bg-purple-500 flex items-center justify-center font-bold text-xl mb-6">
+                <div className="w-12 h-12 rounded-full bg-indigo-500 flex items-center justify-center font-bold text-xl mb-6">
                   1
                 </div>
                 <h3 className="font-display font-semibold text-2xl mb-3">Pick your area</h3>
@@ -164,11 +164,11 @@ export function MarketingHome() {
                 </p>
                 <ul className="mt-4 space-y-2 text-slate-300 text-sm">
                   <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-purple-400" />
+                    <Check className="w-4 h-4 text-indigo-400" />
                     <span>City or ZIP selection</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-purple-400" />
+                    <Check className="w-4 h-4 text-indigo-400" />
                     <span>8 report templates</span>
                   </li>
                 </ul>
@@ -243,7 +243,7 @@ export function MarketingHome() {
         <div className="max-w-[1400px] mx-auto">
           <div className="text-center mb-16">
             <h2 className="font-display font-black text-4xl sm:text-5xl mb-4">
-              <span className="bg-gradient-to-r from-purple-600 via-violet-600 to-fuchsia-500 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-500 bg-clip-text text-transparent">
                 Email reports clients actually open
               </span>
             </h2>
@@ -258,8 +258,8 @@ export function MarketingHome() {
                 <div className="text-sm text-slate-500">Full white-label branding</div>
               </div>
               <div className="flex items-center ml-3">
-                <div className="w-12 border-t-2 border-dashed border-purple-300" />
-                <div className="w-3 h-3 rounded-full bg-purple-500 shadow-lg shadow-purple-500/50 animate-pulse" />
+                <div className="w-12 border-t-2 border-dashed border-indigo-300" />
+                <div className="w-3 h-3 rounded-full bg-indigo-500 shadow-lg shadow-indigo-500/50 animate-pulse" />
               </div>
             </div>
 
@@ -269,8 +269,8 @@ export function MarketingHome() {
                 <div className="text-sm text-slate-500">Price, inventory, DOM</div>
               </div>
               <div className="flex items-center ml-3">
-                <div className="w-12 border-t-2 border-dashed border-purple-300" />
-                <div className="w-3 h-3 rounded-full bg-purple-500 shadow-lg shadow-purple-500/50 animate-pulse" />
+                <div className="w-12 border-t-2 border-dashed border-indigo-300" />
+                <div className="w-3 h-3 rounded-full bg-indigo-500 shadow-lg shadow-indigo-500/50 animate-pulse" />
               </div>
             </div>
 
@@ -352,28 +352,28 @@ export function MarketingHome() {
           {/* Mobile feature list */}
           <div className="lg:hidden mt-12 grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
             <div className="flex items-start gap-3">
-              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <Check className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
               <div>
                 <div className="font-semibold text-slate-900 mb-1">Your logo & colors</div>
                 <div className="text-sm text-slate-600">Full white-label branding in every email</div>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <Check className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
               <div>
                 <div className="font-semibold text-slate-900 mb-1">Mobile-first design</div>
                 <div className="text-sm text-slate-600">Looks perfect on every device</div>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <Check className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
               <div>
                 <div className="font-semibold text-slate-900 mb-1">Key market metrics</div>
                 <div className="text-sm text-slate-600">Median price, inventory, days on market</div>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <Check className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
               <div>
                 <div className="font-semibold text-slate-900 mb-1">Your contact info</div>
                 <div className="text-sm text-slate-600">Photo, phone, email, social links</div>
@@ -390,7 +390,7 @@ export function MarketingHome() {
         <div className="max-w-[1400px] mx-auto">
           <div className="text-center mb-16">
             <h2 className="font-display font-black text-4xl sm:text-5xl mb-4">
-              <span className="bg-gradient-to-r from-violet-600 via-purple-600 to-purple-500 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-violet-600 via-purple-600 to-slate-500 bg-clip-text text-transparent">
                 Print-ready PDFs that look expensive
               </span>
             </h2>
@@ -405,8 +405,8 @@ export function MarketingHome() {
                 <div className="text-sm text-slate-500">Gradient design with branding</div>
               </div>
               <div className="flex items-center ml-3">
-                <div className="w-12 border-t-2 border-dashed border-purple-300" />
-                <div className="w-3 h-3 rounded-full bg-purple-500 shadow-lg shadow-purple-500/50 animate-pulse" />
+                <div className="w-12 border-t-2 border-dashed border-indigo-300" />
+                <div className="w-3 h-3 rounded-full bg-indigo-500 shadow-lg shadow-indigo-500/50 animate-pulse" />
               </div>
             </div>
 
@@ -416,8 +416,8 @@ export function MarketingHome() {
                 <div className="text-sm text-slate-500">Clean grid layouts</div>
               </div>
               <div className="flex items-center ml-3">
-                <div className="w-12 border-t-2 border-dashed border-purple-300" />
-                <div className="w-3 h-3 rounded-full bg-purple-500 shadow-lg shadow-purple-500/50 animate-pulse" />
+                <div className="w-12 border-t-2 border-dashed border-indigo-300" />
+                <div className="w-3 h-3 rounded-full bg-indigo-500 shadow-lg shadow-indigo-500/50 animate-pulse" />
               </div>
             </div>
 
@@ -490,28 +490,28 @@ export function MarketingHome() {
           {/* Mobile feature list */}
           <div className="lg:hidden mt-12 grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
             <div className="flex items-start gap-3">
-              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <Check className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
               <div>
                 <div className="font-semibold text-slate-900 mb-1">Professional header</div>
                 <div className="text-sm text-slate-600">Gradient design with your branding</div>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <Check className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
               <div>
                 <div className="font-semibold text-slate-900 mb-1">Charts & visualizations</div>
                 <div className="text-sm text-slate-600">Price trends, inventory, and market stats</div>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <Check className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
               <div>
                 <div className="font-semibold text-slate-900 mb-1">Property galleries</div>
                 <div className="text-sm text-slate-600">Clean grid layouts with listing details</div>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <Check className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
               <div>
                 <div className="font-semibold text-slate-900 mb-1">Agent footer</div>
                 <div className="text-sm text-slate-600">Photo, credentials, and contact details</div>
@@ -536,13 +536,13 @@ export function MarketingHome() {
           <div className="absolute inset-0 bg-gradient-to-br from-purple-900/95 via-slate-900/90 to-slate-900/95" />
         </div>
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl" />
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl" />
           <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl" />
         </div>
 
         <div className="max-w-[1200px] mx-auto relative z-10">
           <div className="text-center mb-16">
-            <p className="text-purple-400 font-medium uppercase tracking-wider text-sm mb-4">
+            <p className="text-indigo-400 font-medium uppercase tracking-wider text-sm mb-4">
               Built for top performers
             </p>
             <h2 className="font-display font-black text-4xl sm:text-5xl mb-4">Why top producers choose us</h2>
@@ -552,10 +552,10 @@ export function MarketingHome() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
-            <div className="group relative bg-gradient-to-br from-purple-500/10 to-purple-600/5 backdrop-blur-sm rounded-3xl border border-purple-500/20 p-8 hover:border-purple-500/40 transition-all duration-300 hover:-translate-y-1">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="group relative bg-gradient-to-br from-slate-500/10 to-purple-600/5 backdrop-blur-sm rounded-3xl border border-indigo-500/20 p-8 hover:border-indigo-500/40 transition-all duration-300 hover:-translate-y-1">
+              <div className="absolute inset-0 bg-gradient-to-br from-slate-500/5 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="relative">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mb-6 shadow-lg shadow-purple-500/25">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-500 to-purple-600 flex items-center justify-center mb-6 shadow-lg shadow-indigo-500/25">
                   <Clock className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="font-display font-semibold text-2xl text-white mb-3">Set it and forget it</h3>
@@ -563,8 +563,8 @@ export function MarketingHome() {
                   Configure once. Reports generate and deliver automatically every week, month, or on your custom
                   schedule.
                 </p>
-                <div className="mt-6 pt-6 border-t border-purple-500/20">
-                  <div className="flex items-center gap-2 text-purple-400">
+                <div className="mt-6 pt-6 border-t border-indigo-500/20">
+                  <div className="flex items-center gap-2 text-indigo-400">
                     <Check className="w-5 h-5" />
                     <span className="text-sm">Automated delivery</span>
                   </div>
@@ -658,7 +658,7 @@ export function MarketingHome() {
                 ROI is 20x my subscription cost.&quot;
               </p>
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+                <div className="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold">
                   JM
                 </div>
                 <div>
@@ -679,7 +679,7 @@ export function MarketingHome() {
                 made this year.&quot;
               </p>
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+                <div className="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold">
                   RC
                 </div>
                 <div>
@@ -699,7 +699,7 @@ export function MarketingHome() {
                 &quot;My clients forward the reports to their friends. I close more referrals now than ever before.&quot;
               </p>
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+                <div className="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold">
                   SP
                 </div>
                 <div>
@@ -719,7 +719,7 @@ export function MarketingHome() {
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-16">
             <h2 className="font-display font-black text-4xl sm:text-5xl mb-4">
-              <span className="bg-gradient-to-r from-purple-600 via-fuchsia-500 to-orange-500 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-indigo-600 via-fuchsia-500 to-orange-500 bg-clip-text text-transparent">
                 Simple, transparent pricing
               </span>
             </h2>
@@ -730,7 +730,7 @@ export function MarketingHome() {
 
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {/* Starter */}
-            <div className="bg-white rounded-3xl border border-slate-200 p-8 hover:border-purple-200 hover:shadow-lg transition-all">
+            <div className="bg-white rounded-3xl border border-slate-200 p-8 hover:border-indigo-200 hover:shadow-lg transition-all">
               <div className="mb-6">
                 <h3 className="font-display font-semibold text-2xl mb-2 text-slate-900">Starter</h3>
                 <p className="text-slate-600">Try TrendyReports risk-free</p>
@@ -741,21 +741,21 @@ export function MarketingHome() {
               </div>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-start gap-3 text-sm">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span className="text-slate-700">
                     <strong>50 reports</strong> per month
                   </span>
                 </li>
                 <li className="flex items-start gap-3 text-sm">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span className="text-slate-700">Market snapshot templates</span>
                 </li>
                 <li className="flex items-start gap-3 text-sm">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span className="text-slate-700">Email & PDF delivery</span>
                 </li>
                 <li className="flex items-start gap-3 text-sm">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span className="text-slate-700">Basic branding options</span>
                 </li>
               </ul>
@@ -765,8 +765,8 @@ export function MarketingHome() {
             </div>
 
             {/* Pro */}
-            <div className="bg-gradient-to-br from-purple-50 via-white to-white rounded-3xl border-2 border-purple-300 p-8 relative shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg">
+            <div className="bg-gradient-to-br from-slate-50 via-white to-white rounded-3xl border-2 border-indigo-300 p-8 relative shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg">
                 MOST POPULAR
               </div>
               <div className="mb-6">
@@ -779,30 +779,30 @@ export function MarketingHome() {
               </div>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-start gap-3 text-sm">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span className="text-slate-700">
                     <strong>300 reports</strong> per month
                   </span>
                 </li>
                 <li className="flex items-start gap-3 text-sm">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span className="text-slate-700">All report types + galleries</span>
                 </li>
                 <li className="flex items-start gap-3 text-sm">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span className="text-slate-700">Automated scheduling</span>
                 </li>
                 <li className="flex items-start gap-3 text-sm">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span className="text-slate-700">Full white-label branding</span>
                 </li>
                 <li className="flex items-start gap-3 text-sm">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span className="text-slate-700">Priority support</span>
                 </li>
               </ul>
               <Button
-                className="w-full h-12 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg"
+                className="w-full h-12 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white shadow-lg"
                 asChild
               >
                 <Link href="/register">Start Free Trial</Link>
@@ -810,7 +810,7 @@ export function MarketingHome() {
             </div>
 
             {/* Team */}
-            <div className="bg-white rounded-3xl border border-slate-200 p-8 hover:border-purple-200 hover:shadow-lg transition-all">
+            <div className="bg-white rounded-3xl border border-slate-200 p-8 hover:border-indigo-200 hover:shadow-lg transition-all">
               <div className="mb-6">
                 <h3 className="font-display font-semibold text-2xl mb-2 text-slate-900">Team</h3>
                 <p className="text-slate-600">For brokerages, teams & affiliates</p>
@@ -821,25 +821,25 @@ export function MarketingHome() {
               </div>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-start gap-3 text-sm">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span className="text-slate-700">
                     <strong>Unlimited reports</strong>
                   </span>
                 </li>
                 <li className="flex items-start gap-3 text-sm">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span className="text-slate-700">Sponsor agents under one plan</span>
                 </li>
                 <li className="flex items-start gap-3 text-sm">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span className="text-slate-700">Admin dashboard & analytics</span>
                 </li>
                 <li className="flex items-start gap-3 text-sm">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span className="text-slate-700">Co-branded reports</span>
                 </li>
                 <li className="flex items-start gap-3 text-sm">
-                  <Check className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                   <span className="text-slate-700">Dedicated support manager</span>
                 </li>
               </ul>
@@ -872,11 +872,11 @@ export function MarketingHome() {
           <div className="grid md:grid-cols-2 gap-8 items-stretch">
             {/* For Agents */}
             <div className="group">
-              <div className="relative p-8 rounded-3xl bg-white shadow-lg border border-purple-100 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 h-full">
-                <div className="absolute -top-3 -right-3 w-24 h-24 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl opacity-10 blur-2xl group-hover:opacity-20 transition-opacity" />
+              <div className="relative p-8 rounded-3xl bg-white shadow-lg border border-indigo-100 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 h-full">
+                <div className="absolute -top-3 -right-3 w-24 h-24 bg-gradient-to-br from-slate-500 to-purple-600 rounded-2xl opacity-10 blur-2xl group-hover:opacity-20 transition-opacity" />
 
                 <div className="relative">
-                  <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 mb-6 shadow-lg shadow-purple-500/20">
+                  <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-slate-500 to-purple-600 mb-6 shadow-lg shadow-indigo-500/20">
                     <User className="w-8 h-8 text-white" />
                   </div>
 
@@ -887,20 +887,20 @@ export function MarketingHome() {
 
                   <div className="space-y-2 mb-6">
                     <div className="flex items-center gap-2 text-sm text-slate-700">
-                      <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                       <span>Automated MLS data pulls</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-slate-700">
-                      <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                       <span>Custom branding & logos</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-slate-700">
-                      <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                       <span>Share in seconds</span>
                     </div>
                   </div>
 
-                  <Button size="lg" className="bg-purple-600 hover:bg-purple-700 text-white" asChild>
+                  <Button size="lg" className="bg-indigo-600 hover:bg-indigo-700 text-white" asChild>
                     <Link href="/register">
                       Start Free Trial
                       <ChevronRight className="w-5 h-5 ml-2" />
@@ -986,8 +986,8 @@ export function MarketingHome() {
             </div>
 
             <div className="bg-slate-50 rounded-2xl border border-slate-200 p-10 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-purple-100 flex items-center justify-center mx-auto mb-6">
-                <FileCheck className="w-8 h-8 text-purple-600" />
+              <div className="w-16 h-16 rounded-2xl bg-indigo-100 flex items-center justify-center mx-auto mb-6">
+                <FileCheck className="w-8 h-8 text-indigo-600" />
               </div>
               <div className="font-display font-bold text-4xl text-slate-900 mb-2">256-bit</div>
               <div className="text-slate-600">AES encryption</div>
@@ -1003,7 +1003,7 @@ export function MarketingHome() {
       {/* ═══════════════════════════════════════════════════════════════════
           11. FINAL CTA - Close the deal
       ═══════════════════════════════════════════════════════════════════ */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-purple-600 via-purple-700 to-purple-800 relative overflow-hidden">
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-600 via-purple-700 to-indigo-800 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div
             className="absolute inset-0"
@@ -1017,13 +1017,13 @@ export function MarketingHome() {
           <h2 className="font-display font-black text-4xl sm:text-5xl lg:text-6xl mb-6 text-white leading-tight">
             Ready to automate your market reports?
           </h2>
-          <p className="text-xl text-purple-100 mb-8 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl text-indigo-100 mb-8 max-w-3xl mx-auto leading-relaxed">
             Join 1,200+ agents who recovered 150+ hours per year. Start your free trial today.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button
               size="lg"
-              className="bg-white text-purple-700 hover:bg-purple-50 h-14 px-10 text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all font-semibold"
+              className="bg-white text-indigo-700 hover:bg-indigo-50 h-14 px-10 text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all font-semibold"
               asChild
             >
               <Link href="/register">
@@ -1040,7 +1040,7 @@ export function MarketingHome() {
               <a href="mailto:sales@trendyreports.com">Talk to Sales</a>
             </Button>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-6 mt-8 text-sm text-purple-100">
+          <div className="flex flex-wrap items-center justify-center gap-6 mt-8 text-sm text-indigo-100">
             <div className="flex items-center gap-2">
               <Check className="w-4 h-4" />
               <span>No credit card required</span>

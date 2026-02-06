@@ -54,8 +54,8 @@ export default function SecurityPage() {
       {/* Hero */}
       <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[800px] mx-auto text-center">
-          <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <Shield className="w-8 h-8 text-purple-600" />
+          <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Shield className="w-8 h-8 text-indigo-600" />
           </div>
           <h1 className="font-display font-semibold text-4xl sm:text-5xl text-slate-900 mb-6">
             Security at TrendyReports
@@ -77,8 +77,8 @@ export default function SecurityPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {securityFeatures.map((feature) => (
               <div key={feature.title} className="bg-white rounded-xl p-6 border border-slate-200">
-                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4">
-                  <feature.icon className="w-6 h-6 text-purple-600" />
+                <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mb-4">
+                  <feature.icon className="w-6 h-6 text-indigo-600" />
                 </div>
                 <h3 className="font-display font-semibold text-lg text-slate-900 mb-2">
                   {feature.title}
@@ -141,7 +141,7 @@ export default function SecurityPage() {
                 </div>
               </div>
             </div>
-            <div className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-2xl p-8 text-white">
+            <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl p-8 text-white">
               <h3 className="font-display font-semibold text-xl mb-6">Compliance & Certifications</h3>
               <div className="space-y-4">
                 {certifications.map((cert) => (
@@ -151,7 +151,7 @@ export default function SecurityPage() {
                     </div>
                     <div>
                       <div className="font-semibold">{cert.name}</div>
-                      <div className="text-purple-200 text-sm">{cert.description}</div>
+                      <div className="text-indigo-200 text-sm">{cert.description}</div>
                     </div>
                   </div>
                 ))}

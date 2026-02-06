@@ -1,49 +1,33 @@
-import { Skeleton } from "@/components/ui/skeleton"
-
 export default function ReportsLoading() {
   return (
-    <div className="space-y-6">
-      {/* Page header */}
+    <div className="space-y-5">
+      {/* Header skeleton */}
       <div className="flex items-center justify-between">
         <div>
-          <Skeleton className="h-8 w-44" />
-          <Skeleton className="h-4 w-64 mt-2" />
+          <div className="h-6 w-40 bg-muted rounded-md animate-pulse" />
+          <div className="h-3.5 w-64 bg-muted rounded-md animate-pulse mt-1.5" />
         </div>
-        <Skeleton className="h-9 w-32 rounded-md" />
+        <div className="h-9 w-28 bg-muted rounded-lg animate-pulse" />
       </div>
 
-      {/* Table */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
-        {/* Search bar */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
-          <Skeleton className="h-8 w-64 rounded-md" />
-          <Skeleton className="h-8 w-20 rounded-md" />
-        </div>
-
-        {/* Table header */}
-        <div className="px-4 py-3 border-b border-border bg-muted/30">
-          <div className="flex items-center gap-4">
-            <Skeleton className="h-3 w-32" />
-            <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-3 w-20" />
-            <Skeleton className="h-3 w-16 ml-auto" />
+      {/* Table skeleton */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-[var(--shadow-card)]">
+        <div className="px-4 py-2.5 border-b border-border bg-muted/30">
+          <div className="flex gap-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-3 w-20 bg-muted rounded animate-pulse" />
+            ))}
           </div>
         </div>
-
-        {/* Table rows */}
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="px-4 py-4 border-b border-border last:border-0 flex items-center gap-4">
-            <Skeleton className="h-4 w-36" />
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-5 w-16 rounded-full ml-auto" />
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="px-4 py-3.5 border-b border-border/50 flex gap-4">
+            {Array.from({ length: 5 }).map((_, j) => (
+              <div key={j} className="h-4 w-24 bg-muted rounded animate-pulse" />
+            ))}
           </div>
         ))}
-
-        {/* Pagination */}
-        <div className="px-4 py-3 border-t border-border flex items-center justify-between">
-          <Skeleton className="h-3 w-32" />
-          <Skeleton className="h-8 w-48" />
+        <div className="px-4 py-2.5 border-t border-border bg-muted/20">
+          <div className="h-3 w-32 bg-muted rounded animate-pulse" />
         </div>
       </div>
     </div>

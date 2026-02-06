@@ -1,50 +1,55 @@
-import { Skeleton } from "@/components/ui/skeleton"
-
 export default function DashboardLoading() {
   return (
-    <div className="space-y-6">
-      {/* Page header */}
-      <div>
-        <Skeleton className="h-8 w-40" />
-        <Skeleton className="h-4 w-64 mt-2" />
+    <div className="space-y-5">
+      {/* Header skeleton */}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="h-6 w-40 bg-muted rounded-md animate-pulse" />
+          <div className="h-3.5 w-64 bg-muted rounded-md animate-pulse mt-1.5" />
+        </div>
+        <div className="h-9 w-28 bg-muted rounded-lg animate-pulse" />
       </div>
 
-      {/* Metric cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Metric cards skeleton */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-card border border-border rounded-xl p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <Skeleton className="h-3 w-20" />
-              <Skeleton className="h-8 w-8 rounded-lg" />
-            </div>
-            <Skeleton className="h-8 w-16 mb-1" />
-            <Skeleton className="h-3 w-28" />
+          <div key={i} className="bg-card border border-border rounded-xl p-4 shadow-[var(--shadow-card)]">
+            <div className="h-3 w-16 bg-muted rounded animate-pulse mb-3" />
+            <div className="h-7 w-12 bg-muted rounded animate-pulse" />
           </div>
         ))}
       </div>
 
       {/* Two-column content area */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent reports */}
-        <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-border">
-            <Skeleton className="h-5 w-32" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Activity table skeleton */}
+        <div className="lg:col-span-2 bg-card border border-border rounded-xl overflow-hidden shadow-[var(--shadow-card)]">
+          <div className="px-4 py-3 border-b border-border">
+            <div className="h-4 w-32 bg-muted rounded animate-pulse" />
           </div>
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="px-5 py-3 border-b border-border last:border-0 flex items-center justify-between">
-              <div className="space-y-1.5">
-                <Skeleton className="h-4 w-36" />
-                <Skeleton className="h-3 w-24" />
+            <div key={i} className="px-4 py-3.5 border-b border-border/50 last:border-0 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-muted rounded-lg animate-pulse" />
+                <div>
+                  <div className="h-4 w-32 bg-muted rounded animate-pulse mb-1" />
+                  <div className="h-3 w-20 bg-muted rounded animate-pulse" />
+                </div>
               </div>
-              <Skeleton className="h-5 w-16 rounded-full" />
+              <div className="h-5 w-16 bg-muted rounded-full animate-pulse" />
             </div>
           ))}
         </div>
 
-        {/* Activity chart */}
-        <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
-          <Skeleton className="h-5 w-32 mb-4" />
-          <Skeleton className="h-48 w-full rounded-lg" />
+        {/* Sidebar skeleton */}
+        <div className="lg:col-span-1 bg-card border border-border rounded-xl p-4 shadow-[var(--shadow-card)]">
+          <div className="h-4 w-24 bg-muted rounded animate-pulse mb-4" />
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 mb-3">
+              <div className="w-5 h-5 bg-muted rounded animate-pulse" />
+              <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+            </div>
+          ))}
         </div>
       </div>
     </div>

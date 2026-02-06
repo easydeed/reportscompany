@@ -91,7 +91,7 @@ export default function DocsPage() {
       {/* Hero */}
       <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[800px] mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full mb-6 text-sm font-medium">
+          <div className="inline-flex items-center gap-2 bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full mb-6 text-sm font-medium">
             <Code className="w-4 h-4" />
             Developer Documentation
           </div>
@@ -105,14 +105,14 @@ export default function DocsPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
               href="#quickstart"
-              className="inline-flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white font-medium px-6 py-3 rounded-lg transition-colors"
+              className="inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-lg transition-colors"
             >
               Get Started
               <ArrowRight className="w-4 h-4 ml-2" />
             </a>
             <a
               href="mailto:api@trendyreports.com?subject=API Access Request"
-              className="inline-flex items-center justify-center border border-slate-300 hover:border-purple-300 hover:bg-purple-50 text-slate-700 font-medium px-6 py-3 rounded-lg transition-colors"
+              className="inline-flex items-center justify-center border border-slate-300 hover:border-indigo-300 hover:bg-indigo-50 text-slate-700 font-medium px-6 py-3 rounded-lg transition-colors"
             >
               Request API Access
             </a>
@@ -126,8 +126,8 @@ export default function DocsPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((feature) => (
               <div key={feature.title} className="bg-white rounded-xl p-6 border border-slate-200">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                  <feature.icon className="w-5 h-5 text-purple-600" />
+                <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
+                  <feature.icon className="w-5 h-5 text-indigo-600" />
                 </div>
                 <h3 className="font-semibold text-slate-900 mb-2">{feature.title}</h3>
                 <p className="text-slate-600 text-sm">{feature.description}</p>
@@ -165,7 +165,7 @@ export default function DocsPage() {
                 ID that you can use to retrieve the PDF.
               </p>
               <div className="bg-slate-900 rounded-lg p-4 font-mono text-sm text-slate-300 overflow-x-auto">
-                <span className="text-purple-400">curl</span> -X POST \<br />
+                <span className="text-indigo-400">curl</span> -X POST \<br />
                 {"  "}https://api.trendyreports.com/v1/reports/generate \<br />
                 {"  "}-H{" "}
                 <span className="text-green-400">"Authorization: Bearer tr_live_xxx"</span> \<br />
@@ -217,7 +217,7 @@ export default function DocsPage() {
 
           <p className="text-center text-slate-600 mt-6">
             Full API reference documentation coming soon.{" "}
-            <a href="mailto:api@trendyreports.com" className="text-purple-600 hover:underline">
+            <a href="mailto:api@trendyreports.com" className="text-indigo-600 hover:underline">
               Contact us
             </a>{" "}
             for early access.
@@ -266,7 +266,7 @@ export default function DocsPage() {
               },
             ].map((type) => (
               <div key={type.name} className="bg-white rounded-xl p-6 border border-slate-200">
-                <code className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded mb-3 inline-block">
+                <code className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded mb-3 inline-block">
                   {type.name}
                 </code>
                 <h3 className="font-semibold text-slate-900 mb-2">{type.title}</h3>
@@ -314,18 +314,18 @@ export default function DocsPage() {
                 <br />
                 {"{"}
                 <br />
-                {"  "}<span className="text-purple-400">"event"</span>:{" "}
+                {"  "}<span className="text-indigo-400">"event"</span>:{" "}
                 <span className="text-green-400">"report.completed"</span>,
                 <br />
-                {"  "}<span className="text-purple-400">"data"</span>: {"{"}
+                {"  "}<span className="text-indigo-400">"data"</span>: {"{"}
                 <br />
-                {"    "}<span className="text-purple-400">"report_id"</span>:{" "}
+                {"    "}<span className="text-indigo-400">"report_id"</span>:{" "}
                 <span className="text-green-400">"rpt_abc123"</span>,
                 <br />
-                {"    "}<span className="text-purple-400">"pdf_url"</span>:{" "}
+                {"    "}<span className="text-indigo-400">"pdf_url"</span>:{" "}
                 <span className="text-green-400">"https://..."</span>,
                 <br />
-                {"    "}<span className="text-purple-400">"created_at"</span>:{" "}
+                {"    "}<span className="text-indigo-400">"created_at"</span>:{" "}
                 <span className="text-green-400">"2025-12-17T..."</span>
                 <br />
                 {"  }"}
@@ -349,14 +349,14 @@ export default function DocsPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
               href="mailto:api@trendyreports.com?subject=API Access Request"
-              className="inline-flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white font-medium px-6 py-3 rounded-lg transition-colors"
+              className="inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-lg transition-colors"
             >
               <Mail className="w-5 h-5 mr-2" />
               Request API Access
             </a>
             <Link
               href="/login"
-              className="inline-flex items-center justify-center border border-slate-300 hover:border-purple-300 hover:bg-purple-50 text-slate-700 font-medium px-6 py-3 rounded-lg transition-colors"
+              className="inline-flex items-center justify-center border border-slate-300 hover:border-indigo-300 hover:bg-indigo-50 text-slate-700 font-medium px-6 py-3 rounded-lg transition-colors"
             >
               Start Free Trial
             </Link>

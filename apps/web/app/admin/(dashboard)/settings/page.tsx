@@ -133,7 +133,7 @@ export default function SettingsPage() {
         <Card className="bg-white border-slate-200 shadow-sm">
           <CardHeader>
             <CardTitle className="text-slate-900 flex items-center gap-2">
-              <Activity className="h-5 w-5 text-violet-500" />
+              <Activity className="h-5 w-5 text-indigo-500" />
               Live System Health
             </CardTitle>
             <CardDescription className="text-slate-500">
@@ -323,7 +323,7 @@ export default function SettingsPage() {
                   {stats.growth?.map((item: any) => (
                     <div key={item.month} className="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-200">
                       <span className="text-slate-700">{item.month}</span>
-                      <Badge className="bg-violet-100 text-violet-700">+{item.new_accounts} accounts</Badge>
+                      <Badge className="bg-indigo-100 text-indigo-700">+{item.new_accounts} accounts</Badge>
                     </div>
                   ))}
                 </div>
@@ -343,7 +343,7 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-violet-600 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-sm">SR</span>
                 </div>
                 <div>
@@ -382,7 +382,7 @@ export default function SettingsPage() {
 
             <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-sm">ST</span>
                 </div>
                 <div>

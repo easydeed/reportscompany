@@ -11,7 +11,7 @@
  */
 
 // Default TrendyReports brand colors
-const DEFAULT_PRIMARY_COLOR = "#7C3AED";
+const DEFAULT_PRIMARY_COLOR = "#4F46E5";
 const DEFAULT_ACCENT_COLOR = "#F26B2B";
 
 /**

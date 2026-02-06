@@ -49,12 +49,12 @@ export default function AdminLeadPagesMetrics() {
     }
   };
 
-  const COLORS = ['#8B5CF6', '#EC4899', '#F59E0B', '#10B981'];
+  const COLORS = ['#818CF8', '#EC4899', '#F59E0B', '#10B981'];
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <RefreshCw className="w-8 h-8 animate-spin text-violet-600" />
+        <RefreshCw className="w-8 h-8 animate-spin text-indigo-600" />
       </div>
     );
   }
@@ -117,7 +117,7 @@ export default function AdminLeadPagesMetrics() {
                 <Line 
                   type="monotone" 
                   dataKey="reports_requested" 
-                  stroke="#8B5CF6" 
+                  stroke="#818CF8" 
                   strokeWidth={2}
                   name="Reports"
                 />
@@ -176,9 +176,9 @@ export default function AdminLeadPagesMetrics() {
                 backgroundColor: `rgba(139, 92, 246, ${0.1 + (step.pct / 100) * 0.3})` 
               }}
             >
-              <p className="text-2xl font-bold text-violet-700">{step.count}</p>
+              <p className="text-2xl font-bold text-indigo-700">{step.count}</p>
               <p className="text-xs text-gray-600 mt-1">{step.stage}</p>
-              <p className="text-xs text-violet-600 font-medium">{step.pct}%</p>
+              <p className="text-xs text-indigo-600 font-medium">{step.pct}%</p>
             </div>
           )) || <p className="col-span-6 text-center text-gray-500">No data yet</p>}
         </div>
@@ -261,7 +261,7 @@ export default function AdminLeadPagesMetrics() {
                     <Phone className="w-4 h-4 text-green-600" />
                   )}
                   {report.has_pdf && (
-                    <Download className="w-4 h-4 text-violet-600" />
+                    <Download className="w-4 h-4 text-indigo-600" />
                   )}
                 </div>
               </div>
@@ -290,7 +290,7 @@ function MetricCard({
   highlight?: boolean;
 }) {
   return (
-    <Card className={`p-4 ${highlight ? 'ring-2 ring-violet-200 bg-violet-50' : ''}`}>
+    <Card className={`p-4 ${highlight ? 'ring-2 ring-violet-200 bg-indigo-50' : ''}`}>
       <div className="flex items-center gap-2 text-gray-600 mb-2">
         {icon}
         <span className="text-sm">{label}</span>
