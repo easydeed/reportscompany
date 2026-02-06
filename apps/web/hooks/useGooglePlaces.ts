@@ -42,17 +42,31 @@ function loadGoogleMapsScript(): Promise<void> {
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   if (!apiKey) {
+    console.error("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is not configured");
     return Promise.reject(new Error("Google Maps API key not configured"));
   }
 
-  // Start loading
+  console.log("Loading Google Maps script...");
+
+  // Start loading - use callback instead of loading=async for reliable initialization
   scriptLoadPromise = new Promise((resolve, reject) => {
+    // Define callback function that Google will call when ready
+    const callbackName = `initGoogleMaps_${Date.now()}`;
+    (window as any)[callbackName] = () => {
+      console.log("Google Maps callback fired, API ready");
+      delete (window as any)[callbackName];
+      resolve();
+    };
+
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=${callbackName}`;
     script.async = true;
     script.defer = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Google Maps script"));
+    script.onerror = () => {
+      console.error("Failed to load Google Maps script");
+      delete (window as any)[callbackName];
+      reject(new Error("Failed to load Google Maps script"));
+    };
     document.head.appendChild(script);
   });
 
