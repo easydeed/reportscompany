@@ -208,15 +208,16 @@
    ----------------------------------------------------------------------------- #}
 {% macro comp_card(comp, index=1) %}
 <div class="comp-card">
+  {# Photo FIRST, then header — matches V0 design: image on top, header bar below #}
+  {% if comp.photo_url or comp.map_image_url %}
+  <div class="comp-image">
+    <img src="{{ comp.photo_url | default(comp.map_image_url) }}" alt="{{ comp.address }}">
+  </div>
+  {% endif %}
   <div class="comp-card-header">
     <span class="comp-number">{{ index }}</span>
     <span class="comp-price">{{ comp.sale_price | format_currency }}</span>
   </div>
-  {% if comp.map_image_url %}
-  <div class="comp-image">
-    <img src="{{ comp.map_image_url }}" alt="{{ comp.address }}">
-  </div>
-  {% endif %}
   <div class="comp-details">
     <h4 class="comp-address">{{ comp.address }}</h4>
     <div class="comp-meta">
