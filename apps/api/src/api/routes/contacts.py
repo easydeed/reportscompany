@@ -45,6 +45,7 @@ def list_contacts(request: Request):
     List all contacts for the current account.
     
     Returns contacts with their group memberships for the People view.
+    Optimized with a single query using LEFT JOIN and array_agg.
     """
     account_id = getattr(request.state, "account_id", None)
     if not account_id:
@@ -53,39 +54,37 @@ def list_contacts(request: Request):
     with db_conn() as (conn, cur):
         set_rls((conn, cur), account_id)
         
-        # Get contacts
+        # Single query with LEFT JOIN to get contacts + groups in one round trip
         cur.execute("""
             SELECT 
-                id::text,
-                account_id::text,
-                name,
-                email,
-                type,
-                phone,
-                notes,
-                created_at,
-                updated_at
-            FROM contacts
-            WHERE account_id = %s::uuid
-            ORDER BY created_at DESC
+                c.id::text,
+                c.account_id::text,
+                c.name,
+                c.email,
+                c.type,
+                c.phone,
+                c.notes,
+                c.created_at,
+                c.updated_at,
+                COALESCE(
+                    json_agg(
+                        json_build_object('id', cg.id::text, 'name', cg.name)
+                    ) FILTER (WHERE cg.id IS NOT NULL),
+                    '[]'::json
+                ) AS groups
+            FROM contacts c
+            LEFT JOIN contact_group_members cgm 
+                ON cgm.member_type = 'contact' 
+                AND cgm.member_id = c.id 
+                AND cgm.account_id = c.account_id
+            LEFT JOIN contact_groups cg 
+                ON cg.id = cgm.group_id
+            WHERE c.account_id = %s::uuid
+            GROUP BY c.id, c.account_id, c.name, c.email, c.type, c.phone, c.notes, c.created_at, c.updated_at
+            ORDER BY c.created_at DESC
         """, (account_id,))
         
         contacts = list(fetchall_dicts(cur))
-        
-        # For each contact, get their group memberships
-        for contact in contacts:
-            cur.execute("""
-                SELECT 
-                    cg.id::text,
-                    cg.name
-                FROM contact_group_members cgm
-                JOIN contact_groups cg ON cgm.group_id = cg.id
-                WHERE cgm.member_type = 'contact'
-                  AND cgm.member_id = %s::uuid
-                  AND cgm.account_id = %s::uuid
-            """, (contact["id"], account_id))
-            
-            contact["groups"] = list(fetchall_dicts(cur))
         
     return {"contacts": contacts}
 

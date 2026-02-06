@@ -273,3 +273,27 @@ html {
 .dark * {
   scrollbar-color: #475569 transparent;
 }
+
+/* ── Sidebar Scrollbar (Dark) ── */
+/* Subtle dark scrollbar for the sidebar that blends with the dark background */
+[data-sidebar] ::-webkit-scrollbar {
+  width: 6px;
+}
+
+[data-sidebar] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-sidebar] ::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+
+[data-sidebar] ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+[data-sidebar] * {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
