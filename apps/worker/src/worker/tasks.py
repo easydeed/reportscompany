@@ -753,7 +753,7 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                                                 a.primary_color, 
                                                 a.secondary_color
                                             FROM accounts a
-                                            LEFT JOIN users u ON u.active_account_id = a.id
+                                            LEFT JOIN users u ON u.account_id = a.id
                                             WHERE a.id = %s::uuid
                                             LIMIT 1
                                         """, (account_id,))

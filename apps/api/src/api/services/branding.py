@@ -280,7 +280,7 @@ def _get_regular_user_brand(cur, account_id: str, account_name: str) -> Brand:
                 a.website_url,
                 u.avatar_url
             FROM accounts a
-            LEFT JOIN users u ON u.active_account_id = a.id
+            LEFT JOIN users u ON u.account_id = a.id
             WHERE a.id = %s::uuid
             LIMIT 1
         """, (account_id,))
