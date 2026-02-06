@@ -202,6 +202,35 @@
 {% endmacro %}
 
 {# -----------------------------------------------------------------------------
+   KEY STATS BAR
+   Prominent colored bar for property details page (Beds/Baths/SqFt/Year)
+   Usage: {{ macros.property_key_stats_bar(property) }}
+   ----------------------------------------------------------------------------- #}
+{% macro property_key_stats_bar(property) %}
+<div class="key-stats-bar">
+  <div class="key-stat-item">
+    <span class="key-stat-value">{{ property.bedrooms }}</span>
+    <span class="key-stat-label">Beds</span>
+  </div>
+  <div class="key-stat-divider"></div>
+  <div class="key-stat-item">
+    <span class="key-stat-value">{{ property.bathrooms }}</span>
+    <span class="key-stat-label">Baths</span>
+  </div>
+  <div class="key-stat-divider"></div>
+  <div class="key-stat-item">
+    <span class="key-stat-value">{{ property.sqft | format_number }}</span>
+    <span class="key-stat-label">Sq Ft</span>
+  </div>
+  <div class="key-stat-divider"></div>
+  <div class="key-stat-item">
+    <span class="key-stat-value">{{ property.year_built }}</span>
+    <span class="key-stat-label">Year Built</span>
+  </div>
+</div>
+{% endmacro %}
+
+{# -----------------------------------------------------------------------------
    COMP CARD
    Individual comparable property card
    Usage: {{ macros.comp_card(comp, index) }}
