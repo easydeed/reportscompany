@@ -7,17 +7,12 @@ import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import {
-  User,
-  Building,
-  Phone,
-  Globe,
   Mail,
-  Briefcase,
   Save,
   Loader2,
   CheckCircle2,
-  Upload,
   X,
+  Camera,
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { ImageUpload } from "@/components/ui/image-upload"
@@ -167,43 +162,47 @@ export default function ProfilePage() {
       <div className="flex items-center justify-center py-24">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading profile...</p>
+          <p className="text-muted-foreground text-sm">Loading profile...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-8 max-w-2xl">
-      {/* Section Header */}
-      <div>
-        <h2 className="text-lg font-semibold">Profile</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Your personal information. This appears on your reports and emails.
+    <div className="max-w-3xl">
+      {/* Page Header */}
+      <div className="mb-6">
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">Profile</h1>
+        <p className="text-[13px] text-muted-foreground mt-0.5">
+          Your personal information appears on reports and emails.
         </p>
       </div>
 
-      {/* Photo Section */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-[var(--shadow-card)]">
-        <div className="px-5 py-3.5 border-b border-border bg-muted/20">
-          <h3 className="text-[13px] font-semibold text-foreground">Photo</h3>
-        </div>
-        <div className="p-5">
-          <div className="flex items-start gap-6">
-            <Avatar className="w-24 h-24 border-4 border-background shadow-lg">
-              <AvatarImage src={formData.avatar_url || undefined} />
-              <AvatarFallback className="text-2xl bg-indigo-600 text-white">
-                {getInitials()}
-              </AvatarFallback>
-            </Avatar>
-
-            <div className="flex-1 space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Your photo appears on reports and emails.
+      {/* Main Card */}
+      <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
+        {/* Avatar Section */}
+        <div className="p-6 border-b border-border">
+          <div className="flex items-center gap-5">
+            <div className="relative group">
+              <Avatar className="w-20 h-20 border-2 border-border shadow-sm">
+                <AvatarImage src={formData.avatar_url || undefined} />
+                <AvatarFallback className="text-xl font-semibold bg-gradient-to-br from-indigo-500 to-indigo-600 text-white">
+                  {getInitials()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <Camera className="w-5 h-5 text-white" />
+              </div>
+            </div>
+            
+            <div className="flex-1">
+              <h3 className="font-medium text-foreground">Profile Photo</h3>
+              <p className="text-xs text-muted-foreground mt-0.5 mb-3">
+                Recommended: Square image, at least 400×400px
               </p>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <ImageUpload
-                  label="Upload Photo"
+                  label="Upload"
                   value={formData.avatar_url}
                   onChange={(url) => setFormData({ ...formData, avatar_url: url })}
                   assetType="headshot"
@@ -213,150 +212,160 @@ export default function ProfilePage() {
                 />
                 {formData.avatar_url && (
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setFormData({ ...formData, avatar_url: null })}
+                    className="text-muted-foreground hover:text-destructive"
                   >
-                    <X className="w-4 h-4 mr-1" />
-                    Remove
+                    <X className="w-4 h-4" />
                   </Button>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Recommended: Square image, at least 400×400px
-              </p>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Personal Information */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-[var(--shadow-card)]">
-        <div className="px-5 py-3.5 border-b border-border bg-muted/20">
-          <h3 className="text-[13px] font-semibold text-foreground">Personal Information</h3>
-        </div>
-        <div className="p-5">
-        <div className="space-y-4">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="first_name">First Name</Label>
-              <Input
-                id="first_name"
-                value={formData.first_name}
-                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                placeholder="Jerry"
-                className="mt-1.5"
-              />
+        {/* Form Sections */}
+        <div className="divide-y divide-border">
+          {/* Personal Information */}
+          <div className="p-6">
+            <h3 className="text-[13px] font-semibold text-foreground uppercase tracking-wide mb-4">
+              Personal Information
+            </h3>
+            <div className="grid gap-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="first_name" className="text-xs font-medium text-muted-foreground">
+                    First Name
+                  </Label>
+                  <Input
+                    id="first_name"
+                    value={formData.first_name}
+                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                    placeholder="Jerry"
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="last_name" className="text-xs font-medium text-muted-foreground">
+                    Last Name
+                  </Label>
+                  <Input
+                    id="last_name"
+                    value={formData.last_name}
+                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                    placeholder="Mendoza"
+                    className="h-9"
+                  />
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="job_title" className="text-xs font-medium text-muted-foreground">
+                    Job Title
+                  </Label>
+                  <Input
+                    id="job_title"
+                    value={formData.job_title}
+                    onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
+                    placeholder="Real Estate Agent"
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="company_name" className="text-xs font-medium text-muted-foreground">
+                    Company
+                  </Label>
+                  <Input
+                    id="company_name"
+                    value={formData.company_name}
+                    onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
+                    placeholder="Century 21 Masters"
+                    className="h-9"
+                  />
+                </div>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="last_name">Last Name</Label>
-              <Input
-                id="last_name"
-                value={formData.last_name}
-                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                placeholder="Mendoza"
-                className="mt-1.5"
-              />
+          </div>
+
+          {/* Contact Information */}
+          <div className="p-6">
+            <h3 className="text-[13px] font-semibold text-foreground uppercase tracking-wide mb-4">
+              Contact Information
+            </h3>
+            <div className="grid gap-4">
+              {/* Email (read-only) */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Email Address</Label>
+                <div className="flex items-center gap-3 px-3 py-2 h-9 bg-muted/50 rounded-md border border-border">
+                  <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-sm text-foreground flex-1 truncate">{profile?.email}</span>
+                  {profile?.email_verified && (
+                    <Badge variant="secondary" className="text-emerald-600 bg-emerald-50 border-emerald-200 text-[10px] px-1.5 py-0">
+                      <CheckCircle2 className="w-3 h-3 mr-0.5" />
+                      Verified
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Change your email in{" "}
+                  <a href="/app/settings/security" className="text-indigo-600 hover:underline">
+                    Security settings
+                  </a>
+                </p>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="phone" className="text-xs font-medium text-muted-foreground">
+                    Phone Number
+                  </Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={handlePhoneChange}
+                    placeholder="(626) 555-1234"
+                    maxLength={14}
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="website" className="text-xs font-medium text-muted-foreground">
+                    Website
+                  </Label>
+                  <Input
+                    id="website"
+                    type="url"
+                    value={formData.website}
+                    onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                    placeholder="https://jerry.century21masters.com"
+                    className="h-9"
+                  />
+                </div>
+              </div>
             </div>
           </div>
-
-          <div>
-            <Label htmlFor="job_title">Job Title</Label>
-            <Input
-              id="job_title"
-              value={formData.job_title}
-              onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
-              placeholder="Real Estate Agent"
-              className="mt-1.5"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="company_name">Company</Label>
-            <Input
-              id="company_name"
-              value={formData.company_name}
-              onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-              placeholder="Century 21 Masters"
-              className="mt-1.5"
-            />
-          </div>
         </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 bg-muted/30 border-t border-border flex justify-end">
+          <Button onClick={saveProfile} disabled={saving} size="sm">
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-1.5" />
+                Save Changes
+              </>
+            )}
+          </Button>
         </div>
-      </div>
-
-      {/* Contact Information */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-[var(--shadow-card)]">
-        <div className="px-5 py-3.5 border-b border-border bg-muted/20">
-          <h3 className="text-[13px] font-semibold text-foreground">Contact Information</h3>
-        </div>
-        <div className="p-5 space-y-4">
-          {/* Email (read-only) */}
-          <div>
-            <Label>Email</Label>
-            <div className="mt-1.5 flex items-center gap-3 px-3 py-2.5 bg-muted/50 rounded-lg border">
-              <Mail className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm flex-1">{profile?.email}</span>
-              {profile?.email_verified && (
-                <Badge variant="secondary" className="text-green-600 bg-green-50 border-green-200">
-                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                  Verified
-                </Badge>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1.5">
-              This is your login email. Change it in{" "}
-              <a href="/app/settings/security" className="text-indigo-600 hover:underline">
-                Security settings
-              </a>
-              .
-            </p>
-          </div>
-
-          <div>
-            <Label htmlFor="phone">Phone</Label>
-            <Input
-              id="phone"
-              type="tel"
-              value={formData.phone}
-              onChange={handlePhoneChange}
-              placeholder="(626) 555-1234"
-              maxLength={14}
-              className="mt-1.5"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="website">Website</Label>
-            <Input
-              id="website"
-              type="url"
-              value={formData.website}
-              onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-              placeholder="https://jerry.century21masters.com"
-              className="mt-1.5"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <Button onClick={saveProfile} disabled={saving} size="lg">
-          {saving ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="w-4 h-4 mr-2" />
-              Save Changes
-            </>
-          )}
-        </Button>
       </div>
     </div>
   )
 }
-

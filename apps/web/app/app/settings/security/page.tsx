@@ -24,6 +24,9 @@ import {
   EyeOff,
   CheckCircle2,
   AlertCircle,
+  Shield,
+  KeyRound,
+  Trash2,
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 
@@ -233,271 +236,283 @@ export default function SecurityPage() {
       <div className="flex items-center justify-center py-24">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading security settings...</p>
+          <p className="text-muted-foreground text-sm">Loading security settings...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-8 max-w-2xl">
-      {/* Section Header */}
-      <div>
-        <h2 className="text-lg font-semibold">Security</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Manage your password and account security.
+    <div className="max-w-3xl">
+      {/* Page Header */}
+      <div className="mb-6">
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">Security</h1>
+        <p className="text-[13px] text-muted-foreground mt-0.5">
+          Manage your account security and authentication.
         </p>
       </div>
 
-      {/* Email Address Card */}
-      <div className="bg-card border rounded-xl p-6">
-        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
-          Email Address
-        </h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Your email is used to sign in and receive notifications.
-        </p>
+      <div className="space-y-4">
+        {/* Email & Password Card */}
+        <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
+          <div className="divide-y divide-border">
+            {/* Email Row */}
+            <div className="p-5 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
+                  <Mail className="w-5 h-5 text-indigo-600" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-medium text-foreground">Email Address</h3>
+                    {profile?.email_verified && (
+                      <Badge variant="secondary" className="text-emerald-600 bg-emerald-50 border-emerald-200 text-[10px] px-1.5 py-0">
+                        <CheckCircle2 className="w-3 h-3 mr-0.5" />
+                        Verified
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground truncate">{profile?.email}</p>
+                </div>
+              </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Mail className="w-5 h-5 text-muted-foreground" />
-            <div>
-              <p className="font-medium">{profile?.email}</p>
-              {profile?.email_verified && (
-                <Badge variant="secondary" className="text-green-600 bg-green-50 border-green-200 mt-1">
-                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                  Verified
-                </Badge>
-              )}
+              <Dialog open={emailModalOpen} onOpenChange={setEmailModalOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 flex-shrink-0">
+                    Change
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Change Email Address</DialogTitle>
+                    <DialogDescription>
+                      Enter your new email and confirm with your password.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-muted-foreground">New Email</Label>
+                      <Input
+                        type="email"
+                        value={newEmail}
+                        onChange={(e) => setNewEmail(e.target.value)}
+                        placeholder="newemail@example.com"
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-muted-foreground">Current Password</Label>
+                      <div className="relative">
+                        <Input
+                          type={showEmailPassword ? "text" : "password"}
+                          value={emailPassword}
+                          onChange={(e) => setEmailPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="h-9 pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowEmailPassword(!showEmailPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showEmailPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">Required to confirm this change</p>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" size="sm" onClick={() => setEmailModalOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button size="sm" onClick={changeEmail} disabled={savingEmail}>
+                      {savingEmail && <Loader2 className="w-4 h-4 animate-spin mr-1.5" />}
+                      Update Email
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {/* Password Row */}
+            <div className="p-5 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+                  <KeyRound className="w-5 h-5 text-slate-600" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-foreground">Password</h3>
+                  <p className="text-sm text-muted-foreground">{getPasswordLastChanged()}</p>
+                </div>
+              </div>
+
+              <Dialog open={passwordModalOpen} onOpenChange={setPasswordModalOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 flex-shrink-0">
+                    Change
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Change Password</DialogTitle>
+                    <DialogDescription>
+                      Enter your current password and choose a new one.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-muted-foreground">Current Password</Label>
+                      <div className="relative">
+                        <Input
+                          type={showCurrentPassword ? "text" : "password"}
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="h-9 pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-muted-foreground">New Password</Label>
+                      <div className="relative">
+                        <Input
+                          type={showNewPassword ? "text" : "password"}
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="h-9 pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">At least 8 characters</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-muted-foreground">Confirm New Password</Label>
+                      <div className="relative">
+                        <Input
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="h-9 pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      {newPassword && confirmPassword && newPassword !== confirmPassword && (
+                        <p className="text-[11px] text-destructive flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          Passwords don't match
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" size="sm" onClick={() => setPasswordModalOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button size="sm" onClick={changePassword} disabled={savingPassword}>
+                      {savingPassword && <Loader2 className="w-4 h-4 animate-spin mr-1.5" />}
+                      Update Password
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
+        </div>
 
-          <Dialog open={emailModalOpen} onOpenChange={setEmailModalOpen}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
-                Change Email
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Change Email Address</DialogTitle>
-                <DialogDescription>
-                  Enter your new email address and confirm with your password.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div>
-                  <Label>New Email</Label>
-                  <Input
-                    type="email"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                    placeholder="newemail@example.com"
-                    className="mt-1.5"
-                  />
+        {/* Danger Zone Card */}
+        <div className="bg-card border border-red-200 rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
+          <div className="px-5 py-3 border-b border-red-100 bg-red-50/50">
+            <h3 className="text-[13px] font-semibold text-red-700 uppercase tracking-wide flex items-center gap-2">
+              <Shield className="w-4 h-4" />
+              Danger Zone
+            </h3>
+          </div>
+          <div className="p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
+                  <Trash2 className="w-5 h-5 text-red-600" />
                 </div>
                 <div>
-                  <Label>Current Password</Label>
-                  <div className="relative mt-1.5">
-                    <Input
-                      type={showEmailPassword ? "text" : "password"}
-                      value={emailPassword}
-                      onChange={(e) => setEmailPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowEmailPassword(!showEmailPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showEmailPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">Required to confirm this change</p>
+                  <h3 className="text-sm font-medium text-foreground">Delete Account</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Permanently delete your account and all data.
+                  </p>
                 </div>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setEmailModalOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={changeEmail} disabled={savingEmail}>
-                  {savingEmail ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                  Update Email
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
 
-      {/* Password Card */}
-      <div className="bg-card border rounded-xl p-6">
-        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
-          Password
-        </h3>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Lock className="w-5 h-5 text-muted-foreground" />
-            <div>
-              <p className="font-medium">Password</p>
-              <p className="text-sm text-muted-foreground">{getPasswordLastChanged()}</p>
+              <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="destructive" size="sm">
+                    Delete Account
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2 text-red-600">
+                      <AlertTriangle className="w-5 h-5" />
+                      Delete Account
+                    </DialogTitle>
+                    <DialogDescription>
+                      This will permanently delete your account, all reports, schedules, and data. This cannot be undone.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-muted-foreground">
+                        Type DELETE to confirm
+                      </Label>
+                      <Input
+                        value={deleteConfirmText}
+                        onChange={(e) => setDeleteConfirmText(e.target.value)}
+                        placeholder="DELETE"
+                        className="h-9 font-mono"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" size="sm" onClick={() => setDeleteModalOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={deleteAccount}
+                      disabled={deleting || deleteConfirmText !== "DELETE"}
+                    >
+                      {deleting && <Loader2 className="w-4 h-4 animate-spin mr-1.5" />}
+                      Delete Account
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
-
-          <Dialog open={passwordModalOpen} onOpenChange={setPasswordModalOpen}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
-                Change Password
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Change Password</DialogTitle>
-                <DialogDescription>
-                  Enter your current password and choose a new one.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div>
-                  <Label>Current Password</Label>
-                  <div className="relative mt-1.5">
-                    <Input
-                      type={showCurrentPassword ? "text" : "password"}
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <Label>New Password</Label>
-                  <div className="relative mt-1.5">
-                    <Input
-                      type={showNewPassword ? "text" : "password"}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">At least 8 characters</p>
-                </div>
-                <div>
-                  <Label>Confirm New Password</Label>
-                  <div className="relative mt-1.5">
-                    <Input
-                      type={showConfirmPassword ? "text" : "password"}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  {newPassword && confirmPassword && newPassword !== confirmPassword && (
-                    <p className="text-xs text-destructive flex items-center gap-1 mt-1">
-                      <AlertCircle className="w-3 h-3" />
-                      Passwords don't match
-                    </p>
-                  )}
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setPasswordModalOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={changePassword} disabled={savingPassword}>
-                  {savingPassword ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                  Update Password
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-
-      {/* Danger Zone */}
-      <div className="bg-card border border-red-200 dark:border-red-900 rounded-xl p-6">
-        <h3 className="text-sm font-medium text-red-600 uppercase tracking-wider mb-4">
-          Danger Zone
-        </h3>
-
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-medium">Delete Account</p>
-            <p className="text-sm text-muted-foreground">
-              Permanently delete your account and all associated data.
-              <br />
-              This action cannot be undone.
-            </p>
-          </div>
-
-          <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
-            <DialogTrigger asChild>
-              <Button variant="destructive">Delete Account</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2 text-red-600">
-                  <AlertTriangle className="w-5 h-5" />
-                  Delete Account
-                </DialogTitle>
-                <DialogDescription>
-                  This will permanently delete your account, all reports, schedules, and data.
-                  This cannot be undone.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="py-4">
-                <Label>Type DELETE to confirm</Label>
-                <Input
-                  value={deleteConfirmText}
-                  onChange={(e) => setDeleteConfirmText(e.target.value)}
-                  placeholder="DELETE"
-                  className="mt-1.5"
-                />
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setDeleteModalOpen(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={deleteAccount}
-                  disabled={deleting || deleteConfirmText !== "DELETE"}
-                >
-                  {deleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                  Delete Account
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </div>
       </div>
     </div>
   )
 }
-

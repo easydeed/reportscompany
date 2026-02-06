@@ -5,11 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -20,17 +15,14 @@ import {
   Palette,
   FileText,
   Mail,
-  TestTube2,
-  ChevronDown,
-  ChevronUp,
   Save,
   Loader2,
   Download,
   Send,
   Check,
-  AlertCircle,
   Lightbulb,
   Sparkles,
+  Eye,
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { ImageUpload } from "@/components/ui/image-upload"
@@ -46,13 +38,6 @@ type BrandingData = {
   email_footer_logo_url: string | null
 }
 
-type AccordionState = {
-  colors: boolean
-  pdfLogos: boolean
-  emailLogos: boolean
-  testing: boolean
-}
-
 export default function BrandingPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -65,13 +50,6 @@ export default function BrandingPage() {
     pdf_footer_logo_url: null,
     email_header_logo_url: null,
     email_footer_logo_url: null,
-  })
-
-  const [accordion, setAccordion] = useState<AccordionState>({
-    colors: true,
-    pdfLogos: false,
-    emailLogos: false,
-    testing: false,
   })
 
   // Test branding state
@@ -280,505 +258,361 @@ export default function BrandingPage() {
       <div className="flex items-center justify-center py-24">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading branding settings...</p>
+          <p className="text-muted-foreground text-sm">Loading branding settings...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Section Header */}
-      <div className="flex items-center justify-between">
+    <div className="max-w-5xl">
+      {/* Page Header */}
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-lg font-semibold">Branding</h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">Branding</h1>
+          <p className="text-[13px] text-muted-foreground mt-0.5">
             Customize how your reports and emails look.
           </p>
         </div>
-        <Button onClick={save} disabled={saving}>
+        <Button onClick={save} disabled={saving} size="sm">
           {saving ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
               Saving...
             </>
           ) : (
             <>
-              <Save className="w-4 h-4 mr-2" />
+              <Save className="w-4 h-4 mr-1.5" />
               Save Changes
             </>
           )}
         </Button>
       </div>
 
-      {/* Two-column layout: Config + Preview */}
-      <div className="grid grid-cols-[1fr_380px] gap-8">
-        {/* Left: Configuration Accordions */}
-        <div className="space-y-3">
-          {/* Brand Colors Accordion */}
-          <Collapsible
-            open={accordion.colors}
-            onOpenChange={(open) => setAccordion({ ...accordion, colors: open })}
-          >
-            <div className="bg-card border rounded-xl overflow-hidden">
-              <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/30">
-                    <Palette className="w-4 h-4 text-indigo-600" />
-                  </div>
-                  <div className="text-left">
-                    <p className="font-medium">Brand Colors</p>
-                    {!accordion.colors && (
-                      <div className="flex items-center gap-2 mt-1">
-                        <div
-                          className="w-4 h-4 rounded border"
-                          style={{ backgroundColor: primaryColor }}
-                        />
-                        <span className="text-xs text-muted-foreground">{primaryColor}</span>
-                        <span className="text-muted-foreground">·</span>
-                        <div
-                          className="w-4 h-4 rounded border"
-                          style={{ backgroundColor: accentColor }}
-                        />
-                        <span className="text-xs text-muted-foreground">{accentColor}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {accordion.colors ? (
-                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                )}
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="p-4 pt-0 space-y-5 border-t">
-                  <p className="text-sm text-muted-foreground">
-                    These colors are used throughout your reports and emails.
-                  </p>
-
-                  <div>
-                    <Label>Primary Color</Label>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      Used for headers, ribbons, and backgrounds
-                    </p>
-                    <div className="flex gap-2">
-                      <div
-                        className="w-14 h-10 rounded-lg border-2 cursor-pointer relative shadow-sm flex-shrink-0"
-                        style={{ backgroundColor: primaryColor }}
-                      >
-                        <input
-                          type="color"
-                          value={primaryColor}
-                          onChange={(e) =>
-                            setBranding({ ...branding, primary_color: e.target.value })
-                          }
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        />
-                      </div>
-                      <Input
+      {/* Two-column layout */}
+      <div className="grid lg:grid-cols-[1fr_340px] gap-6">
+        {/* Left: Configuration */}
+        <div className="space-y-4">
+          {/* Brand Colors Card */}
+          <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
+            <div className="px-5 py-3 border-b border-border bg-muted/30 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                <Palette className="w-4 h-4 text-indigo-600" />
+              </div>
+              <div>
+                <h3 className="text-[13px] font-semibold text-foreground">Brand Colors</h3>
+                <p className="text-[11px] text-muted-foreground">Used throughout reports and emails</p>
+              </div>
+            </div>
+            <div className="p-5 space-y-5">
+              <div className="grid sm:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Primary Color</Label>
+                  <p className="text-[11px] text-muted-foreground -mt-1">Headers, ribbons, backgrounds</p>
+                  <div className="flex gap-2">
+                    <div
+                      className="w-12 h-9 rounded-lg border-2 border-border cursor-pointer relative shadow-sm flex-shrink-0 transition-shadow hover:shadow-md"
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      <input
+                        type="color"
                         value={primaryColor}
-                        onChange={(e) =>
-                          setBranding({ ...branding, primary_color: e.target.value })
-                        }
-                        className="font-mono text-sm uppercase"
-                        maxLength={7}
+                        onChange={(e) => setBranding({ ...branding, primary_color: e.target.value })}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       />
                     </div>
+                    <Input
+                      value={primaryColor}
+                      onChange={(e) => setBranding({ ...branding, primary_color: e.target.value })}
+                      className="font-mono text-sm uppercase h-9"
+                      maxLength={7}
+                    />
                   </div>
+                </div>
 
-                  {/* Gradient preview */}
-                  <div
-                    className="h-3 rounded-full"
-                    style={{
-                      background: `linear-gradient(90deg, ${primaryColor} 0%, ${accentColor} 100%)`,
-                    }}
-                  />
-
-                  <div>
-                    <Label>Accent Color</Label>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      Used for buttons, highlights, and call-to-actions
-                    </p>
-                    <div className="flex gap-2">
-                      <div
-                        className="w-14 h-10 rounded-lg border-2 cursor-pointer relative shadow-sm flex-shrink-0"
-                        style={{ backgroundColor: accentColor }}
-                      >
-                        <input
-                          type="color"
-                          value={accentColor}
-                          onChange={(e) =>
-                            setBranding({ ...branding, accent_color: e.target.value })
-                          }
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        />
-                      </div>
-                      <Input
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Accent Color</Label>
+                  <p className="text-[11px] text-muted-foreground -mt-1">Buttons, highlights, CTAs</p>
+                  <div className="flex gap-2">
+                    <div
+                      className="w-12 h-9 rounded-lg border-2 border-border cursor-pointer relative shadow-sm flex-shrink-0 transition-shadow hover:shadow-md"
+                      style={{ backgroundColor: accentColor }}
+                    >
+                      <input
+                        type="color"
                         value={accentColor}
-                        onChange={(e) =>
-                          setBranding({ ...branding, accent_color: e.target.value })
-                        }
-                        className="font-mono text-sm uppercase"
-                        maxLength={7}
+                        onChange={(e) => setBranding({ ...branding, accent_color: e.target.value })}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       />
                     </div>
+                    <Input
+                      value={accentColor}
+                      onChange={(e) => setBranding({ ...branding, accent_color: e.target.value })}
+                      className="font-mono text-sm uppercase h-9"
+                      maxLength={7}
+                    />
                   </div>
                 </div>
-              </CollapsibleContent>
-            </div>
-          </Collapsible>
+              </div>
 
-          {/* PDF Logos Accordion */}
-          <Collapsible
-            open={accordion.pdfLogos}
-            onOpenChange={(open) => setAccordion({ ...accordion, pdfLogos: open })}
-          >
-            <div className="bg-card border rounded-xl overflow-hidden">
-              <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="p-1.5 rounded-lg bg-red-100 dark:bg-red-900/30">
-                    <FileText className="w-4 h-4 text-red-600" />
-                  </div>
-                  <div className="text-left">
-                    <p className="font-medium">PDF Logos</p>
-                    {!accordion.pdfLogos && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Header {branding.pdf_header_logo_url ? "✓" : "○"} · Footer{" "}
-                        {branding.pdf_footer_logo_url ? "✓" : "○"}
-                      </p>
-                    )}
-                  </div>
+              {/* Gradient preview */}
+              <div
+                className="h-2 rounded-full"
+                style={{ background: `linear-gradient(90deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
+              />
+            </div>
+          </div>
+
+          {/* PDF Logos Card */}
+          <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
+            <div className="px-5 py-3 border-b border-border bg-muted/30 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
+                <FileText className="w-4 h-4 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-[13px] font-semibold text-foreground">PDF Logos</h3>
+                <p className="text-[11px] text-muted-foreground">Logos for downloadable PDF reports</p>
+              </div>
+            </div>
+            <div className="p-5">
+              <div className="grid sm:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Header Logo</Label>
+                  <p className="text-[11px] text-muted-foreground -mt-1">Light/white version for gradient</p>
+                  <ImageUpload
+                    label=""
+                    value={branding.pdf_header_logo_url}
+                    onChange={(url) => setBranding({ ...branding, pdf_header_logo_url: url })}
+                    assetType="logo"
+                    aspectRatio="wide"
+                    helpText="PNG/SVG, transparent bg"
+                  />
                 </div>
-                {accordion.pdfLogos ? (
-                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                )}
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="p-4 pt-0 space-y-5 border-t">
-                  <p className="text-sm text-muted-foreground">
-                    Logos used in downloadable PDF reports.
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Footer Logo</Label>
+                  <p className="text-[11px] text-muted-foreground -mt-1">Standard/dark version</p>
+                  <ImageUpload
+                    label=""
+                    value={branding.pdf_footer_logo_url}
+                    onChange={(url) => setBranding({ ...branding, pdf_footer_logo_url: url })}
+                    assetType="logo"
+                    aspectRatio="wide"
+                    helpText="PNG/SVG, transparent bg"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Email Logos Card */}
+          <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
+            <div className="px-5 py-3 border-b border-border bg-muted/30 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                <Mail className="w-4 h-4 text-indigo-600" />
+              </div>
+              <div>
+                <h3 className="text-[13px] font-semibold text-foreground">Email Logos</h3>
+                <p className="text-[11px] text-muted-foreground">Logos for email reports</p>
+              </div>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="grid sm:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Header Logo</Label>
+                  <ImageUpload
+                    label=""
+                    value={branding.email_header_logo_url}
+                    onChange={(url) => setBranding({ ...branding, email_header_logo_url: url })}
+                    assetType="logo"
+                    aspectRatio="wide"
+                    helpText=""
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Footer Logo</Label>
+                  <ImageUpload
+                    label=""
+                    value={branding.email_footer_logo_url}
+                    onChange={(url) => setBranding({ ...branding, email_footer_logo_url: url })}
+                    assetType="logo"
+                    aspectRatio="wide"
+                    helpText=""
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
+                <p className="text-[11px] text-amber-800 flex items-start gap-2">
+                  <Lightbulb className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  Email logos may need to differ from PDF logos due to email client rendering.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Test Branding Card */}
+          <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
+            <div className="px-5 py-3 border-b border-border bg-muted/30 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                <Eye className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="text-[13px] font-semibold text-foreground">Test Your Branding</h3>
+                <p className="text-[11px] text-muted-foreground">Download samples or send test email</p>
+              </div>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Report Type</Label>
+                <Select value={reportType} onValueChange={(v) => setReportType(v as ReportType)}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Select report type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {REPORT_TYPE_OPTIONS.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleDownloadPdf}
+                  disabled={isDownloadingPdf}
+                  variant="outline"
+                  size="sm"
+                  className={cn("flex-1", downloadSuccess === "pdf" && "border-emerald-500 text-emerald-600")}
+                >
+                  {isDownloadingPdf ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                  ) : downloadSuccess === "pdf" ? (
+                    <Check className="w-4 h-4 mr-1.5" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-1.5" />
+                  )}
+                  {downloadSuccess === "pdf" ? "Downloaded!" : "Sample PDF"}
+                </Button>
+
+                <Button
+                  onClick={handleDownloadJpg}
+                  disabled={isDownloadingJpg}
+                  variant="outline"
+                  size="sm"
+                  className={cn("flex-1", downloadSuccess === "jpg" && "border-emerald-500 text-emerald-600")}
+                >
+                  {isDownloadingJpg ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                  ) : downloadSuccess === "jpg" ? (
+                    <Check className="w-4 h-4 mr-1.5" />
+                  ) : (
+                    <Sparkles className="w-4 h-4 mr-1.5" />
+                  )}
+                  {downloadSuccess === "jpg" ? "Downloaded!" : "Social Image"}
+                </Button>
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-[10px] uppercase tracking-wider">
+                  <span className="bg-card px-2 text-muted-foreground">or</span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Send Test Email</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="email"
+                    value={testEmail}
+                    onChange={(e) => setTestEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    className="flex-1 h-9"
+                  />
+                  <Button
+                    onClick={handleSendTestEmail}
+                    disabled={isSending}
+                    size="sm"
+                    className={cn(sendSuccess && "bg-emerald-600 hover:bg-emerald-700")}
+                  >
+                    {isSending ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : sendSuccess ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+                {sendSuccess && (
+                  <p className="text-[11px] text-emerald-600 flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    Test email sent! Check your inbox.
                   </p>
-
-                  <div>
-                    <Label>Header Logo</Label>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      Appears on the gradient header. Use a light/white version.
-                    </p>
-                    <ImageUpload
-                      label=""
-                      value={branding.pdf_header_logo_url}
-                      onChange={(url) =>
-                        setBranding({ ...branding, pdf_header_logo_url: url })
-                      }
-                      assetType="logo"
-                      aspectRatio="wide"
-                      helpText="PNG or SVG, transparent background recommended"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Footer Logo</Label>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      Appears in the footer. Use your standard/dark version.
-                    </p>
-                    <ImageUpload
-                      label=""
-                      value={branding.pdf_footer_logo_url}
-                      onChange={(url) =>
-                        setBranding({ ...branding, pdf_footer_logo_url: url })
-                      }
-                      assetType="logo"
-                      aspectRatio="wide"
-                      helpText="PNG or SVG, transparent background recommended"
-                    />
-                  </div>
-                </div>
-              </CollapsibleContent>
-            </div>
-          </Collapsible>
-
-          {/* Email Logos Accordion */}
-          <Collapsible
-            open={accordion.emailLogos}
-            onOpenChange={(open) => setAccordion({ ...accordion, emailLogos: open })}
-          >
-            <div className="bg-card border rounded-xl overflow-hidden">
-              <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/30">
-                    <Mail className="w-4 h-4 text-indigo-600" />
-                  </div>
-                  <div className="text-left">
-                    <p className="font-medium">Email Logos</p>
-                    {!accordion.emailLogos && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Header {branding.email_header_logo_url ? "✓" : "○"} · Footer{" "}
-                        {branding.email_footer_logo_url ? "✓" : "○"}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                {accordion.emailLogos ? (
-                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
                 )}
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="p-4 pt-0 space-y-5 border-t">
-                  <p className="text-sm text-muted-foreground">Logos used in email reports.</p>
-
-                  <div>
-                    <Label>Header Logo</Label>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      Appears on the email header.
-                    </p>
-                    <ImageUpload
-                      label=""
-                      value={branding.email_header_logo_url}
-                      onChange={(url) =>
-                        setBranding({ ...branding, email_header_logo_url: url })
-                      }
-                      assetType="logo"
-                      aspectRatio="wide"
-                      helpText=""
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Footer Logo</Label>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      Appears in the email footer.
-                    </p>
-                    <ImageUpload
-                      label=""
-                      value={branding.email_footer_logo_url}
-                      onChange={(url) =>
-                        setBranding({ ...branding, email_footer_logo_url: url })
-                      }
-                      assetType="logo"
-                      aspectRatio="wide"
-                      helpText=""
-                    />
-                  </div>
-
-                  <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                    <p className="text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
-                      <Lightbulb className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                      Email logos may need to be different from PDF logos due to email client
-                      rendering differences.
-                    </p>
-                  </div>
-                </div>
-              </CollapsibleContent>
+              </div>
             </div>
-          </Collapsible>
-
-          {/* Test Your Branding Accordion */}
-          <Collapsible
-            open={accordion.testing}
-            onOpenChange={(open) => setAccordion({ ...accordion, testing: open })}
-          >
-            <div className="bg-card border rounded-xl overflow-hidden">
-              <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="p-1.5 rounded-lg bg-green-100 dark:bg-green-900/30">
-                    <TestTube2 className="w-4 h-4 text-green-600" />
-                  </div>
-                  <div className="text-left">
-                    <p className="font-medium">Test Your Branding</p>
-                    {!accordion.testing && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Download samples or send test email
-                      </p>
-                    )}
-                  </div>
-                </div>
-                {accordion.testing ? (
-                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                )}
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="p-4 pt-0 space-y-5 border-t">
-                  <p className="text-sm text-muted-foreground">
-                    Preview how your branding looks on actual reports.
-                  </p>
-
-                  <div>
-                    <Label>Report Type</Label>
-                    <Select
-                      value={reportType}
-                      onValueChange={(v) => setReportType(v as ReportType)}
-                    >
-                      <SelectTrigger className="mt-1.5">
-                        <SelectValue placeholder="Select report type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {REPORT_TYPE_OPTIONS.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Button
-                      onClick={handleDownloadPdf}
-                      disabled={isDownloadingPdf}
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start h-11",
-                        downloadSuccess === "pdf" && "border-green-500 text-green-600"
-                      )}
-                    >
-                      {isDownloadingPdf ? (
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      ) : downloadSuccess === "pdf" ? (
-                        <Check className="w-4 h-4 mr-2" />
-                      ) : (
-                        <FileText className="w-4 h-4 mr-2" />
-                      )}
-                      {isDownloadingPdf
-                        ? "Generating..."
-                        : downloadSuccess === "pdf"
-                        ? "Downloaded!"
-                        : "Download Sample PDF"}
-                    </Button>
-
-                    <Button
-                      onClick={handleDownloadJpg}
-                      disabled={isDownloadingJpg}
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start h-11",
-                        downloadSuccess === "jpg" && "border-green-500 text-green-600"
-                      )}
-                    >
-                      {isDownloadingJpg ? (
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      ) : downloadSuccess === "jpg" ? (
-                        <Check className="w-4 h-4 mr-2" />
-                      ) : (
-                        <Sparkles className="w-4 h-4 mr-2" />
-                      )}
-                      {isDownloadingJpg
-                        ? "Generating..."
-                        : downloadSuccess === "jpg"
-                        ? "Downloaded!"
-                        : "Download Social Image (Story)"}
-                    </Button>
-                  </div>
-
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-card px-2 text-muted-foreground">or</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label>Send Test Email</Label>
-                    <div className="flex gap-2 mt-1.5">
-                      <Input
-                        type="email"
-                        value={testEmail}
-                        onChange={(e) => setTestEmail(e.target.value)}
-                        placeholder="your@email.com"
-                        className="flex-1"
-                      />
-                      <Button
-                        onClick={handleSendTestEmail}
-                        disabled={isSending}
-                        className={cn(sendSuccess && "bg-green-600 hover:bg-green-700")}
-                      >
-                        {isSending ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : sendSuccess ? (
-                          <Check className="w-4 h-4" />
-                        ) : (
-                          <Send className="w-4 h-4" />
-                        )}
-                      </Button>
-                    </div>
-                    {sendSuccess && (
-                      <p className="text-xs text-green-600 mt-1.5 flex items-center gap-1">
-                        <Check className="w-3 h-3" />
-                        Test email sent! Check your inbox.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </CollapsibleContent>
-            </div>
-          </Collapsible>
+          </div>
         </div>
 
         {/* Right: Live Preview (Sticky) */}
-        <div className="sticky top-24 h-fit space-y-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            Preview
-            <span className="text-xs ml-auto">Updates live</span>
+        <div className="lg:sticky lg:top-20 h-fit space-y-4">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Live Preview
           </div>
 
           {/* PDF Preview */}
-          <div>
-            <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
+          <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
+            <div className="px-3 py-2 border-b border-border bg-muted/30 flex items-center gap-2">
               <FileText className="w-3.5 h-3.5 text-red-500" />
-              PDF Report
+              <span className="text-[11px] font-medium text-muted-foreground">PDF Report</span>
             </div>
-            <div className="rounded-xl border shadow-lg overflow-hidden bg-white dark:bg-zinc-900">
+            <div className="bg-white">
               {/* Header */}
               <div
-                className="p-4"
-                style={{
-                  background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)`,
-                }}
+                className="p-3"
+                style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   {branding.pdf_header_logo_url ? (
                     <img
                       src={branding.pdf_header_logo_url}
-                      className="h-8 w-auto max-w-[80px] object-contain brightness-0 invert"
+                      className="h-6 w-auto max-w-[60px] object-contain brightness-0 invert"
                       alt=""
                     />
                   ) : (
-                    <div className="h-8 w-8 rounded bg-white/20 flex items-center justify-center text-white font-bold">
+                    <div className="h-6 w-6 rounded bg-white/20 flex items-center justify-center text-white font-bold text-xs">
                       {companyName?.[0] || "B"}
                     </div>
                   )}
                   <div className="text-white">
-                    <div className="font-semibold text-sm">Market Update</div>
-                    <div className="text-xs text-white/70">January 2026</div>
+                    <div className="font-semibold text-xs">Market Update</div>
+                    <div className="text-[10px] text-white/70">January 2026</div>
                   </div>
                 </div>
               </div>
               {/* Content placeholder */}
-              <div className="p-4 space-y-2">
-                <div className="h-2 bg-slate-100 rounded w-full" />
-                <div className="h-2 bg-slate-100 rounded w-3/4" />
-                <div className="h-2 bg-slate-100 rounded w-5/6" />
+              <div className="p-3 space-y-1.5">
+                <div className="h-1.5 bg-slate-100 rounded w-full" />
+                <div className="h-1.5 bg-slate-100 rounded w-3/4" />
+                <div className="h-1.5 bg-slate-100 rounded w-5/6" />
               </div>
               {/* Footer */}
-              <div className="p-3 bg-slate-50 border-t flex items-center justify-between">
-                <div className="text-xs text-slate-600 truncate">{userName}</div>
+              <div className="p-2 bg-slate-50 border-t flex items-center justify-between">
+                <div className="text-[10px] text-slate-600 truncate">{userName}</div>
                 {branding.pdf_footer_logo_url ? (
                   <img
                     src={branding.pdf_footer_logo_url}
-                    className="h-6 w-auto max-w-[60px] object-contain"
+                    className="h-4 w-auto max-w-[40px] object-contain"
                     alt=""
                   />
                 ) : (
-                  <div className="text-xs font-semibold" style={{ color: primaryColor }}>
+                  <div className="text-[9px] font-semibold" style={{ color: primaryColor }}>
                     {companyName || "Your Brand"}
                   </div>
                 )}
@@ -787,53 +621,51 @@ export default function BrandingPage() {
           </div>
 
           {/* Email Preview */}
-          <div>
-            <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
+          <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
+            <div className="px-3 py-2 border-b border-border bg-muted/30 flex items-center gap-2">
               <Mail className="w-3.5 h-3.5 text-indigo-500" />
-              Email
+              <span className="text-[11px] font-medium text-muted-foreground">Email</span>
             </div>
-            <div className="rounded-xl border shadow-lg overflow-hidden bg-white dark:bg-zinc-900">
+            <div className="bg-white">
               {/* Header */}
               <div
-                className="p-3"
-                style={{
-                  background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)`,
-                }}
+                className="p-2"
+                style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
               >
                 <div className="flex items-center gap-2">
                   {branding.email_header_logo_url || branding.pdf_header_logo_url ? (
                     <img
                       src={branding.email_header_logo_url || branding.pdf_header_logo_url || ""}
-                      className="h-6 w-auto max-w-[60px] object-contain"
+                      className="h-5 w-auto max-w-[50px] object-contain"
                       alt=""
                     />
                   ) : (
-                    <div className="h-6 w-6 rounded bg-white/20 flex items-center justify-center text-white font-bold text-xs">
+                    <div className="h-5 w-5 rounded bg-white/20 flex items-center justify-center text-white font-bold text-[10px]">
                       {companyName?.[0] || "B"}
                     </div>
                   )}
-                  <div className="text-white text-xs font-semibold">
+                  <div className="text-white text-[10px] font-semibold">
                     {companyName || "Your Brand"}
                   </div>
                 </div>
               </div>
               {/* Content */}
-              <div className="p-3 space-y-2">
-                <div className="text-xs text-slate-600">Your report is ready!</div>
-                <div className="h-1.5 bg-slate-100 rounded w-full" />
-                <div className="h-1.5 bg-slate-100 rounded w-2/3" />
+              <div className="p-2 space-y-1.5">
+                <div className="text-[10px] text-slate-600">Your report is ready!</div>
+                <div className="h-1 bg-slate-100 rounded w-full" />
+                <div className="h-1 bg-slate-100 rounded w-2/3" />
               </div>
               {/* Footer */}
-              <div className="p-3 bg-white border-t flex items-center justify-between">
-                <div className="text-[10px] text-slate-600 truncate">{userName}</div>
+              <div className="p-2 bg-white border-t flex items-center justify-between">
+                <div className="text-[9px] text-slate-600 truncate">{userName}</div>
                 {branding.email_footer_logo_url || branding.pdf_footer_logo_url ? (
                   <img
                     src={branding.email_footer_logo_url || branding.pdf_footer_logo_url || ""}
-                    className="h-5 w-auto max-w-[50px] object-contain"
+                    className="h-4 w-auto max-w-[40px] object-contain"
                     alt=""
                   />
                 ) : (
-                  <div className="text-[10px] font-semibold" style={{ color: primaryColor }}>
+                  <div className="text-[9px] font-semibold" style={{ color: primaryColor }}>
                     {companyName || "Your Brand"}
                   </div>
                 )}
@@ -842,8 +674,8 @@ export default function BrandingPage() {
           </div>
 
           {/* Tip */}
-          <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-            <p className="text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
+          <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
+            <p className="text-[11px] text-amber-800 flex items-start gap-2">
               <Lightbulb className="w-4 h-4 flex-shrink-0 mt-0.5" />
               Header logos should be light/white for the gradient background.
             </p>
@@ -853,4 +685,3 @@ export default function BrandingPage() {
     </div>
   )
 }
-
