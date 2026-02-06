@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,22 +12,11 @@ import { Logo } from "@/components/logo";
 import { ArrowRight, Mail, Lock, Check, AlertCircle } from "lucide-react";
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  // Always redirect to /app after login - don't use ?next= parameter
-  // This avoids redirect chains that cause slow perceived login
-  const nextPath = "/app";
-  
-  // Debug: log the redirect target (check browser console)
-  const requestedNext = searchParams.get("next");
-  if (requestedNext) {
-    console.log('[LOGIN] Ignoring ?next= param:', requestedNext, '→ always going to /app');
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,14 +27,13 @@ function LoginForm() {
     console.log('[LOGIN] Starting login...');
 
     try {
-      // Use proxy route to ensure Set-Cookie works (same-origin)
       console.log('[LOGIN] Calling /api/proxy/v1/auth/login...');
       const fetchStart = performance.now();
       const res = await fetch("/api/proxy/v1/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
-        credentials: "include", // Allow browser to accept Set-Cookie
+        credentials: "include",
       });
       console.log(`[LOGIN] API response received in ${(performance.now() - fetchStart).toFixed(0)}ms, status: ${res.status}`);
 
@@ -56,11 +44,27 @@ function LoginForm() {
         return;
       }
 
-      // Backend sets mr_token cookie via Set-Cookie header
-      // Redirect to next path or dashboard
-      console.log(`[LOGIN] Success! Redirecting to: ${nextPath}`);
-      console.log(`[LOGIN] Total login time: ${(performance.now() - startTime).toFixed(0)}ms`);
-      router.push(nextPath);
+      // Parse the token from the response body
+      const data = await res.json().catch(() => ({}));
+      
+      if (data.access_token) {
+        // Set the auth cookie directly from JavaScript.
+        // The proxy also sets it via Set-Cookie header, but some environments
+        // (Edge Runtime, certain Vercel configs) don't reliably forward it.
+        // Belt-and-suspenders: set it here to guarantee it exists.
+        const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+        document.cookie = `mr_token=${data.access_token}; path=/; max-age=3600; SameSite=Lax${secure}`;
+        console.log('[LOGIN] Cookie set from JavaScript');
+      } else {
+        console.warn('[LOGIN] No access_token in response body:', Object.keys(data));
+      }
+
+      console.log(`[LOGIN] Success! Total login time: ${(performance.now() - startTime).toFixed(0)}ms`);
+      
+      // Use full page navigation (NOT router.push) to guarantee the cookie
+      // is sent with the request. Client-side navigation can race with
+      // cookie storage in some browsers.
+      window.location.href = "/app";
     } catch (err: any) {
       console.error("Login failed", err);
       setError("Something went wrong. Please try again.");

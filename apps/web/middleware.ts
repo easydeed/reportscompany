@@ -19,33 +19,31 @@ export async function middleware(req: NextRequest) {
   // Protect all /app/*
   if (pathname.startsWith("/app")) {
     if (!token) {
-      // Just redirect to login - don't set ?next= parameter
-      // User will always land on /app after login (simpler, faster)
+      console.log(`[MW] No mr_token cookie found for ${pathname} → redirecting to /login`)
       return NextResponse.redirect(new URL('/login', req.url))
     }
 
-    // Decode JWT locally - NO external API call!
+    // Decode JWT locally — no external API call
     try {
       const decoded = jwtDecode<JWTPayload>(token)
       
       // Check expiry
       if (decoded.exp * 1000 < Date.now()) {
+        console.log(`[MW] Token expired (exp=${decoded.exp}, now=${Math.floor(Date.now()/1000)}) for ${pathname} → /login`)
         const response = NextResponse.redirect(new URL('/login', req.url))
         response.cookies.delete('mr_token')
         return response
       }
 
-      // Admin route protection - check role from JWT payload directly
+      // Admin route protection
       if (pathname.startsWith("/app/admin")) {
         const role = decoded.role || "USER"
         if (role !== "ADMIN") {
           if (CLOAK) {
-            // Cloak as 404 for non-admins
             const url = req.nextUrl.clone()
             url.pathname = "/404"
             return NextResponse.rewrite(url)
           } else {
-            // Redirect to dashboard
             const url = req.nextUrl.clone()
             url.pathname = "/app"
             return NextResponse.redirect(url)
@@ -54,8 +52,10 @@ export async function middleware(req: NextRequest) {
       }
 
       return NextResponse.next()
-    } catch {
-      // Invalid token → login
+    } catch (err) {
+      // Log the actual error — this is critical for debugging
+      console.error(`[MW] JWT decode FAILED for ${pathname}:`, err)
+      console.error(`[MW] Token starts with: ${token.substring(0, 20)}...`)
       const response = NextResponse.redirect(new URL('/login', req.url))
       response.cookies.delete('mr_token')
       return response
