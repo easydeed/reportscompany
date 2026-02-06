@@ -142,13 +142,13 @@ const THEME_GRADIENTS: Record<number, string> = {
   5: "linear-gradient(135deg, #15216E 0%, #0a1145 100%)", // Bold
 };
 
-// Generation stages
+// Generation stages with icons and descriptions
 const GENERATION_STAGES = [
-  "Fetching property data...",
-  "Analyzing comparables...",
-  "Rendering report pages...",
-  "Generating PDF...",
-  "Finalizing...",
+  { label: "Fetching property data", desc: "Pulling records & tax info", icon: Home },
+  { label: "Analyzing comparables", desc: "Scoring nearby sales", icon: BarChart3 },
+  { label: "Rendering report pages", desc: "Building layouts & charts", icon: FileText },
+  { label: "Generating PDF", desc: "Assembling final document", icon: Download },
+  { label: "Finalizing", desc: "Creating share link & QR code", icon: QrCode },
 ];
 
 // ============================================
@@ -884,32 +884,91 @@ export default function NewPropertyReportPage() {
 
     // Generating state
     if (generationState === "generating") {
+      const progressPercent = Math.round(((generationStage) / GENERATION_STAGES.length) * 100);
+
       return (
-        <div className="bg-white rounded-xl border border-[var(--border)] p-8 text-center shadow-[var(--shadow-card)]">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <div className="bg-white rounded-xl border border-[var(--border)] overflow-hidden shadow-[var(--shadow-card)]">
+          {/* Header with spinning icon */}
+          <div className="px-6 pt-8 pb-4 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center mx-auto mb-4 shadow-sm">
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground">Generating Your Report</h3>
+            <p className="text-sm text-muted-foreground mt-1">This usually takes about 30 seconds</p>
           </div>
-          <h3 className="text-lg font-semibold text-foreground mb-2">Generating Your Report</h3>
-          
-          <div className="max-w-xs mx-auto space-y-2 mt-6 text-left">
+
+          {/* Progress bar */}
+          <div className="px-6 pb-5">
+            <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+              <span>Progress</span>
+              <span className="font-medium tabular-nums">{progressPercent}%</span>
+            </div>
+            <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-700 ease-out"
+                style={{ width: `${Math.max(progressPercent, 5)}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Stage checklist */}
+          <div className="border-t border-border bg-muted/20 px-5 py-4 space-y-1">
             {GENERATION_STAGES.map((stage, i) => {
+              const StageIcon = stage.icon;
               const isActive = generationStage === i;
               const isComplete = generationStage > i;
+              const isPending = !isActive && !isComplete;
+
               return (
-                <div key={stage} className={cn(
-                  "flex items-center gap-3 text-sm transition-all duration-300",
-                  isComplete && "text-emerald-600",
-                  isActive && "text-foreground font-medium",
-                  !isActive && !isComplete && "text-muted-foreground/50"
-                )}>
-                  {isComplete ? (
-                    <Check className="w-4 h-4 text-emerald-500" />
-                  ) : isActive ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                  ) : (
-                    <div className="w-4 h-4 rounded-full border border-border" />
+                <div
+                  key={stage.label}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-500",
+                    isActive && "bg-white shadow-sm border border-primary/20",
+                    isComplete && "opacity-70",
+                    isPending && "opacity-40"
                   )}
-                  {stage}
+                >
+                  {/* Status icon */}
+                  <div className={cn(
+                    "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors duration-300",
+                    isComplete && "bg-emerald-100 dark:bg-emerald-900/30",
+                    isActive && "bg-primary/10",
+                    isPending && "bg-muted"
+                  )}>
+                    {isComplete ? (
+                      <CheckCircle2 className="w-4.5 h-4.5 text-emerald-500" />
+                    ) : isActive ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                    ) : (
+                      <StageIcon className="w-4 h-4 text-muted-foreground/50" />
+                    )}
+                  </div>
+
+                  {/* Label + description */}
+                  <div className="flex-1 min-w-0">
+                    <p className={cn(
+                      "text-sm leading-tight transition-colors duration-300",
+                      isComplete && "text-emerald-700 dark:text-emerald-400 font-medium line-through decoration-emerald-300",
+                      isActive && "text-foreground font-semibold",
+                      isPending && "text-muted-foreground"
+                    )}>
+                      {stage.label}
+                    </p>
+                    {(isActive || isComplete) && (
+                      <p className={cn(
+                        "text-xs mt-0.5",
+                        isComplete ? "text-emerald-600/60" : "text-muted-foreground"
+                      )}>
+                        {stage.desc}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Completion checkmark */}
+                  {isComplete && (
+                    <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                  )}
                 </div>
               );
             })}
