@@ -19,10 +19,9 @@ export async function middleware(req: NextRequest) {
   // Protect all /app/*
   if (pathname.startsWith("/app")) {
     if (!token) {
-      const url = req.nextUrl.clone()
-      url.pathname = "/login"
-      url.searchParams.set("next", pathname)
-      return NextResponse.redirect(url)
+      // Just redirect to login - don't set ?next= parameter
+      // User will always land on /app after login (simpler, faster)
+      return NextResponse.redirect(new URL('/login', req.url))
     }
 
     // Decode JWT locally - NO external API call!

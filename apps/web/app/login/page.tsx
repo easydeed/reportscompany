@@ -19,10 +19,15 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const nextPath = searchParams.get("next") || "/app";
+  // Always redirect to /app after login - don't use ?next= parameter
+  // This avoids redirect chains that cause slow perceived login
+  const nextPath = "/app";
   
-  // Debug: log the redirect target
-  console.log('[LOGIN] nextPath from URL:', searchParams.get("next"), '→ will redirect to:', nextPath);
+  // Debug: log the redirect target (check browser console)
+  const requestedNext = searchParams.get("next");
+  if (requestedNext) {
+    console.log('[LOGIN] Ignoring ?next= param:', requestedNext, '→ always going to /app');
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
