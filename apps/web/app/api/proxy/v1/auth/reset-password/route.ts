@@ -16,13 +16,18 @@ export async function POST(req: NextRequest) {
 
     const data = await response.json().catch(() => ({}));
 
-    // If successful, forward the Set-Cookie header from the backend
     const res = NextResponse.json(data, { status: response.status });
 
-    // Copy the mr_token cookie if present
-    const setCookie = response.headers.get("set-cookie");
-    if (setCookie) {
-      res.headers.set("set-cookie", setCookie);
+    // Set the cookie ourselves from the response body token.
+    // Node.js Fetch API doesn't reliably expose Set-Cookie headers via .get().
+    if (response.ok && data.access_token) {
+      res.cookies.set("mr_token", data.access_token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        maxAge: 3600,
+        path: "/",
+      });
     }
 
     return res;
@@ -34,4 +39,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

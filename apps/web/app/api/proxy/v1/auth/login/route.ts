@@ -20,21 +20,30 @@ export async function POST(request: NextRequest) {
     });
     console.log(`[LOGIN PROXY] Backend responded in ${Date.now() - fetchStart}ms, status: ${response.status}`);
     
-    const data = await response.text();
+    const data = await response.json().catch(() => ({}));
     
-    // Forward Set-Cookie headers from backend
-    const setCookieHeader = response.headers.get('set-cookie');
-    const nextResponse = new NextResponse(data, {
+    const nextResponse = NextResponse.json(data, {
       status: response.status,
-      headers: {
-        'Content-Type': response.headers.get('content-type') || 'application/json',
-      },
     });
     
-    // If backend set a cookie, forward it
-    if (setCookieHeader) {
-      nextResponse.headers.set('Set-Cookie', setCookieHeader);
+    // Set the cookie ourselves from the response body token.
+    // We can't rely on forwarding Set-Cookie from server-side fetch —
+    // Node.js Fetch API doesn't reliably expose Set-Cookie headers via .get().
+    if (response.ok && data.access_token) {
+      nextResponse.cookies.set('mr_token', data.access_token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        maxAge: 3600,
+        path: '/',
+      });
+      console.log(`[LOGIN PROXY] Cookie set successfully for mr_token`);
+    } else {
+      console.log(`[LOGIN PROXY] No token to set cookie — status: ${response.status}`);
     }
+    
+    const totalTime = Date.now() - startTime;
+    console.log(`[LOGIN PROXY] Total proxy execution time: ${totalTime}ms`);
     
     return nextResponse;
   } catch (error) {
