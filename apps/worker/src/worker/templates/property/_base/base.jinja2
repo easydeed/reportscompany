@@ -959,6 +959,219 @@
     }
     
     {# =========================================================================
+       RANGE PAGE — ENHANCED
+       ========================================================================= #}
+    
+    /* Range bar container */
+    .range-bar-container {
+      padding: 20px;
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-border);
+      margin-bottom: 16px;
+    }
+    
+    .range-bar-label {
+      font-family: var(--font-body);
+      font-size: 9px;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 20px;
+    }
+    
+    .range-bar-visual {
+      position: relative;
+      height: 56px;
+      margin-bottom: 8px;
+    }
+    
+    .range-bar-track {
+      position: absolute;
+      top: 26px;
+      left: 0;
+      right: 0;
+      height: 16px;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(90deg, var(--color-border) 0%, var(--color-accent) 100%);
+    }
+    
+    .range-bar-dot {
+      position: absolute;
+      top: 3px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: white;
+      border: 2px solid var(--color-primary);
+      transform: translateX(-50%);
+      z-index: 2;
+    }
+    
+    .range-bar-subject {
+      position: absolute;
+      top: -26px;
+      transform: translateX(-50%);
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .range-bar-subject-label {
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--color-accent);
+      white-space: nowrap;
+      margin-bottom: 2px;
+    }
+    
+    .range-bar-subject-arrow {
+      display: block;
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 8px solid var(--color-accent);
+    }
+    
+    .range-bar-endpoints {
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-body);
+      font-size: 9px;
+      color: var(--color-text-muted);
+    }
+    
+    /* Range comps with mini bars */
+    .range-comps-section { margin-bottom: 16px; }
+    
+    .range-comp-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+    }
+    
+    .range-comp-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--color-accent);
+      flex-shrink: 0;
+    }
+    
+    .range-comp-address {
+      flex: 1;
+      font-family: var(--font-body);
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--color-primary);
+    }
+    
+    .range-comp-distance {
+      font-family: var(--font-body);
+      font-size: 9px;
+      color: var(--color-text-muted);
+      min-width: 50px;
+      text-align: center;
+    }
+    
+    .range-comp-price {
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--color-primary);
+      min-width: 90px;
+      text-align: right;
+    }
+    
+    .range-comp-minibar {
+      position: relative;
+      width: 60px;
+      height: 6px;
+      background: var(--color-border);
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    
+    .range-comp-minibar-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      border-radius: 3px;
+      background: var(--color-accent);
+      opacity: 0.7;
+    }
+    
+    /* Range stats grid */
+    .range-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    
+    .range-stat-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 6px;
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-border);
+    }
+    
+    .range-stat-value {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--color-primary);
+      line-height: 1;
+    }
+    
+    .range-stat-label {
+      font-family: var(--font-body);
+      font-size: 7px;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 3px;
+      text-align: center;
+    }
+    
+    /* Market insight */
+    .market-insight {
+      padding: 14px 16px;
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-border);
+    }
+    
+    .market-insight-title {
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--color-primary);
+      margin: 0 0 6px 0;
+    }
+    
+    .market-insight-text {
+      font-family: var(--font-body);
+      font-size: 10px;
+      color: var(--color-text-muted);
+      line-height: 1.6;
+      margin: 0;
+    }
+    
+    {# =========================================================================
        TWO COLUMN LAYOUT
        ========================================================================= #}
     
@@ -1126,15 +1339,85 @@
     <div class="page page-range">
       {% block range %}
       <div class="page-content">
-        {{ macros.page_header('Range of Sales', 'Price Range Analysis') }}
-        {{ macros.price_range_bar(stats.price_low, stats.price_high) }}
-        <div class="range-comps-list">
-          {% for comp in comparables[:4] %}
-          <div class="range-comp-item">
-            <span class="range-comp-address">{{ comp.address }}</span>
-            <span class="range-comp-price">{{ comp.sale_price | format_currency }}</span>
+        {{ macros.page_header('Range of Sales', 'Price positioning and market insight') }}
+
+        {# Visual Price Range Bar with comp markers #}
+        <div class="range-bar-container">
+          <div class="range-bar-label">Estimated Value Position</div>
+          <div class="range-bar-visual">
+            <div class="range-bar-track">
+              {# Comp dot markers #}
+              {% for comp in comparables[:4] %}
+              {% if stats.price_high != stats.price_low %}
+              {% set pct = ((comp.sale_price - stats.price_low) / (stats.price_high - stats.price_low) * 100) | int %}
+              <div class="range-bar-dot" style="left: {{ pct }}%"></div>
+              {% endif %}
+              {% endfor %}
+              {# Subject marker #}
+              {% if stats.price_high != stats.price_low %}
+              {% set subject_pct = ((stats.piq.price - stats.price_low) / (stats.price_high - stats.price_low) * 100) | int %}
+              <div class="range-bar-subject" style="left: {{ subject_pct }}%">
+                <span class="range-bar-subject-label">{{ stats.piq.price | format_currency }}</span>
+                <span class="range-bar-subject-arrow"></span>
+              </div>
+              {% endif %}
+            </div>
+            <div class="range-bar-endpoints">
+              <span>{{ stats.price_low | format_currency }}</span>
+              <span>{{ stats.price_high | format_currency }}</span>
+            </div>
           </div>
-          {% endfor %}
+        </div>
+
+        {# Comparable Sales Summary with mini position bars #}
+        <div class="range-comps-section">
+          <h3 class="section-title">Comparable Sales Summary</h3>
+          <div class="range-comps-list">
+            {% for comp in comparables[:4] | sort(attribute='sale_price') %}
+            {% if stats.price_high != stats.price_low %}
+            {% set pct = ((comp.sale_price - stats.price_low) / (stats.price_high - stats.price_low) * 100) | int %}
+            {% else %}
+            {% set pct = 50 %}
+            {% endif %}
+            <div class="range-comp-item">
+              <span class="range-comp-dot"></span>
+              <span class="range-comp-address">{{ comp.address }}</span>
+              <span class="range-comp-distance">{{ comp.distance_miles }} mi</span>
+              <span class="range-comp-price">{{ comp.sale_price | format_currency }}</span>
+              <div class="range-comp-minibar">
+                <div class="range-comp-minibar-fill" style="width: {{ pct }}%"></div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        {# Summary Statistics Grid #}
+        <div class="range-stats-grid">
+          <div class="range-stat-card">
+            <span class="range-stat-value">{{ stats.avg_price_per_sqft | format_currency }}</span>
+            <span class="range-stat-label">Avg $/Sq Ft</span>
+          </div>
+          <div class="range-stat-card">
+            <span class="range-stat-value">{{ stats.avg_days_on_market | default('—') }}</span>
+            <span class="range-stat-label">Avg Days on Market</span>
+          </div>
+          <div class="range-stat-card">
+            <span class="range-stat-value">{{ stats.active_listings | default('—') }}</span>
+            <span class="range-stat-label">Active Listings</span>
+          </div>
+          <div class="range-stat-card">
+            <span class="range-stat-value">{{ stats.total_comps }}</span>
+            <span class="range-stat-label">Comparables</span>
+          </div>
+        </div>
+
+        {# Market Insight #}
+        <div class="market-insight">
+          <h4 class="market-insight-title">Market Insight</h4>
+          <p class="market-insight-text">
+            Based on {{ stats.total_comps }} comparable sales{% if stats.max_distance %} within {{ stats.max_distance }} miles{% endif %}, the estimated market value for this property falls between {{ stats.price_low | format_currency }} and {{ stats.price_high | format_currency }}. The median comparable sold at {{ stats.medium.price | format_currency }}, suggesting strong market positioning.
+          </p>
         </div>
       </div>
       {{ macros.page_footer(agent, 7) }}
