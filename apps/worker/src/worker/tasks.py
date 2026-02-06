@@ -230,6 +230,30 @@ def upload_to_r2(local_path: str, s3_key: str) -> str:
 def ping():
     return {"pong": True}
 
+
+@celery.task(name="keep_alive_ping")
+def keep_alive_ping():
+    """
+    Ping the API health endpoint to prevent Render cold starts.
+    Runs every 5 minutes via Celery Beat.
+    """
+    import httpx
+    
+    # Use PRINT_BASE (which points to the frontend) or fall back to API_BASE
+    # The frontend /api/health route is simpler than hitting the backend directly
+    api_base = os.getenv("API_BASE_URL") or os.getenv("NEXT_PUBLIC_API_BASE") or "https://reportscompany.onrender.com"
+    
+    try:
+        response = httpx.get(f"{api_base}/health", timeout=10.0)
+        logger.info(f"Keep-alive ping: {response.status_code}")
+        return {"ok": True, "status": response.status_code}
+    except httpx.TimeoutException:
+        logger.warning("Keep-alive ping timed out")
+        return {"ok": False, "error": "timeout"}
+    except Exception as e:
+        logger.warning(f"Keep-alive ping failed: {e}")
+        return {"ok": False, "error": str(e)}
+
 def _sign(secret: str, body: bytes, ts: str) -> str:
     mac = hmac.new(secret.encode(), msg=(ts + ".").encode() + body, digestmod=hashlib.sha256)
     return "sha256=" + mac.hexdigest()

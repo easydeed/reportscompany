@@ -1,6 +1,7 @@
 import os
 import ssl
 from celery import Celery
+from celery.schedules import crontab
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 CELERY_RESULT_URL = os.getenv("CELERY_RESULT_URL", REDIS_URL)
@@ -41,6 +42,13 @@ config_updates = {
         "ping": {"queue": "celery"},
     },
     "task_time_limit": 300,
+    # Celery Beat schedule for periodic tasks
+    "beat_schedule": {
+        "keep-alive-ping": {
+            "task": "keep_alive_ping",
+            "schedule": 300.0,  # Every 5 minutes
+        },
+    },
 }
 
 # Add SSL configuration if using secure Redis (rediss://)

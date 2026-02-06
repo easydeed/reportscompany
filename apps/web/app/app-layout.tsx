@@ -1,6 +1,7 @@
 "use client"
 
 import { Suspense, useState, useEffect, useMemo } from "react"
+import { QueryProvider } from "@/components/providers/query-provider"
 import {
   SidebarProvider,
   Sidebar,
@@ -396,16 +397,18 @@ export default function AppLayoutClient({
   
   // Normal mode: With sidebar
   return (
-    <SidebarProvider>
-      <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-        <div className="flex min-h-screen w-full bg-background text-foreground">
-          <DashboardSidebar isAdmin={isAdmin} isAffiliate={isAffiliate} />
-          <SidebarInset className="flex flex-col">
-            <DashboardTopbar accountType={accountType} isAdmin={isAdmin} isAffiliate={isAffiliate} />
-            <main className="flex-1 px-6 py-5 bg-background">{children}</main>
-          </SidebarInset>
-        </div>
-      </Suspense>
-    </SidebarProvider>
+    <QueryProvider>
+      <SidebarProvider>
+        <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
+          <div className="flex min-h-screen w-full bg-background text-foreground">
+            <DashboardSidebar isAdmin={isAdmin} isAffiliate={isAffiliate} />
+            <SidebarInset className="flex flex-col">
+              <DashboardTopbar accountType={accountType} isAdmin={isAdmin} isAffiliate={isAffiliate} />
+              <main className="flex-1 px-6 py-5 bg-background">{children}</main>
+            </SidebarInset>
+          </div>
+        </Suspense>
+      </SidebarProvider>
+    </QueryProvider>
   )
 }
