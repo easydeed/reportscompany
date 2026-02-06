@@ -148,7 +148,7 @@ export default function AdminLeadPagesMetrics() {
                     outerRadius={80}
                     dataKey="count"
                     nameKey="device_type"
-                    label={({ name, percent }) => `${name || ''} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                    label={({ name, percent }) => `${name || ''} ${(Number(percent ?? 0) * 100).toFixed(0)}%`}
                   >
                     {devices.map((_, i) => (
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
