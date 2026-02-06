@@ -787,7 +787,7 @@ export default function NewPropertyReportPage() {
 
       {/* Comparables Picker */}
       {!compsLoading && state.comparables.length > 0 && (
-        <div className="bg-white rounded-xl border border-[var(--border)] p-5 shadow-[var(--shadow-card)]">
+        <div className="bg-white rounded-xl border border-[var(--border)] p-6 shadow-[var(--shadow-card)]">
           <ComparablesPicker
             availableComps={state.comparables}
             selectedIds={state.selectedCompIds}
@@ -1264,8 +1264,8 @@ export default function NewPropertyReportPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(400px,520px)_1fr] gap-8">
+      <main className="max-w-[1400px] mx-auto px-6 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(560px,1fr)_360px] xl:grid-cols-[minmax(640px,1fr)_380px] gap-8">
           {/* Left: Steps Panel */}
           <div className="space-y-5">
             {/* Step Progress */}
