@@ -95,11 +95,21 @@ def login(body: LoginIn, response: Response):
             """, (user_id, default_account_id))
             account_row = cur.fetchone()
             account_id = account_row[0] if account_row else default_account_id
+            account_type = account_row[1] if account_row else "REGULAR"
+            
+            # Fetch user role for JWT (avoids extra API call on frontend)
+            cur.execute("""
+                SELECT role FROM users WHERE id = %s::uuid
+            """, (user_id,))
+            role_row = cur.fetchone()
+            user_role = (role_row[0] or "USER").upper() if role_row else "USER"
 
     token = sign_jwt({
         "sub": user_id,
         "user_id": user_id,
         "account_id": account_id,
+        "role": user_role,           # Added: enables frontend to check admin locally
+        "account_type": account_type, # Added: enables affiliate redirect locally
         "scopes": ["reports:read", "reports:write"]
     }, settings.JWT_SECRET, ttl_seconds=3600)
     
@@ -284,6 +294,8 @@ def register(body: RegisterIn, response: Response, background_tasks: BackgroundT
                     "sub": user_id,
                     "user_id": user_id,
                     "account_id": account_id,
+                    "role": "USER",           # New users start as USER
+                    "account_type": "REGULAR", # New accounts are REGULAR
                     "scopes": ["reports:read", "reports:write"]
                 },
                 settings.JWT_SECRET,
@@ -422,6 +434,17 @@ def accept_invite(body: AcceptInviteRequest, response: Response):
                 WHERE token = %s
             """, (token,))
             
+            # Fetch role and account_type for JWT
+            cur.execute("""
+                SELECT u.role, a.account_type
+                FROM users u
+                JOIN accounts a ON u.account_id = a.id
+                WHERE u.id = %s::uuid
+            """, (user_id,))
+            extra_row = cur.fetchone()
+            user_role = (extra_row[0] or "USER").upper() if extra_row else "USER"
+            account_type = extra_row[1] if extra_row else "REGULAR"
+            
             conn.commit()
             
             # 5. Generate auth session (JWT)
@@ -430,6 +453,8 @@ def accept_invite(body: AcceptInviteRequest, response: Response):
                     "sub": user_id,
                     "user_id": user_id,
                     "account_id": account_id,
+                    "role": user_role,
+                    "account_type": account_type,
                     "scopes": ["reports:read", "reports:write"]
                 },
                 settings.JWT_SECRET,
@@ -620,6 +645,17 @@ def reset_password(body: ResetPasswordRequest, response: Response):
                 WHERE id = %s::uuid
             """, (token_id,))
             
+            # Fetch role and account_type for JWT
+            cur.execute("""
+                SELECT u.role, a.account_type
+                FROM users u
+                JOIN accounts a ON u.account_id = a.id
+                WHERE u.id = %s::uuid
+            """, (user_id,))
+            extra_row = cur.fetchone()
+            user_role = (extra_row[0] or "USER").upper() if extra_row else "USER"
+            account_type = extra_row[1] if extra_row else "REGULAR"
+            
             conn.commit()
             
             # Generate new auth session
@@ -628,6 +664,8 @@ def reset_password(body: ResetPasswordRequest, response: Response):
                     "sub": user_id,
                     "user_id": user_id,
                     "account_id": account_id,
+                    "role": user_role,
+                    "account_type": account_type,
                     "scopes": ["reports:read", "reports:write"]
                 },
                 settings.JWT_SECRET,

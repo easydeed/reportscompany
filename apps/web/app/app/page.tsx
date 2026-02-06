@@ -3,13 +3,19 @@ import { AlertCircle, AlertTriangle, FileText, Mail, Calendar, Clock, Plus } fro
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
+import { jwtDecode } from "jwt-decode"
 import { DashboardOnboarding } from "@/components/onboarding"
-import { createServerApi } from "@/lib/api-server"
+import { createServerApi, CACHE_DURATIONS } from "@/lib/api-server"
 import { PageHeader } from "@/components/page-header"
 import { MetricCard } from "@/components/metric-card"
 import { StatusBadge } from "@/components/status-badge"
 
 export const dynamic = 'force-dynamic'
+
+interface JWTPayload {
+  account_type?: string
+}
 
 // Format relative time
 function formatRelativeTime(timestamp: string): string {
@@ -34,23 +40,34 @@ export default async function Overview() {
     redirect('/login')
   }
 
-  // Fetch ALL data in parallel using the shared API utility
-  const [meRes, dataRes, planUsageRes, onboardingRes] = await Promise.all([
-    api.get<any>("/v1/me"),
+  // Check affiliate status from JWT (no API call needed)
+  const cookieStore = await cookies()
+  const token = cookieStore.get('mr_token')?.value
+  if (token) {
+    try {
+      const decoded = jwtDecode<JWTPayload>(token)
+      if (decoded.account_type === "INDUSTRY_AFFILIATE") {
+        redirect("/app/affiliate")
+      }
+    } catch {
+      // Invalid token - continue
+    }
+  }
+
+  // Fetch dashboard data in parallel with caching
+  // NOTE: /v1/me is NOT needed here - layout.tsx reads role/account_type from JWT locally
+  // This saves one API call per page load
+  console.time('[PERF] dashboard-fetch-all')
+  const [dataRes, planUsageRes, onboardingRes] = await Promise.all([
     api.get<any>("/v1/usage"),
-    api.get<any>("/v1/account/plan-usage"),
+    api.get<any>("/v1/account/plan-usage", { cache: CACHE_DURATIONS.PLAN_USAGE }),
     api.get<any>("/v1/onboarding"),
   ])
+  console.timeEnd('[PERF] dashboard-fetch-all')
 
-  const me = meRes.data
   const data = dataRes.data
   const planUsage = planUsageRes.data
   const onboardingStatus = onboardingRes.data
-  
-  // Check if affiliate and redirect
-  if (me?.account_type === "INDUSTRY_AFFILIATE") {
-    redirect("/app/affiliate")
-  }
 
   // Combine recent reports and emails into a single feed
   const recentReports = (data?.recent_reports ?? []).map((r: any) => ({
