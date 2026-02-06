@@ -368,7 +368,8 @@ class PropertyReportBuilder:
                 "latitude": latitude,
                 "longitude": longitude,
                 "image_url": image_url,
-                "map_image_url": map_image_url,  # V0 template field
+                "photo_url": image_url,  # V0 template field (prefer property photo)
+                "map_image_url": map_image_url,  # Fallback satellite thumbnail
                 "price": self._format_price(raw_price),  # Formatted
                 "sale_price": raw_price,  # V0 template (raw number for filter)
                 "sold_date": comp.get("sold_date") or comp.get("close_date", ""),  # V0 template
@@ -533,6 +534,8 @@ class PropertyReportBuilder:
         lots = []
         distances = []
         
+        days_on_market = []
+        
         for comp in comparables:
             raw_price = comp.get("price") or comp.get("close_price")
             if raw_price:
@@ -568,6 +571,12 @@ class PropertyReportBuilder:
             dist = comp.get("distance_miles") or comp.get("distance")
             if dist and isinstance(dist, (int, float)):
                 distances.append(float(dist))
+            dom = comp.get("days_on_market")
+            if dom is not None:
+                try:
+                    days_on_market.append(int(dom))
+                except (ValueError, TypeError):
+                    pass
         
         # Sort comparables by price to get low/medium/high
         sorted_by_price = sorted(
@@ -614,11 +623,23 @@ class PropertyReportBuilder:
             "price": sitex_data.get("estimated_value") or "-",
         }
         
+        # Calculate avg price per sqft across all comps
+        avg_price_per_sqft = 0
+        if prices and sqfts and len(prices) == len(sqfts):
+            ppsf_values = [p / s for p, s in zip(prices, sqfts) if s > 0]
+            avg_price_per_sqft = int(sum(ppsf_values) / len(ppsf_values)) if ppsf_values else 0
+        elif prices and sqfts:
+            avg_price_per_sqft = int((sum(prices) / len(prices)) / (sum(sqfts) / len(sqfts))) if sqfts else 0
+        
         return {
             "total_comps": len(comparables),
             "avg_sqft": int(sum(sqfts)/len(sqfts)) if sqfts else 0,
             "avg_beds": round(sum(beds)/len(beds)) if beds else 0,
             "avg_baths": round(sum(baths)/len(baths)) if baths else 0,
+            "avg_price_per_sqft": avg_price_per_sqft,
+            "avg_days_on_market": int(sum(days_on_market)/len(days_on_market)) if days_on_market else None,
+            "active_listings": None,  # Populated if available from MLS data
+            "max_distance": round(max(distances), 1) if distances else None,
             "price_low": min(prices) if prices else 0,
             "price_high": max(prices) if prices else 0,
             "piq": piq,
