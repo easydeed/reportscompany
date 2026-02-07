@@ -12,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Progress } from "@/components/ui/progress"
 import {
   User,
   Building,
@@ -25,6 +24,8 @@ import {
   Palette,
   FileText,
   Camera,
+  Rocket,
+  CircleDot,
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { ImageUpload } from "@/components/ui/image-upload"
@@ -64,6 +65,13 @@ function formatPhoneNumber(value: string): string {
   if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`
   return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`
 }
+
+const STEPS: { key: WizardStep; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { key: "welcome", label: "Welcome", icon: Sparkles },
+  { key: "profile", label: "Profile", icon: User },
+  { key: "branding", label: "Branding", icon: Palette },
+  { key: "complete", label: "Done", icon: Check },
+]
 
 export function SetupWizard({ open, onOpenChange, onComplete, isAffiliate = false }: SetupWizardProps) {
   const router = useRouter()
@@ -279,344 +287,417 @@ export function SetupWizard({ open, onOpenChange, onComplete, isAffiliate = fals
     else if (step === "branding") setStep("complete")
   }
 
-  const stepIndex = ["welcome", "profile", "branding", "complete"].indexOf(step)
-  const progress = ((stepIndex + 1) / 4) * 100
+  const stepIndex = STEPS.findIndex(s => s.key === step)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        {/* Progress bar */}
-        <div className="absolute top-0 left-0 right-0">
-          <Progress value={progress} className="h-1 rounded-none" />
+      <DialogContent className="sm:max-w-lg overflow-hidden p-0">
+        {/* Modern step indicator bar */}
+        <div className="px-6 pt-6 pb-0">
+          <div className="flex items-center justify-between mb-1">
+            {STEPS.map((s, i) => {
+              const Icon = s.icon
+              const isCompleted = i < stepIndex
+              const isCurrent = i === stepIndex
+              return (
+                <div key={s.key} className="flex items-center flex-1 last:flex-none">
+                  <div className="flex flex-col items-center gap-1">
+                    <div
+                      className={cn(
+                        "w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 ring-2",
+                        isCompleted
+                          ? "bg-green-500 ring-green-200 text-white scale-100"
+                          : isCurrent
+                          ? "bg-primary ring-primary/30 text-primary-foreground scale-110 shadow-lg shadow-primary/20"
+                          : "bg-muted ring-border text-muted-foreground scale-90"
+                      )}
+                    >
+                      {isCompleted ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        <Icon className="w-4 h-4" />
+                      )}
+                    </div>
+                    <span
+                      className={cn(
+                        "text-[10px] font-medium transition-colors duration-300",
+                        isCurrent ? "text-primary" : isCompleted ? "text-green-600" : "text-muted-foreground"
+                      )}
+                    >
+                      {s.label}
+                    </span>
+                  </div>
+                  {i < STEPS.length - 1 && (
+                    <div className="flex-1 mx-2 mb-4">
+                      <div className="h-0.5 rounded-full bg-border overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all duration-500",
+                            isCompleted ? "bg-green-500 w-full" : "bg-border w-0"
+                          )}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
 
-        {/* Welcome Step */}
-        {step === "welcome" && (
-          <>
-            <DialogHeader className="text-center pt-4">
-              <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center mb-4">
-                <Sparkles className="w-8 h-8 text-white" />
+        <div className="px-6 pb-6">
+          {/* Welcome Step */}
+          {step === "welcome" && (
+            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+              <DialogHeader className="text-center pt-2 pb-4">
+                <div className="mx-auto w-20 h-20 rounded-2xl bg-gradient-to-br from-primary via-primary/80 to-primary/60 flex items-center justify-center mb-4 shadow-xl shadow-primary/20 rotate-3 hover:rotate-0 transition-transform duration-300">
+                  <Sparkles className="w-10 h-10 text-white" />
+                </div>
+                <DialogTitle className="text-2xl font-bold">
+                  Welcome{userName ? `, ${userName}` : ""}! 🎉
+                </DialogTitle>
+                <DialogDescription className="text-base mt-2 text-muted-foreground/80">
+                  Let&apos;s get your account set up in just a few quick steps.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-3 py-2">
+                {[
+                  {
+                    icon: User,
+                    title: "Complete your profile",
+                    desc: "Add your name and contact info",
+                    color: "bg-blue-500/10 text-blue-600",
+                  },
+                  {
+                    icon: Palette,
+                    title: isAffiliateAccount ? "Set up white-label branding" : "Set up your branding",
+                    desc: isAffiliateAccount
+                      ? "Your branding appears on sponsored agent reports"
+                      : "Upload your logo and brand colors",
+                    color: "bg-orange-500/10 text-orange-600",
+                  },
+                  {
+                    icon: isAffiliateAccount ? Building : FileText,
+                    title: isAffiliateAccount ? "Invite your first agent" : "Create your first report",
+                    desc: isAffiliateAccount
+                      ? "Sponsor agents with your branding"
+                      : "Generate a market snapshot in seconds",
+                    color: "bg-emerald-500/10 text-emerald-600",
+                  },
+                ].map((item, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-4 p-3.5 rounded-xl border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors duration-200"
+                    style={{ animationDelay: `${(i + 1) * 100}ms` }}
+                  >
+                    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0", item.color)}>
+                      <item.icon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm">{item.title}</p>
+                      <p className="text-xs text-muted-foreground">{item.desc}</p>
+                    </div>
+                    <div className="ml-auto">
+                      <CircleDot className="w-4 h-4 text-muted-foreground/40" />
+                    </div>
+                  </div>
+                ))}
               </div>
-              <DialogTitle className="text-2xl">
-                Welcome{userName ? `, ${userName}` : ""}!
-              </DialogTitle>
-              <DialogDescription className="text-base mt-2">
-                Let's get your account set up in just a few steps. This will only take about 2 minutes.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="grid gap-3">
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <User className="w-4 h-4 text-primary" />
+
+              <p className="text-xs text-center text-muted-foreground mt-3">
+                ⏱️ Takes about 2 minutes
+              </p>
+
+              <div className="flex justify-end mt-4">
+                <Button onClick={handleNext} size="lg" className="gap-2 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all">
+                  Get Started
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Profile Step */}
+          {step === "profile" && (
+            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+              <DialogHeader className="pb-2">
+                <DialogTitle className="text-xl">Complete your profile</DialogTitle>
+                <DialogDescription>
+                  Tell us a bit about yourself so we can personalize your experience.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-5 py-3">
+                {/* Headshot Upload */}
+                <div className="flex justify-center">
+                  <ImageUpload
+                    label="Your Headshot"
+                    value={profile.avatar_url}
+                    onChange={(url) => setProfile({ ...profile, avatar_url: url })}
+                    assetType="headshot"
+                    aspectRatio="square"
+                    helpText="Optional • Makes your reports more personal"
+                    className="w-full max-w-[200px]"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="first_name" className="text-xs font-medium">First Name</Label>
+                    <Input
+                      id="first_name"
+                      value={profile.first_name}
+                      onChange={(e) => setProfile({ ...profile, first_name: e.target.value })}
+                      placeholder="John"
+                      className="h-10"
+                    />
                   </div>
-                  <div>
-                    <p className="font-medium text-sm">Complete your profile</p>
-                    <p className="text-xs text-muted-foreground">Add your name and contact info</p>
+                  <div className="space-y-2">
+                    <Label htmlFor="last_name" className="text-xs font-medium">Last Name</Label>
+                    <Input
+                      id="last_name"
+                      value={profile.last_name}
+                      onChange={(e) => setProfile({ ...profile, last_name: e.target.value })}
+                      placeholder="Doe"
+                      className="h-10"
+                    />
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Palette className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">
-                      {isAffiliateAccount ? "Set up white-label branding" : "Set up your branding"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {isAffiliateAccount ? "Your branding appears on sponsored agent reports" : "Upload your logo and colors"}
-                    </p>
-                  </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="company_name" className="flex items-center gap-2 text-xs font-medium">
+                    <Building className="w-3.5 h-3.5 text-muted-foreground" />
+                    Company Name
+                  </Label>
+                  <Input
+                    id="company_name"
+                    value={profile.company_name}
+                    onChange={(e) => setProfile({ ...profile, company_name: e.target.value })}
+                    placeholder="Acme Real Estate"
+                    className="h-10"
+                  />
                 </div>
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    {isAffiliateAccount ? (
-                      <Building className="w-4 h-4 text-primary" />
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="flex items-center gap-2 text-xs font-medium">
+                    <Phone className="w-3.5 h-3.5 text-muted-foreground" />
+                    Phone Number
+                  </Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={profile.phone}
+                    onChange={handlePhoneChange}
+                    placeholder="(555) 123-4567"
+                    maxLength={14}
+                    className="h-10"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-between pt-2">
+                <Button variant="ghost" onClick={handleBack} className="gap-2">
+                  <ArrowLeft className="w-4 h-4" />
+                  Back
+                </Button>
+                <div className="flex gap-2">
+                  <Button variant="ghost" onClick={handleSkip} className="text-muted-foreground">
+                    Skip for now
+                  </Button>
+                  <Button onClick={handleNext} disabled={saving} className="gap-2 min-w-[120px]">
+                    {saving ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      <FileText className="w-4 h-4 text-primary" />
+                      <>
+                        Continue
+                        <ArrowRight className="w-4 h-4" />
+                      </>
                     )}
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">
-                      {isAffiliateAccount ? "Invite your first agent" : "Create your first report"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {isAffiliateAccount ? "Sponsor agents with your branding" : "Generate a market snapshot"}
-                    </p>
-                  </div>
+                  </Button>
                 </div>
               </div>
             </div>
-            <div className="flex justify-end">
-              <Button onClick={handleNext} className="gap-2">
-                Get Started
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </div>
-          </>
-        )}
+          )}
 
-        {/* Profile Step */}
-        {step === "profile" && (
-          <>
-            <DialogHeader>
-              <DialogTitle>Complete your profile</DialogTitle>
-              <DialogDescription>
-                Tell us a bit about yourself so we can personalize your experience.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-5 py-4">
-              {/* Headshot Upload */}
-              <div className="flex justify-center">
+          {/* Branding Step */}
+          {step === "branding" && (
+            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+              <DialogHeader className="pb-2">
+                <DialogTitle className="text-xl">Set up your branding</DialogTitle>
+                <DialogDescription>
+                  Add your logo and brand colors to personalize your reports.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-5 py-3">
                 <ImageUpload
-                  label="Your Headshot"
-                  value={profile.avatar_url}
-                  onChange={(url) => setProfile({ ...profile, avatar_url: url })}
-                  assetType="headshot"
-                  aspectRatio="square"
-                  helpText="Optional • Makes your reports more personal"
-                  className="w-full max-w-[200px]"
+                  label="Company Logo"
+                  value={branding.logo_url}
+                  onChange={(url) => setBranding({ ...branding, logo_url: url })}
+                  assetType="logo"
+                  aspectRatio="wide"
+                  helpText="Recommended: 400x150px, PNG with transparency"
                 />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="first_name">First Name</Label>
-                  <Input
-                    id="first_name"
-                    value={profile.first_name}
-                    onChange={(e) => setProfile({ ...profile, first_name: e.target.value })}
-                    placeholder="John"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="last_name">Last Name</Label>
-                  <Input
-                    id="last_name"
-                    value={profile.last_name}
-                    onChange={(e) => setProfile({ ...profile, last_name: e.target.value })}
-                    placeholder="Doe"
-                  />
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="company_name" className="flex items-center gap-2">
-                  <Building className="w-4 h-4 text-muted-foreground" />
-                  Company Name
-                </Label>
-                <Input
-                  id="company_name"
-                  value={profile.company_name}
-                  onChange={(e) => setProfile({ ...profile, company_name: e.target.value })}
-                  placeholder="Acme Real Estate"
-                />
-              </div>
+                {/* Color Pickers - Modern layout */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Primary Color</Label>
+                    <div className="flex items-center gap-2.5 p-3 rounded-xl border bg-muted/20 hover:bg-muted/40 transition-colors">
+                      <div className="relative">
+                        <input
+                          type="color"
+                          value={branding.primary_color}
+                          onChange={(e) => setBranding({ ...branding, primary_color: e.target.value })}
+                          className="w-10 h-10 rounded-lg cursor-pointer border-0 p-0"
+                          style={{ backgroundColor: branding.primary_color }}
+                        />
+                        <div 
+                          className="absolute inset-0 rounded-lg pointer-events-none ring-1 ring-inset ring-black/10"
+                          style={{ backgroundColor: branding.primary_color }}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <Input
+                          type="text"
+                          value={branding.primary_color}
+                          onChange={(e) => setBranding({ ...branding, primary_color: e.target.value })}
+                          className="font-mono text-xs h-8"
+                          placeholder="#4F46E5"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      Headers & buttons
+                    </p>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-muted-foreground" />
-                  Phone Number
-                </Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={profile.phone}
-                  onChange={handlePhoneChange}
-                  placeholder="(555) 123-4567"
-                  maxLength={14}
-                />
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Accent Color</Label>
+                    <div className="flex items-center gap-2.5 p-3 rounded-xl border bg-muted/20 hover:bg-muted/40 transition-colors">
+                      <div className="relative">
+                        <input
+                          type="color"
+                          value={branding.accent_color}
+                          onChange={(e) => setBranding({ ...branding, accent_color: e.target.value })}
+                          className="w-10 h-10 rounded-lg cursor-pointer border-0 p-0"
+                          style={{ backgroundColor: branding.accent_color }}
+                        />
+                        <div 
+                          className="absolute inset-0 rounded-lg pointer-events-none ring-1 ring-inset ring-black/10"
+                          style={{ backgroundColor: branding.accent_color }}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <Input
+                          type="text"
+                          value={branding.accent_color}
+                          onChange={(e) => setBranding({ ...branding, accent_color: e.target.value })}
+                          className="font-mono text-xs h-8"
+                          placeholder="#F26B2B"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      Highlights & gradients
+                    </p>
+                  </div>
+                </div>
+
+                {/* Live Preview - Enhanced */}
+                <div className="rounded-xl border bg-muted/10 p-4 space-y-2">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Live Preview</p>
+                  <div 
+                    className="h-10 rounded-lg flex items-center justify-center text-white text-xs font-semibold shadow-md"
+                    style={{ 
+                      background: `linear-gradient(135deg, ${branding.primary_color}, ${branding.accent_color})` 
+                    }}
+                  >
+                    Your Report Header
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <div
+                      className="flex-1 h-2 rounded-full"
+                      style={{ backgroundColor: branding.primary_color }}
+                    />
+                    <div
+                      className="w-16 h-2 rounded-full"
+                      style={{ backgroundColor: branding.accent_color }}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-between pt-2">
+                <Button variant="ghost" onClick={handleBack} className="gap-2">
+                  <ArrowLeft className="w-4 h-4" />
+                  Back
+                </Button>
+                <div className="flex gap-2">
+                  <Button variant="ghost" onClick={handleSkip} className="text-muted-foreground">
+                    Skip for now
+                  </Button>
+                  <Button onClick={handleNext} disabled={saving} className="gap-2 min-w-[120px]">
+                    {saving ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        Continue
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
-            <div className="flex justify-between">
-              <Button variant="ghost" onClick={handleBack} className="gap-2">
-                <ArrowLeft className="w-4 h-4" />
-                Back
-              </Button>
-              <div className="flex gap-2">
-                <Button variant="ghost" onClick={handleSkip}>
-                  Skip for now
-                </Button>
-                <Button onClick={handleNext} disabled={saving} className="gap-2">
-                  {saving ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+          )}
+
+          {/* Complete Step */}
+          {step === "complete" && (
+            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+              <DialogHeader className="text-center pt-4 pb-2">
+                <div className="mx-auto w-20 h-20 rounded-2xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center mb-4 shadow-xl shadow-green-500/20 animate-in zoom-in-50 duration-500">
+                  <Check className="w-10 h-10 text-white" />
+                </div>
+                <DialogTitle className="text-2xl font-bold">You&apos;re all set! 🚀</DialogTitle>
+                <DialogDescription className="text-base mt-2">
+                  {isAffiliateAccount 
+                    ? "Your affiliate account is ready. Start inviting agents to sponsor them with your branding."
+                    : "Your account is ready. Let's create your first market report."
+                  }
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <div className="rounded-xl border-2 border-dashed border-primary/20 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 p-6 text-center">
+                  {isAffiliateAccount ? (
+                    <>
+                      <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                        <Building className="w-7 h-7 text-primary" />
+                      </div>
+                      <h3 className="font-bold text-lg mb-1">Invite Your First Agent</h3>
+                      <p className="text-sm text-muted-foreground mb-4 max-w-xs mx-auto">
+                        Sponsored agents get your branding on all their reports.
+                      </p>
+                    </>
                   ) : (
                     <>
-                      Continue
-                      <ArrowRight className="w-4 h-4" />
+                      <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                        <Rocket className="w-7 h-7 text-primary" />
+                      </div>
+                      <h3 className="font-bold text-lg mb-1">Create Your First Report</h3>
+                      <p className="text-sm text-muted-foreground mb-4 max-w-xs mx-auto">
+                        Generate a beautiful market snapshot report in just seconds.
+                      </p>
                     </>
                   )}
+                </div>
+              </div>
+              <div className="flex justify-center">
+                <Button onClick={handleNext} size="lg" className="gap-2 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all px-8">
+                  {isAffiliateAccount ? "Go to Dashboard" : "Create Report"}
+                  <ArrowRight className="w-4 h-4" />
                 </Button>
               </div>
             </div>
-          </>
-        )}
-
-        {/* Branding Step */}
-        {step === "branding" && (
-          <>
-            <DialogHeader>
-              <DialogTitle>Set up your branding</DialogTitle>
-              <DialogDescription>
-                Add your logo and brand colors to personalize your reports.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-5 py-4">
-              <ImageUpload
-                label="Company Logo"
-                value={branding.logo_url}
-                onChange={(url) => setBranding({ ...branding, logo_url: url })}
-                assetType="logo"
-                aspectRatio="wide"
-                helpText="Recommended: 400x150px, PNG with transparency"
-              />
-
-              {/* Color Pickers - Side by Side */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Primary Color</Label>
-                  <div className="flex items-center gap-2 p-3 rounded-lg border bg-muted/30">
-                    <div className="relative">
-                      <input
-                        type="color"
-                        value={branding.primary_color}
-                        onChange={(e) => setBranding({ ...branding, primary_color: e.target.value })}
-                        className="w-10 h-10 rounded-lg cursor-pointer border-0 p-0"
-                        style={{ backgroundColor: branding.primary_color }}
-                      />
-                      <div 
-                        className="absolute inset-0 rounded-lg pointer-events-none ring-1 ring-inset ring-black/10"
-                        style={{ backgroundColor: branding.primary_color }}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <Input
-                        type="text"
-                        value={branding.primary_color}
-                        onChange={(e) => setBranding({ ...branding, primary_color: e.target.value })}
-                        className="font-mono text-xs h-8"
-                        placeholder="#4F46E5"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Headers & buttons
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Accent Color</Label>
-                  <div className="flex items-center gap-2 p-3 rounded-lg border bg-muted/30">
-                    <div className="relative">
-                      <input
-                        type="color"
-                        value={branding.accent_color}
-                        onChange={(e) => setBranding({ ...branding, accent_color: e.target.value })}
-                        className="w-10 h-10 rounded-lg cursor-pointer border-0 p-0"
-                        style={{ backgroundColor: branding.accent_color }}
-                      />
-                      <div 
-                        className="absolute inset-0 rounded-lg pointer-events-none ring-1 ring-inset ring-black/10"
-                        style={{ backgroundColor: branding.accent_color }}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <Input
-                        type="text"
-                        value={branding.accent_color}
-                        onChange={(e) => setBranding({ ...branding, accent_color: e.target.value })}
-                        className="font-mono text-xs h-8"
-                        placeholder="#F26B2B"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Highlights & gradients
-                  </p>
-                </div>
-              </div>
-
-              {/* Live Preview */}
-              <div className="rounded-lg border p-3 bg-muted/20">
-                <p className="text-xs text-muted-foreground mb-2">Preview</p>
-                <div 
-                  className="h-8 rounded-md flex items-center justify-center text-white text-xs font-medium"
-                  style={{ 
-                    background: `linear-gradient(90deg, ${branding.primary_color}, ${branding.accent_color})` 
-                  }}
-                >
-                  Your Report Header
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-between">
-              <Button variant="ghost" onClick={handleBack} className="gap-2">
-                <ArrowLeft className="w-4 h-4" />
-                Back
-              </Button>
-              <div className="flex gap-2">
-                <Button variant="ghost" onClick={handleSkip}>
-                  Skip for now
-                </Button>
-                <Button onClick={handleNext} disabled={saving} className="gap-2">
-                  {saving ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      Continue
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Complete Step */}
-        {step === "complete" && (
-          <>
-            <DialogHeader className="text-center pt-4">
-              <div className="mx-auto w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mb-4">
-                <Check className="w-8 h-8 text-white" />
-              </div>
-              <DialogTitle className="text-2xl">You're all set!</DialogTitle>
-              <DialogDescription className="text-base mt-2">
-                {isAffiliateAccount 
-                  ? "Your affiliate account is ready. Start inviting agents to sponsor them with your branding."
-                  : "Your account is ready. Let's create your first market report."
-                }
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-6">
-              <div className="rounded-lg border bg-gradient-to-br from-primary/5 to-primary/10 p-4 text-center">
-                {isAffiliateAccount ? (
-                  <>
-                    <Building className="w-12 h-12 text-primary mx-auto mb-3" />
-                    <h3 className="font-semibold mb-1">Invite Your First Agent</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Sponsored agents get your branding on all their reports.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <FileText className="w-12 h-12 text-primary mx-auto mb-3" />
-                    <h3 className="font-semibold mb-1">Create Your First Report</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Generate a beautiful market snapshot report in seconds.
-                    </p>
-                  </>
-                )}
-              </div>
-            </div>
-            <div className="flex justify-center">
-              <Button onClick={handleNext} size="lg" className="gap-2">
-                {isAffiliateAccount ? "Go to Dashboard" : "Create Report"}
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </div>
-          </>
-        )}
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   )

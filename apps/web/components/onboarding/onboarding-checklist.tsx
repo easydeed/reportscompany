@@ -17,6 +17,7 @@ import {
   X,
   Loader2,
   Sparkles,
+  Zap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -138,23 +139,25 @@ export function OnboardingChecklist({
     return (
       <div
         className={cn(
-          "flex items-center justify-between p-4 rounded-lg border bg-gradient-to-r from-primary/5 to-primary/10",
+          "flex items-center justify-between p-4 rounded-xl border bg-gradient-to-r from-primary/5 to-primary/10",
           className
         )}
       >
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            <span className="font-medium">Complete your setup</span>
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-primary" />
+            </div>
+            <span className="font-semibold text-sm">Complete your setup</span>
           </div>
           <Progress value={status.progress_percent} className="w-32 h-2" />
-          <span className="text-sm text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             {status.completed_count} of {status.total_count} complete
           </span>
         </div>
         {status.current_step && (
           <Link href={status.steps.find((s) => s.key === status.current_step)?.href || "/app"} prefetch={false}>
-            <Button size="sm" className="gap-1">
+            <Button size="sm" className="gap-1 shadow-sm">
               Continue
               <ChevronRight className="w-4 h-4" />
             </Button>
@@ -164,54 +167,66 @@ export function OnboardingChecklist({
     )
   }
 
-  // Default card variant
+  // Default card variant - modernized
   return (
     <Card className={cn("relative overflow-hidden", className)}>
-      {/* Gradient accent */}
+      {/* Gradient accent bar at top */}
       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary/80 to-primary/60" />
 
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 pt-5">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            <CardTitle className="text-lg">Welcome! Let's get you set up</CardTitle>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20">
+              <Sparkles className="w-4.5 h-4.5 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-bold">Welcome! Let&apos;s get you set up</CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {status.completed_count} of {status.total_count} steps complete
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {onOpenWizard && status.progress_percent < 100 && (
               <Button
                 variant="outline"
                 size="sm"
-                className="text-xs h-7"
+                className="text-xs h-7 gap-1 border-primary/20 text-primary hover:bg-primary/5"
                 onClick={onOpenWizard}
               >
+                <Zap className="w-3 h-3" />
                 Quick Setup
               </Button>
             )}
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
               onClick={dismissOnboarding}
               disabled={dismissing}
             >
               {dismissing ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               )}
             </Button>
           </div>
         </div>
-        <div className="flex items-center gap-3 mt-2">
-          <Progress value={status.progress_percent} className="flex-1 h-2" />
-          <span className="text-sm text-muted-foreground whitespace-nowrap">
-            {status.completed_count} of {status.total_count}
+
+        {/* Progress bar with percentage */}
+        <div className="flex items-center gap-3 mt-3">
+          <div className="flex-1 relative">
+            <Progress value={status.progress_percent} className="h-2" />
+          </div>
+          <span className="text-xs font-semibold text-primary tabular-nums min-w-[2.5rem] text-right">
+            {Math.round(status.progress_percent)}%
           </span>
         </div>
       </CardHeader>
 
-      <CardContent className="pt-0">
-        <ul className="space-y-2">
+      <CardContent className="pt-0 pb-4">
+        <ul className="space-y-1.5">
           {status.steps.map((step, index) => {
             const Icon = iconMap[step.icon] || Circle
             const isNext = step.key === status.current_step
@@ -222,27 +237,27 @@ export function OnboardingChecklist({
                   href={step.href}
                   prefetch={false}
                   className={cn(
-                    "flex items-center gap-3 p-3 rounded-lg transition-all",
+                    "flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group",
                     step.completed
-                      ? "bg-green-50 dark:bg-green-950/20"
+                      ? "bg-green-50/80 dark:bg-green-950/20"
                       : step.skipped
-                      ? "bg-muted/50 opacity-60"
+                      ? "bg-muted/30 opacity-50"
                       : isNext
-                      ? "bg-primary/5 ring-1 ring-primary/20 hover:bg-primary/10"
+                      ? "bg-primary/5 ring-1 ring-primary/20 hover:bg-primary/10 shadow-sm"
                       : "hover:bg-muted/50"
                   )}
                 >
                   {/* Status Icon */}
                   <div
                     className={cn(
-                      "flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0",
+                      "flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0 transition-all duration-200",
                       step.completed
-                        ? "bg-green-500 text-white"
+                        ? "bg-green-500 text-white shadow-sm shadow-green-500/30"
                         : step.skipped
                         ? "bg-muted text-muted-foreground"
                         : isNext
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
+                        ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30"
+                        : "bg-muted/80 text-muted-foreground group-hover:bg-muted"
                     )}
                   >
                     {step.completed ? (
@@ -259,25 +274,28 @@ export function OnboardingChecklist({
                         className={cn(
                           "font-medium text-sm",
                           step.completed && "text-green-700 dark:text-green-400",
-                          step.skipped && "line-through"
+                          step.skipped && "line-through text-muted-foreground"
                         )}
                       >
                         {step.title}
                       </span>
                       {step.required && !step.completed && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 font-medium">
                           Required
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
                       {step.description}
                     </p>
                   </div>
 
                   {/* Arrow */}
                   {!step.completed && !step.skipped && (
-                    <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <ChevronRight className={cn(
+                      "w-4 h-4 flex-shrink-0 transition-transform duration-200",
+                      isNext ? "text-primary group-hover:translate-x-0.5" : "text-muted-foreground group-hover:translate-x-0.5"
+                    )} />
                   )}
                 </Link>
               </li>

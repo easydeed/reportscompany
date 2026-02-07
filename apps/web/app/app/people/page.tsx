@@ -30,10 +30,28 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { UserPlus, Mail, Trash2, Users, Shield, Pencil } from "lucide-react"
+import {
+  UserPlus,
+  Mail,
+  Trash2,
+  Users,
+  Shield,
+  Pencil,
+  Search,
+  Upload,
+  FolderPlus,
+  Building2,
+  UserCheck,
+  MoreHorizontal,
+  ChevronRight,
+  Sparkles,
+  Filter,
+} from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useContacts, useContactGroups, useAffiliateOverview, useInvalidate } from "@/hooks/use-api"
+import { cn } from "@/lib/utils"
+import { PageHeader } from "@/components/page-header"
 
 type Contact = {
   id: string
@@ -659,587 +677,638 @@ export default function PeoplePage() {
     return true
   })
 
+  // Badge color helper
+  function getTypeBadgeClasses(type: string, kind: string) {
+    if (kind === "sponsored_agent") return "bg-primary/10 text-primary border-primary/20"
+    switch (type) {
+      case "agent": return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-800"
+      case "client": return "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800"
+      case "group": return "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-400 dark:border-purple-800"
+      case "list": return "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800"
+      default: return "bg-muted text-muted-foreground"
+    }
+  }
+
+  // Avatar initial helper
+  function getInitials(name: string) {
+    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
+  }
+
+  function getAvatarColor(name: string) {
+    const colors = [
+      "bg-blue-500", "bg-emerald-500", "bg-purple-500", "bg-orange-500",
+      "bg-pink-500", "bg-indigo-500", "bg-cyan-500", "bg-rose-500"
+    ]
+    const index = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length
+    return colors[index]
+  }
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">My Contacts</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {isAffiliate
-              ? "Manage your sponsored agents and client contacts"
-              : "Manage your client contacts and recipients"}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <Mail className="h-4 w-4 mr-2" />
-                Import CSV
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Import Contacts from CSV</DialogTitle>
-                <DialogDescription>
-                  Upload a CSV file with columns: <code>name</code>, <code>email</code>, optional{" "}
-                  <code>type</code> (client/agent/list), and optional <code>group</code> (group name).
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="import-file">CSV File</Label>
-                  <Input
-                    id="import-file"
-                    type="file"
-                    accept=".csv"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (file) {
-                        setImportFile(file)
-                        setImportSummary(null)
-                      }
-                    }}
-                  />
+    <div className="space-y-5">
+      {/* Modern Header */}
+      <PageHeader
+        title="My Contacts"
+        description={
+          isAffiliate
+            ? "Manage your sponsored agents and client contacts"
+            : "Manage your client contacts and recipients"
+        }
+        action={
+          <div className="flex gap-2">
+            <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <Upload className="h-3.5 w-3.5" />
+                  Import
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Import Contacts from CSV</DialogTitle>
+                  <DialogDescription>
+                    Upload a CSV file with columns: <code className="px-1 py-0.5 bg-muted rounded text-xs">name</code>, <code className="px-1 py-0.5 bg-muted rounded text-xs">email</code>, optional{" "}
+                    <code className="px-1 py-0.5 bg-muted rounded text-xs">type</code>, and optional <code className="px-1 py-0.5 bg-muted rounded text-xs">group</code>.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="import-file">CSV File</Label>
+                    <Input
+                      id="import-file"
+                      type="file"
+                      accept=".csv"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          setImportFile(file)
+                          setImportSummary(null)
+                        }
+                      }}
+                    />
+                  </div>
+                  {importSummary && (
+                    <div className="space-y-2 rounded-xl border p-4 bg-muted/20">
+                      <h4 className="text-sm font-semibold">Import Summary</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Created {importSummary.created_contacts} contact(s), {importSummary.created_groups} group(s)
+                      </p>
+                      {importSummary.errors.length > 0 && (
+                        <div className="text-sm text-destructive">
+                          <p className="font-semibold">Errors:</p>
+                          <ul className="list-disc list-inside">
+                            {importSummary.errors.map((err, i) => (
+                              <li key={i}>
+                                Row {err.row}: {err.reason}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-                {importSummary && (
-                  <div className="space-y-2 rounded-md border p-4">
-                    <h4 className="text-sm font-semibold">Import Summary</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Created {importSummary.created_contacts} contact(s), {importSummary.created_groups} group(s)
-                    </p>
-                    {importSummary.errors.length > 0 && (
-                      <div className="text-sm text-destructive">
-                        <p className="font-semibold">Errors:</p>
-                        <ul className="list-disc list-inside">
-                          {importSummary.errors.map((err, i) => (
-                            <li key={i}>
-                              Row {err.row}: {err.reason}
-                            </li>
-                          ))}
-                        </ul>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setImportDialogOpen(false)
+                      setImportFile(null)
+                      setImportSummary(null)
+                    }}
+                  >
+                    Close
+                  </Button>
+                  <Button onClick={handleImportContacts} disabled={!importFile || importing}>
+                    {importing ? "Importing..." : "Import"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="gap-1.5 shadow-sm">
+                  <UserPlus className="h-3.5 w-3.5" />
+                  Add Contact
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New Contact</DialogTitle>
+                  <DialogDescription>
+                    Select a type first, then fill in the required details
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  {/* Type - FIRST */}
+                  <div className="space-y-2">
+                    <Label htmlFor="type" className="text-xs font-medium">Type *</Label>
+                    <Select
+                      value={formData.type}
+                      onValueChange={(value: "client" | "list" | "agent" | "group") =>
+                        setFormData({ ...formData, type: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a type..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="agent">Agent (External)</SelectItem>
+                        <SelectItem value="group">Group (Office/Company)</SelectItem>
+                        <SelectItem value="client">Client (Individual)</SelectItem>
+                        <SelectItem value="list">List (Recipients)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Conditional fields based on type */}
+                  {formData.type && (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                      {/* Name - Required for all */}
+                      <div className="space-y-2">
+                        <Label htmlFor="name" className="text-xs font-medium">Name *</Label>
+                        <Input
+                          id="name"
+                          placeholder={
+                            formData.type === "group"
+                              ? "e.g. ABC Realty - La Verne"
+                              : formData.type === "agent"
+                                ? "e.g. John Doe"
+                                : "e.g. Jane Smith"
+                          }
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        />
                       </div>
-                    )}
-                  </div>
-                )}
+
+                      {/* Email - Required for agent, optional for others */}
+                      {formData.type === "agent" && (
+                        <div className="space-y-2">
+                          <Label htmlFor="email" className="text-xs font-medium">Email *</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            placeholder="john@example.com"
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          />
+                        </div>
+                      )}
+
+                      {/* Email - Optional for others except group */}
+                      {formData.type !== "agent" && formData.type !== "group" && (
+                        <div className="space-y-2">
+                          <Label htmlFor="email" className="text-xs font-medium">Email</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            placeholder="email@example.com (optional)"
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          />
+                        </div>
+                      )}
+
+                      {/* Phone - Show for agent only */}
+                      {formData.type === "agent" && (
+                        <div className="space-y-2">
+                          <Label htmlFor="phone" className="text-xs font-medium">Phone</Label>
+                          <Input
+                            id="phone"
+                            type="tel"
+                            placeholder="(555) 123-4567 (optional)"
+                            value={formData.phone}
+                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                          />
+                        </div>
+                      )}
+
+                      {/* Notes - Always optional */}
+                      <div className="space-y-2">
+                        <Label htmlFor="notes" className="text-xs font-medium">
+                          {formData.type === "group" ? "Description" : "Notes"}
+                        </Label>
+                        <Input
+                          id="notes"
+                          placeholder={
+                            formData.type === "group"
+                              ? "e.g. Real estate office in La Verne..."
+                              : "Any additional notes..."
+                          }
+                          value={formData.notes}
+                          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => {
+                    setDialogOpen(false)
+                    setFormData({ name: "", email: "", type: "", phone: "", notes: "" })
+                  }}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleAddContact} disabled={!formData.type || !formData.name}>
+                    Add Contact
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        }
+      />
+
+      {/* Create Group Dialog */}
+      <Dialog open={groupDialogOpen} onOpenChange={setGroupDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New Group</DialogTitle>
+            <DialogDescription>
+              Create a group to organize your contacts and sponsored agents.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="group-name" className="text-xs font-medium">Group Name</Label>
+              <Input
+                id="group-name"
+                placeholder="Top Clients"
+                value={groupForm.name}
+                onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="group-description" className="text-xs font-medium">Description (Optional)</Label>
+              <Input
+                id="group-description"
+                placeholder="E.g., Clients receiving monthly market reports"
+                value={groupForm.description}
+                onChange={(e) => setGroupForm({ ...groupForm, description: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setGroupDialogOpen(false)
+                setGroupForm({ name: "", description: "" })
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleCreateGroup}>Create Group</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Person to Group(s) Dialog */}
+      <Dialog
+        open={addToGroupDialogOpen}
+        onOpenChange={(open) => {
+          setAddToGroupDialogOpen(open)
+          if (!open) {
+            setSelectedPersonForGroup(null)
+            setSelectedGroupIds([])
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add to Group</DialogTitle>
+            <DialogDescription>
+              Choose one or more groups to add{" "}
+              <span className="font-semibold">
+                {selectedPersonForGroup?.name || "this person"}
+              </span>{" "}
+              to.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {groupsLoading ? (
+              <div className="text-sm text-muted-foreground">Loading groups...</div>
+            ) : groups.length === 0 ? (
+              <div className="text-sm text-muted-foreground">
+                You don&apos;t have any groups yet. Create one first.
               </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setImportDialogOpen(false)
-                    setImportFile(null)
-                    setImportSummary(null)
+            ) : (
+              <div className="space-y-2">
+                <Label className="text-xs font-medium">Groups</Label>
+                <div className="max-h-60 overflow-y-auto border rounded-xl p-2 space-y-1.5">
+                  {groups.map((group) => {
+                    const checked = selectedGroupIds.includes(group.id)
+                    return (
+                      <button
+                        key={group.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedGroupIds((prev) =>
+                            checked ? prev.filter((id) => id !== group.id) : [...prev, group.id],
+                          )
+                        }}
+                        className={cn(
+                          "w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-all duration-150",
+                          checked
+                            ? "border-primary bg-primary/5 shadow-sm"
+                            : "border-border hover:border-primary/40 hover:bg-muted/40"
+                        )}
+                      >
+                        <div className="font-medium">{group.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {group.description || "No description"} • {group.member_count} members
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAddToGroupDialogOpen(false)
+                setSelectedPersonForGroup(null)
+                setSelectedGroupIds([])
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleAddPersonToGroups} disabled={groups.length === 0}>
+              Add to Group{selectedGroupIds.length > 1 ? "s" : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Contact Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={(open) => {
+        setEditDialogOpen(open)
+        if (!open) {
+          setEditingContact(null)
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Contact</DialogTitle>
+            <DialogDescription>Update this contact&apos;s details.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name" className="text-xs font-medium">Name</Label>
+              <Input
+                id="edit-name"
+                placeholder="John Doe"
+                value={editFormData.name}
+                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-email" className="text-xs font-medium">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                placeholder="john@example.com"
+                value={editFormData.email}
+                onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-type" className="text-xs font-medium">Type</Label>
+              <Select
+                value={editFormData.type}
+                onValueChange={(value: "client" | "list" | "agent") =>
+                  setEditFormData({ ...editFormData, type: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="client">Client (Individual)</SelectItem>
+                  <SelectItem value="list">List (Group)</SelectItem>
+                  <SelectItem value="agent">Agent (External)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-notes" className="text-xs font-medium">Notes (Optional)</Label>
+              <Input
+                id="edit-notes"
+                placeholder="Any additional notes..."
+                value={editFormData.notes}
+                onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditDialogOpen(false)
+                setEditingContact(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateContact}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Sponsored Agent Dialog */}
+      <Dialog open={editSponsoredDialogOpen} onOpenChange={(open) => {
+        setEditSponsoredDialogOpen(open)
+        if (!open) {
+          setEditingSponsoredAgent(null)
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Sponsored Agent</DialogTitle>
+            <DialogDescription>
+              Manage {editingSponsoredAgent?.name || "this agent"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Name (readonly) */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium">Name</Label>
+              <Input
+                value={editingSponsoredAgent?.name || ""}
+                disabled
+                className="bg-muted"
+              />
+            </div>
+            
+            {/* Account ID (readonly) */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium">Account ID</Label>
+              <Input
+                value={editingSponsoredAgent?.account_id || ""}
+                disabled
+                className="bg-muted text-xs"
+              />
+            </div>
+            
+            {/* Phone (optional) */}
+            <div className="space-y-2">
+              <Label htmlFor="sponsored-phone" className="text-xs font-medium">Phone (Optional)</Label>
+              <Input
+                id="sponsored-phone"
+                type="tel"
+                placeholder="(555) 123-4567"
+                value={sponsoredEditForm.phone}
+                onChange={(e) => setSponsoredEditForm({ ...sponsoredEditForm, phone: e.target.value })}
+              />
+            </div>
+            
+            {/* Notes (optional) */}
+            <div className="space-y-2">
+              <Label htmlFor="sponsored-notes" className="text-xs font-medium">Notes (Optional)</Label>
+              <Input
+                id="sponsored-notes"
+                placeholder="Any notes about this agent..."
+                value={sponsoredEditForm.notes}
+                onChange={(e) => setSponsoredEditForm({ ...sponsoredEditForm, notes: e.target.value })}
+              />
+            </div>
+            
+            {/* Sponsorship Toggle */}
+            <div className="space-y-2 pt-4 border-t">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-semibold">Sponsored by your account</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Remove sponsorship to make them independent
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={sponsoredEditForm.isSponsored}
+                  onChange={(e) => {
+                    if (!e.target.checked) {
+                      // User is turning OFF sponsorship
+                      handleUnsponsorAgent()
+                    }
+                    setSponsoredEditForm({ ...sponsoredEditForm, isSponsored: e.target.checked })
                   }}
-                >
-                  Close
-                </Button>
-                <Button onClick={handleImportContacts} disabled={!importFile || importing}>
-                  {importing ? "Importing..." : "Import"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Add Contact
-              </Button>
-            </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Contact</DialogTitle>
-              <DialogDescription>
-                Select a type first, then fill in the required details
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              {/* Type - FIRST */}
-              <div className="space-y-2">
-                <Label htmlFor="type">Type *</Label>
-                <Select
-                  value={formData.type}
-                  onValueChange={(value: "client" | "list" | "agent" | "group") =>
-                    setFormData({ ...formData, type: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a type..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="agent">Agent (External)</SelectItem>
-                    <SelectItem value="group">Group (Office/Company)</SelectItem>
-                    <SelectItem value="client">Client (Individual)</SelectItem>
-                    <SelectItem value="list">List (Recipients)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Conditional fields based on type */}
-              {formData.type && (
-                <>
-                  {/* Name - Required for all */}
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Name *</Label>
-                    <Input
-                      id="name"
-                      placeholder={
-                        formData.type === "group"
-                          ? "e.g. ABC Realty - La Verne"
-                          : formData.type === "agent"
-                            ? "e.g. John Doe"
-                            : "e.g. Jane Smith"
-                      }
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    />
-                  </div>
-
-                  {/* Email - Required for agent, optional for others */}
-                  {formData.type === "agent" && (
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="john@example.com"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      />
-                    </div>
-                  )}
-
-                  {/* Email - Optional for others except group */}
-                  {formData.type !== "agent" && formData.type !== "group" && (
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="email@example.com (optional)"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      />
-                    </div>
-                  )}
-
-                  {/* Phone - Show for agent only */}
-                  {formData.type === "agent" && (
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="(555) 123-4567 (optional)"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      />
-                    </div>
-                  )}
-
-                  {/* Notes - Always optional */}
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">
-                      {formData.type === "group" ? "Description" : "Notes"}
-                    </Label>
-                    <Input
-                      id="notes"
-                      placeholder={
-                        formData.type === "group"
-                          ? "e.g. Real estate office in La Verne..."
-                          : "Any additional notes..."
-                      }
-                      value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => {
-                setDialogOpen(false)
-                setFormData({ name: "", email: "", type: "", phone: "", notes: "" })
-              }}>
-                Cancel
-              </Button>
-              <Button onClick={handleAddContact} disabled={!formData.type || !formData.name}>
-                Add Contact
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        </div>
-
-        {/* Create Group Dialog */}
-        <Dialog open={groupDialogOpen} onOpenChange={setGroupDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>New Group</DialogTitle>
-              <DialogDescription>
-                Create a group to organize your contacts and sponsored agents.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="group-name">Group Name</Label>
-                <Input
-                  id="group-name"
-                  placeholder="Top Clients"
-                  value={groupForm.name}
-                  onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="group-description">Description (Optional)</Label>
-                <Input
-                  id="group-description"
-                  placeholder="E.g., Clients receiving monthly market reports"
-                  value={groupForm.description}
-                  onChange={(e) => setGroupForm({ ...groupForm, description: e.target.value })}
+                  className="h-5 w-5 rounded border-gray-300"
                 />
               </div>
             </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setGroupDialogOpen(false)
-                  setGroupForm({ name: "", description: "" })
-                }}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleCreateGroup}>Create Group</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditSponsoredDialogOpen(false)
+                setEditingSponsoredAgent(null)
+              }}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        {/* Add Person to Group(s) Dialog */}
-        <Dialog
-          open={addToGroupDialogOpen}
-          onOpenChange={(open) => {
-            setAddToGroupDialogOpen(open)
-            if (!open) {
-              setSelectedPersonForGroup(null)
-              setSelectedGroupIds([])
-            }
-          }}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add to Group</DialogTitle>
-              <DialogDescription>
-                Choose one or more groups to add{" "}
-                <span className="font-semibold">
-                  {selectedPersonForGroup?.name || "this person"}
-                </span>{" "}
-                to.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              {groupsLoading ? (
-                <div className="text-sm text-muted-foreground">Loading groups...</div>
-              ) : groups.length === 0 ? (
-                <div className="text-sm text-muted-foreground">
-                  You don&apos;t have any groups yet. Create one first.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label>Groups</Label>
-                  <div className="max-h-60 overflow-y-auto border rounded-md p-2 space-y-1">
-                    {groups.map((group) => {
-                      const checked = selectedGroupIds.includes(group.id)
-                      return (
-                        <button
-                          key={group.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedGroupIds((prev) =>
-                              checked ? prev.filter((id) => id !== group.id) : [...prev, group.id],
-                            )
-                          }}
-                          className={`w-full text-left px-3 py-2 rounded-md border text-sm ${
-                            checked
-                              ? "border-primary bg-primary/5"
-                              : "border-border hover:border-primary/40 hover:bg-muted/40"
-                          }`}
-                        >
-                          <div className="font-medium">{group.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {group.description || "No description"} • {group.member_count} members
-                          </div>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setAddToGroupDialogOpen(false)
-                  setSelectedPersonForGroup(null)
-                  setSelectedGroupIds([])
-                }}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleAddPersonToGroups} disabled={groups.length === 0}>
-                Add to Group{selectedGroupIds.length > 1 ? "s" : ""}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Contact Dialog */}
-        <Dialog open={editDialogOpen} onOpenChange={(open) => {
-          setEditDialogOpen(open)
-          if (!open) {
-            setEditingContact(null)
-          }
-        }}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit Contact</DialogTitle>
-              <DialogDescription>Update this contact’s details.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Name</Label>
-                <Input
-                  id="edit-name"
-                  placeholder="John Doe"
-                  value={editFormData.name}
-                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-email">Email</Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  placeholder="john@example.com"
-                  value={editFormData.email}
-                  onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-type">Type</Label>
-                <Select
-                  value={editFormData.type}
-                  onValueChange={(value: "client" | "list" | "agent") =>
-                    setEditFormData({ ...editFormData, type: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="client">Client (Individual)</SelectItem>
-                    <SelectItem value="list">List (Group)</SelectItem>
-                    <SelectItem value="agent">Agent (External)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-notes">Notes (Optional)</Label>
-                <Input
-                  id="edit-notes"
-                  placeholder="Any additional notes..."
-                  value={editFormData.notes}
-                  onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setEditDialogOpen(false)
-                  setEditingContact(null)
-                }}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleUpdateContact}>Save Changes</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Sponsored Agent Dialog */}
-        <Dialog open={editSponsoredDialogOpen} onOpenChange={(open) => {
-          setEditSponsoredDialogOpen(open)
-          if (!open) {
-            setEditingSponsoredAgent(null)
-          }
-        }}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit Sponsored Agent</DialogTitle>
-              <DialogDescription>
-                Manage {editingSponsoredAgent?.name || "this agent"}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              {/* Name (readonly) */}
-              <div className="space-y-2">
-                <Label>Name</Label>
-                <Input
-                  value={editingSponsoredAgent?.name || ""}
-                  disabled
-                  className="bg-muted"
-                />
-              </div>
-              
-              {/* Email (readonly - sponsored accounts don't expose email here) */}
-              <div className="space-y-2">
-                <Label>Account ID</Label>
-                <Input
-                  value={editingSponsoredAgent?.account_id || ""}
-                  disabled
-                  className="bg-muted text-xs"
-                />
-              </div>
-              
-              {/* Phone (optional, future use) */}
-              <div className="space-y-2">
-                <Label htmlFor="sponsored-phone">Phone (Optional)</Label>
-                <Input
-                  id="sponsored-phone"
-                  type="tel"
-                  placeholder="(555) 123-4567"
-                  value={sponsoredEditForm.phone}
-                  onChange={(e) => setSponsoredEditForm({ ...sponsoredEditForm, phone: e.target.value })}
-                />
-              </div>
-              
-              {/* Notes (optional, future use) */}
-              <div className="space-y-2">
-                <Label htmlFor="sponsored-notes">Notes (Optional)</Label>
-                <Input
-                  id="sponsored-notes"
-                  placeholder="Any notes about this agent..."
-                  value={sponsoredEditForm.notes}
-                  onChange={(e) => setSponsoredEditForm({ ...sponsoredEditForm, notes: e.target.value })}
-                />
-              </div>
-              
-              {/* Sponsorship Toggle */}
-              <div className="space-y-2 pt-4 border-t">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-base">Sponsored by your account</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Remove sponsorship to make them independent
-                    </p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={sponsoredEditForm.isSponsored}
-                    onChange={(e) => {
-                      if (!e.target.checked) {
-                        // User is turning OFF sponsorship
-                        handleUnsponsorAgent()
-                      }
-                      setSponsoredEditForm({ ...sponsoredEditForm, isSponsored: e.target.checked })
-                    }}
-                    className="h-5 w-5 rounded border-gray-300"
-                  />
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setEditSponsoredDialogOpen(false)
-                  setEditingSponsoredAgent(null)
-                }}
-              >
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Top Summary Cards */}
+      {/* Modern Summary Cards */}
       {!loading && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold">{contacts.length}</div>
-              <p className="text-sm text-muted-foreground mt-1">Total Contacts</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold">
-                {contacts.filter((c) => c.type === "agent").length}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            {
+              label: "Total Contacts",
+              value: contacts.length,
+              icon: Users,
+              color: "bg-blue-500/10 text-blue-600",
+            },
+            {
+              label: "Agent Contacts",
+              value: contacts.filter((c) => c.type === "agent").length,
+              icon: UserCheck,
+              color: "bg-emerald-500/10 text-emerald-600",
+            },
+            {
+              label: "Group Contacts",
+              value: contacts.filter((c) => c.type === "group").length,
+              icon: Building2,
+              color: "bg-purple-500/10 text-purple-600",
+            },
+            isAffiliate
+              ? {
+                  label: "Sponsored Agents",
+                  value: sponsoredAccounts.length,
+                  icon: Shield,
+                  color: "bg-primary/10 text-primary",
+                }
+              : {
+                  label: "Total Groups",
+                  value: groups.length,
+                  icon: FolderPlus,
+                  color: "bg-orange-500/10 text-orange-600",
+                },
+          ].map((card, i) => (
+            <div
+              key={i}
+              className="bg-card border border-border rounded-xl p-4 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-elevated)] transition-all duration-200"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.06em]">
+                  {card.label}
+                </span>
+                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", card.color)}>
+                  <card.icon className="w-4 h-4" />
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground mt-1">Agent Contacts</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold">
-                {contacts.filter((c) => c.type === "group").length}
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">Group Contacts</p>
-            </CardContent>
-          </Card>
-          {isAffiliate ? (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-2xl font-bold">{sponsoredAccounts.length}</div>
-                <p className="text-sm text-muted-foreground mt-1">Sponsored Agents</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-2xl font-bold">{groups.length}</div>
-                <p className="text-sm text-muted-foreground mt-1">Total Groups</p>
-              </CardContent>
-            </Card>
-          )}
+              <div className="text-2xl font-bold text-foreground tracking-tight">{card.value}</div>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* People & Groups Tabs */}
+      {/* People & Groups Tabs - Modernized */}
       <Tabs defaultValue="people">
-        <TabsList>
-          <TabsTrigger value="people">People</TabsTrigger>
-          <TabsTrigger value="groups">Groups</TabsTrigger>
+        <TabsList className="h-9">
+          <TabsTrigger value="people" className="text-xs gap-1.5">
+            <Users className="w-3.5 h-3.5" />
+            People
+          </TabsTrigger>
+          <TabsTrigger value="groups" className="text-xs gap-1.5">
+            <FolderPlus className="w-3.5 h-3.5" />
+            Groups
+          </TabsTrigger>
         </TabsList>
-        <TabsContent value="people" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>All People</CardTitle>
-              <CardDescription>
-                {isAffiliate
-                  ? "Your sponsored agents and contacts in one place"
-                  : "Your client contacts and recipients"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {/* Search & Filter Bar */}
-              <div className="flex items-center gap-4 mb-4">
-                <div className="flex-1">
+
+        <TabsContent value="people" className="mt-3">
+          <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
+            {/* Card header */}
+            <div className="px-5 py-4 border-b border-border">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">All People</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {isAffiliate
+                      ? "Your sponsored agents and contacts in one place"
+                      : "Your client contacts and recipients"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Search & Filter Bar - Enhanced */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     placeholder="Search by name or email..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="max-w-md"
+                    className="pl-9 h-9 max-w-md"
                   />
                 </div>
                 <Select value={filterType} onValueChange={(val: any) => setFilterType(val)}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-44 h-9">
+                    <Filter className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1250,23 +1319,31 @@ export default function PeoplePage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
 
-              {loading ? (
-                <div className="text-center py-8 text-muted-foreground">Loading...</div>
-              ) : people.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>
-                    {searchQuery || filterType !== "all"
-                      ? "No results found. Try adjusting your search or filter."
-                      : "No people yet. Add your first contact to get started."}
-                  </p>
+            {loading ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <div className="w-8 h-8 rounded-lg bg-muted animate-pulse mx-auto mb-3" />
+                <p className="text-sm">Loading contacts...</p>
+              </div>
+            ) : people.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                  <Users className="h-7 w-7 text-muted-foreground/50" />
                 </div>
-              ) : (
+                <h4 className="text-sm font-semibold mb-1">No people found</h4>
+                <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+                  {searchQuery || filterType !== "all"
+                    ? "No results found. Try adjusting your search or filter."
+                    : "No people yet. Add your first contact to get started."}
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="w-12 pl-5">
                         <input
                           type="checkbox"
                           checked={selectedPeopleIds.length === people.length && people.length > 0}
@@ -1280,19 +1357,19 @@ export default function PeoplePage() {
                           className="rounded border-gray-300"
                         />
                       </TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Groups</TableHead>
-                      {isAffiliate && <TableHead>Reports This Month</TableHead>}
-                      {isAffiliate && <TableHead>Last Activity</TableHead>}
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="text-xs font-semibold">Name</TableHead>
+                      <TableHead className="text-xs font-semibold">Email</TableHead>
+                      <TableHead className="text-xs font-semibold">Type</TableHead>
+                      <TableHead className="text-xs font-semibold">Groups</TableHead>
+                      {isAffiliate && <TableHead className="text-xs font-semibold">Reports</TableHead>}
+                      {isAffiliate && <TableHead className="text-xs font-semibold">Last Activity</TableHead>}
+                      <TableHead className="text-xs font-semibold text-right pr-5">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {people.map((person) => (
-                      <TableRow key={person.id}>
-                        <TableCell>
+                      <TableRow key={person.id} className="group/row">
+                        <TableCell className="pl-5">
                           <input
                             type="checkbox"
                             checked={selectedPeopleIds.includes(person.id)}
@@ -1306,11 +1383,22 @@ export default function PeoplePage() {
                             className="rounded border-gray-300"
                           />
                         </TableCell>
-                        <TableCell className="font-medium">{person.name}</TableCell>
-                        <TableCell>{person.email || "—"}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "w-8 h-8 rounded-lg flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0",
+                              getAvatarColor(person.name)
+                            )}>
+                              {getInitials(person.name)}
+                            </div>
+                            <span className="font-medium text-sm">{person.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{person.email || "—"}</TableCell>
                         <TableCell>
                           <Badge
-                            variant={person.type === "sponsored_agent" ? "default" : "outline"}
+                            variant="outline"
+                            className={cn("text-[10px] font-semibold px-2 py-0.5", getTypeBadgeClasses(person.type, person.kind))}
                           >
                             {person.displayType}
                           </Badge>
@@ -1319,161 +1407,171 @@ export default function PeoplePage() {
                           {person.groups && person.groups.length > 0 ? (
                             <div className="flex gap-1 flex-wrap">
                               {person.groups.map((group) => (
-                                <Badge key={group.id} variant="secondary" className="text-xs">
+                                <Badge key={group.id} variant="secondary" className="text-[10px] px-1.5 py-0 font-normal">
                                   {group.name}
                                 </Badge>
                               ))}
                             </div>
                           ) : (
-                            <span className="text-muted-foreground text-sm">—</span>
+                            <span className="text-muted-foreground text-xs">—</span>
                           )}
                         </TableCell>
                         {isAffiliate && (
-                          <TableCell>{person.reportsThisMonth ?? "—"}</TableCell>
+                          <TableCell className="text-sm tabular-nums">{person.reportsThisMonth ?? "—"}</TableCell>
                         )}
                         {isAffiliate && (
-                          <TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
                             {person.lastActivity
                               ? new Date(person.lastActivity).toLocaleDateString()
                               : "—"}
                           </TableCell>
                         )}
-                        <TableCell className="text-right space-x-1">
-                          {/* Edit for contacts */}
-                          {person.kind === "contact" && (
-                            <>
+                        <TableCell className="text-right pr-5">
+                          <div className="flex items-center justify-end gap-0.5 opacity-60 group-hover/row:opacity-100 transition-opacity">
+                            {/* Edit for contacts */}
+                            {person.kind === "contact" && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => {
+                                    const contact = contacts.find((c) => c.id === person.id)
+                                    if (!contact) return
+                                    setEditingContact(contact)
+                                    setEditFormData({
+                                      name: contact.name,
+                                      email: contact.email || "",
+                                      type: contact.type,
+                                      phone: contact.phone || "",
+                                      notes: contact.notes || "",
+                                    })
+                                    setEditDialogOpen(true)
+                                  }}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => {
+                                    const contact = contacts.find((c) => c.id === person.id)
+                                    if (!contact) return
+                                    setManageGroupsContact(contact)
+                                    setManageGroupsDialogOpen(true)
+                                  }}
+                                >
+                                  <Users className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive/70 hover:text-destructive"
+                                  onClick={() => handleDeleteContact(person.id, person.name)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
+                            )}
+                            
+                            {/* Edit for sponsored agents */}
+                            {person.kind === "sponsored_agent" && (
                               <Button
                                 variant="ghost"
-                                size="sm"
+                                size="icon"
+                                className="h-7 w-7"
                                 onClick={() => {
-                                  const contact = contacts.find((c) => c.id === person.id)
-                                  if (!contact) return
-                                  setEditingContact(contact)
-                                  setEditFormData({
-                                    name: contact.name,
-                                    email: contact.email || "",
-                                    type: contact.type,
-                                    phone: contact.phone || "",
-                                    notes: contact.notes || "",
+                                  const agent = sponsoredAccounts.find((a) => a.account_id === person.id)
+                                  if (!agent) return
+                                  setEditingSponsoredAgent(agent)
+                                  setSponsoredEditForm({
+                                    phone: "",
+                                    notes: "",
+                                    isSponsored: true,
                                   })
-                                  setEditDialogOpen(true)
+                                  setEditSponsoredDialogOpen(true)
                                 }}
                               >
-                                <Pencil className="h-4 w-4" />
+                                <Pencil className="h-3.5 w-3.5" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  const contact = contacts.find((c) => c.id === person.id)
-                                  if (!contact) return
-                                  setManageGroupsContact(contact)
-                                  setManageGroupsDialogOpen(true)
-                                }}
-                              >
-                                <Users className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteContact(person.id, person.name)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                          
-                          {/* Edit for sponsored agents */}
-                          {person.kind === "sponsored_agent" && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                const agent = sponsoredAccounts.find((a) => a.account_id === person.id)
-                                if (!agent) return
-                                setEditingSponsoredAgent(agent)
-                                setSponsoredEditForm({
-                                  phone: "",
-                                  notes: "",
-                                  isSponsored: true,
-                                })
-                                setEditSponsoredDialogOpen(true)
-                              }}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          )}
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            )}
+          </div>
         </TabsContent>
-        <TabsContent value="groups" className="mt-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+
+        <TabsContent value="groups" className="mt-3">
+          <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
+            <div className="px-5 py-4 border-b border-border flex items-center justify-between">
               <div>
-                <CardTitle>Groups</CardTitle>
-                <CardDescription>
-                  Create and manage groups of contacts and sponsored agents for easy scheduling.
-                </CardDescription>
+                <h3 className="text-sm font-semibold text-foreground">Groups</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Create and manage groups of contacts for easy scheduling.
+                </p>
               </div>
               <Button
                 variant="outline"
+                size="sm"
+                className="gap-1.5"
                 onClick={() => {
                   setGroupDialogOpen(true)
                 }}
               >
-                <Users className="h-4 w-4 mr-2" />
+                <FolderPlus className="h-3.5 w-3.5" />
                 New Group
               </Button>
-            </CardHeader>
-            <CardContent>
-              {groupsLoading ? (
-                <div className="text-center py-8 text-muted-foreground">Loading groups...</div>
-              ) : groups.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No groups yet. Create a group to start organizing your people.</p>
+            </div>
+
+            {groupsLoading ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <div className="w-8 h-8 rounded-lg bg-muted animate-pulse mx-auto mb-3" />
+                <p className="text-sm">Loading groups...</p>
+              </div>
+            ) : groups.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                  <FolderPlus className="h-7 w-7 text-muted-foreground/50" />
                 </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Members</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {groups.map((group) => (
-                      <TableRow key={group.id}>
-                        <TableCell className="font-medium">{group.name}</TableCell>
-                        <TableCell>{group.description || "—"}</TableCell>
-                        <TableCell>{group.member_count ?? 0}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={async () => {
-                              setActiveGroup(group)
-                              await loadGroupMembers(group.id)
-                            }}
-                          >
-                            View / Manage
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+                <h4 className="text-sm font-semibold mb-1">No groups yet</h4>
+                <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+                  Create a group to start organizing your people.
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {groups.map((group) => (
+                  <div
+                    key={group.id}
+                    className="px-5 py-3.5 flex items-center justify-between hover:bg-muted/30 transition-colors cursor-pointer group/item"
+                    onClick={async () => {
+                      setActiveGroup(group)
+                      await loadGroupMembers(group.id)
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                        <Users className="w-4 h-4 text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{group.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {group.description || "No description"} • {group.member_count ?? 0} member{(group.member_count ?? 0) !== 1 ? "s" : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover/item:opacity-100 transition-opacity" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
 
@@ -1489,65 +1587,78 @@ export default function PeoplePage() {
           <div className="space-y-4 py-4">
             {/* Add Members Button */}
             <div className="flex justify-between items-center">
-              <h4 className="text-sm font-semibold">Members ({groupDetailMembers.length})</h4>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Members ({groupDetailMembers.length})</h4>
               <Button
                 variant="outline"
                 size="sm"
+                className="gap-1.5"
                 onClick={() => setAddMembersOpen(true)}
               >
-                <UserPlus className="h-4 w-4 mr-2" />
+                <UserPlus className="h-3.5 w-3.5" />
                 Add Members
               </Button>
             </div>
 
             {/* Members List */}
             {loadingMembers ? (
-              <div className="text-center py-8 text-muted-foreground">Loading members...</div>
+              <div className="text-center py-8 text-muted-foreground text-sm">Loading members...</div>
             ) : groupDetailMembers.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No members yet. Click "Add Members" to get started.</p>
+              <div className="text-center py-8">
+                <div className="w-12 h-12 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
+                  <Users className="h-6 w-6 text-muted-foreground/50" />
+                </div>
+                <p className="text-sm text-muted-foreground">No members yet. Click &quot;Add Members&quot; to get started.</p>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {groupDetailMembers.map((member: any) => (
-                    <TableRow key={`${member.member_type}-${member.member_id}`}>
-                      <TableCell className="font-medium">{member.name}</TableCell>
-                      <TableCell>{member.email || "—"}</TableCell>
-                      <TableCell>
-                        <Badge variant={member.member_type === "sponsored_agent" ? "default" : "secondary"}>
-                          {member.member_type === "contact" ? "Contact" : "Sponsored Agent"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            handleRemoveMemberFromGroup(
-                              activeGroup!.id,
-                              member.member_type,
-                              member.member_id,
-                              member.name
-                            )
-                          }
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="space-y-1.5">
+                {groupDetailMembers.map((member: any) => (
+                  <div
+                    key={`${member.member_type}-${member.member_id}`}
+                    className="flex items-center justify-between p-3 rounded-xl border border-border/50 hover:bg-muted/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "w-8 h-8 rounded-lg flex items-center justify-center text-white text-[11px] font-bold",
+                        getAvatarColor(member.name || "?")
+                      )}>
+                        {getInitials(member.name || "?")}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{member.name}</p>
+                        <p className="text-xs text-muted-foreground">{member.email || "No email"}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[10px] font-semibold px-2 py-0.5",
+                          member.member_type === "sponsored_agent"
+                            ? "bg-primary/10 text-primary border-primary/20"
+                            : "bg-muted text-muted-foreground"
+                        )}
+                      >
+                        {member.member_type === "contact" ? "Contact" : "Sponsored Agent"}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive/70 hover:text-destructive"
+                        onClick={() =>
+                          handleRemoveMemberFromGroup(
+                            activeGroup!.id,
+                            member.member_type,
+                            member.member_id,
+                            member.name
+                          )
+                        }
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
           <DialogFooter>
@@ -1569,8 +1680,8 @@ export default function PeoplePage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Available People</Label>
-              <div className="max-h-60 overflow-y-auto border rounded-md p-2 space-y-1">
+              <Label className="text-xs font-medium">Available People</Label>
+              <div className="max-h-60 overflow-y-auto border rounded-xl p-2 space-y-1.5">
                 {/* Contacts */}
                 {contacts.map((contact) => {
                   const isAlreadyMember = groupDetailMembers.some(
@@ -1588,11 +1699,12 @@ export default function PeoplePage() {
                           checked ? prev.filter((id) => id !== contact.id) : [...prev, contact.id]
                         )
                       }}
-                      className={`w-full text-left px-3 py-2 rounded-md border text-sm ${
+                      className={cn(
+                        "w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-all duration-150",
                         checked
-                          ? "border-primary bg-primary/5"
+                          ? "border-primary bg-primary/5 shadow-sm"
                           : "border-border hover:border-primary/40 hover:bg-muted/40"
-                      }`}
+                      )}
                     >
                       <div className="font-medium">{contact.name}</div>
                       <div className="text-xs text-muted-foreground">
@@ -1622,11 +1734,12 @@ export default function PeoplePage() {
                               : [...prev, agent.account_id]
                           )
                         }}
-                        className={`w-full text-left px-3 py-2 rounded-md border text-sm ${
+                        className={cn(
+                          "w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-all duration-150",
                           checked
-                            ? "border-primary bg-primary/5"
+                            ? "border-primary bg-primary/5 shadow-sm"
                             : "border-border hover:border-primary/40 hover:bg-muted/40"
-                        }`}
+                        )}
                       >
                         <div className="font-medium">{agent.name}</div>
                         <div className="text-xs text-muted-foreground">Sponsored Agent</div>
@@ -1674,32 +1787,36 @@ export default function PeoplePage() {
           <div className="space-y-4 py-4">
             {/* Current Memberships */}
             <div className="space-y-2">
-              <Label className="text-sm font-semibold">Current Groups</Label>
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Current Groups</Label>
               {manageGroupsContact?.groups && manageGroupsContact.groups.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {manageGroupsContact.groups.map((group) => (
                     <div
                       key={group.id}
-                      className="flex items-center justify-between px-3 py-2 border rounded-md"
+                      className="flex items-center justify-between px-3 py-2.5 border rounded-xl hover:bg-muted/30 transition-colors"
                     >
-                      <div>
-                        <div className="font-medium text-sm">{group.name}</div>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                          <Users className="w-3.5 h-3.5 text-purple-600" />
+                        </div>
+                        <span className="font-medium text-sm">{group.name}</span>
                       </div>
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
+                        className="h-7 w-7 text-destructive/70 hover:text-destructive"
                         onClick={() =>
                           manageGroupsContact &&
                           handleRemoveContactFromGroup(manageGroupsContact.id, group.id, group.name)
                         }
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground py-4">
+                <p className="text-sm text-muted-foreground py-4 text-center">
                   Not in any groups yet.
                 </p>
               )}
@@ -1707,8 +1824,8 @@ export default function PeoplePage() {
 
             {/* Add to New Groups */}
             <div className="space-y-2 pt-4 border-t">
-              <Label className="text-sm font-semibold">Add to Groups</Label>
-              <div className="max-h-48 overflow-y-auto border rounded-md p-2 space-y-1">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Add to Groups</Label>
+              <div className="max-h-48 overflow-y-auto border rounded-xl p-2 space-y-1.5">
                 {groups
                   .filter(
                     (g) =>
@@ -1727,11 +1844,12 @@ export default function PeoplePage() {
                               : [...prev, group.id]
                           )
                         }}
-                        className={`w-full text-left px-3 py-2 rounded-md border text-sm ${
+                        className={cn(
+                          "w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-all duration-150",
                           checked
-                            ? "border-primary bg-primary/5"
+                            ? "border-primary bg-primary/5 shadow-sm"
                             : "border-border hover:border-primary/40 hover:bg-muted/40"
-                        }`}
+                        )}
                       >
                         <div className="font-medium">{group.name}</div>
                         <div className="text-xs text-muted-foreground">
@@ -1768,4 +1886,3 @@ export default function PeoplePage() {
     </div>
   )
 }
-

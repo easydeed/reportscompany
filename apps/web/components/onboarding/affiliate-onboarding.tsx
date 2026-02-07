@@ -21,6 +21,7 @@ import {
   ArrowRight,
   Sparkles,
   Info,
+  Zap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -128,12 +129,19 @@ export function AffiliateOnboarding({
   // If complete, show success state
   if (status.is_complete) {
     return (
-      <Alert className={cn("border-green-200 bg-green-50 dark:bg-green-950/20", className)}>
-        <Check className="h-4 w-4 text-green-600" />
-        <AlertDescription className="text-green-800 dark:text-green-200">
-          <strong>Setup complete!</strong> You&apos;re ready to manage your sponsored agents and track their activity.
-        </AlertDescription>
-      </Alert>
+      <div className={cn("flex items-center gap-3 p-4 rounded-xl border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20", className)}>
+        <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center flex-shrink-0 shadow-sm shadow-green-500/30">
+          <Check className="h-4 w-4 text-white" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-green-800 dark:text-green-200">
+            Setup complete!
+          </p>
+          <p className="text-xs text-green-600 dark:text-green-400">
+            You&apos;re ready to manage your sponsored agents and track their activity.
+          </p>
+        </div>
+      </div>
     )
   }
 
@@ -142,13 +150,15 @@ export function AffiliateOnboarding({
       {/* Gradient accent */}
       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary/80 to-primary/60" />
 
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 pt-5">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-primary" />
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20">
+              <Building2 className="w-4.5 h-4.5 text-white" />
+            </div>
             <div>
-              <CardTitle className="text-lg">Welcome to your Affiliate Dashboard</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-base font-bold">Welcome to your Affiliate Dashboard</CardTitle>
+              <CardDescription className="text-xs mt-0.5">
                 Let&apos;s set up your account to start sponsoring agents
               </CardDescription>
             </div>
@@ -156,28 +166,32 @@ export function AffiliateOnboarding({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
             onClick={dismissOnboarding}
             disabled={dismissing}
           >
             {dismissing ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             )}
           </Button>
         </div>
+
+        {/* Progress bar with percentage */}
         <div className="flex items-center gap-3 mt-3">
-          <Progress value={status.progress_percent} className="flex-1 h-2" />
-          <span className="text-sm text-muted-foreground whitespace-nowrap">
-            {status.completed_count} of {status.total_count} complete
+          <div className="flex-1 relative">
+            <Progress value={status.progress_percent} className="h-2" />
+          </div>
+          <span className="text-xs font-semibold text-primary tabular-nums min-w-[2.5rem] text-right">
+            {Math.round(status.progress_percent)}%
           </span>
         </div>
       </CardHeader>
 
-      <CardContent className="pt-0 space-y-4">
+      <CardContent className="pt-0 space-y-3 pb-4">
         {/* Steps list */}
-        <ul className="space-y-2">
+        <ul className="space-y-1.5">
           {status.steps.map((step) => {
             const Icon = iconMap[step.icon] || Circle
             const isNext = step.key === status.current_step
@@ -188,27 +202,27 @@ export function AffiliateOnboarding({
                   href={step.href}
                   prefetch={false}
                   className={cn(
-                    "flex items-center gap-3 p-3 rounded-lg transition-all",
+                    "flex items-center gap-3 p-3 rounded-xl transition-all duration-200 group",
                     step.completed
-                      ? "bg-green-50 dark:bg-green-950/20"
+                      ? "bg-green-50/80 dark:bg-green-950/20"
                       : step.skipped
-                      ? "bg-muted/50 opacity-60"
+                      ? "bg-muted/30 opacity-50"
                       : isNext
-                      ? "bg-primary/5 ring-1 ring-primary/20 hover:bg-primary/10"
+                      ? "bg-primary/5 ring-1 ring-primary/20 hover:bg-primary/10 shadow-sm"
                       : "hover:bg-muted/50"
                   )}
                 >
                   {/* Status Icon */}
                   <div
                     className={cn(
-                      "flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0",
+                      "flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0 transition-all duration-200",
                       step.completed
-                        ? "bg-green-500 text-white"
+                        ? "bg-green-500 text-white shadow-sm shadow-green-500/30"
                         : step.skipped
                         ? "bg-muted text-muted-foreground"
                         : isNext
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
+                        ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30"
+                        : "bg-muted/80 text-muted-foreground group-hover:bg-muted"
                     )}
                   >
                     {step.completed ? (
@@ -225,25 +239,28 @@ export function AffiliateOnboarding({
                         className={cn(
                           "font-medium text-sm",
                           step.completed && "text-green-700 dark:text-green-400",
-                          step.skipped && "line-through"
+                          step.skipped && "line-through text-muted-foreground"
                         )}
                       >
                         {step.title}
                       </span>
                       {step.required && !step.completed && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 font-medium">
                           Required
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
                       {step.description}
                     </p>
                   </div>
 
                   {/* Arrow */}
                   {!step.completed && !step.skipped && (
-                    <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <ChevronRight className={cn(
+                      "w-4 h-4 flex-shrink-0 transition-transform duration-200",
+                      isNext ? "text-primary group-hover:translate-x-0.5" : "text-muted-foreground group-hover:translate-x-0.5"
+                    )} />
                   )}
                 </Link>
               </li>
@@ -253,29 +270,41 @@ export function AffiliateOnboarding({
 
         {/* Helpful tip based on current step */}
         {status.current_step === "branding_setup" && (
-          <Alert className="bg-blue-50 dark:bg-blue-950/20 border-blue-200">
-            <Info className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
-              <strong>Tip:</strong> Your branding (logo, colors) will appear on all reports generated by your sponsored agents.
-            </AlertDescription>
-          </Alert>
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-blue-50/80 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30">
+            <div className="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <Info className="h-3.5 w-3.5 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-blue-800 dark:text-blue-200">Pro Tip</p>
+              <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
+                Your branding (logo, colors) will appear on all reports generated by your sponsored agents.
+              </p>
+            </div>
+          </div>
         )}
 
         {status.current_step === "first_agent_invited" && (
-          <Alert className="bg-blue-50 dark:bg-blue-950/20 border-blue-200">
-            <Mail className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
-              <strong>Tip:</strong> When you invite an agent, they&apos;ll receive an email with a link to set up their account. They&apos;ll automatically see your branding on their reports.
-            </AlertDescription>
-          </Alert>
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-blue-50/80 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30">
+            <div className="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <Mail className="h-3.5 w-3.5 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-blue-800 dark:text-blue-200">Pro Tip</p>
+              <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
+                When you invite an agent, they&apos;ll receive an email with a link to set up their account. They&apos;ll automatically see your branding on their reports.
+              </p>
+            </div>
+          </div>
         )}
 
         {/* Quick stats for context */}
         {sponsoredCount > 0 && (
-          <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg">
-            <Users className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">
-              You have <strong className="text-foreground">{sponsoredCount}</strong> sponsored agent{sponsoredCount !== 1 ? 's' : ''}
+          <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl border border-border/50">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Users className="w-3.5 h-3.5 text-primary" />
+            </div>
+            <span className="text-xs text-muted-foreground">
+              You have <strong className="text-foreground font-semibold">{sponsoredCount}</strong> sponsored agent{sponsoredCount !== 1 ? 's' : ''}
             </span>
           </div>
         )}
@@ -316,25 +345,27 @@ export function AffiliateOnboardingBanner({ className }: { className?: string })
   return (
     <div
       className={cn(
-        "flex items-center justify-between p-4 rounded-lg border bg-gradient-to-r from-primary/5 to-primary/10",
+        "flex items-center justify-between p-4 rounded-xl border bg-gradient-to-r from-primary/5 to-primary/10",
         className
       )}
     >
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-primary" />
-          <span className="font-medium">Complete your affiliate setup</span>
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Sparkles className="w-4 h-4 text-primary" />
+          </div>
+          <span className="font-semibold text-sm">Complete your affiliate setup</span>
         </div>
         <Progress value={status.progress_percent} className="w-32 h-2" />
-        <span className="text-sm text-muted-foreground">
+        <span className="text-xs font-medium text-muted-foreground">
           {status.completed_count} of {status.total_count} complete
         </span>
       </div>
       {nextStep && (
         <Link href={nextStep.href} prefetch={false}>
-          <Button size="sm" className="gap-1">
+          <Button size="sm" className="gap-1.5 shadow-sm">
             {nextStep.title}
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-3.5 h-3.5" />
           </Button>
         </Link>
       )}
