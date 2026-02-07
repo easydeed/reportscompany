@@ -1,158 +1,128 @@
 "use client"
 
-import Link from "next/link"
 import { motion } from "framer-motion"
-import { Button } from "@/components/ui/button"
 import { Check } from "lucide-react"
-import { cn } from "@/lib/utils"
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+}
 
 const plans = [
   {
     name: "Starter",
-    tagline: "Get started for free",
     price: "$0",
-    period: "/month",
-    popular: false,
+    description: "Get started for free",
     features: [
-      "50 reports per month",
+      "50 reports/month",
       "Core report types",
       "Email & PDF delivery",
       "Basic branding",
     ],
+    cta: "Start free trial",
+    featured: false,
   },
   {
     name: "Pro",
-    tagline: "For individual agents",
     price: "$29",
-    period: "/month",
-    popular: true,
+    description: "For individual agents",
     features: [
-      "300 reports per month",
+      "300 reports/month",
       "All 8 report types",
       "Automated scheduling",
       "Full white-label branding",
-      "Priority support",
     ],
+    cta: "Start free trial",
+    featured: true,
   },
   {
     name: "Team",
-    tagline: "For teams & affiliates",
     price: "$99",
-    period: "/month",
-    popular: false,
+    description: "For teams & affiliates",
     features: [
       "Unlimited reports",
       "Sponsor agents",
       "Admin dashboard",
-      "Co-branded reports",
       "Dedicated support",
     ],
+    cta: "Start free trial",
+    featured: false,
   },
 ]
 
-const container = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.08 } },
-} as const
-const item = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" as const } },
-}
-
 export function Pricing() {
   return (
-    <section
-      id="pricing"
-      className="py-20 sm:py-24 px-4 sm:px-6 lg:px-8 bg-white"
-    >
-      <div className="max-w-6xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-          viewport={{ once: true, margin: "-50px" }}
-          className="text-center mb-14"
-        >
-          <h2 className="font-display font-bold text-3xl sm:text-4xl text-slate-900 tracking-[-0.02em] mb-3">
+    <section id="pricing" className="bg-background px-6 py-20 md:py-28">
+      <motion.div
+        className="mx-auto max-w-6xl"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true }}
+        variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
+      >
+        <motion.div variants={fadeUp} className="text-center">
+          <h2 className="text-4xl font-bold tracking-tight text-foreground md:text-5xl">
             Simple, transparent pricing
           </h2>
-          <p className="text-lg text-slate-500 max-w-xl mx-auto">
-            Choose the plan that fits your business. Upgrade or downgrade anytime.
+          <p className="mt-4 text-muted-foreground">
+            Choose the plan that fits your business
           </p>
         </motion.div>
 
-        <motion.div
-          variants={container}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-50px" }}
-          className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto"
-        >
+        <div className="mt-14 grid gap-8 md:grid-cols-3">
           {plans.map((plan) => (
             <motion.div
               key={plan.name}
-              variants={item}
-              className={cn(
-                "relative rounded-2xl p-8 transition-shadow",
-                plan.popular
-                  ? "bg-white border-2 border-indigo-300 shadow-lg hover:shadow-xl"
-                  : "bg-white border border-slate-200/50 hover:shadow-md"
-              )}
+              variants={fadeUp}
+              className={`relative rounded-2xl border p-8 ${
+                plan.featured
+                  ? "border-transparent ring-2 ring-[#6366F1] bg-card"
+                  : "border-[#F1F5F9] bg-card"
+              }`}
             >
-              {plan.popular && (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-indigo-500 text-white text-xs font-semibold px-4 py-1 rounded-full">
+              {plan.featured && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#6366F1] px-3 py-1 text-xs font-semibold text-white">
                   Most popular
-                </div>
+                </span>
               )}
 
-              <div className="mb-6">
-                <h3 className="font-display font-semibold text-xl text-slate-900 mb-1">
-                  {plan.name}
-                </h3>
-                <p className="text-sm text-slate-500">{plan.tagline}</p>
+              <h3 className="text-xl font-bold text-foreground">{plan.name}</h3>
+              <div className="mt-3 flex items-baseline gap-1">
+                <span className="text-4xl font-bold text-foreground">{plan.price}</span>
+                <span className="text-muted-foreground">/month</span>
               </div>
+              <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>
 
-              <div className="mb-6">
-                <span className="font-display font-bold text-4xl text-slate-900">
-                  {plan.price}
-                </span>
-                <span className="text-slate-500 text-base">{plan.period}</span>
-              </div>
-
-              <ul className="space-y-3 mb-8">
+              <ul className="mt-6 space-y-3">
                 {plan.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2.5 text-sm">
-                    <Check className="w-4 h-4 text-indigo-500 flex-shrink-0 mt-0.5" />
-                    <span className="text-slate-600">{f}</span>
+                  <li key={f} className="flex items-center gap-3 text-sm text-foreground">
+                    <Check className="h-4 w-4 shrink-0 text-[#6366F1]" />
+                    {f}
                   </li>
                 ))}
               </ul>
 
-              <Button
-                className={cn(
-                  "w-full rounded-full h-11",
-                  plan.popular
-                    ? "bg-indigo-500 hover:bg-indigo-600 text-white"
-                    : "bg-transparent border border-slate-200 text-slate-700 hover:bg-slate-50"
-                )}
-                asChild
+              <a
+                href="/register"
+                className={`mt-8 flex w-full items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition-colors ${
+                  plan.featured
+                    ? "bg-[#6366F1] text-white hover:bg-[#4F46E5]"
+                    : "border border-border bg-transparent text-foreground hover:bg-muted"
+                }`}
               >
-                <Link href="/register">Start free trial</Link>
-              </Button>
+                {plan.cta}
+              </a>
             </motion.div>
           ))}
-        </motion.div>
+        </div>
 
         <motion.p
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-          viewport={{ once: true }}
-          className="text-center text-sm text-slate-400 mt-10"
+          variants={fadeUp}
+          className="mt-10 text-center text-sm text-muted-foreground/70"
         >
-          All plans include 14-day free trial · No credit card required
+          {"All plans include 14-day free trial \u00B7 No credit card required"}
         </motion.p>
-      </div>
+      </motion.div>
     </section>
   )
 }

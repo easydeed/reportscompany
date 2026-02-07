@@ -1,53 +1,45 @@
 "use client"
 
-import Link from "next/link"
 import { motion } from "framer-motion"
-import { Button } from "@/components/ui/button"
-import { ArrowRight } from "lucide-react"
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+}
 
 export function FinalCta() {
-  const scrollToSamples = (e: React.MouseEvent) => {
-    e.preventDefault()
-    const el = document.getElementById("email-reports")
-    if (el) {
-      const offset = el.getBoundingClientRect().top + window.pageYOffset - 72
-      window.scrollTo({ top: offset, behavior: "smooth" })
-    }
-  }
-
   return (
-    <section className="py-20 sm:py-24 px-4 sm:px-6 lg:px-8 bg-indigo-50/60">
+    <section className="bg-[#EEF2FF] px-6 py-20 md:py-28">
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        viewport={{ once: true, margin: "-50px" }}
-        className="max-w-2xl mx-auto text-center"
+        className="mx-auto max-w-2xl text-center"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true }}
+        variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
       >
-        <h2 className="font-display font-bold text-3xl sm:text-4xl text-slate-900 tracking-[-0.02em] mb-4">
+        <motion.h2
+          variants={fadeUp}
+          className="text-4xl font-bold tracking-tight text-foreground md:text-5xl"
+        >
           Ready to try it?
-        </h2>
-        <p className="text-lg text-slate-500 mb-8">
-          Setup takes 2 minutes. Your first report is free.
-        </p>
-
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Button
-            className="rounded-full bg-indigo-500 hover:bg-indigo-600 text-white px-8 py-3 h-auto text-base shadow-sm hover:shadow-md transition-all"
-            asChild
+        </motion.h2>
+        <motion.p variants={fadeUp} className="mt-4 text-muted-foreground">
+          Set up takes 2 minutes. Your first report is free.
+        </motion.p>
+        <motion.div variants={fadeUp} className="mt-8">
+          <a
+            href="/register"
+            className="inline-flex items-center rounded-full bg-[#6366F1] px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-[#6366F1]/25 transition-colors hover:bg-[#4F46E5]"
           >
-            <Link href="/register">
-              Start free trial
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Link>
-          </Button>
-          <button
-            onClick={scrollToSamples}
-            className="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors cursor-pointer py-3"
-          >
-            See sample reports →
-          </button>
-        </div>
+            Start free trial
+          </a>
+        </motion.div>
+        <motion.p
+          variants={fadeUp}
+          className="mt-5 text-sm text-muted-foreground/70"
+        >
+          {"Free for 14 days \u00B7 No credit card \u00B7 Cancel anytime"}
+        </motion.p>
       </motion.div>
     </section>
   )

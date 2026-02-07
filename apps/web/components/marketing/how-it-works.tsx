@@ -3,84 +3,75 @@
 import { motion } from "framer-motion"
 import { MapPin, Palette, Send } from "lucide-react"
 
+const fadeUp = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+}
+
 const steps = [
   {
     icon: MapPin,
     title: "Pick your market",
     description:
-      "Choose ZIP codes or cities. Eight report types to match any audience.",
+      "Choose your city, zip code, or custom MLS area to pull live data.",
   },
   {
     icon: Palette,
     title: "Add your brand",
     description:
-      "Upload your logo and colors. Every report looks like yours.",
+      "Upload your logo, pick your colors, and add your contact info.",
   },
   {
     icon: Send,
     title: "Hit send",
     description:
-      "Reports deliver on your schedule. Weekly, monthly, or one-time.",
+      "Deliver reports by email on a schedule or download print-ready PDFs.",
   },
 ]
 
-const container = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.08 } },
-} as const
-const item = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" as const } },
-}
-
 export function HowItWorks() {
   return (
-    <section id="how-it-works" className="py-20 sm:py-24 px-4 sm:px-6 lg:px-8 bg-slate-50">
-      <div className="max-w-6xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-          viewport={{ once: true, margin: "-50px" }}
-          className="text-center mb-14"
+    <section id="how-it-works" className="bg-[#F8FAFC] px-6 py-20 md:py-28">
+      <motion.div
+        className="mx-auto max-w-7xl"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true }}
+        variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
+      >
+        <motion.h2
+          variants={fadeUp}
+          className="text-center text-4xl font-bold tracking-tight text-foreground md:text-5xl"
         >
-          <h2 className="font-display font-bold text-3xl sm:text-4xl text-slate-900 tracking-[-0.02em] mb-3">
-            From MLS to inbox in three clicks
-          </h2>
-          <p className="text-lg text-slate-500 max-w-xl mx-auto">
-            No spreadsheets. No manual formatting. Just results.
-          </p>
-        </motion.div>
+          From MLS to inbox in three clicks
+        </motion.h2>
+        <motion.p
+          variants={fadeUp}
+          className="mx-auto mt-4 max-w-xl text-center text-muted-foreground"
+        >
+          No design skills needed. Just pick your market, brand it, and go.
+        </motion.p>
 
-        <motion.div
-          variants={container}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-50px" }}
-          className="grid md:grid-cols-3 gap-6"
-        >
-          {steps.map((step) => {
-            const Icon = step.icon
-            return (
-              <motion.div
-                key={step.title}
-                variants={item}
-                className="bg-white rounded-2xl border border-slate-200/50 p-8 hover:shadow-md transition-shadow"
-              >
-                <div className="w-11 h-11 rounded-xl bg-indigo-50 flex items-center justify-center mb-5">
-                  <Icon className="w-5 h-5 text-indigo-500" />
-                </div>
-                <h3 className="font-display font-semibold text-lg text-slate-900 mb-2">
-                  {step.title}
-                </h3>
-                <p className="text-slate-500 leading-relaxed text-[15px]">
-                  {step.description}
-                </p>
-              </motion.div>
-            )
-          })}
-        </motion.div>
-      </div>
+        <div className="mt-14 grid gap-8 md:grid-cols-3">
+          {steps.map((step) => (
+            <motion.div
+              key={step.title}
+              variants={fadeUp}
+              className="rounded-2xl border border-[#F1F5F9] bg-card p-8 transition-shadow hover:shadow-md"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#EEF2FF]">
+                <step.icon className="h-6 w-6 text-[#6366F1]" />
+              </div>
+              <h3 className="mt-5 text-xl font-semibold text-foreground">
+                {step.title}
+              </h3>
+              <p className="mt-2 leading-relaxed text-muted-foreground">
+                {step.description}
+              </p>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
     </section>
   )
 }

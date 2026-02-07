@@ -1,63 +1,50 @@
 import Link from "next/link"
-import { Logo } from "@/components/logo"
 
 export function MarketingFooter() {
   return (
-    <footer className="border-t border-slate-200 bg-white">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+    <footer className="bg-[#0F172A] px-6 py-24 text-[#94A3B8]">
+      <div className="mx-auto max-w-7xl">
+        <div className="grid gap-12 md:grid-cols-4">
           {/* Brand */}
           <div className="md:col-span-1">
-            <Logo variant="full" className="h-8 mb-4" />
-            <p className="text-sm text-slate-500 leading-relaxed">
+            <p className="text-lg font-bold text-white">TrendyReports</p>
+            <p className="mt-3 text-sm leading-relaxed">
               Turn MLS data into beautiful market reports.
             </p>
           </div>
 
           {/* Product */}
           <div>
-            <h3 className="text-sm font-semibold text-slate-900 mb-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-white">
               Product
-            </h3>
-            <ul className="space-y-3 text-sm">
+            </p>
+            <ul className="mt-4 space-y-3">
               <li>
-                <Link
-                  href="#how-it-works"
-                  className="text-slate-500 hover:text-slate-900 transition-colors"
-                >
+                <a href="#how-it-works" className="text-sm transition-colors hover:text-white">
                   For Agents
-                </Link>
+                </a>
               </li>
               <li>
-                <a
-                  href="mailto:sales@trendyreports.com"
-                  className="text-slate-500 hover:text-slate-900 transition-colors"
-                >
+                <a href="mailto:sales@trendyreports.com" className="text-sm transition-colors hover:text-white">
                   For Affiliates
                 </a>
               </li>
               <li>
-                <Link
-                  href="#pricing"
-                  className="text-slate-500 hover:text-slate-900 transition-colors"
-                >
+                <a href="#pricing" className="text-sm transition-colors hover:text-white">
                   Pricing
-                </Link>
+                </a>
               </li>
             </ul>
           </div>
 
           {/* Support */}
           <div>
-            <h3 className="text-sm font-semibold text-slate-900 mb-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-white">
               Support
-            </h3>
-            <ul className="space-y-3 text-sm">
+            </p>
+            <ul className="mt-4 space-y-3">
               <li>
-                <a
-                  href="mailto:support@trendyreports.com"
-                  className="text-slate-500 hover:text-slate-900 transition-colors"
-                >
+                <a href="mailto:support@trendyreports.com" className="text-sm transition-colors hover:text-white">
                   Contact Us
                 </a>
               </li>
@@ -66,23 +53,17 @@ export function MarketingFooter() {
 
           {/* Legal */}
           <div>
-            <h3 className="text-sm font-semibold text-slate-900 mb-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-white">
               Legal
-            </h3>
-            <ul className="space-y-3 text-sm">
+            </p>
+            <ul className="mt-4 space-y-3">
               <li>
-                <Link
-                  href="/privacy"
-                  className="text-slate-500 hover:text-slate-900 transition-colors"
-                >
+                <Link href="/privacy" className="text-sm transition-colors hover:text-white">
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/terms"
-                  className="text-slate-500 hover:text-slate-900 transition-colors"
-                >
+                <Link href="/terms" className="text-sm transition-colors hover:text-white">
                   Terms of Service
                 </Link>
               </li>
@@ -90,11 +71,8 @@ export function MarketingFooter() {
           </div>
         </div>
 
-        {/* Bottom */}
-        <div className="pt-8 border-t border-slate-200">
-          <p className="text-sm text-slate-400">
-            © {new Date().getFullYear()} TrendyReports. All rights reserved.
-          </p>
+        <div className="mt-16 border-t border-white/10 pt-10 text-center text-sm">
+          {`\u00A9 ${new Date().getFullYear()} TrendyReports. All rights reserved.`}
         </div>
       </div>
     </footer>
