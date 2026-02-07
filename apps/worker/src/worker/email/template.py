@@ -1,5 +1,21 @@
 """HTML email template for scheduled report notifications.
 
+V15: Premium V0-inspired redesign matching React email previews.
+- BRANDED: Hero metric in tinted card with serif font (Georgia) and gold accent bar
+- BRANDED: Section labels with accent bar prefix (V0 SectionLabel component)
+- BRANDED: AI Insight paragraph with left border in brand color
+- BRANDED: Quick Take callout in accent-colored card with $ icon
+- BRANDED: CTA button area in tinted background container
+- BRANDED: Agent footer with branded bg, serif name, pill contact buttons
+- BRANDED: Core Indicators with accent dots and serif numbers
+- LAYOUT: Property Types + Price Tiers side-by-side with progress bars
+- LAYOUT: Gallery count badge with branded pill + line separator
+- GALLERY: Brand-tinted detail badges (Bed/Bath/SF) and serif prices
+- TABLE: Brand-colored header row with white text + summary stats
+- NEW: KPI card helpers with trend indicators for analytics layouts
+- NEW: Year-over-Year comparison table helper with brand header
+- TYPOGRAPHY: Georgia serif for hero metrics, key numbers (premium feel)
+
 V10: Corporate/Professional redesign for Market Snapshot.
 - REMOVED: Emojis from Quick Take, preheaders, and CTAs
 - REMOVED: "Conversation Starter" green callout box (too casual)
@@ -216,6 +232,15 @@ def _build_vertical_list_html(listings: List[Dict], primary_color: str, accent_c
         # Row border (not on last item)
         border_style = "border-bottom: 1px solid #e7e5e4;" if i < len(listings) - 1 else ""
         
+        # V15: Build brand-tinted detail badges for vertical list
+        badges_html = ""
+        if beds:
+            badges_html += f'<span style="display: inline-block; padding: 3px 8px; background-color: {primary_color}12; border-radius: 4px; font-size: 10px; font-weight: 500; color: {primary_color}; margin-right: 4px;">{beds} Bed</span>'
+        if baths:
+            badges_html += f'<span style="display: inline-block; padding: 3px 8px; background-color: {primary_color}12; border-radius: 4px; font-size: 10px; font-weight: 500; color: {primary_color}; margin-right: 4px;">{baths} Bath</span>'
+        if sqft:
+            badges_html += f'<span style="display: inline-block; padding: 3px 8px; background-color: {primary_color}12; border-radius: 4px; font-size: 10px; font-weight: 500; color: {primary_color};">{sqft:,} SF</span>'
+        
         rows_html += f'''
                       <tr>
                         <td style="padding: 14px 16px; {border_style}">
@@ -225,18 +250,16 @@ def _build_vertical_list_html(listings: List[Dict], primary_color: str, accent_c
                                 {photo_html}
                               </td>
                               <td style="vertical-align: top;">
+                                <p style="margin: 0 0 6px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 17px; font-weight: 700; color: {primary_color};">
+                                  {price_str}
+                                </p>
                                 <p style="margin: 0 0 3px 0; font-size: 15px; font-weight: 600; color: #1c1917;">
                                   {address}
                                 </p>
                                 <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 400; color: #78716c;">
                                   {location}
                                 </p>
-                                <p style="margin: 0 0 4px 0; font-size: 17px; font-weight: 700; color: #1c1917;">
-                                  {price_str}
-                                </p>
-                                <p style="margin: 0; font-size: 12px; font-weight: 400; color: #78716c;">
-                                  {details_str}
-                                </p>
+                                {f'<p style="margin: 0;">{badges_html}</p>' if badges_html else ''}
                               </td>
                             </tr>
                           </table>
@@ -288,10 +311,10 @@ def _build_gallery_grid_html(listings: List[Dict], report_type: str, primary_col
     else:
         section_title = "New Listings"
     
-    # V10: Professional styling (neutral colors, clean borders)
-    section_header_style = f"background-color: #fafaf9; border: 1px solid #e7e5e4; border-radius: 6px;"
-    count_style = f"font-size: 20px; font-weight: 700; color: #1c1917; margin-right: 10px;"
-    title_style = f"font-size: 11px; font-weight: 600; color: #57534e; text-transform: uppercase; letter-spacing: 1px;"
+    # V15: Gallery count badge (V0 design - branded pill + line separator)
+    section_header_style = ""  # Not used - replaced by count badge below
+    count_style = ""
+    title_style = ""
     
     # Build the content section
     if use_grid:
@@ -346,9 +369,18 @@ def _build_gallery_grid_html(listings: List[Dict], report_type: str, primary_col
                     cards_html += "</tr>"
                 cards_html += "<tr>"
             
+            # V15: Build brand-tinted detail badges
+            badges_html = ""
+            if beds:
+                badges_html += f'<span style="display: inline-block; padding: 3px 8px; background-color: {primary_color}12; border-radius: 4px; font-size: 10px; font-weight: 500; color: {primary_color}; margin-right: 4px;">{beds} Bed</span>'
+            if baths:
+                badges_html += f'<span style="display: inline-block; padding: 3px 8px; background-color: {primary_color}12; border-radius: 4px; font-size: 10px; font-weight: 500; color: {primary_color}; margin-right: 4px;">{baths} Bath</span>'
+            if sqft:
+                badges_html += f'<span style="display: inline-block; padding: 3px 8px; background-color: {primary_color}12; border-radius: 4px; font-size: 10px; font-weight: 500; color: {primary_color};">{sqft:,} SF</span>'
+            
             cards_html += f'''
                       <td width="{card_width}" style="padding: 5px; vertical-align: top;">
-                        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 6px; border: 1px solid #e7e5e4; overflow: hidden;">
+                        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e7e5e4; overflow: hidden;">
                           <tr>
                             <td style="padding: 0;">
                               {photo_html}
@@ -356,18 +388,16 @@ def _build_gallery_grid_html(listings: List[Dict], report_type: str, primary_col
                           </tr>
                           <tr>
                             <td style="padding: 10px 12px; height: {content_height}px; vertical-align: top;">
+                              <p style="margin: 0 0 6px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 16px; font-weight: 700; color: {primary_color};">
+                                {price_str}
+                              </p>
                               <p style="margin: 0 0 2px 0; font-size: 13px; font-weight: 600; color: #1c1917; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                 {address}
                               </p>
                               <p style="margin: 0 0 6px 0; font-size: 11px; font-weight: 400; color: #78716c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                 {location}
                               </p>
-                              <p style="margin: 0 0 4px 0; font-size: 15px; font-weight: 700; color: #1c1917;">
-                                {price_str}
-                              </p>
-                              <p style="margin: 0; font-size: 10px; font-weight: 400; color: #78716c;">
-                                {details_str}
-                              </p>
+                              {f'<p style="margin: 0;">{badges_html}</p>' if badges_html else ''}
                             </td>
                           </tr>
                         </table>
@@ -386,15 +416,22 @@ def _build_gallery_grid_html(listings: List[Dict], report_type: str, primary_col
         content_html = _build_vertical_list_html(listings, primary_color, accent_color)
     
     return f'''
-              <!-- Photo Gallery (V8 Adaptive Layout) -->
+              <!-- V15: Photo Gallery (branded count badge + adaptive layout) -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
-                  <td style="padding-bottom: 12px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="{section_header_style}">
+                  <td style="padding-bottom: 16px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                       <tr>
-                        <td align="center" style="padding: 14px 20px;">
-                          <span style="{count_style}">{count}</span>
-                          <span style="{title_style}">{section_title}</span>
+                        <td width="auto" style="vertical-align: middle;">
+                          <span style="display: inline-block; background-color: {primary_color}; color: #ffffff; font-size: 14px; font-weight: 700; padding: 6px 16px; border-radius: 20px;">
+                            {count}
+                          </span>
+                        </td>
+                        <td style="padding-left: 10px; vertical-align: middle;">
+                          <span style="font-size: 14px; font-weight: 600; color: #1c1917;">{section_title}</span>
+                        </td>
+                        <td style="vertical-align: middle; padding-left: 12px;">
+                          <div style="height: 1px; background-color: #e7e5e4;"></div>
                         </td>
                       </tr>
                     </table>
@@ -445,21 +482,24 @@ def _build_listings_table_html(listings: List[Dict], report_type: str, primary_c
         # Alternate row background
         bg_color = "#fafaf9" if i % 2 == 0 else "#ffffff"
         
+        # V15: Get sqft for additional context
+        sqft = listing.get("sqft")
+        sqft_str = f" &middot; {sqft:,} SF" if sqft else ""
+        
         rows_html += f'''
                       <tr style="background-color: {bg_color};">
                         <td style="padding: 10px 12px; border-bottom: 1px solid #e7e5e4;">
                           <span style="font-size: 13px; font-weight: 600; color: #1c1917;">{address}</span>
                           <br/>
-                          <span style="font-size: 11px; color: #78716c;">{city}</span>
+                          <span style="font-size: 11px; color: #78716c;">{city}{sqft_str}</span>
                         </td>
                         <td align="center" style="padding: 10px 8px; border-bottom: 1px solid #e7e5e4; font-size: 13px; color: #44403c;">
-                          {beds}
+                          {beds}/{baths}
                         </td>
-                        <td align="center" style="padding: 10px 8px; border-bottom: 1px solid #e7e5e4; font-size: 13px; color: #44403c;">
-                          {baths}
-                        </td>
-                        <td align="right" style="padding: 10px 12px; border-bottom: 1px solid #e7e5e4; font-size: 14px; font-weight: 900; color: {primary_color};">
-                          {price_str}
+                        <td align="right" style="padding: 10px 12px; border-bottom: 1px solid #e7e5e4;">
+                          <span style="font-family: Georgia, 'Times New Roman', serif; font-size: 14px; font-weight: 700; color: {primary_color};">
+                            {price_str}
+                          </span>
                         </td>
                       </tr>'''
     
@@ -471,31 +511,66 @@ def _build_listings_table_html(listings: List[Dict], report_type: str, primary_c
     }
     section_title = titles.get(report_type, "Listings")
     
+    # V15: Build summary stats row (V0 table-view design)
+    # Calculate summary stats from listings
+    prices = [l.get("list_price", 0) for l in listings if l.get("list_price")]
+    avg_price = sum(prices) / len(prices) if prices else 0
+    total_sales = len(listings)
+    
+    summary_stats_html = ""
+    if prices:
+        avg_price_str = _format_price_clean(avg_price)
+        summary_stats_html = f'''
+                <tr>
+                  <td style="padding-bottom: 16px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td width="50%" style="padding-right: 4px;">
+                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 8px;">
+                            <tr>
+                              <td align="center" style="padding: 12px 6px;">
+                                <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 700; color: {primary_color};">{total_sales}</p>
+                                <p style="margin: 4px 0 0; font-size: 9px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">Total</p>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                        <td width="50%" style="padding-left: 4px;">
+                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 8px;">
+                            <tr>
+                              <td align="center" style="padding: 12px 6px;">
+                                <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 700; color: {primary_color};">{avg_price_str}</p>
+                                <p style="margin: 4px 0 0; font-size: 9px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">Avg Price</p>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>'''
+    
     return f'''
-              <!-- Listings Table -->
+              <!-- V15: Listings Table (brand header + summary stats) -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
                   <td style="padding-bottom: 12px;">
-                    <p style="margin: 0; font-size: 11px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 1.5px;">
-                      {section_title} (Top {len(listings)})
-                    </p>
+                    {_section_label_html(f"{section_title} (Top {len(listings)})", primary_color)}
                   </td>
                 </tr>
+                {summary_stats_html}
                 <tr>
                   <td>
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e7e5e4; overflow: hidden;">
-                      <!-- Header Row -->
-                      <tr style="background-color: #f5f5f4;">
-                        <td style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #57534e; text-transform: uppercase; letter-spacing: 0.5px;">
+                      <!-- V15: Brand-colored header row -->
+                      <tr style="background-color: {primary_color};">
+                        <td style="padding: 10px 12px; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">
                           Address
                         </td>
-                        <td align="center" style="padding: 10px 8px; font-size: 11px; font-weight: 700; color: #57534e; text-transform: uppercase; letter-spacing: 0.5px; width: 50px;">
-                          Beds
+                        <td align="center" style="padding: 10px 8px; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; width: 50px;">
+                          Bd/Ba
                         </td>
-                        <td align="center" style="padding: 10px 8px; font-size: 11px; font-weight: 700; color: #57534e; text-transform: uppercase; letter-spacing: 0.5px; width: 50px;">
-                          Baths
-                        </td>
-                        <td align="right" style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #57534e; text-transform: uppercase; letter-spacing: 0.5px; width: 100px;">
+                        <td align="right" style="padding: 10px 12px; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; width: 100px;">
                           Price
                         </td>
                       </tr>
@@ -505,6 +580,99 @@ def _build_listings_table_html(listings: List[Dict], report_type: str, primary_c
                 </tr>
               </table>
 '''
+
+
+def _build_kpi_card_html(label: str, value: str, change: str, positive: bool, position: int) -> str:
+    """
+    V15: Build a single KPI card with trend indicator (V0 StatCard design).
+    Used in 2×2 grid for analytics-style layouts.
+    
+    Args:
+        label: KPI label (e.g. "Median Price")
+        value: Display value (e.g. "$875K")
+        change: Change string (e.g. "+8.0%")
+        positive: Whether the change is positive (green) or negative (red)
+        position: 0-3 position in 2×2 grid (controls padding)
+    """
+    padding = "0 4px 8px 0" if position % 2 == 0 else "0 0 8px 4px"
+    arrow = "&#9650;" if positive else "&#9660;"  # ▲ or ▼
+    color = "#059669" if positive else "#dc2626"
+    
+    return f'''<td width="50%" style="padding: {padding};">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 8px;">
+    <tr>
+      <td style="padding: 16px;">
+        <p style="margin: 0 0 6px; font-size: 10px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">{label}</p>
+        <p style="margin: 0 0 8px; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: 700; color: #1c1917;">{value}</p>
+        <p style="margin: 0; font-size: 11px;">
+          <span style="color: {color}; font-weight: 600;">{arrow} {change}</span>
+          <span style="color: #78716c;"> vs last yr</span>
+        </p>
+      </td>
+    </tr>
+  </table>
+</td>'''
+
+
+def _build_yoy_comparison_table_html(rows: list, primary_color: str) -> str:
+    """
+    V15: Build Year-over-Year comparison table (V0 design).
+    
+    Args:
+        rows: List of dicts with keys: metric, last, current, change, positive
+        primary_color: Brand primary color
+    """
+    if not rows:
+        return ""
+    
+    table_rows = ""
+    for i, row in enumerate(rows):
+        bg = "" if i % 2 == 0 else f' style="background-color: #fafaf9;"'
+        arrow = "&#9650;" if row.get("positive") else "&#9660;"
+        color = "#059669" if row.get("positive") else "#dc2626"
+        table_rows += f'''
+            <tr{bg}>
+              <td style="padding: 10px 12px; border-bottom: 1px solid #e7e5e4; font-size: 12px; font-weight: 600; color: #1c1917;">{row["metric"]}</td>
+              <td align="center" style="padding: 10px 8px; border-bottom: 1px solid #e7e5e4; font-size: 12px; color: #78716c;">{row["last"]}</td>
+              <td align="center" style="padding: 10px 8px; border-bottom: 1px solid #e7e5e4; font-size: 12px; font-weight: 600; color: #1c1917;">{row["current"]}</td>
+              <td align="center" style="padding: 10px 8px; border-bottom: 1px solid #e7e5e4; font-size: 12px; font-weight: 600; color: {color};">{arrow} {row["change"]}</td>
+            </tr>'''
+    
+    return f'''
+              <!-- V15: Year-over-Year Comparison Table -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 28px;">
+                <tr>
+                  <td>
+                    {_section_label_html("Year-over-Year Comparison", primary_color)}
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 8px; overflow: hidden;">
+                      <tr style="background-color: {primary_color};">
+                        <td style="padding: 10px 12px; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">Metric</td>
+                        <td align="center" style="padding: 10px 8px; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">Last Year</td>
+                        <td align="center" style="padding: 10px 8px; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">This Year</td>
+                        <td align="center" style="padding: 10px 8px; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">Change</td>
+                      </tr>
+                      {table_rows}
+                    </table>
+                  </td>
+                </tr>
+              </table>'''
+
+
+def _section_label_html(label: str, primary_color: str) -> str:
+    """V15: Branded section label with accent bar (matches V0 SectionLabel component)."""
+    return f'''
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom: 14px;">
+                      <tr>
+                        <td style="width: 20px; padding-right: 8px; vertical-align: middle;">
+                          <div style="width: 20px; height: 2px; background-color: {primary_color}; border-radius: 2px;"></div>
+                        </td>
+                        <td style="vertical-align: middle;">
+                          <p style="margin: 0; font-size: 11px; font-weight: 700; color: {primary_color}; text-transform: uppercase; letter-spacing: 2px;">
+                            {label}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>'''
 
 
 def _format_decimal(value: Optional[float], decimals: int = 1) -> str:
@@ -1351,14 +1519,14 @@ def schedule_email_html(
     # V4 HTML SECTIONS (Market Snapshot)
     # ============================================================================
     
-    # V10: Insight Paragraph - Professional style
+    # V15: Insight Paragraph - Branded left border (V0 design)
     insight_html = ""
     if insight_text:
         insight_html = f'''
-              <!-- V10: Insight Paragraph (Professional) -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+              <!-- V15: AI Insight (branded left border) -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 28px;">
                 <tr>
-                  <td style="padding: 16px 20px; background-color: #fafaf9; border-radius: 6px; border: 1px solid #e7e5e4;">
+                  <td style="padding: 16px 20px; background-color: {primary_color}0A; border-left: 4px solid {primary_color}; border-radius: 8px;">
                     <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #44403c; font-weight: 400;">
                       {insight_text}
                     </p>
@@ -1389,53 +1557,67 @@ def schedule_email_html(
     hero_4_html = ""
     if has_hero_4:
         if report_type == "market_snapshot":
-            # V10: Market Snapshot - Clean corporate layout
+            # V15: Market Snapshot - Branded hero metric card + 3 separate metric cards (V0 design)
             hero_4_html = f'''
-              <!-- V10: HEADLINE METRIC (Clean, Refined) -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 0;">
+              <!-- V15: HERO METRIC (branded tinted card, serif font) -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 28px;">
                 <tr>
-                  <td align="center" style="padding: 0 0 6px 0;">
-                    <p style="margin: 0; font-size: 11px; font-weight: 500; color: #78716c; text-transform: uppercase; letter-spacing: 1.5px;">
+                  <td align="center" style="padding: 24px 20px; background-color: {primary_color}0F; border-radius: 12px; border: 1px solid {primary_color}1A;">
+                    <p style="margin: 0 0 6px 0; font-size: 11px; font-weight: 600; color: {primary_color}B3; text-transform: uppercase; letter-spacing: 2px;">
                       {h1_label}
                     </p>
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center" style="padding: 0 0 24px 0;">
-                    <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 48px; font-weight: 700; color: #1c1917; letter-spacing: -1px; line-height: 1;">
+                    <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 48px; font-weight: 700; color: {primary_color}; letter-spacing: -1px; line-height: 1;">
                       {h1_value}
                     </p>
+                    <!--[if !mso]><!-->
+                    <div style="margin: 12px auto 0; width: 48px; height: 4px; border-radius: 4px; background-color: {accent_color};"></div>
+                    <!--<![endif]-->
                   </td>
                 </tr>
               </table>
               
-              <!-- V10: KEY METRICS ROW (Clean bordered cards) -->
+              <!-- V15: KEY METRICS ROW (3 separate cards with accent dots, serif numbers) -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 28px;">
                 <tr>
-                  <td>
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafaf9; border-radius: 8px; border: 1px solid #e7e5e4;">
+                  <td width="33%" style="padding-right: 6px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 8px; background-color: #ffffff;">
                       <tr>
-                        <td width="33%" align="center" style="padding: 18px 8px; border-right: 1px solid #e7e5e4;">
-                          <p style="margin: 0 0 4px 0; font-size: 22px; font-weight: 700; color: #1c1917;">
+                        <td align="center" style="padding: 18px 8px;">
+                          <p style="margin: 0 0 6px 0; font-size: 14px; color: {accent_color};">&#9679;</p>
+                          <p style="margin: 0 0 4px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: 700; color: #1c1917;">
                             {h2_value}
                           </p>
-                          <p style="margin: 0; font-size: 10px; font-weight: 500; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
                             {h2_label}
                           </p>
                         </td>
-                        <td width="34%" align="center" style="padding: 18px 8px; border-right: 1px solid #e7e5e4;">
-                          <p style="margin: 0 0 4px 0; font-size: 22px; font-weight: 700; color: #1c1917;">
+                      </tr>
+                    </table>
+                  </td>
+                  <td width="34%" style="padding: 0 3px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 8px; background-color: #ffffff;">
+                      <tr>
+                        <td align="center" style="padding: 18px 8px;">
+                          <p style="margin: 0 0 6px 0; font-size: 14px; color: {accent_color};">&#9679;</p>
+                          <p style="margin: 0 0 4px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: 700; color: #1c1917;">
                             {h3_value}
                           </p>
-                          <p style="margin: 0; font-size: 10px; font-weight: 500; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
                             {h3_label}
                           </p>
                         </td>
-                        <td width="33%" align="center" style="padding: 18px 8px;">
-                          <p style="margin: 0 0 4px 0; font-size: 22px; font-weight: 700; color: #1c1917;">
+                      </tr>
+                    </table>
+                  </td>
+                  <td width="33%" style="padding-left: 6px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 8px; background-color: #ffffff;">
+                      <tr>
+                        <td align="center" style="padding: 18px 8px;">
+                          <p style="margin: 0 0 6px 0; font-size: 14px; color: {accent_color};">&#9679;</p>
+                          <p style="margin: 0 0 4px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: 700; color: #1c1917;">
                             {h4_value}
                           </p>
-                          <p style="margin: 0; font-size: 10px; font-weight: 500; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
                             {h4_label}
                           </p>
                         </td>
@@ -1446,54 +1628,67 @@ def schedule_email_html(
               </table>
 '''
         else:
-            # V10: Non-Market Snapshot reports - Professional 4-metric layout
-            # Uses same clean styling as market_snapshot but with 4-column layout
+            # V15: Non-Market Snapshot reports - Same branded hero + 3 card layout
             hero_4_html = f'''
-              <!-- V10: HEADLINE METRIC (Clean, Refined) -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 0;">
+              <!-- V15: HERO METRIC (branded tinted card, serif font) -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 28px;">
                 <tr>
-                  <td align="center" style="padding: 0 0 6px 0;">
-                    <p style="margin: 0; font-size: 11px; font-weight: 500; color: #78716c; text-transform: uppercase; letter-spacing: 1.5px;">
+                  <td align="center" style="padding: 24px 20px; background-color: {primary_color}0F; border-radius: 12px; border: 1px solid {primary_color}1A;">
+                    <p style="margin: 0 0 6px 0; font-size: 11px; font-weight: 600; color: {primary_color}B3; text-transform: uppercase; letter-spacing: 2px;">
                       {h1_label}
                     </p>
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center" style="padding: 0 0 24px 0;">
-                    <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 48px; font-weight: 700; color: #1c1917; letter-spacing: -1px; line-height: 1;">
+                    <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 48px; font-weight: 700; color: {primary_color}; letter-spacing: -1px; line-height: 1;">
                       {h1_value}
                     </p>
+                    <!--[if !mso]><!-->
+                    <div style="margin: 12px auto 0; width: 48px; height: 4px; border-radius: 4px; background-color: {accent_color};"></div>
+                    <!--<![endif]-->
                   </td>
                 </tr>
               </table>
               
-              <!-- V10: KEY METRICS ROW (Clean bordered cards) -->
+              <!-- V15: KEY METRICS ROW (3 separate cards with accent dots, serif numbers) -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 28px;">
                 <tr>
-                  <td>
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafaf9; border-radius: 8px; border: 1px solid #e7e5e4;">
+                  <td width="33%" style="padding-right: 6px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 8px; background-color: #ffffff;">
                       <tr>
-                        <td width="33%" align="center" style="padding: 18px 8px; border-right: 1px solid #e7e5e4;">
-                          <p style="margin: 0 0 4px 0; font-size: 22px; font-weight: 700; color: #1c1917;">
+                        <td align="center" style="padding: 18px 8px;">
+                          <p style="margin: 0 0 6px 0; font-size: 14px; color: {accent_color};">&#9679;</p>
+                          <p style="margin: 0 0 4px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: 700; color: #1c1917;">
                             {h2_value}
                           </p>
-                          <p style="margin: 0; font-size: 10px; font-weight: 500; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
                             {h2_label}
                           </p>
                         </td>
-                        <td width="34%" align="center" style="padding: 18px 8px; border-right: 1px solid #e7e5e4;">
-                          <p style="margin: 0 0 4px 0; font-size: 22px; font-weight: 700; color: #1c1917;">
+                      </tr>
+                    </table>
+                  </td>
+                  <td width="34%" style="padding: 0 3px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 8px; background-color: #ffffff;">
+                      <tr>
+                        <td align="center" style="padding: 18px 8px;">
+                          <p style="margin: 0 0 6px 0; font-size: 14px; color: {accent_color};">&#9679;</p>
+                          <p style="margin: 0 0 4px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: 700; color: #1c1917;">
                             {h3_value}
                           </p>
-                          <p style="margin: 0; font-size: 10px; font-weight: 500; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
                             {h3_label}
                           </p>
                         </td>
-                        <td width="33%" align="center" style="padding: 18px 8px;">
-                          <p style="margin: 0 0 4px 0; font-size: 22px; font-weight: 700; color: #1c1917;">
+                      </tr>
+                    </table>
+                  </td>
+                  <td width="33%" style="padding-left: 6px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 8px; background-color: #ffffff;">
+                      <tr>
+                        <td align="center" style="padding: 18px 8px;">
+                          <p style="margin: 0 0 6px 0; font-size: 14px; color: {accent_color};">&#9679;</p>
+                          <p style="margin: 0 0 4px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: 700; color: #1c1917;">
                             {h4_value}
                           </p>
-                          <p style="margin: 0; font-size: 10px; font-weight: 500; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <p style="margin: 0; font-size: 10px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
                             {h4_label}
                           </p>
                         </td>
@@ -1504,52 +1699,43 @@ def schedule_email_html(
               </table>
 '''
     
-    # V10: Redesigned Core Indicators Section - Professional Compact Style
+    # V15: Redesigned Core Indicators - Branded section label + accent dots
     core_indicators_html = ""
     if has_core_indicators:
         core_indicators_html = f'''
-              <!-- V10: MARKET ACTIVITY - Professional Inline Stats -->
+              <!-- V15: MARKET ACTIVITY - Branded label + accent dots -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
                   <td style="padding: 20px; background-color: #ffffff; border-radius: 8px; border: 1px solid #e7e5e4;">
+                    {_section_label_html("Market Activity", primary_color)}
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                       <tr>
-                        <td style="padding-bottom: 14px; border-bottom: 1px solid #f5f5f4;">
-                          <p style="margin: 0; font-size: 11px; font-weight: 600; color: #57534e; text-transform: uppercase; letter-spacing: 1px;">
-                            Market Activity
+                        <td width="33%" align="center" style="vertical-align: top; padding: 8px 4px;">
+                          <p style="margin: 0 0 4px 0; font-size: 12px; color: {primary_color}80;">&#8226;</p>
+                          <p style="margin: 0 0 2px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 22px; font-weight: 700; color: #1c1917;">
+                            {ci1_value}
+                          </p>
+                          <p style="margin: 0; font-size: 10px; font-weight: 500; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
+                            {ci1_label}
                           </p>
                         </td>
-                      </tr>
-                      <tr>
-                        <td style="padding-top: 16px;">
-                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                            <tr>
-                              <td width="33%" style="vertical-align: top; padding-right: 12px;">
-                                <p style="margin: 0 0 2px 0; font-size: 24px; font-weight: 700; color: #1c1917;">
-                                  {ci1_value}
-                                </p>
-                                <p style="margin: 0; font-size: 11px; font-weight: 400; color: #78716c;">
-                                  {ci1_label}
-                                </p>
-                              </td>
-                              <td width="34%" style="vertical-align: top; padding: 0 6px; border-left: 1px solid #e7e5e4; border-right: 1px solid #e7e5e4;">
-                                <p style="margin: 0 0 2px 0; font-size: 24px; font-weight: 700; color: #1c1917; padding-left: 12px;">
-                                  {ci2_value}
-                                </p>
-                                <p style="margin: 0; font-size: 11px; font-weight: 400; color: #78716c; padding-left: 12px;">
-                                  {ci2_label}
-                                </p>
-                              </td>
-                              <td width="33%" style="vertical-align: top; padding-left: 12px;">
-                                <p style="margin: 0 0 2px 0; font-size: 24px; font-weight: 700; color: #1c1917;">
-                                  {ci3_value}
-                                </p>
-                                <p style="margin: 0; font-size: 11px; font-weight: 400; color: #78716c;">
-                                  {ci3_label}
-                                </p>
-                              </td>
-                            </tr>
-                          </table>
+                        <td width="34%" align="center" style="vertical-align: top; padding: 8px 4px; border-left: 1px solid #e7e5e4; border-right: 1px solid #e7e5e4;">
+                          <p style="margin: 0 0 4px 0; font-size: 12px; color: {primary_color}80;">&#8226;</p>
+                          <p style="margin: 0 0 2px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 22px; font-weight: 700; color: #1c1917;">
+                            {ci2_value}
+                          </p>
+                          <p style="margin: 0; font-size: 10px; font-weight: 500; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
+                            {ci2_label}
+                          </p>
+                        </td>
+                        <td width="33%" align="center" style="vertical-align: top; padding: 8px 4px;">
+                          <p style="margin: 0 0 4px 0; font-size: 12px; color: {primary_color}80;">&#8226;</p>
+                          <p style="margin: 0 0 2px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 22px; font-weight: 700; color: #1c1917;">
+                            {ci3_value}
+                          </p>
+                          <p style="margin: 0; font-size: 10px; font-weight: 500; color: #78716c; text-transform: uppercase; letter-spacing: 0.5px;">
+                            {ci3_label}
+                          </p>
                         </td>
                       </tr>
                     </table>
@@ -1603,67 +1789,168 @@ def schedule_email_html(
               </table>
 '''
     
-    # V10: Redesigned Property Types Section (Market Snapshot) - Professional horizontal layout
+    # V15: Property Types + Price Tiers side-by-side (V0 design)
     property_types_html = ""
-    if property_types:
-        # Build horizontal cells (td elements for a single row)
-        type_rows = ""
-        col_width = f"{100 // len(property_types)}%"
+    price_tiers_html = ""
+    
+    if property_types and price_tiers:
+        # Build property type rows (vertical list with icons)
+        property_type_rows = ""
+        for ptype in property_types:
+            property_type_rows += f'''
+                              <tr>
+                                <td style="padding: 5px 0;">
+                                  <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                                    <tr>
+                                      <td style="vertical-align: middle;">
+                                        <span style="font-size: 14px; color: {primary_color}40;">&#9632;</span>
+                                        <span style="font-size: 13px; color: #1c1917; padding-left: 6px;">{ptype["name"]}</span>
+                                      </td>
+                                      <td align="right" style="vertical-align: middle;">
+                                        <span style="font-family: Georgia, 'Times New Roman', serif; font-size: 14px; font-weight: 700; color: #1c1917;">{ptype["count"]}</span>
+                                      </td>
+                                    </tr>
+                                  </table>
+                                </td>
+                              </tr>'''
         
-        for i, ptype in enumerate(property_types):
-            border_left = 'border-left: 1px solid #e7e5e4; padding-left: 12px;' if i > 0 else ''
-            type_rows += f'''
-                        <td width="{col_width}" style="vertical-align: top; {border_left}">
-                          <p style="margin: 0 0 2px 0; font-size: 18px; font-weight: 700; color: #1c1917;">{ptype["count"]}</p>
-                          <p style="margin: 0; font-size: 11px; font-weight: 400; color: #78716c;">{ptype["name"]}</p>
-                        </td>'''
+        # Build price tier rows with progress bars
+        price_tier_rows = ""
+        total_tier_count = sum(t["count"] for t in price_tiers) or 1
+        for tier in price_tiers:
+            width_pct = int((tier["count"] / total_tier_count) * 100) if total_tier_count else 0
+            price_tier_rows += f'''
+                              <tr>
+                                <td style="padding: 5px 0;">
+                                  <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                                    <tr>
+                                      <td style="vertical-align: middle;">
+                                        <span style="font-size: 13px; color: #1c1917;">{tier["name"]}</span>
+                                      </td>
+                                      <td align="right" style="vertical-align: middle;">
+                                        <span style="font-family: Georgia, 'Times New Roman', serif; font-size: 14px; font-weight: 700; color: #1c1917;">{tier["count"]}</span>
+                                      </td>
+                                    </tr>
+                                  </table>
+                                  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 4px;">
+                                    <tr>
+                                      <td style="padding-right: 8px;">
+                                        <div style="height: 6px; background-color: #f0f0f0; border-radius: 4px; overflow: hidden;">
+                                          <div style="width: {width_pct}%; height: 6px; background-color: {primary_color}; border-radius: 4px;"></div>
+                                        </div>
+                                      </td>
+                                      <td width="60" style="text-align: right;">
+                                        <span style="font-size: 10px; color: #78716c;">{tier["range"]}</span>
+                                      </td>
+                                    </tr>
+                                  </table>
+                                </td>
+                              </tr>'''
         
+        # Side-by-side layout
         property_types_html = f'''
-              <!-- V10: Property Types - Professional Horizontal Layout -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 16px;">
+              <!-- V15: Property Types + Price Tiers (Side by Side) -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 28px;">
                 <tr>
-                  <td style="padding: 16px 20px; background-color: #ffffff; border-radius: 8px; border: 1px solid #e7e5e4;">
-                    <p style="margin: 0 0 12px 0; font-size: 11px; font-weight: 600; color: #57534e; text-transform: uppercase; letter-spacing: 0.5px;">
-                      By Property Type
-                    </p>
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                  <!-- Property Types -->
+                  <td width="48%" style="vertical-align: top; padding-right: 8px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 8px; background-color: #ffffff;">
                       <tr>
-                        {type_rows}
+                        <td style="padding: 16px;">
+                          {_section_label_html("By Property Type", primary_color)}
+                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                            {property_type_rows}
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <!-- Price Tiers -->
+                  <td width="52%" style="vertical-align: top; padding-left: 8px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 8px; background-color: #ffffff;">
+                      <tr>
+                        <td style="padding: 16px;">
+                          {_section_label_html("By Price Range", primary_color)}
+                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                            {price_tier_rows}
+                          </table>
+                        </td>
                       </tr>
                     </table>
                   </td>
                 </tr>
               </table>
 '''
-    
-    # V10: Redesigned Price Tier Section (Market Snapshot) - Professional horizontal layout
-    price_tiers_html = ""
-    if price_tiers:
-        # Build horizontal cells
-        tier_cells = ""
-        col_width = f"{100 // len(price_tiers)}%"
-        
-        for i, tier in enumerate(price_tiers):
-            border_left = 'border-left: 1px solid #e7e5e4; padding-left: 12px;' if i > 0 else ''
-            tier_cells += f'''
-                        <td width="{col_width}" style="vertical-align: top; {border_left}">
-                          <p style="margin: 0 0 2px 0; font-size: 18px; font-weight: 700; color: #1c1917;">{tier["count"]}</p>
-                          <p style="margin: 0 0 2px 0; font-size: 12px; font-weight: 500; color: #44403c;">{tier["name"]}</p>
-                          <p style="margin: 0; font-size: 10px; font-weight: 400; color: #a8a29e;">{tier["range"]}</p>
-                        </td>'''
-        
-        price_tiers_html = f'''
-              <!-- V10: Price Tiers - Professional Horizontal Layout -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 16px;">
+        # price_tiers_html stays empty since it's combined above
+    elif property_types:
+        # Fallback: Property types only (full width)
+        property_type_rows = ""
+        for ptype in property_types:
+            property_type_rows += f'''
+                              <tr>
+                                <td style="padding: 5px 0;">
+                                  <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                                    <tr>
+                                      <td style="vertical-align: middle;">
+                                        <span style="font-size: 14px; color: {primary_color}40;">&#9632;</span>
+                                        <span style="font-size: 13px; color: #1c1917; padding-left: 6px;">{ptype["name"]}</span>
+                                      </td>
+                                      <td align="right" style="vertical-align: middle;">
+                                        <span style="font-family: Georgia, 'Times New Roman', serif; font-size: 14px; font-weight: 700; color: #1c1917;">{ptype["count"]}</span>
+                                      </td>
+                                    </tr>
+                                  </table>
+                                </td>
+                              </tr>'''
+        property_types_html = f'''
+              <!-- V15: Property Types (full width) -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 28px;">
                 <tr>
-                  <td style="padding: 16px 20px; background-color: #ffffff; border-radius: 8px; border: 1px solid #e7e5e4;">
-                    <p style="margin: 0 0 12px 0; font-size: 11px; font-weight: 600; color: #57534e; text-transform: uppercase; letter-spacing: 0.5px;">
-                      By Price Range
-                    </p>
+                  <td style="padding: 16px; border: 1px solid #e7e5e4; border-radius: 8px; background-color: #ffffff;">
+                    {_section_label_html("By Property Type", primary_color)}
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                      <tr>
-                        {tier_cells}
-                      </tr>
+                      {property_type_rows}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+'''
+    
+    if price_tiers and not property_types:
+        # Fallback: Price tiers only (full width)
+        total_tier_count = sum(t["count"] for t in price_tiers) or 1
+        price_tier_rows = ""
+        for tier in price_tiers:
+            width_pct = int((tier["count"] / total_tier_count) * 100) if total_tier_count else 0
+            price_tier_rows += f'''
+                              <tr>
+                                <td style="padding: 5px 0;">
+                                  <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                                    <tr>
+                                      <td><span style="font-size: 13px; color: #1c1917;">{tier["name"]}</span></td>
+                                      <td align="right"><span style="font-family: Georgia, 'Times New Roman', serif; font-size: 14px; font-weight: 700; color: #1c1917;">{tier["count"]}</span></td>
+                                    </tr>
+                                  </table>
+                                  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 4px;">
+                                    <tr>
+                                      <td style="padding-right: 8px;">
+                                        <div style="height: 6px; background-color: #f0f0f0; border-radius: 4px; overflow: hidden;">
+                                          <div style="width: {width_pct}%; height: 6px; background-color: {primary_color}; border-radius: 4px;"></div>
+                                        </div>
+                                      </td>
+                                      <td width="60" style="text-align: right;"><span style="font-size: 10px; color: #78716c;">{tier["range"]}</span></td>
+                                    </tr>
+                                  </table>
+                                </td>
+                              </tr>'''
+        price_tiers_html = f'''
+              <!-- V15: Price Tiers (full width) -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 28px;">
+                <tr>
+                  <td style="padding: 16px; border: 1px solid #e7e5e4; border-radius: 8px; background-color: #ffffff;">
+                    {_section_label_html("By Price Range", primary_color)}
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      {price_tier_rows}
                     </table>
                   </td>
                 </tr>
@@ -1681,44 +1968,53 @@ def schedule_email_html(
     if has_listings_table:
         listings_table_html = _build_listings_table_html(listings or [], report_type, primary_color)
     
-    # Build agent footer HTML
+    # V15: Build agent footer HTML - branded background, serif name, pill buttons
     if rep_photo_url and (contact_line1 or rep_name):
-        # Full footer with photo
-        contact_info = ""
-        if rep_phone or rep_email:
-            phone_html = f'<a href="tel:{rep_phone}" style="color: {primary_color}; text-decoration: none;">{rep_phone}</a>' if rep_phone else ""
-            email_html = f'<a href="mailto:{rep_email}" style="color: {primary_color}; text-decoration: none;">{rep_email}</a>' if rep_email else ""
-            separator = " &bull; " if phone_html and email_html else ""
-            contact_info = f'''
-                          <p style="margin: 0; font-size: 13px;">
-                            {phone_html}{separator}{email_html}
-                          </p>'''
-        
+        # Full footer with photo - V0 design
         agent_footer_html = f'''
-              <!-- Agent Footer -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+              <!-- V15: AGENT FOOTER (branded bg, serif, pill buttons) -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 4px;">
                 <tr>
-                  <td align="center">
-                    <table role="presentation" cellpadding="0" cellspacing="0">
+                  <td style="padding: 28px 0; border-top: 1px solid {primary_color}15;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: {primary_color}08; border-radius: 10px;">
                       <tr>
-                        <!-- Agent Photo -->
-                        <td style="vertical-align: middle; padding-right: 20px;">
-                          <!--[if mso]>
-                          <v:oval xmlns:v="urn:schemas-microsoft-com:vml" style="width:70px;height:70px;" stroke="f">
-                            <v:fill type="frame" src="{rep_photo_url}"/>
-                          </v:oval>
-                          <![endif]-->
-                          <!--[if !mso]><!-->
-                          <img src="{rep_photo_url}" alt="{contact_line1 or rep_name}" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid {primary_color}20;">
-                          <!--<![endif]-->
-                        </td>
-                        <!-- Agent Info -->
-                        <td style="vertical-align: middle;">
-                          <p style="margin: 0 0 2px 0; font-size: 17px; font-weight: 600; color: #1a1a2e;" class="dark-text">
-                            {contact_line1 or rep_name}
-                          </p>
-                          {f'<p style="margin: 0 0 8px 0; font-size: 13px; color: #6b7280;">{contact_line2 or rep_title}</p>' if (contact_line2 or rep_title) else ''}
-                          {contact_info}
+                        <td style="padding: 24px;">
+                          <table role="presentation" cellpadding="0" cellspacing="0">
+                            <tr>
+                              <!-- Agent Photo -->
+                              <td style="vertical-align: top; padding-right: 20px;">
+                                <!--[if mso]>
+                                <v:oval xmlns:v="urn:schemas-microsoft-com:vml" style="width:80px;height:80px;" stroke="f">
+                                  <v:fill type="frame" src="{rep_photo_url}"/>
+                                </v:oval>
+                                <![endif]-->
+                                <!--[if !mso]><!-->
+                                <img src="{rep_photo_url}" alt="{contact_line1 or rep_name}" width="80" height="80" style="display: block; width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid {primary_color}33;">
+                                <!--<![endif]-->
+                              </td>
+                              <!-- Agent Info -->
+                              <td style="vertical-align: middle;">
+                                <p style="margin: 0 0 2px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 700; color: #1c1917;">
+                                  {contact_line1 or rep_name}
+                                </p>
+                                {f'<p style="margin: 0 0 12px 0; font-size: 12px; color: #78716c;">{contact_line2 or rep_title}</p>' if (contact_line2 or rep_title) else '<div style="margin-bottom: 12px;"></div>'}
+                                <table role="presentation" cellpadding="0" cellspacing="0">
+                                  <tr>
+                                    {f"""<td style="padding-right: 8px;">
+                                      <a href="tel:{rep_phone}" style="display: inline-block; padding: 6px 14px; border: 1px solid {primary_color}26; border-radius: 6px; color: {primary_color}; text-decoration: none; font-size: 12px; font-weight: 500;">
+                                        {rep_phone}
+                                      </a>
+                                    </td>""" if rep_phone else ""}
+                                    {f"""<td>
+                                      <a href="mailto:{rep_email}" style="display: inline-block; padding: 6px 14px; border: 1px solid {primary_color}26; border-radius: 6px; color: {primary_color}; text-decoration: none; font-size: 12px; font-weight: 500;">
+                                        {rep_email}
+                                      </a>
+                                    </td>""" if rep_email else ""}
+                                  </tr>
+                                </table>
+                              </td>
+                            </tr>
+                          </table>
                         </td>
                       </tr>
                     </table>
@@ -1869,6 +2165,11 @@ def schedule_email_html(
             </td>
           </tr>
           
+          <!-- Accent Transition Strip -->
+          <tr>
+            <td style="height: 4px; background: linear-gradient(90deg, {primary_color} 0%, {accent_color} 100%); font-size: 0; line-height: 0;">&nbsp;</td>
+          </tr>
+          
           <!-- ========== MAIN CONTENT ========== -->
           <tr>
             <td style="background-color: #ffffff; padding: 40px;" class="dark-card mobile-padding">
@@ -1920,29 +2221,38 @@ def schedule_email_html(
                 </tr>
               </table>
 '''}{listings_table_html if report_type == "closed" else ""}{core_indicators_html if has_hero_4 else ""}{extra_stats_html}{property_types_html if report_type != "closed" else ""}{price_tiers_html if report_type != "closed" else ""}{price_bands_html}{gallery_html}{listings_table_html if report_type != "closed" else ""}
-              <!-- ========== V10: MARKET INSIGHT (Professional) ========== -->
+              <!-- V15: QUICK TAKE CALLOUT (accent card with icon) -->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 28px;">
                 <tr>
-                  <td align="center" style="padding: 0;">
-                    <p style="margin: 0; font-size: 14px; font-weight: 400; color: #57534e; line-height: 1.5; font-style: italic;">
-                      {quick_take}
-                    </p>
+                  <td style="padding: 18px 20px; background-color: {accent_color}0F; border: 1px solid {accent_color}33; border-radius: 8px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td width="28" style="vertical-align: top; padding-right: 12px;">
+                          <span style="font-size: 20px; color: {accent_color};">&#36;</span>
+                        </td>
+                        <td style="vertical-align: top;">
+                          <p style="margin: 0; font-size: 14px; font-weight: 500; line-height: 1.6; color: #1c1917;">
+                            {quick_take}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>
 
-              <!-- ========== V10: CTA BUTTON (Clean, Professional) ========== -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+              <!-- V15: CTA AREA (tinted background) -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 28px;">
                 <tr>
-                  <td align="center" style="padding: 0 0 24px 0;">
+                  <td align="center" style="padding: 24px; background-color: {primary_color}0A; border-radius: 8px;">
                     <!--[if mso]>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{pdf_url}" style="height:48px;v-text-anchor:middle;width:200px;" arcsize="8%" stroke="f" fillcolor="{primary_color}">
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{pdf_url}" style="height:48px;v-text-anchor:middle;width:220px;" arcsize="8%" stroke="f" fillcolor="{primary_color}">
                       <w:anchorlock/>
-                      <center style="color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:14px;font-weight:600;">View Full Report</center>
+                      <center style="color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:14px;font-weight:600;">View Full Report</center>
                     </v:roundrect>
                     <![endif]-->
                     <!--[if !mso]><!-->
-                    <a href="{pdf_url}" target="_blank" style="display: inline-block; background-color: {primary_color}; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; padding: 14px 36px; border-radius: 6px; letter-spacing: 0.3px;">
+                    <a href="{pdf_url}" target="_blank" style="display: inline-block; background-color: {primary_color}; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; padding: 14px 36px; border-radius: 8px; letter-spacing: 0.3px;">
                       View Full Report
                     </a>
                     <!--<![endif]-->
