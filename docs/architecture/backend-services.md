@@ -1,0 +1,112 @@
+# Backend Services
+
+> `apps/api/src/api/services/` -- Business logic, SQL queries, integrations
+
+---
+
+## usage.py -- Usage Tracking & Plan Limits
+
+### `get_monthly_usage(cur, account_id, now?)` (line 20-85)
+Returns report count + schedule run count for current calendar month.
+
+**Queries:**
+- `SELECT COUNT(*) FROM report_generations WHERE account_id = %s AND generated_at >= %s`
+- `SELECT COUNT(*) FROM schedule_runs WHERE schedule_id IN (SELECT id FROM schedules WHERE account_id = %s)` -- correlated subquery [M1]
+
+**Returns:** `{ report_count, schedule_run_count, period_start, period_end }`
+
+### `resolve_plan_for_account(cur, account_id)` (line 88-151)
+Resolves effective plan with overrides.
+
+**Query:** JOINs `accounts` with `plans` table. Falls back to 'free' plan if none assigned. Applies `monthly_report_limit_override` if set.
+
+**Returns:** `{ plan_slug, plan_name, monthly_report_limit, allow_overage, overage_price_cents, has_override, account_type }`
+
+### `evaluate_report_limit(cur, account_id, now?)` (line 154-242)
+Central limit enforcement. Calls `get_monthly_usage()` and `resolve_plan_for_account()` internally.
+
+**Decision logic:**
+- `limit <= 0` or `>= 10000` -> `ALLOW` (unlimited)
+- `ratio < 0.8` -> `ALLOW`
+- `0.8 <= ratio < 1.1` -> `ALLOW_WITH_WARNING`
+- `ratio >= 1.1` + no overage -> `BLOCK`
+- `ratio >= 1.1` + overage allowed -> `ALLOW_WITH_WARNING`
+
+**Returns:** `(LimitDecision, info_dict)` where info_dict contains usage, plan, ratio, message.
+
+**Known issue:** When called from `/v1/account/plan-usage`, the route also calls `get_monthly_usage()` and `resolve_plan_for_account()` separately, duplicating all queries. See [H1].
+
+### `log_limit_decision(account_id, decision, info)` (line 245-264)
+Prints usage decision to stdout. Should use `logging` module.
+
+---
+
+## plans.py -- Plan Catalog & Stripe Pricing
+
+### `get_plan_catalog(cur)` (line 46-119)
+Fetches all active plans from DB, then calls `stripe.Price.retrieve()` for each plan with a `stripe_price_id`.
+
+**Known issue:** Live Stripe API calls on every invocation. With 4 plans = 4 HTTP roundtrips (800-2000ms). See [C3].
+
+**Returns:** `Dict[str, PlanCatalog]` keyed by plan_slug.
+
+### `get_plan_info(cur, plan_slug)` (line 122-128)
+Convenience wrapper that calls `get_plan_catalog()` (fetching ALL plans) to return one. See [H3].
+
+---
+
+## affiliates.py -- Affiliate Account Management
+
+### `get_sponsored_accounts(cur, affiliate_account_id)` (line 10-80)
+Main query JOINs `accounts` with `report_generations` aggregate for monthly usage.
+
+Then loops through results and runs per-account query for group memberships:
+```sql
+SELECT cg.id, cg.name FROM contact_group_members cgm
+JOIN contact_groups cg ON cgm.group_id = cg.id
+WHERE cgm.member_type = 'sponsored_agent' AND cgm.member_id = %s
+```
+
+**Known issue:** N+1 query pattern. 20 accounts = 20 extra queries. See [C5].
+
+### `get_affiliate_overview(cur, affiliate_account_id)` (line 83-101)
+Calls `get_sponsored_accounts()` internally, then derives metrics (count + total reports).
+
+**Known issue:** The overview route also calls `get_sponsored_accounts()` separately = double execution. See [C4].
+
+### `verify_affiliate_account(cur, account_id)` (line 104-125)
+Simple check: `SELECT account_type FROM accounts WHERE id = %s`, returns `True` if `INDUSTRY_AFFILIATE`.
+
+---
+
+## accounts.py -- Multi-Account Support
+
+### `get_user_accounts(cur, user_id)` (line 10-64)
+Returns all accounts for a user via `account_users` join. Ordered by role (OWNER first).
+
+### `get_default_account_for_user(cur, user_id)` (line 67-93)
+Returns first OWNER account, or first account in list.
+
+### `verify_user_account_access(cur, user_id, account_id)` (line 96-115)
+Checks `account_users` for membership.
+
+### `get_account_info(cur, account_id)` (line 118-150)
+Basic account lookup returning id, name, type, plan_slug, sponsor_account_id.
+
+---
+
+## Other Services
+
+| File | Purpose | Key Functions |
+|------|---------|---------------|
+| `email.py` | Send emails via Resend | `send_invite_email()`, password reset, notifications |
+| `branding.py` | White-label brand resolution | `get_brand_for_account()`, `validate_brand_input()` |
+| `simplyrets.py` | MLS data from SimplyRETS API | Property search, listing data |
+| `sitex.py` | MLS data from SiteX API | Property search, listing data |
+| `property_stats.py` | Property report statistics | Stats at agent/affiliate/admin levels |
+| `qr_service.py` | QR code generation | Generate QR codes for report links |
+| `twilio_sms.py` | SMS via Twilio | Send SMS notifications |
+| `upload.py` | File upload handling | Process and store uploaded files |
+| `agent_code.py` | Agent tracking codes | Generate/manage promotional codes |
+| `billing_state.py` | Billing state management | Track subscription state |
+| `plan_lookup.py` | Plan detail resolution | Resolve plan details from slugs |
