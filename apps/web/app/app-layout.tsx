@@ -63,7 +63,7 @@ import { usePlanUsage, useMe } from "@/hooks/use-api"
 
 // Routes where sidebar should be hidden (builder modes)
 const BUILDER_ROUTES = [
-  "/app/reports/new",
+  "/app/property/new",
   "/app/schedules/new",
   "/app/schedules/", // Will check for /edit suffix
 ]
