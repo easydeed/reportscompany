@@ -85,38 +85,48 @@ export function StepProperty({
       });
 
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+        const errBody = await res.json().catch(() => ({}));
         throw new Error(
-          data.detail || data.message || "Property not found. Please check the address and try again."
+          errBody.detail || errBody.message || "Property not found. Please check the address and try again."
         );
       }
 
-      const propertyData = await res.json();
+      const responseData = await res.json();
 
-      // Map API response to our PropertyData interface
+      // Backend returns { success, data, error, multiple_matches }
+      if (!responseData.success || !responseData.data) {
+        throw new Error(
+          responseData.error || "Property not found. Please verify the address."
+        );
+      }
+
+      // Extract the actual property data from the response wrapper
+      const d = responseData.data;
+
+      // Map SiteX PropertyData fields to our frontend PropertyData interface
+      // SiteX uses "street" not "street_address", etc.
       const mapped: PropertyData = {
-        street_address:
-          propertyData.street_address || propertyData.address || searchAddr,
-        city: propertyData.city || "",
-        state: propertyData.state || "",
-        zip_code: propertyData.zip_code || propertyData.zip || "",
+        street_address: d.street || d.street_address || searchAddr,
+        city: d.city || "",
+        state: d.state || "",
+        zip_code: d.zip_code || "",
         full_address:
-          propertyData.full_address ||
-          `${propertyData.street_address || propertyData.address || searchAddr}, ${propertyData.city || ""}, ${propertyData.state || ""} ${propertyData.zip_code || propertyData.zip || ""}`.trim(),
-        bedrooms: propertyData.bedrooms || propertyData.beds || 0,
-        bathrooms: propertyData.bathrooms || propertyData.baths || 0,
-        sqft: propertyData.sqft || propertyData.square_feet || 0,
-        lot_size: propertyData.lot_size || 0,
-        year_built: propertyData.year_built || 0,
-        owner_name: propertyData.owner_name || "N/A",
-        apn: propertyData.apn || propertyData.APN || "",
-        assessed_value: propertyData.assessed_value || 0,
-        tax_amount: propertyData.tax_amount || 0,
-        latitude: propertyData.latitude || 0,
-        longitude: propertyData.longitude || 0,
-        property_type: propertyData.property_type,
-        county: propertyData.county,
-        legal_description: propertyData.legal_description,
+          d.full_address ||
+          `${d.street || searchAddr}, ${d.city || ""}, ${d.state || ""} ${d.zip_code || ""}`.trim(),
+        bedrooms: d.bedrooms || 0,
+        bathrooms: d.bathrooms || 0,
+        sqft: d.sqft || 0,
+        lot_size: d.lot_size || 0,
+        year_built: d.year_built || 0,
+        owner_name: d.owner_name || "N/A",
+        apn: d.apn || "",
+        assessed_value: d.assessed_value || 0,
+        tax_amount: d.tax_amount || 0,
+        latitude: d.latitude || 0,
+        longitude: d.longitude || 0,
+        property_type: d.property_type,
+        county: d.county,
+        legal_description: d.legal_description,
       };
 
       onPropertyFound(mapped);

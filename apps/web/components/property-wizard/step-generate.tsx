@@ -112,7 +112,7 @@ export function StepGenerate({
             price_per_sqft: c.price_per_sqft,
             photo_url: c.photo_url,
           })),
-          pages: selectedPageIds,
+          selected_pages: selectedPageIds,
         }),
       });
 

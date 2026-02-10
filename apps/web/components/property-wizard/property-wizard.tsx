@@ -105,50 +105,66 @@ export function PropertyWizard() {
     setCompsError(null);
 
     try {
+      // Build city_state_zip for the backend to parse into SimplyRETS location filters
+      const cityStateZipStr = [property.city, property.state, property.zip_code]
+        .filter(Boolean)
+        .join(", ");
+
       const res = await fetch("/api/proxy/v1/property/comparables", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           address: property.full_address,
+          city_state_zip: cityStateZipStr,
           latitude: property.latitude,
           longitude: property.longitude,
-          bedrooms: property.bedrooms,
+          beds: property.bedrooms,       // Backend expects "beds" not "bedrooms"
+          baths: property.bathrooms,     // Backend expects "baths" not "bathrooms"
           sqft: property.sqft,
+          property_type: property.property_type || undefined,
+          radius_miles: 1.0,             // Start with 1 mile radius for better results
         }),
       });
 
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.detail || "Failed to fetch comparables");
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(errBody.detail || "Failed to fetch comparables");
       }
 
       const data = await res.json();
 
-      // Map API response to our Comparable interface
-      const comps: Comparable[] = (Array.isArray(data) ? data : data.comparables || []).map(
-        (c: any, i: number) => ({
-          id: c.id || `comp-${i}`,
-          address: c.address || c.street_address || "",
-          city: c.city || "",
-          state: c.state || "",
-          zip: c.zip || c.zip_code || "",
-          sale_price: c.sale_price || c.price || 0,
-          sold_date: c.sold_date || c.close_date || "",
-          sqft: c.sqft || c.square_feet || 0,
-          bedrooms: c.bedrooms || c.beds || 0,
-          bathrooms: c.bathrooms || c.baths || 0,
-          year_built: c.year_built || 0,
-          distance_miles: c.distance_miles || c.distance || 0,
-          price_per_sqft:
-            c.price_per_sqft ||
-            (c.sale_price && c.sqft
-              ? Math.round(c.sale_price / c.sqft)
-              : 0),
-          status: c.status || "closed",
-          photo_url: c.photo_url || c.photos?.[0] || null,
-          lat: c.latitude || c.lat,
-          lng: c.longitude || c.lng,
-        })
+      // Backend returns { success, comparables, total_found, subject_property, search_params, error }
+      if (!data.success) {
+        throw new Error(data.error || "Failed to fetch comparables");
+      }
+
+      // Map backend comparable fields to our Comparable interface
+      const comps: Comparable[] = (data.comparables || []).map(
+        (c: any, i: number) => {
+          const salePrice = c.close_price || c.price || c.sale_price || 0;
+          const compSqft = c.sqft || c.square_feet || 0;
+          return {
+            id: c.mls_id || c.id || `comp-${i}`,
+            address: c.address || "",
+            city: c.city || "",
+            state: c.state || "",
+            zip: c.zip_code || c.zip || "",
+            sale_price: salePrice,
+            sold_date: c.close_date || c.sold_date || c.list_date || "",
+            sqft: compSqft,
+            bedrooms: c.bedrooms || 0,
+            bathrooms: c.bathrooms || 0,
+            year_built: c.year_built || 0,
+            distance_miles: c.distance_miles ?? 0,
+            price_per_sqft:
+              c.price_per_sqft ||
+              (salePrice && compSqft ? Math.round(salePrice / compSqft) : 0),
+            status: c.status || "Closed",
+            photo_url: c.photo_url || (c.photos && c.photos[0]) || null,
+            lat: c.lat || c.latitude,
+            lng: c.lng || c.longitude,
+          };
+        }
       );
 
       setAvailableComps(comps);
