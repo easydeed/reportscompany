@@ -50,15 +50,17 @@ export function StepProperty({
   const handlePlaceSelect = useCallback(
     (place: PlaceResult) => {
       // Populate the address fields from Google Places
-      onStreetAddressChange(place.address || place.fullAddress);
+      const addr = place.address || place.fullAddress;
+      onStreetAddressChange(addr);
       const csz = [place.city, place.state, place.zip]
         .filter(Boolean)
         .join(", ");
       onCityStateZipChange(csz || "");
 
-      // Auto-trigger property search after place selection
-      if (place.address) {
-        searchProperty(place.address);
+      // Auto-trigger property search — pass csz directly since React
+      // state won't have updated yet when searchProperty reads props
+      if (addr) {
+        searchProperty(addr, csz);
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -70,9 +72,12 @@ export function StepProperty({
     { onPlaceSelect: handlePlaceSelect }
   );
 
-  async function searchProperty(address?: string) {
+  async function searchProperty(address?: string, csz?: string) {
     const searchAddr = address || streetAddress;
     if (!searchAddr.trim()) return;
+
+    // Use the explicitly passed csz (from handlePlaceSelect) or fall back to the prop
+    const searchCsz = csz ?? cityStateZip;
 
     onSearchLoading(true);
     onSearchError(null);
@@ -81,7 +86,10 @@ export function StepProperty({
       const res = await fetch("/api/proxy/v1/property/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: searchAddr }),
+        body: JSON.stringify({
+          address: searchAddr,
+          city_state_zip: searchCsz || "",
+        }),
       });
 
       if (!res.ok) {
