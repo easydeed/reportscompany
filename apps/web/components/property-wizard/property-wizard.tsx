@@ -50,6 +50,7 @@ export function PropertyWizard() {
   const [compsLoading, setCompsLoading] = useState(false);
   const [compsLoaded, setCompsLoaded] = useState(false);
   const [compsError, setCompsError] = useState<string | null>(null);
+  const [compsStatus, setCompsStatus] = useState<"Active" | "Closed">("Active");
 
   // Step 3
   const [selectedThemeId, setSelectedThemeId] = useState(4);
@@ -99,10 +100,11 @@ export function PropertyWizard() {
   );
 
   // Fetch real comparables from API
-  const loadComparables = useCallback(async () => {
+  const loadComparables = useCallback(async (status: "Active" | "Closed" = "Active") => {
     if (!property) return;
     setCompsLoading(true);
     setCompsError(null);
+    setSelectedCompIds([]);
 
     try {
       // Build city_state_zip for the backend to parse into SimplyRETS location filters
@@ -118,11 +120,12 @@ export function PropertyWizard() {
           city_state_zip: cityStateZipStr,
           latitude: property.latitude,
           longitude: property.longitude,
-          beds: property.bedrooms,       // Backend expects "beds" not "bedrooms"
-          baths: property.bathrooms,     // Backend expects "baths" not "bathrooms"
+          beds: property.bedrooms,
+          baths: property.bathrooms,
           sqft: property.sqft,
           property_type: property.property_type || undefined,
-          radius_miles: 1.0,             // Start with 1 mile radius for better results
+          radius_miles: 1.0,
+          status,
         }),
       });
 
@@ -139,9 +142,12 @@ export function PropertyWizard() {
       }
 
       // Map backend comparable fields to our Comparable interface
+      const isActive = status === "Active";
       const comps: Comparable[] = (data.comparables || []).map(
         (c: any, i: number) => {
-          const salePrice = c.close_price || c.price || c.sale_price || 0;
+          const price = isActive
+            ? (c.list_price || c.price || c.close_price || 0)
+            : (c.close_price || c.price || c.list_price || 0);
           const compSqft = c.sqft || c.square_feet || 0;
           return {
             id: c.mls_id || c.id || `comp-${i}`,
@@ -149,8 +155,10 @@ export function PropertyWizard() {
             city: c.city || "",
             state: c.state || "",
             zip: c.zip_code || c.zip || "",
-            sale_price: salePrice,
-            sold_date: c.close_date || c.sold_date || c.list_date || "",
+            sale_price: price,
+            sold_date: c.close_date || c.sold_date || "",
+            list_price: c.list_price || c.price || 0,
+            list_date: c.list_date || "",
             sqft: compSqft,
             bedrooms: c.bedrooms || 0,
             bathrooms: c.bathrooms || 0,
@@ -158,8 +166,9 @@ export function PropertyWizard() {
             distance_miles: c.distance_miles ?? 0,
             price_per_sqft:
               c.price_per_sqft ||
-              (salePrice && compSqft ? Math.round(salePrice / compSqft) : 0),
-            status: c.status || "Closed",
+              (price && compSqft ? Math.round(price / compSqft) : 0),
+            status: c.status || status,
+            dom: c.dom || c.days_on_market || 0,
             photo_url: c.photo_url || (c.photos && c.photos[0]) || null,
             lat: c.lat || c.latitude,
             lng: c.lng || c.longitude,
@@ -186,10 +195,15 @@ export function PropertyWizard() {
     if (!canProceed(step)) return;
     // When leaving step 1, load real comps
     if (step === 0 && !compsLoaded) {
-      loadComparables();
+      loadComparables(compsStatus);
     }
     setDirection(1);
     setStep((s) => Math.min(s + 1, 3));
+  }
+
+  function handleCompsStatusChange(newStatus: "Active" | "Closed") {
+    setCompsStatus(newStatus);
+    loadComparables(newStatus);
   }
 
   function back() {
@@ -220,6 +234,7 @@ export function PropertyWizard() {
     setCompsLoading(false);
     setCompsLoaded(false);
     setCompsError(null);
+    setCompsStatus("Active");
     setSelectedThemeId(4);
     setAccentColor("#34d1c3");
     setSelectedPageIds(COMPACT_PAGES.map((p) => p.id));
@@ -238,6 +253,7 @@ export function PropertyWizard() {
     setSelectedCompIds([]);
     setCompsLoaded(false);
     setCompsError(null);
+    setCompsStatus("Active");
   }
 
   const stepsCompleted = [
@@ -396,6 +412,8 @@ export function PropertyWizard() {
                     compsError={compsError}
                     property={property}
                     onSelectedChange={setSelectedCompIds}
+                    compsStatus={compsStatus}
+                    onStatusChange={handleCompsStatusChange}
                   />
                 )}
 

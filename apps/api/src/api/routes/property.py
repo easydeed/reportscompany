@@ -104,7 +104,7 @@ class ComparablesRequest(BaseModel):
     # Search filters
     radius_miles: float = Field(default=0.5, ge=0.1, le=5.0, description="Search radius in miles")
     sqft_variance: float = Field(default=0.20, ge=0.05, le=0.50, description="SQFT +/- variance (0.20 = 20%)")
-    status: Literal["Closed", "Active", "All"] = "Closed"
+    status: Literal["Closed", "Active", "All"] = "Active"
     limit: int = Field(default=15, ge=1, le=50)
 
 
@@ -418,8 +418,14 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
     # (API and worker are separate deployments, so we use our own simplyrets service)
     try:
         # Build search params - same logic as working Market Reports
+        # Map status filter to SimplyRETS values
+        status_map = {
+            "Closed": "Closed",
+            "Active": "Active",
+            "All": "Active,Closed",
+        }
         params: Dict[str, Any] = {
-            "status": "Closed" if payload.status == "Closed" else "Active,Closed",
+            "status": status_map.get(payload.status, "Active"),
             "type": "RES",  # CRITICAL: Excludes rentals
             "limit": payload.limit * 3,  # Fetch extra for post-filtering
         }

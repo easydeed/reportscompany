@@ -16,11 +16,16 @@ export function ComparableCard({
   isSelected,
   onToggle,
 }: ComparableCardProps) {
-  const formattedDate = new Date(comp.sold_date).toLocaleDateString("en-US", {
-    month: "2-digit",
-    day: "2-digit",
-    year: "numeric",
-  });
+  const isActive = comp.status === "Active";
+  const displayDate = isActive ? comp.list_date : comp.sold_date;
+  const formattedDate = displayDate
+    ? new Date(displayDate).toLocaleDateString("en-US", {
+        month: "2-digit",
+        day: "2-digit",
+        year: "numeric",
+      })
+    : "N/A";
+  const displayPrice = isActive ? comp.list_price || comp.sale_price : comp.sale_price;
 
   return (
     <motion.div
@@ -58,12 +63,18 @@ export function ComparableCard({
           </p>
           <div className="flex items-center gap-1.5 mt-1">
             <span className="text-sm font-bold text-foreground">
-              ${comp.sale_price.toLocaleString()}
+              ${displayPrice.toLocaleString()}
             </span>
             <span className="text-muted-foreground text-xs">{"·"}</span>
-            <span className="text-xs text-muted-foreground">
-              Sold {formattedDate}
-            </span>
+            {isActive ? (
+              <span className="text-xs text-emerald-600 font-medium">
+                Active {comp.dom > 0 ? `· ${comp.dom} DOM` : ""}
+              </span>
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                Sold {formattedDate}
+              </span>
+            )}
           </div>
         </div>
       </div>

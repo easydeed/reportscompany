@@ -17,6 +17,8 @@ interface StepComparablesProps {
   compsError: string | null;
   property: PropertyData;
   onSelectedChange: (ids: string[]) => void;
+  compsStatus: "Active" | "Closed";
+  onStatusChange: (status: "Active" | "Closed") => void;
 }
 
 export function StepComparables({
@@ -26,6 +28,8 @@ export function StepComparables({
   compsError,
   property,
   onSelectedChange,
+  compsStatus,
+  onStatusChange,
 }: StepComparablesProps) {
   const [mapOpen, setMapOpen] = useState(false);
   const [autoSelectLoading, setAutoSelectLoading] = useState(false);
@@ -89,7 +93,7 @@ export function StepComparables({
               Select Comparables
             </h2>
             <p className="text-sm text-muted-foreground">
-              Choose 4-8 comparable sales for the report.
+              Choose 4-8 comparable {compsStatus === "Active" ? "active listings" : "sold properties"} for the report.
             </p>
           </div>
         </div>
@@ -97,6 +101,32 @@ export function StepComparables({
 
       {/* Controls Bar */}
       <div className="flex flex-wrap items-center gap-3">
+        {/* Active / Sold toggle */}
+        <div className="inline-flex items-center rounded-lg border border-border p-0.5 bg-muted/50">
+          <button
+            type="button"
+            onClick={() => onStatusChange("Active")}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+              compsStatus === "Active"
+                ? "bg-[#6366F1] text-white shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Active Listings
+          </button>
+          <button
+            type="button"
+            onClick={() => onStatusChange("Closed")}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+              compsStatus === "Closed"
+                ? "bg-[#6366F1] text-white shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Sold
+          </button>
+        </div>
+
         <Button
           variant="outline"
           size="sm"

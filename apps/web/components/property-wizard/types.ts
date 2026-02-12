@@ -32,6 +32,8 @@ export interface Comparable {
   zip: string;
   sale_price: number;
   sold_date: string;
+  list_price: number;
+  list_date: string;
   sqft: number;
   bedrooms: number;
   bathrooms: number;
@@ -39,6 +41,7 @@ export interface Comparable {
   distance_miles: number;
   price_per_sqft: number;
   status: string;
+  dom: number;
   photo_url: string | null;
   lat?: number;
   lng?: number;
