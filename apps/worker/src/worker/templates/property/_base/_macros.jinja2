@@ -344,21 +344,31 @@
       <span>Comp Average</span>
       <span>Difference</span>
     </div>
+    {% set piq_price = stats.piq.price | default(0, true) | float %}
+    {% set med_price = stats.medium.price | default(0, true) | float %}
+    {% set subj_sqft = property.sqft | default(0, true) | float %}
+    {% set avg_sqft_val = stats.avg_sqft | default(0, true) | float %}
+    {% set subj_beds = property.bedrooms | default(0, true) | float %}
+    {% set avg_beds_val = stats.avg_beds | default(0, true) | float %}
+    {% set subj_baths = property.bathrooms | default(0, true) | float %}
+    {% set avg_baths_val = stats.avg_baths | default(0, true) | float %}
+    {% set piq_ppsf = stats.piq.price_per_sqft | default(0, true) | float %}
+    {% set avg_ppsf = stats.avg_price_per_sqft | default(0, true) | float %}
     {% set rows = [
-      {'metric': 'Price', 'subject': stats.piq.price | format_currency, 'comp': stats.medium.price | format_currency, 'diff': stats.piq.price - stats.medium.price, 'is_currency': true},
-      {'metric': 'Sq Ft', 'subject': property.sqft | format_number, 'comp': stats.avg_sqft | format_number, 'diff': property.sqft - stats.avg_sqft, 'is_currency': false},
-      {'metric': 'Beds', 'subject': property.bedrooms, 'comp': stats.avg_beds, 'diff': property.bedrooms - stats.avg_beds, 'is_currency': false},
-      {'metric': 'Baths', 'subject': property.bathrooms, 'comp': stats.avg_baths, 'diff': property.bathrooms - stats.avg_baths, 'is_currency': false},
-      {'metric': '$/Sq Ft', 'subject': stats.piq.price_per_sqft | format_currency, 'comp': stats.avg_price_per_sqft | format_currency, 'diff': stats.piq.price_per_sqft - stats.avg_price_per_sqft, 'is_currency': true}
+      {'metric': 'Price', 'subject': piq_price | format_currency, 'comp': med_price | format_currency, 'diff': piq_price - med_price, 'is_currency': true},
+      {'metric': 'Sq Ft', 'subject': subj_sqft | int | format_number, 'comp': avg_sqft_val | int | format_number, 'diff': subj_sqft - avg_sqft_val, 'is_currency': false},
+      {'metric': 'Beds', 'subject': subj_beds | int, 'comp': avg_beds_val | round(1), 'diff': subj_beds - avg_beds_val, 'is_currency': false},
+      {'metric': 'Baths', 'subject': subj_baths | round(1), 'comp': avg_baths_val | round(1), 'diff': subj_baths - avg_baths_val, 'is_currency': false},
+      {'metric': '$/Sq Ft', 'subject': piq_ppsf | format_currency, 'comp': avg_ppsf | format_currency, 'diff': piq_ppsf - avg_ppsf, 'is_currency': true}
     ] %}
     {% for row in rows %}
     <div class="comparison-row {% if loop.index is odd %}comparison-row-stripe{% endif %}">
       <span class="comparison-metric">{{ row.metric }}</span>
       <span class="comparison-subject">{{ row.subject }}</span>
       <span class="comparison-comp">{{ row.comp }}</span>
-      <span class="comparison-diff {% if row.diff >= 0 %}diff-positive{% else %}diff-negative{% endif %}">
-        {% if row.is_currency %}{{ row.diff | abs | format_currency }}{% else %}{{ row.diff | abs }}{% endif %}
-        {% if row.diff >= 0 %}↑{% else %}↓{% endif %}
+      <span class="comparison-diff {% if row.diff | default(0) >= 0 %}diff-positive{% else %}diff-negative{% endif %}">
+        {% if row.is_currency %}{{ row.diff | default(0) | abs | format_currency }}{% else %}{{ row.diff | default(0) | abs | round(1) }}{% endif %}
+        {% if row.diff | default(0) >= 0 %}↑{% else %}↓{% endif %}
       </span>
     </div>
     {% endfor %}

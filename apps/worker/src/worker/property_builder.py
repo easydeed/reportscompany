@@ -537,7 +537,7 @@ class PropertyReportBuilder:
         days_on_market = []
         
         for comp in comparables:
-            raw_price = comp.get("price") or comp.get("close_price")
+            raw_price = comp.get("price") or comp.get("close_price") or comp.get("sale_price") or comp.get("list_price")
             if raw_price:
                 try:
                     prices.append(float(raw_price))
@@ -580,8 +580,8 @@ class PropertyReportBuilder:
         
         # Sort comparables by price to get low/medium/high
         sorted_by_price = sorted(
-            [c for c in comparables if c.get("price") or c.get("close_price")],
-            key=lambda x: float(x.get("price") or x.get("close_price") or 0)
+            [c for c in comparables if c.get("price") or c.get("close_price") or c.get("sale_price") or c.get("list_price")],
+            key=lambda x: float(x.get("price") or x.get("close_price") or x.get("sale_price") or x.get("list_price") or 0)
         )
         
         # Get low, medium, high comps
@@ -591,7 +591,7 @@ class PropertyReportBuilder:
         med_comp = sorted_by_price[med_idx] if sorted_by_price else {}
         
         def extract_comp_stats(comp):
-            raw_price = comp.get("price") or comp.get("close_price")
+            raw_price = comp.get("price") or comp.get("close_price") or comp.get("sale_price") or comp.get("list_price")
             sqft = comp.get("sqft") or comp.get("area")
             return {
                 "distance": comp.get("distance_miles") or comp.get("distance") or "-",
