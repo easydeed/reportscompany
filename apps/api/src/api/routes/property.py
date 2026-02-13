@@ -59,6 +59,132 @@ router = APIRouter(prefix="/v1/property", tags=["property"])
 
 
 # =============================================================================
+# PROPERTY TYPE MAPPING (SiteX UseCode -> SimplyRETS type + subtype)
+# Reference: docs/architecture/property-type-data-contract.md
+# =============================================================================
+
+# Maps lowercase SiteX UseCode to (SimplyRETS type, SimplyRETS subtype)
+PROPERTY_TYPE_MAP = {
+    # ---- Single Family Residence ----
+    "sfr":                          ("residential", "singlefamilyresidence"),
+    "rsfr":                         ("residential", "singlefamilyresidence"),
+    "single family":                ("residential", "singlefamilyresidence"),
+    "singlefamily":                 ("residential", "singlefamilyresidence"),
+    "single family residential":    ("residential", "singlefamilyresidence"),
+    "residential":                  ("residential", "singlefamilyresidence"),
+    "pud":                          ("residential", "singlefamilyresidence"),
+    # ---- Condominium ----
+    "condo":                        ("condominium", "condominium"),
+    "condominium":                  ("condominium", "condominium"),
+    # ---- Townhouse ----
+    "townhouse":                    ("residential", "townhouse"),
+    "th":                           ("residential", "townhouse"),
+    "townhome":                     ("residential", "townhouse"),
+    # ---- Duplex ----
+    "duplex":                       ("multifamily", "duplex"),
+    # ---- Triplex ----
+    "triplex":                      ("multifamily", "triplex"),
+    # ---- Quadruplex ----
+    "quadplex":                     ("multifamily", "quadruplex"),
+    "quadruplex":                   ("multifamily", "quadruplex"),
+    # ---- Multi-Family (generic) ----
+    "multi-family":                 ("multifamily", None),
+    "multifamily":                  ("multifamily", None),
+    # ---- Mobile / Manufactured ----
+    "mobile":                       ("mobilehome", "manufacturedhome"),
+    "mobilehome":                   ("mobilehome", "manufacturedhome"),
+    "manufactured":                 ("mobilehome", "manufacturedhome"),
+    # ---- Land ----
+    "land":                         ("land", None),
+    "vacant land":                  ("land", None),
+    # ---- Commercial ----
+    "commercial":                   ("commercial", None),
+}
+
+# Post-filter: allowed SimplyRETS property.subType values per normalized category
+# Used as safety net after SimplyRETS returns results
+POST_FILTER_ALLOWED_SUBTYPES = {
+    "singlefamilyresidence": {"Single Family Residence", "Detached", ""},
+    "condominium":           {"Condominium", "Stock Cooperative", "Attached"},
+    "townhouse":             {"Townhouse", "Attached"},
+    "duplex":                {"Duplex"},
+    "triplex":               {"Triplex"},
+    "quadruplex":            {"Quadruplex"},
+    "manufacturedhome":      {"Manufactured Home", "Manufactured On Land", "Mobile Home"},
+}
+
+
+def resolve_simplyrets_type(sitex_use_code: Optional[str]) -> tuple:
+    """
+    Resolve SiteX UseCode to SimplyRETS (type, subtype) pair.
+
+    Returns:
+        (simplyrets_type, simplyrets_subtype) — subtype may be None
+        Defaults to ("residential", "singlefamilyresidence") if unresolved.
+    """
+    if not sitex_use_code:
+        return ("residential", "singlefamilyresidence")
+
+    key = sitex_use_code.strip().lower()
+
+    # 1. Exact match
+    if key in PROPERTY_TYPE_MAP:
+        return PROPERTY_TYPE_MAP[key]
+
+    # 2. Substring match (e.g., "rsfr" contains "sfr")
+    for pattern, mapping in PROPERTY_TYPE_MAP.items():
+        if pattern in key or key in pattern:
+            return mapping
+
+    # 3. Default to SFR (most common residential type)
+    logger.warning(f"Unknown SiteX UseCode '{sitex_use_code}', defaulting to SFR")
+    return ("residential", "singlefamilyresidence")
+
+
+def post_filter_by_property_type(
+    listings: list,
+    simplyrets_subtype: Optional[str],
+) -> list:
+    """
+    Post-filter SimplyRETS listings to remove property types that don't match
+    the subject property. This is a safety net since SimplyRETS may ignore
+    the subtype filter depending on the vendor.
+
+    Args:
+        listings: Raw SimplyRETS listing dicts
+        simplyrets_subtype: The subtype we queried for (e.g., "singlefamilyresidence")
+
+    Returns:
+        Filtered list of listings
+    """
+    if not simplyrets_subtype:
+        return listings  # No subtype filter requested, return all
+
+    allowed = POST_FILTER_ALLOWED_SUBTYPES.get(simplyrets_subtype.lower())
+    if not allowed:
+        return listings  # No post-filter defined for this subtype
+
+    filtered = []
+    removed = 0
+    for listing in listings:
+        prop = listing.get("property", {})
+        listing_subtype = prop.get("subType") or prop.get("subTypeText") or ""
+        # Allow if subType matches OR if subType is missing (don't over-filter)
+        if not listing_subtype or listing_subtype in allowed:
+            filtered.append(listing)
+        else:
+            removed += 1
+
+    if removed > 0:
+        logger.warning(
+            f"Post-filter removed {removed} listings with mismatched subtype "
+            f"(wanted: {simplyrets_subtype}, allowed: {allowed})"
+        )
+
+    return filtered
+
+
+# =============================================================================
 # SCHEMAS
 # =============================================================================
 
@@ -407,7 +533,7 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
             if zip_parts and zip_parts[-1].isdigit():
                 subject_zip = zip_parts[-1]
     
-    logger.warning(f"Comparables search: city={subject_city}, zip={subject_zip}, beds={subject_beds}, baths={subject_baths}, sqft={subject_sqft}")
+    logger.warning(f"Comparables search: city={subject_city}, zip={subject_zip}, beds={subject_beds}, baths={subject_baths}, sqft={subject_sqft}, property_type={subject_prop_type}")
     
     # Track search params for response
     sqft_range = None
@@ -461,15 +587,13 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
             params["maxbaths"] = max_baths
             baths_range = {"min": min_baths, "max": max_baths}
         
-        # PROPERTY TYPE FILTER
-        if subject_prop_type:
-            prop_type_lower = subject_prop_type.lower()
-            if "condo" in prop_type_lower:
-                params["subtype"] = "Condominium"
-            elif "townhouse" in prop_type_lower:
-                params["subtype"] = "Townhouse"
-            elif "single" in prop_type_lower or "sfr" in prop_type_lower:
-                params["subtype"] = "SingleFamilyResidence"
+        # PROPERTY TYPE FILTER — uses canonical mapping from data contract
+        # See: docs/architecture/property-type-data-contract.md
+        sr_type, sr_subtype = resolve_simplyrets_type(subject_prop_type)
+        params["type"] = sr_type  # Override the default "RES" with correct type
+        if sr_subtype:
+            params["subtype"] = sr_subtype
+        logger.warning(f"Property type mapping: '{subject_prop_type}' -> type={sr_type}, subtype={sr_subtype}")
         
         logger.warning(f"SimplyRETS query params: {params}")
         
@@ -500,6 +624,12 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
             filtered_listings.sort(key=lambda x: x.get("_distance_miles") or 999)
             listings = filtered_listings
             logger.info(f"Distance filter: {total_before_filter} -> {len(listings)} (radius: {payload.radius_miles} mi)")
+        
+        # Step 4: Post-filter by property type (safety net)
+        before_type_filter = len(listings)
+        listings = post_filter_by_property_type(listings, sr_subtype)
+        if len(listings) < before_type_filter:
+            logger.warning(f"Property type filter: {before_type_filter} -> {len(listings)}")
         
         # Convert to simple dicts (like Worker does) - no Pydantic validation issues
         comparables = []
