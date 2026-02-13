@@ -238,11 +238,15 @@
 {% macro comp_card(comp, index=1) %}
 <div class="comp-card">
   {# Photo FIRST, then header — matches V0 design: image on top, header bar below #}
-  {% if comp.photo_url or comp.map_image_url %}
   <div class="comp-image">
+    {% if comp.photo_url or comp.map_image_url %}
     <img src="{{ comp.photo_url | default(comp.map_image_url) }}" alt="{{ comp.address }}">
+    {% else %}
+    <div style="width:100%;height:100%;background:var(--color-surface);display:flex;align-items:center;justify-content:center;">
+      <span style="color:var(--color-text-muted);font-size:11px;font-family:var(--font-body);">No Image Available</span>
+    </div>
+    {% endif %}
   </div>
-  {% endif %}
   <div class="comp-card-header">
     <span class="comp-number">{{ index }}</span>
     <span class="comp-price">{{ comp.sale_price | format_currency }}</span>

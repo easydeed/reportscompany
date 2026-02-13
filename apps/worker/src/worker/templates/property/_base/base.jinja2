@@ -124,6 +124,7 @@
       left: var(--page-margin);
       right: var(--page-margin);
       bottom: calc(var(--footer-height) + var(--footer-bottom));
+      overflow: hidden;
     }
     
     .page-content--full {
@@ -491,7 +492,7 @@
     }
     
     .comp-image {
-      height: 150px;
+      height: 170px;
       overflow: hidden;
     }
     
@@ -1241,6 +1242,18 @@
   </style>
 </head>
 <body>
+  {# Force font rendering before PDF capture — ensures all Google Fonts are loaded
+     and rasterized, preventing fallback to generic serif/sans-serif in PDF output. #}
+  <div style="position:absolute;left:-9999px;top:-9999px;opacity:0;pointer-events:none;" aria-hidden="true">
+    <span style="font-family:var(--font-display);font-weight:400;">.</span>
+    <span style="font-family:var(--font-display);font-weight:500;">.</span>
+    <span style="font-family:var(--font-display);font-weight:600;">.</span>
+    <span style="font-family:var(--font-display);font-weight:700;">.</span>
+    <span style="font-family:var(--font-body);font-weight:400;">.</span>
+    <span style="font-family:var(--font-body);font-weight:500;">.</span>
+    <span style="font-family:var(--font-body);font-weight:600;">.</span>
+    <span style="font-family:var(--font-body);font-weight:700;">.</span>
+  </div>
   <div class="sheet">
     
     {# =========================================================================
