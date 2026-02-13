@@ -590,6 +590,413 @@
     background: var(--color-primary);
     opacity: 0.6;
   }
+
+  /* ==========================================================================
+     TEAL: Per-Theme Page Overrides — Analysis, Comparables, Range
+     ========================================================================== */
+
+  /* --- Analysis Page --- */
+  .teal-mini-bars {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+
+  .teal-mini-bars span {
+    width: 3px;
+    height: 14px;
+    background: var(--color-primary);
+    border-radius: 2px;
+  }
+
+  .teal-mini-bars span:nth-child(2) {
+    height: 20px;
+  }
+
+  .teal-mini-bars span:nth-child(3) {
+    height: 10px;
+  }
+
+  .teal-section-title {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 900;
+    color: var(--color-text);
+    text-transform: uppercase;
+    letter-spacing: -0.5px;
+    margin-bottom: 14px;
+  }
+
+  .teal-stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .teal-stat-box {
+    padding: 12px 8px;
+    text-align: center;
+    border-radius: var(--radius-sm);
+  }
+
+  .teal-stat-box:nth-child(odd) {
+    background: var(--color-primary);
+    color: var(--color-accent);
+  }
+
+  .teal-stat-box:nth-child(even) {
+    background: var(--color-accent);
+    color: white;
+  }
+
+  .teal-stat-box .num {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .teal-stat-box:nth-child(odd) .num {
+    color: var(--color-accent);
+  }
+
+  .teal-stat-box:nth-child(even) .num {
+    color: var(--color-primary);
+  }
+
+  .teal-stat-box .lbl {
+    font-size: 7px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+    opacity: 0.8;
+  }
+
+  .teal-stripe-divider {
+    height: 6px;
+    background: var(--color-primary);
+    transform: skewY(-1deg);
+    margin: 10px 0;
+  }
+
+  .teal-analysis-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+
+  .teal-analysis-table thead {
+    background: var(--color-accent);
+    color: white;
+  }
+
+  .teal-analysis-table th {
+    padding: 10px 8px;
+    text-align: left;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .teal-analysis-table tbody tr:nth-child(odd) {
+    background: var(--color-row-a);
+  }
+
+  .teal-analysis-table tbody tr:nth-child(even) {
+    background: var(--color-row-b);
+  }
+
+  .teal-analysis-table td {
+    padding: 7px 8px;
+  }
+
+  .teal-analysis-table tfoot {
+    background: var(--color-primary);
+    color: var(--color-accent);
+    font-weight: 800;
+  }
+
+  .teal-analysis-table tfoot td {
+    padding: 10px 8px;
+    font-family: var(--font-display);
+    font-size: 12px;
+  }
+
+  /* --- Comparables Page --- */
+  .teal-comp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  .teal-comp-card {
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+
+  .teal-comp-header {
+    background: var(--color-accent);
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .teal-comp-header .num {
+    background: var(--color-primary);
+    color: var(--color-accent);
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 10px;
+    font-weight: 800;
+  }
+
+  .teal-comp-header .price {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 800;
+    color: white;
+  }
+
+  .teal-comp-img {
+    height: 90px;
+    background: var(--color-surface);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .teal-comp-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .teal-comp-stripe {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 30px;
+    height: 30px;
+    overflow: hidden;
+  }
+
+  .teal-comp-stripe::before {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 40px;
+    height: 6px;
+    background: var(--color-primary);
+    transform: rotate(-45deg);
+    transform-origin: bottom right;
+  }
+
+  .teal-comp-body {
+    padding: 8px 12px;
+  }
+
+  .teal-comp-address {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-text);
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .teal-comp-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
+  }
+
+  .teal-comp-stat {
+    padding: 4px 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 3px;
+  }
+
+  .teal-comp-stat:nth-child(odd) {
+    background: var(--color-row-a);
+  }
+
+  .teal-comp-stat:nth-child(even) {
+    background: var(--color-row-b);
+  }
+
+  .teal-comp-stat .lbl {
+    font-size: 8px;
+    color: var(--color-text-muted);
+    font-weight: 600;
+  }
+
+  .teal-comp-stat .val {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--color-text);
+  }
+
+  /* --- Range Page --- */
+  .teal-range-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .teal-range-stat {
+    padding: 14px 8px;
+    text-align: center;
+    border-radius: var(--radius-sm);
+  }
+
+  .teal-range-stat:nth-child(odd) {
+    background: var(--color-primary);
+  }
+
+  .teal-range-stat:nth-child(even) {
+    background: var(--color-accent);
+  }
+
+  .teal-range-stat .num {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .teal-range-stat:nth-child(odd) .num {
+    color: var(--color-accent);
+  }
+
+  .teal-range-stat:nth-child(even) .num {
+    color: var(--color-primary);
+  }
+
+  .teal-range-stat .lbl {
+    font-size: 7px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+    color: rgba(255,255,255,0.7);
+  }
+
+  .teal-range-slider {
+    background: var(--color-surface);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 18px;
+    margin-bottom: 10px;
+  }
+
+  .teal-range-slider-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .teal-range-slider-price {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--color-accent);
+  }
+
+  .teal-range-track {
+    height: 12px;
+    background: linear-gradient(90deg, var(--color-row-a) 0%, var(--color-primary) 50%, var(--color-row-b) 100%);
+    border-radius: 100px;
+    position: relative;
+    border: 2px solid var(--color-border);
+    margin-bottom: 8px;
+  }
+
+  .teal-range-dot {
+    width: 18px;
+    height: 18px;
+    background: white;
+    border: 3px solid var(--color-accent);
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .teal-range-comps {
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+
+  .teal-range-comp {
+    display: flex;
+    align-items: center;
+    padding: 7px 12px;
+    gap: 8px;
+  }
+
+  .teal-range-comp:nth-child(odd) {
+    background: var(--color-row-a);
+  }
+
+  .teal-range-comp:nth-child(even) {
+    background: var(--color-row-b);
+  }
+
+  .teal-range-comp .addr {
+    flex: 1;
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .teal-range-comp .dist {
+    font-size: 9px;
+    color: var(--color-text-muted);
+    min-width: 40px;
+    text-align: center;
+  }
+
+  .teal-range-comp .price {
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--color-accent);
+    min-width: 80px;
+    text-align: right;
+  }
+
+  .teal-range-note {
+    font-size: 10px;
+    line-height: 1.6;
+    color: var(--color-text-muted);
+    text-align: center;
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: var(--color-row-a);
+    border-left: 3px solid var(--color-primary);
+    border-radius: var(--radius-sm);
+  }
 </style>
 {% endblock %}
 
@@ -625,4 +1032,153 @@
 </div>
 
 {{ macros.cover_agent_block(agent) }}
+{% endblock %}
+
+{# =============================================================================
+   ANALYSIS PAGE OVERRIDE — Alternating teal/lavender rows, diagonal stripe, bold weights
+   ============================================================================= #}
+{% block analysis %}
+<div class="page-content">
+  <div class="teal-mini-bars"><span></span><span></span><span></span></div>
+  <div class="teal-section-title">Area Sales Analysis</div>
+
+  <div class="teal-stats-row">
+    <div class="teal-stat-box">
+      <div class="num">{{ stats.total_comps }}</div>
+      <div class="lbl">Comps</div>
+    </div>
+    <div class="teal-stat-box">
+      <div class="num">{{ stats.avg_sqft | default(0) | int | format_number }}</div>
+      <div class="lbl">Avg Sq Ft</div>
+    </div>
+    <div class="teal-stat-box">
+      <div class="num">{{ stats.avg_beds | default(0) | round(1) }}</div>
+      <div class="lbl">Avg Beds</div>
+    </div>
+    <div class="teal-stat-box">
+      <div class="num">{{ stats.avg_price_per_sqft | format_currency }}</div>
+      <div class="lbl">Avg $/Sqft</div>
+    </div>
+  </div>
+
+  <div class="teal-stripe-divider"></div>
+
+  <table class="teal-analysis-table">
+    <thead>
+      <tr><th>Metric</th><th>Subject</th><th>Low</th><th>Medium</th><th>High</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Distance (mi)</td><td>{{ stats.piq.distance | default('0') }}</td><td>{{ stats.low.distance | default('-') }}</td><td>{{ stats.medium.distance | default('-') }}</td><td>{{ stats.high.distance | default('-') }}</td></tr>
+      <tr><td>Living Area (sf)</td><td>{{ stats.piq.sqft | default('-') }}</td><td>{{ stats.low.sqft | default('-') }}</td><td>{{ stats.medium.sqft | default('-') }}</td><td>{{ stats.high.sqft | default('-') }}</td></tr>
+      <tr><td>Price/Sq.Ft.</td><td>{{ stats.piq.price_per_sqft | format_currency }}</td><td>{{ stats.low.price_per_sqft | format_currency }}</td><td>{{ stats.medium.price_per_sqft | format_currency }}</td><td>{{ stats.high.price_per_sqft | format_currency }}</td></tr>
+      <tr><td>Year Built</td><td>{{ stats.piq.year_built | default('-') }}</td><td>{{ stats.low.year_built | default('-') }}</td><td>{{ stats.medium.year_built | default('-') }}</td><td>{{ stats.high.year_built | default('-') }}</td></tr>
+      <tr><td>Lot Size (sf)</td><td>{{ stats.piq.lot_size | format_number }}</td><td>{{ stats.low.lot_size | format_number }}</td><td>{{ stats.medium.lot_size | format_number }}</td><td>{{ stats.high.lot_size | format_number }}</td></tr>
+      <tr><td>Bedrooms</td><td>{{ stats.piq.bedrooms | default('-') }}</td><td>{{ stats.low.bedrooms | default('-') }}</td><td>{{ stats.medium.bedrooms | default('-') }}</td><td>{{ stats.high.bedrooms | default('-') }}</td></tr>
+      <tr><td>Bathrooms</td><td>{{ stats.piq.bathrooms | default('-') }}</td><td>{{ stats.low.bathrooms | default('-') }}</td><td>{{ stats.medium.bathrooms | default('-') }}</td><td>{{ stats.high.bathrooms | default('-') }}</td></tr>
+    </tbody>
+    <tfoot>
+      <tr><td>Sale Price</td><td>{{ stats.piq.price | format_currency }}</td><td>{{ stats.low.price | format_currency }}</td><td>{{ stats.medium.price | format_currency }}</td><td>{{ stats.high.price | format_currency }}</td></tr>
+    </tfoot>
+  </table>
+</div>
+{{ macros.page_footer(agent, 5) }}
+{% endblock %}
+
+{# =============================================================================
+   COMPARABLES PAGE OVERRIDE — Teal headers, diagonal stripe corners, alternating rows
+   ============================================================================= #}
+{% block comparables %}
+<div class="page-content">
+  <div class="teal-mini-bars"><span></span><span></span><span></span></div>
+  <div class="teal-section-title">Sales Comparables</div>
+
+  <div class="teal-comp-grid">
+    {% for comp in comparables[:4] %}
+    <div class="teal-comp-card">
+      <div class="teal-comp-header">
+        <span class="num">{{ loop.index }}</span>
+        <span class="price">{{ comp.sale_price | format_currency }}</span>
+      </div>
+      <div class="teal-comp-img">
+        {% if comp.photo_url or comp.map_image_url %}
+        <img src="{{ comp.photo_url | default(comp.map_image_url) }}" alt="{{ comp.address }}">
+        {% endif %}
+        <div class="teal-comp-stripe"></div>
+      </div>
+      <div class="teal-comp-body">
+        <div class="teal-comp-address">{{ comp.address }}</div>
+        <div class="teal-comp-stats">
+          <div class="teal-comp-stat"><span class="lbl">Sold</span><span class="val">{{ comp.sold_date }}</span></div>
+          <div class="teal-comp-stat"><span class="lbl">Sq.Ft.</span><span class="val">{{ comp.sqft | format_number }}</span></div>
+          <div class="teal-comp-stat"><span class="lbl">Bed/Bath</span><span class="val">{{ comp.bedrooms }}/{{ comp.bathrooms }}</span></div>
+          <div class="teal-comp-stat"><span class="lbl">$/Sq.Ft.</span><span class="val">{{ comp.price_per_sqft | format_currency }}</span></div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{{ macros.page_footer(agent, 6) }}
+{% endblock %}
+
+{# =============================================================================
+   RANGE PAGE OVERRIDE — Teal-to-navy gradient bar, alternating stat boxes
+   ============================================================================= #}
+{% block range %}
+<div class="page-content">
+  <div class="teal-mini-bars"><span></span><span></span><span></span></div>
+  <div class="teal-section-title">Range of Sales</div>
+
+  <div class="teal-range-stats">
+    <div class="teal-range-stat">
+      <div class="num">{{ stats.total_comps }}</div>
+      <div class="lbl">Total Comps</div>
+    </div>
+    <div class="teal-range-stat">
+      <div class="num">{{ stats.avg_sqft | default(0) | int }}</div>
+      <div class="lbl">Avg Sq Ft</div>
+    </div>
+    <div class="teal-range-stat">
+      <div class="num">{{ stats.avg_beds | default(0) | round(1) }}</div>
+      <div class="lbl">Avg Beds</div>
+    </div>
+    <div class="teal-range-stat">
+      <div class="num">{{ stats.avg_baths | default(0) | round(1) }}</div>
+      <div class="lbl">Avg Baths</div>
+    </div>
+  </div>
+
+  <div class="teal-range-slider">
+    <div class="teal-range-slider-header">
+      <div class="teal-range-slider-price">{{ stats.price_low | format_currency_short }}</div>
+      <div class="teal-range-slider-price">{{ stats.price_high | format_currency_short }}</div>
+    </div>
+    <div class="teal-range-track">
+      {% set subj_price = stats.piq.price | default(0, true) | float %}
+      {% set r_low = stats.price_low | default(0, true) | float %}
+      {% set r_high = stats.price_high | default(0, true) | float %}
+      {% if r_high != r_low and subj_price > 0 %}
+      {% set pct = ((subj_price - r_low) / (r_high - r_low) * 100) | int %}
+      <div class="teal-range-dot" style="left:{{ pct }}%;"></div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="teal-stripe-divider"></div>
+
+  <div class="teal-range-comps">
+    {% for comp in comparables[:4] | sort(attribute='sale_price') %}
+    <div class="teal-range-comp">
+      <span class="addr">{{ comp.address }}</span>
+      <span class="dist">{{ comp.distance_miles }} mi</span>
+      <span class="price">{{ comp.sale_price | format_currency }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="teal-range-note">
+    Based on {{ stats.total_comps }} comparable sales, the estimated market value falls between {{ stats.price_low | format_currency }} and {{ stats.price_high | format_currency }}. The median comparable sold at {{ stats.medium.price | format_currency }}.
+  </div>
+</div>
+{{ macros.page_footer(agent, 7) }}
 {% endblock %}
