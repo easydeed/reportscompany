@@ -365,7 +365,7 @@
   }
   
   .comp-image {
-    height: 150px;
+    height: 170px;
   }
   
   .comp-details {
@@ -543,6 +543,62 @@
   
   .contents-sidebar-accent {
     display: none;
+  }
+
+  /* ==========================================================================
+     MODERN: Internal Page Accents — Theme personality on pages 2-7
+     ========================================================================== */
+
+  /* Top gradient accent bar on internal pages */
+  .page-contents::before,
+  .page-aerial::before,
+  .page-property::before,
+  .page-analysis::before,
+  .page-comparables::before,
+  .page-range::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+    z-index: 10;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+
+  /* Key stats bar uses accent (dark) */
+  .key-stats-bar {
+    background: var(--color-accent);
+    border-radius: var(--radius-lg);
+  }
+
+  /* Analysis summary with coral accent */
+  .analysis-summary {
+    border-top: 3px solid var(--color-primary);
+  }
+
+  /* Range bar container */
+  .range-bar-container {
+    border-radius: var(--radius-lg);
+    border-top: 3px solid var(--color-primary);
+  }
+
+  /* Stats grid cards */
+  .range-stat-card {
+    border-radius: var(--radius-md);
+    border-top: 2px solid var(--color-primary);
+  }
+
+  /* Market insight with coral accent */
+  .market-insight {
+    border-left: 3px solid var(--color-primary);
+    border-radius: var(--radius-md);
+  }
+
+  /* Comp card hover accent */
+  .comp-card {
+    border-top: 2px solid var(--color-primary);
   }
 </style>
 {% endblock %}

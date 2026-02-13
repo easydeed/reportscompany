@@ -358,7 +358,7 @@
   }
   
   .comp-image {
-    height: 150px;
+    height: 170px;
   }
   
   /* ==========================================================================
@@ -537,6 +537,59 @@
   
   .range-comp-item:nth-child(odd) { background: var(--color-row-a); }
   .range-comp-item:nth-child(even) { background: var(--color-row-b); }
+
+  /* ==========================================================================
+     TEAL: Internal Page Accents — Theme personality on pages 2-7
+     ========================================================================== */
+
+  /* Top accent bar on all internal pages (mirrors cover page) */
+  .page-contents::before,
+  .page-aerial::before,
+  .page-property::before,
+  .page-analysis::before,
+  .page-comparables::before,
+  .page-range::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-dark) 50%, var(--color-accent) 50%);
+    z-index: 10;
+  }
+
+  /* Key stats bar uses accent color */
+  .key-stats-bar {
+    background: var(--color-accent);
+  }
+
+  /* Analysis summary accent border */
+  .analysis-summary {
+    border-top: 3px solid var(--color-primary);
+  }
+
+  /* Range bar container accent */
+  .range-bar-container {
+    border-top: 3px solid var(--color-primary);
+  }
+
+  /* Stats grid cards have accent hover */
+  .range-stat-card {
+    border-top: 2px solid var(--color-primary);
+  }
+
+  /* Market insight accent */
+  .market-insight {
+    border-left: 3px solid var(--color-primary);
+    background: var(--color-row-a);
+  }
+
+  /* Contents page number badges */
+  .page-contents .contents-sidebar-accent {
+    background: var(--color-primary);
+    opacity: 0.6;
+  }
 </style>
 {% endblock %}
 

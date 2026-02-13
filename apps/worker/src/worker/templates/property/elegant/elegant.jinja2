@@ -344,7 +344,7 @@
   }
   
   .comp-image {
-    height: 150px;
+    height: 170px;
   }
   
   /* ==========================================================================
@@ -527,6 +527,57 @@
   
   .contents-sidebar-accent {
     display: none;
+  }
+
+  /* ==========================================================================
+     ELEGANT: Internal Page Accents — Theme personality on pages 2-7
+     ========================================================================== */
+
+  /* Delicate top accent line on internal pages */
+  .page-contents::before,
+  .page-aerial::before,
+  .page-property::before,
+  .page-analysis::before,
+  .page-comparables::before,
+  .page-range::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--color-accent);
+    z-index: 10;
+  }
+
+  /* Key stats bar — elegant dark */
+  .key-stats-bar {
+    background: var(--color-primary);
+  }
+
+  /* Analysis summary — subtle accent */
+  .analysis-summary {
+    border-top: 1px solid var(--color-accent);
+  }
+
+  /* Range bar container */
+  .range-bar-container {
+    border-top: 1px solid var(--color-accent);
+  }
+
+  /* Stats grid cards */
+  .range-stat-card {
+    border-top: 1px solid var(--color-accent);
+  }
+
+  /* Contents page — decorative accent line */
+  .page-contents .contents-list::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 1px;
+    background: var(--color-accent);
+    margin-bottom: var(--space-lg);
   }
 </style>
 {% endblock %}

@@ -67,21 +67,28 @@ def render_pdf_playwright(run_id: str, account_id: str, html_content: Optional[s
         
         if html_content:
             # Render from HTML string
-            page.set_content(html_content)
+            page.set_content(html_content, wait_until="networkidle")
         else:
             # Navigate to print page
             page.goto(print_url, wait_until="networkidle", timeout=30000)
-        
+
+        # Wait for fonts to load before capturing
+        page.evaluate("() => document.fonts.ready")
+
         # Generate PDF with proper formatting
+        # CRITICAL: margin: 0 — CSS handles all spacing via .page-content positioning.
+        # This matches PDFShift production behavior. Templates use:
+        #   @page { size: Letter; margin: 0; }
+        #   .page-content { position: absolute; top: var(--page-margin); ... }
         page.pdf(
             path=pdf_path,
             format="Letter",  # 8.5" x 11"
             print_background=True,
             margin={
-                "top": "0.5in",
-                "right": "0.5in",
-                "bottom": "0.5in",
-                "left": "0.5in"
+                "top": "0",
+                "right": "0",
+                "bottom": "0",
+                "left": "0"
             }
         )
         
