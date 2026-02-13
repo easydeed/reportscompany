@@ -382,9 +382,10 @@
    Usage: {{ macros.price_position_bar(stats) }}
    ----------------------------------------------------------------------------- #}
 {% macro price_position_bar(stats) %}
-{% set low = stats.price_low %}
-{% set high = stats.price_high %}
-{% set subject = stats.piq.price | default(stats.medium.price) %}
+{% set low = stats.price_low | default(0, true) | float %}
+{% set high = stats.price_high | default(0, true) | float %}
+{% set subject = stats.piq.price | default(0, true) | float %}
+{% if subject == 0 %}{% set subject = stats.medium.price | default(0, true) | float %}{% endif %}
 {% set range = high - low %}
 {% if range > 0 %}
 {% set position = ((subject - low) / range * 100) | int %}
@@ -488,11 +489,14 @@
    Usage: {{ macros.price_range_bar(low, high, subject_estimate) }}
    ----------------------------------------------------------------------------- #}
 {% macro price_range_bar(low, high, subject_estimate=None) %}
+{% set low_val = low | default(0, true) | float %}
+{% set high_val = high | default(0, true) | float %}
+{% set subj_val = subject_estimate | default(0, true) | float %}
 <div class="price-range-bar">
   <div class="price-range-track">
-    {% if subject_estimate %}
-    {% set range = high - low %}
-    {% set position = ((subject_estimate - low) / range * 100) | int %}
+    {% if subj_val > 0 and (high_val - low_val) > 0 %}
+    {% set range = high_val - low_val %}
+    {% set position = ((subj_val - low_val) / range * 100) | int %}
     <div class="price-range-marker" style="left: {{ position }}%">
       <span class="price-range-marker-label">{{ subject_estimate | format_currency }}</span>
     </div>

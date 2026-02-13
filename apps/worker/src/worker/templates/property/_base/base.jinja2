@@ -1367,14 +1367,20 @@
             <div class="range-bar-track">
               {# Comp dot markers #}
               {% for comp in comparables[:4] %}
-              {% if stats.price_high != stats.price_low %}
-              {% set pct = ((comp.sale_price - stats.price_low) / (stats.price_high - stats.price_low) * 100) | int %}
+              {% set comp_price = (comp.sale_price or comp.list_price or 0) | float %}
+              {% set range_low = stats.price_low | default(0, true) | float %}
+              {% set range_high = stats.price_high | default(0, true) | float %}
+              {% if range_high != range_low and comp_price > 0 %}
+              {% set pct = ((comp_price - range_low) / (range_high - range_low) * 100) | int %}
               <div class="range-bar-dot" style="left: {{ pct }}%"></div>
               {% endif %}
               {% endfor %}
               {# Subject marker #}
-              {% if stats.price_high != stats.price_low %}
-              {% set subject_pct = ((stats.piq.price - stats.price_low) / (stats.price_high - stats.price_low) * 100) | int %}
+              {% set subj_price = stats.piq.price | default(0, true) | float %}
+              {% set range_low = stats.price_low | default(0, true) | float %}
+              {% set range_high = stats.price_high | default(0, true) | float %}
+              {% if range_high != range_low and subj_price > 0 %}
+              {% set subject_pct = ((subj_price - range_low) / (range_high - range_low) * 100) | int %}
               <div class="range-bar-subject" style="left: {{ subject_pct }}%">
                 <span class="range-bar-subject-label">{{ stats.piq.price | format_currency }}</span>
                 <span class="range-bar-subject-arrow"></span>
@@ -1393,8 +1399,11 @@
           <h3 class="section-title">Comparable Sales Summary</h3>
           <div class="range-comps-list">
             {% for comp in comparables[:4] | sort(attribute='sale_price') %}
-            {% if stats.price_high != stats.price_low %}
-            {% set pct = ((comp.sale_price - stats.price_low) / (stats.price_high - stats.price_low) * 100) | int %}
+            {% set comp_sp = (comp.sale_price or comp.list_price or 0) | float %}
+            {% set r_low = stats.price_low | default(0, true) | float %}
+            {% set r_high = stats.price_high | default(0, true) | float %}
+            {% if r_high != r_low and comp_sp > 0 %}
+            {% set pct = ((comp_sp - r_low) / (r_high - r_low) * 100) | int %}
             {% else %}
             {% set pct = 50 %}
             {% endif %}

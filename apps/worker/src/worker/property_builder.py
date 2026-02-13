@@ -237,12 +237,12 @@ class PropertyReportBuilder:
             "county": self.report_data.get("property_county", "") or sitex_data.get("county", ""),
             "apn": self.report_data.get("apn", "") or sitex_data.get("apn", ""),
             
-            # Property details
-            "bedrooms": sitex_data.get("bedrooms"),
-            "bathrooms": sitex_data.get("bathrooms"),
-            "sqft": sitex_data.get("sqft"),
-            "lot_size": sitex_data.get("lot_size"),
-            "year_built": sitex_data.get("year_built"),
+            # Property details (numeric fields default to 0 for safe template arithmetic)
+            "bedrooms": sitex_data.get("bedrooms") or 0,
+            "bathrooms": sitex_data.get("bathrooms") or 0,
+            "sqft": sitex_data.get("sqft") or 0,
+            "lot_size": sitex_data.get("lot_size") or 0,
+            "year_built": sitex_data.get("year_built") or 0,
             "garage": sitex_data.get("garage"),
             "fireplace": sitex_data.get("fireplace"),
             "pool": sitex_data.get("pool"),
@@ -350,7 +350,7 @@ class PropertyReportBuilder:
                 distance_formatted = f"{distance_raw:.1f} mi"
             
             # Get raw price for stats calculations
-            raw_price = comp.get("price") or comp.get("close_price")
+            raw_price = comp.get("price") or comp.get("close_price") or comp.get("sale_price") or comp.get("list_price")
             
             # Generate map URL if we have coordinates
             map_image_url = comp.get("map_image_url")
@@ -363,6 +363,18 @@ class PropertyReportBuilder:
                     f"&key={GOOGLE_MAPS_API_KEY}"
                 )
             
+            # Ensure raw_price is numeric
+            try:
+                raw_price_num = float(raw_price) if raw_price else 0
+            except (ValueError, TypeError):
+                raw_price_num = 0
+
+            comp_sqft = comp.get("sqft") or comp.get("area") or 0
+            try:
+                comp_sqft = float(comp_sqft)
+            except (ValueError, TypeError):
+                comp_sqft = 0
+
             comparables.append({
                 "address": comp.get("address") or comp.get("full_address", ""),
                 "latitude": latitude,
@@ -370,18 +382,19 @@ class PropertyReportBuilder:
                 "image_url": image_url,
                 "photo_url": image_url,  # V0 template field (prefer property photo)
                 "map_image_url": map_image_url,  # Fallback satellite thumbnail
-                "price": self._format_price(raw_price),  # Formatted
-                "sale_price": raw_price,  # V0 template (raw number for filter)
+                "price": self._format_price(raw_price),  # Formatted string
+                "sale_price": raw_price_num,  # V0 template (raw number for filter/arithmetic)
+                "list_price": float(comp.get("list_price") or 0),
                 "sold_date": comp.get("sold_date") or comp.get("close_date", ""),  # V0 template
-                "days_on_market": comp.get("days_on_market"),
+                "days_on_market": comp.get("days_on_market") or 0,
                 "distance": distance_formatted,
-                "distance_miles": distance_raw,  # V0 template (raw number)
-                "sqft": comp.get("sqft") or comp.get("area"),
-                "price_per_sqft": self._calc_price_per_sqft(raw_price, comp.get("sqft") or comp.get("area")),
-                "bedrooms": comp.get("bedrooms"),
-                "bathrooms": comp.get("bathrooms"),
-                "year_built": comp.get("year_built"),
-                "lot_size": comp.get("lot_size"),
+                "distance_miles": float(distance_raw) if isinstance(distance_raw, (int, float)) else 0,
+                "sqft": comp_sqft,
+                "price_per_sqft": self._calc_price_per_sqft(raw_price, comp_sqft) or 0,
+                "bedrooms": comp.get("bedrooms") or 0,
+                "bathrooms": comp.get("bathrooms") or 0,
+                "year_built": comp.get("year_built") or 0,
+                "lot_size": comp.get("lot_size") or 0,
                 "pool": comp.get("pool") if isinstance(comp.get("pool"), bool) else (comp.get("pool", "No") == "Yes"),
             })
         
@@ -590,37 +603,45 @@ class PropertyReportBuilder:
         med_idx = len(sorted_by_price) // 2
         med_comp = sorted_by_price[med_idx] if sorted_by_price else {}
         
+        def _safe_num(val, default=0):
+            """Convert value to a number, returning default for None/'-'/non-numeric."""
+            if val is None or val == "-" or val == "":
+                return default
+            try:
+                return float(val)
+            except (ValueError, TypeError):
+                return default
+
         def extract_comp_stats(comp):
             raw_price = comp.get("price") or comp.get("close_price") or comp.get("sale_price") or comp.get("list_price")
             sqft = comp.get("sqft") or comp.get("area")
             return {
-                "distance": comp.get("distance_miles") or comp.get("distance") or "-",
-                "sqft": sqft,
-                "price_per_sqft": self._calc_price_per_sqft(raw_price, sqft),
-                "year_built": comp.get("year_built") or "-",
-                "lot_size": comp.get("lot_size") or "-",
-                "bedrooms": comp.get("bedrooms") or "-",
-                "bathrooms": comp.get("bathrooms") or "-",
-                "stories": comp.get("stories") or 0,
+                "distance": _safe_num(comp.get("distance_miles") or comp.get("distance"), 0),
+                "sqft": _safe_num(sqft, 0),
+                "price_per_sqft": _safe_num(self._calc_price_per_sqft(raw_price, sqft), 0),
+                "year_built": _safe_num(comp.get("year_built"), 0),
+                "lot_size": _safe_num(comp.get("lot_size"), 0),
+                "bedrooms": _safe_num(comp.get("bedrooms"), 0),
+                "bathrooms": _safe_num(comp.get("bathrooms"), 0),
+                "stories": _safe_num(comp.get("stories"), 0),
                 "pools": 1 if comp.get("pool") else 0,
-                "price": raw_price,
+                "price": _safe_num(raw_price, 0),
             }
         
         # Property in question stats (from sitex_data)
+        # Use assessed_value as fallback for estimated_value since SiteX may not provide it
+        est_value = sitex_data.get("estimated_value") or sitex_data.get("assessed_value") or 0
         piq = {
             "distance": 0,
-            "sqft": sitex_data.get("sqft") or "-",
-            "price_per_sqft": self._calc_price_per_sqft(
-                sitex_data.get("estimated_value"),
-                sitex_data.get("sqft")
-            ),
-            "year_built": sitex_data.get("year_built") or "-",
-            "lot_size": sitex_data.get("lot_size") or "-",
-            "bedrooms": sitex_data.get("bedrooms") or "-",
-            "bathrooms": sitex_data.get("bathrooms") or "-",
-            "stories": sitex_data.get("stories") or 0,
+            "sqft": _safe_num(sitex_data.get("sqft"), 0),
+            "price_per_sqft": _safe_num(self._calc_price_per_sqft(est_value, sitex_data.get("sqft")), 0),
+            "year_built": _safe_num(sitex_data.get("year_built"), 0),
+            "lot_size": _safe_num(sitex_data.get("lot_size"), 0),
+            "bedrooms": _safe_num(sitex_data.get("bedrooms"), 0),
+            "bathrooms": _safe_num(sitex_data.get("bathrooms"), 0),
+            "stories": _safe_num(sitex_data.get("stories"), 0),
             "pools": 1 if sitex_data.get("pool") else 0,
-            "price": sitex_data.get("estimated_value") or "-",
+            "price": _safe_num(est_value, 0),
         }
         
         # Calculate avg price per sqft across all comps
