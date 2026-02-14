@@ -485,388 +485,311 @@
   }
 
   /* ==========================================================================
-     BOLD: Per-Theme Page Overrides — Analysis, Comparables, Range
+     BOLD V0 ORIGINAL: Analysis Page (p5) — Transplanted from commit 8dbec7b
      ========================================================================== */
 
-  /* --- Analysis Page --- */
-  .bold-section-header {
+  .bold-v0-header {
     background: var(--color-primary);
-    padding: 10px 16px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    padding: 20px 25px;
   }
 
-  .bold-section-header h3 {
+  .bold-v0-header .header-label {
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+
+  .bold-v0-header .header-title {
     font-family: var(--font-display);
-    font-size: 13px;
+    font-size: 42px;
     font-weight: 600;
     color: white;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
+    letter-spacing: 0.05em;
     margin: 0;
   }
 
-  .bold-gold-bar {
-    width: 4px;
-    height: 18px;
-    background: var(--color-accent);
+  .bold-v0-p5 .analysis-chart {
+    background: var(--color-surface);
+    border: 2px solid var(--color-primary);
+    padding: 25px;
+    margin-bottom: 25px;
   }
 
-  .bold-stats-row {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-    margin-bottom: 14px;
-  }
-
-  .bold-stat-box {
-    background: var(--color-primary);
-    padding: 14px 10px;
-    text-align: center;
-    border-left: 3px solid var(--color-accent);
-  }
-
-  .bold-stat-box .num {
+  .bold-v0-p5 .chart-title {
     font-family: var(--font-display);
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--color-accent);
-    line-height: 1;
-  }
-
-  .bold-stat-box .lbl {
-    font-size: 8px;
-    color: rgba(255,255,255,0.7);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-primary);
     text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-top: 4px;
+    letter-spacing: 0.1em;
+    text-align: center;
+    margin-bottom: 25px;
   }
 
-  .bold-analysis-table {
+  .bold-v0-p5 .chart-bars {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    height: 150px;
+    padding: 0 30px;
+    border-bottom: 3px solid var(--color-primary);
+  }
+
+  .bold-v0-p5 .chart-bar-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .bold-v0-p5 .chart-bar {
+    width: 60px;
+    background: linear-gradient(180deg, var(--color-accent) 0%, var(--color-primary) 100%);
+  }
+
+  .bold-v0-p5 .chart-bar-label {
+    font-size: 11px;
+    color: var(--color-text-muted);
+    font-weight: 600;
+  }
+
+  .bold-v0-p5 .analysis-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 11px;
+    font-size: 13px;
     border: 2px solid var(--color-primary);
+    border-radius: 12px;
+    overflow: hidden;
   }
 
-  .bold-analysis-table thead {
+  .bold-v0-p5 .analysis-table thead {
     background: var(--color-primary);
     color: white;
   }
 
-  .bold-analysis-table th {
-    padding: 10px 10px;
+  .bold-v0-p5 .analysis-table th {
+    padding: 14px 12px;
     text-align: left;
-    font-family: var(--font-display);
     font-weight: 600;
-    font-size: 10px;
+    font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.05em;
   }
 
-  .bold-analysis-table tbody tr:nth-child(odd) {
+  .bold-v0-p5 .analysis-table tbody tr:nth-child(odd) {
     background: var(--color-surface);
   }
 
-  .bold-analysis-table td {
-    padding: 8px 10px;
+  .bold-v0-p5 .analysis-table tbody tr {
     border-bottom: 1px solid var(--color-border);
   }
 
-  .bold-analysis-table tfoot {
+  .bold-v0-p5 .analysis-table td {
+    padding: 12px;
+  }
+
+  .bold-v0-p5 .analysis-table tfoot {
     background: var(--color-accent);
     color: var(--color-primary);
     font-weight: 700;
   }
 
-  .bold-analysis-table tfoot td {
-    padding: 10px;
-    font-family: var(--font-display);
-    font-size: 12px;
+  .bold-v0-p5 .analysis-table tfoot td {
+    padding: 14px 12px;
   }
 
-  .bold-divider {
-    height: 4px;
-    background: linear-gradient(90deg, var(--color-accent) 40%, var(--color-primary) 40%);
-    margin: 14px 0;
-  }
+  /* ==========================================================================
+     BOLD V0 ORIGINAL: Comparables Page (p6) — Transplanted from commit 8dbec7b
+     ========================================================================== */
 
-  .bold-position-bar {
-    background: var(--color-surface);
-    border: 2px solid var(--color-primary);
-    padding: 14px 16px;
-    margin-top: 10px;
-  }
-
-  .bold-position-bar .track {
-    height: 14px;
-    background: linear-gradient(90deg, var(--color-surface) 0%, var(--color-accent) 35%, var(--color-primary) 65%, var(--color-surface) 100%);
-    position: relative;
-    margin: 12px 0 6px;
-  }
-
-  .bold-position-bar .marker {
-    position: absolute;
-    top: -22px;
-    transform: translateX(-50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .bold-position-bar .marker-label {
-    font-family: var(--font-display);
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--color-primary);
-    white-space: nowrap;
-  }
-
-  .bold-position-bar .marker-tick {
-    width: 3px;
-    height: 28px;
-    background: var(--color-primary);
-  }
-
-  .bold-position-bar .ends {
-    display: flex;
-    justify-content: space-between;
-    font-size: 9px;
-    color: var(--color-text-muted);
-  }
-
-  /* --- Comparables Page --- */
-  .bold-comp-grid {
+  .bold-v0-p6 .comp-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 14px;
-    margin-top: 16px;
+    gap: 20px;
+    margin-top: 25px;
   }
 
-  .bold-comp-card {
+  .bold-v0-p6 .comp-card {
     border: 2px solid var(--color-primary);
+    border-radius: 12px;
     overflow: hidden;
+    box-shadow: 0 4px 12px rgba(21, 33, 110, 0.08);
+  }
+
+  .bold-v0-p6 .comp-card-image {
+    height: 130px;
+    background: var(--color-text-muted);
     position: relative;
   }
 
-  .bold-comp-card-header {
-    background: var(--color-primary);
-    padding: 8px 14px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 3px solid var(--color-accent);
-  }
-
-  .bold-comp-card-header .comp-num {
-    font-family: var(--font-display);
-    font-size: 11px;
-    font-weight: 600;
-    color: rgba(255,255,255,0.6);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-
-  .bold-comp-card-header .comp-price {
-    font-family: var(--font-display);
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--color-accent);
-  }
-
-  .bold-comp-img {
-    height: 100px;
-    background: var(--color-surface);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .bold-comp-img img {
+  .bold-v0-p6 .comp-card-image img {
     width: 100%;
     height: 100%;
     object-fit: cover;
   }
 
-  .bold-comp-triangle {
+  .bold-v0-p6 .comp-card-price {
     position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 0;
-    height: 0;
-    border-style: solid;
-    border-width: 0 0 30px 30px;
-    border-color: transparent transparent var(--color-accent) transparent;
-  }
-
-  .bold-comp-body {
-    padding: 10px 14px;
-  }
-
-  .bold-comp-address {
+    top: 0;
+    left: 0;
+    background: var(--color-accent);
+    color: var(--color-primary);
+    padding: 8px 16px;
     font-family: var(--font-display);
-    font-size: 12px;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .bold-v0-p6 .comp-card-body {
+    padding: 15px;
+    background: white;
+  }
+
+  .bold-v0-p6 .comp-card-address {
+    font-family: var(--font-display);
+    font-size: 14px;
     font-weight: 600;
     color: var(--color-primary);
     text-transform: uppercase;
-    letter-spacing: 0.3px;
-    margin-bottom: 8px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
-  .bold-comp-stats {
+  .bold-v0-p6 .comp-card-address svg {
+    width: 14px;
+    height: 14px;
+    fill: var(--color-accent);
+    flex-shrink: 0;
+  }
+
+  .bold-v0-p6 .comp-card-stats {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
+    gap: 8px;
   }
 
-  .bold-comp-stat {
+  .bold-v0-p6 .comp-stat {
     background: var(--color-surface);
-    padding: 6px 8px;
+    padding: 10px;
     text-align: center;
   }
 
-  .bold-comp-stat .lbl {
-    font-size: 8px;
+  .bold-v0-p6 .comp-stat-label {
+    font-size: 9px;
     color: var(--color-text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 2px;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+    font-weight: 600;
   }
 
-  .bold-comp-stat .val {
+  .bold-v0-p6 .comp-stat-value {
     font-family: var(--font-display);
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--color-primary);
   }
 
-  /* --- Range Page --- */
-  .bold-range-stats {
+  /* ==========================================================================
+     BOLD V0 ORIGINAL: Range Page (p7) — Transplanted from commit 8dbec7b
+     ========================================================================== */
+
+  .bold-v0-p7 .range-map {
+    height: 3.8in;
+    background: var(--color-border);
+    border: 2px solid var(--color-primary);
+    border-radius: 8px;
+    margin: 25px 0;
+    overflow: hidden;
+  }
+
+  .bold-v0-p7 .range-map img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .bold-v0-p7 .range-stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-    margin-bottom: 14px;
+    gap: 12px;
+    margin-bottom: 25px;
   }
 
-  .bold-range-stat {
+  .bold-v0-p7 .range-stat {
     background: var(--color-primary);
-    padding: 16px 8px;
+    padding: 28px 10px;
     text-align: center;
+    border-radius: 8px;
   }
 
-  .bold-range-stat .num {
+  .bold-v0-p7 .range-stat-num {
     font-family: var(--font-display);
-    font-size: 28px;
+    font-size: 42px;
     font-weight: 700;
     color: var(--color-accent);
     line-height: 1;
   }
 
-  .bold-range-stat .lbl {
-    font-size: 8px;
-    color: rgba(255,255,255,0.7);
+  .bold-v0-p7 .range-stat-label {
+    font-size: 10px;
+    color: rgba(255,255,255,0.8);
     text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-top: 6px;
+    letter-spacing: 0.15em;
+    margin-top: 10px;
   }
 
-  .bold-range-slider {
+  .bold-v0-p7 .range-slider {
     background: var(--color-surface);
     border: 2px solid var(--color-accent);
-    padding: 20px;
-    margin-bottom: 14px;
+    border-radius: 12px;
+    padding: 25px;
   }
 
-  .bold-range-slider-header {
+  .bold-v0-p7 .range-slider-header {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 12px;
+    margin-bottom: 15px;
   }
 
-  .bold-range-slider-price {
+  .bold-v0-p7 .range-slider-price {
     font-family: var(--font-display);
-    font-size: 22px;
+    font-size: 26px;
     font-weight: 700;
     color: var(--color-primary);
   }
 
-  .bold-range-track {
+  .bold-v0-p7 .range-slider-track {
     height: 12px;
     background: linear-gradient(90deg, var(--color-accent) 0%, var(--color-primary) 50%, var(--color-accent) 100%);
+    border-radius: 6px;
     position: relative;
-    margin-bottom: 12px;
+    margin-bottom: 20px;
   }
 
-  .bold-range-dot {
-    width: 18px;
-    height: 18px;
+  .bold-v0-p7 .range-slider-dot {
+    width: 24px;
+    height: 24px;
     background: white;
-    border: 3px solid var(--color-primary);
+    border: 4px solid var(--color-primary);
+    border-radius: 50%;
     position: absolute;
     top: 50%;
     transform: translate(-50%, -50%);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   }
 
-  .bold-range-comps {
-    border: 2px solid var(--color-primary);
-  }
-
-  .bold-range-comp {
-    display: flex;
-    align-items: center;
-    padding: 8px 14px;
-    border-bottom: 1px solid var(--color-border);
-    gap: 10px;
-  }
-
-  .bold-range-comp:last-child {
-    border-bottom: none;
-  }
-
-  .bold-range-comp:nth-child(odd) {
-    background: var(--color-surface);
-  }
-
-  .bold-range-comp .addr {
-    flex: 1;
-    font-family: var(--font-display);
-    font-size: 11px;
-    font-weight: 500;
-    text-transform: uppercase;
-    color: var(--color-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .bold-range-comp .dist {
-    font-size: 9px;
-    color: var(--color-text-muted);
-    min-width: 40px;
-    text-align: center;
-  }
-
-  .bold-range-comp .price {
-    font-family: var(--font-display);
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--color-primary);
-    min-width: 80px;
-    text-align: right;
-  }
-
-  .bold-range-note {
-    font-size: 10px;
-    line-height: 1.6;
+  .bold-v0-p7 .range-note {
+    font-size: 12px;
+    line-height: 1.7;
     color: var(--color-text-muted);
     text-align: center;
-    margin-top: 10px;
-    padding: 12px 16px;
-    background: var(--color-surface);
-    border-left: 4px solid var(--color-accent);
   }
 </style>
 {% endblock %}
@@ -899,112 +822,73 @@
 {% endblock %}
 
 {# =============================================================================
-   ANALYSIS PAGE OVERRIDE — Bold geometric, high-impact layout
+   ANALYSIS PAGE OVERRIDE — Transplanted from V0 original (commit 8dbec7b)
+   Navy header bar + chart with gold-navy gradient bars + analysis table
    ============================================================================= #}
 {% block analysis %}
-<div class="page-content">
-  <div class="bold-section-header">
-    <div class="bold-gold-bar"></div>
-    <h3>Area Sales Analysis</h3>
-  </div>
-
-  <div style="margin-top:14px;">
-    <div class="bold-stats-row">
-      <div class="bold-stat-box">
-        <div class="num">{{ stats.total_comps }}</div>
-        <div class="lbl">Comps</div>
+<div class="bold-v0-header">
+  <div class="header-label">Market Intelligence</div>
+  <h2 class="header-title">Area Sales Analysis</h2>
+</div>
+<div class="page-content bold-v0-p5">
+  <div class="analysis-chart">
+    <div class="chart-title">Recent Comparable Sales Activity</div>
+    <div class="chart-bars">
+      {% for comp in comparables[:4] %}
+      <div class="chart-bar-wrap">
+        <div class="chart-bar" style="height: {{ [40, (comp.sale_price / 8000) | int] | max }}px;"></div>
+        <div class="chart-bar-label">{{ comp.sold_date | default('-') }}</div>
       </div>
-      <div class="bold-stat-box">
-        <div class="num">{{ stats.avg_sqft | default(0) | int | format_number }}</div>
-        <div class="lbl">Avg Sq Ft</div>
-      </div>
-      <div class="bold-stat-box">
-        <div class="num">{{ stats.avg_beds | default(0) | round(1) }}</div>
-        <div class="lbl">Avg Beds</div>
-      </div>
-      <div class="bold-stat-box">
-        <div class="num">{{ stats.avg_price_per_sqft | format_currency }}</div>
-        <div class="lbl">Avg $/Sqft</div>
-      </div>
+      {% endfor %}
     </div>
-
-    <div class="bold-divider"></div>
-
-    <table class="bold-analysis-table">
-      <thead>
-        <tr><th>Metric</th><th>Subject</th><th>Low</th><th>Medium</th><th>High</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>Distance (mi)</td><td>{{ stats.piq.distance | default('0') }}</td><td>{{ stats.low.distance | default('-') }}</td><td>{{ stats.medium.distance | default('-') }}</td><td>{{ stats.high.distance | default('-') }}</td></tr>
-        <tr><td>Living Area (sf)</td><td>{{ stats.piq.sqft | default('-') }}</td><td>{{ stats.low.sqft | default('-') }}</td><td>{{ stats.medium.sqft | default('-') }}</td><td>{{ stats.high.sqft | default('-') }}</td></tr>
-        <tr><td>Price/Sq.Ft.</td><td>{{ stats.piq.price_per_sqft | format_currency }}</td><td>{{ stats.low.price_per_sqft | format_currency }}</td><td>{{ stats.medium.price_per_sqft | format_currency }}</td><td>{{ stats.high.price_per_sqft | format_currency }}</td></tr>
-        <tr><td>Year Built</td><td>{{ stats.piq.year_built | default('-') }}</td><td>{{ stats.low.year_built | default('-') }}</td><td>{{ stats.medium.year_built | default('-') }}</td><td>{{ stats.high.year_built | default('-') }}</td></tr>
-        <tr><td>Lot Size (sf)</td><td>{{ stats.piq.lot_size | format_number }}</td><td>{{ stats.low.lot_size | format_number }}</td><td>{{ stats.medium.lot_size | format_number }}</td><td>{{ stats.high.lot_size | format_number }}</td></tr>
-        <tr><td>Bedrooms</td><td>{{ stats.piq.bedrooms | default('-') }}</td><td>{{ stats.low.bedrooms | default('-') }}</td><td>{{ stats.medium.bedrooms | default('-') }}</td><td>{{ stats.high.bedrooms | default('-') }}</td></tr>
-        <tr><td>Bathrooms</td><td>{{ stats.piq.bathrooms | default('-') }}</td><td>{{ stats.low.bathrooms | default('-') }}</td><td>{{ stats.medium.bathrooms | default('-') }}</td><td>{{ stats.high.bathrooms | default('-') }}</td></tr>
-      </tbody>
-      <tfoot>
-        <tr><td>Sale Price</td><td>{{ stats.piq.price | format_currency }}</td><td>{{ stats.low.price | format_currency }}</td><td>{{ stats.medium.price | format_currency }}</td><td>{{ stats.high.price | format_currency }}</td></tr>
-      </tfoot>
-    </table>
-
-    {# Price Position Bar #}
-    {% set low = stats.price_low | default(0, true) | float %}
-    {% set high = stats.price_high | default(0, true) | float %}
-    {% set subject = stats.piq.price | default(0, true) | float %}
-    {% if subject == 0 %}{% set subject = stats.medium.price | default(0, true) | float %}{% endif %}
-    {% set range = high - low %}
-    {% if range > 0 %}
-    {% set position = ((subject - low) / range * 100) | int %}
-    <div class="bold-position-bar">
-      <div style="font-family:var(--font-display);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--color-primary);">Subject Property Position</div>
-      <div class="track">
-        <div class="marker" style="left:{{ position }}%">
-          <span class="marker-label">{{ subject | format_currency }}</span>
-          <span class="marker-tick"></span>
-        </div>
-      </div>
-      <div class="ends">
-        <span>{{ low | format_currency }}</span>
-        <span>{{ high | format_currency }}</span>
-      </div>
-    </div>
-    {% endif %}
   </div>
+  <table class="analysis-table">
+    <thead>
+      <tr><th>Metric</th><th>Subject</th><th>Low</th><th>Medium</th><th>High</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Distance (mi)</td><td>{{ stats.piq.distance | default('0') }}</td><td>{{ stats.low.distance | default('-') }}</td><td>{{ stats.medium.distance | default('-') }}</td><td>{{ stats.high.distance | default('-') }}</td></tr>
+      <tr><td>Living Area (sf)</td><td>{{ stats.piq.sqft | default('-') }}</td><td>{{ stats.low.sqft | default('-') }}</td><td>{{ stats.medium.sqft | default('-') }}</td><td>{{ stats.high.sqft | default('-') }}</td></tr>
+      <tr><td>Price/Sq.Ft.</td><td>{{ stats.piq.price_per_sqft | format_currency }}</td><td>{{ stats.low.price_per_sqft | format_currency }}</td><td>{{ stats.medium.price_per_sqft | format_currency }}</td><td>{{ stats.high.price_per_sqft | format_currency }}</td></tr>
+      <tr><td>Year Built</td><td>{{ stats.piq.year_built | default('-') }}</td><td>{{ stats.low.year_built | default('-') }}</td><td>{{ stats.medium.year_built | default('-') }}</td><td>{{ stats.high.year_built | default('-') }}</td></tr>
+      <tr><td>Lot Size (sf)</td><td>{{ stats.piq.lot_size | format_number }}</td><td>{{ stats.low.lot_size | format_number }}</td><td>{{ stats.medium.lot_size | format_number }}</td><td>{{ stats.high.lot_size | format_number }}</td></tr>
+      <tr><td>Bedrooms</td><td>{{ stats.piq.bedrooms | default('-') }}</td><td>{{ stats.low.bedrooms | default('-') }}</td><td>{{ stats.medium.bedrooms | default('-') }}</td><td>{{ stats.high.bedrooms | default('-') }}</td></tr>
+      <tr><td>Bathrooms</td><td>{{ stats.piq.bathrooms | default('-') }}</td><td>{{ stats.low.bathrooms | default('-') }}</td><td>{{ stats.medium.bathrooms | default('-') }}</td><td>{{ stats.high.bathrooms | default('-') }}</td></tr>
+    </tbody>
+    <tfoot>
+      <tr><td>Sale Price</td><td>{{ stats.piq.price | format_currency }}</td><td>{{ stats.low.price | format_currency }}</td><td>{{ stats.medium.price | format_currency }}</td><td>{{ stats.high.price | format_currency }}</td></tr>
+    </tfoot>
+  </table>
 </div>
 {{ macros.page_footer(agent, 5) }}
 {% endblock %}
 
 {# =============================================================================
-   COMPARABLES PAGE OVERRIDE — Thick borders, gold header bars, corner triangles
+   COMPARABLES PAGE OVERRIDE — Transplanted from V0 original (commit 8dbec7b)
+   2x2 comp grid, gold price badge on image, pin SVG, 4-stat cards
    ============================================================================= #}
 {% block comparables %}
-<div class="page-content">
-  <div class="bold-section-header">
-    <div class="bold-gold-bar"></div>
-    <h3>Sales Comparables</h3>
-  </div>
-
-  <div class="bold-comp-grid">
+<div class="bold-v0-header">
+  <div class="header-label">Recent Transactions</div>
+  <h2 class="header-title">Sales Comparables</h2>
+</div>
+<div class="page-content bold-v0-p6">
+  <div class="comp-grid">
     {% for comp in comparables[:4] %}
-    <div class="bold-comp-card">
-      <div class="bold-comp-card-header">
-        <span class="comp-num">Comp {{ loop.index }}</span>
-        <span class="comp-price">{{ comp.sale_price | format_currency }}</span>
+    <div class="comp-card">
+      <div class="comp-card-image" {% if comp.photo_url or comp.map_image_url %}style="background-image: url('{{ comp.photo_url | default(comp.map_image_url) }}'); background-size: cover; background-position: center;"{% endif %}>
+        <div class="comp-card-price">{{ comp.sale_price | format_currency }}</div>
       </div>
-      <div class="bold-comp-img">
-        {% if comp.photo_url or comp.map_image_url %}
-        <img src="{{ comp.photo_url | default(comp.map_image_url) }}" alt="{{ comp.address }}">
-        {% endif %}
-        <div class="bold-comp-triangle"></div>
-      </div>
-      <div class="bold-comp-body">
-        <div class="bold-comp-address">{{ comp.address }}</div>
-        <div class="bold-comp-stats">
-          <div class="bold-comp-stat"><div class="lbl">Sold</div><div class="val">{{ comp.sold_date }}</div></div>
-          <div class="bold-comp-stat"><div class="lbl">Sq.Ft.</div><div class="val">{{ comp.sqft | format_number }}</div></div>
-          <div class="bold-comp-stat"><div class="lbl">Bed/Bath</div><div class="val">{{ comp.bedrooms }}/{{ comp.bathrooms }}</div></div>
-          <div class="bold-comp-stat"><div class="lbl">$/Sq.Ft.</div><div class="val">{{ comp.price_per_sqft | format_currency }}</div></div>
+      <div class="comp-card-body">
+        <div class="comp-card-address">
+          <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+          {{ comp.address }}
+        </div>
+        <div class="comp-card-stats">
+          <div class="comp-stat"><div class="comp-stat-label">Sold</div><div class="comp-stat-value">{{ comp.sold_date }}</div></div>
+          <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">{{ comp.sqft | format_number }}</div></div>
+          <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">{{ comp.bedrooms }}/{{ comp.bathrooms }}</div></div>
+          <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">{{ comp.price_per_sqft | format_currency }}</div></div>
         </div>
       </div>
     </div>
@@ -1015,66 +899,34 @@
 {% endblock %}
 
 {# =============================================================================
-   RANGE PAGE OVERRIDE — Geometric bar, navy stat boxes, gold accents
+   RANGE PAGE OVERRIDE — Transplanted from V0 original (commit 8dbec7b)
+   Map with navy border, 4 navy stat cards, gold-navy gradient slider
    ============================================================================= #}
 {% block range %}
-<div class="page-content">
-  <div class="bold-section-header">
-    <div class="bold-gold-bar"></div>
-    <h3>Range of Sales</h3>
+<div class="bold-v0-header">
+  <div class="header-label">Valuation Summary</div>
+  <h2 class="header-title">Range of Sales</h2>
+</div>
+<div class="page-content bold-v0-p7">
+  <div class="range-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}>
+    {% if images.aerial_map %}<img src="{{ images.aerial_map }}" alt="Aerial map">{% endif %}
   </div>
-
-  <div style="margin-top:14px;">
-    <div class="bold-range-stats">
-      <div class="bold-range-stat">
-        <div class="num">{{ stats.total_comps }}</div>
-        <div class="lbl">Total Comps</div>
-      </div>
-      <div class="bold-range-stat">
-        <div class="num">{{ stats.avg_sqft | default(0) | int }}</div>
-        <div class="lbl">Avg Sq Ft</div>
-      </div>
-      <div class="bold-range-stat">
-        <div class="num">{{ stats.avg_beds | default(0) | round(1) }}</div>
-        <div class="lbl">Avg Beds</div>
-      </div>
-      <div class="bold-range-stat">
-        <div class="num">{{ stats.avg_baths | default(0) | round(1) }}</div>
-        <div class="lbl">Avg Baths</div>
-      </div>
+  <div class="range-stats">
+    <div class="range-stat"><div class="range-stat-num">{{ '%02d' | format(stats.total_comps | default(0)) }}</div><div class="range-stat-label">Total Comps</div></div>
+    <div class="range-stat"><div class="range-stat-num">{{ stats.avg_sqft | default(0) | int }}</div><div class="range-stat-label">Avg. Sq.Ft.</div></div>
+    <div class="range-stat"><div class="range-stat-num">{{ '%02d' | format(stats.avg_beds | default(0) | int) }}</div><div class="range-stat-label">Avg. Beds</div></div>
+    <div class="range-stat"><div class="range-stat-num">{{ '%02d' | format(stats.avg_baths | default(0) | int) }}</div><div class="range-stat-label">Avg. Baths</div></div>
+  </div>
+  <div class="range-slider">
+    <div class="range-slider-header">
+      <div class="range-slider-price">{{ stats.price_low | format_currency_short }}</div>
+      <div class="range-slider-price">{{ stats.price_high | format_currency_short }}</div>
     </div>
-
-    <div class="bold-range-slider">
-      <div class="bold-range-slider-header">
-        <div class="bold-range-slider-price">{{ stats.price_low | format_currency_short }}</div>
-        <div class="bold-range-slider-price">{{ stats.price_high | format_currency_short }}</div>
-      </div>
-      <div class="bold-range-track">
-        {% set subj_price = stats.piq.price | default(0, true) | float %}
-        {% set r_low = stats.price_low | default(0, true) | float %}
-        {% set r_high = stats.price_high | default(0, true) | float %}
-        {% if r_high != r_low and subj_price > 0 %}
-        {% set pct = ((subj_price - r_low) / (r_high - r_low) * 100) | int %}
-        <div class="bold-range-dot" style="left:{{ pct }}%;"></div>
-        {% endif %}
-      </div>
+    <div class="range-slider-track">
+      <div class="range-slider-dot" style="left: 5%;"></div>
+      <div class="range-slider-dot" style="left: 95%;"></div>
     </div>
-
-    <div class="bold-divider"></div>
-
-    <div class="bold-range-comps">
-      {% for comp in comparables[:4] | sort(attribute='sale_price') %}
-      <div class="bold-range-comp">
-        <span class="addr">{{ comp.address }}</span>
-        <span class="dist">{{ comp.distance_miles }} mi</span>
-        <span class="price">{{ comp.sale_price | format_currency }}</span>
-      </div>
-      {% endfor %}
-    </div>
-
-    <div class="bold-range-note">
-      Based on {{ stats.total_comps }} comparable sales, the estimated market value falls between {{ stats.price_low | format_currency }} and {{ stats.price_high | format_currency }}. The median comparable sold at {{ stats.medium.price | format_currency }}.
-    </div>
+    <p class="range-note">The above statistics represent average property details for comparable homes sold within the last 12 months. The price range indicates the low and high sale prices for properties matching your home's characteristics.</p>
   </div>
 </div>
 {{ macros.page_footer(agent, 7) }}
