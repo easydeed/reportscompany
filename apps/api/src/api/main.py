@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .settings import settings
 from .middleware.authn import AuthContextMiddleware, RateLimitMiddleware
 from .routes.health import router as health_router
+from .routes.hello import router as hello_router
 from .routes.reports import router as reports_router
 from .routes.report_data import router as report_data_router
 from .routes.account import router as account_router
@@ -89,6 +90,7 @@ async def timing_middleware(request, call_next):
 
 # Routes
 app.include_router(health_router)
+app.include_router(hello_router)
 app.include_router(auth_router)
 app.include_router(apikeys_router)
 app.include_router(webhooks_router)
