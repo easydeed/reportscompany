@@ -95,14 +95,59 @@ Basic account lookup returning id, name, type, plan_slug, sponsor_account_id.
 
 ---
 
+---
+
+## simplyrets.py -- API-Layer SimplyRETS Client
+
+> Full module doc: [modules/simplyrets-api-service.md](./modules/simplyrets-api-service.md)
+
+Used by `routes/property.py` to fetch comparable listings during the property report wizard.
+
+### `fetch_properties(params: dict) → list[dict]`
+
+Async HTTP GET to `https://api.simplyrets.com/properties` with Basic Auth.
+Returns raw listing objects normalised via `normalize_listing()`.
+
+### `build_comparables_params(subject, options) → dict`
+
+Constructs SimplyRETS query parameters from subject property attributes + user-specified options (`sqft_tolerance`, `radius`, `type`, `subtype`).
+
+### `normalize_listing(raw) → dict`
+
+Maps SimplyRETS API fields to the consistent `PropertyData` shape consumed by the property builder.
+
+**Known behaviour:** No local rate limiter — relies on the 60 RPM SimplyRETS limit. Rapid frontend calls can trigger 429 responses.
+
+---
+
+## sitex.py -- SiteX Pro API Client
+
+> Full module doc: [modules/sitex-api-service.md](./modules/sitex-api-service.md)
+
+Provides subject-property lookup via the SiteX Pro REST API (OAuth2 client credentials). Used as Step 1 of the property report wizard.
+
+### `SiteXClient` (class, singleton)
+
+Manages OAuth2 token lifecycle (10-min TTL, auto-refreshed at 9 min). In-memory 24-hour cache for address and APN lookups.
+
+### `SiteXClient.search_by_address(address, city, state, zip) → PropertyData | None`
+
+Looks up property by street address. Returns `None` if not found; raises `MultiMatchError` if multiple results.
+
+### `SiteXClient.search_by_apn(fips, apn) → PropertyData | None`
+
+Higher-precision lookup using county FIPS + APN.
+
+**Critical output field:** `property_type` (mapped from SiteX `UseCode`) is used by the comparables route to select the correct SimplyRETS `type` + `subtype`.
+
+---
+
 ## Other Services
 
 | File | Purpose | Key Functions |
 |------|---------|---------------|
 | `email.py` | Send emails via Resend | `send_invite_email()`, password reset, notifications |
 | `branding.py` | White-label brand resolution | `get_brand_for_account()`, `validate_brand_input()` |
-| `simplyrets.py` | MLS data from SimplyRETS API | Property search, listing data |
-| `sitex.py` | MLS data from SiteX API | Property search, listing data |
 | `property_stats.py` | Property report statistics | Stats at agent/affiliate/admin levels |
 | `qr_service.py` | QR code generation | Generate QR codes for report links |
 | `twilio_sms.py` | SMS via Twilio | Send SMS notifications |
