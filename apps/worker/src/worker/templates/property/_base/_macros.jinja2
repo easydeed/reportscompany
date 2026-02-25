@@ -37,7 +37,7 @@
     {% endif %}
     <div class="footer-agent-info">
       <span class="footer-agent-name">{{ agent.name }}</span>
-      <span class="footer-agent-contact">{{ agent.phone }}</span>
+      {% if agent.phone %}<span class="footer-agent-contact">{{ agent.phone }}</span>{% endif %}
     </div>
   </div>
   <div class="footer-right">
@@ -68,7 +68,7 @@
     <div class="cover-agent-info">
       <h3 class="cover-agent-name">{{ agent.name }}</h3>
       <p class="cover-agent-title">{{ agent.title | default('Realtor®') }}{% if agent.license %} · {{ agent.license }}{% endif %}</p>
-      <p class="cover-agent-contact">{{ agent.phone }}{% if agent.email %} · {{ agent.email }}{% endif %}</p>
+      {% if agent.phone or agent.email %}<p class="cover-agent-contact">{% if agent.phone %}{{ agent.phone }}{% endif %}{% if agent.phone and agent.email %} · {% endif %}{% if agent.email %}{{ agent.email }}{% endif %}</p>{% endif %}
     </div>
   </div>
   <div class="cover-branding">
@@ -161,12 +161,30 @@
   {'label': 'Bedrooms', 'value': property.bedrooms},
   {'label': 'Bathrooms', 'value': property.bathrooms},
   {'label': 'Square Feet', 'value': property.sqft | format_number if property.sqft else None},
-  {'label': 'Lot Size', 'value': (property.lot_size | format_number ~ ' sq ft') if property.lot_size else None},
   {'label': 'Year Built', 'value': property.year_built},
   {'label': 'Garage', 'value': (property.garage ~ ' Car') if property.garage else None},
   {'label': 'Pool', 'value': property.pool},
-  {'label': 'Zoning', 'value': property.zoning}
+  {'label': 'Zoning', 'value': property.zoning},
+  {'label': 'HOA', 'value': ((property.hoa_fee | format_currency) ~ ((' / ' ~ property.hoa_frequency) if property.hoa_frequency else '/mo')) if property.hoa_fee else ('No HOA' if property.hoa_fee == 0 else None)},
+  {'label': 'Annual Taxes', 'value': property.tax_annual_amount | format_currency if property.tax_annual_amount else None},
+  {'label': 'Lot Size', 'value': (property.lot_size_area | format_number ~ ' sq ft' ~ ((' / ' ~ property.acres ~ ' ac') if property.acres else '')) if property.lot_size_area else ((property.acres ~ ' ac') if property.acres else None)}
 ], 'Property Details') }}
+{% endmacro %}
+
+{# -----------------------------------------------------------------------------
+   C1: SCHOOL TABLE
+   Conditional school rows — only renders when field is non-null
+   Usage: {{ macros.school_table(property) }}
+   ----------------------------------------------------------------------------- #}
+{% macro school_table(property) %}
+{% if property.school_district or property.school_high or property.school_middle or property.school_elementary %}
+{{ data_table([
+  {'label': 'School District',   'value': property.school_district},
+  {'label': 'High School',       'value': property.school_high},
+  {'label': 'Middle School',     'value': property.school_middle},
+  {'label': 'Elementary School', 'value': property.school_elementary}
+], 'Schools') }}
+{% endif %}
 {% endmacro %}
 
 {# -----------------------------------------------------------------------------
@@ -180,7 +198,7 @@
   {'label': 'Assessed Value', 'value': property.assessed_value | format_currency if property.assessed_value else None},
   {'label': 'Land Value', 'value': property.land_value | format_currency if property.land_value else None},
   {'label': 'Improvement Value', 'value': property.improvement_value | format_currency if property.improvement_value else None},
-  {'label': 'Annual Taxes', 'value': property.tax_amount | format_currency if property.tax_amount else None},
+  {'label': 'Tax Amount', 'value': property.tax_amount | format_currency if property.tax_amount else None},
   {'label': 'Tax Year', 'value': property.tax_year}
 ], 'Tax Information') }}
 {% endmacro %}
@@ -209,12 +227,12 @@
 {% macro property_key_stats_bar(property) %}
 <div class="key-stats-bar">
   <div class="key-stat-item">
-    <span class="key-stat-value">{{ property.bedrooms }}</span>
+    <span class="key-stat-value">{{ property.bedrooms if property.bedrooms is not none else '-' }}</span>
     <span class="key-stat-label">Beds</span>
   </div>
   <div class="key-stat-divider"></div>
   <div class="key-stat-item">
-    <span class="key-stat-value">{{ property.bathrooms }}</span>
+    <span class="key-stat-value">{{ property.bathrooms if property.bathrooms is not none else '-' }}</span>
     <span class="key-stat-label">Baths</span>
   </div>
   <div class="key-stat-divider"></div>
@@ -224,7 +242,7 @@
   </div>
   <div class="key-stat-divider"></div>
   <div class="key-stat-item">
-    <span class="key-stat-value">{{ property.year_built }}</span>
+    <span class="key-stat-value">{{ property.year_built if property.year_built is not none else '-' }}</span>
     <span class="key-stat-label">Year Built</span>
   </div>
 </div>
@@ -274,8 +292,42 @@
         <span class="comp-stat-label">Distance</span>
       </div>
     </div>
+    {# C3: HOA + Lot size (conditional) #}
+    <div class="comp-extras">
+      {% if comp.lot_display %}
+      <span class="comp-extra-item comp-lot">Lot: {{ comp.lot_display }}</span>
+      {% endif %}
+      {% if comp.hoa_fee is not none %}
+        {% if comp.hoa_fee > 0 %}
+        <span class="comp-extra-item comp-hoa">HOA: {{ comp.hoa_fee | format_currency }}{% if comp.hoa_frequency %}/{{ comp.hoa_frequency }}{% else %}/mo{% endif %}</span>
+        {% else %}
+        <span class="comp-extra-item comp-hoa comp-hoa--none">No HOA</span>
+        {% endif %}
+      {% endif %}
+    </div>
   </div>
 </div>
+{% endmacro %}
+
+{# -----------------------------------------------------------------------------
+   COMP CONFIDENCE BAR
+   Stand-alone confidence badge for theme-overridden comparables pages.
+   Usage: {{ macros.comp_confidence_bar(comp_confidence_grade, comp_confidence_reason, comparables|length) }}
+   ----------------------------------------------------------------------------- #}
+{% macro comp_confidence_bar(grade, reason, comp_count=0) %}
+{% if grade %}
+<div class="comp-confidence-bar comp-confidence--{{ grade | lower }}">
+  <span class="comp-confidence-badge">{{ grade }}</span>
+  <span class="comp-confidence-label">
+    {% if grade == 'A' %}Strict Match
+    {% elif grade == 'B' %}{{ reason | default('Relaxed Match') }}
+    {% elif grade == 'C' %}{{ reason | default('Broad Match') }}
+    {% else %}Thin Market
+    {% endif %}
+  </span>
+  <span class="comp-confidence-count">{{ comp_count }} comp{{ 's' if comp_count != 1 }}</span>
+</div>
+{% endif %}
 {% endmacro %}
 
 {# -----------------------------------------------------------------------------
@@ -283,12 +335,70 @@
    Grid of comparable cards
    Usage: {{ macros.comp_grid(comparables) }}
    ----------------------------------------------------------------------------- #}
-{% macro comp_grid(comparables) %}
+{% macro comp_grid(comparables, confidence_grade=None, confidence_reason=None) %}
+{# C3: Confidence badge header #}
+{% if confidence_grade %}
+<div class="comp-confidence-bar comp-confidence--{{ confidence_grade | lower }}">
+  <span class="comp-confidence-badge">{{ confidence_grade }}</span>
+  <span class="comp-confidence-label">
+    {% if confidence_grade == 'A' %}Strict Match
+    {% elif confidence_grade == 'B' %}{{ confidence_reason | default('Relaxed Match') }}
+    {% elif confidence_grade == 'C' %}{{ confidence_reason | default('Broad Match') }}
+    {% else %}Thin Market
+    {% endif %}
+  </span>
+  <span class="comp-confidence-count">{{ comparables | length }} comp{{ 's' if comparables | length != 1 }}</span>
+</div>
+{% endif %}
 <div class="comp-grid">
   {% for comp in comparables[:4] %}
   {{ comp_card(comp, loop.index) }}
   {% endfor %}
 </div>
+{% endmacro %}
+
+{# -----------------------------------------------------------------------------
+   C2: MARKET METRICS BLOCK
+   Page 5 — MOI, price cuts, DOM distribution, escrow timeline
+   Usage: {{ macros.market_metrics_block(market_trends) }}
+   ----------------------------------------------------------------------------- #}
+{% macro market_metrics_block(market_trends) %}
+{% if market_trends %}
+<div class="market-metrics-block">
+  <h3 class="section-title">Market Conditions (Last 90 Days)</h3>
+  <div class="market-metrics-grid">
+    {% if market_trends.months_of_inventory and market_trends.months_of_inventory.current is not none %}
+    <div class="market-metric-item">
+      <span class="market-metric-value">{{ market_trends.months_of_inventory.formatted_current }}</span>
+      <span class="market-metric-label">Months of Inventory</span>
+    </div>
+    {% endif %}
+    {% if market_trends.price_cut_stats and market_trends.price_cut_stats.count > 0 %}
+    <div class="market-metric-item">
+      <span class="market-metric-value">{{ market_trends.price_cut_stats.rate }}%</span>
+      <span class="market-metric-label">Price Cut Rate</span>
+      <span class="market-metric-sub">Median cut: {{ market_trends.price_cut_stats.median_cut | format_currency }}</span>
+    </div>
+    {% endif %}
+    {% if market_trends.dom_distribution and market_trends.dom_distribution.count %}
+    <div class="market-metric-item">
+      <span class="market-metric-value">{{ market_trends.dom_distribution.under_30 }}%</span>
+      <span class="market-metric-label">Sold in ≤30 Days</span>
+      <span class="market-metric-sub">{{ market_trends.dom_distribution.over_45 }}% took >45 days</span>
+    </div>
+    {% endif %}
+    {% if market_trends.timeline_metrics and market_trends.timeline_metrics.avg_escrow_days is not none %}
+    <div class="market-metric-item">
+      <span class="market-metric-value">{{ market_trends.timeline_metrics.avg_escrow_days | int }} days</span>
+      <span class="market-metric-label">Avg Escrow</span>
+      {% if market_trends.timeline_metrics.avg_marketing_days is not none %}
+      <span class="market-metric-sub">{{ market_trends.timeline_metrics.avg_marketing_days | int }}d to contract</span>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
 {% endmacro %}
 
 {# -----------------------------------------------------------------------------
@@ -484,6 +594,57 @@
     <div class="map-placeholder">Map not available</div>
     {% endif %}
   </div>
+</div>
+{% endmacro %}
+
+{# =============================================================================
+   MARKET TRENDS MACROS
+   Used by the optional Market Trends page (page 6, between Analysis & Comps).
+
+   Key design principle: color by SENTIMENT (good/bad/neutral for sellers),
+   NOT by direction (up/down). DOM going down = sentiment "good" = green.
+   This avoids the "DOM falls but CSS shows red" bug from naive implementations.
+   ============================================================================= #}
+
+{# -----------------------------------------------------------------------------
+   TREND CARD
+   Displays a single market metric with optional trend arrow + change %.
+   Usage: {{ macros.trend_card(label, metric, has_prior_data) }}
+
+   metric shape:
+     { current, prior, change_pct, direction, sentiment,
+       formatted_current, formatted_prior }
+   ----------------------------------------------------------------------------- #}
+{% macro trend_card(label, metric, has_prior_data) %}
+<div class="mt-card">
+  <div class="mt-card-label">{{ label }}</div>
+  {% if metric and metric.current is not none %}
+  <div class="mt-card-value">{{ metric.formatted_current }}</div>
+  {% if has_prior_data and metric.change_pct is not none %}
+  <div class="mt-card-change mt-card-change--{{ metric.sentiment or 'neutral' }}">
+    {% if metric.direction == "up" %}▲{% elif metric.direction == "down" %}▼{% else %}—{% endif %}
+    {{ "%.1f" | format(metric.change_pct | abs) }}% vs prior 90 days
+  </div>
+  {% elif has_prior_data %}
+  <div class="mt-card-note">No prior data</div>
+  {% endif %}
+  {% else %}
+  <div class="mt-card-value mt-card-value--na">N/A</div>
+  <div class="mt-card-note">Insufficient data</div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{# -----------------------------------------------------------------------------
+   MARKET CONDITION SCORE DOTS
+   Renders 10 dots, filled up to market_condition.score (1–10).
+   Usage: {{ macros.condition_dots(score) }}
+   ----------------------------------------------------------------------------- #}
+{% macro condition_dots(score) %}
+<div class="mt-condition-score">
+  {% for i in range(10) %}
+  <span class="mt-dot {% if i < score %}mt-dot--filled{% endif %}"></span>
+  {% endfor %}
 </div>
 {% endmacro %}
 

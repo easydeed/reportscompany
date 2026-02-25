@@ -16,10 +16,9 @@
 {% endblock %}
 
 {% block theme_styles %}
-<style>
   :root {
     /* Classic Theme Colors - Primary is customizable */
-    --color-primary: {{ theme_color | default('#1B365D') }};
+    --color-primary: {{ theme_color | default('#1B365D', true) }};
     --color-primary-light: #2C4A7C;
     --color-accent: #8B7355;
     --color-accent-light: #A89070;
@@ -494,33 +493,52 @@
      CLASSIC V0 ORIGINAL: Analysis Page (p5) — Transplanted from commit 8dbec7b
      ========================================================================== */
 
+  /* Full-bleed page banner for pages 5/6/7 — positioned at absolute top of .page */
   .classic-v0-header {
-    background: var(--color-primary);
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 5;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
     padding: 20px 25px;
+    border-bottom: 3px solid var(--color-accent);
+  }
+
+  /* Push page-content below the full-bleed header on pages 5, 6, 7 */
+  .page-analysis .page-content,
+  .page-comparables .page-content,
+  .page-range .page-content {
+    top: 1.2in;
   }
 
   .classic-v0-header .header-label {
+    font-family: var(--font-body);
     font-size: 11px;
-    letter-spacing: 0.25em;
+    letter-spacing: 0.22em;
     text-transform: uppercase;
     color: var(--color-accent-light);
     margin-bottom: 8px;
-    font-weight: 500;
+    font-weight: 600;
   }
 
   .classic-v0-header .header-title {
     font-family: var(--font-display);
-    font-size: 42px;
+    font-size: 40px;
     font-weight: 700;
     color: white;
     margin: 0;
+    letter-spacing: -0.3px;
   }
 
   .classic-v0-p5 .analysis-chart {
-    background: var(--color-surface);
+    background: linear-gradient(180deg, var(--color-surface) 0%, #fff 100%);
     border: 1px solid var(--color-border);
+    border-top: 3px solid var(--color-accent);
     padding: 25px;
     margin-bottom: 25px;
+    box-shadow: var(--shadow-sm);
+    border-radius: var(--radius-md);
   }
 
   .classic-v0-p5 .chart-title {
@@ -530,13 +548,14 @@
     color: var(--color-primary);
     margin-bottom: 20px;
     text-align: center;
+    letter-spacing: 0.3px;
   }
 
   .classic-v0-p5 .chart-bars {
     display: flex;
     align-items: flex-end;
     justify-content: space-around;
-    height: 150px;
+    height: 350px;
     padding: 0 30px;
     border-bottom: 2px solid var(--color-primary);
   }
@@ -550,7 +569,9 @@
 
   .classic-v0-p5 .chart-bar {
     width: 55px;
-    background: var(--color-primary);
+    background: linear-gradient(180deg, var(--color-primary-light) 0%, var(--color-primary) 100%);
+    box-shadow: 0 4px 12px rgba(27, 54, 93, 0.18);
+    border-radius: 3px 3px 0 0;
   }
 
   .classic-v0-p5 .chart-bar-label {
@@ -593,8 +614,8 @@
   }
 
   .classic-v0-p5 .analysis-table tfoot {
-    background: #4A90D9;
-    color: white;
+    background: linear-gradient(90deg, var(--color-accent) 0%, var(--color-accent-light) 100%);
+    color: var(--color-primary);
     font-weight: 700;
   }
 
@@ -617,11 +638,12 @@
     border: 1px solid var(--color-border);
     border-radius: 10px;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    box-shadow: var(--shadow-sm);
+    border-top: 3px solid var(--color-accent);
   }
 
   .classic-v0-p6 .comp-card-image {
-    height: 130px;
+    height: 220px;
     background: var(--color-text-muted);
     position: relative;
   }
@@ -663,7 +685,7 @@
   .classic-v0-p6 .comp-card-address svg {
     width: 14px;
     height: 14px;
-    fill: #4A90D9;
+    fill: var(--color-accent);
     flex-shrink: 0;
   }
 
@@ -698,7 +720,7 @@
      ========================================================================== */
 
   .classic-v0-p7 .range-map {
-    height: 4in;
+    height: 4.5in;
     background: var(--color-border);
     border: 1px solid var(--color-border);
     border-radius: 8px;
@@ -720,10 +742,12 @@
   }
 
   .classic-v0-p7 .range-stat {
-    background: var(--color-primary);
-    padding: 26px 15px;
+    background: linear-gradient(160deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+    padding: 24px 15px;
     text-align: center;
     border-radius: 8px;
+    border-bottom: 3px solid var(--color-accent);
+    box-shadow: var(--shadow-md);
   }
 
   .classic-v0-p7 .range-stat-num {
@@ -738,8 +762,9 @@
     font-size: 11px;
     color: var(--color-accent-light);
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.12em;
     margin-top: 10px;
+    font-weight: 600;
   }
 
   .classic-v0-p7 .range-slider {
@@ -764,7 +789,7 @@
 
   .classic-v0-p7 .range-slider-track {
     height: 10px;
-    background: linear-gradient(90deg, #4A90D9 0%, var(--color-primary) 100%);
+    background: linear-gradient(90deg, var(--color-accent-light) 0%, var(--color-accent) 40%, var(--color-primary) 100%);
     border-radius: 5px;
     position: relative;
     margin-bottom: 20px;
@@ -788,7 +813,6 @@
     color: var(--color-text-muted);
     text-align: center;
   }
-</style>
 {% endblock %}
 
 {# =============================================================================
@@ -855,6 +879,7 @@
       <tr><td>Sale Price</td><td>{{ stats.piq.price | format_currency }}</td><td>{{ stats.low.price | format_currency }}</td><td>{{ stats.medium.price | format_currency }}</td><td>{{ stats.high.price | format_currency }}</td></tr>
     </tfoot>
   </table>
+  {{ macros.market_metrics_block(market_trends) }}
 </div>
 {{ macros.page_footer(agent, 5) }}
 {% endblock %}
@@ -869,6 +894,7 @@
   <h2 class="header-title">Sales Comparables</h2>
 </div>
 <div class="page-content classic-v0-p6">
+  {{ macros.comp_confidence_bar(comp_confidence_grade, comp_confidence_reason, comparables|length) }}
   <div class="comp-grid">
     {% for comp in comparables[:4] %}
     <div class="comp-card">
@@ -885,6 +911,8 @@
           <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">{{ comp.sqft | format_number }}</div></div>
           <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">{{ comp.bedrooms }}/{{ comp.bathrooms }}</div></div>
           <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">{{ comp.price_per_sqft | format_currency }}</div></div>
+          {% if comp.lot_display %}<div class="comp-stat"><div class="comp-stat-label">Lot</div><div class="comp-stat-value">{{ comp.lot_display }}</div></div>{% endif %}
+          <div class="comp-stat"><div class="comp-stat-label">HOA</div><div class="comp-stat-value">{% if comp.hoa_fee %}{{ comp.hoa_fee | format_currency }}{% if comp.hoa_frequency %}/{{ comp.hoa_frequency }}{% endif %}{% else %}No HOA{% endif %}</div></div>
         </div>
       </div>
     </div>

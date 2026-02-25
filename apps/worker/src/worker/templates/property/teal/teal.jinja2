@@ -16,10 +16,9 @@
 {% endblock %}
 
 {% block theme_styles %}
-<style>
   :root {
     /* Teal Theme Colors - Primary is customizable */
-    --color-primary: {{ theme_color | default('#34D1C3') }};
+    --color-primary: {{ theme_color | default('#34D1C3', true) }};
     --color-primary-dark: #21C7B7;
     --color-accent: #18235C;
     --color-accent-light: #2A3875;
@@ -45,6 +44,7 @@
     --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.06);
     --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.1);
     --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.12);
+    --shadow-primary: 0 8px 24px rgba(52, 209, 195, 0.28);
   }
   
   /* ==========================================================================
@@ -59,10 +59,11 @@
     position: absolute;
     inset: 0;
     background: 
-      linear-gradient(180deg, 
-        rgba(24, 35, 92, 0.1) 0%,
-        rgba(24, 35, 92, 0.5) 60%,
-        rgba(24, 35, 92, 0.95) 100%
+      linear-gradient(160deg, 
+        rgba(24, 35, 92, 0.05) 0%,
+        rgba(24, 35, 92, 0.35) 45%,
+        rgba(24, 35, 92, 0.92) 80%,
+        rgba(11, 15, 26, 0.98) 100%
       ){% if images.hero %},
       url('{{ images.hero }}') center/cover no-repeat{% endif %};
   }
@@ -155,6 +156,7 @@
     text-transform: uppercase;
     letter-spacing: -1px;
     margin-bottom: 12px;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.3);
   }
   
   .page-cover .cover-location {
@@ -312,13 +314,15 @@
   }
   
   .table-title {
-    background: var(--color-accent);
+    background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-light) 100%);
     color: white;
     padding: 14px var(--space-md);
     border-radius: var(--radius-md) var(--radius-md) 0 0;
     margin-bottom: 0;
     font-weight: 800;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    font-size: 13px;
   }
   
   /* ==========================================================================
@@ -330,10 +334,12 @@
     border: 2px solid var(--color-border);
     border-radius: var(--radius-md);
     overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.2s;
   }
   
   .comp-card-header {
-    background: var(--color-accent);
+    background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-light) 100%);
     padding: 12px var(--space-md);
   }
   
@@ -618,11 +624,12 @@
     display: block;
     height: 6px;
     border-radius: 6px;
-    background: rgba(52,209,195,.75);
+    background: var(--color-primary);
+    opacity: 0.75;
   }
 
-  .teal-v0-p5 .mini-bars span:nth-child(1) { width: 26px; }
-  .teal-v0-p5 .mini-bars span:nth-child(2) { width: 10px; background: rgba(52,209,195,.55); }
+  .teal-v0-p5 .mini-bars span:nth-child(1) { width: 26px; opacity: 0.9; }
+  .teal-v0-p5 .mini-bars span:nth-child(2) { width: 10px; opacity: 0.55; }
 
   .teal-v0-p5 .subtitle {
     margin: 8px 0 0;
@@ -692,8 +699,9 @@
     margin-top: 16px;
     height: 2.8in;
     border-radius: 12px;
-    background: linear-gradient(180deg, #f8faff 0%, #fff 100%);
+    background: linear-gradient(180deg, #eef8f7 0%, #f8faff 50%, #fff 100%);
     border: 1px solid var(--color-border);
+    box-shadow: inset 0 -3px 0 0 var(--color-primary), var(--shadow-sm);
     padding: 18px 24px 40px;
     display: flex;
     align-items: flex-end;
@@ -714,12 +722,12 @@
     width: 65px;
     background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
     border-radius: 8px 8px 0 0;
-    box-shadow: 0 8px 20px rgba(52,209,195,.25);
+    box-shadow: var(--shadow-primary);
     position: relative;
   }
 
   .teal-v0-p5 .bar:nth-child(even) {
-    background: linear-gradient(180deg, var(--color-accent) 0%, #0f1a45 100%);
+    background: linear-gradient(180deg, var(--color-accent-light) 0%, var(--color-accent) 100%);
     box-shadow: 0 8px 20px rgba(24,35,92,.2);
   }
 
@@ -780,11 +788,12 @@
   .teal-v0-p5 .analysis-table tbody tr:nth-child(even) td { background: #e9ecf7; }
 
   .teal-v0-p5 .analysis-table tfoot td {
-    background: var(--color-primary);
+    background: linear-gradient(90deg, var(--color-primary), var(--color-primary-dark));
     color: var(--color-accent);
     padding: 14px 12px;
     font-weight: 900;
     border-top: 0;
+    letter-spacing: 0.03em;
   }
 
   .teal-v0-p5 .analysis-table tfoot td:first-child { border-radius: 0 0 0 12px; }
@@ -817,11 +826,12 @@
     display: block;
     height: 6px;
     border-radius: 6px;
-    background: rgba(52,209,195,.75);
+    background: var(--color-primary);
+    opacity: 0.75;
   }
 
-  .teal-v0-p6 .mini-bars span:nth-child(1) { width: 26px; }
-  .teal-v0-p6 .mini-bars span:nth-child(2) { width: 10px; background: rgba(52,209,195,.55); }
+  .teal-v0-p6 .mini-bars span:nth-child(1) { width: 26px; opacity: 0.9; }
+  .teal-v0-p6 .mini-bars span:nth-child(2) { width: 10px; opacity: 0.55; }
 
   .teal-v0-p6 .subtitle {
     margin: 8px 0 0;
@@ -849,7 +859,7 @@
   }
 
   .teal-v0-p6 .comp-map {
-    height: 1.4in;
+    height: 1.8in;
     background: linear-gradient(0deg, rgba(0,0,0,.06), rgba(0,0,0,.06)),
       repeating-linear-gradient(90deg, #f2f4f8 0 18px, #eef1f7 18px 36px),
       repeating-linear-gradient(0deg, #f2f4f8 0 18px, #eef1f7 18px 36px);
@@ -898,7 +908,7 @@
   }
 
   .teal-v0-p6 .comp-body {
-    background: linear-gradient(180deg, var(--color-accent), #0c1436);
+    background: linear-gradient(160deg, var(--color-accent) 0%, #0c1436 100%);
     color: #fff;
     padding: 14px 16px 12px;
   }
@@ -997,11 +1007,12 @@
     display: block;
     height: 6px;
     border-radius: 6px;
-    background: rgba(52,209,195,.75);
+    background: var(--color-primary);
+    opacity: 0.75;
   }
 
-  .teal-v0-p7 .mini-bars span:nth-child(1) { width: 26px; }
-  .teal-v0-p7 .mini-bars span:nth-child(2) { width: 10px; background: rgba(52,209,195,.55); }
+  .teal-v0-p7 .mini-bars span:nth-child(1) { width: 26px; opacity: 0.9; }
+  .teal-v0-p7 .mini-bars span:nth-child(2) { width: 10px; opacity: 0.55; }
 
   .teal-v0-p7 .subtitle {
     margin: 8px 0 0;
@@ -1015,7 +1026,7 @@
 
   .teal-v0-p7 .range-map {
     margin-top: 14px;
-    height: 4.2in;
+    height: 5.5in;
     border-radius: 12px;
     border: 1px solid var(--color-border);
     overflow: hidden;
@@ -1069,35 +1080,42 @@
 
   .teal-v0-p7 .range-metrics {
     margin-top: -2px;
-    background: var(--color-accent);
+    background: linear-gradient(135deg, var(--color-accent) 0%, #0c1436 100%);
     color: #fff;
-    padding: 24px 22px;
+    padding: 22px 22px;
     display: grid;
     grid-template-columns: repeat(4,1fr);
-    gap: 16px;
+    gap: 12px;
     border-radius: 0 0 14px 14px;
+    box-shadow: 0 6px 20px rgba(24,35,92,0.25);
   }
 
   .teal-v0-p7 .metric {
     text-align: center;
-    padding: 12px 8px;
+    padding: 10px 8px;
+    border-left: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .teal-v0-p7 .metric:first-child {
+    border-left: none;
   }
 
   .teal-v0-p7 .metric .num {
     color: var(--color-primary);
     font-weight: 900;
-    font-size: 48px;
+    font-size: 44px;
     letter-spacing: .02em;
     line-height: 1;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.2);
   }
 
   .teal-v0-p7 .metric .lbl {
-    margin-top: 10px;
+    margin-top: 8px;
     font-weight: 700;
-    opacity: .9;
-    font-size: 12px;
+    opacity: .85;
+    font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
   }
 
   .teal-v0-p7 .range-slider {
@@ -1163,7 +1181,6 @@
     color: var(--color-text-muted);
     margin-top: 14px;
   }
-</style>
 {% endblock %}
 
 {# =============================================================================
@@ -1270,6 +1287,7 @@
       </tfoot>
     </table>
   </div>
+  {{ macros.market_metrics_block(market_trends) }}
 </div>
 {{ macros.page_footer(agent, 5) }}
 {% endblock %}
@@ -1288,6 +1306,7 @@
   </div>
   <div class="subtitle">PROPERTIES THAT HAVE RECENTLY SOLD</div>
 
+  {{ macros.comp_confidence_bar(comp_confidence_grade, comp_confidence_reason, comparables|length) }}
   <div class="comps-grid">
     {% for comp in comparables[:4] %}
     <article class="comp-card">
@@ -1312,8 +1331,8 @@
           <div class="stat"><span class="tiny">$/Sqft</span><b>{{ comp.price_per_sqft | format_currency }}</b></div>
           <div class="stat"><span class="tiny">Bed/Bath</span><b>{{ comp.bedrooms }}/{{ comp.bathrooms }}</b></div>
           <div class="stat"><span class="tiny">Year Blt</span><b>{{ comp.year_built }}</b></div>
-          <div class="stat"><span class="tiny">Lot Area</span><b>{{ comp.lot_size | format_number }}</b></div>
-          <div class="stat"><span class="tiny">Pool</span><b>{{ 'Yes' if comp.pool else 'No' }}</b></div>
+          <div class="stat"><span class="tiny">Lot</span><b>{{ comp.lot_display if comp.lot_display else (comp.lot_size | format_number) }}</b></div>
+          <div class="stat"><span class="tiny">HOA</span><b>{% if comp.hoa_fee %}{{ comp.hoa_fee | format_currency }}{% if comp.hoa_frequency %}/{{ comp.hoa_frequency }}{% endif %}{% else %}No HOA{% endif %}</b></div>
         </div>
       </div>
     </article>

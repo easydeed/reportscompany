@@ -16,10 +16,9 @@
 {% endblock %}
 
 {% block theme_styles %}
-<style>
   :root {
     /* Elegant Theme Colors - Primary is customizable */
-    --color-primary: {{ theme_color | default('#1A1A1A') }};
+    --color-primary: {{ theme_color | default('#1A1A1A', true) }};
     --color-primary-light: #333333;
     --color-accent: #B8977E;
     --color-accent-light: #D4C4B0;
@@ -150,6 +149,7 @@
     line-height: 1.1;
     color: white;
     margin-bottom: 16px;
+    text-shadow: 0 2px 16px rgba(0,0,0,0.25);
   }
   
   .page-cover .cover-location {
@@ -615,13 +615,13 @@
   /* Shared header and accents for V0 pages */
   .elegant-v0-p5 .property-header,
   .elegant-v0-p6 .property-header,
-  .elegant-v0-p7 .property-header { text-align: center; margin-bottom: 0.4in; }
+  .elegant-v0-p7 .property-header { text-align: center; margin-bottom: 0.35in; }
   .elegant-v0-p5 .property-label,
   .elegant-v0-p6 .property-label,
-  .elegant-v0-p7 .property-label { font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase; color: var(--color-primary); margin-bottom: 10px; }
+  .elegant-v0-p7 .property-label { font-size: 10px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: 10px; font-weight: 400; }
   .elegant-v0-p5 .property-title,
   .elegant-v0-p6 .property-title,
-  .elegant-v0-p7 .property-title { font-family: var(--font-display); font-size: 38px; color: var(--color-text); font-weight: 400; }
+  .elegant-v0-p7 .property-title { font-family: var(--font-display); font-size: 38px; color: var(--color-text); font-weight: 400; font-style: italic; }
   .elegant-v0-p5 .gold-rule,
   .elegant-v0-p6 .gold-rule,
   .elegant-v0-p7 .gold-rule { width: 80px; height: 3px; background: linear-gradient(90deg, transparent, var(--color-accent), transparent); margin: 15px auto; }
@@ -634,18 +634,18 @@
      Burgundy gradient bar chart + gold-bordered analysis table
      ========================================================================== */
 
-  .elegant-v0-p5 .analysis-chart { background: #F0EBE3; border-radius: 12px; padding: 25px; margin-bottom: 25px; border: 1px solid rgba(184,151,126,0.3); }
-  .elegant-v0-p5 .chart-bars { display: flex; align-items: flex-end; justify-content: space-around; height: 180px; padding: 0 20px; border-bottom: 2px solid var(--color-primary); }
+  .elegant-v0-p5 .analysis-chart { background: var(--color-surface); border-radius: 8px; padding: 25px; margin-bottom: 25px; border: 1px solid var(--color-border); border-top: 2px solid var(--color-accent); }
+  .elegant-v0-p5 .chart-bars { display: flex; align-items: flex-end; justify-content: space-around; height: 290px; padding: 0 20px; border-bottom: 2px solid var(--color-primary); }
   .elegant-v0-p5 .chart-bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-  .elegant-v0-p5 .chart-bar { width: 60px; background: linear-gradient(180deg, var(--color-primary), #0d0d0d); border-radius: 4px 4px 0 0; }
-  .elegant-v0-p5 .chart-bar-label { font-size: 11px; color: var(--color-text-muted); }
+  .elegant-v0-p5 .chart-bar { width: 60px; background: linear-gradient(180deg, var(--color-primary-light) 0%, var(--color-primary) 100%); border-radius: 3px 3px 0 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .elegant-v0-p5 .chart-bar-label { font-size: 11px; color: var(--color-text-muted); letter-spacing: 0.03em; }
   .elegant-v0-p5 .analysis-table { width: 100%; border-collapse: collapse; font-size: 12px; }
   .elegant-v0-p5 .analysis-table thead { background: var(--color-primary); color: #fff; }
-  .elegant-v0-p5 .analysis-table th { padding: 12px 10px; text-align: left; font-weight: 500; letter-spacing: 0.05em; }
-  .elegant-v0-p5 .analysis-table tbody tr:nth-child(even) { background: #F0EBE3; }
-  .elegant-v0-p5 .analysis-table td { padding: 10px; border-bottom: 1px solid rgba(184,151,126,0.2); }
+  .elegant-v0-p5 .analysis-table th { padding: 12px 10px; text-align: left; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; font-size: 10px; }
+  .elegant-v0-p5 .analysis-table tbody tr:nth-child(even) { background: var(--color-surface); }
+  .elegant-v0-p5 .analysis-table td { padding: 10px; border-bottom: 1px solid var(--color-border); }
   .elegant-v0-p5 .analysis-table tfoot { background: var(--color-accent-light); font-weight: 600; }
-  .elegant-v0-p5 .analysis-table tfoot td { padding: 12px 10px; color: #0d0d0d; }
+  .elegant-v0-p5 .analysis-table tfoot td { padding: 12px 10px; color: var(--color-text); }
 
   /* ==========================================================================
      ELEGANT V0 ORIGINAL: Comparables Page (p6) — Transplanted from commit 8dbec7b
@@ -653,16 +653,16 @@
      ========================================================================== */
 
   .elegant-v0-p6 .comp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 0.3in; }
-  .elegant-v0-p6 .comp-card { background: #fff; border-radius: 14px; overflow: hidden; border: 1px solid rgba(184,151,126,0.3); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-  .elegant-v0-p6 .comp-card-image { height: 140px; background: #ddd; position: relative; }
+  .elegant-v0-p6 .comp-card { background: #fff; overflow: hidden; border: 1px solid var(--color-border); border-top: 2px solid var(--color-accent); box-shadow: var(--shadow-sm); }
+  .elegant-v0-p6 .comp-card-image { height: 220px; background: var(--color-border); position: relative; }
   .elegant-v0-p6 .comp-card-image img { width: 100%; height: 100%; object-fit: cover; }
-  .elegant-v0-p6 .comp-card-badge { position: absolute; top: 10px; right: 10px; background: var(--color-primary); color: #fff; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 600; }
+  .elegant-v0-p6 .comp-card-badge { position: absolute; top: 10px; right: 10px; background: var(--color-primary); color: #fff; padding: 6px 12px; font-size: 14px; font-weight: 600; font-family: var(--font-display); }
   .elegant-v0-p6 .comp-card-body { padding: 15px; }
-  .elegant-v0-p6 .comp-card-address { font-family: var(--font-display); font-size: 15px; color: var(--color-text); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
-  .elegant-v0-p6 .comp-card-address svg { width: 14px; height: 14px; fill: var(--color-primary); }
+  .elegant-v0-p6 .comp-card-address { font-family: var(--font-display); font-size: 15px; font-style: italic; color: var(--color-text); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .elegant-v0-p6 .comp-card-address svg { width: 14px; height: 14px; fill: var(--color-accent); }
   .elegant-v0-p6 .comp-card-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; font-size: 11px; }
-  .elegant-v0-p6 .comp-stat { text-align: center; padding: 8px 4px; background: var(--color-surface); border-radius: 6px; }
-  .elegant-v0-p6 .comp-stat-label { color: var(--color-text-muted); margin-bottom: 3px; }
+  .elegant-v0-p6 .comp-stat { text-align: center; padding: 8px 4px; background: var(--color-surface); border-top: 1px solid var(--color-border); }
+  .elegant-v0-p6 .comp-stat-label { color: var(--color-text-muted); margin-bottom: 3px; letter-spacing: 0.04em; }
   .elegant-v0-p6 .comp-stat-value { color: var(--color-text); font-weight: 600; }
 
   /* ==========================================================================
@@ -670,18 +670,18 @@
      Rounded map, dark stat cards with gold numbers, gradient slider
      ========================================================================== */
 
-  .elegant-v0-p7 .range-map { height: 4.2in; background: #ddd; border-radius: 14px; overflow: hidden; margin: 0.25in 0; border: 1px solid rgba(184,151,126,0.3); }
+  .elegant-v0-p7 .range-map { height: 3.4in; background: var(--color-border); overflow: hidden; margin: 0.25in 0; border: 1px solid var(--color-border); }
   .elegant-v0-p7 .range-map img { width: 100%; height: 100%; object-fit: cover; }
-  .elegant-v0-p7 .range-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; background: var(--color-primary); border-radius: 14px; padding: 28px 20px; margin-bottom: 25px; }
-  .elegant-v0-p7 .range-stat { text-align: center; color: #fff; padding: 8px 0; }
-  .elegant-v0-p7 .range-stat-num { font-family: var(--font-display); font-size: 46px; color: var(--color-accent); line-height: 1; }
-  .elegant-v0-p7 .range-stat-label { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 10px; opacity: 0.9; }
+  .elegant-v0-p7 .range-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; background: var(--color-primary); padding: 28px 20px; margin-bottom: 25px; border-top: 2px solid var(--color-accent); }
+  .elegant-v0-p7 .range-stat { text-align: center; color: #fff; padding: 8px 0; border-left: 1px solid rgba(255,255,255,0.08); }
+  .elegant-v0-p7 .range-stat:first-child { border-left: none; }
+  .elegant-v0-p7 .range-stat-num { font-family: var(--font-display); font-size: 46px; color: var(--color-accent); line-height: 1; font-style: italic; }
+  .elegant-v0-p7 .range-stat-label { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; margin-top: 10px; opacity: 0.8; font-family: var(--font-body); font-weight: 400; }
   .elegant-v0-p7 .range-slider { padding: 20px 0; }
-  .elegant-v0-p7 .range-slider-labels { display: flex; justify-content: space-between; font-family: var(--font-display); font-size: 20px; color: var(--color-primary); }
-  .elegant-v0-p7 .range-slider-track { height: 8px; background: linear-gradient(90deg, var(--color-accent-light), var(--color-primary)); border-radius: 4px; position: relative; margin: 30px 0; }
-  .elegant-v0-p7 .range-slider-dot { width: 20px; height: 20px; background: var(--color-primary); border: 3px solid #fff; border-radius: 50%; position: absolute; top: -6px; margin-left: -10px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
-  .elegant-v0-p7 .range-note { font-size: 12px; line-height: 1.7; color: var(--color-text-muted); text-align: center; max-width: 90%; margin: 0 auto; }
-</style>
+  .elegant-v0-p7 .range-slider-labels { display: flex; justify-content: space-between; font-family: var(--font-display); font-size: 22px; color: var(--color-primary); font-style: italic; }
+  .elegant-v0-p7 .range-slider-track { height: 6px; background: linear-gradient(90deg, var(--color-accent-light) 0%, var(--color-accent) 50%, var(--color-primary) 100%); position: relative; margin: 28px 0; }
+  .elegant-v0-p7 .range-slider-dot { width: 18px; height: 18px; background: white; border: 2px solid var(--color-accent); border-radius: 50%; position: absolute; top: -6px; margin-left: -9px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+  .elegant-v0-p7 .range-note { font-size: 12px; line-height: 1.75; color: var(--color-text-muted); text-align: center; max-width: 90%; margin: 0 auto; font-weight: 300; letter-spacing: 0.02em; }
 {% endblock %}
 
 {# =============================================================================
@@ -741,6 +741,7 @@
     </tbody>
     <tfoot><tr><td>Sale Price</td><td>{{ stats.piq.price | format_currency }}</td><td>{{ stats.low.price | format_currency }}</td><td>{{ stats.medium.price | format_currency }}</td><td>{{ stats.high.price | format_currency }}</td></tr></tfoot>
   </table>
+  {{ macros.market_metrics_block(market_trends) }}
 </div>
 {{ macros.page_footer(agent, 5) }}
 {% endblock %}
@@ -754,6 +755,7 @@
   <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
   <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
   <div class="property-header"><div class="property-label">Recent Transactions</div><h2 class="property-title">Sales Comparables</h2><div class="gold-rule"></div></div>
+  {{ macros.comp_confidence_bar(comp_confidence_grade, comp_confidence_reason, comparables|length) }}
   <div class="comp-grid">
     {% for comp in comparables[:4] %}
     <div class="comp-card">
@@ -767,6 +769,8 @@
           <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">{{ comp.sqft | format_number }}</div></div>
           <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">{{ comp.bedrooms }}/{{ comp.bathrooms }}</div></div>
           <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">{{ comp.price_per_sqft | format_currency }}</div></div>
+          {% if comp.lot_display %}<div class="comp-stat"><div class="comp-stat-label">Lot</div><div class="comp-stat-value">{{ comp.lot_display }}</div></div>{% endif %}
+          <div class="comp-stat"><div class="comp-stat-label">HOA</div><div class="comp-stat-value">{% if comp.hoa_fee %}{{ comp.hoa_fee | format_currency }}{% if comp.hoa_frequency %}/{{ comp.hoa_frequency }}{% endif %}{% else %}No HOA{% endif %}</div></div>
         </div>
       </div>
     </div>

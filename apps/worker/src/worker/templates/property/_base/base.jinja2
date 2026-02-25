@@ -44,7 +44,17 @@
       --page-margin: 0.5in;
       --footer-height: 0.6in;
       --footer-bottom: 0.4in;
-      --header-height: 0.8in;
+
+      /* Page Geometry - Locked dimensions */
+      --page-header-height: 1.1in;   /* Min header height — used as min-height, not fixed */
+      --content-area-height: calc(
+        var(--page-height)
+        - var(--page-margin)
+        - var(--page-header-height)
+        - var(--space-lg)
+        - var(--footer-height)
+        - var(--footer-bottom)
+      );  /* ≈ 8.15in — usable vertical budget per page, below header, above footer */
       
       /* Spacing Scale */
       --space-xs: 4px;
@@ -139,6 +149,7 @@
        ========================================================================= #}
     
     .page-header {
+      min-height: var(--page-header-height);
       margin-bottom: var(--space-lg);
       padding-bottom: var(--space-md);
       border-bottom: 2px solid var(--color-border);
@@ -1187,6 +1198,251 @@
       line-height: 1.6;
       margin: 0;
     }
+
+    {# =========================================================================
+       MARKET TRENDS PAGE — Shared styles (inherited by all 5 themes via CSS vars)
+       
+       Design principles:
+       - Colors via CSS vars (--color-primary, --font-display, --font-body)
+         so all 5 themes inherit brand personality automatically.
+       - Sentiment coloring (good/bad/neutral) is INDEPENDENT of direction.
+         Template uses .mt-card-change--good/bad, not direction arrows, for color.
+       - Gauge marker sits OUTSIDE .mt-gauge-bar (overflow:hidden) but INSIDE
+         .mt-gauge-container (position:relative) to avoid clipping at rounded ends.
+       ========================================================================= #}
+
+    /* ── Page header ─────────────────────────────────────────────────────── */
+    .mt-header {
+      margin-bottom: 14px;
+    }
+    .mt-title {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--color-primary);
+      margin: 0 0 2px 0;
+      line-height: 1.2;
+    }
+    .mt-subtitle {
+      font-family: var(--font-body);
+      font-size: 11px;
+      color: var(--color-text-muted);
+      margin: 0;
+      letter-spacing: 0.2px;
+    }
+    .mt-header-accent {
+      width: 48px;
+      height: 3px;
+      background: var(--color-accent);
+      margin-top: 6px;
+      border-radius: 2px;
+    }
+
+    /* ── Market condition badge ───────────────────────────────────────────── */
+    .mt-condition {
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+    .mt-condition--sellers {
+      background: rgba(22, 163, 74, 0.05);
+      border: 1px solid rgba(22, 163, 74, 0.25);
+    }
+    .mt-condition--balanced {
+      background: rgba(234, 179, 8, 0.05);
+      border: 1px solid rgba(234, 179, 8, 0.3);
+    }
+    .mt-condition--buyers {
+      background: rgba(220, 38, 38, 0.05);
+      border: 1px solid rgba(220, 38, 38, 0.2);
+    }
+    .mt-condition--unknown {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+    }
+    .mt-condition-left {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      min-width: 100px;
+    }
+    .mt-condition-label {
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--color-primary);
+      white-space: nowrap;
+    }
+    .mt-condition-score {
+      display: flex;
+      gap: 3px;
+    }
+    .mt-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--color-border);
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .mt-dot--filled {
+      background: var(--color-accent);
+    }
+    .mt-condition-desc {
+      font-family: var(--font-body);
+      font-size: 9.5px;
+      color: var(--color-text-muted);
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    /* ── Metrics grid — 3 × 2 ────────────────────────────────────────────── */
+    .mt-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9px;
+      margin-bottom: 14px;
+    }
+    .mt-card {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      text-align: center;
+      background: var(--color-surface);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .mt-card-label {
+      font-family: var(--font-body);
+      font-size: 7.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--color-text-muted);
+    }
+    .mt-card-value {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--color-primary);
+      line-height: 1.15;
+    }
+    .mt-card-value--na {
+      color: var(--color-border);
+      font-size: 16px;
+    }
+    .mt-card-note {
+      font-family: var(--font-body);
+      font-size: 8px;
+      color: var(--color-text-muted);
+    }
+
+    /* Trend change — colored by SENTIMENT, not direction */
+    .mt-card-change {
+      font-family: var(--font-body);
+      font-size: 8px;
+      color: var(--color-text-muted);
+      font-weight: 500;
+    }
+    .mt-card-change--good    { color: #16a34a; }
+    .mt-card-change--bad     { color: #dc2626; }
+    .mt-card-change--neutral { color: var(--color-text-muted); }
+
+    /* ── Inventory gauge ─────────────────────────────────────────────────── */
+    .mt-gauge-wrap {
+      margin-bottom: 14px;
+    }
+    .mt-gauge-label {
+      font-family: var(--font-body);
+      font-size: 8px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--color-text-muted);
+      margin-bottom: 18px;          /* Space for marker above bar */
+    }
+    .mt-gauge-container {
+      position: relative;           /* Marker positions relative to THIS */
+    }
+    .mt-gauge-bar {
+      height: 22px;
+      border-radius: var(--radius-full);
+      display: flex;
+      overflow: hidden;             /* Clips zone colors — marker is OUTSIDE */
+    }
+    .mt-gauge-zone {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-body);
+      font-size: 7px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    .mt-gauge-zone--sellers  { background: #16a34a; }
+    .mt-gauge-zone--balanced { background: #ca8a04; }
+    .mt-gauge-zone--buyers   { background: #dc2626; }
+    /* Gauge marker — OUTSIDE the clipping bar, inside the container */
+    .mt-gauge-marker {
+      position: absolute;
+      top: -28px;                   /* Above the bar, within container padding */
+      transform: translateX(-50%);
+      text-align: center;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .mt-gauge-pip {
+      display: block;
+      font-size: 11px;
+      color: var(--color-primary);
+      line-height: 1;
+      margin-bottom: 1px;
+    }
+    .mt-gauge-val {
+      display: inline-block;
+      background: var(--color-primary);
+      color: white;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-family: var(--font-display);
+      font-size: 9px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .mt-gauge-tick-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4px;
+      font-family: var(--font-body);
+      font-size: 7px;
+      color: var(--color-text-muted);
+    }
+
+    /* ── Attribution ─────────────────────────────────────────────────────── */
+    .mt-attribution {
+      padding-top: 10px;
+      border-top: 1px solid var(--color-border);
+    }
+    .mt-attribution p {
+      font-family: var(--font-body);
+      font-size: 7px;
+      color: var(--color-text-muted);
+      margin: 0 0 2px 0;
+      line-height: 1.4;
+    }
+
+    {# Per-theme market-trends CSS overrides live here — each theme can inject
+       additional brand personality without touching the shared layout above. #}
+    {% block market_trends_css %}{% endblock %}
     
     {# =========================================================================
        TWO COLUMN LAYOUT
@@ -1202,6 +1458,28 @@
       min-width: 0;
     }
     
+    {# =========================================================================
+       PAGE 4: COMPACT DATA TABLES
+       Single-column layout packs 21 data rows — scope under .page-property
+       so higher specificity overrides all theme padding overrides.
+       ========================================================================= #}
+
+    .page-property .data-table {
+      font-size: 11px;
+    }
+
+    .page-property .data-table td {
+      padding: 5px 10px;
+    }
+
+    .page-property .table-title {
+      padding: 7px 10px;
+    }
+
+    .page-property .table-section + .table-section {
+      margin-top: 14px;
+    }
+
     {# =========================================================================
        PRINT STYLES
        ========================================================================= #}
@@ -1277,21 +1555,35 @@
     
     {# =========================================================================
        PAGE 2: CONTENTS
+       Dynamic page numbers — computed from which pages are in page_set.
+       Page order is fixed; active pages get sequential numbers.
        ========================================================================= #}
     <div class="page page-contents">
       {% block contents %}
+      {# Define canonical page order and display metadata #}
+      {% set _page_meta = {
+        "cover":         {"name": "Cover",              "sub": property.street_address},
+        "contents":      {"name": "Contents",           "sub": "Report Overview"},
+        "aerial":        {"name": "Aerial View",        "sub": "Property Location Map"},
+        "property":      {"name": "Property Details",   "sub": "Specifications & Tax Information"},
+        "analysis":      {"name": "Area Sales Analysis","sub": "Market Statistics"},
+        "market_trends": {"name": "Market Trends",      "sub": "Pricing, Inventory & Conditions"},
+        "comparables":   {"name": "Sales Comparables",  "sub": "Recent Comparable Sales"},
+        "range":         {"name": "Range of Sales",     "sub": "Price Range Analysis"},
+      } %}
+      {% set _page_order = ["cover","contents","aerial","property","analysis","market_trends","comparables","range"] %}
       <div class="page-content contents-layout">
         <div class="contents-sidebar-accent"></div>
         <div class="contents-main">
           {{ macros.page_header('Contents', 'Property Report Overview') }}
           <div class="contents-list">
-            {{ macros.contents_item(1, 'Cover', property.street_address) }}
-            {{ macros.contents_item(2, 'Contents', 'Report Overview') }}
-            {{ macros.contents_item(3, 'Aerial View', 'Property Location Map') }}
-            {{ macros.contents_item(4, 'Property Details', 'Specifications & Tax Information') }}
-            {{ macros.contents_item(5, 'Area Sales Analysis', 'Market Statistics') }}
-            {{ macros.contents_item(6, 'Sales Comparables', 'Recent Comparable Sales') }}
-            {{ macros.contents_item(7, 'Range of Sales', 'Price Range Analysis') }}
+            {% set _num = namespace(v=1) %}
+            {% for _pid in _page_order %}
+              {% if _pid in page_set and _pid in _page_meta %}
+                {{ macros.contents_item(_num.v, _page_meta[_pid].name, _page_meta[_pid].sub) }}
+                {% set _num.v = _num.v + 1 %}
+              {% endif %}
+            {% endfor %}
           </div>
         </div>
       </div>
@@ -1321,17 +1613,10 @@
       <div class="page-content">
         {{ macros.page_header('Property Details', property.full_address) }}
         {{ macros.property_key_stats_bar(property) }}
-        <div class="two-column">
-          <div>
-            {{ macros.property_details_table(property) }}
-          </div>
-          <div>
-            {{ macros.tax_table(property) }}
-            <div style="margin-top: var(--space-xl);">
-              {{ macros.location_table(property) }}
-            </div>
-          </div>
-        </div>
+        <div class="table-section">{{ macros.property_details_table(property) }}</div>
+        <div class="table-section">{{ macros.school_table(property) }}</div>
+        <div class="table-section">{{ macros.tax_table(property) }}</div>
+        <div class="table-section">{{ macros.location_table(property) }}</div>
       </div>
       {{ macros.page_footer(agent, 4) }}
       {% endblock %}
@@ -1347,19 +1632,115 @@
         {{ macros.analysis_summary(stats, property) }}
         {{ macros.price_position_bar(stats) }}
         {{ macros.comparison_table(stats, property) }}
+        {{ macros.market_metrics_block(market_trends) }}
       </div>
       {{ macros.page_footer(agent, 5) }}
       {% endblock %}
     </div>
     
     {# =========================================================================
-       PAGE 6: SALES COMPARABLES
+       PAGE 6: MARKET TRENDS  (optional — only rendered when in page_set AND
+               market_trends context is populated with sufficient data)
+       ========================================================================= #}
+    {% if "market_trends" in page_set and market_trends %}
+    {% block market_trends_page %}
+    <div class="page page-market-trends">
+      <div class="page-content">
+        {% block market_trends_content %}
+
+        {# ── Page Header ───────────────────────────────────────────────────── #}
+        <div class="mt-header">
+          <h1 class="mt-title">Market Trends</h1>
+          <p class="mt-subtitle">
+            {{ market_trends.city }}
+            {% if market_trends.city %} · {% endif %}
+            {{ market_trends.period_label }}
+            {% if not market_trends.has_prior_data %}
+            <span style="color: #ca8a04;"> · Current period only (prior comparison unavailable)</span>
+            {% endif %}
+          </p>
+          <div class="mt-header-accent"></div>
+        </div>
+
+        {# ── Market Condition Badge ─────────────────────────────────────────── #}
+        <div class="mt-condition mt-condition--{{ market_trends.market_condition.indicator }}">
+          <div class="mt-condition-left">
+            <span class="mt-condition-label">{{ market_trends.market_condition.label }}</span>
+            {{ macros.condition_dots(market_trends.market_condition.score) }}
+          </div>
+          <p class="mt-condition-desc">{{ market_trends.market_condition.description }}</p>
+        </div>
+
+        {# ── Metrics Grid (3 × 2) ───────────────────────────────────────────── #}
+        <div class="mt-grid">
+          {{ macros.trend_card("Median Sale Price",       market_trends.median_sale_price,    market_trends.has_prior_data) }}
+          {{ macros.trend_card("Avg Days on Market",      market_trends.avg_days_on_market,   market_trends.has_prior_data) }}
+          {{ macros.trend_card("List-to-Sale Ratio",      market_trends.list_to_sale_ratio,   market_trends.has_prior_data) }}
+          {{ macros.trend_card("Price per Sq Ft",         market_trends.price_per_sqft,       market_trends.has_prior_data) }}
+          {{ macros.trend_card("Closed Sales (90 Days)",  market_trends.closed_sales,         market_trends.has_prior_data) }}
+
+          {# Active Listings — snapshot only, no trend arrow #}
+          <div class="mt-card">
+            <div class="mt-card-label">Active Listings</div>
+            <div class="mt-card-value">{{ market_trends.active_listings.formatted_count }}</div>
+            <div class="mt-card-note">Avg {{ market_trends.active_listings.formatted_avg_price }}</div>
+          </div>
+        </div>
+
+        {# ── Months of Inventory Gauge ───────────────────────────────────────── #}
+        {% if market_trends.months_of_inventory.current is not none %}
+        <div class="mt-gauge-wrap">
+          <div class="mt-gauge-label">Months of Inventory</div>
+          <div class="mt-gauge-container">
+            {# Bar with colored zones: overflow:hidden clips at rounded edges #}
+            <div class="mt-gauge-bar">
+              <div class="mt-gauge-zone mt-gauge-zone--sellers">Seller's<br>&lt; 4 mo</div>
+              <div class="mt-gauge-zone mt-gauge-zone--balanced">Balanced<br>4 – 6 mo</div>
+              <div class="mt-gauge-zone mt-gauge-zone--buyers">Buyer's<br>&gt; 6 mo</div>
+            </div>
+            {# Marker OUTSIDE the bar — not clipped by overflow:hidden above #}
+            <div class="mt-gauge-marker" style="left: {{ market_trends.months_of_inventory.gauge_pct | default(50) }}%;">
+              <span class="mt-gauge-pip">▼</span>
+              <span class="mt-gauge-val">{{ market_trends.months_of_inventory.formatted_current }}</span>
+            </div>
+          </div>
+          <div class="mt-gauge-tick-labels">
+            <span>0 mo</span>
+            <span>3 mo</span>
+            <span>6 mo</span>
+            <span>9 mo</span>
+            <span>12 mo+</span>
+          </div>
+        </div>
+        {% endif %}
+
+        {# ── Data Attribution (MLS compliance) ─────────────────────────────── #}
+        <div class="mt-attribution">
+          <p>
+            Data source: {{ market_trends.data_source }} ·
+            {{ market_trends.city }} ·
+            {{ market_trends.period_label }} ·
+            {{ market_trends.sample_size }} closed sales analyzed ·
+            Generated {{ market_trends.generated_date }}
+          </p>
+          <p>Market conditions change rapidly. Consult your real estate professional for current, personalized advice.</p>
+        </div>
+
+        {% endblock market_trends_content %}
+      </div>
+      {{ macros.page_footer(agent) }}
+    </div>
+    {% endblock market_trends_page %}
+    {% endif %}
+
+    {# =========================================================================
+       PAGE 6/7: SALES COMPARABLES
        ========================================================================= #}
     <div class="page page-comparables">
       {% block comparables %}
       <div class="page-content">
         {{ macros.page_header('Sales Comparables', 'Recent Comparable Sales') }}
-        {{ macros.comp_grid(comparables) }}
+        {{ macros.comp_grid(comparables, confidence_grade=comp_confidence_grade, confidence_reason=comp_confidence_reason) }}
       </div>
       {{ macros.page_footer(agent, 6) }}
       {% endblock %}
