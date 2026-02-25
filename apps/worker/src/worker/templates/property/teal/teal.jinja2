@@ -1325,7 +1325,7 @@
           <span class="val">{{ comp.sale_price | format_currency }}</span>
         </div>
         <div class="comp-stats">
-          <div class="stat"><span class="tiny">Sold Date</span><b>{{ comp.sold_date }}</b></div>
+          <div class="stat"><span class="tiny">{{ comp.sold_date_label | default('Sold') }} Date</span><b>{{ comp.sold_date }}</b></div>
           <div class="stat"><span class="tiny">Dist</span><b>{{ comp.distance_miles | default('-') }}</b></div>
           <div class="stat"><span class="tiny">Sq.ft</span><b>{{ comp.sqft | format_number }}</b></div>
           <div class="stat"><span class="tiny">$/Sqft</span><b>{{ comp.price_per_sqft | format_currency }}</b></div>

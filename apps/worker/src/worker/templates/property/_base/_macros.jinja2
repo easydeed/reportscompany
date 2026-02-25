@@ -285,7 +285,7 @@
       </div>
       <div class="comp-stat">
         <span class="comp-stat-value">{{ comp.sold_date }}</span>
-        <span class="comp-stat-label">Sold</span>
+        <span class="comp-stat-label">{{ comp.sold_date_label | default('Sold') }}</span>
       </div>
       <div class="comp-stat">
         <span class="comp-stat-value">{{ comp.distance_miles }} mi</span>

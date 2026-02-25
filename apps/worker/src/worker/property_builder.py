@@ -375,6 +375,16 @@ class PropertyReportBuilder:
             except (ValueError, TypeError):
                 comp_sqft = 0
 
+            # ── Status & dates ──────────────────────────────────────────────
+            status = comp.get("status") or "Active"
+            list_date_raw = comp.get("list_date") or ""
+            sold_date_raw = comp.get("sold_date") or comp.get("close_date") or ""
+
+            # Display date: active/pending → list_date; closed → sold/close_date
+            is_active = status.lower() in ("active", "pending")
+            display_date = self._fmt_date(list_date_raw if is_active else sold_date_raw)
+            display_date_label = "Listed" if is_active else "Sold"
+
             comparables.append({
                 "address": comp.get("address") or comp.get("full_address", ""),
                 "latitude": latitude,
@@ -385,8 +395,12 @@ class PropertyReportBuilder:
                 "price": self._format_price(raw_price),  # Formatted string
                 "sale_price": raw_price_num,  # V0 template (raw number for filter/arithmetic)
                 "list_price": float(comp.get("list_price") or 0),
-                "sold_date": comp.get("sold_date") or comp.get("close_date", ""),  # V0 template
-                "days_on_market": comp.get("days_on_market") or 0,
+                # Dates
+                "sold_date": display_date,           # Formatted display date (may be list_date for active)
+                "sold_date_label": display_date_label,  # "Listed" or "Sold"
+                "list_date": self._fmt_date(list_date_raw),
+                "status": status,
+                "days_on_market": comp.get("days_on_market") or comp.get("dom") or 0,
                 "distance": distance_formatted,
                 "distance_miles": float(distance_raw) if isinstance(distance_raw, (int, float)) else 0,
                 "sqft": comp_sqft,
@@ -395,6 +409,9 @@ class PropertyReportBuilder:
                 "bathrooms": comp.get("bathrooms") or 0,
                 "year_built": comp.get("year_built") or 0,
                 "lot_size": comp.get("lot_size") or 0,
+                "lot_display": comp.get("lot_display") or "",
+                "hoa_fee": comp.get("hoa_fee"),
+                "hoa_frequency": comp.get("hoa_frequency") or "",
                 "pool": comp.get("pool") if isinstance(comp.get("pool"), bool) else (comp.get("pool", "No") == "Yes"),
             })
         
@@ -417,7 +434,26 @@ class PropertyReportBuilder:
         except (ValueError, TypeError, ZeroDivisionError):
             pass
         return None
-    
+
+    def _fmt_date(self, date_str: Any) -> str:
+        """
+        Format an ISO date string for display on comparable cards.
+
+        Examples:
+          '2024-03-15T00:00:00Z'  →  'Mar 2024'
+          '2024-03-15'            →  'Mar 2024'
+          None / ''               →  ''
+        """
+        if not date_str:
+            return ""
+        try:
+            from datetime import datetime as _dt
+            raw = str(date_str).split("T")[0]   # strip time component
+            return _dt.strptime(raw, "%Y-%m-%d").strftime("%b %Y")
+        except (ValueError, AttributeError):
+            # Graceful fallback: return first 10 chars (keeps YYYY-MM-DD readable)
+            return str(date_str)[:10]
+
     def _build_neighborhood_context(self) -> Dict[str, Any]:
         """
         Build neighborhood statistics context.
@@ -672,14 +708,31 @@ class PropertyReportBuilder:
     def _build_images_context(self) -> Dict[str, Any]:
         """
         Build images context for V0 Teal template.
-        
-        Includes hero image and aerial map URLs.
+
+        Hero image priority:
+          1. Explicitly stored cover_image_url (user-uploaded or pre-set)
+          2. Google Street View static image based on lat/lng (auto fallback)
+          3. None → template shows placeholder gradient
+
+        Aerial map: Google Static Maps roadmap with property pin.
         """
         sitex_data = self.report_data.get("sitex_data") or {}
         lat = sitex_data.get("latitude") or sitex_data.get("lat")
         lng = sitex_data.get("longitude") or sitex_data.get("lng")
-        
-        # Generate aerial map URL if we have coordinates
+
+        # --- Hero / Cover image -------------------------------------------
+        hero = self.report_data.get("cover_image_url")
+        if not hero and lat and lng and GOOGLE_MAPS_API_KEY:
+            # Street View gives a realistic photo of the property exterior
+            hero = (
+                f"https://maps.googleapis.com/maps/api/streetview"
+                f"?size=1200x800"
+                f"&location={lat},{lng}"
+                f"&fov=90&pitch=0"
+                f"&key={GOOGLE_MAPS_API_KEY}"
+            )
+
+        # --- Aerial / neighbourhood map -----------------------------------
         aerial_map = None
         if lat and lng and GOOGLE_MAPS_API_KEY:
             aerial_map = (
@@ -689,9 +742,9 @@ class PropertyReportBuilder:
                 f"&markers=color:0x1e3a5f%7C{lat},{lng}"
                 f"&key={GOOGLE_MAPS_API_KEY}"
             )
-        
+
         return {
-            "hero": self.report_data.get("cover_image_url"),
+            "hero": hero,
             "aerial_map": aerial_map,
         }
     
@@ -742,7 +795,27 @@ class PropertyReportBuilder:
         """
         # Determine theme color
         theme_color = self._get_theme_color()
-        
+
+        # ── Market Trends (optional page) ─────────────────────────────────
+        # Only fetch if the page is actually selected — saves 3 API calls for
+        # reports that don't include the Market Trends page.
+        page_set = list(self.page_set)  # local copy so we can drop the page if data fails
+        market_trends_data = None
+        if "market_trends" in page_set:
+            city     = self.report_data.get("property_city", "")
+            zip_code = self.report_data.get("property_zip", "")
+            state    = self.report_data.get("property_state", "")
+            try:
+                from worker.compute.market_trends import fetch_and_compute_market_trends
+                market_trends_data = fetch_and_compute_market_trends(city, zip_code, state)
+            except Exception as _mt_exc:
+                logger.warning("market_trends: fetch failed — %s", _mt_exc)
+            if market_trends_data is None:
+                # Not enough data or API error — silently drop the page rather than
+                # rendering a broken/empty Market Trends page.
+                page_set = [p for p in page_set if p != "market_trends"]
+                logger.info("market_trends: page removed from page_set (insufficient data)")
+
         # Build the unified context (same structure for all themes)
         context = {
             # Theme configuration
@@ -752,8 +825,11 @@ class PropertyReportBuilder:
             "assets_base_url": ASSETS_BASE_URL,
             "google_maps_api_key": GOOGLE_MAPS_API_KEY,
             
-            # Page set
-            "page_set": self.page_set,
+            # Page set (may have market_trends removed if data unavailable)
+            "page_set": page_set,
+
+            # Market trends data (None when page was dropped)
+            "market_trends": market_trends_data,
             
             # Property data
             "property": self._build_property_context(),

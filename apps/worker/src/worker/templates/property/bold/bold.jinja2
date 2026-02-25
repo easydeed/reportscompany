@@ -921,7 +921,7 @@
           {{ comp.address }}
         </div>
         <div class="comp-card-stats">
-          <div class="comp-stat"><div class="comp-stat-label">Sold</div><div class="comp-stat-value">{{ comp.sold_date }}</div></div>
+          <div class="comp-stat"><div class="comp-stat-label">{{ comp.sold_date_label | default('Sold') }}</div><div class="comp-stat-value">{{ comp.sold_date }}</div></div>
           <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">{{ comp.sqft | format_number }}</div></div>
           <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">{{ comp.bedrooms }}/{{ comp.bathrooms }}</div></div>
           <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">{{ comp.price_per_sqft | format_currency }}</div></div>

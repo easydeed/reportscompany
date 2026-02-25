@@ -142,6 +142,10 @@ export function StepGenerate({
             photo_url: c.photo_url,
             status: c.status,
             dom: c.dom,
+            // Coordinates — needed by the worker to generate Google Static Maps
+            // thumbnails for comps that have no photo_url
+            lat: c.lat,
+            lng: c.lng,
           })),
           selected_pages: selectedPageIds,
         }),
