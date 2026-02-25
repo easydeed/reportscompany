@@ -409,11 +409,13 @@ export function PropertyWizard() {
                     comps={availableComps}
                     selectedCompIds={selectedCompIds}
                     compsLoading={compsLoading}
+                    compsLoaded={compsLoaded}
                     compsError={compsError}
                     property={property}
                     onSelectedChange={setSelectedCompIds}
                     compsStatus={compsStatus}
                     onStatusChange={handleCompsStatusChange}
+                    onReload={() => loadComparables(compsStatus)}
                   />
                 )}
 
@@ -426,6 +428,8 @@ export function PropertyWizard() {
                     onThemeChange={handleThemeChange}
                     onAccentChange={setAccentColor}
                     onPagesChange={setSelectedPageIds}
+                    propertyData={property}
+                    comparables={selectedComps}
                   />
                 )}
 
