@@ -135,40 +135,46 @@ export const THEMES: Theme[] = [
 // Page Definitions
 // ============================================
 
+// -----------------------------------------------------------------------------
+// PAGE ID CONTRACT — must match the keys used in base.jinja2 page_set checks.
+// Template page order: cover → contents → aerial → property → analysis →
+//                      market_trends → comparables → range
+// -----------------------------------------------------------------------------
+
 export const FULL_PAGES: ReportPage[] = [
-  { id: "cover", name: "Cover", required: false },
-  { id: "toc", name: "Table of Contents", required: false },
-  { id: "introduction", name: "Introduction", required: false },
-  { id: "aerial", name: "Aerial View", required: false },
-  { id: "property_details", name: "Property Details", required: true },
-  { id: "area_analysis", name: "Area Sales Analysis", required: false },
-  { id: "comparables", name: "Sales Comparables", required: true },
-  { id: "range", name: "Range of Sales", required: false },
-  { id: "neighborhood", name: "Neighborhood Stats", required: false },
-  { id: "roadmap", name: "Selling Roadmap", required: false },
-  { id: "buyers", name: "How Buyers Find Homes", required: false },
-  { id: "pricing", name: "Pricing Strategy", required: false },
-  { id: "dom", name: "Days on Market", required: false },
-  { id: "digital", name: "Digital Marketing", required: false },
-  { id: "print", name: "Print Marketing", required: false },
-  { id: "social", name: "Social Media", required: false },
-  { id: "optimize", name: "Analyze & Optimize", required: false },
-  { id: "negotiating", name: "Negotiating Offers", required: false },
-  { id: "timeline", name: "Transaction Timeline", required: false },
-  { id: "promise", name: "Agent Promise", required: false },
-  { id: "back_cover", name: "Back Cover", required: true },
+  // --- Core pages (exist in all themes via base.jinja2) ---
+  { id: "cover",         name: "Cover",               required: false },
+  { id: "contents",      name: "Table of Contents",   required: false },
+  { id: "aerial",        name: "Aerial View",         required: false },
+  { id: "property",      name: "Property Details",    required: true  },
+  { id: "analysis",      name: "Area Sales Analysis", required: false },
+  { id: "market_trends", name: "Market Trends",       required: false },
+  { id: "comparables",   name: "Sales Comparables",   required: true  },
+  { id: "range",         name: "Range of Sales",      required: false },
+  // --- Extended pages (future full-report templates) ---
+  { id: "introduction",  name: "Introduction",        required: false },
+  { id: "roadmap",       name: "Selling Roadmap",     required: false },
+  { id: "buyers",        name: "How Buyers Find Homes", required: false },
+  { id: "pricing",       name: "Pricing Strategy",    required: false },
+  { id: "dom",           name: "Days on Market",      required: false },
+  { id: "digital",       name: "Digital Marketing",   required: false },
+  { id: "print",         name: "Print Marketing",     required: false },
+  { id: "social",        name: "Social Media",        required: false },
+  { id: "optimize",      name: "Analyze & Optimize",  required: false },
+  { id: "negotiating",   name: "Negotiating Offers",  required: false },
+  { id: "timeline",      name: "Transaction Timeline", required: false },
+  { id: "promise",       name: "Agent Promise",       required: false },
 ];
 
 export const COMPACT_PAGES: ReportPage[] = [
-  { id: "cover", name: "Cover", required: false },
-  { id: "toc", name: "Table of Contents", required: false },
-  { id: "aerial", name: "Aerial View", required: false },
-  { id: "property_details", name: "Property Details", required: true },
-  { id: "area_analysis", name: "Area Sales Analysis", required: false },
-  { id: "comparables", name: "Sales Comparables", required: true },
-  { id: "range", name: "Range of Sales", required: false },
-  { id: "neighborhood", name: "Neighborhood Stats", required: false },
-  { id: "back_cover", name: "Back Cover", required: true },
+  { id: "cover",         name: "Cover",               required: false },
+  { id: "contents",      name: "Table of Contents",   required: false },
+  { id: "aerial",        name: "Aerial View",         required: false },
+  { id: "property",      name: "Property Details",    required: true  },
+  { id: "analysis",      name: "Area Sales Analysis", required: false },
+  { id: "market_trends", name: "Market Trends",       required: false },
+  { id: "comparables",   name: "Sales Comparables",   required: true  },
+  { id: "range",         name: "Range of Sales",      required: false },
 ];
 
 // ============================================

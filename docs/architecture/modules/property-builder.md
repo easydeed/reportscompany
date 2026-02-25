@@ -20,25 +20,32 @@
 | `teal` | Teal (default) | Teal + Navy |
 | `bold` | Bold | Navy + Gold |
 
-Template location: `apps/worker/src/worker/templates/property/<theme>/<theme>_report.jinja2`
+Template location: `apps/worker/src/worker/templates/property/<theme>/<theme>.jinja2`
+
+All 5 themes extend `_base/base.jinja2` via Jinja2 template inheritance.
 
 ---
 
 ## Report Pages
 
-The default page set contains **7 pages**:
+The default page set contains **7 core pages** plus 1 optional page:
 
-| Page | Key | Description |
-|------|-----|-------------|
-| 1 | `cover` | Cover page (hero image, address, agent branding) |
-| 2 | `contents` | Table of contents |
-| 3 | `aerial` | Aerial map (Google Maps satellite + street view) |
-| 4 | `property` | Subject property details (beds, baths, sqft, APN, owner, tax info) |
-| 5 | `analysis` | Market area analysis (price per sqft, year built, lot size trends) |
-| 6 | `comparables` | Comparable listings grid (up to 12 comps) |
-| 7 | `range` | Price range chart (subject vs comps) |
+| Page | Key | Description | Required |
+|------|-----|-------------|----------|
+| 1 | `cover` | Cover page (hero image, address, agent branding) | — |
+| 2 | `contents` | Table of contents (dynamic, reflects selected pages) | — |
+| 3 | `aerial` | Aerial map (Google Maps satellite + street view) | — |
+| 4 | `property` | Subject property details (beds, baths, sqft, APN, owner, tax info, HOA, lot) | ✅ |
+| 5 | `analysis` | Market area analysis (price per sqft, year built, lot size trends) | — |
+| 6 | `market_trends` | Market trend metrics (absorption rate, MOI, price cuts, DOM distribution) | — |
+| 7 | `comparables` | Comparable listings grid with confidence badge (up to 6 comps) | ✅ |
+| 8 | `range` | Price range chart — subject property vs comp low/mid/high | — |
+
+> **Page ID contract:** The keys in this table are the **exact strings** that must appear in `selected_pages` (sent by the frontend wizard and stored in `property_reports.selected_pages`). The template checks `{% if "property" in page_set %}` — mismatched IDs silently skip pages.
 
 Pages are selectable per report (stored in `property_reports.selected_pages`).
+
+Default page set (no selection override): `["cover","contents","aerial","property","analysis","comparables","range"]`
 
 ---
 
@@ -149,6 +156,11 @@ python scripts/generate_theme_previews.py
 
 | Date | Change |
 |------|--------|
+| 2026-02 | **Page ID sync:** Frontend `types.ts` COMPACT_PAGES + FULL_PAGES IDs aligned to template keys (`toc`→`contents`, `property_details`→`property`, `area_analysis`→`analysis`). Added `market_trends` page. Removed non-existent `neighborhood` and `back_cover` entries. |
+| 2026-02 | **Theme CSS fixes (commit 208d6bb):** Standardized page geometry, fixed Bold/Classic header overlap on pages 5-7, fixed slider colors, fixed `default(true)` for `theme_color` CSS variable. |
+| 2026-02 | Added `market_trends` page (key `market_trends`) — optional, only renders when `market_trends` context is populated |
+| 2026-02 | Added `comp_confidence_bar` macro + `market_metrics_block` to all 5 themes |
+| 2026-02 | Added C1 fields to `property` page: `tax_annual_amount`, `lot_size_area`, `acres`, HOA fee/frequency, school district |
 | 2026-02 | Pages 5-7 HTML transplanted from original V0 design (commit 8dbec7b) — fixed layout regressions |
 | 2026-01 | Added `_build_comparables_context` normalisation for `lat`/`latitude` and `photo_url`/`photos[0]` field variants |
 | 2025-12 | Added `bold` theme (5th theme) |

@@ -808,7 +808,7 @@ class PropertyReportBuilder:
             HTML string for preview
         """
         if pages is None:
-            pages = ["cover", "property_details", "comparables"]
+            pages = ["cover", "property", "comparables"]
         
         # Temporarily override page_set
         original_page_set = self.page_set
