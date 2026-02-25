@@ -51,6 +51,10 @@ export function PropertyWizard() {
   const [compsLoaded, setCompsLoaded] = useState(false);
   const [compsError, setCompsError] = useState<string | null>(null);
   const [compsStatus, setCompsStatus] = useState<"Active" | "Closed">("Active");
+  // Search filter controls exposed to the agent in Step 2
+  const [sqftTolerance, setSqftTolerance] = useState(0.20); // 0 = any
+  const [radiusMiles, setRadiusMiles] = useState(1.0);
+  const [fallbackLevel, setFallbackLevel] = useState<string | null>(null);
 
   // Step 3
   const [selectedThemeId, setSelectedThemeId] = useState(4);
@@ -99,8 +103,14 @@ export function PropertyWizard() {
     [property, selectedCompIds.length, selectedThemeId]
   );
 
-  // Fetch real comparables from API
-  const loadComparables = useCallback(async (status: "Active" | "Closed" = "Active") => {
+  // Fetch real comparables from API.
+  // sqftVar / radiusVal can be passed explicitly (e.g. when filter controls change)
+  // so we don't rely on stale closure values.
+  const loadComparables = useCallback(async (
+    status: "Active" | "Closed" = "Active",
+    sqftVar: number = sqftTolerance,
+    radiusVal: number = radiusMiles,
+  ) => {
     if (!property) return;
     setCompsLoading(true);
     setCompsError(null);
@@ -124,7 +134,8 @@ export function PropertyWizard() {
           baths: property.bathrooms,
           sqft: property.sqft,
           property_type: property.property_type || undefined,
-          radius_miles: 1.0,
+          sqft_variance: sqftVar,
+          radius_miles: radiusVal,
           status,
         }),
       });
@@ -177,6 +188,7 @@ export function PropertyWizard() {
       );
 
       setAvailableComps(comps);
+      setFallbackLevel(data.comp_ladder_level || null);
       setCompsLoaded(true);
     } catch (err: any) {
       console.error("Failed to load comparables:", err);
@@ -184,7 +196,7 @@ export function PropertyWizard() {
     } finally {
       setCompsLoading(false);
     }
-  }, [property]);
+  }, [property, sqftTolerance, radiusMiles]);
 
   function goToStep(s: number) {
     setDirection(s > step ? 1 : -1);
@@ -203,7 +215,14 @@ export function PropertyWizard() {
 
   function handleCompsStatusChange(newStatus: "Active" | "Closed") {
     setCompsStatus(newStatus);
-    loadComparables(newStatus);
+    loadComparables(newStatus, sqftTolerance, radiusMiles);
+  }
+
+  function handleFiltersChange(newSqft: number, newRadius: number) {
+    setSqftTolerance(newSqft);
+    setRadiusMiles(newRadius);
+    // Pass new values explicitly — don't rely on state update propagating first
+    loadComparables(compsStatus, newSqft, newRadius);
   }
 
   function back() {
@@ -235,6 +254,9 @@ export function PropertyWizard() {
     setCompsLoaded(false);
     setCompsError(null);
     setCompsStatus("Active");
+    setSqftTolerance(0.20);
+    setRadiusMiles(1.0);
+    setFallbackLevel(null);
     setSelectedThemeId(4);
     setAccentColor("#34d1c3");
     setSelectedPageIds(COMPACT_PAGES.map((p) => p.id));
@@ -254,6 +276,9 @@ export function PropertyWizard() {
     setCompsLoaded(false);
     setCompsError(null);
     setCompsStatus("Active");
+    setSqftTolerance(0.20);
+    setRadiusMiles(1.0);
+    setFallbackLevel(null);
   }
 
   const stepsCompleted = [
@@ -415,7 +440,11 @@ export function PropertyWizard() {
                     onSelectedChange={setSelectedCompIds}
                     compsStatus={compsStatus}
                     onStatusChange={handleCompsStatusChange}
-                    onReload={() => loadComparables(compsStatus)}
+                    onReload={() => loadComparables(compsStatus, sqftTolerance, radiusMiles)}
+                    sqftTolerance={sqftTolerance}
+                    radiusMiles={radiusMiles}
+                    fallbackLevel={fallbackLevel}
+                    onFiltersChange={handleFiltersChange}
                   />
                 )}
 

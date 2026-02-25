@@ -235,8 +235,8 @@ class ComparablesRequest(BaseModel):
     sqft: Optional[int] = None
     property_type: Optional[str] = None
     # Search filters
-    radius_miles: float = Field(default=0.5, ge=0.1, le=5.0, description="Search radius in miles")
-    sqft_variance: float = Field(default=0.20, ge=0.05, le=0.50, description="SQFT +/- variance (0.20 = 20%)")
+    radius_miles: float = Field(default=1.0, ge=0.1, le=10.0, description="Search radius in miles")
+    sqft_variance: float = Field(default=0.20, ge=0.0, le=0.50, description="SQFT +/- variance (0.20 = 20%). 0 = no sqft filter.")
     status: Literal["Closed", "Active", "All"] = "Active"
     limit: int = Field(default=15, ge=1, le=50)
 
@@ -569,8 +569,9 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
         sr_type, sr_subtype = resolve_simplyrets_type(subject_prop_type)
         logger.warning(f"Property type mapping: '{subject_prop_type}' -> type={sr_type}, subtype={sr_subtype}")
 
-        # Build base SQFT range for ladder widening
-        base_sqft_variance = payload.sqft_variance  # e.g. 0.20
+        # Build base SQFT range for ladder widening.
+        # sqft_variance == 0 means the user selected "Any" in the UI — skip sqft filter from L0.
+        base_sqft_variance = payload.sqft_variance if payload.sqft_variance > 0 else None
 
         # ──────────────────────────────────────────────────────────────────────
         # FALLBACK LADDER for comps: start strict, progressively loosen until
