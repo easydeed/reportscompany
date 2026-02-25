@@ -668,9 +668,11 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
 
             # Distance filter (radius widens at later levels)
             filtered = _filter_distance(raw, radius)
-            # Property type post-filter (only when subtype was requested)
-            if incl_sub:
-                filtered = post_filter_by_property_type(filtered, sr_subtype)
+            # Always post-filter by property type to keep comps same type as subject.
+            # incl_sub only controls whether we send the subtype param to SimplyRETS
+            # (to avoid over-filtering by the API at looser levels); we still enforce
+            # type consistency ourselves on every level.
+            filtered = post_filter_by_property_type(filtered, sr_subtype)
 
             total_before_filter = len(raw)
 
