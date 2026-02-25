@@ -64,36 +64,41 @@ router = APIRouter(prefix="/v1/property", tags=["property"])
 # =============================================================================
 
 # Maps lowercase SiteX UseCode to (SimplyRETS type, SimplyRETS subtype)
+# SimplyRETS `type` query parameter uses FULL WORDS per the API spec:
+#   https://docs.simplyrets.com/api/index.html#/Listings/get_properties
+#   residential, rental, multifamily, commercial, land
+# SimplyRETS `subtype` query parameter uses CamelCase (as returned in property.subType):
+#   SingleFamilyResidence, Condominium, Townhouse, ManufacturedHome, Duplex
 PROPERTY_TYPE_MAP = {
     # ---- Single Family Residence ----
-    "sfr":                          ("residential", "singlefamilyresidence"),
-    "rsfr":                         ("residential", "singlefamilyresidence"),
-    "single family":                ("residential", "singlefamilyresidence"),
-    "singlefamily":                 ("residential", "singlefamilyresidence"),
-    "single family residential":    ("residential", "singlefamilyresidence"),
-    "residential":                  ("residential", "singlefamilyresidence"),
-    "pud":                          ("residential", "singlefamilyresidence"),
+    "sfr":                          ("residential", "SingleFamilyResidence"),
+    "rsfr":                         ("residential", "SingleFamilyResidence"),
+    "single family":                ("residential", "SingleFamilyResidence"),
+    "singlefamily":                 ("residential", "SingleFamilyResidence"),
+    "single family residential":    ("residential", "SingleFamilyResidence"),
+    "residential":                  ("residential", "SingleFamilyResidence"),
+    "pud":                          ("residential", "SingleFamilyResidence"),
     # ---- Condominium ----
-    "condo":                        ("condominium", "condominium"),
-    "condominium":                  ("condominium", "condominium"),
+    "condo":                        ("residential", "Condominium"),
+    "condominium":                  ("residential", "Condominium"),
     # ---- Townhouse ----
-    "townhouse":                    ("residential", "townhouse"),
-    "th":                           ("residential", "townhouse"),
-    "townhome":                     ("residential", "townhouse"),
+    "townhouse":                    ("residential", "Townhouse"),
+    "th":                           ("residential", "Townhouse"),
+    "townhome":                     ("residential", "Townhouse"),
     # ---- Duplex ----
-    "duplex":                       ("multifamily", "duplex"),
+    "duplex":                       ("multifamily", "Duplex"),
     # ---- Triplex ----
-    "triplex":                      ("multifamily", "triplex"),
+    "triplex":                      ("multifamily", "Triplex"),
     # ---- Quadruplex ----
-    "quadplex":                     ("multifamily", "quadruplex"),
-    "quadruplex":                   ("multifamily", "quadruplex"),
+    "quadplex":                     ("multifamily", "Quadruplex"),
+    "quadruplex":                   ("multifamily", "Quadruplex"),
     # ---- Multi-Family (generic) ----
     "multi-family":                 ("multifamily", None),
     "multifamily":                  ("multifamily", None),
     # ---- Mobile / Manufactured ----
-    "mobile":                       ("mobilehome", "manufacturedhome"),
-    "mobilehome":                   ("mobilehome", "manufacturedhome"),
-    "manufactured":                 ("mobilehome", "manufacturedhome"),
+    "mobile":                       ("residential", "ManufacturedHome"),
+    "mobilehome":                   ("residential", "ManufacturedHome"),
+    "manufactured":                 ("residential", "ManufacturedHome"),
     # ---- Land ----
     "land":                         ("land", None),
     "vacant land":                  ("land", None),
@@ -102,15 +107,17 @@ PROPERTY_TYPE_MAP = {
 }
 
 # Post-filter: allowed SimplyRETS property.subType values per normalized category
-# Used as safety net after SimplyRETS returns results
+# Used as safety net after SimplyRETS returns results.
+# Values MUST match what SimplyRETS actually returns in property.subType — CamelCase, no spaces.
+# See extract.py subtype_map for authoritative source: "SingleFamilyResidence", "Condominium", etc.
 POST_FILTER_ALLOWED_SUBTYPES = {
-    "singlefamilyresidence": {"Single Family Residence", "Detached", ""},
-    "condominium":           {"Condominium", "Stock Cooperative", "Attached"},
+    "singlefamilyresidence": {"SingleFamilyResidence", "Detached"},
+    "condominium":           {"Condominium", "StockCooperative", "Attached"},
     "townhouse":             {"Townhouse", "Attached"},
     "duplex":                {"Duplex"},
     "triplex":               {"Triplex"},
     "quadruplex":            {"Quadruplex"},
-    "manufacturedhome":      {"Manufactured Home", "Manufactured On Land", "Mobile Home"},
+    "manufacturedhome":      {"ManufacturedHome", "ManufacturedOnLand", "MobileHome"},
 }
 
 
@@ -123,7 +130,7 @@ def resolve_simplyrets_type(sitex_use_code: Optional[str]) -> tuple:
         Defaults to ("residential", "singlefamilyresidence") if unresolved.
     """
     if not sitex_use_code:
-        return ("residential", "singlefamilyresidence")
+        return ("residential", "SingleFamilyResidence")
 
     key = sitex_use_code.strip().lower()
 
@@ -138,7 +145,7 @@ def resolve_simplyrets_type(sitex_use_code: Optional[str]) -> tuple:
 
     # 3. Default to SFR (most common residential type)
     logger.warning(f"Unknown SiteX UseCode '{sitex_use_code}', defaulting to SFR")
-    return ("residential", "singlefamilyresidence")
+    return ("residential", "SingleFamilyResidence")
 
 
 def post_filter_by_property_type(
@@ -253,6 +260,10 @@ class ComparablesResponse(BaseModel):
     total_found: int = 0
     search_params: Optional[dict] = None  # Simple dict for params
     error: Optional[str] = None
+    # C3: Fallback ladder metadata for confidence badge
+    comp_ladder_level: Optional[str] = None
+    comp_confidence_grade: Optional[str] = None
+    comp_confidence_reason: Optional[str] = None
 
 
 class PropertyReportCreate(BaseModel):
@@ -347,6 +358,9 @@ class PreviewRequest(BaseModel):
     # Agent/branding context (optional, will use defaults if not provided)
     agent: Optional[dict] = None
     branding: Optional[dict] = None
+
+    # Pages to render — if omitted, defaults to cover + comparables + range (fast preview)
+    pages: Optional[List[str]] = None
 
 
 # =============================================================================
@@ -550,86 +564,152 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
             "Active": "Active",
             "All": "Active,Closed",
         }
-        params: Dict[str, Any] = {
-            "status": status_map.get(payload.status, "Active"),
-            "type": "RES",  # CRITICAL: Excludes rentals
-            "limit": payload.limit * 3,  # Fetch extra for post-filtering
-        }
-        
-        # Location filter - prefer ZIP, also add city for broader search
-        if subject_zip:
-            params["postalCodes"] = subject_zip
-        if subject_city:
-            params["q"] = subject_city
-        
-        # SQFT VARIANCE FILTER - Key enhancement from ModernAgent
-        if subject_sqft and payload.sqft_variance:
-            min_sqft = int(subject_sqft * (1 - payload.sqft_variance))
-            max_sqft = int(subject_sqft * (1 + payload.sqft_variance))
-            params["minarea"] = min_sqft
-            params["maxarea"] = max_sqft
-            sqft_range = {"min": min_sqft, "max": max_sqft}
-            logger.info(f"SQFT filter: {min_sqft} - {max_sqft} (subject: {subject_sqft}, variance: {payload.sqft_variance})")
-        
-        # BED FILTER (+/- 1 from subject)
-        if subject_beds:
-            min_beds = max(1, subject_beds - 1)
-            max_beds = subject_beds + 1
-            params["minbeds"] = min_beds
-            params["maxbeds"] = max_beds
-            beds_range = {"min": min_beds, "max": max_beds}
-        
-        # BATH FILTER (+/- 1 from subject)
-        if subject_baths:
-            min_baths = max(1, int(subject_baths) - 1)
-            max_baths = int(subject_baths) + 1
-            params["minbaths"] = min_baths
-            params["maxbaths"] = max_baths
-            baths_range = {"min": min_baths, "max": max_baths}
-        
         # PROPERTY TYPE FILTER — uses canonical mapping from data contract
         # See: docs/architecture/property-type-data-contract.md
         sr_type, sr_subtype = resolve_simplyrets_type(subject_prop_type)
-        params["type"] = sr_type  # Override the default "RES" with correct type
-        if sr_subtype:
-            params["subtype"] = sr_subtype
         logger.warning(f"Property type mapping: '{subject_prop_type}' -> type={sr_type}, subtype={sr_subtype}")
-        
-        logger.warning(f"SimplyRETS query params: {params}")
-        
-        # Fetch from SimplyRETS using the API's async client
-        listings = await simplyrets_fetch_properties(params, limit=payload.limit * 3)
-        total_before_filter = len(listings)
-        logger.warning(f"SimplyRETS returned {total_before_filter} listings")
-        
-        # Step 3: Post-filter by distance if coordinates available
-        if subject_lat and subject_lng:
-            filtered_listings = []
-            for listing in listings:
-                geo = listing.get("geo", {})
-                comp_lat = geo.get("lat")
-                comp_lng = geo.get("lng")
-                
-                if comp_lat and comp_lng:
-                    distance = haversine_distance(subject_lat, subject_lng, comp_lat, comp_lng)
-                    if distance <= payload.radius_miles:
-                        listing["_distance_miles"] = round(distance, 2)
-                        filtered_listings.append(listing)
+
+        # Build base SQFT range for ladder widening
+        base_sqft_variance = payload.sqft_variance  # e.g. 0.20
+
+        # ──────────────────────────────────────────────────────────────────────
+        # FALLBACK LADDER for comps: start strict, progressively loosen until
+        # we have enough results. Each ladder level logs which level succeeded.
+        #
+        # Key design decisions:
+        #   - sqft_var=None  → skip the sqft filter entirely (thin markets)
+        #   - We track the BEST (most results) seen across all levels so we
+        #     never return fewer comps than a prior level happened to find.
+        #   - FALLBACK_MIN is the target; we still return whatever we found
+        #     even if we never reach it (avoids returning 0 when 2–4 exist).
+        # ──────────────────────────────────────────────────────────────────────
+        FALLBACK_MIN = 5   # target; we keep trying until we reach this
+
+        def _build_params(sqft_var, extra_beds: int = 0,
+                          include_subtype: bool = True,
+                          use_city: bool = True) -> Dict[str, Any]:
+            """Build SimplyRETS params for one ladder attempt."""
+            p: Dict[str, Any] = {
+                "status": status_map.get(payload.status, "Active"),
+                "type": sr_type,
+                "limit": payload.limit * 4,
+            }
+            # Location — prefer postalCodes (precise) + cities (deterministic)
+            if subject_zip:
+                p["postalCodes"] = subject_zip
+            if subject_city and use_city:
+                p["cities"] = subject_city
+
+            # SQFT variance — None means no sqft filter
+            if subject_sqft and sqft_var is not None:
+                p["minarea"] = int(subject_sqft * (1 - sqft_var))
+                p["maxarea"] = int(subject_sqft * (1 + sqft_var))
+
+            # Bed filter
+            if subject_beds:
+                p["minbeds"] = max(1, subject_beds - 1 - extra_beds)
+                p["maxbeds"] = subject_beds + 1 + extra_beds
+
+            # Bath filter (only at strict level, extra_beds==0)
+            if subject_baths and extra_beds == 0:
+                p["minbaths"] = max(1, int(subject_baths) - 1)
+                p["maxbaths"] = int(subject_baths) + 1
+
+            # Subtype
+            if include_subtype and sr_subtype:
+                p["subtype"] = sr_subtype
+
+            return p
+
+        def _filter_distance(raw: List[Dict], radius: float) -> List[Dict]:
+            """Post-filter by radius if coordinates known."""
+            if not (subject_lat and subject_lng):
+                return raw
+            out = []
+            for lst in raw:
+                geo = lst.get("geo", {})
+                clat, clng = geo.get("lat"), geo.get("lng")
+                if clat and clng:
+                    d = haversine_distance(subject_lat, subject_lng, clat, clng)
+                    if d <= radius:
+                        lst["_distance_miles"] = round(d, 2)
+                        out.append(lst)
                 else:
-                    # No geo data - include but without distance
-                    listing["_distance_miles"] = None
-                    filtered_listings.append(listing)
-            
-            # Sort by distance
-            filtered_listings.sort(key=lambda x: x.get("_distance_miles") or 999)
-            listings = filtered_listings
-            logger.info(f"Distance filter: {total_before_filter} -> {len(listings)} (radius: {payload.radius_miles} mi)")
-        
-        # Step 4: Post-filter by property type (safety net)
-        before_type_filter = len(listings)
-        listings = post_filter_by_property_type(listings, sr_subtype)
-        if len(listings) < before_type_filter:
-            logger.warning(f"Property type filter: {before_type_filter} -> {len(listings)}")
+                    lst["_distance_miles"] = None
+                    out.append(lst)
+            out.sort(key=lambda x: x.get("_distance_miles") or 999)
+            return out
+
+        # Ladder definition:
+        #   (label, sqft_var, extra_beds, include_subtype, use_city, radius_miles)
+        # sqft_var=None → no sqft filter
+        # radius progressively widens at later levels
+        _r = payload.radius_miles
+        ladder = [
+            ("L0:strict",              base_sqft_variance, 0, True,  True,  _r),
+            ("L1:no-subtype",          base_sqft_variance, 0, False, True,  _r),
+            ("L2:sqft+30%",            0.30,               0, False, True,  _r),
+            ("L3:sqft+50%,beds+1",     0.50,               1, False, True,  _r),
+            ("L4:no-sqft,beds+2",      None,               2, False, True,  _r),
+            ("L5:no-sqft,radius*3",    None,               2, False, True,  _r * 3),
+        ]
+
+        listings: List[Dict] = []
+        best_listings: List[Dict] = []   # best seen across all levels
+        fallback_level_used = "L0:strict"
+        total_before_filter = 0
+
+        for label, sqft_var, extra_beds, incl_sub, use_city, radius in ladder:
+            params = _build_params(sqft_var, extra_beds, incl_sub, use_city)
+            logger.warning(f"Comps fallback {label}: params={params}")
+
+            raw = await simplyrets_fetch_properties(params, limit=payload.limit * 4)
+            logger.warning(f"Comps fallback {label}: SimplyRETS returned {len(raw)} raw")
+
+            # Distance filter (radius widens at later levels)
+            filtered = _filter_distance(raw, radius)
+            # Property type post-filter (only when subtype was requested)
+            if incl_sub:
+                filtered = post_filter_by_property_type(filtered, sr_subtype)
+
+            total_before_filter = len(raw)
+
+            # Always keep the best (most) results seen across all ladder levels
+            if len(filtered) > len(best_listings):
+                best_listings = filtered
+                fallback_level_used = label
+
+            if len(filtered) >= FALLBACK_MIN:
+                logger.warning(f"Comps fallback succeeded at {label}: {len(filtered)} results")
+                break
+            else:
+                logger.warning(
+                    f"Comps fallback {label}: only {len(filtered)} results (need {FALLBACK_MIN}), "
+                    f"best so far={len(best_listings)}, trying next level..."
+                )
+
+        # Use the best results found across all ladder levels
+        listings = best_listings
+
+        # Track sqft_range/beds_range/baths_range for response (from level 0 params for display)
+        _p0 = _build_params(base_sqft_variance, 0, True, True)
+        sqft_range = (
+            {"min": _p0["minarea"], "max": _p0["maxarea"]}
+            if "minarea" in _p0 else None
+        )
+        beds_range = (
+            {"min": _p0.get("minbeds"), "max": _p0.get("maxbeds")}
+            if "minbeds" in _p0 else None
+        )
+        baths_range = (
+            {"min": _p0.get("minbaths"), "max": _p0.get("maxbaths")}
+            if "minbaths" in _p0 else None
+        )
+
+        logger.warning(
+            f"Comparables final: {len(listings)} after fallback ladder "
+            f"(level_used={fallback_level_used}, total_before_filter={total_before_filter})"
+        )
         
         # Convert to simple dicts (like Worker does) - no Pydantic validation issues
         comparables = []
@@ -688,12 +768,36 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
             "total_before_filter": total_before_filter,
         }
         
+        # C3: Compute confidence grade from fallback ladder level
+        _lv = (fallback_level_used or "").lower()
+        if _lv.startswith("l0"):
+            _conf_grade  = "A"
+            _conf_reason = "Strict match"
+        elif _lv.startswith("l1"):
+            _conf_grade  = "B"
+            _conf_reason = "Subtype relaxed"
+        elif _lv.startswith("l2"):
+            _conf_grade  = "B"
+            _conf_reason = "Sqft range widened"
+        elif _lv.startswith("l3") or _lv.startswith("l4"):
+            _conf_grade  = "C"
+            _conf_reason = "Sqft + beds loosened"
+        else:
+            _conf_grade  = "C"
+            _conf_reason = "Thin market"
+        if len(comparables) < 3:
+            _conf_grade  = "D"
+            _conf_reason = "Thin market"
+
         return ComparablesResponse(
             success=True,
             subject_property=subject_info,
             comparables=comparables,
             total_found=len(comparables),
             search_params=search_params,
+            comp_ladder_level=fallback_level_used,
+            comp_confidence_grade=_conf_grade,
+            comp_confidence_reason=_conf_reason,
         )
         
     except Exception as e:
@@ -852,13 +956,15 @@ async def generate_preview_html(payload: PreviewRequest, request: Request):
             "company_name": "Your Company",
         },
         "branding": payload.branding or {},
-        # Default page set for preview
         "selected_pages": ["cover", "contents", "aerial", "property", "analysis", "comparables", "range"],
     }
     
+    # Pages to render — caller can limit to just a few pages for speed
+    preview_pages = payload.pages or ["cover", "property", "comparables"]
+
     try:
         builder = PropertyReportBuilder(report_data)
-        html = builder.render_html()
+        html = builder.render_preview(pages=preview_pages)
         
         from fastapi.responses import HTMLResponse
         return HTMLResponse(content=html, media_type="text/html")

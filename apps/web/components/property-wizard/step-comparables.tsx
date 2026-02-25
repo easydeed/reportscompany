@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BarChart3, Info, Loader2, Map, Check, Zap } from "lucide-react";
+import { BarChart3, Info, Loader2, Map, Check, Zap, RefreshCw, SearchX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ComparableCard } from "./comparable-card";
@@ -14,22 +14,26 @@ interface StepComparablesProps {
   comps: Comparable[];
   selectedCompIds: string[];
   compsLoading: boolean;
+  compsLoaded: boolean;
   compsError: string | null;
   property: PropertyData;
   onSelectedChange: (ids: string[]) => void;
   compsStatus: "Active" | "Closed";
   onStatusChange: (status: "Active" | "Closed") => void;
+  onReload: () => void;
 }
 
 export function StepComparables({
   comps,
   selectedCompIds,
   compsLoading,
+  compsLoaded,
   compsError,
   property,
   onSelectedChange,
   compsStatus,
   onStatusChange,
+  onReload,
 }: StepComparablesProps) {
   const [mapOpen, setMapOpen] = useState(false);
   const [autoSelectLoading, setAutoSelectLoading] = useState(false);
@@ -187,10 +191,38 @@ export function StepComparables({
                   />
                 ))}
               </AnimatePresence>
+              {/* All selected */}
               {availableComps.length === 0 && comps.length > 0 && (
                 <div className="text-center text-sm text-muted-foreground py-8">
                   All comparables are in your report
                 </div>
+              )}
+              {/* Loaded but zero results */}
+              {compsLoaded && comps.length === 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex flex-col items-center justify-center py-12 text-center rounded-xl border-2 border-dashed border-border gap-3"
+                >
+                  <SearchX className="h-10 w-10 text-muted-foreground/40" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      No {compsStatus === "Active" ? "active listings" : "sold properties"} found nearby
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1 max-w-[220px] mx-auto">
+                      Try switching to {compsStatus === "Active" ? "Sold" : "Active Listings"} or reload to retry with a wider search.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onReload}
+                    className="gap-1.5"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Reload
+                  </Button>
+                </motion.div>
               )}
             </div>
           </ScrollArea>

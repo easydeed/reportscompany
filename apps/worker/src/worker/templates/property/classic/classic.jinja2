@@ -489,6 +489,305 @@
     background: var(--color-accent);
     opacity: 0.5;
   }
+
+  /* ==========================================================================
+     CLASSIC V0 ORIGINAL: Analysis Page (p5) — Transplanted from commit 8dbec7b
+     ========================================================================== */
+
+  .classic-v0-header {
+    background: var(--color-primary);
+    padding: 20px 25px;
+  }
+
+  .classic-v0-header .header-label {
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--color-accent-light);
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+
+  .classic-v0-header .header-title {
+    font-family: var(--font-display);
+    font-size: 42px;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+  }
+
+  .classic-v0-p5 .analysis-chart {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    padding: 25px;
+    margin-bottom: 25px;
+  }
+
+  .classic-v0-p5 .chart-title {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .classic-v0-p5 .chart-bars {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    height: 150px;
+    padding: 0 30px;
+    border-bottom: 2px solid var(--color-primary);
+  }
+
+  .classic-v0-p5 .chart-bar-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .classic-v0-p5 .chart-bar {
+    width: 55px;
+    background: var(--color-primary);
+  }
+
+  .classic-v0-p5 .chart-bar-label {
+    font-size: 11px;
+    color: var(--color-text-muted);
+    font-weight: 600;
+  }
+
+  .classic-v0-p5 .analysis-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .classic-v0-p5 .analysis-table thead {
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .classic-v0-p5 .analysis-table th {
+    padding: 14px 12px;
+    text-align: left;
+    font-weight: 700;
+    font-size: 12px;
+  }
+
+  .classic-v0-p5 .analysis-table tbody tr:nth-child(even) {
+    background: var(--color-surface);
+  }
+
+  .classic-v0-p5 .analysis-table tbody tr {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .classic-v0-p5 .analysis-table td {
+    padding: 12px;
+  }
+
+  .classic-v0-p5 .analysis-table tfoot {
+    background: #4A90D9;
+    color: white;
+    font-weight: 700;
+  }
+
+  .classic-v0-p5 .analysis-table tfoot td {
+    padding: 14px 12px;
+  }
+
+  /* ==========================================================================
+     CLASSIC V0 ORIGINAL: Comparables Page (p6) — Transplanted from commit 8dbec7b
+     ========================================================================== */
+
+  .classic-v0-p6 .comp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 25px;
+  }
+
+  .classic-v0-p6 .comp-card {
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+
+  .classic-v0-p6 .comp-card-image {
+    height: 130px;
+    background: var(--color-text-muted);
+    position: relative;
+  }
+
+  .classic-v0-p6 .comp-card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .classic-v0-p6 .comp-card-price {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: var(--color-primary);
+    color: white;
+    padding: 6px 14px;
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .classic-v0-p6 .comp-card-body {
+    padding: 15px;
+    background: white;
+  }
+
+  .classic-v0-p6 .comp-card-address {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .classic-v0-p6 .comp-card-address svg {
+    width: 14px;
+    height: 14px;
+    fill: #4A90D9;
+    flex-shrink: 0;
+  }
+
+  .classic-v0-p6 .comp-card-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .classic-v0-p6 .comp-stat {
+    background: var(--color-surface);
+    padding: 10px;
+    text-align: center;
+  }
+
+  .classic-v0-p6 .comp-stat-label {
+    font-size: 10px;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 3px;
+  }
+
+  .classic-v0-p6 .comp-stat-value {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-text);
+  }
+
+  /* ==========================================================================
+     CLASSIC V0 ORIGINAL: Range Page (p7) — Transplanted from commit 8dbec7b
+     ========================================================================== */
+
+  .classic-v0-p7 .range-map {
+    height: 4in;
+    background: var(--color-border);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    margin: 25px 0;
+    overflow: hidden;
+  }
+
+  .classic-v0-p7 .range-map img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .classic-v0-p7 .range-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 25px;
+  }
+
+  .classic-v0-p7 .range-stat {
+    background: var(--color-primary);
+    padding: 26px 15px;
+    text-align: center;
+    border-radius: 8px;
+  }
+
+  .classic-v0-p7 .range-stat-num {
+    font-family: var(--font-display);
+    font-size: 38px;
+    font-weight: 900;
+    color: white;
+    line-height: 1;
+  }
+
+  .classic-v0-p7 .range-stat-label {
+    font-size: 11px;
+    color: var(--color-accent-light);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 10px;
+  }
+
+  .classic-v0-p7 .range-slider {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 25px;
+  }
+
+  .classic-v0-p7 .range-slider-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+  }
+
+  .classic-v0-p7 .range-slider-price {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--color-primary);
+  }
+
+  .classic-v0-p7 .range-slider-track {
+    height: 10px;
+    background: linear-gradient(90deg, #4A90D9 0%, var(--color-primary) 100%);
+    border-radius: 5px;
+    position: relative;
+    margin-bottom: 20px;
+  }
+
+  .classic-v0-p7 .range-slider-dot {
+    width: 22px;
+    height: 22px;
+    background: white;
+    border: 3px solid var(--color-primary);
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+
+  .classic-v0-p7 .range-note {
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--color-text-muted);
+    text-align: center;
+  }
 </style>
 {% endblock %}
 
@@ -516,4 +815,115 @@
 </div>
 
 {{ macros.cover_agent_block(agent) }}
+{% endblock %}
+
+{# =============================================================================
+   ANALYSIS PAGE OVERRIDE — Transplanted from V0 original (commit 8dbec7b)
+   Navy header + chart with navy bars + analysis table with sky-blue footer
+   ============================================================================= #}
+{% block analysis %}
+<div class="classic-v0-header">
+  <div class="header-label">Market Intelligence</div>
+  <h2 class="header-title">Area Sales Analysis</h2>
+</div>
+<div class="page-content classic-v0-p5">
+  <div class="analysis-chart">
+    <div class="chart-title">Recent Comparable Sales Activity</div>
+    <div class="chart-bars">
+      {% for comp in comparables[:4] %}
+      <div class="chart-bar-wrap">
+        <div class="chart-bar" style="height: {{ [40, (comp.sale_price / 8000) | int] | max }}px;"></div>
+        <div class="chart-bar-label">{{ comp.sold_date | default('-') }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <table class="analysis-table">
+    <thead>
+      <tr><th>Metric</th><th>Subject</th><th>Low</th><th>Medium</th><th>High</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Distance (mi)</td><td>{{ stats.piq.distance | default('0') }}</td><td>{{ stats.low.distance | default('-') }}</td><td>{{ stats.medium.distance | default('-') }}</td><td>{{ stats.high.distance | default('-') }}</td></tr>
+      <tr><td>Living Area (sf)</td><td>{{ stats.piq.sqft | default('-') }}</td><td>{{ stats.low.sqft | default('-') }}</td><td>{{ stats.medium.sqft | default('-') }}</td><td>{{ stats.high.sqft | default('-') }}</td></tr>
+      <tr><td>Price/Sq.Ft.</td><td>{{ stats.piq.price_per_sqft | format_currency }}</td><td>{{ stats.low.price_per_sqft | format_currency }}</td><td>{{ stats.medium.price_per_sqft | format_currency }}</td><td>{{ stats.high.price_per_sqft | format_currency }}</td></tr>
+      <tr><td>Year Built</td><td>{{ stats.piq.year_built | default('-') }}</td><td>{{ stats.low.year_built | default('-') }}</td><td>{{ stats.medium.year_built | default('-') }}</td><td>{{ stats.high.year_built | default('-') }}</td></tr>
+      <tr><td>Lot Size (sf)</td><td>{{ stats.piq.lot_size | format_number }}</td><td>{{ stats.low.lot_size | format_number }}</td><td>{{ stats.medium.lot_size | format_number }}</td><td>{{ stats.high.lot_size | format_number }}</td></tr>
+      <tr><td>Bedrooms</td><td>{{ stats.piq.bedrooms | default('-') }}</td><td>{{ stats.low.bedrooms | default('-') }}</td><td>{{ stats.medium.bedrooms | default('-') }}</td><td>{{ stats.high.bedrooms | default('-') }}</td></tr>
+      <tr><td>Bathrooms</td><td>{{ stats.piq.bathrooms | default('-') }}</td><td>{{ stats.low.bathrooms | default('-') }}</td><td>{{ stats.medium.bathrooms | default('-') }}</td><td>{{ stats.high.bathrooms | default('-') }}</td></tr>
+    </tbody>
+    <tfoot>
+      <tr><td>Sale Price</td><td>{{ stats.piq.price | format_currency }}</td><td>{{ stats.low.price | format_currency }}</td><td>{{ stats.medium.price | format_currency }}</td><td>{{ stats.high.price | format_currency }}</td></tr>
+    </tfoot>
+  </table>
+</div>
+{{ macros.page_footer(agent, 5) }}
+{% endblock %}
+
+{# =============================================================================
+   COMPARABLES PAGE OVERRIDE — Transplanted from V0 original (commit 8dbec7b)
+   2x2 comp grid, navy price badge top-left, pin SVG, serif address, 4-stat cards
+   ============================================================================= #}
+{% block comparables %}
+<div class="classic-v0-header">
+  <div class="header-label">Recent Transactions</div>
+  <h2 class="header-title">Sales Comparables</h2>
+</div>
+<div class="page-content classic-v0-p6">
+  <div class="comp-grid">
+    {% for comp in comparables[:4] %}
+    <div class="comp-card">
+      <div class="comp-card-image" {% if comp.photo_url or comp.map_image_url %}style="background-image: url('{{ comp.photo_url | default(comp.map_image_url) }}'); background-size: cover; background-position: center;"{% endif %}>
+        <div class="comp-card-price">{{ comp.sale_price | format_currency }}</div>
+      </div>
+      <div class="comp-card-body">
+        <div class="comp-card-address">
+          <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+          {{ comp.address }}
+        </div>
+        <div class="comp-card-stats">
+          <div class="comp-stat"><div class="comp-stat-label">Sold</div><div class="comp-stat-value">{{ comp.sold_date }}</div></div>
+          <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">{{ comp.sqft | format_number }}</div></div>
+          <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">{{ comp.bedrooms }}/{{ comp.bathrooms }}</div></div>
+          <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">{{ comp.price_per_sqft | format_currency }}</div></div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{{ macros.page_footer(agent, 6) }}
+{% endblock %}
+
+{# =============================================================================
+   RANGE PAGE OVERRIDE — Transplanted from V0 original (commit 8dbec7b)
+   Map with rounded border, navy stat cards, sky-navy slider, white dots
+   ============================================================================= #}
+{% block range %}
+<div class="classic-v0-header">
+  <div class="header-label">Valuation Summary</div>
+  <h2 class="header-title">Range of Sales</h2>
+</div>
+<div class="page-content classic-v0-p7">
+  <div class="range-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}>
+    {% if images.aerial_map %}<img src="{{ images.aerial_map }}" alt="Aerial map">{% endif %}
+  </div>
+  <div class="range-stats">
+    <div class="range-stat"><div class="range-stat-num">{{ '%02d' | format(stats.total_comps | default(0)) }}</div><div class="range-stat-label">Total Comps</div></div>
+    <div class="range-stat"><div class="range-stat-num">{{ stats.avg_sqft | default(0) | int }}</div><div class="range-stat-label">Avg. Sq.Ft.</div></div>
+    <div class="range-stat"><div class="range-stat-num">{{ '%02d' | format(stats.avg_beds | default(0) | int) }}</div><div class="range-stat-label">Avg. Beds</div></div>
+    <div class="range-stat"><div class="range-stat-num">{{ '%02d' | format(stats.avg_baths | default(0) | int) }}</div><div class="range-stat-label">Avg. Baths</div></div>
+  </div>
+  <div class="range-slider">
+    <div class="range-slider-header">
+      <div class="range-slider-price">{{ stats.price_low | format_currency_short }}</div>
+      <div class="range-slider-price">{{ stats.price_high | format_currency_short }}</div>
+    </div>
+    <div class="range-slider-track">
+      <div class="range-slider-dot" style="left: 5%;"></div>
+      <div class="range-slider-dot" style="left: 95%;"></div>
+    </div>
+    <p class="range-note">The above statistics represent average property details for comparable homes sold within the last 12 months. The price range indicates the low and high sale prices for properties matching your home's characteristics.</p>
+  </div>
+</div>
+{{ macros.page_footer(agent, 7) }}
 {% endblock %}
