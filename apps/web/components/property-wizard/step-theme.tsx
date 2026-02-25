@@ -17,7 +17,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { Theme, ReportPage } from "./types";
+import type { Theme, ReportPage, PropertyData, Comparable } from "./types";
 import { THEMES, ACCENT_PRESETS } from "./types";
 
 interface StepThemeProps {
@@ -28,6 +28,10 @@ interface StepThemeProps {
   onThemeChange: (id: number) => void;
   onAccentChange: (color: string) => void;
   onPagesChange: (ids: string[]) => void;
+  /** Property data — reserved for future live preview */
+  propertyData?: PropertyData | null;
+  /** Selected comparables — reserved for future live preview */
+  comparables?: Comparable[];
 }
 
 export function StepTheme({
