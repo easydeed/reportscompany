@@ -800,8 +800,11 @@ class PropertyReportBuilder:
         # Only fetch if the page is actually selected — saves 3 API calls for
         # reports that don't include the Market Trends page.
         page_set = list(self.page_set)  # local copy so we can drop the page if data fails
-        market_trends_data = None
-        if "market_trends" in page_set:
+
+        # Allow callers (e.g. test scripts) to pre-inject data and skip the API call.
+        market_trends_data = self.report_data.get("market_trends_data") or None
+
+        if market_trends_data is None and "market_trends" in page_set:
             city     = self.report_data.get("property_city", "")
             zip_code = self.report_data.get("property_zip", "")
             state    = self.report_data.get("property_state", "")
@@ -810,11 +813,12 @@ class PropertyReportBuilder:
                 market_trends_data = fetch_and_compute_market_trends(city, zip_code, state)
             except Exception as _mt_exc:
                 logger.warning("market_trends: fetch failed — %s", _mt_exc)
-            if market_trends_data is None:
-                # Not enough data or API error — silently drop the page rather than
-                # rendering a broken/empty Market Trends page.
-                page_set = [p for p in page_set if p != "market_trends"]
-                logger.info("market_trends: page removed from page_set (insufficient data)")
+
+        if market_trends_data is None and "market_trends" in page_set:
+            # Not enough data or API error — silently drop the page rather than
+            # rendering a broken/empty Market Trends page.
+            page_set = [p for p in page_set if p != "market_trends"]
+            logger.info("market_trends: page removed from page_set (insufficient data)")
 
         # Build the unified context (same structure for all themes)
         context = {

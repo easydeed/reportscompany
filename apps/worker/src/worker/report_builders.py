@@ -299,6 +299,40 @@ def _filter_by_city(listings: List[Dict], city: str) -> List[Dict]:
     return filtered
 
 
+def _exclude_rentals(listings: List[Dict]) -> List[Dict]:
+    """
+    Remove rental / lease listings from a dataset.
+
+    The SimplyRETS API is called with type=RES which already filters most
+    rentals out, but a small number can slip through (e.g., short-term rentals
+    listed as residential).  This client-side guard removes them based on:
+
+      1. Status containing "lease", "rent", or "for rent" (case-insensitive)
+      2. List/close price suspiciously low for a sale (< $50,000) — MLS rental
+         prices are typically monthly rents of $1,500-$8,000 which look like
+         typos in a sales dataset.
+
+    Both conditions are independent — a listing is excluded if EITHER matches.
+    """
+    RENTAL_STATUSES = {"lease", "for lease", "for rent", "rent"}
+    MIN_SALE_PRICE = 50_000   # anything below this is almost certainly a rental
+
+    result = []
+    for listing in listings:
+        status = (listing.get("status") or "").lower().strip()
+        if status in RENTAL_STATUSES:
+            continue
+        price = listing.get("close_price") or listing.get("list_price") or 0
+        try:
+            price = float(price)
+        except (TypeError, ValueError):
+            price = 0
+        if price > 0 and price < MIN_SALE_PRICE:
+            continue
+        result.append(listing)
+    return result
+
+
 def build_new_listings_result(listings: List[Dict], context: Dict) -> Dict:
     """
     New Listings - Fresh inventory report
