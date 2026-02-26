@@ -21,6 +21,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Property Report - {{ property.full_address }}</title>
   
+  {# Phase 4.3: Font preconnect — reduces Google Fonts DNS + TLS latency
+     Must come BEFORE the fonts block so the browser resolves the connection
+     before the theme's <link> tags fire. #}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
   {# Theme-specific fonts #}
   {% block fonts %}{% endblock %}
   
@@ -1846,6 +1852,22 @@
       {% endblock %}
     </div>
     
+  </div>
+
+  {# Phase 4.3: Force ALL theme fonts to load before Playwright/PDFShift captures.
+     Each span references a font family; the browser fetches it to render the dot.
+     Without this, some fonts may still be swapping when the PDF snapshot fires,
+     causing fallback glyphs in the output.  The div is 1px outside the visible
+     area so it has zero impact on layout. #}
+  <div aria-hidden="true" style="position:absolute;left:-9999px;top:0;opacity:0;font-size:1px;line-height:1;pointer-events:none;">
+    <span style="font-family:'Merriweather',serif">.</span>
+    <span style="font-family:'Source Sans Pro',sans-serif">.</span>
+    <span style="font-family:'Space Grotesk',sans-serif">.</span>
+    <span style="font-family:'DM Sans',sans-serif">.</span>
+    <span style="font-family:'Playfair Display',serif">.</span>
+    <span style="font-family:'Montserrat',sans-serif">.</span>
+    <span style="font-family:'Oswald',sans-serif">.</span>
+    <span style="font-family:'Lato',sans-serif">.</span>
   </div>
 </body>
 </html>

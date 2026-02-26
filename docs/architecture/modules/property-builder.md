@@ -156,6 +156,12 @@ python scripts/generate_theme_previews.py
 
 | Date | Change |
 |------|--------|
+| 2026-02 | **Phase 4 (cursor-enhancement-plan):** Added `<link rel="preconnect">` hints for `fonts.googleapis.com` and `fonts.gstatic.com` to `base.jinja2`. Added invisible font-trigger `<div>` before `</body>` that forces all 8 theme font families to load before Playwright/PDFShift captures the page — prevents fallback-glyph rendering in PDFs. |
+| 2026-02 | **market_trends page fix:** `render_html()` now accepts `market_trends_data` pre-injected in `report_data` as an override, bypassing the live API fetch. Used by the generation script for demo/testing with sample data. |
+| 2026-02 | **_exclude_rentals fix:** `report_builders._exclude_rentals()` was imported by `market_trends.py` but was never defined, causing all Market Trends page generation to fail with `ImportError`. Function now defined in `report_builders.py`. |
+| 2026-02 | **Cover image fix:** `_build_images_context()` generates a Google Street View URL as a fallback `hero` when `cover_image_url` is not provided. |
+| 2026-02 | **Comparable image fix:** `_build_comparables_context()` uses `lat`/`lng` (passed from frontend) to generate Google Static Maps thumbnails when `photo_url` is not available. |
+| 2026-02 | **Sold/Listed label fix:** `_build_comparables_context()` adds `sold_date_label` ("Listed" for Active/Pending, "Sold" for Closed) to each comparable. `_macros.jinja2` uses `{{ comp.sold_date_label }}`. |
 | 2026-02 | **Page ID sync:** Frontend `types.ts` COMPACT_PAGES + FULL_PAGES IDs aligned to template keys (`toc`→`contents`, `property_details`→`property`, `area_analysis`→`analysis`). Added `market_trends` page. Removed non-existent `neighborhood` and `back_cover` entries. |
 | 2026-02 | **Theme CSS fixes (commit 208d6bb):** Standardized page geometry, fixed Bold/Classic header overlap on pages 5-7, fixed slider colors, fixed `default(true)` for `theme_color` CSS variable. |
 | 2026-02 | Added `market_trends` page (key `market_trends`) — optional, only renders when `market_trends` context is populated |

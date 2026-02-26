@@ -70,6 +70,8 @@ Uploads bytes to Cloudflare R2.
 - Returns a presigned public URL with 7-day TTL
 - Falls back to local `/tmp` write if R2 credentials are missing (dev mode)
 
+> **Enhancement Plan Fix 4 (Critical):** When `R2_PUBLIC_URL` is set, the function returns a permanent public URL instead of a 7-day presigned URL. This prevents broken PDF links in scheduled emails after the 7-day window expires.
+
 ### `_deliver_webhooks(run_id, event_type, payload, account_id, cur)` (internal)
 
 Signs payload with `HMAC-SHA256` using each webhook's secret, then sends `POST` to each registered endpoint.
@@ -171,6 +173,8 @@ python qa_deliver_reports.py --base-url $API_URL --token $TOKEN \
 
 | Date | Change |
 |------|--------|
+| 2026-02 | **Phase 4 (cursor-enhancement-plan):** `pdf_engine.py` — Playwright PDF margins set to `"0"` (was `"0.5in"`). Added `page.evaluate("() => document.fonts.ready")` before `page.pdf()` call to ensure fonts are fully loaded. Both Playwright and PDFShift now use identical 0-margin configuration. |
+| 2026-02 | **Enhancement Plan Fix 4:** `upload_to_r2` returns permanent `R2_PUBLIC_URL`-based link when env var is set, instead of always generating 7-day expiring presigned URLs. |
 | 2026-02 | `generate_property_report_task` wired to new fallback-ladder-based comparables |
 | 2026-01 | Added `_deliver_webhooks` with HMAC-SHA256 signing |
 | 2026-01 | Added `sponsor_account_id` verification in `resolve_recipients_to_emails` |

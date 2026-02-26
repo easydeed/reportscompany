@@ -117,6 +117,19 @@ app.include_router(mobile_reports_router)
 app.include_router(admin_metrics_router)
 app.include_router(lead_pages_router)
 
+# ── Pool shutdown ────────────────────────────────────────────────────────────
+# Phase 1.4: Close connection pool cleanly when the Uvicorn worker shuts down.
+# Prevents "connection already closed" errors in logs during deployment roll.
+@app.on_event("shutdown")
+async def _shutdown_pool():
+    from .db import get_pool
+    try:
+        pool = get_pool()
+        pool.close()
+    except Exception:
+        pass  # Pool may not have been initialized yet
+
+
 # Root
 @app.get("/")
 def root():
