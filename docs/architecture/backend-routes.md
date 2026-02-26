@@ -60,25 +60,44 @@ Dependency that extracts `account_id` from `request.state`. Used by most protect
 
 ### account.py
 
+**`GET /v1/account/plan-usage`** (fixed):
+- Single call to `evaluate_report_limit()` — fetches plan + usage internally (was: 3 separate calls)
+- `get_plan_catalog()` is in-memory cached (1-hour TTL) — Stripe API only called on first request or after cache invalidation
+
+### stripe_webhook.py — cursor-wire-caching fixes
+
+**`POST /v1/webhooks/stripe`**:
+
+Events handled: `customer.subscription.created`, `.updated`, `.deleted`, `price.*`, `product.*`.
+
+**Fix 1 — Connection pool:** All DB access now uses `db_conn()` (pool) instead of raw `psycopg.connect(settings.DATABASE_URL, autocommit=True)`. Two places fixed — subscription update and subscription deletion handlers.
+
+**Fix 2 — Plan cache invalidation:** `invalidate_plan_cache()` is called after every plan change:
+- After `subscription.created` / `subscription.updated` (plan upgrade/downgrade)
+- After `subscription.deleted` (downgrade to free)
+- After any `price.*` or `product.*` event
+
+Without invalidation, the in-memory plan catalog in `services/plans.py` would serve stale Stripe pricing data for up to 1 hour after a price change.
+
+---
+
+### account.py
+
 **`GET /v1/account/plan-usage`**:
-- Calls `resolve_plan_for_account()`, `get_monthly_usage()`, then `evaluate_report_limit()` which re-calls both internally
-- Also calls `get_plan_catalog()` which triggers live Stripe API calls
-- **Known issues:** [C3] Stripe calls, [H1] duplicate sub-function calls
+- Single call to `evaluate_report_limit()` which internally fetches plan + usage
+- `get_plan_catalog()` is now cached in-memory (1-hour TTL) — first call pays the Stripe overhead, subsequent calls return instantly
 
 ### affiliates.py
 
-**`GET /v1/affiliate/overview`** (line 30-74):
+**`GET /v1/affiliate/overview`**:
 - Calls `verify_affiliate_account()` (1 query)
-- Calls `get_affiliate_overview()` which internally calls `get_sponsored_accounts()` (1 + N queries)
-- Calls `get_sponsored_accounts()` again (1 + N queries -- duplicate)
+- Calls `get_affiliate_overview()` — lightweight aggregate query (1 query)
+- Calls `get_sponsored_accounts()` — 2 queries total (batch N+1 fix)
 - Queries account info (1 query)
-- **Known issues:** [C4] double call, [C5] N+1
+- Total: 4 queries (was: 1 + 1 + N + N + 1)
 
-**`POST /v1/affiliate/invite-agent`** (line 85-225):
+**`POST /v1/affiliate/invite-agent`**:
 - Creates account, user, account_users, signup_token
-- Includes `CREATE TABLE IF NOT EXISTS` in request handler [L3]
 - Sends invite email via background task
 
-**Duplicate routes:** Two `GET /branding` and two `POST /branding` definitions exist (Phase 30 at ~line 251 and Phase W2 at ~line 502). See [M5].
-
-**Other endpoints:** `GET/POST /accounts/{id}/deactivate`, `/reactivate`, `/unsponsor`, `GET /accounts/{id}` (detail with 4 separate queries [M4]).
+**Other endpoints:** `GET/POST /accounts/{id}/deactivate`, `/reactivate`, `/unsponsor`, `GET /accounts/{id}`.

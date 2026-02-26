@@ -170,6 +170,8 @@ Pydantic models for normalizing property data from different MLS sources (Simply
 
 | Date | Change |
 |------|--------|
+| 2026-02 | **cursor-wire-caching:** `stripe_webhook.py` migrated from raw `psycopg.connect()` to `db_conn()` pool. `invalidate_plan_cache()` now called on all subscription/price/product Stripe events. `services/plans.py` in-memory 1-hour plan catalog cache confirmed active. |
+| 2026-02 | **Migration 0042:** 7 performance indexes deployed to staging DB (`idx_report_generations_account_generated`, `idx_accounts_sponsor`, `idx_cgm_member`, `idx_jwt_blacklist_hash`, `idx_schedule_runs_schedule_created`, `idx_api_keys_hash`, `idx_property_reports_account_created`). |
 | 2026-02 | **Phase 6:** `set_rls()` SQL injection fix — uses `sql.Literal` instead of f-string. `settings.py` no longer logs JWT secret value (logs length only). |
 | 2026-02 | **Phase 2:** Added `cache.py` — shared Redis utility with `cache_get` / `cache_set` / `cache_delete`. |
 | 2026-02 | **Phase 1:** `db.py` replaced with `psycopg_pool.ConnectionPool`. Added `db_conn_autocommit()`. Added pool shutdown hook to `main.py`. |

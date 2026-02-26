@@ -41,40 +41,52 @@ Prints usage decision to stdout. Should use `logging` module.
 
 ---
 
-## plans.py -- Plan Catalog & Stripe Pricing
+## plans.py -- Plan Catalog & Stripe Pricing (cursor-wire-caching)
 
-### `get_plan_catalog(cur)` (line 46-119)
+### `get_plan_catalog(cur)`
+
 Fetches all active plans from DB, then calls `stripe.Price.retrieve()` for each plan with a `stripe_price_id`.
 
-**Known issue:** Live Stripe API calls on every invocation. With 4 plans = 4 HTTP roundtrips (800-2000ms). See [C3].
+**Caching (cursor-wire-caching fix):** Wrapped with an in-memory TTL cache:
 
-**Returns:** `Dict[str, PlanCatalog]` keyed by plan_slug.
+```python
+_plan_cache: Dict | None = None
+_plan_cache_time: float = 0
+_CACHE_TTL_SECONDS = 3600  # 1 hour
+```
 
-### `get_plan_info(cur, plan_slug)` (line 122-128)
-Convenience wrapper that calls `get_plan_catalog()` (fetching ALL plans) to return one. See [H3].
+- **First call:** DB query + Stripe API × N plans (~1–2 seconds)
+- **Cached call:** Returns dict from memory (~0 ms)
+- **Cache invalidation:** Call `invalidate_plan_cache()` — hooked into the Stripe webhook handler for `subscription.*`, `price.*`, and `product.*` events
+
+**Returns:** `Dict[str, PlanCatalog]` keyed by `plan_slug`.
+
+### `invalidate_plan_cache()`
+
+Resets `_plan_cache = None` so the next call re-fetches from DB + Stripe. Called by:
+- `routes/stripe_webhook.py` after any subscription change
+- Admin plan management endpoints (future)
+
+### `get_plan_info(cur, plan_slug)`
+
+Convenience wrapper that calls `get_plan_catalog()` and returns one entry. Benefits from cache automatically.
 
 ---
 
-## affiliates.py -- Affiliate Account Management
+## affiliates.py -- Affiliate Account Management (cursor-enhancement-plan)
 
-### `get_sponsored_accounts(cur, affiliate_account_id)` (line 10-80)
-Main query JOINs `accounts` with `report_generations` aggregate for monthly usage.
+### `get_sponsored_accounts(cur, affiliate_account_id)`
 
-Then loops through results and runs per-account query for group memberships:
-```sql
-SELECT cg.id, cg.name FROM contact_group_members cgm
-JOIN contact_groups cg ON cgm.group_id = cg.id
-WHERE cgm.member_type = 'sponsored_agent' AND cgm.member_id = %s
-```
+Runs exactly **2 queries** regardless of account count (was: 1 + N):
+1. Main query: `accounts` JOIN `report_generations` aggregate
+2. Batch query: ALL group memberships for all sponsored account IDs in one `ANY(%s::uuid[])` call
 
-**Known issue:** N+1 query pattern. 20 accounts = 20 extra queries. See [C5].
+### `get_affiliate_overview(cur, affiliate_account_id)`
 
-### `get_affiliate_overview(cur, affiliate_account_id)` (line 83-101)
-Calls `get_sponsored_accounts()` internally, then derives metrics (count + total reports).
+Lightweight aggregate query (1 query). The overview route calls this once and `get_sponsored_accounts()` once — no duplicate calls.
 
-**Known issue:** The overview route also calls `get_sponsored_accounts()` separately = double execution. See [C4].
+### `verify_affiliate_account(cur, account_id)`
 
-### `verify_affiliate_account(cur, account_id)` (line 104-125)
 Simple check: `SELECT account_type FROM accounts WHERE id = %s`, returns `True` if `INDUSTRY_AFFILIATE`.
 
 ---
