@@ -487,10 +487,11 @@
      places content INSIDE the header. Override top to clear the header.
      ========================================================================== */
 
+  /* bold-v0-header removed — page_header macro used instead */
   .page-analysis .page-content,
   .page-comparables .page-content,
   .page-range .page-content {
-    top: 130px;
+    top: var(--page-margin);
   }
 
   /* ==========================================================================
@@ -854,11 +855,8 @@
    Navy header bar + chart with gold-navy gradient bars + analysis table
    ============================================================================= #}
 {% block analysis %}
-<div class="bold-v0-header">
-  <div class="header-label">Market Intelligence</div>
-  <h2 class="header-title">Area Sales Analysis</h2>
-</div>
 <div class="page-content bold-v0-p5">
+  {{ macros.page_header('Area Sales Analysis', 'Market Statistics') }}
   <div class="analysis-chart">
     <div class="chart-title">Recent Comparable Sales Activity</div>
     <div class="chart-bars">
@@ -897,11 +895,8 @@
    2x2 comp grid, gold price badge on image, pin SVG, 4-stat cards
    ============================================================================= #}
 {% block comparables %}
-<div class="bold-v0-header">
-  <div class="header-label">Recent Transactions</div>
-  <h2 class="header-title">Sales Comparables</h2>
-</div>
 <div class="page-content bold-v0-p6">
+  {{ macros.page_header('Sales Comparables', 'Recent Transactions') }}
   {{ macros.comp_confidence_bar(comp_confidence_grade, comp_confidence_reason, comparables|length) }}
   <div class="comp-grid">
     {% for comp in comparables[:4] %}
@@ -937,11 +932,8 @@
    Map with navy border, 4 navy stat cards, gold-navy gradient slider
    ============================================================================= #}
 {% block range %}
-<div class="bold-v0-header">
-  <div class="header-label">Valuation Summary</div>
-  <h2 class="header-title">Range of Sales</h2>
-</div>
 <div class="page-content bold-v0-p7">
+  {{ macros.page_header('Range of Sales', 'Valuation Summary') }}
   <div class="range-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}>
     {% if images.aerial_map %}<img src="{{ images.aerial_map }}" alt="Aerial map">{% endif %}
   </div>
