@@ -1542,6 +1542,125 @@
     }
 
     {# =========================================================================
+       ANALYSIS PAGE — Shared layout classes.
+       All themes use these class names; each theme overrides colors/gradients
+       via their scoped `.{theme}-v0-p5 .analysis-*` rules.
+       ========================================================================= #}
+
+    /* Intro banner */
+    .analysis-intro {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: center;
+      margin-bottom: 12px;
+      padding: 14px 18px;
+      border-radius: 10px;
+    }
+    .analysis-intro-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    .analysis-intro-desc {
+      font-size: 10.5px;
+      line-height: 1.55;
+      margin: 0;
+    }
+    .analysis-stats-mini {
+      display: flex;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .analysis-stat-mini {
+      text-align: center;
+      padding: 8px 14px;
+      border-radius: 8px;
+    }
+    .analysis-stat-num {
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .analysis-stat-lbl {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 3px;
+    }
+    /* Bar chart */
+    .analysis-chart-wrap {
+      height: 2in;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-around;
+      padding: 14px 28px 36px;
+      position: relative;
+      overflow: visible;
+    }
+    .analysis-chart-grid {
+      position: absolute;
+      inset: 14px 18px 34px 18px;
+      background: repeating-linear-gradient(to top, rgba(0,0,0,.04) 0 1px, transparent 1px 22px);
+      pointer-events: none;
+    }
+    .analysis-bar {
+      width: 56px;
+      border-radius: 6px 6px 0 0;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .analysis-bar-val {
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 9.5px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .analysis-bar-label {
+      position: absolute;
+      bottom: -24px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 9.5px;
+      font-weight: 600;
+      white-space: nowrap;
+      letter-spacing: 0.02em;
+    }
+    /* Comparison table */
+    .analysis-table-wrap {
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .analysis-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+    .analysis-table thead th {
+      padding: 9px 12px;
+      text-align: left;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .analysis-table tbody td {
+      padding: 6px 12px;
+      letter-spacing: 0.02em;
+    }
+    .analysis-table tfoot td {
+      padding: 9px 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    {# =========================================================================
        PRINT STYLES
        ========================================================================= #}
     
@@ -1689,10 +1808,43 @@
     <div class="page page-analysis">
       {% block analysis %}
       <div class="page-content">
-        {{ macros.page_header('Area Sales Analysis', 'Comparable market statistics and pricing') }}
-        {{ macros.analysis_summary(stats, property) }}
-        {{ macros.price_position_bar(stats) }}
-        {{ macros.comparison_table(stats, property) }}
+        {{ macros.page_header('Area Sales Analysis', 'Market Statistics') }}
+        <div class="analysis-intro">
+          <div class="analysis-intro-text">
+            <h3 class="analysis-intro-title">Market Overview</h3>
+            <p class="analysis-intro-desc">Recent comparable sales in your area show strong market activity. Properties similar to yours have sold at competitive prices, indicating healthy buyer demand in your neighborhood.</p>
+          </div>
+          <div class="analysis-stats-mini">
+            <div class="analysis-stat-mini"><div class="analysis-stat-num">{{ stats.total_comps | default(4) }}</div><div class="analysis-stat-lbl">Comps</div></div>
+            <div class="analysis-stat-mini"><div class="analysis-stat-num">{{ stats.avg_sqft | default(0) | int }}</div><div class="analysis-stat-lbl">Avg Sqft</div></div>
+          </div>
+        </div>
+        <div class="analysis-chart-wrap">
+          <div class="analysis-chart-grid"></div>
+          {% for comp in comparables[:4] %}
+          <div class="analysis-bar" style="height: {{ [28, (comp.sale_price / 8000) | int] | max }}px;">
+            <span class="analysis-bar-val">{{ comp.sale_price | format_currency_short }}</span>
+            <label class="analysis-bar-label">{{ comp.sold_date | default('-') }}</label>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="analysis-table-wrap">
+          <table class="analysis-table">
+            <thead><tr><th>Monthly Sales Overview</th><th>PIQ</th><th>Low</th><th>Medium</th><th>High</th></tr></thead>
+            <tbody>
+              <tr><td>Distance (mi)</td><td>{{ stats.piq.distance | default('0') }}</td><td>{{ stats.low.distance | default('-') }}</td><td>{{ stats.medium.distance | default('-') }}</td><td>{{ stats.high.distance | default('-') }}</td></tr>
+              <tr><td>Living Area (sf)</td><td>{{ stats.piq.sqft | default('-') }}</td><td>{{ stats.low.sqft | default('-') }}</td><td>{{ stats.medium.sqft | default('-') }}</td><td>{{ stats.high.sqft | default('-') }}</td></tr>
+              <tr><td>Price / Sq.Ft.</td><td>{{ stats.piq.price_per_sqft | format_currency }}</td><td>{{ stats.low.price_per_sqft | format_currency }}</td><td>{{ stats.medium.price_per_sqft | format_currency }}</td><td>{{ stats.high.price_per_sqft | format_currency }}</td></tr>
+              <tr><td>Year Built</td><td>{{ stats.piq.year_built | default('-') }}</td><td>{{ stats.low.year_built | default('-') }}</td><td>{{ stats.medium.year_built | default('-') }}</td><td>{{ stats.high.year_built | default('-') }}</td></tr>
+              <tr><td>Lot Size (sf)</td><td>{{ stats.piq.lot_size | format_number }}</td><td>{{ stats.low.lot_size | format_number }}</td><td>{{ stats.medium.lot_size | format_number }}</td><td>{{ stats.high.lot_size | format_number }}</td></tr>
+              <tr><td>Bedrooms</td><td>{{ stats.piq.bedrooms | default('-') }}</td><td>{{ stats.low.bedrooms | default('-') }}</td><td>{{ stats.medium.bedrooms | default('-') }}</td><td>{{ stats.high.bedrooms | default('-') }}</td></tr>
+              <tr><td>Bathrooms</td><td>{{ stats.piq.bathrooms | default('-') }}</td><td>{{ stats.low.bathrooms | default('-') }}</td><td>{{ stats.medium.bathrooms | default('-') }}</td><td>{{ stats.high.bathrooms | default('-') }}</td></tr>
+              <tr><td>Stories</td><td>{{ stats.piq.stories | default('0') }}</td><td>{{ stats.low.stories | default('0') }}</td><td>{{ stats.medium.stories | default('0') }}</td><td>{{ stats.high.stories | default('0') }}</td></tr>
+              <tr><td>Pools</td><td>{{ stats.piq.pools | default('0') }}</td><td>{{ stats.low.pools | default('0') }}</td><td>{{ stats.medium.pools | default('0') }}</td><td>{{ stats.high.pools | default('0') }}</td></tr>
+            </tbody>
+            <tfoot><tr><td>Sales Price</td><td>{{ stats.piq.price | format_currency }}</td><td>{{ stats.low.price | format_currency }}</td><td>{{ stats.medium.price | format_currency }}</td><td>{{ stats.high.price | format_currency }}</td></tr></tfoot>
+          </table>
+        </div>
         {{ macros.market_metrics_block(market_trends) }}
       </div>
       {{ macros.page_footer(agent, 5) }}

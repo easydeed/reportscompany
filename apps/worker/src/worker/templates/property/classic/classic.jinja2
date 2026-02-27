@@ -477,132 +477,44 @@
   }
 
   /* ==========================================================================
-     CLASSIC V0 ORIGINAL: Analysis Page (p5) — Transplanted from commit 8dbec7b
+     CLASSIC V0: Analysis Page (p5) — Teal-style layout, Classic palette
      ========================================================================== */
 
-  /* Full-bleed page banner for pages 5/6/7 — positioned at absolute top of .page */
-  .classic-v0-header {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 5;
+  /* Intro banner — navy gradient, sky-blue accent numbers */
+  .classic-v0-p5 .analysis-intro {
     background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
-    padding: 20px 25px;
-    border-bottom: 3px solid var(--color-accent);
-  }
-
-
-  .classic-v0-header .header-label {
-    font-family: var(--font-body);
-    font-size: 11px;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: var(--color-accent-light);
-    margin-bottom: 8px;
-    font-weight: 600;
-  }
-
-  .classic-v0-header .header-title {
-    font-family: var(--font-display);
-    font-size: 40px;
-    font-weight: 700;
     color: white;
-    margin: 0;
-    letter-spacing: -0.3px;
+    border-radius: 10px;
   }
+  .classic-v0-p5 .analysis-intro-title { color: var(--color-accent-light); }
+  .classic-v0-p5 .analysis-intro-desc  { color: rgba(255,255,255,0.8); }
+  .classic-v0-p5 .analysis-stat-mini   { background: rgba(255,255,255,0.12); border-radius: 8px; }
+  .classic-v0-p5 .analysis-stat-num    { color: var(--color-accent); }
+  .classic-v0-p5 .analysis-stat-lbl    { color: rgba(255,255,255,0.7); }
 
-  .classic-v0-p5 .analysis-chart {
+  /* Bar chart — light surface, navy bars */
+  .classic-v0-p5 .analysis-chart-wrap {
     background: linear-gradient(180deg, var(--color-surface) 0%, #fff 100%);
     border: 1px solid var(--color-border);
     border-top: 3px solid var(--color-accent);
-    padding: 25px;
-    margin-bottom: 25px;
     box-shadow: var(--shadow-sm);
     border-radius: var(--radius-md);
   }
+  .classic-v0-p5 .analysis-bar { background: linear-gradient(180deg, var(--color-primary-light) 0%, var(--color-primary) 100%); box-shadow: 0 4px 12px rgba(27,54,93,.18); }
+  .classic-v0-p5 .analysis-bar:nth-child(even) { background: linear-gradient(180deg, var(--color-accent-light) 0%, var(--color-accent) 100%); }
+  .classic-v0-p5 .analysis-bar-val   { color: var(--color-primary); }
+  .classic-v0-p5 .analysis-bar-label { color: var(--color-text-muted); }
 
-  .classic-v0-p5 .chart-title {
-    font-family: var(--font-display);
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--color-primary);
-    margin-bottom: 20px;
-    text-align: center;
-    letter-spacing: 0.3px;
-  }
-
-  .classic-v0-p5 .chart-bars {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-around;
-    height: 350px;
-    padding: 0 30px;
-    border-bottom: 2px solid var(--color-primary);
-  }
-
-  .classic-v0-p5 .chart-bar-wrap {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .classic-v0-p5 .chart-bar {
-    width: 55px;
-    background: linear-gradient(180deg, var(--color-primary-light) 0%, var(--color-primary) 100%);
-    box-shadow: 0 4px 12px rgba(27, 54, 93, 0.18);
-    border-radius: 3px 3px 0 0;
-  }
-
-  .classic-v0-p5 .chart-bar-label {
-    font-size: 11px;
-    color: var(--color-text-muted);
-    font-weight: 600;
-  }
-
-  .classic-v0-p5 .analysis-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-    border: 1px solid var(--color-border);
-    border-radius: 10px;
-    overflow: hidden;
-  }
-
-  .classic-v0-p5 .analysis-table thead {
-    background: var(--color-primary);
-    color: white;
-  }
-
-  .classic-v0-p5 .analysis-table th {
-    padding: 14px 12px;
-    text-align: left;
-    font-weight: 700;
-    font-size: 12px;
-  }
-
-  .classic-v0-p5 .analysis-table tbody tr:nth-child(even) {
-    background: var(--color-surface);
-  }
-
-  .classic-v0-p5 .analysis-table tbody tr {
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  .classic-v0-p5 .analysis-table td {
-    padding: 12px;
-  }
-
-  .classic-v0-p5 .analysis-table tfoot {
-    background: linear-gradient(90deg, var(--color-accent) 0%, var(--color-accent-light) 100%);
-    color: var(--color-primary);
-    font-weight: 700;
-  }
-
-  .classic-v0-p5 .analysis-table tfoot td {
-    padding: 14px 12px;
-  }
+  /* Table — bordered, navy header, sky-blue footer */
+  .classic-v0-p5 .analysis-table-wrap { border: 1px solid var(--color-border); border-radius: 10px; overflow: hidden; box-shadow: var(--shadow-sm); }
+  .classic-v0-p5 .analysis-table thead th { background: var(--color-primary); color: white; }
+  .classic-v0-p5 .analysis-table thead th:first-child { border-radius: 8px 0 0 0; }
+  .classic-v0-p5 .analysis-table thead th:last-child  { border-radius: 0 8px 0 0; }
+  .classic-v0-p5 .analysis-table tbody tr:nth-child(even) td { background: var(--color-surface); }
+  .classic-v0-p5 .analysis-table tbody td { border-bottom: 1px solid var(--color-border); }
+  .classic-v0-p5 .analysis-table tfoot td { background: linear-gradient(90deg, var(--color-accent) 0%, var(--color-accent-light) 100%); color: var(--color-primary); }
+  .classic-v0-p5 .analysis-table tfoot td:first-child { border-radius: 0; }
+  .classic-v0-p5 .analysis-table tfoot td:last-child  { border-radius: 0 0 8px 0; }
 
   /* ==========================================================================
      CLASSIC V0 ORIGINAL: Comparables Page (p6) — Transplanted from commit 8dbec7b
@@ -828,34 +740,42 @@
 {% block analysis %}
 <div class="page-content classic-v0-p5">
   {{ macros.page_header('Area Sales Analysis', 'Market Statistics') }}
-  <div class="analysis-chart">
-    <div class="chart-title">Recent Comparable Sales Activity</div>
-    <div class="chart-bars">
-      {% for comp in comparables[:4] %}
-      <div class="chart-bar-wrap">
-        <div class="chart-bar" style="height: {{ [40, (comp.sale_price / 8000) | int] | max }}px;"></div>
-        <div class="chart-bar-label">{{ comp.sold_date | default('-') }}</div>
-      </div>
-      {% endfor %}
+  <div class="analysis-intro">
+    <div class="analysis-intro-text">
+      <h3 class="analysis-intro-title">Market Overview</h3>
+      <p class="analysis-intro-desc">Recent comparable sales in your area show strong market activity. Properties similar to yours have sold at competitive prices, indicating healthy buyer demand in your neighborhood.</p>
+    </div>
+    <div class="analysis-stats-mini">
+      <div class="analysis-stat-mini"><div class="analysis-stat-num">{{ stats.total_comps | default(4) }}</div><div class="analysis-stat-lbl">Comps</div></div>
+      <div class="analysis-stat-mini"><div class="analysis-stat-num">{{ stats.avg_sqft | default(0) | int }}</div><div class="analysis-stat-lbl">Avg Sqft</div></div>
     </div>
   </div>
-  <table class="analysis-table">
-    <thead>
-      <tr><th>Metric</th><th>Subject</th><th>Low</th><th>Medium</th><th>High</th></tr>
-    </thead>
-    <tbody>
-      <tr><td>Distance (mi)</td><td>{{ stats.piq.distance | default('0') }}</td><td>{{ stats.low.distance | default('-') }}</td><td>{{ stats.medium.distance | default('-') }}</td><td>{{ stats.high.distance | default('-') }}</td></tr>
-      <tr><td>Living Area (sf)</td><td>{{ stats.piq.sqft | default('-') }}</td><td>{{ stats.low.sqft | default('-') }}</td><td>{{ stats.medium.sqft | default('-') }}</td><td>{{ stats.high.sqft | default('-') }}</td></tr>
-      <tr><td>Price/Sq.Ft.</td><td>{{ stats.piq.price_per_sqft | format_currency }}</td><td>{{ stats.low.price_per_sqft | format_currency }}</td><td>{{ stats.medium.price_per_sqft | format_currency }}</td><td>{{ stats.high.price_per_sqft | format_currency }}</td></tr>
-      <tr><td>Year Built</td><td>{{ stats.piq.year_built | default('-') }}</td><td>{{ stats.low.year_built | default('-') }}</td><td>{{ stats.medium.year_built | default('-') }}</td><td>{{ stats.high.year_built | default('-') }}</td></tr>
-      <tr><td>Lot Size (sf)</td><td>{{ stats.piq.lot_size | format_number }}</td><td>{{ stats.low.lot_size | format_number }}</td><td>{{ stats.medium.lot_size | format_number }}</td><td>{{ stats.high.lot_size | format_number }}</td></tr>
-      <tr><td>Bedrooms</td><td>{{ stats.piq.bedrooms | default('-') }}</td><td>{{ stats.low.bedrooms | default('-') }}</td><td>{{ stats.medium.bedrooms | default('-') }}</td><td>{{ stats.high.bedrooms | default('-') }}</td></tr>
-      <tr><td>Bathrooms</td><td>{{ stats.piq.bathrooms | default('-') }}</td><td>{{ stats.low.bathrooms | default('-') }}</td><td>{{ stats.medium.bathrooms | default('-') }}</td><td>{{ stats.high.bathrooms | default('-') }}</td></tr>
-    </tbody>
-    <tfoot>
-      <tr><td>Sale Price</td><td>{{ stats.piq.price | format_currency }}</td><td>{{ stats.low.price | format_currency }}</td><td>{{ stats.medium.price | format_currency }}</td><td>{{ stats.high.price | format_currency }}</td></tr>
-    </tfoot>
-  </table>
+  <div class="analysis-chart-wrap">
+    <div class="analysis-chart-grid"></div>
+    {% for comp in comparables[:4] %}
+    <div class="analysis-bar" style="height: {{ [28, (comp.sale_price / 8000) | int] | max }}px;">
+      <span class="analysis-bar-val">{{ comp.sale_price | format_currency_short }}</span>
+      <label class="analysis-bar-label">{{ comp.sold_date | default('-') }}</label>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="analysis-table-wrap">
+    <table class="analysis-table">
+      <thead><tr><th>Monthly Sales Overview</th><th>PIQ</th><th>Low</th><th>Medium</th><th>High</th></tr></thead>
+      <tbody>
+        <tr><td>Distance (mi)</td><td>{{ stats.piq.distance | default('0') }}</td><td>{{ stats.low.distance | default('-') }}</td><td>{{ stats.medium.distance | default('-') }}</td><td>{{ stats.high.distance | default('-') }}</td></tr>
+        <tr><td>Living Area (sf)</td><td>{{ stats.piq.sqft | default('-') }}</td><td>{{ stats.low.sqft | default('-') }}</td><td>{{ stats.medium.sqft | default('-') }}</td><td>{{ stats.high.sqft | default('-') }}</td></tr>
+        <tr><td>Price / Sq.Ft.</td><td>{{ stats.piq.price_per_sqft | format_currency }}</td><td>{{ stats.low.price_per_sqft | format_currency }}</td><td>{{ stats.medium.price_per_sqft | format_currency }}</td><td>{{ stats.high.price_per_sqft | format_currency }}</td></tr>
+        <tr><td>Year Built</td><td>{{ stats.piq.year_built | default('-') }}</td><td>{{ stats.low.year_built | default('-') }}</td><td>{{ stats.medium.year_built | default('-') }}</td><td>{{ stats.high.year_built | default('-') }}</td></tr>
+        <tr><td>Lot Size (sf)</td><td>{{ stats.piq.lot_size | format_number }}</td><td>{{ stats.low.lot_size | format_number }}</td><td>{{ stats.medium.lot_size | format_number }}</td><td>{{ stats.high.lot_size | format_number }}</td></tr>
+        <tr><td>Bedrooms</td><td>{{ stats.piq.bedrooms | default('-') }}</td><td>{{ stats.low.bedrooms | default('-') }}</td><td>{{ stats.medium.bedrooms | default('-') }}</td><td>{{ stats.high.bedrooms | default('-') }}</td></tr>
+        <tr><td>Bathrooms</td><td>{{ stats.piq.bathrooms | default('-') }}</td><td>{{ stats.low.bathrooms | default('-') }}</td><td>{{ stats.medium.bathrooms | default('-') }}</td><td>{{ stats.high.bathrooms | default('-') }}</td></tr>
+        <tr><td>Stories</td><td>{{ stats.piq.stories | default('0') }}</td><td>{{ stats.low.stories | default('0') }}</td><td>{{ stats.medium.stories | default('0') }}</td><td>{{ stats.high.stories | default('0') }}</td></tr>
+        <tr><td>Pools</td><td>{{ stats.piq.pools | default('0') }}</td><td>{{ stats.low.pools | default('0') }}</td><td>{{ stats.medium.pools | default('0') }}</td><td>{{ stats.high.pools | default('0') }}</td></tr>
+      </tbody>
+      <tfoot><tr><td>Sales Price</td><td>{{ stats.piq.price | format_currency }}</td><td>{{ stats.low.price | format_currency }}</td><td>{{ stats.medium.price | format_currency }}</td><td>{{ stats.high.price | format_currency }}</td></tr></tfoot>
+    </table>
+  </div>
   {{ macros.market_metrics_block(market_trends) }}
 </div>
 {{ macros.page_footer(agent, 5) }}
