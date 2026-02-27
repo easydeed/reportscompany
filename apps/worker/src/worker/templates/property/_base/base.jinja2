@@ -1503,20 +1503,42 @@
        so higher specificity overrides all theme padding overrides.
        ========================================================================= #}
 
+    /* =========================================================================
+       PROPERTY DETAILS PAGE — Elegant-style compact tables, all themes.
+       High specificity (.page-property .__) overrides any theme-level rules.
+       ========================================================================= */
+
     .page-property .data-table {
       font-size: 11px;
+      border: none;
+      border-radius: 0;
+      overflow: visible;
     }
 
     .page-property .data-table td {
-      padding: 5px 10px;
+      padding: 7px 12px;
     }
 
+    /* Clean accent-line table title — no heavy background */
     .page-property .table-title {
-      padding: 7px 10px;
+      background: none !important;
+      color: var(--color-primary) !important;
+      border-radius: 0 !important;
+      padding: 6px 0 6px 0 !important;
+      margin-bottom: 0 !important;
+      font-size: 11px !important;
+      font-weight: 700 !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.6px !important;
+      border-bottom: 2px solid var(--color-accent) !important;
     }
 
     .page-property .table-section + .table-section {
       margin-top: 14px;
+    }
+
+    .page-property .data-label {
+      letter-spacing: 0.2px;
     }
 
     {# =========================================================================
@@ -1688,18 +1710,13 @@
         {% block market_trends_content %}
 
         {# ── Page Header ───────────────────────────────────────────────────── #}
-        <div class="mt-header">
-          <h1 class="mt-title">Market Trends</h1>
-          <p class="mt-subtitle">
-            {{ market_trends.city }}
-            {% if market_trends.city %} · {% endif %}
-            {{ market_trends.period_label }}
-            {% if not market_trends.has_prior_data %}
-            <span style="color: #ca8a04;"> · Current period only (prior comparison unavailable)</span>
-            {% endif %}
-          </p>
-          <div class="mt-header-accent"></div>
-        </div>
+        {%- set _mt_subtitle = (market_trends.city ~ ' · ' if market_trends.city else '') ~ (market_trends.period_label | default('')) -%}
+        {{ macros.page_header('Market Trends', _mt_subtitle) }}
+        {% if not market_trends.has_prior_data %}
+        <p style="font-size:10px; color:#ca8a04; margin-top:-12px; margin-bottom:12px;">
+          Current period only — prior comparison unavailable
+        </p>
+        {% endif %}
 
         {# ── Market Condition Badge ─────────────────────────────────────────── #}
         <div class="mt-condition mt-condition--{{ market_trends.market_condition.indicator }}">

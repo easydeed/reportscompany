@@ -492,12 +492,6 @@
     border-bottom: 3px solid var(--color-accent);
   }
 
-  /* Push page-content below the full-bleed header on pages 5, 6, 7 */
-  .page-analysis .page-content,
-  .page-comparables .page-content,
-  .page-range .page-content {
-    top: 1.2in;
-  }
 
   .classic-v0-header .header-label {
     font-family: var(--font-body);
@@ -622,11 +616,10 @@
   }
 
   .classic-v0-p6 .comp-card {
-    border: 1px solid var(--color-border);
+    border: none;
     border-radius: 10px;
     overflow: hidden;
     box-shadow: var(--shadow-sm);
-    border-top: 3px solid var(--color-accent);
   }
 
   .classic-v0-p6 .comp-card-image {
@@ -709,7 +702,7 @@
   .classic-v0-p7 .range-map {
     height: 4in;
     background: var(--color-border);
-    border: 1px solid var(--color-border);
+    border: none;
     border-radius: 8px;
     margin: 25px 0;
     overflow: hidden;
@@ -833,11 +826,8 @@
    Navy header + chart with navy bars + analysis table with sky-blue footer
    ============================================================================= #}
 {% block analysis %}
-<div class="classic-v0-header">
-  <div class="header-label">Market Intelligence</div>
-  <h2 class="header-title">Area Sales Analysis</h2>
-</div>
 <div class="page-content classic-v0-p5">
+  {{ macros.page_header('Area Sales Analysis', 'Market Statistics') }}
   <div class="analysis-chart">
     <div class="chart-title">Recent Comparable Sales Activity</div>
     <div class="chart-bars">
@@ -876,11 +866,8 @@
    2x2 comp grid, navy price badge top-left, pin SVG, serif address, 4-stat cards
    ============================================================================= #}
 {% block comparables %}
-<div class="classic-v0-header">
-  <div class="header-label">Recent Transactions</div>
-  <h2 class="header-title">Sales Comparables</h2>
-</div>
 <div class="page-content classic-v0-p6">
+  {{ macros.page_header('Sales Comparables', 'Recent Transactions') }}
   {{ macros.comp_confidence_bar(comp_confidence_grade, comp_confidence_reason, comparables|length) }}
   <div class="comp-grid">
     {% for comp in comparables[:4] %}
@@ -916,11 +903,8 @@
    Map with rounded border, navy stat cards, sky-navy slider, white dots
    ============================================================================= #}
 {% block range %}
-<div class="classic-v0-header">
-  <div class="header-label">Valuation Summary</div>
-  <h2 class="header-title">Range of Sales</h2>
-</div>
 <div class="page-content classic-v0-p7">
+  {{ macros.page_header('Range of Sales', 'Valuation Summary') }}
   <div class="range-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}>
     {% if images.aerial_map %}<img src="{{ images.aerial_map }}" alt="Aerial map">{% endif %}
   </div>
