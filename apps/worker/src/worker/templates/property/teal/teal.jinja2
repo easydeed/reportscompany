@@ -236,7 +236,7 @@
      ========================================================================== */
   
   .page-header {
-    border-bottom: 3px solid var(--color-accent);
+    border-bottom: none;
   }
   
   .page-title {
@@ -505,15 +505,6 @@
      ========================================================================== */
   
   
-  .page-footer::before {
-    content: '';
-    position: absolute;
-    top: -3px;
-    left: 0;
-    width: 80px;
-    height: 3px;
-    background: var(--color-primary);
-  }
   
   .footer-agent-name {
     font-weight: 700;
@@ -590,8 +581,7 @@
 
   /* Contents page number badges */
   .page-contents .contents-sidebar-accent {
-    background: var(--color-primary);
-    opacity: 0.6;
+    display: none;
   }
 
   /* ==========================================================================

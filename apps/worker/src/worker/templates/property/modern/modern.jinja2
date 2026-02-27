@@ -738,7 +738,7 @@
   }
 
   .modern-v0-p6 .comp-card-image {
-    height: 200px;
+    height: 190px;
     background: linear-gradient(135deg, var(--color-text-muted), var(--color-accent));
     position: relative;
     overflow: hidden;
@@ -787,7 +787,7 @@
 
   .modern-v0-p6 .comp-card-stats {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 8px;
   }
 
@@ -1007,8 +1007,10 @@
           <div class="comp-stat"><span class="comp-stat-label">Sq.Ft.</span><span class="comp-stat-value">{{ comp.sqft | format_number }}</span></div>
           <div class="comp-stat"><span class="comp-stat-label">Bed/Bath</span><span class="comp-stat-value">{{ comp.bedrooms }}/{{ comp.bathrooms }}</span></div>
           <div class="comp-stat"><span class="comp-stat-label">$/Sq.Ft.</span><span class="comp-stat-value">{{ comp.price_per_sqft | format_currency }}</span></div>
-          {% if comp.lot_display %}<div class="comp-stat"><span class="comp-stat-label">Lot</span><span class="comp-stat-value">{{ comp.lot_display }}</span></div>{% endif %}
-          <div class="comp-stat"><span class="comp-stat-label">HOA</span><span class="comp-stat-value">{% if comp.hoa_fee %}{{ comp.hoa_fee | format_currency }}{% if comp.hoa_frequency %}/{{ comp.hoa_frequency }}{% endif %}{% else %}No HOA{% endif %}</span></div>
+        </div>
+        <div class="comp-pills">
+          {% if comp.lot_display %}<span class="comp-pill">Lot: {{ comp.lot_display }}</span>{% endif %}
+          <span class="comp-pill">{% if comp.hoa_fee %}HOA: {{ comp.hoa_fee | format_currency }}{% if comp.hoa_frequency %}/{{ comp.hoa_frequency }}{% else %}/mo{% endif %}{% else %}No HOA{% endif %}</span>
         </div>
       </div>
     </div>

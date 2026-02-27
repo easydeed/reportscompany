@@ -208,7 +208,7 @@
      ========================================================================== */
   
   .page-header {
-    border-bottom: 3px solid var(--color-primary);
+    border-bottom: none;
   }
   
   .page-title {
@@ -477,9 +477,7 @@
 
   /* Contents sidebar accent */
   .page-contents .contents-sidebar-accent {
-    width: 4px;
-    background: var(--color-accent);
-    opacity: 0.7;
+    display: none;
   }
 
   /* ==========================================================================
@@ -648,7 +646,7 @@
   }
 
   .bold-v0-p6 .comp-card-image {
-    height: 220px;
+    height: 190px;
     background: var(--color-text-muted);
     position: relative;
   }
@@ -697,7 +695,7 @@
 
   .bold-v0-p6 .comp-card-stats {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 8px;
   }
 
@@ -921,8 +919,10 @@
           <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">{{ comp.sqft | format_number }}</div></div>
           <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">{{ comp.bedrooms }}/{{ comp.bathrooms }}</div></div>
           <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">{{ comp.price_per_sqft | format_currency }}</div></div>
-          {% if comp.lot_display %}<div class="comp-stat"><div class="comp-stat-label">Lot</div><div class="comp-stat-value">{{ comp.lot_display }}</div></div>{% endif %}
-          <div class="comp-stat"><div class="comp-stat-label">HOA</div><div class="comp-stat-value">{% if comp.hoa_fee %}{{ comp.hoa_fee | format_currency }}{% if comp.hoa_frequency %}/{{ comp.hoa_frequency }}{% endif %}{% else %}No HOA{% endif %}</div></div>
+        </div>
+        <div class="comp-pills">
+          {% if comp.lot_display %}<span class="comp-pill">Lot: {{ comp.lot_display }}</span>{% endif %}
+          <span class="comp-pill">{% if comp.hoa_fee %}HOA: {{ comp.hoa_fee | format_currency }}{% if comp.hoa_frequency %}/{{ comp.hoa_frequency }}{% else %}/mo{% endif %}{% else %}No HOA{% endif %}</span>
         </div>
       </div>
     </div>

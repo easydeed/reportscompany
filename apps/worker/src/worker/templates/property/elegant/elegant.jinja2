@@ -650,7 +650,7 @@
 
   .elegant-v0-p6 .comp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 0.3in; }
   .elegant-v0-p6 .comp-card { background: #fff; overflow: hidden; border: 1px solid var(--color-border); border-top: 2px solid var(--color-accent); box-shadow: var(--shadow-sm); }
-  .elegant-v0-p6 .comp-card-image { height: 220px; background: var(--color-border); position: relative; }
+  .elegant-v0-p6 .comp-card-image { height: 190px; background: var(--color-border); position: relative; }
   .elegant-v0-p6 .comp-card-image img { width: 100%; height: 100%; object-fit: cover; }
   .elegant-v0-p6 .comp-card-badge { position: absolute; top: 10px; right: 10px; background: var(--color-primary); color: #fff; padding: 6px 12px; font-size: 14px; font-weight: 600; font-family: var(--font-display); }
   .elegant-v0-p6 .comp-card-body { padding: 15px; }
@@ -765,8 +765,10 @@
           <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">{{ comp.sqft | format_number }}</div></div>
           <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">{{ comp.bedrooms }}/{{ comp.bathrooms }}</div></div>
           <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">{{ comp.price_per_sqft | format_currency }}</div></div>
-          {% if comp.lot_display %}<div class="comp-stat"><div class="comp-stat-label">Lot</div><div class="comp-stat-value">{{ comp.lot_display }}</div></div>{% endif %}
-          <div class="comp-stat"><div class="comp-stat-label">HOA</div><div class="comp-stat-value">{% if comp.hoa_fee %}{{ comp.hoa_fee | format_currency }}{% if comp.hoa_frequency %}/{{ comp.hoa_frequency }}{% endif %}{% else %}No HOA{% endif %}</div></div>
+        </div>
+        <div class="comp-pills">
+          {% if comp.lot_display %}<span class="comp-pill">Lot: {{ comp.lot_display }}</span>{% endif %}
+          <span class="comp-pill">{% if comp.hoa_fee %}HOA: {{ comp.hoa_fee | format_currency }}{% if comp.hoa_frequency %}/{{ comp.hoa_frequency }}{% else %}/mo{% endif %}{% else %}No HOA{% endif %}</span>
         </div>
       </div>
     </div>
