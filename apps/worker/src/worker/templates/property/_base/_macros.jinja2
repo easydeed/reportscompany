@@ -365,7 +365,7 @@
 {% macro market_metrics_block(market_trends) %}
 {% if market_trends %}
 <div class="market-metrics-block">
-  <h3 class="section-title">Market Conditions (Last 90 Days)</h3>
+  <h3 class="mm-title">Market Conditions (Last 90 Days)</h3>
   <div class="market-metrics-grid">
     {% if market_trends.months_of_inventory and market_trends.months_of_inventory.current is not none %}
     <div class="market-metric-item">

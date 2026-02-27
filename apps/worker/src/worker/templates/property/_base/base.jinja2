@@ -667,6 +667,18 @@
       color: var(--color-primary);
       margin-bottom: 8px;
     }
+
+    /* Market Conditions heading inside market_metrics_block — explicit size
+       so it can't be hijacked by page-scoped .section-title overrides */
+    .mm-title {
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--color-primary);
+      margin-bottom: 8px;
+    }
     
     .comparison-table {
       border-radius: var(--radius-lg);
@@ -1558,15 +1570,15 @@
       border-radius: 10px;
     }
     .analysis-intro-title {
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 700;
       letter-spacing: 0.06em;
       text-transform: uppercase;
       margin-bottom: 5px;
     }
     .analysis-intro-desc {
-      font-size: 10.5px;
-      line-height: 1.55;
+      font-size: 12px;
+      line-height: 1.6;
       margin: 0;
     }
     .analysis-stats-mini {
@@ -1580,12 +1592,12 @@
       border-radius: 8px;
     }
     .analysis-stat-num {
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 800;
       line-height: 1;
     }
     .analysis-stat-lbl {
-      font-size: 9px;
+      font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       margin-top: 3px;
@@ -1598,13 +1610,13 @@
       display: flex;
       align-items: flex-end;
       justify-content: space-around;
-      padding: 14px 28px 36px;
+      padding: 14px 28px 38px;
       position: relative;
       overflow: visible;
     }
     .analysis-chart-grid {
       position: absolute;
-      inset: 14px 18px 34px 18px;
+      inset: 14px 18px 36px 18px;
       background: repeating-linear-gradient(to top, rgba(0,0,0,.04) 0 1px, transparent 1px 22px);
       pointer-events: none;
     }
@@ -1619,16 +1631,16 @@
       top: -20px;
       left: 50%;
       transform: translateX(-50%);
-      font-size: 9.5px;
+      font-size: 11px;
       font-weight: 700;
       white-space: nowrap;
     }
     .analysis-bar-label {
       position: absolute;
-      bottom: -24px;
+      bottom: -26px;
       left: 50%;
       transform: translateX(-50%);
-      font-size: 9.5px;
+      font-size: 11px;
       font-weight: 600;
       white-space: nowrap;
       letter-spacing: 0.02em;
@@ -1642,13 +1654,13 @@
     .analysis-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 11px;
+      font-size: 12px;
     }
     .analysis-table thead th {
       padding: 9px 12px;
       text-align: left;
       font-weight: 700;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.05em;
     }
     .analysis-table tbody td {
       padding: 6px 12px;
@@ -1657,7 +1669,7 @@
     .analysis-table tfoot td {
       padding: 9px 12px;
       font-weight: 700;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.05em;
     }
 
     {# =========================================================================
