@@ -538,35 +538,80 @@ def render_theme(theme_name: str, report_data: dict,
         return result
 
     pdf_path = OUTPUT_DIR / f"{theme_name}_report.pdf"
-    try:
-        from playwright.sync_api import sync_playwright
-        t1 = time.perf_counter()
-        with sync_playwright() as pw:
-            browser = pw.chromium.launch(headless=True)
-            page = browser.new_page()
-            page.set_content(html, wait_until="networkidle")
-            page.evaluate("() => document.fonts.ready")
-            page.pdf(
-                path=str(pdf_path),
-                format="Letter",
-                print_background=True,
-                margin={"top": "0", "right": "0", "bottom": "0", "left": "0"},
-            )
-            browser.close()
-        pdf_size = pdf_path.stat().st_size
-        elapsed = time.perf_counter() - t1
-        print(f"  PDF : {pdf_path.name} ({pdf_size:,} bytes, {elapsed:.2f}s)")
 
+    # ---------- Try PDFShift first (same renderer as production) ----------
+    pdfshift_key = os.getenv("PDFSHIFT_API_KEY") or os.getenv("PDF_API_KEY", "")
+    pdf_generated = False
+    if pdfshift_key:
+        try:
+            import httpx
+            t1 = time.perf_counter()
+            payload = {
+                "source": html,
+                "sandbox": False,
+                "use_print": True,
+                "format": "Letter",
+                "margin": {"top": "0", "right": "0", "bottom": "0", "left": "0"},
+                "remove_blank": True,
+                "delay": 3000,
+                "wait_for_network": True,
+                "lazy_load_images": True,
+                "timeout": 60,
+            }
+            headers = {
+                "X-API-Key": pdfshift_key,
+                "Content-Type": "application/json",
+                "X-Processor-Version": "142",
+            }
+            resp = httpx.post(
+                "https://api.pdfshift.io/v3/convert/pdf",
+                json=payload,
+                headers=headers,
+                timeout=90.0,
+            )
+            resp.raise_for_status()
+            pdf_path.write_bytes(resp.content)
+            pdf_size = pdf_path.stat().st_size
+            elapsed = time.perf_counter() - t1
+            print(f"  PDF : {pdf_path.name} ({pdf_size:,} bytes, {elapsed:.2f}s) [PDFShift]")
+            pdf_generated = True
+        except ImportError:
+            print("  PDF:  httpx not installed -- falling back to Playwright")
+        except Exception as e:
+            print(f"  PDF:  PDFShift failed ({e}) -- falling back to Playwright")
+
+    # ---------- Fallback: Playwright (local Chromium) ----------
+    if not pdf_generated:
+        try:
+            from playwright.sync_api import sync_playwright
+            t1 = time.perf_counter()
+            with sync_playwright() as pw:
+                browser = pw.chromium.launch(headless=True)
+                page = browser.new_page()
+                page.set_content(html, wait_until="networkidle")
+                page.evaluate("() => document.fonts.ready")
+                page.pdf(
+                    path=str(pdf_path),
+                    format="Letter",
+                    print_background=True,
+                    margin={"top": "0", "right": "0", "bottom": "0", "left": "0"},
+                )
+                browser.close()
+            pdf_size = pdf_path.stat().st_size
+            elapsed = time.perf_counter() - t1
+            print(f"  PDF : {pdf_path.name} ({pdf_size:,} bytes, {elapsed:.2f}s) [Playwright]")
+            pdf_generated = True
+        except ImportError:
+            print("  PDF:  SKIPPED (no PDFShift key and playwright not installed)")
+        except Exception as e:
+            print(f"  PDF:  FAILED -- {e}")
+            result["ok"] = False
+
+    if pdf_generated and pdf_path.exists():
         pg = _count_pdf_pages(pdf_path)
         result["page_count"] = pg
         tag = "[PASS]" if pg == 8 else f"[WARN] expected 8"
         print(f"  Pages: {pg} {tag}")
-
-    except ImportError:
-        print("  PDF:  SKIPPED (playwright not installed)")
-    except Exception as e:
-        print(f"  PDF:  FAILED -- {e}")
-        result["ok"] = False
 
     print(f"  Total: {time.perf_counter()-t0:.2f}s")
     if open_after:
@@ -597,7 +642,7 @@ def main():
     )
     parser.add_argument(
         "--html-only", action="store_true",
-        help="Output HTML only -- skip Playwright PDF rendering (fast)",
+        help="Output HTML only -- skip PDF rendering (fast)",
     )
     parser.add_argument(
         "--open", action="store_true",
