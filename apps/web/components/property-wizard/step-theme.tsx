@@ -17,6 +17,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import Image from "next/image";
 import type { Theme, ReportPage, PropertyData, Comparable } from "./types";
 import { THEMES, ACCENT_PRESETS } from "./types";
 
@@ -45,6 +46,15 @@ export function StepTheme({
 }: StepThemeProps) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const selectedTheme = THEMES.find((t) => t.id === selectedThemeId);
+
+  /** When user picks a new theme, also set its default accent color */
+  function handleThemeChange(id: number) {
+    onThemeChange(id);
+    const theme = THEMES.find((t) => t.id === id);
+    if (theme) {
+      onAccentChange(theme.accentDefault);
+    }
+  }
 
   function togglePage(pageId: string) {
     const page = pages.find((p) => p.id === pageId);
@@ -91,7 +101,7 @@ export function StepTheme({
                 type="button"
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
-                onClick={() => onThemeChange(theme.id)}
+                onClick={() => handleThemeChange(theme.id)}
                 className={`relative rounded-xl border-2 overflow-hidden transition-all duration-200 text-left ${
                   isSelected
                     ? "border-[#6366F1] ring-2 ring-[#6366F1]/20 scale-[1.02]"
@@ -103,29 +113,42 @@ export function StepTheme({
                   className="aspect-[8.5/11] relative overflow-hidden"
                   style={{ background: theme.gradient }}
                 >
-                  <div className="h-full flex flex-col justify-between p-3">
-                    <div>
-                      <p className="text-[7px] uppercase tracking-[0.2em] text-white/50">
-                        Property Report
-                      </p>
-                      <p
-                        className="text-[11px] font-bold text-white mt-0.5 leading-tight"
-                        style={{ fontFamily: theme.displayFont }}
-                      >
-                        {theme.name}
-                      </p>
-                    </div>
-                    {/* Decorative lines */}
-                    <div className="space-y-1">
-                      <div className="h-[1px] w-3/4 bg-white/20 rounded-full" />
-                      <div className="h-[1px] w-1/2 bg-white/15 rounded-full" />
-                      <div className="h-[1px] w-2/3 bg-white/10 rounded-full" />
-                    </div>
-                    <div
-                      className="h-0.5 rounded-full"
-                      style={{ backgroundColor: theme.accentDefault }}
+                  {theme.previewImage ? (
+                    <Image
+                      src={theme.previewImage}
+                      alt={`${theme.name} theme preview`}
+                      fill
+                      className="object-cover object-top"
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                      onError={(e) => {
+                        // Fallback: hide broken image, show gradient underneath
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
                     />
-                  </div>
+                  ) : (
+                    <div className="h-full flex flex-col justify-between p-3">
+                      <div>
+                        <p className="text-[7px] uppercase tracking-[0.2em] text-white/50">
+                          Property Report
+                        </p>
+                        <p
+                          className="text-[11px] font-bold text-white mt-0.5 leading-tight"
+                          style={{ fontFamily: theme.displayFont }}
+                        >
+                          {theme.name}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="h-[1px] w-3/4 bg-white/20 rounded-full" />
+                        <div className="h-[1px] w-1/2 bg-white/15 rounded-full" />
+                        <div className="h-[1px] w-2/3 bg-white/10 rounded-full" />
+                      </div>
+                      <div
+                        className="h-0.5 rounded-full"
+                        style={{ backgroundColor: theme.accentDefault }}
+                      />
+                    </div>
+                  )}
 
                   {/* Selected check */}
                   {isSelected && (
@@ -159,11 +182,44 @@ export function StepTheme({
 
       {/* Accent Color Picker */}
       <div className="rounded-2xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-3">
+        <h3 className="text-sm font-semibold text-foreground mb-1">
           Accent Color
         </h3>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex gap-2">
+        <p className="text-xs text-muted-foreground mb-3">
+          Choose from colors curated for the {selectedTheme?.name} theme, or pick your own.
+        </p>
+
+        {/* Theme-suggested colors */}
+        {selectedTheme?.suggestedColors && selectedTheme.suggestedColors.length > 0 && (
+          <div className="mb-3">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 font-medium">
+              Recommended for {selectedTheme.name}
+            </p>
+            <div className="flex gap-2">
+              {selectedTheme.suggestedColors.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  className={`w-8 h-8 rounded-full transition-all duration-150 ${
+                    accentColor === color
+                      ? "ring-2 ring-offset-2 ring-[#6366F1] scale-110"
+                      : "hover:scale-110"
+                  }`}
+                  style={{ backgroundColor: color }}
+                  onClick={() => onAccentChange(color)}
+                  aria-label={`Select recommended color ${color}`}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* General palette */}
+        <div className="mb-3">
+          <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2 font-medium">
+            All Colors
+          </p>
+          <div className="flex flex-wrap gap-2">
             {ACCENT_PRESETS.map((color) => (
               <button
                 key={color}
@@ -179,17 +235,21 @@ export function StepTheme({
               />
             ))}
           </div>
-          <div className="flex items-center gap-2 ml-2">
-            <Input
-              value={accentColor}
-              onChange={(e) => onAccentChange(e.target.value)}
-              className="w-24 h-8 text-xs font-mono rounded-lg"
-            />
-            <div
-              className="w-8 h-8 rounded-lg border border-border shrink-0"
-              style={{ backgroundColor: accentColor }}
-            />
-          </div>
+        </div>
+
+        {/* Custom color input */}
+        <div className="flex items-center gap-2">
+          <Input
+            value={accentColor}
+            onChange={(e) => onAccentChange(e.target.value)}
+            className="w-28 h-8 text-xs font-mono rounded-lg"
+            placeholder="#hex"
+          />
+          <div
+            className="w-8 h-8 rounded-lg border border-border shrink-0"
+            style={{ backgroundColor: accentColor }}
+          />
+          <span className="text-[10px] text-muted-foreground">Custom hex</span>
         </div>
       </div>
 
