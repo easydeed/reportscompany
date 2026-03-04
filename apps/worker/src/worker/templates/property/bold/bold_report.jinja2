@@ -10,7 +10,7 @@
   <style>
     :root {
       /* Primary accent color - can be overridden by theme_color */
-      --navy: {{ theme_color | default('#15216E') }};
+      --navy: {{ theme_color | default('#15216E', true) }};
       --navy-light: #1E2D8F;
       --gold: #D69649;
       --gold-light: #E5AB5E;

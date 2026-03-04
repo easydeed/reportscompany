@@ -10,7 +10,7 @@
   <style>
     :root {
       /* Primary accent color - can be overridden by theme_color */
-      --burgundy:{{ theme_color | default('#1a1a1a') }}; --burgundy-dark:#0d0d0d;
+      --burgundy:{{ theme_color | default('#1a1a1a', true) }}; --burgundy-dark:#0d0d0d;
       --gold:#C9A962; --gold-light:#E8D5A3;
       --cream:#FAF7F2; --cream-dark:#F0EBE3;
       --charcoal:#2D2D2D; --slate:#5A5A5A;

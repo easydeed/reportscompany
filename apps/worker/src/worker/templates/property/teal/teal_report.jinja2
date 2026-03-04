@@ -13,8 +13,8 @@
   <style>
     :root{
       /* Primary accent color - can be overridden by theme_color */
-      --teal: {{ theme_color | default('#34d1c3') }};
-      --teal-2: {{ theme_color | default('#21c7b7') }};
+      --teal: {{ theme_color | default('#34d1c3', true) }};
+      --teal-2: {{ theme_color_dark | default('#21c7b7', true) }};
       --navy:#18235c;
       --navy-2:#0f1a45;
       --ink:#0b0f1a;

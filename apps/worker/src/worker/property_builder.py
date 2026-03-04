@@ -233,7 +233,7 @@ class PropertyReportBuilder:
             
             # Owner info
             "owner_name": self.report_data.get("owner_name", "") or sitex_data.get("owner_name", ""),
-            "secondary_owner": sitex_data.get("secondary_owner"),
+            "secondary_owner": sitex_data.get("secondary_owner") or "-",
             "county": self.report_data.get("property_county", "") or sitex_data.get("county", ""),
             "apn": self.report_data.get("apn", "") or sitex_data.get("apn", ""),
             
@@ -243,36 +243,36 @@ class PropertyReportBuilder:
             "sqft": sitex_data.get("sqft") or 0,
             "lot_size": sitex_data.get("lot_size") or 0,
             "year_built": sitex_data.get("year_built") or 0,
-            "garage": sitex_data.get("garage"),
-            "fireplace": sitex_data.get("fireplace"),
-            "pool": sitex_data.get("pool"),
-            "total_rooms": sitex_data.get("total_rooms"),
-            "num_units": sitex_data.get("num_units"),
-            "units": sitex_data.get("num_units"),  # V0 template naming
-            "zoning": sitex_data.get("zoning"),
+            "garage": sitex_data.get("garage") or "-",
+            "fireplace": sitex_data.get("fireplace") or "-",
+            "pool": sitex_data.get("pool") or "No",
+            "total_rooms": sitex_data.get("total_rooms") or "-",
+            "num_units": sitex_data.get("num_units") or "-",
+            "units": sitex_data.get("num_units") or "-",  # V0 template naming
+            "zoning": sitex_data.get("zoning") or "-",
             "property_type": self.report_data.get("property_type", "") or sitex_data.get("property_type", ""),
-            "use_code": sitex_data.get("use_code"),
+            "use_code": sitex_data.get("use_code") or "-",
             
             # Tax/Assessment
-            "assessed_value": sitex_data.get("assessed_value"),
-            "tax_amount": sitex_data.get("tax_amount"),
-            "land_value": sitex_data.get("land_value"),
-            "improvement_value": sitex_data.get("improvement_value"),
-            "percent_improved": sitex_data.get("percent_improved"),
-            "improvement_pct": sitex_data.get("percent_improved"),  # V0 template naming
-            "tax_status": sitex_data.get("tax_status"),
-            "tax_rate_area": sitex_data.get("tax_rate_area"),
-            "tax_year": sitex_data.get("tax_year"),
+            "assessed_value": sitex_data.get("assessed_value") or 0,
+            "tax_amount": sitex_data.get("tax_amount") or 0,
+            "land_value": sitex_data.get("land_value") or 0,
+            "improvement_value": sitex_data.get("improvement_value") or 0,
+            "percent_improved": sitex_data.get("percent_improved") or 0,
+            "improvement_pct": sitex_data.get("percent_improved") or 0,  # V0 template naming
+            "tax_status": sitex_data.get("tax_status") or "Current",
+            "tax_rate_area": sitex_data.get("tax_rate_area") or "-",
+            "tax_year": sitex_data.get("tax_year") or "-",
             
             # Legal
             "legal_description": self.report_data.get("legal_description", "") or sitex_data.get("legal_description", ""),
-            "mailing_address": sitex_data.get("mailing_address"),
-            "census_tract": sitex_data.get("census_tract"),
-            "housing_tract": sitex_data.get("housing_tract"),
-            "lot_number": sitex_data.get("lot_number"),
-            "page_grid": sitex_data.get("page_grid"),
-            "partial_bath": sitex_data.get("partial_bath"),
-            "notes": sitex_data.get("notes"),
+            "mailing_address": sitex_data.get("mailing_address") or "",
+            "census_tract": sitex_data.get("census_tract") or "-",
+            "housing_tract": sitex_data.get("housing_tract") or "-",
+            "lot_number": sitex_data.get("lot_number") or "-",
+            "page_grid": sitex_data.get("page_grid") or "-",
+            "partial_bath": sitex_data.get("partial_bath") or 0,
+            "notes": sitex_data.get("notes") or "",
         }
     
     def _build_agent_context(self) -> Dict[str, Any]:
@@ -753,15 +753,27 @@ class PropertyReportBuilder:
             "aerial_map": aerial_map,
         }
     
+    # Per-theme default accent colours (must match the CSS defaults inside
+    # each standalone *_report.jinja2 template).
+    _THEME_DEFAULT_COLORS = {
+        "teal":    "#34d1c3",
+        "modern":  "#FF6B5B",
+        "classic": "#1B365D",
+        "bold":    "#15216E",
+        "elegant": "#1a1a1a",
+    }
+
     def _get_theme_color(self) -> str:
         """
         Get the theme color, preferring branding over report accent_color.
+        Falls back to the theme's built-in default so CSS variables are
+        never rendered as the literal string ``None``.
         """
         branding = self.report_data.get("branding") or {}
         return (
             branding.get("primary_color") or 
             self.accent_color or 
-            None  # Let template use theme default
+            self._THEME_DEFAULT_COLORS.get(self.theme_name, "#34d1c3")
         )
     
     def _build_default_content_sections(self) -> Dict[str, Any]:
