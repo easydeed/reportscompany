@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Check, Eye, Lock, Palette } from "lucide-react";
+import { Check, Eye, Lock, Palette, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,6 +20,38 @@ import {
 import Image from "next/image";
 import type { Theme, ReportPage, PropertyData, Comparable } from "./types";
 import { THEMES, ACCENT_PRESETS } from "./types";
+
+// ---------------------------------------------------------------------------
+// Client-side color-role helpers (mirror the backend compute_color_roles)
+// ---------------------------------------------------------------------------
+function hexToRgb(hex: string): [number, number, number] {
+  let h = hex.replace("#", "");
+  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  const n = parseInt(h, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function luminance(r: number, g: number, b: number): number {
+  const [rs, gs, bs] = [r, g, b].map((c) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+}
+
+function contrastRatio(hex1: string, hex2: string): number {
+  const l1 = luminance(...hexToRgb(hex1));
+  const l2 = luminance(...hexToRgb(hex2));
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+/** Returns white or dark text depending on the accent brightness */
+function textOnAccent(hex: string): string {
+  const [r, g, b] = hexToRgb(hex);
+  return luminance(r, g, b) < 0.35 ? "#ffffff" : "#1a1a1a";
+}
 
 interface StepThemeProps {
   selectedThemeId: number;
@@ -46,6 +78,23 @@ export function StepTheme({
 }: StepThemeProps) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const selectedTheme = THEMES.find((t) => t.id === selectedThemeId);
+
+  // Live contrast-ratio metrics for the selected accent color
+  const colorMetrics = useMemo(() => {
+    const darkBg = "#1B365D"; // representative dark report background
+    const lightBg = "#ffffff";
+    const onDarkRatio = contrastRatio(accentColor, darkBg);
+    const onLightRatio = contrastRatio(accentColor, lightBg);
+    return {
+      darkBg,
+      lightBg,
+      onDarkRatio,
+      onLightRatio,
+      onDarkPass: onDarkRatio >= 3.0,
+      onLightPass: onLightRatio >= 3.0,
+      textOnAccent: textOnAccent(accentColor),
+    };
+  }, [accentColor]);
 
   /** When user picks a new theme, also set its default accent color */
   function handleThemeChange(id: number) {
@@ -250,6 +299,79 @@ export function StepTheme({
             style={{ backgroundColor: accentColor }}
           />
           <span className="text-[10px] text-muted-foreground">Custom hex</span>
+        </div>
+
+        {/* Color Contrast Preview */}
+        <div className="mt-4 pt-4 border-t border-border">
+          <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2.5 font-medium">
+            Live Contrast Preview
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {/* On dark background */}
+            <div
+              className="rounded-lg p-2.5 text-center"
+              style={{ backgroundColor: colorMetrics.darkBg }}
+            >
+              <p
+                className="text-[11px] font-bold"
+                style={{ color: accentColor }}
+              >
+                $485,000
+              </p>
+              <p className="text-[8px] text-white/50 mt-0.5">On dark</p>
+            </div>
+
+            {/* On light background */}
+            <div
+              className="rounded-lg p-2.5 text-center border border-border"
+              style={{ backgroundColor: colorMetrics.lightBg }}
+            >
+              <p
+                className="text-[11px] font-bold"
+                style={{ color: accentColor }}
+              >
+                $485,000
+              </p>
+              <p className="text-[8px] text-muted-foreground mt-0.5">
+                On light
+              </p>
+            </div>
+
+            {/* As background */}
+            <div
+              className="rounded-lg p-2.5 text-center"
+              style={{ backgroundColor: accentColor }}
+            >
+              <p
+                className="text-[11px] font-bold"
+                style={{ color: colorMetrics.textOnAccent }}
+              >
+                $485,000
+              </p>
+              <p
+                className="text-[8px] mt-0.5"
+                style={{
+                  color:
+                    colorMetrics.textOnAccent === "#ffffff"
+                      ? "rgba(255,255,255,0.6)"
+                      : "rgba(0,0,0,0.4)",
+                }}
+              >
+                As fill
+              </p>
+            </div>
+          </div>
+
+          {/* Auto-adjustment note */}
+          <div className="flex items-start gap-2 mt-3 bg-[#EEF2FF] rounded-lg p-2.5">
+            <ShieldCheck className="h-3.5 w-3.5 text-[#6366F1] mt-0.5 shrink-0" />
+            <p className="text-[10px] text-[#4338CA] leading-relaxed">
+              <span className="font-semibold">Smart Color System:</span> We
+              automatically adjust your accent color for readability on every
+              report section — dark headers, light backgrounds, and stat boxes.
+              Pick any color you love.
+            </p>
+          </div>
         </div>
       </div>
 

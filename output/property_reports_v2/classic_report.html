@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
+      /* Primary accent color - can be overridden by theme_color */
       --navy: #1B365D;
       --navy-light: #2C4A7C;
       --sky: #4A90A4;
@@ -378,11 +379,109 @@
       font-family: 'Merriweather', serif;
       font-size: 14px; font-weight: 700; color: var(--navy);
     }
+
+    /* ── Market Trends Page ──────────────────────────────────────── */
+    .page-market-trends .page-content{
+      display:flex; flex-direction:column; padding:0.5in var(--pad) 0.6in;
+    }
+    .mt-header{ margin-bottom:18px; }
+    .mt-title{
+      font-family:'Merriweather',serif; font-size:22px; font-weight:700;
+      color:var(--navy); margin:0 0 2px 0; line-height:1.2;
+    }
+    .mt-subtitle{
+      font-family:'Source Sans Pro',sans-serif; font-size:10px; color:var(--slate);
+      margin:0; letter-spacing:0.02em;
+    }
+    .mt-header-accent{
+      width:48px; height:3px; background:var(--sky); margin-top:8px; border-radius:2px;
+    }
+    .mt-condition{
+      border-radius:8px; padding:16px 18px; margin-bottom:18px;
+      display:flex; align-items:flex-start; gap:14px;
+    }
+    .mt-condition--sellers{ background:rgba(22,163,74,0.05); border:1px solid rgba(22,163,74,0.25); }
+    .mt-condition--balanced{ background:rgba(234,179,8,0.05); border:1px solid rgba(234,179,8,0.3); }
+    .mt-condition--buyers{ background:rgba(220,38,38,0.05); border:1px solid rgba(220,38,38,0.2); }
+    .mt-condition--unknown{ background:var(--cream); border:1px solid var(--border); }
+    .mt-condition-left{
+      flex-shrink:0; display:flex; flex-direction:column; align-items:center;
+      gap:6px; min-width:100px;
+    }
+    .mt-condition-label{
+      font-family:'Merriweather',serif; font-size:12px; font-weight:700;
+      color:var(--navy); white-space:nowrap;
+    }
+    .mt-condition-score{ display:flex; gap:3px; }
+    .mt-dot{
+      width:7px; height:7px; border-radius:50%; background:var(--border);
+      display:inline-block; flex-shrink:0;
+    }
+    .mt-dot--filled{ background:var(--sky); }
+    .mt-condition-desc{
+      font-family:'Source Sans Pro',sans-serif; font-size:9px; color:var(--slate);
+      line-height:1.5; margin:0;
+    }
+    .mt-grid{
+      display:grid; grid-template-columns:repeat(3,1fr);
+      gap:10px; margin-bottom:18px;
+    }
+    .mt-card{
+      border:1px solid var(--border); border-radius:8px; padding:14px 12px;
+      text-align:center; background:var(--cream); display:flex; flex-direction:column; gap:3px;
+    }
+    .mt-card-label{
+      font-family:'Source Sans Pro',sans-serif; font-size:7.5px; font-weight:600;
+      text-transform:uppercase; letter-spacing:0.06em; color:var(--slate);
+    }
+    .mt-card-value{
+      font-family:'Merriweather',serif; font-size:20px; font-weight:700;
+      color:var(--navy); line-height:1.15;
+    }
+    .mt-card-value--na{ color:var(--border); font-size:16px; }
+    .mt-card-note{ font-family:'Source Sans Pro',sans-serif; font-size:7.5px; color:var(--slate); }
+    .mt-card-change{ font-family:'Source Sans Pro',sans-serif; font-size:8px; color:var(--slate); font-weight:500; }
+    .mt-card-change--good{ color:#16a34a; }
+    .mt-card-change--bad{ color:#dc2626; }
+    .mt-card-change--neutral{ color:var(--slate); }
+    .mt-gauge-wrap{ flex:1; display:flex; flex-direction:column; justify-content:center; }
+    .mt-gauge-label{
+      font-family:'Source Sans Pro',sans-serif; font-size:7.5px; font-weight:600;
+      text-transform:uppercase; letter-spacing:0.06em; color:var(--slate); margin-bottom:18px;
+    }
+    .mt-gauge-container{ position:relative; }
+    .mt-gauge-bar{ height:22px; border-radius:999px; display:flex; overflow:hidden; }
+    .mt-gauge-zone{
+      flex:1; display:flex; align-items:center; justify-content:center;
+      font-family:'Source Sans Pro',sans-serif; font-size:7px; font-weight:700;
+      text-transform:uppercase; letter-spacing:0.04em; color:rgba(255,255,255,0.9);
+    }
+    .mt-gauge-zone--sellers{ background:#16a34a; }
+    .mt-gauge-zone--balanced{ background:#ca8a04; }
+    .mt-gauge-zone--buyers{ background:#dc2626; }
+    .mt-gauge-marker{
+      position:absolute; top:-28px; transform:translateX(-50%);
+      text-align:center; z-index:2; pointer-events:none;
+    }
+    .mt-gauge-pip{ display:block; font-size:11px; color:var(--navy); line-height:1; margin-bottom:1px; }
+    .mt-gauge-val{
+      display:inline-block; background:var(--navy); color:#fff;
+      padding:2px 8px; border-radius:999px; font-family:'Merriweather',serif;
+      font-size:9px; font-weight:700; white-space:nowrap;
+    }
+    .mt-gauge-tick-labels{
+      display:flex; justify-content:space-between; margin-top:4px;
+      font-family:'Source Sans Pro',sans-serif; font-size:7px; color:var(--slate);
+    }
+    .mt-attribution{ padding-top:12px; border-top:1px solid var(--border); margin-top:18px; }
+    .mt-attribution p{ font-family:'Source Sans Pro',sans-serif; font-size:7px; color:var(--slate); margin:0 0 2px 0; line-height:1.4; }
   </style>
 </head>
 <body>
+  
   <div class="sheet">
 
+    
     <!-- PAGE 1: COVER -->
     <section class="page cover">
       <div class="cover-top">
@@ -428,7 +527,9 @@
         </div>
       </div>
     </section>
+    
 
+    
     <!-- PAGE 2: CONTENTS -->
     <section class="page contents">
       <div class="page-header">
@@ -439,12 +540,15 @@
         <div class="contents-item"><div class="contents-num">1</div><div class="contents-text">Aerial Property View</div><div class="contents-dots"></div><div class="contents-page">03</div></div>
         <div class="contents-item"><div class="contents-num">2</div><div class="contents-text">Property Information</div><div class="contents-dots"></div><div class="contents-page">04</div></div>
         <div class="contents-item"><div class="contents-num">3</div><div class="contents-text">Area Sales Analysis</div><div class="contents-dots"></div><div class="contents-page">05</div></div>
-        <div class="contents-item"><div class="contents-num">4</div><div class="contents-text">Sales Comparables</div><div class="contents-dots"></div><div class="contents-page">06</div></div>
-        <div class="contents-item"><div class="contents-num">5</div><div class="contents-text">Estimated Value Range</div><div class="contents-dots"></div><div class="contents-page">07</div></div>
+        <div class="contents-item"><div class="contents-num">4</div><div class="contents-text">Market Trends</div><div class="contents-dots"></div><div class="contents-page">06</div></div>
+        <div class="contents-item"><div class="contents-num">5</div><div class="contents-text">Sales Comparables</div><div class="contents-dots"></div><div class="contents-page">07</div></div>
+        <div class="contents-item"><div class="contents-num">6</div><div class="contents-text">Estimated Value Range</div><div class="contents-dots"></div><div class="contents-page">08</div></div>
       </div>
       <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">02</div></div>
     </section>
+    
 
+    
     <!-- PAGE 3: AERIAL -->
     <section class="page aerial">
       <div class="aerial-header">
@@ -467,7 +571,9 @@
       </div>
       <div class="page-footer" style="border-color: rgba(255,255,255,.2);"><div class="brand" style="color:#fff;">Classic Collection • TrendyReports</div><div class="num" style="color:#fff;">03</div></div>
     </section>
+    
 
+    
     <!-- PAGE 4: PROPERTY -->
     <section class="page property">
       <div class="page-header">
@@ -520,7 +626,9 @@
       </div>
       <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">04</div></div>
     </section>
+    
 
+    
     <!-- PAGE 5: ANALYSIS -->
     <section class="page analysis">
       <div class="page-header">
@@ -572,8 +680,165 @@
       </table>
       <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">05</div></div>
     </section>
+    
 
-    <!-- PAGE 6: COMPARABLES -->
+    
+    <!-- PAGE 6: MARKET TRENDS -->
+    <section class="page page-market-trends">
+      <div class="page-header">
+        <div class="page-header-label">Market Intelligence</div>
+        <h2 class="page-header-title">Market Trends</h2>
+      </div>
+      <div class="page-content"><div class="mt-header">
+          <div class="mt-subtitle">La Verne - Jan 2026 - Mar 2026</div>
+          <div class="mt-header-accent"></div>
+        </div>
+
+        
+
+        <div class="mt-condition mt-condition--sellers">
+          <div class="mt-condition-left">
+            <span class="mt-condition-label">Seller&#39;s Market</span>
+            <div class="mt-condition-score">
+              
+              <span class="mt-dot mt-dot--filled"></span>
+              
+              <span class="mt-dot mt-dot--filled"></span>
+              
+              <span class="mt-dot mt-dot--filled"></span>
+              
+              <span class="mt-dot mt-dot--filled"></span>
+              
+              <span class="mt-dot mt-dot--filled"></span>
+              
+              <span class="mt-dot mt-dot--filled"></span>
+              
+              <span class="mt-dot mt-dot--filled"></span>
+              
+              <span class="mt-dot "></span>
+              
+              <span class="mt-dot "></span>
+              
+              <span class="mt-dot "></span>
+              
+            </div>
+          </div>
+          <p class="mt-condition-desc">Low inventory and strong demand continue to favor sellers in this market, with homes selling quickly at or above asking price.</p>
+        </div>
+
+        <div class="mt-grid">
+          
+          <div class="mt-card">
+            <div class="mt-card-label">Median Sale Price</div>
+            
+            <div class="mt-card-value">$615,000</div>
+            
+            <div class="mt-card-change mt-card-change--positive">
+              &#9650;
+              4.2% vs prior 90 days
+            </div>
+            
+            
+          </div>
+          
+          <div class="mt-card">
+            <div class="mt-card-label">Avg Days on Market</div>
+            
+            <div class="mt-card-value">18 days</div>
+            
+            <div class="mt-card-change mt-card-change--positive">
+              &#9660;
+              12.5% vs prior 90 days
+            </div>
+            
+            
+          </div>
+          
+          <div class="mt-card">
+            <div class="mt-card-label">List-to-Sale Ratio</div>
+            
+            <div class="mt-card-value">99.1%</div>
+            
+            <div class="mt-card-change mt-card-change--positive">
+              &#9650;
+              0.8% vs prior 90 days
+            </div>
+            
+            
+          </div>
+          
+          <div class="mt-card">
+            <div class="mt-card-label">Price per Sq Ft</div>
+            
+            <div class="mt-card-value">$485</div>
+            
+            <div class="mt-card-change mt-card-change--positive">
+              &#9650;
+              3.1% vs prior 90 days
+            </div>
+            
+            
+          </div>
+          
+          <div class="mt-card">
+            <div class="mt-card-label">Closed Sales (90 Days)</div>
+            
+            <div class="mt-card-value">42</div>
+            
+            <div class="mt-card-change mt-card-change--negative">
+              &#9660;
+              5.0% vs prior 90 days
+            </div>
+            
+            
+          </div>
+          
+          <div class="mt-card">
+            <div class="mt-card-label">Active Listings</div>
+            <div class="mt-card-value">28</div>
+            
+            <div class="mt-card-note">Avg $649,000</div>
+            
+          </div>
+        </div>
+
+        
+        <div class="mt-gauge-wrap">
+          <div class="mt-gauge-label">Months of Inventory</div>
+          <div class="mt-gauge-container">
+            <div class="mt-gauge-bar">
+              <div class="mt-gauge-zone mt-gauge-zone--sellers">Seller's<br>&lt; 4 mo</div>
+              <div class="mt-gauge-zone mt-gauge-zone--balanced">Balanced<br>4 - 6 mo</div>
+              <div class="mt-gauge-zone mt-gauge-zone--buyers">Buyer's<br>&gt; 6 mo</div>
+            </div>
+            <div class="mt-gauge-marker" style="left: 23%;">
+              <span class="mt-gauge-pip">&#9660;</span>
+              <span class="mt-gauge-val">2.8 mo</span>
+            </div>
+          </div>
+          <div class="mt-gauge-tick-labels">
+            <span>0 mo</span><span>3 mo</span><span>6 mo</span><span>9 mo</span><span>12 mo+</span>
+          </div>
+        </div>
+        
+
+        <div class="mt-attribution">
+          <p>
+            Data source: SimplyRETS MLS &middot;
+            La Verne &middot;
+            Jan 2026 - Mar 2026 &middot;
+            42 closed sales analyzed &middot;
+            Generated Mar 3, 2026
+          </p>
+          <p>Market conditions change rapidly. Consult your real estate professional for current, personalized advice.</p>
+        </div>
+      </div>
+      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">06</div></div>
+    </section>
+    
+
+    
+    <!-- PAGE 7: COMPARABLES -->
     <section class="page comparables">
       <div class="page-header">
         <div class="page-header-label">Recent Transactions</div>
@@ -591,7 +856,7 @@
               1889 Bonita Ave, La Verne
             </div>
             <div class="comp-card-stats">
-              <div class="comp-stat"><div class="comp-stat-label">Sold</div><div class="comp-stat-value">5/10/23</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Listed</div><div class="comp-stat-value">5/10/23</div></div>
               <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">940</div></div>
               <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">2/1</div></div>
               <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">$671</div></div>
@@ -609,7 +874,7 @@
               1507 2nd St, La Verne
             </div>
             <div class="comp-card-stats">
-              <div class="comp-stat"><div class="comp-stat-label">Sold</div><div class="comp-stat-value">3/15/23</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Listed</div><div class="comp-stat-value">3/15/23</div></div>
               <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">912</div></div>
               <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">3/1</div></div>
               <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">$696</div></div>
@@ -654,10 +919,12 @@
         </div>
         
       </div>
-      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">06</div></div>
+      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">07</div></div>
     </section>
+    
 
-    <!-- PAGE 7: RANGE -->
+    
+    <!-- PAGE 8: RANGE -->
     <section class="page range">
       <div class="page-header">
         <div class="page-header-label">Valuation Summary</div>
@@ -681,8 +948,9 @@
         </div>
         <p class="range-note">The above statistics represent average property details for comparable homes sold within the last 12 months. The price range indicates the low and high sale prices for properties matching your home's characteristics.</p>
       </div>
-      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">07</div></div>
+      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">08</div></div>
     </section>
+    
 
   </div>
 </body>

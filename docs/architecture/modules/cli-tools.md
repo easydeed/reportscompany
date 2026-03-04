@@ -144,27 +144,65 @@ python scripts/test_all_reports.py \
 
 ---
 
+### `scripts/gen_la_verne_all_themes.py`
+
+**Primary theme validation script.** Fetches live data from SiteX + SimplyRETS for a La Verne sample property, renders all 5 themes to HTML + optional PDF. Includes AI Executive Summary and Market Trends pages with pre-injected sample data.
+
+**Usage:**
+```bash
+python scripts/gen_la_verne_all_themes.py                # HTML + PDF (uses PDFShift if key set, else Playwright)
+python scripts/gen_la_verne_all_themes.py --html-only    # HTML only (fast, no PDF renderer needed)
+python scripts/gen_la_verne_all_themes.py --theme bold    # Single theme
+python scripts/gen_la_verne_all_themes.py --open          # Open output after generation
+```
+
+**Output:** `output/la_verne_themes/{theme}_report.html` (and `.pdf` if not `--html-only`)
+
+**Pages rendered:** `cover`, `overview`, `contents`, `aerial`, `property`, `analysis`, `comparables`, `range`, `market_trends` (9 pages).
+
+**Data:** Pre-injects `overview_text` and `market_trends_data` so the script works without `OPENAI_API_KEY`. Falls back to hardcoded property/comp data when SiteX/SimplyRETS are unavailable.
+
+**Requires:** `PDFSHIFT_API_KEY` for PDFShift PDF rendering (optional — falls back to Playwright, or use `--html-only`).
+
+---
+
 ### `scripts/generate_all_property_pdfs.py`
 
-**Batch PDF generation** for all 5 themes using sample data. Outputs to `output/property_reports/`.
+**Batch HTML/PDF generation** for all 5 themes using static sample data. Does **not** include AI overview page. Outputs to `output/property_reports_v2/`.
 
 **Usage:**
 ```bash
 python scripts/generate_all_property_pdfs.py
 ```
 
-**Requires:** `PDFSHIFT_API_KEY` in environment.
+**Requires:** `PDFSHIFT_API_KEY` in environment (optional).
 
 ---
 
-### `scripts/generate_theme_previews.py`
+### `scripts/generate_theme_preview_jpgs.py`
 
-**Generates PNG thumbnail previews** for all 5 property report themes. Used for UI theme selector.
+**Generates JPG thumbnail previews** for all 5 property report themes. Used by the wizard UI theme selector (`/previews/1.jpg` … `5.jpg`). Extracts the cover page from generated HTML and screenshots it via headless Chromium (Playwright).
 
 **Usage:**
 ```bash
-python scripts/generate_theme_previews.py
+# Prerequisite: generate theme HTML first
+python scripts/gen_la_verne_all_themes.py --html-only
+
+# Then generate previews
+python scripts/generate_theme_preview_jpgs.py
 ```
+
+**Input:** Reads from `output/la_verne_themes/` (preferred), falls back to `output/property_reports_v2/` or `output/property_reports/`.
+
+**Output:** `apps/web/public/previews/1.jpg` … `5.jpg` (510×660 px, letter-size aspect ratio)
+
+**Requires:** Playwright (`pip install playwright && playwright install chromium`). Optional: Pillow for PNG→JPG conversion.
+
+---
+
+### `scripts/generate_theme_previews.py` (legacy)
+
+**Generates PNG thumbnail previews.** Superseded by `generate_theme_preview_jpgs.py`.
 
 **Output:** `output/theme_previews/<theme>.png`
 
@@ -180,7 +218,7 @@ All tools read from `.env` (or environment variables). Minimum required:
 | `SIMPLYRETS_API_SECRET` | Same |
 | `SITEX_CLIENT_ID` | `test_sitex.py`, `test_property_report_flow.py` |
 | `SITEX_CLIENT_SECRET` | Same |
-| `PDFSHIFT_API_KEY` | `generate_all_property_pdfs.py` |
+| `PDFSHIFT_API_KEY` | `generate_all_property_pdfs.py`, `gen_la_verne_all_themes.py` (optional) |
 | `DATABASE_URL` | DB-interacting scripts |
 
 See `.env.example` in repo root for full list.
@@ -199,6 +237,8 @@ All scripts import from `apps/api/src/api/services/` or `apps/worker/src/worker/
 | `argparse` | CLI argument parsing |
 | `python-dotenv` | `.env` loading |
 | `tabulate` | Pretty-print output tables |
+| `playwright` | Headless Chromium for PDF rendering and JPG preview screenshots |
+| `Pillow` | PNG→JPG conversion for theme previews (optional) |
 
 ---
 
@@ -217,6 +257,8 @@ All scripts import from `apps/api/src/api/services/` or `apps/worker/src/worker/
 
 | Date | Change |
 |------|--------|
+| 2026-03 | Added `gen_la_verne_all_themes.py` — primary theme validation script with AI overview and market trends pages |
+| 2026-03 | Added `generate_theme_preview_jpgs.py` — Playwright-based JPG previews replacing `html2image`-based `generate_theme_previews.py` |
 | 2026-02 | Added `--report-types` filter to `qa_deliver_reports.py` |
 | 2026-01 | Added `test_property_report_flow.py` with fallback ladder validation |
 | 2025-12 | Added `generate_theme_previews.py` |

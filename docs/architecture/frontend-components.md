@@ -78,6 +78,25 @@ Multi-step wizard for creating scheduled reports.
 
 ---
 
+## Property Report Wizard (`property-wizard/`)
+
+Multi-step wizard for creating property reports.
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| PropertyWizard | `property-wizard/property-wizard.tsx` | Main wizard container (4 steps) |
+| StepTheme | `property-wizard/step-theme.tsx` | Theme selection, accent color picker with Smart Color System, page checklist |
+| types | `property-wizard/types.ts` | Theme definitions, page lists (FULL_PAGES, COMPACT_PAGES), accent presets |
+
+**StepTheme features:**
+- 5-theme gallery with preview images (`/previews/1-5.jpg`)
+- Accent color picker with per-theme suggested palettes and shared `ACCENT_PRESETS` (16 colors)
+- **Live Contrast Preview** — shows accent color on dark (#1B365D), light (#ffffff), and as fill, with real-time WCAG contrast ratios
+- **Smart Color System badge** — explains auto-adjustment for readability
+- Report page checklist with 9 pages including Executive Summary (`overview`); required pages (`property`, `comparables`) locked
+
+---
+
 ## Branding (`branding/`)
 
 | Component | File | Purpose |

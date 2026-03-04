@@ -11,7 +11,10 @@
     :root {
       /* Primary accent color - can be overridden by theme_color */
       --navy: {{ theme_color | default('#1B365D', true) }};
-      --navy-light: #2C4A7C;
+      --navy-light: {{ theme_color_light | default('#5a7199', true) }};
+      --navy-on-dark: {{ theme_color_on_dark | default('#5a7199', true) }};
+      --navy-on-light: {{ theme_color_on_light | default('#1B365D', true) }};
+      --navy-text: {{ theme_color_text | default('#ffffff', true) }};
       --sky: #4A90A4;
       --sand: #C4B7A6;
       --cream: #FDFBF7;
@@ -130,7 +133,7 @@
     .cover-title {
       font-family: 'Merriweather', serif;
       font-size: 58px; font-weight: 900;
-      color: var(--navy); line-height: 1.1;
+      color: var(--navy-on-light); line-height: 1.1;
       margin-bottom: 30px;
     }
     .cover-divider-wrap { width: 300px; margin: 0 auto 30px; }
@@ -158,7 +161,7 @@
     .cover-agent-name {
       font-family: 'Merriweather', serif;
       font-size: 22px; font-weight: 700;
-      color: var(--navy); margin-bottom: 4px;
+      color: var(--navy-on-light); margin-bottom: 4px;
     }
     .cover-agent-title { font-size: 14px; color: var(--slate); margin-bottom: 10px; }
     .cover-agent-details { display: flex; gap: 20px; font-size: 13px; color: var(--charcoal); }
@@ -168,7 +171,7 @@
     .cover-logo {
       font-family: 'Merriweather', serif;
       font-size: 14px; font-weight: 700;
-      color: var(--navy); letter-spacing: 0.05em;
+      color: var(--navy-on-light); letter-spacing: 0.05em;
     }
     .cover-logo-sub { font-size: 11px; color: var(--slate); margin-top: 2px; }
 
@@ -193,7 +196,7 @@
     }
     .page-header-title {
       font-family: 'Merriweather', serif;
-      font-size: 36px; font-weight: 900; color: var(--navy);
+      font-size: 36px; font-weight: 900; color: var(--navy-on-light);
     }
     .contents-list { margin-top: 40px; }
     .contents-item {
@@ -204,7 +207,7 @@
     .contents-num {
       font-family: 'Merriweather', serif;
       font-size: 24px; font-weight: 900;
-      color: var(--navy); width: 50px;
+      color: var(--navy-on-light); width: 50px;
     }
     .contents-text { flex: 1; font-size: 16px; color: var(--charcoal); }
     .contents-dots {
@@ -233,7 +236,7 @@
     .aerial-info-card h3 {
       font-family: 'Merriweather', serif;
       font-size: 14px; font-weight: 700;
-      color: var(--navy); margin-bottom: 8px;
+      color: var(--navy-on-light); margin-bottom: 8px;
     }
     .aerial-info-card p { font-size: 13px; line-height: 1.6; color: var(--slate); }
 
@@ -273,7 +276,7 @@
     .chart-title {
       font-family: 'Merriweather', serif;
       font-size: 14px; font-weight: 700;
-      color: var(--navy); margin-bottom: 20px; text-align: center;
+      color: var(--navy-on-light); margin-bottom: 20px; text-align: center;
     }
     .chart-bars {
       display: flex; align-items: flex-end; justify-content: space-around;
@@ -317,7 +320,7 @@
     .comp-card-address {
       font-family: 'Merriweather', serif;
       font-size: 14px; font-weight: 700;
-      color: var(--navy); margin-bottom: 12px;
+      color: var(--navy-on-light); margin-bottom: 12px;
       display: flex; align-items: center; gap: 8px;
     }
     .comp-card-address svg { width: 14px; height: 14px; fill: var(--sky); flex-shrink: 0; }
@@ -341,7 +344,7 @@
     .range-stat-num {
       font-family: 'Merriweather', serif;
       font-size: 38px; font-weight: 900;
-      color: var(--warm-white); line-height: 1;
+      color: var(--navy-text); line-height: 1;
     }
     .range-stat-label {
       font-size: 11px; color: var(--sand);
@@ -353,7 +356,7 @@
     .range-slider-header { display: flex; justify-content: space-between; margin-bottom: 15px; }
     .range-slider-price {
       font-family: 'Merriweather', serif;
-      font-size: 22px; font-weight: 900; color: var(--navy);
+      font-size: 22px; font-weight: 900; color: var(--navy-on-light);
     }
     .range-slider-track {
       height: 10px;
@@ -377,28 +380,28 @@
     .page-footer .brand { font-size: 11px; color: var(--slate); }
     .page-footer .num {
       font-family: 'Merriweather', serif;
-      font-size: 14px; font-weight: 700; color: var(--navy);
+      font-size: 14px; font-weight: 700; color: var(--navy-on-light);
     }
 
     /* ── Market Trends Page ──────────────────────────────────────── */
     .page-market-trends .page-content{
       display:flex; flex-direction:column; padding:0.5in var(--pad) 0.6in;
     }
-    .mt-header{ margin-bottom:18px; }
+    .mt-header{ margin-bottom:22px; }
     .mt-title{
-      font-family:'Merriweather',serif; font-size:22px; font-weight:700;
-      color:var(--navy); margin:0 0 2px 0; line-height:1.2;
+      font-family:'Merriweather',serif; font-size:24px; font-weight:700;
+      color:var(--navy-on-light); margin:0 0 4px 0; line-height:1.2;
     }
     .mt-subtitle{
-      font-family:'Source Sans Pro',sans-serif; font-size:10px; color:var(--slate);
+      font-family:'Source Sans Pro',sans-serif; font-size:11px; color:var(--slate);
       margin:0; letter-spacing:0.02em;
     }
     .mt-header-accent{
-      width:48px; height:3px; background:var(--sky); margin-top:8px; border-radius:2px;
+      width:56px; height:4px; background:var(--sky); margin-top:10px; border-radius:2px;
     }
     .mt-condition{
-      border-radius:8px; padding:16px 18px; margin-bottom:18px;
-      display:flex; align-items:flex-start; gap:14px;
+      border-radius:10px; padding:22px 24px; margin-bottom:22px;
+      display:flex; align-items:flex-start; gap:18px;
     }
     .mt-condition--sellers{ background:rgba(22,163,74,0.05); border:1px solid rgba(22,163,74,0.25); }
     .mt-condition--balanced{ background:rgba(234,179,8,0.05); border:1px solid rgba(234,179,8,0.3); }
@@ -406,79 +409,115 @@
     .mt-condition--unknown{ background:var(--cream); border:1px solid var(--border); }
     .mt-condition-left{
       flex-shrink:0; display:flex; flex-direction:column; align-items:center;
-      gap:6px; min-width:100px;
+      gap:8px; min-width:110px;
     }
     .mt-condition-label{
-      font-family:'Merriweather',serif; font-size:12px; font-weight:700;
-      color:var(--navy); white-space:nowrap;
+      font-family:'Merriweather',serif; font-size:14px; font-weight:700;
+      color:var(--navy-on-light); white-space:nowrap;
     }
-    .mt-condition-score{ display:flex; gap:3px; }
+    .mt-condition-score{ display:flex; gap:4px; }
     .mt-dot{
-      width:7px; height:7px; border-radius:50%; background:var(--border);
+      width:9px; height:9px; border-radius:50%; background:var(--border);
       display:inline-block; flex-shrink:0;
     }
     .mt-dot--filled{ background:var(--sky); }
     .mt-condition-desc{
-      font-family:'Source Sans Pro',sans-serif; font-size:9px; color:var(--slate);
-      line-height:1.5; margin:0;
+      font-family:'Source Sans Pro',sans-serif; font-size:10px; color:var(--slate);
+      line-height:1.6; margin:0;
     }
     .mt-grid{
       display:grid; grid-template-columns:repeat(3,1fr);
-      gap:10px; margin-bottom:18px;
+      gap:14px; margin-bottom:22px;
     }
     .mt-card{
-      border:1px solid var(--border); border-radius:8px; padding:14px 12px;
-      text-align:center; background:var(--cream); display:flex; flex-direction:column; gap:3px;
+      border:1px solid var(--border); border-radius:10px; padding:22px 16px;
+      text-align:center; background:var(--cream); display:flex; flex-direction:column; gap:5px;
     }
     .mt-card-label{
-      font-family:'Source Sans Pro',sans-serif; font-size:7.5px; font-weight:600;
+      font-family:'Source Sans Pro',sans-serif; font-size:9px; font-weight:600;
       text-transform:uppercase; letter-spacing:0.06em; color:var(--slate);
     }
     .mt-card-value{
-      font-family:'Merriweather',serif; font-size:20px; font-weight:700;
-      color:var(--navy); line-height:1.15;
+      font-family:'Merriweather',serif; font-size:26px; font-weight:700;
+      color:var(--navy-on-light); line-height:1.15;
     }
-    .mt-card-value--na{ color:var(--border); font-size:16px; }
-    .mt-card-note{ font-family:'Source Sans Pro',sans-serif; font-size:7.5px; color:var(--slate); }
-    .mt-card-change{ font-family:'Source Sans Pro',sans-serif; font-size:8px; color:var(--slate); font-weight:500; }
+    .mt-card-value--na{ color:var(--border); font-size:18px; }
+    .mt-card-note{ font-family:'Source Sans Pro',sans-serif; font-size:8.5px; color:var(--slate); }
+    .mt-card-change{ font-family:'Source Sans Pro',sans-serif; font-size:9px; color:var(--slate); font-weight:500; }
     .mt-card-change--good{ color:#16a34a; }
     .mt-card-change--bad{ color:#dc2626; }
     .mt-card-change--neutral{ color:var(--slate); }
-    .mt-gauge-wrap{ flex:1; display:flex; flex-direction:column; justify-content:center; }
+    .mt-gauge-wrap{ flex:1; display:flex; flex-direction:column; justify-content:center; padding:8px 0; }
     .mt-gauge-label{
-      font-family:'Source Sans Pro',sans-serif; font-size:7.5px; font-weight:600;
-      text-transform:uppercase; letter-spacing:0.06em; color:var(--slate); margin-bottom:18px;
+      font-family:'Source Sans Pro',sans-serif; font-size:9px; font-weight:600;
+      text-transform:uppercase; letter-spacing:0.06em; color:var(--slate); margin-bottom:22px;
     }
     .mt-gauge-container{ position:relative; }
-    .mt-gauge-bar{ height:22px; border-radius:999px; display:flex; overflow:hidden; }
+    .mt-gauge-bar{ height:30px; border-radius:999px; display:flex; overflow:hidden; }
     .mt-gauge-zone{
       flex:1; display:flex; align-items:center; justify-content:center;
-      font-family:'Source Sans Pro',sans-serif; font-size:7px; font-weight:700;
+      font-family:'Source Sans Pro',sans-serif; font-size:8px; font-weight:700;
       text-transform:uppercase; letter-spacing:0.04em; color:rgba(255,255,255,0.9);
     }
     .mt-gauge-zone--sellers{ background:#16a34a; }
     .mt-gauge-zone--balanced{ background:#ca8a04; }
     .mt-gauge-zone--buyers{ background:#dc2626; }
     .mt-gauge-marker{
-      position:absolute; top:-28px; transform:translateX(-50%);
+      position:absolute; top:-32px; transform:translateX(-50%);
       text-align:center; z-index:2; pointer-events:none;
     }
-    .mt-gauge-pip{ display:block; font-size:11px; color:var(--navy); line-height:1; margin-bottom:1px; }
+    .mt-gauge-pip{ display:block; font-size:13px; color:var(--navy-on-light); line-height:1; margin-bottom:2px; }
     .mt-gauge-val{
-      display:inline-block; background:var(--navy); color:#fff;
-      padding:2px 8px; border-radius:999px; font-family:'Merriweather',serif;
-      font-size:9px; font-weight:700; white-space:nowrap;
+      display:inline-block; background:var(--navy); color:var(--navy-text);
+      padding:3px 10px; border-radius:999px; font-family:'Merriweather',serif;
+      font-size:10px; font-weight:700; white-space:nowrap;
     }
     .mt-gauge-tick-labels{
-      display:flex; justify-content:space-between; margin-top:4px;
-      font-family:'Source Sans Pro',sans-serif; font-size:7px; color:var(--slate);
+      display:flex; justify-content:space-between; margin-top:6px;
+      font-family:'Source Sans Pro',sans-serif; font-size:8px; color:var(--slate);
     }
-    .mt-attribution{ padding-top:12px; border-top:1px solid var(--border); margin-top:18px; }
-    .mt-attribution p{ font-family:'Source Sans Pro',sans-serif; font-size:7px; color:var(--slate); margin:0 0 2px 0; line-height:1.4; }
+    .mt-attribution{ padding-top:14px; border-top:1px solid var(--border); margin-top:22px; }
+    .mt-attribution p{ font-family:'Source Sans Pro',sans-serif; font-size:7.5px; color:var(--slate); margin:0 0 2px 0; line-height:1.4; }
+
+    /* ── Overview / Executive Summary Page ─────────────────────────── */
+    .page-overview .page-content{
+      display:flex; flex-direction:column; padding:0.6in var(--pad) 0.5in;
+    }
+    .overview-header{ margin-bottom:28px; }
+    .overview-label{
+      font-family:'Source Sans Pro',sans-serif; font-size:9px; font-weight:600;
+      text-transform:uppercase; letter-spacing:0.15em; color:var(--sky-on-light);
+      margin-bottom:6px;
+    }
+    .overview-title{
+      font-family:'Merriweather',serif; font-size:26px; font-weight:700;
+      color:var(--navy-on-light); margin:0 0 4px 0; line-height:1.2;
+    }
+    .overview-accent{
+      width:56px; height:4px; background:var(--sky); margin-top:10px; border-radius:2px;
+    }
+    .overview-body{
+      font-family:'Source Sans Pro',sans-serif; font-size:12px; line-height:1.85;
+      color:#3a3a3a; flex:1;
+    }
+    .overview-body p{ margin:0 0 16px 0; }
+    .overview-footer{
+      margin-top:auto; padding-top:20px; border-top:1px solid var(--border);
+      display:flex; align-items:center; gap:14px;
+    }
+    .overview-footer-photo{
+      width:44px; height:44px; border-radius:50%; overflow:hidden; flex-shrink:0;
+      border:2px solid var(--sky);
+    }
+    .overview-footer-photo img{ width:100%; height:100%; object-fit:cover; }
+    .overview-footer-info{
+      font-family:'Source Sans Pro',sans-serif; font-size:9px; color:var(--slate); line-height:1.5;
+    }
+    .overview-footer-name{ font-weight:700; color:var(--navy-on-light); font-size:10px; }
   </style>
 </head>
 <body>
-  {% set _pages = page_set | default(["cover","contents","aerial","property","analysis","comparables","range","market_trends"]) %}
+  {% set _pages = page_set | default(["cover","overview","contents","aerial","property","analysis","comparables","range","market_trends"]) %}
   <div class="sheet">
 
     {% if "cover" in _pages %}
@@ -524,6 +563,36 @@
         <div class="cover-logo-area">
           <div class="cover-logo">{{ agent.company_name | default('REALTY GROUP') }}</div>
           <div class="cover-logo-sub">{{ agent.company_tagline | default('') }}</div>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    {% if "overview" in _pages and overview_text %}
+    <!-- PAGE: EXECUTIVE SUMMARY / OVERVIEW -->
+    <section class="page page-overview">
+      <div class="page-content">
+        <div class="overview-header">
+          <div class="overview-label">Executive Summary</div>
+          <h2 class="overview-title">Property Overview</h2>
+          <div class="overview-accent"></div>
+        </div>
+        <div class="overview-body">
+          {% for para in overview_text.split('\n\n') %}
+          {% if para.strip() %}
+          <p>{{ para.strip() }}</p>
+          {% endif %}
+          {% endfor %}
+        </div>
+        <div class="overview-footer">
+          {% if agent.photo_url %}
+          <div class="overview-footer-photo"><img src="{{ agent.photo_url }}" alt="{{ agent.name }}"></div>
+          {% endif %}
+          <div class="overview-footer-info">
+            <div class="overview-footer-name">{{ agent.name }}</div>
+            <div>{{ agent.title | default('Realtor®') }} · {{ agent.company_name }}</div>
+            <div>{{ agent.phone }}{% if agent.email %} · {{ agent.email }}{% endif %}</div>
+          </div>
         </div>
       </div>
     </section>

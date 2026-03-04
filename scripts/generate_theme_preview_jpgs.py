@@ -2,8 +2,8 @@
 """
 Generate JPG preview thumbnails for each theme.
 
-Reads the already-generated HTML files from output/property_reports_v2/,
-extracts the cover page section, and renders it to a JPG using html2image.
+Reads the already-generated HTML files from output/la_verne_themes/,
+extracts the cover page section, and renders it to a JPG using Playwright.
 
 Output: apps/web/public/previews/1.jpg ... 5.jpg
         (These are referenced by types.ts previewImage field)
@@ -12,13 +12,18 @@ Usage:
     python scripts/generate_theme_preview_jpgs.py
 """
 
-import os
 import re
 import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent
-HTML_DIR = PROJECT_ROOT / "output" / "property_reports_v2"
+
+# Try la_verne_themes first (latest gen script output), fall back to others
+HTML_CANDIDATES = [
+    PROJECT_ROOT / "output" / "la_verne_themes",
+    PROJECT_ROOT / "output" / "property_reports_v2",
+    PROJECT_ROOT / "output" / "property_reports",
+]
 OUTPUT_DIR = PROJECT_ROOT / "apps" / "web" / "public" / "previews"
 
 # Theme ID -> HTML filename mapping  (matches types.ts theme IDs)
@@ -31,13 +36,19 @@ THEME_MAP = {
 }
 
 
+def find_html_dir() -> Path:
+    """Find the first existing HTML output directory."""
+    for d in HTML_CANDIDATES:
+        if d.exists() and any(d.glob("*_report.html")):
+            return d
+    return HTML_CANDIDATES[0]  # Return first as default (will error later)
+
+
 def extract_cover_html(full_html: str) -> str:
     """
     Extract everything up to and including the first </section> tag.
-    This gives us the full <html>...<section class="page">...</section>
-    but we need to close the doc properly.
+    This gives us the cover page as a standalone HTML document.
     """
-    # Find the first closing </section> tag
     match = re.search(r"</section>", full_html)
     if not match:
         return full_html
@@ -51,93 +62,106 @@ def extract_cover_html(full_html: str) -> str:
 
 
 def main():
+    sys.stdout.reconfigure(encoding="utf-8")
+
     print("=" * 60)
-    print("Theme Preview JPG Generator")
+    print("Theme Preview JPG Generator (Playwright)")
     print("=" * 60)
     print()
 
-    # Check input directory
+    HTML_DIR = find_html_dir()
+
     if not HTML_DIR.exists():
         print(f"[ERROR] HTML directory not found: {HTML_DIR}")
-        print("        Run generate_all_property_pdfs.py first.")
+        print("        Run gen_la_verne_all_themes.py first.")
         sys.exit(1)
 
-    # Create output directory
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     print(f"[INPUT]  {HTML_DIR}")
     print(f"[OUTPUT] {OUTPUT_DIR}")
     print()
 
+    # Try Playwright first (preferred — same renderer as PDF generation)
     try:
-        from html2image import Html2Image
+        from playwright.sync_api import sync_playwright
     except ImportError:
-        print("[ERROR] html2image not installed. Run: pip install html2image")
+        print("[ERROR] Playwright not installed. Run: pip install playwright && playwright install chromium")
         sys.exit(1)
 
-    # Initialize html2image with chrome flags for better rendering
-    hti = Html2Image(
-        output_path=str(OUTPUT_DIR),
-        custom_flags=[
-            "--no-sandbox",
-            "--disable-gpu",
-            "--hide-scrollbars",
-            "--force-device-scale-factor=1",
-        ],
-    )
-
-    # Letter-size aspect ratio: 8.5 x 11 inches
-    # At reasonable web resolution, let's use 510 x 660 (scaled down for thumbnails)
+    # Letter-size aspect ratio: 8.5 x 11 -> 510 x 660 for thumbnails
     img_width = 510
     img_height = 660
 
     results = []
 
-    for theme_id, html_filename in THEME_MAP.items():
-        html_path = HTML_DIR / html_filename
-        if not html_path.exists():
-            print(f"[SKIP] {html_filename} not found")
-            results.append((theme_id, False))
-            continue
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
 
-        print(f"[THEME {theme_id}] {html_filename}")
+        for theme_id, html_filename in THEME_MAP.items():
+            html_path = HTML_DIR / html_filename
+            if not html_path.exists():
+                print(f"[SKIP] {html_filename} not found")
+                results.append((theme_id, False))
+                continue
 
-        # Read full HTML
-        full_html = html_path.read_text(encoding="utf-8")
+            print(f"[THEME {theme_id}] {html_filename}")
 
-        # Extract just the cover page
-        cover_html = extract_cover_html(full_html)
+            try:
+                # Read full HTML
+                full_html = html_path.read_text(encoding="utf-8")
 
-        # Generate JPG
-        output_filename = f"{theme_id}.jpg"
-        try:
-            hti.screenshot(
-                html_str=cover_html,
-                save_as=output_filename,
-                size=(img_width, img_height),
-            )
-            output_path = OUTPUT_DIR / output_filename
+                # Extract just the cover page
+                cover_html = extract_cover_html(full_html)
 
-            if output_path.exists():
-                size_kb = output_path.stat().st_size / 1024
-                print(f"  [OK] {output_filename} ({size_kb:.0f} KB)")
-                results.append((theme_id, True))
-            else:
-                # html2image sometimes saves as PNG, try converting
+                # Create a new page with the cover dimensions
+                page = browser.new_page(
+                    viewport={"width": img_width, "height": img_height}
+                )
+                page.set_content(cover_html, wait_until="networkidle")
+
+                # Wait for fonts to load
+                try:
+                    page.evaluate("() => document.fonts.ready")
+                except Exception:
+                    pass
+
+                # Take screenshot as PNG first (Playwright native), then convert to JPG
                 png_path = OUTPUT_DIR / f"{theme_id}.png"
-                if png_path.exists():
+                jpg_path = OUTPUT_DIR / f"{theme_id}.jpg"
+
+                page.screenshot(
+                    path=str(png_path),
+                    full_page=False,
+                    clip={"x": 0, "y": 0, "width": img_width, "height": img_height},
+                )
+                page.close()
+
+                # Convert PNG to JPG for smaller file size
+                try:
                     from PIL import Image
                     img = Image.open(png_path).convert("RGB")
-                    img.save(output_path, "JPEG", quality=85)
-                    png_path.unlink()
-                    size_kb = output_path.stat().st_size / 1024
-                    print(f"  [OK] {output_filename} (converted from PNG, {size_kb:.0f} KB)")
+                    img.save(str(jpg_path), "JPEG", quality=88)
+                    png_path.unlink()  # Remove PNG
+                    size_kb = jpg_path.stat().st_size / 1024
+                    print(f"  [OK] {theme_id}.jpg ({size_kb:.0f} KB)")
                     results.append((theme_id, True))
-                else:
-                    print(f"  [WARN] Output file not created")
-                    results.append((theme_id, False))
-        except Exception as e:
-            print(f"  [ERROR] {e}")
-            results.append((theme_id, False))
+                except ImportError:
+                    # No Pillow — just keep the PNG and rename
+                    if png_path.exists():
+                        # Can't convert without Pillow, keep as PNG
+                        # But rename to .jpg (browsers handle this fine)
+                        if jpg_path.exists():
+                            jpg_path.unlink()
+                        png_path.rename(jpg_path)
+                        size_kb = jpg_path.stat().st_size / 1024
+                        print(f"  [OK] {theme_id}.jpg ({size_kb:.0f} KB, PNG format)")
+                        results.append((theme_id, True))
+
+            except Exception as e:
+                print(f"  [ERROR] {e}")
+                results.append((theme_id, False))
+
+        browser.close()
 
     # Summary
     print()

@@ -15,6 +15,10 @@
       /* Primary accent color - can be overridden by theme_color */
       --teal: {{ theme_color | default('#34d1c3', true) }};
       --teal-2: {{ theme_color_dark | default('#21c7b7', true) }};
+      --teal-on-dark: {{ theme_color_on_dark | default('#34d1c3', true) }};
+      --teal-on-light: {{ theme_color_on_light | default('#1abaae', true) }};
+      --teal-light: {{ theme_color_light | default('#7fe3da', true) }};
+      --teal-text: {{ theme_color_text | default('#1a1a1a', true) }};
       --navy:#18235c;
       --navy-2:#0f1a45;
       --ink:#0b0f1a;
@@ -211,7 +215,7 @@
       font-weight: 700;
       letter-spacing:.2em;
       text-transform: uppercase;
-      color: var(--teal);
+      color: var(--teal-on-dark);
       margin-bottom: 16px;
     }
     .cover-title{
@@ -229,7 +233,7 @@
       display:block;
       font-weight: 300;
       font-size: 58px;
-      color: var(--teal);
+      color: var(--teal-on-dark);
       margin-top: 4px;
     }
     .cover-divider{
@@ -318,7 +322,7 @@
     .cover-logo-text{
       font-size: 36px;
       line-height: 1;
-      color: var(--teal);
+      color: var(--teal-on-dark);
       font-weight: 800;
       letter-spacing:.02em;
     }
@@ -394,7 +398,7 @@
     }
     .toc-item .num{
       font-weight: 900;
-      color: var(--teal);
+      color: var(--teal-on-light);
       font-size: 22px;
       width: 36px;
       flex-shrink: 0;
@@ -411,7 +415,7 @@
       position: relative;
       top: -4px;
     }
-    .toc-item .page{
+    .toc-item .pg-num{
       font-size: 18px;
       font-weight: 900;
       color: var(--navy);
@@ -429,7 +433,7 @@
       font-size: 12px;
       letter-spacing:.2em;
       text-transform: uppercase;
-      color: var(--teal);
+      color: var(--teal-on-dark);
       font-weight: 700;
       margin-bottom: 12px;
     }
@@ -463,7 +467,7 @@
       color:#fff;
     }
     .hero-pad .h{
-      color: var(--teal);
+      color: var(--teal-on-dark);
       font-weight: 900;
       font-size: 38px;
       text-transform: uppercase;
@@ -588,7 +592,7 @@
       align-items:center;
       gap: 6px;
       font-weight: 700;
-      color: var(--teal);
+      color: var(--teal-on-light);
     }
     .page-footer .num{
       font-weight: 800;
@@ -656,7 +660,7 @@
     .analysis-intro-text h3{
       font-size: 16px;
       font-weight: 800;
-      color: var(--teal);
+      color: var(--teal-on-dark);
       margin: 0 0 8px;
       text-transform: uppercase;
       letter-spacing: .04em;
@@ -680,7 +684,7 @@
     .analysis-stat .num{
       font-size: 28px;
       font-weight: 900;
-      color: var(--teal);
+      color: var(--teal-on-dark);
       line-height: 1;
     }
     .analysis-stat .lbl{
@@ -874,7 +878,7 @@
     }
     .comp-price .lbl{ opacity:.85; font-size: 12px; font-weight: 600; }
     .comp-price .val{
-      color: var(--teal);
+      color: var(--teal-on-light);
       font-weight: 900;
       font-size: 30px;
       letter-spacing:.01em;
@@ -924,7 +928,7 @@
       padding: 12px 8px;
     }
     .metric .num{
-      color: var(--teal);
+      color: var(--teal-on-dark);
       font-weight: 900;
       font-size: 48px;
       letter-spacing:.02em;
@@ -992,23 +996,23 @@
     .page-market-trends .page-content{
       display:flex; flex-direction:column; padding:0.4in 0.5in 0.6in;
     }
-    .mt-header{ margin-bottom:18px; }
+    .mt-header{ margin-bottom:22px; }
     .mt-title{
-      font-family:'Montserrat',sans-serif; font-size:22px; font-weight:800;
+      font-family:'Montserrat',sans-serif; font-size:24px; font-weight:800;
       text-transform:uppercase; letter-spacing:0.06em; color:var(--navy);
-      margin:0 0 2px 0; line-height:1.15;
+      margin:0 0 4px 0; line-height:1.15;
     }
     .mt-subtitle{
-      font-family:'Montserrat',sans-serif; font-size:10px; color:var(--muted);
+      font-family:'Montserrat',sans-serif; font-size:11px; color:var(--muted);
       margin:0; letter-spacing:0.02em;
     }
     .mt-header-accent{
-      width:48px; height:3px; background:var(--teal); margin-top:8px; border-radius:2px;
+      width:56px; height:4px; background:var(--teal); margin-top:10px; border-radius:2px;
     }
     /* Condition badge */
     .mt-condition{
-      border-radius:10px; padding:16px 18px; margin-bottom:18px;
-      display:flex; align-items:flex-start; gap:14px;
+      border-radius:12px; padding:22px 24px; margin-bottom:22px;
+      display:flex; align-items:flex-start; gap:18px;
     }
     .mt-condition--sellers{ background:rgba(22,163,74,0.05); border:1px solid rgba(22,163,74,0.25); }
     .mt-condition--balanced{ background:rgba(234,179,8,0.05); border:1px solid rgba(234,179,8,0.3); }
@@ -1016,87 +1020,128 @@
     .mt-condition--unknown{ background:var(--bg); border:1px solid var(--line); }
     .mt-condition-left{
       flex-shrink:0; display:flex; flex-direction:column; align-items:center;
-      gap:6px; min-width:100px;
+      gap:8px; min-width:110px;
     }
     .mt-condition-label{
-      font-family:'Montserrat',sans-serif; font-size:12px; font-weight:700;
+      font-family:'Montserrat',sans-serif; font-size:14px; font-weight:700;
       color:var(--navy); white-space:nowrap;
     }
-    .mt-condition-score{ display:flex; gap:3px; }
+    .mt-condition-score{ display:flex; gap:4px; }
     .mt-dot{
-      width:7px; height:7px; border-radius:50%; background:var(--line);
+      width:9px; height:9px; border-radius:50%; background:var(--line);
       display:inline-block; flex-shrink:0;
     }
     .mt-dot--filled{ background:var(--teal); }
     .mt-condition-desc{
-      font-family:'Montserrat',sans-serif; font-size:9px; color:var(--muted);
-      line-height:1.5; margin:0;
+      font-family:'Montserrat',sans-serif; font-size:10px; color:var(--muted);
+      line-height:1.6; margin:0;
     }
     /* Metrics grid */
     .mt-grid{
       display:grid; grid-template-columns:repeat(3,1fr);
-      gap:10px; margin-bottom:18px;
+      gap:14px; margin-bottom:22px;
     }
     .mt-card{
-      border:1px solid var(--line); border-radius:10px; padding:14px 12px;
-      text-align:center; background:var(--bg); display:flex; flex-direction:column; gap:3px;
+      border:1px solid var(--line); border-radius:12px; padding:22px 16px;
+      text-align:center; background:var(--bg); display:flex; flex-direction:column; gap:5px;
     }
     .mt-card-label{
-      font-family:'Montserrat',sans-serif; font-size:7.5px; font-weight:600;
+      font-family:'Montserrat',sans-serif; font-size:9px; font-weight:600;
       text-transform:uppercase; letter-spacing:0.06em; color:var(--muted);
     }
     .mt-card-value{
-      font-family:'Montserrat',sans-serif; font-size:20px; font-weight:700;
+      font-family:'Montserrat',sans-serif; font-size:26px; font-weight:700;
       color:var(--navy); line-height:1.15;
     }
-    .mt-card-value--na{ color:var(--line); font-size:16px; }
+    .mt-card-value--na{ color:var(--line); font-size:18px; }
     .mt-card-note{
-      font-family:'Montserrat',sans-serif; font-size:7.5px; color:var(--muted);
+      font-family:'Montserrat',sans-serif; font-size:8.5px; color:var(--muted);
     }
     .mt-card-change{
-      font-family:'Montserrat',sans-serif; font-size:8px; color:var(--muted); font-weight:500;
+      font-family:'Montserrat',sans-serif; font-size:9px; color:var(--muted); font-weight:500;
     }
     .mt-card-change--good{ color:#16a34a; }
     .mt-card-change--bad{ color:#dc2626; }
     .mt-card-change--neutral{ color:var(--muted); }
     /* Gauge */
-    .mt-gauge-wrap{ flex:1; display:flex; flex-direction:column; justify-content:center; }
+    .mt-gauge-wrap{ flex:1; display:flex; flex-direction:column; justify-content:center; padding:8px 0; }
     .mt-gauge-label{
-      font-family:'Montserrat',sans-serif; font-size:7.5px; font-weight:600;
-      text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); margin-bottom:18px;
+      font-family:'Montserrat',sans-serif; font-size:9px; font-weight:600;
+      text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); margin-bottom:22px;
     }
     .mt-gauge-container{ position:relative; }
     .mt-gauge-bar{
-      height:22px; border-radius:999px; display:flex; overflow:hidden;
+      height:30px; border-radius:999px; display:flex; overflow:hidden;
     }
     .mt-gauge-zone{
       flex:1; display:flex; align-items:center; justify-content:center;
-      font-family:'Montserrat',sans-serif; font-size:7px; font-weight:700;
+      font-family:'Montserrat',sans-serif; font-size:8px; font-weight:700;
       text-transform:uppercase; letter-spacing:0.04em; color:rgba(255,255,255,0.9);
     }
     .mt-gauge-zone--sellers{ background:#16a34a; }
     .mt-gauge-zone--balanced{ background:#ca8a04; }
     .mt-gauge-zone--buyers{ background:#dc2626; }
     .mt-gauge-marker{
-      position:absolute; top:-28px; transform:translateX(-50%);
+      position:absolute; top:-32px; transform:translateX(-50%);
       text-align:center; z-index:2; pointer-events:none;
     }
-    .mt-gauge-pip{ display:block; font-size:11px; color:var(--navy); line-height:1; margin-bottom:1px; }
+    .mt-gauge-pip{ display:block; font-size:13px; color:var(--navy); line-height:1; margin-bottom:2px; }
     .mt-gauge-val{
       display:inline-block; background:var(--navy); color:#fff;
-      padding:2px 8px; border-radius:999px; font-family:'Montserrat',sans-serif;
-      font-size:9px; font-weight:700; white-space:nowrap;
+      padding:3px 10px; border-radius:999px; font-family:'Montserrat',sans-serif;
+      font-size:10px; font-weight:700; white-space:nowrap;
     }
     .mt-gauge-tick-labels{
-      display:flex; justify-content:space-between; margin-top:4px;
-      font-family:'Montserrat',sans-serif; font-size:7px; color:var(--muted);
+      display:flex; justify-content:space-between; margin-top:6px;
+      font-family:'Montserrat',sans-serif; font-size:8px; color:var(--muted);
     }
     .mt-attribution{
-      padding-top:12px; border-top:1px solid var(--line); margin-top:18px;
+      padding-top:14px; border-top:1px solid var(--line); margin-top:22px;
     }
     .mt-attribution p{
-      font-family:'Montserrat',sans-serif; font-size:7px; color:var(--muted);
+      font-family:'Montserrat',sans-serif; font-size:7.5px; color:var(--muted);
       margin:0 0 2px 0; line-height:1.4;
+    }
+
+    /* ── Overview / Executive Summary Page ─────────────────────────── */
+    .page-overview .page-content{
+      display:flex; flex-direction:column; padding:0.6in 0.6in 0.5in;
+    }
+    .overview-header{ margin-bottom:28px; }
+    .overview-label{
+      font-family:'Montserrat',sans-serif; font-size:9px; font-weight:600;
+      text-transform:uppercase; letter-spacing:0.15em; color:var(--teal-on-light);
+      margin-bottom:6px;
+    }
+    .overview-title{
+      font-family:'Montserrat',sans-serif; font-size:26px; font-weight:800;
+      text-transform:uppercase; letter-spacing:0.06em; color:var(--navy);
+      margin:0 0 4px 0; line-height:1.15;
+    }
+    .overview-accent{
+      width:56px; height:4px; background:var(--teal); margin-top:10px; border-radius:2px;
+    }
+    .overview-body{
+      font-family:'Montserrat',sans-serif; font-size:12px; line-height:1.85;
+      color:#3a3a3a; flex:1;
+    }
+    .overview-body p{
+      margin:0 0 16px 0;
+    }
+    .overview-footer{
+      margin-top:auto; padding-top:20px; border-top:1px solid var(--line);
+      display:flex; align-items:center; gap:14px;
+    }
+    .overview-footer-photo{
+      width:44px; height:44px; border-radius:50%; overflow:hidden; flex-shrink:0;
+      border:2px solid var(--teal);
+    }
+    .overview-footer-photo img{ width:100%; height:100%; object-fit:cover; }
+    .overview-footer-info{
+      font-family:'Montserrat',sans-serif; font-size:9px; color:var(--muted); line-height:1.5;
+    }
+    .overview-footer-name{
+      font-weight:700; color:var(--navy); font-size:10px;
     }
   </style>
 </head>
@@ -1105,7 +1150,7 @@
   {# page_set: when rendered via PropertyReportBuilder the caller passes a list
      of page IDs.  When rendered standalone (generate_all_property_pdfs.py) no
      page_set is provided, so we default to showing every page. #}
-  {% set _pages = page_set | default(["cover","contents","aerial","property","analysis","comparables","range","market_trends"]) %}
+  {% set _pages = page_set | default(["cover","overview","contents","aerial","property","analysis","comparables","range","market_trends"]) %}
   <div class="sheet">
 
     {% if "cover" in _pages %}
@@ -1152,6 +1197,38 @@
     </section>
     {% endif %}
 
+    {% if "overview" in _pages and overview_text %}
+    <!-- =========================================================
+      PAGE: EXECUTIVE SUMMARY / OVERVIEW
+    ========================================================== -->
+    <section class="page page-overview">
+      <div class="page-content">
+        <div class="overview-header">
+          <div class="overview-label">Executive Summary</div>
+          <h2 class="overview-title">Property Overview</h2>
+          <div class="overview-accent"></div>
+        </div>
+        <div class="overview-body">
+          {% for para in overview_text.split('\n\n') %}
+          {% if para.strip() %}
+          <p>{{ para.strip() }}</p>
+          {% endif %}
+          {% endfor %}
+        </div>
+        <div class="overview-footer">
+          {% if agent.photo_url %}
+          <div class="overview-footer-photo"><img src="{{ agent.photo_url }}" alt="{{ agent.name }}"></div>
+          {% endif %}
+          <div class="overview-footer-info">
+            <div class="overview-footer-name">{{ agent.name }}</div>
+            <div>{{ agent.title | default('Realtor®') }} · {{ agent.company_name }}</div>
+            <div>{{ agent.phone }}{% if agent.email %} · {{ agent.email }}{% endif %}</div>
+          </div>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
     {% if "contents" in _pages %}
     <!-- =========================================================
       PAGE 2: CONTENTS
@@ -1178,41 +1255,41 @@
             <span class="num">01</span>
             <span class="name">Aerial Snapshot</span>
             <span class="dots"></span>
-            <span class="page">03</span>
+            <span class="pg-num">03</span>
           </div>
           <div class="toc-item">
             <span class="num">02</span>
             <span class="name">Property Information</span>
             <span class="dots"></span>
-            <span class="page">04</span>
+            <span class="pg-num">04</span>
           </div>
           <div class="toc-item">
             <span class="num">03</span>
             <span class="name">Area Sales Analysis</span>
             <span class="dots"></span>
-            <span class="page">05</span>
+            <span class="pg-num">05</span>
           </div>
           <div class="toc-item">
             <span class="num">04</span>
             <span class="name">Market Trends</span>
             <span class="dots"></span>
-            <span class="page">06</span>
+            <span class="pg-num">06</span>
           </div>
           <div class="toc-item">
             <span class="num">05</span>
             <span class="name">Sales Comparables</span>
             <span class="dots"></span>
-            <span class="page">07</span>
+            <span class="pg-num">07</span>
           </div>
           <div class="toc-item">
             <span class="num">06</span>
             <span class="name">Range of Sales</span>
             <span class="dots"></span>
-            <span class="page">08</span>
+            <span class="pg-num">08</span>
           </div>
         </div>
         <div class="page-footer" style="background:transparent; border:none; color:#fff;">
-          <div class="brand" style="color:var(--teal);">TrendyReports</div>
+          <div class="brand" style="color:var(--teal-on-dark);">TrendyReports</div>
           <div class="num" style="color:#fff;">02</div>
         </div>
       </div>
@@ -1246,7 +1323,7 @@
         </div>
       </div>
       <div class="page-footer" style="background:transparent; border:none; color:#fff;">
-        <div class="brand" style="color:var(--teal);">TrendyReports</div>
+        <div class="brand" style="color:var(--teal-on-dark);">TrendyReports</div>
         <div class="num" style="color:#fff;">03</div>
       </div>
     </section>

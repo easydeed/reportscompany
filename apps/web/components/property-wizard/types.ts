@@ -90,8 +90,8 @@ export const THEMES: Theme[] = [
     displayFont: "'Merriweather', serif",
     gradient: "linear-gradient(135deg, #1B365D 0%, #2D5F8A 100%)",
     accentDefault: "#4A90A4",
-    suggestedColors: ["#4A90A4", "#1B365D", "#2D5F8A", "#3A7CA5", "#5BA3B5"],
-    pageCount: 8,
+    suggestedColors: ["#4A90A4", "#C9A962", "#7B68AE", "#2E8B57", "#D4756B"],
+    pageCount: 9,
     compact: false,
     previewImage: "/previews/1.jpg",
   },
@@ -102,8 +102,8 @@ export const THEMES: Theme[] = [
     displayFont: "'DM Sans', sans-serif",
     gradient: "linear-gradient(135deg, #1A1F36 0%, #FF6B5B 100%)",
     accentDefault: "#FF6B5B",
-    suggestedColors: ["#FF6B5B", "#FF8A7A", "#E85D4F", "#FF9F6C", "#F4725C"],
-    pageCount: 8,
+    suggestedColors: ["#FF6B5B", "#6366F1", "#10B981", "#F59E0B", "#EC4899"],
+    pageCount: 9,
     compact: false,
     previewImage: "/previews/2.jpg",
   },
@@ -114,8 +114,8 @@ export const THEMES: Theme[] = [
     displayFont: "'Playfair Display', serif",
     gradient: "linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #C9A962 100%)",
     accentDefault: "#C9A962",
-    suggestedColors: ["#C9A962", "#B8944F", "#D4B872", "#A88B4A", "#DFCA82"],
-    pageCount: 8,
+    suggestedColors: ["#C9A962", "#7B8EA8", "#9B6B5E", "#A080B0", "#6B8E6B"],
+    pageCount: 9,
     compact: false,
     previewImage: "/previews/3.jpg",
   },
@@ -126,8 +126,8 @@ export const THEMES: Theme[] = [
     displayFont: "'Montserrat', sans-serif",
     gradient: "linear-gradient(135deg, #18235c 0%, #34d1c3 100%)",
     accentDefault: "#34d1c3",
-    suggestedColors: ["#34d1c3", "#21c7b7", "#2AB5A8", "#48DDD0", "#1ABAAE"],
-    pageCount: 8,
+    suggestedColors: ["#34d1c3", "#F59E0B", "#EC4899", "#8B5CF6", "#22D3EE"],
+    pageCount: 9,
     compact: true,
     previewImage: "/previews/4.jpg",
   },
@@ -138,8 +138,8 @@ export const THEMES: Theme[] = [
     displayFont: "'Clash Display', sans-serif",
     gradient: "linear-gradient(135deg, #15216E 0%, #1a3a7a 50%, #D69649 100%)",
     accentDefault: "#D69649",
-    suggestedColors: ["#D69649", "#C4863D", "#E0A758", "#B07832", "#EAB968"],
-    pageCount: 8,
+    suggestedColors: ["#D69649", "#4F9BDA", "#E05A47", "#6BBF59", "#C77DBA"],
+    pageCount: 9,
     compact: true,
     previewImage: "/previews/5.jpg",
   },
@@ -159,6 +159,7 @@ export const THEMES: Theme[] = [
 // template pages. market_trends is now ported to all 5 standalone templates.
 export const FULL_PAGES: ReportPage[] = [
   { id: "cover",           name: "Cover",               required: false },
+  { id: "overview",        name: "Executive Summary",   required: false },
   { id: "contents",        name: "Table of Contents",   required: false },
   { id: "aerial",          name: "Aerial View",         required: false },
   { id: "property",        name: "Property Details",    required: true  },
@@ -170,6 +171,7 @@ export const FULL_PAGES: ReportPage[] = [
 
 export const COMPACT_PAGES: ReportPage[] = [
   { id: "cover",           name: "Cover",               required: false },
+  { id: "overview",        name: "Executive Summary",   required: false },
   { id: "contents",        name: "Table of Contents",   required: false },
   { id: "aerial",          name: "Aerial View",         required: false },
   { id: "property",        name: "Property Details",    required: true  },
@@ -184,16 +186,14 @@ export const COMPACT_PAGES: ReportPage[] = [
 // ============================================
 
 export const ACCENT_PRESETS = [
-  "#4A90A4",
-  "#FF6B5B",
-  "#C9A962",
-  "#34d1c3",
-  "#D69649",
-  "#6366F1",
-  "#10B981",
-  "#F43F5E",
-  "#8B5CF6",
-  "#0EA5E9",
+  // Blues & Teals
+  "#4A90A4", "#0EA5E9", "#34d1c3", "#2563EB",
+  // Purples & Pinks
+  "#6366F1", "#8B5CF6", "#A855F7", "#EC4899",
+  // Reds & Oranges
+  "#F43F5E", "#FF6B5B", "#F59E0B", "#D69649",
+  // Greens & Earth
+  "#10B981", "#22C55E", "#C9A962", "#9B6B5E",
 ];
 
 export const STEPS = [

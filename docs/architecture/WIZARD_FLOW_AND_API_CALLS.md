@@ -105,13 +105,19 @@ The Property Report wizard lives at `/app/property/new` and is powered by the `P
 
 ### Step 3 — Theme & Pages
 
-**What the agent sees:** 5 theme cards (Classic, Modern, Elegant, Teal, Bold), an accent color picker, and a checklist of report pages to include/exclude.
+**What the agent sees:** 5 theme cards (Classic, Modern, Elegant, Teal, Bold), an accent color picker with live contrast previews, and a checklist of report pages to include/exclude.
 
 **Key details:**
-- **Compact themes** (Teal, Bold): 8 core pages — `cover`, `contents`, `aerial`, `property`, `analysis`, `market_trends`, `comparables`, `range`.
-- **Full themes** (Classic, Modern, Elegant): Same 8 core pages plus up to 12 extended pages (Introduction, Selling Roadmap, marketing sections, etc.) for future full-length reports.
+- **Compact themes** (Teal, Bold): 9 pages — `cover`, `overview`, `contents`, `aerial`, `property`, `analysis`, `market_trends`, `comparables`, `range`.
+- **Full themes** (Classic, Modern, Elegant): Same 9 pages plus up to 12 extended pages (Introduction, Selling Roadmap, marketing sections, etc.) for future full-length reports.
 - Required pages that cannot be deselected: **Property Details** (`property`) and **Sales Comparables** (`comparables`).
+- **Executive Summary** (`overview`): Optional AI-generated page. When selected, the worker generates a 4–5 paragraph property overview via GPT-4o-mini at render time.
 - A live preview is available via `POST /v1/property/preview` — renders the Jinja2 template server-side and returns HTML for the iframe.
+
+**Smart Color System:**
+- The accent color picker includes a **Live Contrast Preview** panel showing the selected color on dark, light, and as-fill backgrounds with real-time contrast ratios.
+- Suggested color palettes per theme are diversified (not monochromatic).
+- A "Smart Color System" badge reassures agents that the system auto-adjusts their accent color for readability on every report section (dark headers, light backgrounds, stat boxes). The backend `compute_color_roles()` function handles this — see `property-builder.md`.
 
 > **⚠️ Page ID Contract:** The page `id` values sent in `selected_pages` **must exactly match** the keys used in the Jinja2 templates (`"property"`, not `"property_details"`; `"contents"`, not `"toc"`; `"analysis"`, not `"area_analysis"`). See `docs/architecture/modules/property-builder.md` for the full page key table.
 

@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
+      /* Primary accent color - can be overridden by theme_color */
       --burgundy:#1a1a1a; --burgundy-dark:#0d0d0d;
       --gold:#C9A962; --gold-light:#E8D5A3;
       --cream:#FAF7F2; --cream-dark:#F0EBE3;
@@ -138,10 +139,52 @@
     .page-footer{position:absolute; bottom:0.4in; left:var(--pad); right:var(--pad); display:flex; justify-content:space-between; align-items:center; font-size:10px; color:var(--slate);}
     .page-footer .brand{display:flex; align-items:center; gap:8px;}
     .page-footer .num{font-family:'Playfair Display',serif; font-size:14px; color:var(--burgundy);}
+
+    /* --- Market Trends --- */
+    .page-market-trends .page-content{padding:0 var(--pad); padding-top:10px;}
+    .mt-header{margin-bottom:14px;}
+    .mt-subtitle{font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--slate); margin-bottom:6px;}
+    .mt-header-accent{width:50px; height:3px; background:var(--gold); border-radius:2px;}
+    .mt-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:18px;}
+    .mt-card{background:#f8f6f3; border:1px solid var(--gold-light); border-radius:12px; padding:16px 14px; text-align:center;}
+    .mt-card-label{font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--slate); margin-bottom:6px;}
+    .mt-card-value{font-family:'Playfair Display',serif; font-size:22px; color:var(--burgundy); line-height:1.1;}
+    .mt-card-value--na{color:#aaa; font-size:16px;}
+    .mt-card-change{font-size:9px; margin-top:4px; font-weight:600;}
+    .mt-card-change--positive{color:#16a34a;}
+    .mt-card-change--negative{color:#dc2626;}
+    .mt-card-change--neutral{color:var(--slate);}
+    .mt-card-note{font-size:8px; color:#999; margin-top:3px;}
+    .mt-condition{display:flex; align-items:center; gap:18px; background:#f8f6f3; border:1px solid var(--gold-light); border-radius:12px; padding:14px 18px; margin-bottom:16px;}
+    .mt-condition-left{min-width:120px;}
+    .mt-condition-label{font-family:'Playfair Display',serif; font-size:16px; color:var(--burgundy); margin-bottom:4px;}
+    .mt-condition-score{display:flex; gap:4px;}
+    .mt-dot{width:10px; height:10px; border-radius:50%; background:#e0ddd8;}
+    .mt-dot--filled{background:var(--gold);}
+    .mt-condition--sellers .mt-dot--filled{background:#16a34a;}
+    .mt-condition--balanced .mt-dot--filled{background:var(--gold);}
+    .mt-condition--buyers .mt-dot--filled{background:#dc2626;}
+    .mt-condition-desc{font-size:10px; color:var(--slate); line-height:1.5; flex:1;}
+    .mt-gauge-wrap{margin-bottom:18px;}
+    .mt-gauge-label{font-size:10px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--burgundy); margin-bottom:8px; text-align:center;}
+    .mt-gauge-container{position:relative; margin:0 auto; max-width:90%;}
+    .mt-gauge-bar{display:flex; height:28px; border-radius:14px; overflow:hidden;}
+    .mt-gauge-zone{flex:1; display:flex; align-items:center; justify-content:center; font-size:7px; letter-spacing:0.05em; text-transform:uppercase; text-align:center; line-height:1.2; color:#fff;}
+    .mt-gauge-zone--sellers{background:#16a34a;}
+    .mt-gauge-zone--balanced{background:var(--gold);}
+    .mt-gauge-zone--buyers{background:#dc2626;}
+    .mt-gauge-marker{position:absolute; top:-6px; transform:translateX(-50%); text-align:center;}
+    .mt-gauge-pip{font-size:14px; color:var(--burgundy); line-height:1;}
+    .mt-gauge-val{display:block; font-size:10px; font-weight:700; color:var(--burgundy);}
+    .mt-gauge-tick-labels{display:flex; justify-content:space-between; font-size:8px; color:#999; margin-top:4px; max-width:90%; margin-left:auto; margin-right:auto;}
+    .mt-attribution{margin-top:14px; text-align:center;}
+    .mt-attribution p{font-size:7px; color:#aaa; line-height:1.5; margin:0 0 2px;}
   </style>
 </head>
 <body>
+  
   <div class="sheet">
+    
     <!-- PAGE 1: COVER -->
     <section class="page cover">
       <div class="cover-bg-image" style="background-image: url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&amp;h=600&amp;fit=crop');"></div>
@@ -170,7 +213,9 @@
         <div class="cover-logo">TR</div>
       </div>
     </section>
+    
 
+    
     <!-- PAGE 2: CONTENTS -->
     <section class="page contents">
       <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
@@ -184,12 +229,15 @@
         <div class="contents-item"><div class="contents-num">01</div><div class="contents-text">Aerial Property View</div><div class="contents-dots"></div><div class="contents-page">03</div></div>
         <div class="contents-item"><div class="contents-num">02</div><div class="contents-text">Property Information</div><div class="contents-dots"></div><div class="contents-page">04</div></div>
         <div class="contents-item"><div class="contents-num">03</div><div class="contents-text">Area Sales Analysis</div><div class="contents-dots"></div><div class="contents-page">05</div></div>
-        <div class="contents-item"><div class="contents-num">04</div><div class="contents-text">Comparable Sales</div><div class="contents-dots"></div><div class="contents-page">06</div></div>
-        <div class="contents-item"><div class="contents-num">05</div><div class="contents-text">Estimated Value Range</div><div class="contents-dots"></div><div class="contents-page">07</div></div>
+        <div class="contents-item"><div class="contents-num">04</div><div class="contents-text">Market Trends</div><div class="contents-dots"></div><div class="contents-page">06</div></div>
+        <div class="contents-item"><div class="contents-num">05</div><div class="contents-text">Comparable Sales</div><div class="contents-dots"></div><div class="contents-page">07</div></div>
+        <div class="contents-item"><div class="contents-num">06</div><div class="contents-text">Estimated Value Range</div><div class="contents-dots"></div><div class="contents-page">08</div></div>
       </div>
       <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">02</div></div>
     </section>
+    
 
+    
     <!-- PAGE 3: AERIAL -->
     <section class="page aerial">
       <div class="aerial-header"><div class="aerial-label">Location Overview</div><h2 class="aerial-title">Aerial View</h2></div>
@@ -204,7 +252,9 @@
       </div>
       <div class="page-footer" style="border:none;"><div class="brand" style="color:var(--gold-light);"><span class="diamond"></span> Elegant Collection</div><div class="num" style="color:#fff;">03</div></div>
     </section>
+    
 
+    
     <!-- PAGE 4: PROPERTY -->
     <section class="page property">
       <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
@@ -259,7 +309,9 @@
       </div>
       <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">04</div></div>
     </section>
+    
 
+    
     <!-- PAGE 5: ANALYSIS -->
     <section class="page analysis">
       <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
@@ -293,8 +345,164 @@
       </table>
       <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">05</div></div>
     </section>
+    
 
-    <!-- PAGE 6: COMPARABLES -->
+    
+    <!-- PAGE 6: MARKET TRENDS -->
+    <section class="page page-market-trends">
+      <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
+      <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
+      <div class="property-header"><div class="property-label">Market Intelligence</div><h2 class="property-title">Market Trends</h2><div class="gold-rule"></div></div>
+      <div class="page-content"><div class="mt-header">
+          <div class="mt-subtitle">La Verne - Jan 2026 - Mar 2026</div>
+          <div class="mt-header-accent"></div>
+        </div>
+
+        
+
+        <div class="mt-condition mt-condition--sellers">
+          <div class="mt-condition-left">
+            <span class="mt-condition-label">Seller&#39;s Market</span>
+            <div class="mt-condition-score">
+              
+              <span class="mt-dot mt-dot--filled"></span>
+              
+              <span class="mt-dot mt-dot--filled"></span>
+              
+              <span class="mt-dot mt-dot--filled"></span>
+              
+              <span class="mt-dot mt-dot--filled"></span>
+              
+              <span class="mt-dot mt-dot--filled"></span>
+              
+              <span class="mt-dot mt-dot--filled"></span>
+              
+              <span class="mt-dot mt-dot--filled"></span>
+              
+              <span class="mt-dot "></span>
+              
+              <span class="mt-dot "></span>
+              
+              <span class="mt-dot "></span>
+              
+            </div>
+          </div>
+          <p class="mt-condition-desc">Low inventory and strong demand continue to favor sellers in this market, with homes selling quickly at or above asking price.</p>
+        </div>
+
+        <div class="mt-grid">
+          
+          <div class="mt-card">
+            <div class="mt-card-label">Median Sale Price</div>
+            
+            <div class="mt-card-value">$615,000</div>
+            
+            <div class="mt-card-change mt-card-change--positive">
+              &#9650;
+              4.2% vs prior 90 days
+            </div>
+            
+            
+          </div>
+          
+          <div class="mt-card">
+            <div class="mt-card-label">Avg Days on Market</div>
+            
+            <div class="mt-card-value">18 days</div>
+            
+            <div class="mt-card-change mt-card-change--positive">
+              &#9660;
+              12.5% vs prior 90 days
+            </div>
+            
+            
+          </div>
+          
+          <div class="mt-card">
+            <div class="mt-card-label">List-to-Sale Ratio</div>
+            
+            <div class="mt-card-value">99.1%</div>
+            
+            <div class="mt-card-change mt-card-change--positive">
+              &#9650;
+              0.8% vs prior 90 days
+            </div>
+            
+            
+          </div>
+          
+          <div class="mt-card">
+            <div class="mt-card-label">Price per Sq Ft</div>
+            
+            <div class="mt-card-value">$485</div>
+            
+            <div class="mt-card-change mt-card-change--positive">
+              &#9650;
+              3.1% vs prior 90 days
+            </div>
+            
+            
+          </div>
+          
+          <div class="mt-card">
+            <div class="mt-card-label">Closed Sales (90 Days)</div>
+            
+            <div class="mt-card-value">42</div>
+            
+            <div class="mt-card-change mt-card-change--negative">
+              &#9660;
+              5.0% vs prior 90 days
+            </div>
+            
+            
+          </div>
+          
+          <div class="mt-card">
+            <div class="mt-card-label">Active Listings</div>
+            <div class="mt-card-value">28</div>
+            
+            <div class="mt-card-note">Avg $649,000</div>
+            
+          </div>
+        </div>
+
+        
+        <div class="mt-gauge-wrap">
+          <div class="mt-gauge-label">Months of Inventory</div>
+          <div class="mt-gauge-container">
+            <div class="mt-gauge-bar">
+              <div class="mt-gauge-zone mt-gauge-zone--sellers">Seller's<br>&lt; 4 mo</div>
+              <div class="mt-gauge-zone mt-gauge-zone--balanced">Balanced<br>4 - 6 mo</div>
+              <div class="mt-gauge-zone mt-gauge-zone--buyers">Buyer's<br>&gt; 6 mo</div>
+            </div>
+            <div class="mt-gauge-marker" style="left: 23%;">
+              <span class="mt-gauge-pip">&#9660;</span>
+              <span class="mt-gauge-val">2.8 mo</span>
+            </div>
+          </div>
+          <div class="mt-gauge-tick-labels">
+            <span>0 mo</span><span>3 mo</span><span>6 mo</span><span>9 mo</span><span>12 mo+</span>
+          </div>
+        </div>
+        
+
+        <div class="mt-attribution">
+          <p>
+            Data source: SimplyRETS MLS &middot;
+            La Verne &middot;
+            Jan 2026 - Mar 2026 &middot;
+            42 closed sales analyzed &middot;
+            Generated Mar 3, 2026
+          </p>
+          <p>Market conditions change rapidly. Consult your real estate professional for current, personalized advice.</p>
+        </div>
+      </div>
+      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">06</div></div>
+    </section>
+    
+
+    
+    <!-- PAGE 7: COMPARABLES -->
     <section class="page comparables">
       <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
@@ -308,7 +516,7 @@
           <div class="comp-card-body">
             <div class="comp-card-address"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>1889 Bonita Ave, La Verne</div>
             <div class="comp-card-stats">
-              <div class="comp-stat"><div class="comp-stat-label">Sold</div><div class="comp-stat-value">5/10/23</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Listed</div><div class="comp-stat-value">5/10/23</div></div>
               <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">940</div></div>
               <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">2/1</div></div>
               <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">$671</div></div>
@@ -323,7 +531,7 @@
           <div class="comp-card-body">
             <div class="comp-card-address"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>1507 2nd St, La Verne</div>
             <div class="comp-card-stats">
-              <div class="comp-stat"><div class="comp-stat-label">Sold</div><div class="comp-stat-value">3/15/23</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Listed</div><div class="comp-stat-value">3/15/23</div></div>
               <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">912</div></div>
               <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">3/1</div></div>
               <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">$696</div></div>
@@ -362,10 +570,12 @@
         </div>
         
       </div>
-      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">06</div></div>
+      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">07</div></div>
     </section>
+    
 
-    <!-- PAGE 7: RANGE -->
+    
+    <!-- PAGE 8: RANGE -->
     <section class="page range">
       <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
@@ -382,8 +592,10 @@
         <div class="range-slider-track"><div class="range-slider-dot" style="left:5%;"></div><div class="range-slider-dot" style="left:95%;"></div></div>
       </div>
       <p class="range-note">The above statistics represent average property details for comparable homes sold within the last 12 months. The price range indicates the low and high sale prices for properties matching your home's characteristics including square footage, bedrooms, bathrooms, and lot size.</p>
-      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">07</div></div>
+      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">08</div></div>
     </section>
+    
+
   </div>
 </body>
 </html>

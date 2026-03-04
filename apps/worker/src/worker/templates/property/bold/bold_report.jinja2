@@ -11,7 +11,10 @@
     :root {
       /* Primary accent color - can be overridden by theme_color */
       --navy: {{ theme_color | default('#15216E', true) }};
-      --navy-light: #1E2D8F;
+      --navy-light: {{ theme_color_light | default('#4a54a0', true) }};
+      --navy-on-dark: {{ theme_color_on_dark | default('#6b73c4', true) }};
+      --navy-on-light: {{ theme_color_on_light | default('#15216E', true) }};
+      --navy-text: {{ theme_color_text | default('#ffffff', true) }};
       --gold: #D69649;
       --gold-light: #E5AB5E;
       --cream: #FDF8F3;
@@ -208,7 +211,7 @@
       font-family: 'Oswald', sans-serif;
       font-size: 24px;
       font-weight: 600;
-      color: var(--navy);
+      color: var(--navy-on-light);
       text-transform: uppercase;
       margin-bottom: 4px;
     }
@@ -231,7 +234,7 @@
       font-family: 'Oswald', sans-serif;
       font-size: 18px;
       font-weight: 600;
-      color: var(--navy);
+      color: var(--navy-on-light);
       text-transform: uppercase;
       letter-spacing: 0.1em;
     }
@@ -283,7 +286,7 @@
       font-family: 'Oswald', sans-serif;
       font-size: 36px;
       font-weight: 700;
-      color: var(--navy);
+      color: var(--navy-on-light);
       width: 60px;
     }
     .contents-text {
@@ -345,7 +348,7 @@
       font-family: 'Oswald', sans-serif;
       font-size: 15px;
       font-weight: 600;
-      color: var(--navy);
+      color: var(--navy-on-light);
       text-transform: uppercase;
       margin-bottom: 8px;
     }
@@ -362,7 +365,7 @@
     }
     .property-section-header {
       background: var(--navy);
-      color: var(--warm-white);
+      color: var(--navy-text);
       padding: 12px 18px;
       font-family: 'Oswald', sans-serif;
       font-size: 14px;
@@ -417,7 +420,7 @@
       font-family: 'Oswald', sans-serif;
       font-size: 16px;
       font-weight: 600;
-      color: var(--navy);
+      color: var(--navy-on-light);
       text-transform: uppercase;
       letter-spacing: 0.1em;
       text-align: center;
@@ -456,7 +459,7 @@
     }
     .analysis-table thead {
       background: var(--navy);
-      color: var(--warm-white);
+      color: var(--navy-text);
     }
     .analysis-table th {
       padding: 14px 12px;
@@ -476,8 +479,8 @@
       padding: 12px;
     }
     .analysis-table tfoot {
-      background: var(--gold);
-      color: var(--navy);
+      background: var(--navy);
+      color: var(--navy-text);
       font-weight: 700;
     }
     .analysis-table tfoot td {
@@ -527,7 +530,7 @@
       font-family: 'Oswald', sans-serif;
       font-size: 14px;
       font-weight: 600;
-      color: var(--navy);
+      color: var(--navy-on-light);
       text-transform: uppercase;
       margin-bottom: 12px;
       display: flex;
@@ -562,7 +565,7 @@
       font-family: 'Oswald', sans-serif;
       font-size: 14px;
       font-weight: 600;
-      color: var(--navy);
+      color: var(--navy-on-light);
     }
 
     /* RANGE */
@@ -596,12 +599,13 @@
       font-family: 'Oswald', sans-serif;
       font-size: 42px;
       font-weight: 700;
-      color: var(--gold);
+      color: var(--navy-text);
       line-height: 1;
     }
     .range-stat-label {
       font-size: 10px;
-      color: rgba(255,255,255,0.8);
+      color: var(--navy-text);
+      opacity: 0.8;
       text-transform: uppercase;
       letter-spacing: 0.15em;
       margin-top: 10px;
@@ -621,7 +625,7 @@
       font-family: 'Oswald', sans-serif;
       font-size: 26px;
       font-weight: 700;
-      color: var(--navy);
+      color: var(--navy-on-light);
     }
     .range-slider-track {
       height: 12px;
@@ -671,29 +675,29 @@
       font-family: 'Oswald', sans-serif;
       font-size: 18px;
       font-weight: 700;
-      color: var(--navy);
+      color: var(--navy-on-light);
     }
 
     /* ── Market Trends Page ──────────────────────────────────────── */
     .page-market-trends .page-content{
       display:flex; flex-direction:column; padding:0.5in var(--pad) 0.6in;
     }
-    .mt-header{ margin-bottom:18px; }
+    .mt-header{ margin-bottom:22px; }
     .mt-title{
-      font-family:'Oswald',sans-serif; font-size:24px; font-weight:700;
+      font-family:'Oswald',sans-serif; font-size:26px; font-weight:700;
       text-transform:uppercase; letter-spacing:0.05em;
-      color:var(--navy); margin:0 0 2px 0; line-height:1.15;
+      color:var(--navy-on-light); margin:0 0 4px 0; line-height:1.15;
     }
     .mt-subtitle{
-      font-family:'Montserrat',sans-serif; font-size:10px; color:var(--slate);
+      font-family:'Montserrat',sans-serif; font-size:11px; color:var(--slate);
       margin:0; letter-spacing:0.02em;
     }
     .mt-header-accent{
-      width:48px; height:3px; background:var(--gold); margin-top:8px; border-radius:2px;
+      width:56px; height:4px; background:var(--gold); margin-top:10px; border-radius:2px;
     }
     .mt-condition{
-      border-radius:8px; padding:16px 18px; margin-bottom:18px;
-      display:flex; align-items:flex-start; gap:14px;
+      border-radius:10px; padding:22px 24px; margin-bottom:22px;
+      display:flex; align-items:flex-start; gap:18px;
     }
     .mt-condition--sellers{ background:rgba(22,163,74,0.05); border:1px solid rgba(22,163,74,0.25); }
     .mt-condition--balanced{ background:rgba(234,179,8,0.05); border:1px solid rgba(234,179,8,0.3); }
@@ -701,79 +705,116 @@
     .mt-condition--unknown{ background:var(--cream); border:1px solid var(--border); }
     .mt-condition-left{
       flex-shrink:0; display:flex; flex-direction:column; align-items:center;
-      gap:6px; min-width:100px;
+      gap:8px; min-width:110px;
     }
     .mt-condition-label{
-      font-family:'Oswald',sans-serif; font-size:13px; font-weight:700;
-      text-transform:uppercase; color:var(--navy); white-space:nowrap;
+      font-family:'Oswald',sans-serif; font-size:15px; font-weight:700;
+      text-transform:uppercase; color:var(--navy-on-light); white-space:nowrap;
     }
-    .mt-condition-score{ display:flex; gap:3px; }
+    .mt-condition-score{ display:flex; gap:4px; }
     .mt-dot{
-      width:7px; height:7px; border-radius:50%; background:var(--border);
+      width:9px; height:9px; border-radius:50%; background:var(--border);
       display:inline-block; flex-shrink:0;
     }
     .mt-dot--filled{ background:var(--gold); }
     .mt-condition-desc{
-      font-family:'Montserrat',sans-serif; font-size:9px; color:var(--slate);
-      line-height:1.5; margin:0;
+      font-family:'Montserrat',sans-serif; font-size:10px; color:var(--slate);
+      line-height:1.6; margin:0;
     }
     .mt-grid{
       display:grid; grid-template-columns:repeat(3,1fr);
-      gap:10px; margin-bottom:18px;
+      gap:14px; margin-bottom:22px;
     }
     .mt-card{
-      border:1px solid var(--border); border-radius:8px; padding:14px 12px;
-      text-align:center; background:var(--cream); display:flex; flex-direction:column; gap:3px;
+      border:1px solid var(--border); border-radius:10px; padding:22px 16px;
+      text-align:center; background:var(--cream); display:flex; flex-direction:column; gap:5px;
     }
     .mt-card-label{
-      font-family:'Montserrat',sans-serif; font-size:7.5px; font-weight:600;
+      font-family:'Montserrat',sans-serif; font-size:9px; font-weight:600;
       text-transform:uppercase; letter-spacing:0.06em; color:var(--slate);
     }
     .mt-card-value{
-      font-family:'Oswald',sans-serif; font-size:22px; font-weight:700;
-      color:var(--navy); line-height:1.15;
+      font-family:'Oswald',sans-serif; font-size:26px; font-weight:700;
+      color:var(--navy-on-light); line-height:1.15;
     }
-    .mt-card-value--na{ color:var(--border); font-size:16px; }
-    .mt-card-note{ font-family:'Montserrat',sans-serif; font-size:7.5px; color:var(--slate); }
-    .mt-card-change{ font-family:'Montserrat',sans-serif; font-size:8px; color:var(--slate); font-weight:500; }
+    .mt-card-value--na{ color:var(--border); font-size:18px; }
+    .mt-card-note{ font-family:'Montserrat',sans-serif; font-size:8.5px; color:var(--slate); }
+    .mt-card-change{ font-family:'Montserrat',sans-serif; font-size:9px; color:var(--slate); font-weight:500; }
     .mt-card-change--good{ color:#16a34a; }
     .mt-card-change--bad{ color:#dc2626; }
     .mt-card-change--neutral{ color:var(--slate); }
-    .mt-gauge-wrap{ flex:1; display:flex; flex-direction:column; justify-content:center; }
+    .mt-gauge-wrap{ flex:1; display:flex; flex-direction:column; justify-content:center; padding:8px 0; }
     .mt-gauge-label{
-      font-family:'Montserrat',sans-serif; font-size:7.5px; font-weight:600;
-      text-transform:uppercase; letter-spacing:0.06em; color:var(--slate); margin-bottom:18px;
+      font-family:'Montserrat',sans-serif; font-size:9px; font-weight:600;
+      text-transform:uppercase; letter-spacing:0.06em; color:var(--slate); margin-bottom:22px;
     }
     .mt-gauge-container{ position:relative; }
-    .mt-gauge-bar{ height:22px; border-radius:999px; display:flex; overflow:hidden; }
+    .mt-gauge-bar{ height:30px; border-radius:999px; display:flex; overflow:hidden; }
     .mt-gauge-zone{
       flex:1; display:flex; align-items:center; justify-content:center;
-      font-family:'Montserrat',sans-serif; font-size:7px; font-weight:700;
+      font-family:'Montserrat',sans-serif; font-size:8px; font-weight:700;
       text-transform:uppercase; letter-spacing:0.04em; color:rgba(255,255,255,0.9);
     }
     .mt-gauge-zone--sellers{ background:#16a34a; }
     .mt-gauge-zone--balanced{ background:#ca8a04; }
     .mt-gauge-zone--buyers{ background:#dc2626; }
     .mt-gauge-marker{
-      position:absolute; top:-28px; transform:translateX(-50%);
+      position:absolute; top:-32px; transform:translateX(-50%);
       text-align:center; z-index:2; pointer-events:none;
     }
-    .mt-gauge-pip{ display:block; font-size:11px; color:var(--navy); line-height:1; margin-bottom:1px; }
+    .mt-gauge-pip{ display:block; font-size:13px; color:var(--navy); line-height:1; margin-bottom:2px; }
     .mt-gauge-val{
-      display:inline-block; background:var(--navy); color:#fff;
-      padding:2px 8px; border-radius:999px; font-family:'Oswald',sans-serif;
-      font-size:9px; font-weight:700; white-space:nowrap;
+      display:inline-block; background:var(--navy); color:var(--navy-text);
+      padding:3px 10px; border-radius:999px; font-family:'Oswald',sans-serif;
+      font-size:10px; font-weight:700; white-space:nowrap;
     }
     .mt-gauge-tick-labels{
-      display:flex; justify-content:space-between; margin-top:4px;
-      font-family:'Montserrat',sans-serif; font-size:7px; color:var(--slate);
+      display:flex; justify-content:space-between; margin-top:6px;
+      font-family:'Montserrat',sans-serif; font-size:8px; color:var(--slate);
     }
-    .mt-attribution{ padding-top:12px; border-top:1px solid var(--border); margin-top:18px; }
-    .mt-attribution p{ font-family:'Montserrat',sans-serif; font-size:7px; color:var(--slate); margin:0 0 2px 0; line-height:1.4; }
+    .mt-attribution{ padding-top:14px; border-top:1px solid var(--border); margin-top:22px; }
+    .mt-attribution p{ font-family:'Montserrat',sans-serif; font-size:7.5px; color:var(--slate); margin:0 0 2px 0; line-height:1.4; }
+
+    /* ── Overview / Executive Summary Page ─────────────────────────── */
+    .page-overview .page-content{
+      display:flex; flex-direction:column; padding:0.6in var(--pad) 0.5in;
+    }
+    .overview-header{ margin-bottom:28px; }
+    .overview-label{
+      font-family:'Montserrat',sans-serif; font-size:9px; font-weight:600;
+      text-transform:uppercase; letter-spacing:0.15em; color:var(--gold);
+      margin-bottom:6px;
+    }
+    .overview-title{
+      font-family:'Oswald',sans-serif; font-size:28px; font-weight:700;
+      text-transform:uppercase; letter-spacing:0.05em; color:var(--navy-on-light);
+      margin:0 0 4px 0; line-height:1.15;
+    }
+    .overview-accent{
+      width:56px; height:4px; background:var(--gold); margin-top:10px; border-radius:2px;
+    }
+    .overview-body{
+      font-family:'Montserrat',sans-serif; font-size:12px; line-height:1.85;
+      color:#3a3a3a; flex:1;
+    }
+    .overview-body p{ margin:0 0 16px 0; }
+    .overview-footer{
+      margin-top:auto; padding-top:20px; border-top:1px solid var(--border);
+      display:flex; align-items:center; gap:14px;
+    }
+    .overview-footer-photo{
+      width:44px; height:44px; border-radius:50%; overflow:hidden; flex-shrink:0;
+      border:2px solid var(--gold);
+    }
+    .overview-footer-photo img{ width:100%; height:100%; object-fit:cover; }
+    .overview-footer-info{
+      font-family:'Montserrat',sans-serif; font-size:9px; color:var(--slate); line-height:1.5;
+    }
+    .overview-footer-name{ font-weight:700; color:var(--navy-on-light); font-size:10px; }
   </style>
 </head>
 <body>
-  {% set _pages = page_set | default(["cover","contents","aerial","property","analysis","comparables","range","market_trends"]) %}
+  {% set _pages = page_set | default(["cover","overview","contents","aerial","property","analysis","comparables","range","market_trends"]) %}
   <div class="sheet">
 
     {% if "cover" in _pages %}
@@ -813,6 +854,36 @@
         <div class="cover-logo">
           <div class="cover-logo-text">{{ agent.company_name | default('REALTY GROUP') }}</div>
           <div class="cover-logo-sub">{{ agent.company_tagline | default('Excellence in Real Estate') }}</div>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    {% if "overview" in _pages and overview_text %}
+    <!-- PAGE: EXECUTIVE SUMMARY / OVERVIEW -->
+    <section class="page page-overview">
+      <div class="page-content">
+        <div class="overview-header">
+          <div class="overview-label">Executive Summary</div>
+          <h2 class="overview-title">Property Overview</h2>
+          <div class="overview-accent"></div>
+        </div>
+        <div class="overview-body">
+          {% for para in overview_text.split('\n\n') %}
+          {% if para.strip() %}
+          <p>{{ para.strip() }}</p>
+          {% endif %}
+          {% endfor %}
+        </div>
+        <div class="overview-footer">
+          {% if agent.photo_url %}
+          <div class="overview-footer-photo"><img src="{{ agent.photo_url }}" alt="{{ agent.name }}"></div>
+          {% endif %}
+          <div class="overview-footer-info">
+            <div class="overview-footer-name">{{ agent.name }}</div>
+            <div>{{ agent.title | default('Realtor®') }} · {{ agent.company_name }}</div>
+            <div>{{ agent.phone }}{% if agent.email %} · {{ agent.email }}{% endif %}</div>
+          </div>
         </div>
       </div>
     </section>

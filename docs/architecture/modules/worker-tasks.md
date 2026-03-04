@@ -45,7 +45,7 @@ Full report generation pipeline:
 
 Property report pipeline:
 1. Load property report record from DB (comps, agent info, selected_pages)
-2. `PropertyReportBuilder.render()` → HTML string
+2. `PropertyReportBuilder.render()` → HTML string (includes AI executive summary generation via `ai_overview.py` if `overview` page is selected and `OPENAI_API_KEY` is set)
 3. `pdf_adapter.render_pdf(html)` → PDF bytes via PDFShift API
 4. Upload PDF to R2, get public URL
 5. Update `property_reports.pdf_url` and `status = "complete"`
@@ -121,9 +121,10 @@ Recursively serialises Python objects to JSON, converting `datetime`/`date` to I
 | `vendors/simplyrets.py` | Market data fetching |
 | `filter_resolver.py` | Market-adaptive filter resolution |
 | `property_builder.py` | HTML rendering for property reports |
+| `ai_overview.py` | GPT-4o-mini executive summary for property reports (`overview` page) |
 | `pdf_engine.py` | PDF generation coordination |
 | `pdf_adapter.py` | PDFShift API integration |
-| `ai_insights.py` | GPT-4o-mini commentary generation |
+| `ai_insights.py` | GPT-4o-mini commentary for market reports |
 | `email/send.py` | Email dispatch |
 | `cache.py` | Redis caching |
 | `limit_checker.py` | Plan limit enforcement |
@@ -173,6 +174,7 @@ python qa_deliver_reports.py --base-url $API_URL --token $TOKEN \
 
 | Date | Change |
 |------|--------|
+| 2026-03 | Property report task now generates AI Executive Summary (`overview` page) via `ai_overview.py` when `OPENAI_API_KEY` is set and `overview` is in `selected_pages`. Gracefully omits page if generation fails. |
 | 2026-02 | **Phase 4 (cursor-enhancement-plan):** `pdf_engine.py` — Playwright PDF margins set to `"0"` (was `"0.5in"`). Added `page.evaluate("() => document.fonts.ready")` before `page.pdf()` call to ensure fonts are fully loaded. Both Playwright and PDFShift now use identical 0-margin configuration. |
 | 2026-02 | **Enhancement Plan Fix 4:** `upload_to_r2` returns permanent `R2_PUBLIC_URL`-based link when env var is set, instead of always generating 7-day expiring presigned URLs. |
 | 2026-02 | `generate_property_report_task` wired to new fallback-ladder-based comparables |

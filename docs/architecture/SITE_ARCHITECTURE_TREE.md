@@ -107,7 +107,8 @@ reportscompany/
 │           ├── schedules_tick.py   # Every-minute schedule executor
 │           ├── property_builder.py # ← HTML report renderer (5 themes) [NEW]
 │           ├── filter_resolver.py  # ← Market-adaptive filters [NEW]
-│           ├── ai_insights.py      # GPT-4o-mini commentary
+│           ├── ai_insights.py      # GPT-4o-mini market commentary
+│           ├── ai_overview.py      # GPT-4o-mini property executive summary [NEW]
 │           ├── pdf_engine.py       # PDF generation coordinator
 │           ├── pdf_adapter.py      # PDFShift API integration
 │           ├── limit_checker.py    # Worker-context plan limits
@@ -188,8 +189,10 @@ reportscompany/
 │   ├── test_sitex.py
 │   ├── test_property_report_flow.py
 │   ├── test_all_reports.py
+│   ├── gen_la_verne_all_themes.py          # Primary theme validator (9-page reports) [NEW]
 │   ├── generate_all_property_pdfs.py
 │   ├── generate_theme_previews.py
+│   ├── generate_theme_preview_jpgs.py      # Playwright JPG previews for wizard [NEW]
 │   └── ... (20+ more)
 │
 ├── qa_deliver_reports.py           # ← QA delivery automation [NEW]
@@ -255,7 +258,9 @@ reportscompany/
 │  └───────────────────────────────────────────────────────────┘  │
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │ generate_property_report_task (property reports)          │  │
-│  │  ├── property_builder.py [Jinja2, 5 themes, 7 pages]      │  │
+│  │  ├── property_builder.py [Jinja2, 5 themes, 9 pages]      │  │
+│  │  ├── ai_overview.py [GPT-4o-mini executive summary]       │  │
+│  │  ├── compute_color_roles() [Smart Color System]            │  │
 │  │  ├── pdf_adapter.py [PDFShift]                            │  │
 │  │  └── R2 upload [Cloudflare]                               │  │
 │  └───────────────────────────────────────────────────────────┘  │

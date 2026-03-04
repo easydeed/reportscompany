@@ -15,7 +15,7 @@ TrendyReports is a **multi-tenant SaaS platform** that transforms live MLS data 
 | Family | Description |
 |--------|-------------|
 | **Market Reports** | Area-level snapshots: New Listings, Closed Sales, Inventory, Price Bands, etc. Delivered via automated schedules (email + optional PDF). |
-| **Property Reports** | Subject-property comparables analysis (CMA-style): PDF with cover, aerial, comparables, price range chart. Agent-branded. |
+| **Property Reports** | Subject-property comparables analysis (CMA-style): PDF with cover, AI executive summary, aerial, comparables, market trends, price range chart. Agent-branded with Smart Color System. |
 
 **Target users:**
 1. **Individual agents** — create and schedule reports for their client lists
@@ -65,11 +65,12 @@ TrendyReports is a **multi-tenant SaaS platform** that transforms live MLS data 
 | Celery app | `src/worker/app.py` | App init, beat schedule |
 | Tasks | `src/worker/tasks.py` | `generate_report`, `generate_property_report_task`, `keep_alive_ping` |
 | Schedule tick | `src/worker/schedules_tick.py` | Every-minute tick that fires due schedules |
-| Property builder | `src/worker/property_builder.py` | Jinja2 HTML renderer for property reports (5 themes) |
+| Property builder | `src/worker/property_builder.py` | Jinja2 HTML renderer for property reports (5 themes, 9 pages, Smart Color System) |
 | Filter resolver | `src/worker/filter_resolver.py` | Market-adaptive filter resolution + elastic widening |
 | SimplyRETS vendor | `src/worker/vendors/simplyrets.py` | Synchronous SimplyRETS client with rate limiter + pagination |
 | PDF adapter | `src/worker/pdf_adapter.py` | PDFShift API integration |
 | AI insights | `src/worker/ai_insights.py` | GPT-4o-mini market commentary |
+| AI overview | `src/worker/ai_overview.py` | GPT-4o-mini property executive summary (overview page) |
 | Email templates | `src/worker/templates/property/` | 5 email theme templates (Jinja2) |
 
 **Hosting:** Render (background worker)
@@ -103,7 +104,7 @@ Standalone Next.js preview apps for developing report layouts, schedule builders
 | **SiteX Pro** | Property assessor data (subject property lookup) | OAuth2 Client Credentials |
 | **PDFShift** | HTML → PDF rendering | HTTP Basic Auth |
 | **SendGrid** | Transactional email delivery | API Key |
-| **OpenAI** | GPT-4o-mini market commentary | API Key (Bearer) |
+| **OpenAI** | GPT-4o-mini market commentary + property executive summary | API Key (Bearer) |
 | **Stripe** | Subscription billing, webhooks | API Key + Webhook Secret |
 | **Cloudflare R2** | PDF + logo storage, photo proxy | Access Key + Secret |
 | **Google Maps** | Aerial + street view images for property reports | API Key |

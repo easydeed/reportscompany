@@ -11,7 +11,10 @@
     :root {
       /* Primary accent color - can be overridden by theme_color */
       --navy: #1B365D;
-      --navy-light: #2C4A7C;
+      --navy-light: #6a7c95;
+      --navy-on-dark: #5f88c3;
+      --navy-on-light: #1B365D;
+      --navy-text: #ffffff;
       --sky: #4A90A4;
       --sand: #C4B7A6;
       --cream: #FDFBF7;
@@ -130,7 +133,7 @@
     .cover-title {
       font-family: 'Merriweather', serif;
       font-size: 58px; font-weight: 900;
-      color: var(--navy); line-height: 1.1;
+      color: var(--navy-on-light); line-height: 1.1;
       margin-bottom: 30px;
     }
     .cover-divider-wrap { width: 300px; margin: 0 auto 30px; }
@@ -158,7 +161,7 @@
     .cover-agent-name {
       font-family: 'Merriweather', serif;
       font-size: 22px; font-weight: 700;
-      color: var(--navy); margin-bottom: 4px;
+      color: var(--navy-on-light); margin-bottom: 4px;
     }
     .cover-agent-title { font-size: 14px; color: var(--slate); margin-bottom: 10px; }
     .cover-agent-details { display: flex; gap: 20px; font-size: 13px; color: var(--charcoal); }
@@ -168,7 +171,7 @@
     .cover-logo {
       font-family: 'Merriweather', serif;
       font-size: 14px; font-weight: 700;
-      color: var(--navy); letter-spacing: 0.05em;
+      color: var(--navy-on-light); letter-spacing: 0.05em;
     }
     .cover-logo-sub { font-size: 11px; color: var(--slate); margin-top: 2px; }
 
@@ -193,7 +196,7 @@
     }
     .page-header-title {
       font-family: 'Merriweather', serif;
-      font-size: 36px; font-weight: 900; color: var(--navy);
+      font-size: 36px; font-weight: 900; color: var(--navy-on-light);
     }
     .contents-list { margin-top: 40px; }
     .contents-item {
@@ -204,7 +207,7 @@
     .contents-num {
       font-family: 'Merriweather', serif;
       font-size: 24px; font-weight: 900;
-      color: var(--navy); width: 50px;
+      color: var(--navy-on-light); width: 50px;
     }
     .contents-text { flex: 1; font-size: 16px; color: var(--charcoal); }
     .contents-dots {
@@ -233,7 +236,7 @@
     .aerial-info-card h3 {
       font-family: 'Merriweather', serif;
       font-size: 14px; font-weight: 700;
-      color: var(--navy); margin-bottom: 8px;
+      color: var(--navy-on-light); margin-bottom: 8px;
     }
     .aerial-info-card p { font-size: 13px; line-height: 1.6; color: var(--slate); }
 
@@ -273,7 +276,7 @@
     .chart-title {
       font-family: 'Merriweather', serif;
       font-size: 14px; font-weight: 700;
-      color: var(--navy); margin-bottom: 20px; text-align: center;
+      color: var(--navy-on-light); margin-bottom: 20px; text-align: center;
     }
     .chart-bars {
       display: flex; align-items: flex-end; justify-content: space-around;
@@ -317,7 +320,7 @@
     .comp-card-address {
       font-family: 'Merriweather', serif;
       font-size: 14px; font-weight: 700;
-      color: var(--navy); margin-bottom: 12px;
+      color: var(--navy-on-light); margin-bottom: 12px;
       display: flex; align-items: center; gap: 8px;
     }
     .comp-card-address svg { width: 14px; height: 14px; fill: var(--sky); flex-shrink: 0; }
@@ -341,7 +344,7 @@
     .range-stat-num {
       font-family: 'Merriweather', serif;
       font-size: 38px; font-weight: 900;
-      color: var(--warm-white); line-height: 1;
+      color: var(--navy-text); line-height: 1;
     }
     .range-stat-label {
       font-size: 11px; color: var(--sand);
@@ -353,7 +356,7 @@
     .range-slider-header { display: flex; justify-content: space-between; margin-bottom: 15px; }
     .range-slider-price {
       font-family: 'Merriweather', serif;
-      font-size: 22px; font-weight: 900; color: var(--navy);
+      font-size: 22px; font-weight: 900; color: var(--navy-on-light);
     }
     .range-slider-track {
       height: 10px;
@@ -377,8 +380,140 @@
     .page-footer .brand { font-size: 11px; color: var(--slate); }
     .page-footer .num {
       font-family: 'Merriweather', serif;
-      font-size: 14px; font-weight: 700; color: var(--navy);
+      font-size: 14px; font-weight: 700; color: var(--navy-on-light);
     }
+
+    /* ── Market Trends Page ──────────────────────────────────────── */
+    .page-market-trends .page-content{
+      display:flex; flex-direction:column; padding:0.5in var(--pad) 0.6in;
+    }
+    .mt-header{ margin-bottom:22px; }
+    .mt-title{
+      font-family:'Merriweather',serif; font-size:24px; font-weight:700;
+      color:var(--navy-on-light); margin:0 0 4px 0; line-height:1.2;
+    }
+    .mt-subtitle{
+      font-family:'Source Sans Pro',sans-serif; font-size:11px; color:var(--slate);
+      margin:0; letter-spacing:0.02em;
+    }
+    .mt-header-accent{
+      width:56px; height:4px; background:var(--sky); margin-top:10px; border-radius:2px;
+    }
+    .mt-condition{
+      border-radius:10px; padding:22px 24px; margin-bottom:22px;
+      display:flex; align-items:flex-start; gap:18px;
+    }
+    .mt-condition--sellers{ background:rgba(22,163,74,0.05); border:1px solid rgba(22,163,74,0.25); }
+    .mt-condition--balanced{ background:rgba(234,179,8,0.05); border:1px solid rgba(234,179,8,0.3); }
+    .mt-condition--buyers{ background:rgba(220,38,38,0.05); border:1px solid rgba(220,38,38,0.2); }
+    .mt-condition--unknown{ background:var(--cream); border:1px solid var(--border); }
+    .mt-condition-left{
+      flex-shrink:0; display:flex; flex-direction:column; align-items:center;
+      gap:8px; min-width:110px;
+    }
+    .mt-condition-label{
+      font-family:'Merriweather',serif; font-size:14px; font-weight:700;
+      color:var(--navy-on-light); white-space:nowrap;
+    }
+    .mt-condition-score{ display:flex; gap:4px; }
+    .mt-dot{
+      width:9px; height:9px; border-radius:50%; background:var(--border);
+      display:inline-block; flex-shrink:0;
+    }
+    .mt-dot--filled{ background:var(--sky); }
+    .mt-condition-desc{
+      font-family:'Source Sans Pro',sans-serif; font-size:10px; color:var(--slate);
+      line-height:1.6; margin:0;
+    }
+    .mt-grid{
+      display:grid; grid-template-columns:repeat(3,1fr);
+      gap:14px; margin-bottom:22px;
+    }
+    .mt-card{
+      border:1px solid var(--border); border-radius:10px; padding:22px 16px;
+      text-align:center; background:var(--cream); display:flex; flex-direction:column; gap:5px;
+    }
+    .mt-card-label{
+      font-family:'Source Sans Pro',sans-serif; font-size:9px; font-weight:600;
+      text-transform:uppercase; letter-spacing:0.06em; color:var(--slate);
+    }
+    .mt-card-value{
+      font-family:'Merriweather',serif; font-size:26px; font-weight:700;
+      color:var(--navy-on-light); line-height:1.15;
+    }
+    .mt-card-value--na{ color:var(--border); font-size:18px; }
+    .mt-card-note{ font-family:'Source Sans Pro',sans-serif; font-size:8.5px; color:var(--slate); }
+    .mt-card-change{ font-family:'Source Sans Pro',sans-serif; font-size:9px; color:var(--slate); font-weight:500; }
+    .mt-card-change--good{ color:#16a34a; }
+    .mt-card-change--bad{ color:#dc2626; }
+    .mt-card-change--neutral{ color:var(--slate); }
+    .mt-gauge-wrap{ flex:1; display:flex; flex-direction:column; justify-content:center; padding:8px 0; }
+    .mt-gauge-label{
+      font-family:'Source Sans Pro',sans-serif; font-size:9px; font-weight:600;
+      text-transform:uppercase; letter-spacing:0.06em; color:var(--slate); margin-bottom:22px;
+    }
+    .mt-gauge-container{ position:relative; }
+    .mt-gauge-bar{ height:30px; border-radius:999px; display:flex; overflow:hidden; }
+    .mt-gauge-zone{
+      flex:1; display:flex; align-items:center; justify-content:center;
+      font-family:'Source Sans Pro',sans-serif; font-size:8px; font-weight:700;
+      text-transform:uppercase; letter-spacing:0.04em; color:rgba(255,255,255,0.9);
+    }
+    .mt-gauge-zone--sellers{ background:#16a34a; }
+    .mt-gauge-zone--balanced{ background:#ca8a04; }
+    .mt-gauge-zone--buyers{ background:#dc2626; }
+    .mt-gauge-marker{
+      position:absolute; top:-32px; transform:translateX(-50%);
+      text-align:center; z-index:2; pointer-events:none;
+    }
+    .mt-gauge-pip{ display:block; font-size:13px; color:var(--navy-on-light); line-height:1; margin-bottom:2px; }
+    .mt-gauge-val{
+      display:inline-block; background:var(--navy); color:var(--navy-text);
+      padding:3px 10px; border-radius:999px; font-family:'Merriweather',serif;
+      font-size:10px; font-weight:700; white-space:nowrap;
+    }
+    .mt-gauge-tick-labels{
+      display:flex; justify-content:space-between; margin-top:6px;
+      font-family:'Source Sans Pro',sans-serif; font-size:8px; color:var(--slate);
+    }
+    .mt-attribution{ padding-top:14px; border-top:1px solid var(--border); margin-top:22px; }
+    .mt-attribution p{ font-family:'Source Sans Pro',sans-serif; font-size:7.5px; color:var(--slate); margin:0 0 2px 0; line-height:1.4; }
+
+    /* ── Overview / Executive Summary Page ─────────────────────────── */
+    .page-overview .page-content{
+      display:flex; flex-direction:column; padding:0.6in var(--pad) 0.5in;
+    }
+    .overview-header{ margin-bottom:28px; }
+    .overview-label{
+      font-family:'Source Sans Pro',sans-serif; font-size:9px; font-weight:600;
+      text-transform:uppercase; letter-spacing:0.15em; color:var(--sky-on-light);
+      margin-bottom:6px;
+    }
+    .overview-title{
+      font-family:'Merriweather',serif; font-size:26px; font-weight:700;
+      color:var(--navy-on-light); margin:0 0 4px 0; line-height:1.2;
+    }
+    .overview-accent{
+      width:56px; height:4px; background:var(--sky); margin-top:10px; border-radius:2px;
+    }
+    .overview-body{
+      font-family:'Source Sans Pro',sans-serif; font-size:12px; line-height:1.85;
+      color:#3a3a3a; flex:1;
+    }
+    .overview-body p{ margin:0 0 16px 0; }
+    .overview-footer{
+      margin-top:auto; padding-top:20px; border-top:1px solid var(--border);
+      display:flex; align-items:center; gap:14px;
+    }
+    .overview-footer-photo{
+      width:44px; height:44px; border-radius:50%; overflow:hidden; flex-shrink:0;
+      border:2px solid var(--sky);
+    }
+    .overview-footer-photo img{ width:100%; height:100%; object-fit:cover; }
+    .overview-footer-info{
+      font-family:'Source Sans Pro',sans-serif; font-size:9px; color:var(--slate); line-height:1.5;
+    }
+    .overview-footer-name{ font-weight:700; color:var(--navy-on-light); font-size:10px; }
   </style>
 </head>
 <body>
@@ -429,6 +564,31 @@
       </div>
     </section>
 
+    <!-- PAGE: EXECUTIVE SUMMARY / OVERVIEW -->
+    <section class="page page-overview">
+      <div class="page-content">
+        <div class="overview-header">
+          <div class="overview-label">Executive Summary</div>
+          <h2 class="overview-title">Property Overview</h2>
+          <div class="overview-accent"></div>
+        </div>
+        <div class="overview-body">
+          <p>This comprehensive Seller&#39;s Report has been prepared exclusively for the property located at 1358 5th St in La Verne, California. The report provides an in-depth analysis of the property&#39;s current market position and comparable sales activity in the surrounding area.</p>
+          <p>Your home is a well-maintained single-family residence featuring 3 bedrooms, 2 bathrooms, and approximately 1,344 square feet of living space on a generous 7,500 square-foot lot. Built in 1956, the property benefits from the established character of the neighborhood while offering strong appeal to today&#39;s buyers.</p>
+          <p>Based on an analysis of 6 comparable sales in the immediate area, the local market shows a median sale price of approximately $715,000 with homes averaging 22 days on market. The price-per-square-foot in the area is trending at $498, and the close-to-list ratio of 101.2% indicates that homes are frequently selling above asking price.</p>
+          <p>The La Verne market is currently classified as a Seller&#39;s Market with only 2.3 months of inventory available. This means demand exceeds supply, putting sellers in a favorable negotiating position. We encourage you to review the detailed findings in this report and reach out to discuss your property&#39;s unique advantages.</p>
+        </div>
+        <div class="overview-footer">
+          <div class="overview-footer-photo"><img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Jennifer Martinez"></div>
+          <div class="overview-footer-info">
+            <div class="overview-footer-name">Jennifer Martinez</div>
+            <div>Luxury Home Specialist · Luxury Estates Realty</div>
+            <div>(310) 555-4567 · jennifer@luxuryestates.com</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- PAGE 2: CONTENTS -->
     <section class="page contents">
       <div class="page-header">
@@ -439,8 +599,9 @@
         <div class="contents-item"><div class="contents-num">1</div><div class="contents-text">Aerial Property View</div><div class="contents-dots"></div><div class="contents-page">03</div></div>
         <div class="contents-item"><div class="contents-num">2</div><div class="contents-text">Property Information</div><div class="contents-dots"></div><div class="contents-page">04</div></div>
         <div class="contents-item"><div class="contents-num">3</div><div class="contents-text">Area Sales Analysis</div><div class="contents-dots"></div><div class="contents-page">05</div></div>
-        <div class="contents-item"><div class="contents-num">4</div><div class="contents-text">Sales Comparables</div><div class="contents-dots"></div><div class="contents-page">06</div></div>
-        <div class="contents-item"><div class="contents-num">5</div><div class="contents-text">Estimated Value Range</div><div class="contents-dots"></div><div class="contents-page">07</div></div>
+        <div class="contents-item"><div class="contents-num">4</div><div class="contents-text">Market Trends</div><div class="contents-dots"></div><div class="contents-page">06</div></div>
+        <div class="contents-item"><div class="contents-num">5</div><div class="contents-text">Sales Comparables</div><div class="contents-dots"></div><div class="contents-page">07</div></div>
+        <div class="contents-item"><div class="contents-num">6</div><div class="contents-text">Estimated Value Range</div><div class="contents-dots"></div><div class="contents-page">08</div></div>
       </div>
       <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">02</div></div>
     </section>
@@ -564,7 +725,112 @@
       <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">05</div></div>
     </section>
 
-    <!-- PAGE 6: COMPARABLES -->
+    <!-- PAGE 6: MARKET TRENDS -->
+    <section class="page page-market-trends">
+      <div class="page-header">
+        <div class="page-header-label">Market Intelligence</div>
+        <h2 class="page-header-title">Market Trends</h2>
+      </div>
+      <div class="page-content"><div class="mt-header">
+<div class="mt-subtitle">La Verne - Last 90 Days</div>          <div class="mt-header-accent"></div>
+        </div>
+
+
+        <div class="mt-condition mt-condition--sellers">
+          <div class="mt-condition-left">
+            <span class="mt-condition-label">Seller&#39;s Market</span>
+            <div class="mt-condition-score">
+              <span class="mt-dot mt-dot--filled"></span>
+              <span class="mt-dot mt-dot--filled"></span>
+              <span class="mt-dot mt-dot--filled"></span>
+              <span class="mt-dot mt-dot--filled"></span>
+              <span class="mt-dot mt-dot--filled"></span>
+              <span class="mt-dot mt-dot--filled"></span>
+              <span class="mt-dot mt-dot--filled"></span>
+              <span class="mt-dot mt-dot--filled"></span>
+              <span class="mt-dot "></span>
+              <span class="mt-dot "></span>
+            </div>
+          </div>
+          <p class="mt-condition-desc">With only 2.8 months of inventory and 89 sales in the last 90 days, sellers have the clear advantage. Homes are moving quickly and typically selling near or above asking price (98.5% close-to-list ratio).</p>
+        </div>
+
+        <div class="mt-grid">
+          <div class="mt-card">
+            <div class="mt-card-label">Median Sale Price</div>
+            <div class="mt-card-value">$725,000</div>
+            <div class="mt-card-change mt-card-change--good">
+&#9650;              4.3% vs prior 90 days
+            </div>
+          </div>
+          <div class="mt-card">
+            <div class="mt-card-label">Avg Days on Market</div>
+            <div class="mt-card-value">28 days</div>
+            <div class="mt-card-change mt-card-change--good">
+&#9660;              17.6% vs prior 90 days
+            </div>
+          </div>
+          <div class="mt-card">
+            <div class="mt-card-label">List-to-Sale Ratio</div>
+            <div class="mt-card-value">98.5%</div>
+            <div class="mt-card-change mt-card-change--good">
+&#9650;              1.3% vs prior 90 days
+            </div>
+          </div>
+          <div class="mt-card">
+            <div class="mt-card-label">Price per Sq Ft</div>
+            <div class="mt-card-value">$342</div>
+            <div class="mt-card-change mt-card-change--good">
+&#9650;              4.3% vs prior 90 days
+            </div>
+          </div>
+          <div class="mt-card">
+            <div class="mt-card-label">Closed Sales (90 Days)</div>
+            <div class="mt-card-value">89</div>
+            <div class="mt-card-change mt-card-change--good">
+&#9650;              14.1% vs prior 90 days
+            </div>
+          </div>
+          <div class="mt-card">
+            <div class="mt-card-label">Active Listings</div>
+            <div class="mt-card-value">156</div>
+            <div class="mt-card-note">Avg $745,000</div>
+          </div>
+        </div>
+
+        <div class="mt-gauge-wrap">
+          <div class="mt-gauge-label">Months of Inventory</div>
+          <div class="mt-gauge-container">
+            <div class="mt-gauge-bar">
+              <div class="mt-gauge-zone mt-gauge-zone--sellers">Seller's<br>&lt; 4 mo</div>
+              <div class="mt-gauge-zone mt-gauge-zone--balanced">Balanced<br>4 - 6 mo</div>
+              <div class="mt-gauge-zone mt-gauge-zone--buyers">Buyer's<br>&gt; 6 mo</div>
+            </div>
+            <div class="mt-gauge-marker" style="left: 23%;">
+              <span class="mt-gauge-pip">&#9660;</span>
+              <span class="mt-gauge-val">2.8 months</span>
+            </div>
+          </div>
+          <div class="mt-gauge-tick-labels">
+            <span>0 mo</span><span>3 mo</span><span>6 mo</span><span>9 mo</span><span>12 mo+</span>
+          </div>
+        </div>
+
+        <div class="mt-attribution">
+          <p>
+            Data source: MLS &middot;
+            La Verne &middot;
+            Last 90 Days &middot;
+            89 closed sales analyzed &middot;
+            Generated February 2026
+          </p>
+          <p>Market conditions change rapidly. Consult your real estate professional for current, personalized advice.</p>
+        </div>
+      </div>
+      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">06</div></div>
+    </section>
+
+    <!-- PAGE 7: COMPARABLES -->
     <section class="page comparables">
       <div class="page-header">
         <div class="page-header-label">Recent Transactions</div>
@@ -623,10 +889,10 @@
           </div>
         </div>
       </div>
-      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">06</div></div>
+      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">07</div></div>
     </section>
 
-    <!-- PAGE 7: RANGE -->
+    <!-- PAGE 8: RANGE -->
     <section class="page range">
       <div class="page-header">
         <div class="page-header-label">Valuation Summary</div>
@@ -650,7 +916,7 @@
         </div>
         <p class="range-note">The above statistics represent average property details for comparable homes sold within the last 12 months. The price range indicates the low and high sale prices for properties matching your home's characteristics.</p>
       </div>
-      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">07</div></div>
+      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">08</div></div>
     </section>
 
   </div>

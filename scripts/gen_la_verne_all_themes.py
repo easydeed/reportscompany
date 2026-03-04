@@ -610,7 +610,7 @@ def render_theme(theme_name: str, report_data: dict,
     if pdf_generated and pdf_path.exists():
         pg = _count_pdf_pages(pdf_path)
         result["page_count"] = pg
-        tag = "[PASS]" if pg == 7 else f"[WARN] expected 7"
+        tag = "[PASS]" if pg == 9 else f"[WARN] expected 9"
         print(f"  Pages: {pg} {tag}")
 
     print(f"  Total: {time.perf_counter()-t0:.2f}s")
@@ -684,11 +684,35 @@ def main():
         "agent":            SAMPLE_AGENT,
         "cover_image_url":  COVER_IMAGE,
         "comparables":      comps,
-        # 7 core pages (market_trends will be added when ported to standalone templates)
+        # All pages including overview and market trends
         "selected_pages": [
-            "cover", "contents", "aerial", "property",
-            "analysis", "comparables", "range",
+            "cover", "overview", "contents", "aerial", "property",
+            "analysis", "comparables", "range", "market_trends",
         ],
+        # Pre-inject market trends so builder doesn't need to call the API
+        "market_trends_data": _get_sample_market_trends(),
+        # Pre-inject overview text so builder doesn't need OpenAI API key locally
+        "overview_text": (
+            "This comprehensive Seller's Report has been prepared exclusively "
+            "for the property located at 1358 5th St in La Verne, California. "
+            "The report provides an in-depth analysis of the property's current "
+            "market position and comparable sales activity in the surrounding area.\n\n"
+            "Your home is a well-maintained single-family residence featuring "
+            "3 bedrooms, 2 bathrooms, and approximately 1,344 square feet of "
+            "living space on a generous 7,500 square-foot lot. Built in 1956, "
+            "the property benefits from the established character of the "
+            "neighborhood while offering strong appeal to today's buyers.\n\n"
+            "Based on an analysis of 6 comparable sales in the immediate area, "
+            "the local market shows a median sale price of approximately $715,000 "
+            "with homes averaging 22 days on market. The price-per-square-foot "
+            "in the area is trending at $498, and the close-to-list ratio of "
+            "101.2% indicates that homes are frequently selling above asking price.\n\n"
+            "The La Verne market is currently classified as a Seller's Market "
+            "with only 2.3 months of inventory available. This means demand "
+            "exceeds supply, putting sellers in a favorable negotiating position. "
+            "We encourage you to review the detailed findings in this report "
+            "and reach out to discuss your property's unique advantages."
+        ),
     }
 
     # Print summary
@@ -727,15 +751,15 @@ def main():
         all_pass = True
         for r in pdf_results:
             pg   = r["page_count"]
-            tag  = "[PASS]" if pg == 7 else "[FAIL] expected 7"
+            tag  = "[PASS]" if pg == 9 else "[FAIL] expected 9"
             print(f"    {r['theme']:10s}  {pg} pages  {tag}")
-            if pg != 7:
+            if pg != 9:
                 all_pass = False
         print()
         if all_pass:
             print("  All themes pass page count check [PASS]")
         else:
-            print("  [FAIL] Some themes have wrong page count")
+            print("  [FAIL] Some themes have wrong page count (expected 9)")
     print(f"{'='*60}\n")
 
     if args.open:

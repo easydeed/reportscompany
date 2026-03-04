@@ -19,11 +19,147 @@ Usage:
 
 import os
 import logging
+import colorsys
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Color Utility Functions — compute derived roles from a single accent hex
+# =============================================================================
+
+def _hex_to_rgb(hex_color: str) -> tuple:
+    """Convert '#RRGGBB' to (r, g, b) floats in 0-1."""
+    h = hex_color.lstrip("#")
+    if len(h) == 3:
+        h = h[0]*2 + h[1]*2 + h[2]*2
+    return tuple(int(h[i:i+2], 16) / 255.0 for i in (0, 2, 4))
+
+
+def _rgb_to_hex(r: float, g: float, b: float) -> str:
+    """Convert (r, g, b) floats in 0-1 to '#RRGGBB'."""
+    return "#{:02x}{:02x}{:02x}".format(
+        max(0, min(255, int(r * 255))),
+        max(0, min(255, int(g * 255))),
+        max(0, min(255, int(b * 255))),
+    )
+
+
+def _relative_luminance(r: float, g: float, b: float) -> float:
+    """WCAG relative luminance (0 = black, 1 = white)."""
+    def _lin(c):
+        return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+    return 0.2126 * _lin(r) + 0.7152 * _lin(g) + 0.0722 * _lin(b)
+
+
+def _lighten(hex_color: str, amount: float = 0.3) -> str:
+    """Lighten a color by mixing with white."""
+    r, g, b = _hex_to_rgb(hex_color)
+    return _rgb_to_hex(
+        r + (1.0 - r) * amount,
+        g + (1.0 - g) * amount,
+        b + (1.0 - b) * amount,
+    )
+
+
+def _darken(hex_color: str, amount: float = 0.25) -> str:
+    """Darken a color by mixing toward black."""
+    r, g, b = _hex_to_rgb(hex_color)
+    return _rgb_to_hex(r * (1 - amount), g * (1 - amount), b * (1 - amount))
+
+
+def _ensure_readable_on_dark(hex_color: str, dark_bg: str = "#18235c") -> str:
+    """
+    Return a version of hex_color that has enough contrast on a dark background.
+    If the color is too dark, progressively lighten it until readable.
+    Target: WCAG AA (contrast ratio ≥ 4.5) or at minimum 3.0 for large text.
+    """
+    r, g, b = _hex_to_rgb(hex_color)
+    lum_color = _relative_luminance(r, g, b)
+    br, bg_val, bb = _hex_to_rgb(dark_bg)
+    lum_bg = _relative_luminance(br, bg_val, bb)
+
+    # Contrast ratio: (lighter + 0.05) / (darker + 0.05)
+    lighter = max(lum_color, lum_bg)
+    darker = min(lum_color, lum_bg)
+    ratio = (lighter + 0.05) / (darker + 0.05)
+
+    if ratio >= 3.0:
+        return hex_color  # Already readable
+
+    # Lighten the color until we hit contrast ≥ 3.0
+    h, s, v = colorsys.rgb_to_hsv(r, g, b)
+    for _ in range(30):
+        v = min(1.0, v + 0.04)
+        s = max(0.0, s - 0.02)  # Slightly desaturate as we brighten
+        nr, ng, nb = colorsys.hsv_to_rgb(h, s, v)
+        lum_new = _relative_luminance(nr, ng, nb)
+        new_ratio = (max(lum_new, lum_bg) + 0.05) / (min(lum_new, lum_bg) + 0.05)
+        if new_ratio >= 3.0:
+            return _rgb_to_hex(nr, ng, nb)
+
+    return _rgb_to_hex(*colorsys.hsv_to_rgb(h, s, v))
+
+
+def _ensure_readable_on_light(hex_color: str, light_bg: str = "#ffffff") -> str:
+    """
+    Return a version of hex_color that has enough contrast on a light background.
+    If the color is too light/bright, darken it until readable.
+    """
+    r, g, b = _hex_to_rgb(hex_color)
+    lum_color = _relative_luminance(r, g, b)
+    lr, lg, lb = _hex_to_rgb(light_bg)
+    lum_bg = _relative_luminance(lr, lg, lb)
+
+    lighter = max(lum_color, lum_bg)
+    darker = min(lum_color, lum_bg)
+    ratio = (lighter + 0.05) / (darker + 0.05)
+
+    if ratio >= 3.0:
+        return hex_color
+
+    # Darken the color until readable
+    h, s, v = colorsys.rgb_to_hsv(r, g, b)
+    for _ in range(30):
+        v = max(0.0, v - 0.04)
+        nr, ng, nb = colorsys.hsv_to_rgb(h, s, v)
+        lum_new = _relative_luminance(nr, ng, nb)
+        new_ratio = (max(lum_new, lum_bg) + 0.05) / (min(lum_new, lum_bg) + 0.05)
+        if new_ratio >= 3.0:
+            return _rgb_to_hex(nr, ng, nb)
+
+    return _rgb_to_hex(*colorsys.hsv_to_rgb(h, s, v))
+
+
+def _text_on_accent(hex_color: str) -> str:
+    """Return '#ffffff' or '#1a1a1a' depending on accent brightness."""
+    r, g, b = _hex_to_rgb(hex_color)
+    lum = _relative_luminance(r, g, b)
+    return "#ffffff" if lum < 0.35 else "#1a1a1a"
+
+
+def compute_color_roles(hex_color: str, dark_bg: str = "#18235c") -> Dict[str, str]:
+    """
+    From a single accent hex, compute a complete set of color roles:
+
+      theme_color          – the raw user pick
+      theme_color_light    – lighter tint for subtle backgrounds
+      theme_color_dark     – darker shade for borders / hover states
+      theme_color_on_dark  – guaranteed readable on dark backgrounds
+      theme_color_on_light – guaranteed readable on light backgrounds
+      theme_color_text     – white or dark text to overlay on the accent
+    """
+    return {
+        "theme_color":          hex_color,
+        "theme_color_light":    _lighten(hex_color, 0.35),
+        "theme_color_dark":     _darken(hex_color, 0.25),
+        "theme_color_on_dark":  _ensure_readable_on_dark(hex_color, dark_bg),
+        "theme_color_on_light": _ensure_readable_on_light(hex_color, "#ffffff"),
+        "theme_color_text":     _text_on_accent(hex_color),
+    }
 
 # Template directory - points to property/ for Jinja2 inheritance to work
 # This allows templates to use {% extends '_base/base.jinja2' %}
@@ -763,6 +899,16 @@ class PropertyReportBuilder:
         "elegant": "#1a1a1a",
     }
 
+    # Per-theme dark background colour — used by compute_color_roles() to
+    # guarantee the "on_dark" variant has enough contrast.
+    _THEME_DARK_BG = {
+        "teal":    "#18235c",  # --navy
+        "modern":  "#1A1F36",  # --midnight
+        "classic": "#1B365D",  # --navy
+        "bold":    "#15216E",  # --navy
+        "elegant": "#1a1a1a",  # --charcoal
+    }
+
     def _get_theme_color(self) -> str:
         """
         Get the theme color, preferring branding over report accent_color.
@@ -837,14 +983,20 @@ class PropertyReportBuilder:
             page_set = [p for p in page_set if p != "market_trends"]
             logger.info("market_trends: page removed from page_set (insufficient data)")
 
+        # ── Compute Color Roles ───────────────────────────────────────────
+        dark_bg = self._THEME_DARK_BG.get(self.theme_name, "#18235c")
+        color_roles = compute_color_roles(theme_color, dark_bg)
+
         # Build the unified context (same structure for all themes)
         context = {
             # Theme configuration
             "theme_number": self.theme_number,
             "theme_name": self.theme_name,
-            "theme_color": theme_color,
             "assets_base_url": ASSETS_BASE_URL,
             "google_maps_api_key": GOOGLE_MAPS_API_KEY,
+
+            # Color roles (all templates can use any of these)
+            **color_roles,
             
             # Page set (may have market_trends removed if data unavailable)
             "page_set": page_set,
@@ -878,6 +1030,28 @@ class PropertyReportBuilder:
             # Optional assets
             "cover_image_url": self.report_data.get("cover_image_url"),
         }
+
+        # ── AI Executive Summary (optional page) ──────────────────────────
+        overview_text = self.report_data.get("overview_text")  # allow pre-injection
+        if overview_text is None and "overview" in page_set:
+            try:
+                from worker.ai_overview import generate_overview
+                overview_text = generate_overview(
+                    property_ctx=context["property"],
+                    agent_ctx=context["agent"],
+                    stats_ctx=context["stats"],
+                    comparables=context["comparables"],
+                    market_trends=market_trends_data,
+                )
+            except Exception as _ov_exc:
+                logger.warning("ai_overview: generation failed — %s", _ov_exc)
+
+        if overview_text is None and "overview" in page_set:
+            page_set = [p for p in page_set if p != "overview"]
+            context["page_set"] = page_set
+            logger.info("ai_overview: page removed from page_set (no API key or generation failed)")
+
+        context["overview_text"] = overview_text or ""
         
         try:
             # Simple theme lookup - all templates are self-contained

@@ -28,24 +28,25 @@ All 5 themes extend `_base/base.jinja2` via Jinja2 template inheritance.
 
 ## Report Pages
 
-The default page set contains **7 core pages** plus 1 optional page:
+The default page set contains **9 pages** (7 core + 2 optional):
 
 | Page | Key | Description | Required |
 |------|-----|-------------|----------|
 | 1 | `cover` | Cover page (hero image, address, agent branding) | — |
-| 2 | `contents` | Table of contents (dynamic, reflects selected pages) | — |
-| 3 | `aerial` | Aerial map (Google Maps satellite + street view) | — |
-| 4 | `property` | Subject property details (beds, baths, sqft, APN, owner, tax info, HOA, lot) | ✅ |
-| 5 | `analysis` | Market area analysis (price per sqft, year built, lot size trends) | — |
-| 6 | `market_trends` | Market trend metrics (absorption rate, MOI, price cuts, DOM distribution) | — |
-| 7 | `comparables` | Comparable listings grid with confidence badge (up to 6 comps) | ✅ |
-| 8 | `range` | Price range chart — subject property vs comp low/mid/high | — |
+| 2 | `overview` | AI-generated Executive Summary / Property Overview (GPT-4o-mini) | — |
+| 3 | `contents` | Table of contents (dynamic, reflects selected pages) | — |
+| 4 | `aerial` | Aerial map (Google Maps satellite + street view) | — |
+| 5 | `property` | Subject property details (beds, baths, sqft, APN, owner, tax info, HOA, lot) | ✅ |
+| 6 | `analysis` | Market area analysis (price per sqft, year built, lot size trends) | — |
+| 7 | `market_trends` | Market trend metrics (absorption rate, MOI, price cuts, DOM distribution) | — |
+| 8 | `comparables` | Comparable listings grid with confidence badge (up to 6 comps) | ✅ |
+| 9 | `range` | Price range chart — subject property vs comp low/mid/high | — |
 
 > **Page ID contract:** The keys in this table are the **exact strings** that must appear in `selected_pages` (sent by the frontend wizard and stored in `property_reports.selected_pages`). The template checks `{% if "property" in page_set %}` — mismatched IDs silently skip pages.
 
 Pages are selectable per report (stored in `property_reports.selected_pages`).
 
-Default page set (no selection override): `["cover","contents","aerial","property","analysis","comparables","range"]`
+Default page set (no selection override): `["cover","overview","contents","aerial","property","analysis","comparables","range","market_trends"]`
 
 ---
 
@@ -64,6 +65,25 @@ Default page set (no selection override): `["cover","contents","aerial","propert
 | `_build_images_context(data)` | Hero image URL, aerial map URL (Google Maps Static API), street view URL |
 | `_build_neighborhood_context(data)` | Demographics (male/female ratio, average sale price) |
 | `_build_area_analysis_context(comps)` | Market stats: living area, price/sqft, year built, lot size, beds, baths (min/max/avg) |
+
+### `compute_color_roles(hex_color, dark_bg)` (module-level function)
+
+Derives 6 color roles from a single user-picked accent hex, ensuring WCAG-safe contrast across all report sections:
+
+| Role | Purpose |
+|------|---------|
+| `theme_color` | Raw user-picked hex, used as-is |
+| `theme_color_light` | Lighter tint (mixed 35% toward white) — subtle backgrounds |
+| `theme_color_dark` | Darker shade (mixed 25% toward black) — borders, hover states |
+| `theme_color_on_dark` | Guaranteed readable on dark backgrounds (navy headers, cover pages). Progressively lightened until WCAG contrast ratio ≥ 3.0 against the theme's dark background color. |
+| `theme_color_on_light` | Guaranteed readable on white/light backgrounds (price labels, TOC numbers). Progressively darkened until contrast ratio ≥ 3.0. |
+| `theme_color_text` | `#ffffff` or `#1a1a1a` — text to overlay on the accent color when used as a fill |
+
+Each theme defines its own dark background color in `_THEME_DARK_BG` (e.g., teal uses `#18235c`, elegant uses `#1a1a1a`) so contrast math is accurate per theme. Templates consume these roles via CSS custom properties (e.g., `--teal-on-dark`, `--teal-on-light`).
+
+### `generate_overview()` (via `ai_overview.py`)
+
+Produces a 4–5 paragraph, 180–250 word AI executive summary for the property report. Called by the builder when `"overview"` is in the page set and no pre-injected `overview_text` exists. See `ai_overview.py` module below.
 
 ### Custom Jinja2 Filters
 
@@ -113,13 +133,16 @@ Default page set (no selection override): `["cover","contents","aerial","propert
 |--------|-------|
 | `apps/worker/src/worker/tasks.py` | Calls `PropertyReportBuilder.render()` |
 | `apps/worker/src/worker/pdf_adapter.py` | Receives the HTML string for PDF conversion |
+| `apps/worker/src/worker/ai_overview.py` | Generates AI executive summary text (GPT-4o-mini) for the `overview` page |
 
 ### External
 | Library / Service | Usage |
 |---|---|
 | `Jinja2` | Template rendering engine |
 | `jinja2.Environment` | Custom environment with `format_currency` etc. filters |
+| `colorsys` (stdlib) | HSV color space conversions for Smart Color System |
 | Google Maps Static API | Aerial + street view image URLs embedded in context |
+| OpenAI GPT-4o-mini | AI executive summary generation (via `ai_overview.py`) |
 
 ---
 
@@ -130,6 +153,8 @@ Default page set (no selection override): `["cover","contents","aerial","propert
 | Unknown theme | Falls back to `teal` theme |
 | Missing optional field (e.g., no aerial image) | Jinja2 template handles `None` gracefully; section hidden |
 | No comparables | Renders "No comparables available" state in page 6 |
+| AI overview generation fails | `overview` page silently removed from page set; report renders without it |
+| No `OPENAI_API_KEY` set | `ai_overview.py` returns `None`; overview page omitted |
 | Template file missing | Raises `TemplateNotFound` → task fails with `"failed"` status |
 | Jinja2 render error (undefined var) | Raises `UndefinedError` → task fails |
 
@@ -143,11 +168,15 @@ The test suite (`tests/test_property_templates.py`) validates all 5 themes again
 # Full template test suite (5 themes × 6 test classes)
 pytest tests/test_property_templates.py -v
 
-# Generate sample PDFs for all themes
+# Generate all 5 themes with live/sample data (HTML + optional PDF)
+python scripts/gen_la_verne_all_themes.py            # full run with PDF
+python scripts/gen_la_verne_all_themes.py --html-only # HTML only (fast)
+
+# Generate sample PDFs for all themes (static data, no AI overview)
 python scripts/generate_all_property_pdfs.py
 
-# Generate theme previews (PNG screenshots)
-python scripts/generate_theme_previews.py
+# Generate JPG theme previews for the wizard UI (requires gen_la_verne output)
+python scripts/generate_theme_preview_jpgs.py
 ```
 
 ---
@@ -156,6 +185,9 @@ python scripts/generate_theme_previews.py
 
 | Date | Change |
 |------|--------|
+| 2026-03 | **AI Executive Summary page:** Added `overview` page (key `overview`) to all 5 themes. Powered by `ai_overview.py` (GPT-4o-mini, 4–5 paragraphs, 180–250 words). `overview_text` can be pre-injected via `report_data` to skip the API call. If generation fails or no API key is set, the page is silently removed from the page set. |
+| 2026-03 | **Smart Color System:** Added `compute_color_roles()` — derives 6 color variants from a single accent hex (light, dark, on_dark, on_light, text). All 5 templates updated to use `on_dark`/`on_light` CSS variables for WCAG-safe contrast. Each theme defines its dark background color in `_THEME_DARK_BG`. |
+| 2026-03 | **Page count updated:** Default page set now includes `overview` and `market_trends` (9 pages total, up from 7). Frontend `types.ts` `pageCount` updated to 9. |
 | 2026-02 | **Phase 4 (cursor-enhancement-plan):** Added `<link rel="preconnect">` hints for `fonts.googleapis.com` and `fonts.gstatic.com` to `base.jinja2`. Added invisible font-trigger `<div>` before `</body>` that forces all 8 theme font families to load before Playwright/PDFShift captures the page — prevents fallback-glyph rendering in PDFs. |
 | 2026-02 | **market_trends page fix:** `render_html()` now accepts `market_trends_data` pre-injected in `report_data` as an override, bypassing the live API fetch. Used by the generation script for demo/testing with sample data. |
 | 2026-02 | **_exclude_rentals fix:** `report_builders._exclude_rentals()` was imported by `market_trends.py` but was never defined, causing all Market Trends page generation to fail with `ImportError`. Function now defined in `report_builders.py`. |
