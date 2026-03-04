@@ -139,6 +139,46 @@
     .page-footer{position:absolute; bottom:0.4in; left:var(--pad); right:var(--pad); display:flex; justify-content:space-between; align-items:center; font-size:10px; color:var(--slate);}
     .page-footer .brand{display:flex; align-items:center; gap:8px;}
     .page-footer .num{font-family:'Playfair Display',serif; font-size:14px; color:var(--burgundy);}
+
+    /* --- Market Trends --- */
+    .page-market-trends .page-content{padding:0 var(--pad); padding-top:10px;}
+    .mt-header{margin-bottom:14px;}
+    .mt-subtitle{font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--slate); margin-bottom:6px;}
+    .mt-header-accent{width:50px; height:3px; background:var(--gold); border-radius:2px;}
+    .mt-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:18px;}
+    .mt-card{background:#f8f6f3; border:1px solid var(--gold-light); border-radius:12px; padding:16px 14px; text-align:center;}
+    .mt-card-label{font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--slate); margin-bottom:6px;}
+    .mt-card-value{font-family:'Playfair Display',serif; font-size:22px; color:var(--burgundy); line-height:1.1;}
+    .mt-card-value--na{color:#aaa; font-size:16px;}
+    .mt-card-change{font-size:9px; margin-top:4px; font-weight:600;}
+    .mt-card-change--positive{color:#16a34a;}
+    .mt-card-change--negative{color:#dc2626;}
+    .mt-card-change--neutral{color:var(--slate);}
+    .mt-card-note{font-size:8px; color:#999; margin-top:3px;}
+    .mt-condition{display:flex; align-items:center; gap:18px; background:#f8f6f3; border:1px solid var(--gold-light); border-radius:12px; padding:14px 18px; margin-bottom:16px;}
+    .mt-condition-left{min-width:120px;}
+    .mt-condition-label{font-family:'Playfair Display',serif; font-size:16px; color:var(--burgundy); margin-bottom:4px;}
+    .mt-condition-score{display:flex; gap:4px;}
+    .mt-dot{width:10px; height:10px; border-radius:50%; background:#e0ddd8;}
+    .mt-dot--filled{background:var(--gold);}
+    .mt-condition--sellers .mt-dot--filled{background:#16a34a;}
+    .mt-condition--balanced .mt-dot--filled{background:var(--gold);}
+    .mt-condition--buyers .mt-dot--filled{background:#dc2626;}
+    .mt-condition-desc{font-size:10px; color:var(--slate); line-height:1.5; flex:1;}
+    .mt-gauge-wrap{margin-bottom:18px;}
+    .mt-gauge-label{font-size:10px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--burgundy); margin-bottom:8px; text-align:center;}
+    .mt-gauge-container{position:relative; margin:0 auto; max-width:90%;}
+    .mt-gauge-bar{display:flex; height:28px; border-radius:14px; overflow:hidden;}
+    .mt-gauge-zone{flex:1; display:flex; align-items:center; justify-content:center; font-size:7px; letter-spacing:0.05em; text-transform:uppercase; text-align:center; line-height:1.2; color:#fff;}
+    .mt-gauge-zone--sellers{background:#16a34a;}
+    .mt-gauge-zone--balanced{background:var(--gold);}
+    .mt-gauge-zone--buyers{background:#dc2626;}
+    .mt-gauge-marker{position:absolute; top:-6px; transform:translateX(-50%); text-align:center;}
+    .mt-gauge-pip{font-size:14px; color:var(--burgundy); line-height:1;}
+    .mt-gauge-val{display:block; font-size:10px; font-weight:700; color:var(--burgundy);}
+    .mt-gauge-tick-labels{display:flex; justify-content:space-between; font-size:8px; color:#999; margin-top:4px; max-width:90%; margin-left:auto; margin-right:auto;}
+    .mt-attribution{margin-top:14px; text-align:center;}
+    .mt-attribution p{font-size:7px; color:#aaa; line-height:1.5; margin:0 0 2px;}
   </style>
 </head>
 <body>
@@ -300,8 +340,109 @@
     </section>
     {% endif %}
 
+    {% if "market_trends" in _pages and market_trends %}
+    <!-- PAGE 6: MARKET TRENDS -->
+    <section class="page page-market-trends">
+      <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
+      <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
+      <div class="property-header"><div class="property-label">Market Intelligence</div><h2 class="property-title">Market Trends</h2><div class="gold-rule"></div></div>
+      <div class="page-content">
+        {%- set _mt_subtitle = (market_trends.city ~ ' - ' if market_trends.city else '') ~ (market_trends.period_label | default('')) -%}
+        <div class="mt-header">
+          {% if _mt_subtitle %}<div class="mt-subtitle">{{ _mt_subtitle }}</div>{% endif %}
+          <div class="mt-header-accent"></div>
+        </div>
+
+        {% if not market_trends.has_prior_data %}
+        <p style="font-size:9px; color:#ca8a04; margin-top:-10px; margin-bottom:10px;">
+          Current period only - prior comparison unavailable
+        </p>
+        {% endif %}
+
+        <div class="mt-condition mt-condition--{{ market_trends.market_condition.indicator | default('unknown') }}">
+          <div class="mt-condition-left">
+            <span class="mt-condition-label">{{ market_trends.market_condition.label | default('Unknown') }}</span>
+            <div class="mt-condition-score">
+              {% for i in range(10) %}
+              <span class="mt-dot {% if i < (market_trends.market_condition.score | default(0)) %}mt-dot--filled{% endif %}"></span>
+              {% endfor %}
+            </div>
+          </div>
+          <p class="mt-condition-desc">{{ market_trends.market_condition.description | default('') }}</p>
+        </div>
+
+        <div class="mt-grid">
+          {% for item in [
+            ("Median Sale Price", market_trends.median_sale_price),
+            ("Avg Days on Market", market_trends.avg_days_on_market),
+            ("List-to-Sale Ratio", market_trends.list_to_sale_ratio),
+            ("Price per Sq Ft", market_trends.price_per_sqft),
+            ("Closed Sales (90 Days)", market_trends.closed_sales)
+          ] %}
+          <div class="mt-card">
+            <div class="mt-card-label">{{ item[0] }}</div>
+            {% if item[1] and item[1].current is not none %}
+            <div class="mt-card-value">{{ item[1].formatted_current }}</div>
+            {% if market_trends.has_prior_data and item[1].change_pct is not none %}
+            <div class="mt-card-change mt-card-change--{{ item[1].sentiment | default('neutral') }}">
+              {% if item[1].direction == "up" %}&#9650;{% elif item[1].direction == "down" %}&#9660;{% else %}&mdash;{% endif %}
+              {{ "%.1f" | format(item[1].change_pct | abs) }}% vs prior 90 days
+            </div>
+            {% elif market_trends.has_prior_data %}
+            <div class="mt-card-note">No prior data</div>
+            {% endif %}
+            {% else %}
+            <div class="mt-card-value mt-card-value--na">N/A</div>
+            <div class="mt-card-note">Insufficient data</div>
+            {% endif %}
+          </div>
+          {% endfor %}
+          <div class="mt-card">
+            <div class="mt-card-label">Active Listings</div>
+            <div class="mt-card-value">{{ market_trends.active_listings.formatted_count | default('N/A') }}</div>
+            {% if market_trends.active_listings.formatted_avg_price %}
+            <div class="mt-card-note">Avg {{ market_trends.active_listings.formatted_avg_price }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if market_trends.months_of_inventory and market_trends.months_of_inventory.current is not none %}
+        <div class="mt-gauge-wrap">
+          <div class="mt-gauge-label">Months of Inventory</div>
+          <div class="mt-gauge-container">
+            <div class="mt-gauge-bar">
+              <div class="mt-gauge-zone mt-gauge-zone--sellers">Seller's<br>&lt; 4 mo</div>
+              <div class="mt-gauge-zone mt-gauge-zone--balanced">Balanced<br>4 - 6 mo</div>
+              <div class="mt-gauge-zone mt-gauge-zone--buyers">Buyer's<br>&gt; 6 mo</div>
+            </div>
+            <div class="mt-gauge-marker" style="left: {{ market_trends.months_of_inventory.gauge_pct | default(50) }}%;">
+              <span class="mt-gauge-pip">&#9660;</span>
+              <span class="mt-gauge-val">{{ market_trends.months_of_inventory.formatted_current }}</span>
+            </div>
+          </div>
+          <div class="mt-gauge-tick-labels">
+            <span>0 mo</span><span>3 mo</span><span>6 mo</span><span>9 mo</span><span>12 mo+</span>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="mt-attribution">
+          <p>
+            Data source: {{ market_trends.data_source | default('SimplyRETS MLS') }} &middot;
+            {{ market_trends.city | default('') }} &middot;
+            {{ market_trends.period_label | default('') }} &middot;
+            {{ market_trends.sample_size | default(0) }} closed sales analyzed &middot;
+            Generated {{ market_trends.generated_date | default('') }}
+          </p>
+          <p>Market conditions change rapidly. Consult your real estate professional for current, personalized advice.</p>
+        </div>
+      </div>
+      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">06</div></div>
+    </section>
+    {% endif %}
+
     {% if "comparables" in _pages %}
-    <!-- PAGE 6: COMPARABLES -->
+    <!-- PAGE 7: COMPARABLES -->
     <section class="page comparables">
       <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
@@ -324,12 +465,12 @@
         </div>
         {% endfor %}
       </div>
-      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">06</div></div>
+      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">07</div></div>
     </section>
     {% endif %}
 
     {% if "range" in _pages %}
-    <!-- PAGE 7: RANGE -->
+    <!-- PAGE 8: RANGE -->
     <section class="page range">
       <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
@@ -346,7 +487,7 @@
         <div class="range-slider-track"><div class="range-slider-dot" style="left:5%;"></div><div class="range-slider-dot" style="left:95%;"></div></div>
       </div>
       <p class="range-note">The above statistics represent average property details for comparable homes sold within the last 12 months. The price range indicates the low and high sale prices for properties matching your home's characteristics including square footage, bedrooms, bathrooms, and lot size.</p>
-      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">07</div></div>
+      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">08</div></div>
     </section>
     {% endif %}
 

@@ -987,6 +987,117 @@
       border-top: 10px solid var(--teal);
       transform: translateY(3px);
     }
+
+    /* ── Market Trends Page ──────────────────────────────────────────── */
+    .page-market-trends .page-content{
+      display:flex; flex-direction:column; padding:0.4in 0.5in 0.6in;
+    }
+    .mt-header{ margin-bottom:18px; }
+    .mt-title{
+      font-family:'Montserrat',sans-serif; font-size:22px; font-weight:800;
+      text-transform:uppercase; letter-spacing:0.06em; color:var(--navy);
+      margin:0 0 2px 0; line-height:1.15;
+    }
+    .mt-subtitle{
+      font-family:'Montserrat',sans-serif; font-size:10px; color:var(--muted);
+      margin:0; letter-spacing:0.02em;
+    }
+    .mt-header-accent{
+      width:48px; height:3px; background:var(--teal); margin-top:8px; border-radius:2px;
+    }
+    /* Condition badge */
+    .mt-condition{
+      border-radius:10px; padding:16px 18px; margin-bottom:18px;
+      display:flex; align-items:flex-start; gap:14px;
+    }
+    .mt-condition--sellers{ background:rgba(22,163,74,0.05); border:1px solid rgba(22,163,74,0.25); }
+    .mt-condition--balanced{ background:rgba(234,179,8,0.05); border:1px solid rgba(234,179,8,0.3); }
+    .mt-condition--buyers{ background:rgba(220,38,38,0.05); border:1px solid rgba(220,38,38,0.2); }
+    .mt-condition--unknown{ background:var(--bg); border:1px solid var(--line); }
+    .mt-condition-left{
+      flex-shrink:0; display:flex; flex-direction:column; align-items:center;
+      gap:6px; min-width:100px;
+    }
+    .mt-condition-label{
+      font-family:'Montserrat',sans-serif; font-size:12px; font-weight:700;
+      color:var(--navy); white-space:nowrap;
+    }
+    .mt-condition-score{ display:flex; gap:3px; }
+    .mt-dot{
+      width:7px; height:7px; border-radius:50%; background:var(--line);
+      display:inline-block; flex-shrink:0;
+    }
+    .mt-dot--filled{ background:var(--teal); }
+    .mt-condition-desc{
+      font-family:'Montserrat',sans-serif; font-size:9px; color:var(--muted);
+      line-height:1.5; margin:0;
+    }
+    /* Metrics grid */
+    .mt-grid{
+      display:grid; grid-template-columns:repeat(3,1fr);
+      gap:10px; margin-bottom:18px;
+    }
+    .mt-card{
+      border:1px solid var(--line); border-radius:10px; padding:14px 12px;
+      text-align:center; background:var(--bg); display:flex; flex-direction:column; gap:3px;
+    }
+    .mt-card-label{
+      font-family:'Montserrat',sans-serif; font-size:7.5px; font-weight:600;
+      text-transform:uppercase; letter-spacing:0.06em; color:var(--muted);
+    }
+    .mt-card-value{
+      font-family:'Montserrat',sans-serif; font-size:20px; font-weight:700;
+      color:var(--navy); line-height:1.15;
+    }
+    .mt-card-value--na{ color:var(--line); font-size:16px; }
+    .mt-card-note{
+      font-family:'Montserrat',sans-serif; font-size:7.5px; color:var(--muted);
+    }
+    .mt-card-change{
+      font-family:'Montserrat',sans-serif; font-size:8px; color:var(--muted); font-weight:500;
+    }
+    .mt-card-change--good{ color:#16a34a; }
+    .mt-card-change--bad{ color:#dc2626; }
+    .mt-card-change--neutral{ color:var(--muted); }
+    /* Gauge */
+    .mt-gauge-wrap{ flex:1; display:flex; flex-direction:column; justify-content:center; }
+    .mt-gauge-label{
+      font-family:'Montserrat',sans-serif; font-size:7.5px; font-weight:600;
+      text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); margin-bottom:18px;
+    }
+    .mt-gauge-container{ position:relative; }
+    .mt-gauge-bar{
+      height:22px; border-radius:999px; display:flex; overflow:hidden;
+    }
+    .mt-gauge-zone{
+      flex:1; display:flex; align-items:center; justify-content:center;
+      font-family:'Montserrat',sans-serif; font-size:7px; font-weight:700;
+      text-transform:uppercase; letter-spacing:0.04em; color:rgba(255,255,255,0.9);
+    }
+    .mt-gauge-zone--sellers{ background:#16a34a; }
+    .mt-gauge-zone--balanced{ background:#ca8a04; }
+    .mt-gauge-zone--buyers{ background:#dc2626; }
+    .mt-gauge-marker{
+      position:absolute; top:-28px; transform:translateX(-50%);
+      text-align:center; z-index:2; pointer-events:none;
+    }
+    .mt-gauge-pip{ display:block; font-size:11px; color:var(--navy); line-height:1; margin-bottom:1px; }
+    .mt-gauge-val{
+      display:inline-block; background:var(--navy); color:#fff;
+      padding:2px 8px; border-radius:999px; font-family:'Montserrat',sans-serif;
+      font-size:9px; font-weight:700; white-space:nowrap;
+    }
+    .mt-gauge-tick-labels{
+      display:flex; justify-content:space-between; margin-top:4px;
+      font-family:'Montserrat',sans-serif; font-size:7px; color:var(--muted);
+    }
+    .mt-attribution{
+      padding-top:12px; border-top:1px solid var(--line); margin-top:18px;
+    }
+    .mt-attribution p{
+      font-family:'Montserrat',sans-serif; font-size:7px; color:var(--muted);
+      margin:0 0 2px 0; line-height:1.4;
+    }
   </style>
 </head>
 
@@ -1286,9 +1397,125 @@
     </section>
     {% endif %}
 
+    {% if "market_trends" in _pages and market_trends %}
+    <!-- =========================================================
+      PAGE 6: MARKET TRENDS
+    ========================================================== -->
+    <section class="page pad page-market-trends">
+      <div class="topline">
+        <h2 class="section-title">
+          MARKET TRENDS
+          <span class="mini-bars"><span></span><span></span></span>
+        </h2>
+      </div>
+      <div class="page-content">
+        {%- set _mt_subtitle = (market_trends.city ~ ' - ' if market_trends.city else '') ~ (market_trends.period_label | default('')) -%}
+        <div class="mt-header">
+          <div class="mt-title">Market Trends</div>
+          {% if _mt_subtitle %}<div class="mt-subtitle">{{ _mt_subtitle }}</div>{% endif %}
+          <div class="mt-header-accent"></div>
+        </div>
+
+        {% if not market_trends.has_prior_data %}
+        <p style="font-size:9px; color:#ca8a04; margin-top:-10px; margin-bottom:10px;">
+          Current period only - prior comparison unavailable
+        </p>
+        {% endif %}
+
+        {# Market Condition Badge #}
+        <div class="mt-condition mt-condition--{{ market_trends.market_condition.indicator | default('unknown') }}">
+          <div class="mt-condition-left">
+            <span class="mt-condition-label">{{ market_trends.market_condition.label | default('Unknown') }}</span>
+            <div class="mt-condition-score">
+              {% for i in range(10) %}
+              <span class="mt-dot {% if i < (market_trends.market_condition.score | default(0)) %}mt-dot--filled{% endif %}"></span>
+              {% endfor %}
+            </div>
+          </div>
+          <p class="mt-condition-desc">{{ market_trends.market_condition.description | default('') }}</p>
+        </div>
+
+        {# Metrics Grid (3x2) #}
+        <div class="mt-grid">
+          {% for item in [
+            ("Median Sale Price", market_trends.median_sale_price),
+            ("Avg Days on Market", market_trends.avg_days_on_market),
+            ("List-to-Sale Ratio", market_trends.list_to_sale_ratio),
+            ("Price per Sq Ft", market_trends.price_per_sqft),
+            ("Closed Sales (90 Days)", market_trends.closed_sales)
+          ] %}
+          <div class="mt-card">
+            <div class="mt-card-label">{{ item[0] }}</div>
+            {% if item[1] and item[1].current is not none %}
+            <div class="mt-card-value">{{ item[1].formatted_current }}</div>
+            {% if market_trends.has_prior_data and item[1].change_pct is not none %}
+            <div class="mt-card-change mt-card-change--{{ item[1].sentiment | default('neutral') }}">
+              {% if item[1].direction == "up" %}&#9650;{% elif item[1].direction == "down" %}&#9660;{% else %}&mdash;{% endif %}
+              {{ "%.1f" | format(item[1].change_pct | abs) }}% vs prior 90 days
+            </div>
+            {% elif market_trends.has_prior_data %}
+            <div class="mt-card-note">No prior data</div>
+            {% endif %}
+            {% else %}
+            <div class="mt-card-value mt-card-value--na">N/A</div>
+            <div class="mt-card-note">Insufficient data</div>
+            {% endif %}
+          </div>
+          {% endfor %}
+
+          {# Active Listings - snapshot only #}
+          <div class="mt-card">
+            <div class="mt-card-label">Active Listings</div>
+            <div class="mt-card-value">{{ market_trends.active_listings.formatted_count | default('N/A') }}</div>
+            {% if market_trends.active_listings.formatted_avg_price %}
+            <div class="mt-card-note">Avg {{ market_trends.active_listings.formatted_avg_price }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        {# Months of Inventory Gauge #}
+        {% if market_trends.months_of_inventory and market_trends.months_of_inventory.current is not none %}
+        <div class="mt-gauge-wrap">
+          <div class="mt-gauge-label">Months of Inventory</div>
+          <div class="mt-gauge-container">
+            <div class="mt-gauge-bar">
+              <div class="mt-gauge-zone mt-gauge-zone--sellers">Seller's<br>&lt; 4 mo</div>
+              <div class="mt-gauge-zone mt-gauge-zone--balanced">Balanced<br>4 - 6 mo</div>
+              <div class="mt-gauge-zone mt-gauge-zone--buyers">Buyer's<br>&gt; 6 mo</div>
+            </div>
+            <div class="mt-gauge-marker" style="left: {{ market_trends.months_of_inventory.gauge_pct | default(50) }}%;">
+              <span class="mt-gauge-pip">&#9660;</span>
+              <span class="mt-gauge-val">{{ market_trends.months_of_inventory.formatted_current }}</span>
+            </div>
+          </div>
+          <div class="mt-gauge-tick-labels">
+            <span>0 mo</span><span>3 mo</span><span>6 mo</span><span>9 mo</span><span>12 mo+</span>
+          </div>
+        </div>
+        {% endif %}
+
+        {# Attribution #}
+        <div class="mt-attribution">
+          <p>
+            Data source: {{ market_trends.data_source | default('SimplyRETS MLS') }} &middot;
+            {{ market_trends.city | default('') }} &middot;
+            {{ market_trends.period_label | default('') }} &middot;
+            {{ market_trends.sample_size | default(0) }} closed sales analyzed &middot;
+            Generated {{ market_trends.generated_date | default('') }}
+          </p>
+          <p>Market conditions change rapidly. Consult your real estate professional for current, personalized advice.</p>
+        </div>
+      </div>
+      <div class="page-footer">
+        <div class="brand">TrendyReports</div>
+        <div class="num">06</div>
+      </div>
+    </section>
+    {% endif %}
+
     {% if "comparables" in _pages %}
     <!-- =========================================================
-      PAGE 6: SALES COMPARABLES
+      PAGE 7: SALES COMPARABLES
     ========================================================== -->
     <section class="page pad">
       <div class="topline">
@@ -1297,7 +1524,7 @@
           <span class="mini-bars"><span></span><span></span></span>
         </h2>
       </div>
-      <div class="subtitle">PROPERTIES THAT HAVE RECENTLY SOLD</div>
+      <div class="subtitle">PROPERTIES THAT HAVE RECENTLY SOLD OR LISTED</div>
 
       <div class="comps-grid">
         {% for comp in comparables[:4] %}
@@ -1333,7 +1560,7 @@
       </div>
       <div class="page-footer">
         <div class="brand">TrendyReports</div>
-        <div class="num">06</div>
+        <div class="num">07</div>
       </div>
     </section>
     {% endif %}
@@ -1382,12 +1609,10 @@
       </div>
       <div class="page-footer">
         <div class="brand">TrendyReports</div>
-        <div class="num">07</div>
+        <div class="num">08</div>
       </div>
     </section>
     {% endif %}
-
-    {# Market Trends page placeholder — will be ported in a future update #}
 
   </div>
 </body>
