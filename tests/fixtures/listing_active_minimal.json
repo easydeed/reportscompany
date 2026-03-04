@@ -1,0 +1,87 @@
+{
+  "mlsId": 238837393,
+  "listingId": "IV26039109",
+  "listPrice": 869900,
+  "originalListPrice": 895000,
+  "listDate": "2026-02-21T08:00:00Z",
+  "modified": "2026-02-24T17:22:49Z",
+  "remarks": "Upgraded single-story pool home in Downey.",
+  "photos": [
+    "https://media.crmls.org/medias/sample1.jpg",
+    "https://media.crmls.org/medias/sample2.jpg",
+    "https://media.crmls.org/medias/sample3.jpg"
+  ],
+  "property": {
+    "area": 1228,
+    "bathsFull": 2,
+    "bathsHalf": null,
+    "bedrooms": 2,
+    "subType": "SingleFamilyResidence",
+    "subTypeText": "Single Family Residence",
+    "type": "RES",
+    "lotSizeArea": 5183,
+    "lotSizeAreaUnits": "Square Feet",
+    "acres": 0.119,
+    "yearBuilt": 1949,
+    "pool": "Private,In Ground",
+    "cooling": "Central Air",
+    "heating": null,
+    "garageSpaces": 1,
+    "stories": 1,
+    "view": "None"
+  },
+  "mls": {
+    "status": "Active",
+    "daysOnMarket": 3,
+    "area": "699 - Not Defined",
+    "originalEntryTimestamp": "2026-02-22T01:00:05Z",
+    "originatingSystemName": "CRM"
+  },
+  "address": {
+    "full": "8806 Stamps",
+    "streetName": "Stamps",
+    "streetNumberText": "8806",
+    "streetNumber": 8806,
+    "city": "Downey",
+    "state": "CA",
+    "postalCode": "90240",
+    "country": "United States",
+    "unit": null,
+    "crossStreet": null
+  },
+  "geo": {
+    "lat": 33.962378,
+    "lng": -118.113186,
+    "county": "Los Angeles",
+    "marketArea": "699 - Not Defined"
+  },
+  "school": {
+    "district": "Downey Unified",
+    "middleSchool": null,
+    "highSchool": null,
+    "elementarySchool": null
+  },
+  "association": {
+    "fee": 0,
+    "frequency": null,
+    "name": null,
+    "amenities": null
+  },
+  "tax": {
+    "id": "6367026018",
+    "taxYear": null,
+    "taxAnnualAmount": null
+  },
+  "office": {
+    "name": "GREENVIEW REALTY",
+    "brokerid": "IDAVB",
+    "servingName": "GREENVIEW REALTY",
+    "contact": null
+  },
+  "sales": null,
+  "coAgent": null,
+  "specialListingConditions": "Standard",
+  "internetAddressDisplay": true,
+  "internetEntireListingDisplay": true,
+  "ownership": "None"
+}

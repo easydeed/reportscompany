@@ -1,0 +1,159 @@
+{
+  "privateRemarks": "**REDACTED**",
+  "showingContactName": "**REDACTED**",
+  "property": {
+    "roof": null,
+    "cooling": "Central Air",
+    "style": null,
+    "area": 1783,
+    "bathsFull": 0,
+    "bathsHalf": null,
+    "stories": 1,
+    "fireplaces": null,
+    "flooring": null,
+    "heating": "Central",
+    "bathrooms": "2",
+    "foundation": null,
+    "laundryFeatures": "Inside",
+    "occupantName": null,
+    "ownerName": null,
+    "lotDescription": "Cul-De-Sac",
+    "pool": "None",
+    "subType": "SingleFamilyResidence",
+    "bedrooms": 3,
+    "interiorFeatures": null,
+    "lotSize": null,
+    "areaSource": "Assessor",
+    "maintenanceExpense": null,
+    "additionalRooms": null,
+    "exteriorFeatures": "Street Lights",
+    "water": null,
+    "view": "None",
+    "lotSizeArea": 5267,
+    "subdivision": null,
+    "construction": null,
+    "parking": {
+      "leased": null,
+      "spaces": 2,
+      "description": "Garage"
+    },
+    "lotSizeAreaUnits": "Square Feet",
+    "type": "RES",
+    "garageSpaces": 2,
+    "bathsThreeQuarter": 2,
+    "accessibility": null,
+    "acres": 0.1209,
+    "occupantType": null,
+    "subTypeText": "Single Family Residence",
+    "yearBuilt": 1963
+  },
+  "mlsId": 237936535,
+  "showingContactPhone": "**REDACTED**",
+  "terms": null,
+  "showingInstructions": "**REDACTED**",
+  "office": {
+    "contact": null,
+    "name": "T.N.G. Real Estate Consultants",
+    "servingName": "T.N.G. Real Estate Consultants",
+    "brokerid": "PB18025"
+  },
+  "leaseTerm": null,
+  "disclaimer": "This information is believed to be accurate, but without warranty.",
+  "specialListingConditions": "Standard",
+  "originalListPrice": 1059000,
+  "address": {
+    "crossStreet": null,
+    "state": "CA",
+    "country": "United States",
+    "postalCode": "90242",
+    "streetName": "Corey",
+    "streetNumberText": "7456",
+    "city": "Downey",
+    "streetNumber": 7456,
+    "full": "7456 Corey",
+    "unit": null
+  },
+  "agreement": null,
+  "listDate": "2026-01-24T08:00:00Z",
+  "agent": {
+    "officeMlsId": "PB18025",
+    "lastName": "**REDACTED**",
+    "contact": {
+      "email": "**REDACTED**",
+      "office": "**REDACTED**",
+      "cell": "**REDACTED**"
+    },
+    "address": null,
+    "modified": null,
+    "firstName": "**REDACTED**",
+    "id": "PCHUNWON"
+  },
+  "modified": "2026-02-24T20:07:33Z",
+  "school": {
+    "middleSchool": null,
+    "highSchool": null,
+    "elementarySchool": null,
+    "district": "Downey Unified"
+  },
+  "photos_count": 6,
+  "photos_sample": [
+    "https://media.crmls.org/medias/3fece66b-acbb-4cb2-b4a8-9753ff1f6cf5.jpg?preset=X-Large",
+    "https://media.crmls.org/medias/cbaca91d-b996-4e9a-9d7f-7df1b1ea9ca3.jpg?preset=X-Large"
+  ],
+  "listPrice": 1059000,
+  "internetAddressDisplay": true,
+  "listingId": "PW26011136",
+  "mls": {
+    "status": "Closed",
+    "area": "D3 - Southwest Downey, S of Firestone, W of Downey",
+    "daysOnMarket": 0,
+    "originalEntryTimestamp": "2026-01-16T16:45:39Z",
+    "originatingSystemName": "CRM",
+    "statusText": "Closed",
+    "areaMinor": null
+  },
+  "internetEntireListingDisplay": true,
+  "geo": {
+    "county": "Los Angeles",
+    "lat": 33.93477,
+    "lng": -118.155759,
+    "marketArea": "D3 - Southwest Downey, S of Firestone, W of Downey",
+    "directions": "From Imperial Hwy -> NB on Old River School Rd -> RT Rundell ->Pomering ->Corey"
+  },
+  "tax": {
+    "taxYear": null,
+    "taxAnnualAmount": null,
+    "id": "6246027022"
+  },
+  "coAgent": null,
+  "sales": {
+    "closeDate": "2026-02-24T08:00:00Z",
+    "office": {
+      "contact": null,
+      "name": "Mi Jeong Kim",
+      "servingName": "Mi Jeong Kim",
+      "brokerid": "CLW-X83444"
+    },
+    "closePrice": 1100000,
+    "agent": {
+      "officeMlsId": "CLW-X83444",
+      "lastName": "Kim",
+      "contact": null,
+      "address": null,
+      "modified": null,
+      "firstName": "MiJeong",
+      "id": "CLW-C101557"
+    },
+    "contractDate": "2026-01-14T08:00:00Z"
+  },
+  "ownership": "None",
+  "leaseType": null,
+  "virtualTourUrl": "https://my.matterport.com/show/?m=wosuYvGxaih&mls=1",
+  "remarks": "Beautifully upgraded and maintained One Level SFR in a cul-de-sac located in a quiet neighborhood of Downey.  Detached Garage and long driveway for additional cars.   Remodeled kitchen, bathrooms and spacious bedrooms.  Extra large Bonus room as you enter the home, can be used as a game room, hobby room or just a living/family room.",
+  "association": {
+    "frequency": null,
+    "fee": 0,
+    "name": null,
+    "amenities": null
+  }
+}

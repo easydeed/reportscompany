@@ -1,0 +1,112 @@
+{
+  "mlsId": 236998668,
+  "listingId": "OC26002243",
+  "listPrice": 1150000,
+  "originalListPrice": 1150000,
+  "listDate": "2026-01-07T08:00:00Z",
+  "modified": "2026-02-20T19:17:54Z",
+  "remarks": "Spanish-style home fully updated, 4 bedrooms, 3 bathrooms, pool.",
+  "photos": [
+    "https://media.crmls.org/medias/la_verne1.jpg",
+    "https://media.crmls.org/medias/la_verne2.jpg",
+    "https://media.crmls.org/medias/la_verne3.jpg",
+    "https://media.crmls.org/medias/la_verne4.jpg",
+    "https://media.crmls.org/medias/la_verne5.jpg"
+  ],
+  "property": {
+    "area": 2085,
+    "bathsFull": 3,
+    "bathsHalf": null,
+    "bedrooms": 4,
+    "subType": "SingleFamilyResidence",
+    "subTypeText": "Single Family Residence",
+    "type": "RES",
+    "lotSizeArea": 7460,
+    "lotSizeAreaUnits": "Square Feet",
+    "acres": 0.1713,
+    "yearBuilt": 1978,
+    "pool": "Private,Heated,In Ground",
+    "cooling": "Central Air",
+    "heating": "Central",
+    "garageSpaces": 2,
+    "stories": 2,
+    "view": "Mountain(s)"
+  },
+  "mls": {
+    "status": "Closed",
+    "daysOnMarket": 16,
+    "area": "684 - La Verne",
+    "originalEntryTimestamp": "2026-01-07T17:40:07Z",
+    "originatingSystemName": "CRM"
+  },
+  "address": {
+    "full": "1216 Baseline",
+    "streetName": "Baseline",
+    "streetNumberText": "1216",
+    "streetNumber": 1216,
+    "city": "La Verne",
+    "state": "CA",
+    "postalCode": "91750",
+    "country": "United States",
+    "unit": null,
+    "crossStreet": null
+  },
+  "geo": {
+    "lat": 34.12139,
+    "lng": -117.780653,
+    "county": "Los Angeles",
+    "marketArea": "684 - La Verne"
+  },
+  "school": {
+    "district": "Bonita Unified",
+    "middleSchool": "Ramona",
+    "highSchool": "Bonita",
+    "elementarySchool": null
+  },
+  "association": {
+    "fee": 0,
+    "frequency": null,
+    "name": null,
+    "amenities": null
+  },
+  "tax": {
+    "id": "8664032034",
+    "taxYear": null,
+    "taxAnnualAmount": null
+  },
+  "office": {
+    "name": "Black Rock Realty",
+    "brokerid": "J02496",
+    "servingName": "Black Rock Realty",
+    "contact": null
+  },
+  "sales": {
+    "closeDate": "2026-02-18T08:00:00Z",
+    "closePrice": 1175000,
+    "contractDate": "2026-01-23T08:00:00Z",
+    "office": {
+      "name": "CC Royal Realty",
+      "brokerid": "PB19814",
+      "servingName": "CC Royal Realty",
+      "contact": null
+    },
+    "agent": {
+      "id": "HCHENCAT",
+      "firstName": "Cathy",
+      "lastName": "Cheng",
+      "officeMlsId": "PB19814",
+      "contact": null
+    }
+  },
+  "coAgent": {
+    "id": "OCSALAJUM",
+    "firstName": "Jumana",
+    "lastName": "Salameh",
+    "officeMlsId": null,
+    "contact": null
+  },
+  "specialListingConditions": "Standard",
+  "internetAddressDisplay": true,
+  "internetEntireListingDisplay": true,
+  "ownership": "None"
+}

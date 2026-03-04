@@ -86,7 +86,7 @@ export const THEMES: Theme[] = [
     displayFont: "'Merriweather', serif",
     gradient: "linear-gradient(135deg, #1B365D 0%, #2D5F8A 100%)",
     accentDefault: "#4A90A4",
-    pageCount: 8,
+    pageCount: 7,
     compact: false,
   },
   {
@@ -96,7 +96,7 @@ export const THEMES: Theme[] = [
     displayFont: "'Space Grotesk', sans-serif",
     gradient: "linear-gradient(135deg, #1A1F36 0%, #FF6B5B 100%)",
     accentDefault: "#FF6B5B",
-    pageCount: 8,
+    pageCount: 7,
     compact: false,
   },
   {
@@ -106,7 +106,7 @@ export const THEMES: Theme[] = [
     displayFont: "'Playfair Display', serif",
     gradient: "linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #C9A962 100%)",
     accentDefault: "#C9A962",
-    pageCount: 8,
+    pageCount: 7,
     compact: false,
   },
   {
@@ -116,7 +116,7 @@ export const THEMES: Theme[] = [
     displayFont: "'Montserrat', sans-serif",
     gradient: "linear-gradient(135deg, #18235c 0%, #34d1c3 100%)",
     accentDefault: "#34d1c3",
-    pageCount: 8,
+    pageCount: 7,
     compact: true,
   },
   {
@@ -126,7 +126,7 @@ export const THEMES: Theme[] = [
     displayFont: "'Oswald', sans-serif",
     gradient: "linear-gradient(135deg, #15216E 0%, #1a3a7a 50%, #D69649 100%)",
     accentDefault: "#D69649",
-    pageCount: 8,
+    pageCount: 7,
     compact: true,
   },
 ];
@@ -141,16 +141,14 @@ export const THEMES: Theme[] = [
 //                      market_trends → comparables → range
 // -----------------------------------------------------------------------------
 
-// NOTE: FULL_PAGES and COMPACT_PAGES currently map to the same 8 Jinja2 template
-// pages supported by base.jinja2. Extended "seller education" pages (roadmap,
-// pricing strategy, etc.) will be added here when their templates are built.
+// NOTE: FULL_PAGES and COMPACT_PAGES map to the standalone *_report.jinja2
+// template pages.  market_trends will be re-added once ported to standalone.
 export const FULL_PAGES: ReportPage[] = [
   { id: "cover",         name: "Cover",               required: false },
   { id: "contents",      name: "Table of Contents",   required: false },
   { id: "aerial",        name: "Aerial View",         required: false },
   { id: "property",      name: "Property Details",    required: true  },
   { id: "analysis",      name: "Area Sales Analysis", required: false },
-  { id: "market_trends", name: "Market Trends",       required: false },
   { id: "comparables",   name: "Sales Comparables",   required: true  },
   { id: "range",         name: "Range of Sales",      required: false },
 ];
@@ -161,7 +159,6 @@ export const COMPACT_PAGES: ReportPage[] = [
   { id: "aerial",        name: "Aerial View",         required: false },
   { id: "property",      name: "Property Details",    required: true  },
   { id: "analysis",      name: "Area Sales Analysis", required: false },
-  { id: "market_trends", name: "Market Trends",       required: false },
   { id: "comparables",   name: "Sales Comparables",   required: true  },
   { id: "range",         name: "Range of Sales",      required: false },
 ];

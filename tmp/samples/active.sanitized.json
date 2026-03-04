@@ -1,0 +1,140 @@
+{
+  "privateRemarks": "**REDACTED**",
+  "showingContactName": "**REDACTED**",
+  "property": {
+    "roof": null,
+    "cooling": "Central Air",
+    "style": null,
+    "area": 1228,
+    "bathsFull": 2,
+    "bathsHalf": null,
+    "stories": 1,
+    "fireplaces": null,
+    "flooring": null,
+    "heating": null,
+    "bathrooms": "2",
+    "foundation": null,
+    "laundryFeatures": "In Garage",
+    "occupantName": null,
+    "ownerName": null,
+    "lotDescription": "0-1 Unit/Acre",
+    "pool": "Private,In Ground",
+    "subType": "SingleFamilyResidence",
+    "bedrooms": 2,
+    "interiorFeatures": null,
+    "lotSize": null,
+    "areaSource": "Assessor",
+    "maintenanceExpense": null,
+    "additionalRooms": null,
+    "exteriorFeatures": "Curbs",
+    "water": null,
+    "view": "None",
+    "lotSizeArea": 5183,
+    "subdivision": null,
+    "construction": null,
+    "parking": {
+      "leased": null,
+      "spaces": 1,
+      "description": null
+    },
+    "lotSizeAreaUnits": "Square Feet",
+    "type": "RES",
+    "garageSpaces": 1,
+    "bathsThreeQuarter": null,
+    "accessibility": null,
+    "acres": 0.119,
+    "occupantType": null,
+    "subTypeText": "Single Family Residence",
+    "yearBuilt": 1949
+  },
+  "mlsId": 238837393,
+  "showingContactPhone": "**REDACTED**",
+  "terms": null,
+  "showingInstructions": "**REDACTED**",
+  "office": {
+    "contact": null,
+    "name": "GREENVIEW REALTY",
+    "servingName": "GREENVIEW REALTY",
+    "brokerid": "IDAVB"
+  },
+  "leaseTerm": null,
+  "disclaimer": "This information is believed to be accurate, but without warranty.",
+  "specialListingConditions": "Standard",
+  "originalListPrice": 869900,
+  "address": {
+    "crossStreet": null,
+    "state": "CA",
+    "country": "United States",
+    "postalCode": "90240",
+    "streetName": "Stamps",
+    "streetNumberText": "8806",
+    "city": "Downey",
+    "streetNumber": 8806,
+    "full": "8806 Stamps",
+    "unit": null
+  },
+  "agreement": null,
+  "listDate": "2026-02-21T08:00:00Z",
+  "agent": {
+    "officeMlsId": "IDAVB",
+    "lastName": "**REDACTED**",
+    "contact": {
+      "email": "**REDACTED**",
+      "office": "**REDACTED**",
+      "cell": "**REDACTED**"
+    },
+    "address": null,
+    "modified": null,
+    "firstName": "**REDACTED**",
+    "id": "IVGARERNE"
+  },
+  "modified": "2026-02-24T17:22:49Z",
+  "school": {
+    "middleSchool": null,
+    "highSchool": null,
+    "elementarySchool": null,
+    "district": "Downey Unified"
+  },
+  "photos_count": 15,
+  "photos_sample": [
+    "https://media.crmls.org/medias/0c6870ca-4ed6-40ec-8d78-a74c6f5143bf.jpg?preset=X-Large",
+    "https://media.crmls.org/medias/13822227-7acc-4984-b62a-16213640c512.jpg?preset=X-Large"
+  ],
+  "listPrice": 869900,
+  "internetAddressDisplay": true,
+  "listingId": "IV26039109",
+  "mls": {
+    "status": "Active",
+    "area": "699 - Not Defined",
+    "daysOnMarket": 3,
+    "originalEntryTimestamp": "2026-02-22T01:00:05Z",
+    "originatingSystemName": "CRM",
+    "statusText": "Active",
+    "areaMinor": null
+  },
+  "internetEntireListingDisplay": true,
+  "geo": {
+    "county": "Los Angeles",
+    "lat": 33.962378,
+    "lng": -118.113186,
+    "marketArea": "699 - Not Defined",
+    "directions": "Telegraph Rd / Lakewood Ave"
+  },
+  "tax": {
+    "taxYear": null,
+    "taxAnnualAmount": null,
+    "id": "6367026018"
+  },
+  "coAgent": null,
+  "sales": null,
+  "ownership": "None",
+  "leaseType": null,
+  "virtualTourUrl": null,
+  "remarks": "Welcome to this stunningly upgraded single-story Pool home in the highly desirable city of Downey.  From the moment you arrive, the home\u2019s fresh exterior paint. Inside, the home showcases a beautifully remodeled kitchen featuring shaker cabinets, quartz countertops, and brand-new stainless steel appliances.  Both bathrooms have been completely remodeled with upgraded designer tile, sleek fixtures, and modern finishes. Each of the two spacious bedrooms has been updated with stylish details and all-new fixtures throughout. Additional upgrades include newer dual-pane windows ,new flooring and fresh interior paint, ensuring comfort and efficiency year-round. Don\u2019t miss the chance to own this move-in-ready property that\u2019s perfect for both everyday living and entertaining.",
+  "association": {
+    "frequency": null,
+    "fee": 0,
+    "name": null,
+    "amenities": null
+  }
+}

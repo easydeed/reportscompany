@@ -1,0 +1,10 @@
+{
+  "fields": {
+    "status": ["Active", "Closed", "Pending", "ActiveUnderContract", "ComingSoon"],
+    "type": ["Residential", "Condominium", "Rental", "Townhome", "Multi-Family", "Land", "Farm", "Commercial"],
+    "subtype": ["SingleFamilyResidence", "Condominium", "Townhouse", "MobileHome", "Stock Cooperative"],
+    "cities": ["Downey", "La Verne", "Rancho Cucamonga", "San Diego", "Anaheim", "Los Angeles", "Long Beach"]
+  },
+  "lastUpdate": "2026-02-24T20:17:00Z",
+  "expires": "2026-02-25T20:17:00Z"
+}

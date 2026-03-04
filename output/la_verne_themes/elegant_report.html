@@ -10,7 +10,7 @@
   <style>
     :root {
       /* Primary accent color - can be overridden by theme_color */
-      --burgundy:{{ theme_color | default('#1a1a1a') }}; --burgundy-dark:#0d0d0d;
+      --burgundy:None; --burgundy-dark:#0d0d0d;
       --gold:#C9A962; --gold-light:#E8D5A3;
       --cream:#FAF7F2; --cream-dark:#F0EBE3;
       --charcoal:#2D2D2D; --slate:#5A5A5A;
@@ -142,16 +142,13 @@
   </style>
 </head>
 <body>
-  {% set _pages = page_set | default(["cover","contents","aerial","property","analysis","comparables","range","market_trends"]) %}
   <div class="sheet">
-    {% if "cover" in _pages %}
     <!-- PAGE 1: COVER -->
     <section class="page cover">
-      {% if images.hero %}<div class="cover-bg-image" style="background-image: url('{{ images.hero }}');"></div>{% endif %}
-      <div class="cover-header">
+<div class="cover-bg-image" style="background-image: url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&amp;h=800&amp;fit=crop');"></div>      <div class="cover-header">
         <div class="cover-brand">
           <div class="cover-brand-icon"><svg viewBox="0 0 24 24"><path d="M12 3L4 9v12h16V9l-8-6zm0 2.5L18 10v9H6v-9l6-4.5z"/></svg></div>
-          <div class="cover-brand-text">{{ agent.company_name | default('Luxury Real Estate') }}</div>
+          <div class="cover-brand-text">Luxury Estates Realty</div>
         </div>
       </div>
       <div class="cover-main">
@@ -159,23 +156,21 @@
         <h1 class="cover-title">Seller's<span>Report</span></h1>
         <div class="cover-divider"><span class="cover-divider-diamond"></span></div>
         <div class="cover-address">
-          <div class="cover-street">{{ property.street_address }}</div>
-          <div class="cover-city">{{ property.city }}, {{ property.state }} {{ property.zip_code }}</div>
+          <div class="cover-street">1358 5th St</div>
+          <div class="cover-city">La Verne, CA 91750</div>
         </div>
       </div>
       <div class="cover-footer">
-        <div class="cover-agent-photo">{% if agent.photo_url %}<img src="{{ agent.photo_url }}" alt="{{ agent.name }}" />{% endif %}</div>
+        <div class="cover-agent-photo"><img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Jennifer Martinez" /></div>
         <div class="cover-agent-info">
-          <div class="cover-agent-name">{{ agent.name }}</div>
-          <div class="cover-agent-title">{{ agent.title | default('Luxury Property Specialist') }}</div>
-          <div class="cover-agent-contact"><span>☎ {{ agent.phone | default('(000) 000-0000') }}</span><span>✉ {{ agent.email | default('agent@example.com') }}</span></div>
+          <div class="cover-agent-name">Jennifer Martinez</div>
+          <div class="cover-agent-title">Luxury Home Specialist</div>
+          <div class="cover-agent-contact"><span>☎ (310) 555-4567</span><span>✉ jennifer@luxuryestates.com</span></div>
         </div>
-        <div class="cover-logo">{{ agent.company_short | default('Luxe') }}</div>
+        <div class="cover-logo">LU</div>
       </div>
     </section>
-    {% endif %}
 
-    {% if "contents" in _pages %}
     <!-- PAGE 2: CONTENTS -->
     <section class="page contents">
       <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
@@ -194,14 +189,11 @@
       </div>
       <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">02</div></div>
     </section>
-    {% endif %}
 
-    {% if "aerial" in _pages %}
     <!-- PAGE 3: AERIAL -->
     <section class="page aerial">
       <div class="aerial-header"><div class="aerial-label">Location Overview</div><h2 class="aerial-title">Aerial View</h2></div>
-      <div class="aerial-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}>
-        {% if images.aerial_map %}<img src="{{ images.aerial_map }}" alt="Aerial map" />{% endif %}
+      <div class="aerial-map" >
       </div>
       <div class="aerial-info">
         <div class="aerial-cards">
@@ -211,9 +203,7 @@
       </div>
       <div class="page-footer" style="border:none;"><div class="brand" style="color:var(--gold-light);"><span class="diamond"></span> Elegant Collection</div><div class="num" style="color:#fff;">03</div></div>
     </section>
-    {% endif %}
 
-    {% if "property" in _pages %}
     <!-- PAGE 4: PROPERTY -->
     <section class="page property">
       <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
@@ -223,16 +213,16 @@
         <div class="property-section-header"><span class="diamond"></span><div class="property-section-title">Owner & Legal Information</div></div>
         <div class="property-grid">
           <table class="property-table">
-            <tr><td class="label">Primary Owner</td><td class="value">{{ property.owner_name | default('-') }}</td></tr>
-            <tr><td class="label">Secondary Owner</td><td class="value">{{ property.secondary_owner | default('-') }}</td></tr>
-            <tr><td class="label">Site Address</td><td class="value">{{ property.full_address }}</td></tr>
-            <tr><td class="label">Mailing Address</td><td class="value">{{ property.mailing_address | default(property.full_address) }}</td></tr>
+            <tr><td class="label">Primary Owner</td><td class="value">Owner On Record</td></tr>
+            <tr><td class="label">Secondary Owner</td><td class="value">None</td></tr>
+            <tr><td class="label">Site Address</td><td class="value">1358 5th St, La Verne, CA 91750</td></tr>
+            <tr><td class="label">Mailing Address</td><td class="value">None</td></tr>
           </table>
           <table class="property-table">
-            <tr><td class="label">APN</td><td class="value">{{ property.apn | default('-') }}</td></tr>
-            <tr><td class="label">County</td><td class="value">{{ property.county | default('-') }}</td></tr>
-            <tr><td class="label">Census Tract</td><td class="value">{{ property.census_tract | default('-') }}</td></tr>
-            <tr><td class="label">Legal Description</td><td class="value">{{ property.legal_description | default('-') }}</td></tr>
+            <tr><td class="label">APN</td><td class="value">8392-006-007</td></tr>
+            <tr><td class="label">County</td><td class="value">Los Angeles</td></tr>
+            <tr><td class="label">Census Tract</td><td class="value">None</td></tr>
+            <tr><td class="label">Legal Description</td><td class="value"></td></tr>
           </table>
         </div>
       </div>
@@ -240,16 +230,16 @@
         <div class="property-section-header"><span class="diamond"></span><div class="property-section-title">Property Specifications</div></div>
         <div class="property-grid">
           <table class="property-table">
-            <tr><td class="label">Bedrooms</td><td class="value">{{ property.bedrooms | default('-') }}</td></tr>
-            <tr><td class="label">Bathrooms</td><td class="value">{{ property.bathrooms | default('-') }}</td></tr>
-            <tr><td class="label">Square Feet</td><td class="value">{{ property.sqft | default('-') | int | format_number }}</td></tr>
-            <tr><td class="label">Lot Size</td><td class="value">{{ property.lot_size | default('-') | int | format_number }} sq ft</td></tr>
+            <tr><td class="label">Bedrooms</td><td class="value">3</td></tr>
+            <tr><td class="label">Bathrooms</td><td class="value">2.0</td></tr>
+            <tr><td class="label">Square Feet</td><td class="value">1,344</td></tr>
+            <tr><td class="label">Lot Size</td><td class="value">7,500 sq ft</td></tr>
           </table>
           <table class="property-table">
-            <tr><td class="label">Year Built</td><td class="value">{{ property.year_built | default('-') }}</td></tr>
-            <tr><td class="label">Property Type</td><td class="value">{{ property.property_type | default('Single Family') }}</td></tr>
-            <tr><td class="label">Zoning</td><td class="value">{{ property.zoning | default('-') }}</td></tr>
-            <tr><td class="label">Pool/Spa</td><td class="value">{{ property.pool | default('None') }}</td></tr>
+            <tr><td class="label">Year Built</td><td class="value">1956</td></tr>
+            <tr><td class="label">Property Type</td><td class="value">Single Family Residence</td></tr>
+            <tr><td class="label">Zoning</td><td class="value">None</td></tr>
+            <tr><td class="label">Pool/Spa</td><td class="value">None</td></tr>
           </table>
         </div>
       </div>
@@ -257,20 +247,18 @@
         <div class="property-section-header"><span class="diamond"></span><div class="property-section-title">Tax & Assessment</div></div>
         <div class="property-grid">
           <table class="property-table">
-            <tr><td class="label">Assessed Value</td><td class="value">{{ property.assessed_value | format_currency }}</td></tr>
-            <tr><td class="label">Land Value</td><td class="value">{{ property.land_value | format_currency }}</td></tr>
+            <tr><td class="label">Assessed Value</td><td class="value">$420,000</td></tr>
+            <tr><td class="label">Land Value</td><td class="value">$280,000</td></tr>
           </table>
           <table class="property-table">
-            <tr><td class="label">Annual Tax</td><td class="value">{{ property.tax_amount | format_currency }}</td></tr>
-            <tr><td class="label">Tax Year</td><td class="value">{{ property.tax_year | default('-') }}</td></tr>
+            <tr><td class="label">Annual Tax</td><td class="value">$5,250</td></tr>
+            <tr><td class="label">Tax Year</td><td class="value">2024</td></tr>
           </table>
         </div>
       </div>
       <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">04</div></div>
     </section>
-    {% endif %}
 
-    {% if "analysis" in _pages %}
     <!-- PAGE 5: ANALYSIS -->
     <section class="page analysis">
       <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
@@ -278,77 +266,98 @@
       <div class="property-header"><div class="property-label">Market Intelligence</div><h2 class="property-title">Area Sales Analysis</h2><div class="gold-rule"></div></div>
       <div class="analysis-chart">
         <div class="chart-bars">
-          {% for comp in comparables[:4] %}
-          <div class="chart-bar-wrap"><div class="chart-bar" style="height: {{ [40, (comp.sale_price / 8000) | int] | max }}px;"></div><div class="chart-bar-label">{{ comp.sold_date | default('-') }}</div></div>
-          {% endfor %}
+          <div class="chart-bar-wrap"><div class="chart-bar" style="height: 77px;"></div><div class="chart-bar-label"></div></div>
+          <div class="chart-bar-wrap"><div class="chart-bar" style="height: 86px;"></div><div class="chart-bar-label"></div></div>
+          <div class="chart-bar-wrap"><div class="chart-bar" style="height: 71px;"></div><div class="chart-bar-label"></div></div>
         </div>
       </div>
       <table class="analysis-table">
         <thead><tr><th>Metric</th><th>Subject</th><th>Low</th><th>Medium</th><th>High</th></tr></thead>
         <tbody>
-          <tr><td>Distance</td><td>{{ stats.piq.distance | default('0') }}</td><td>{{ stats.low.distance | default('-') }}</td><td>{{ stats.medium.distance | default('-') }}</td><td>{{ stats.high.distance | default('-') }}</td></tr>
-          <tr><td>Living Area</td><td>{{ stats.piq.sqft | default('-') }}</td><td>{{ stats.low.sqft | default('-') }}</td><td>{{ stats.medium.sqft | default('-') }}</td><td>{{ stats.high.sqft | default('-') }}</td></tr>
-          <tr><td>Price/Sq.Ft.</td><td>{{ stats.piq.price_per_sqft | format_currency }}</td><td>{{ stats.low.price_per_sqft | format_currency }}</td><td>{{ stats.medium.price_per_sqft | format_currency }}</td><td>{{ stats.high.price_per_sqft | format_currency }}</td></tr>
-          <tr><td>Year Built</td><td>{{ stats.piq.year_built | default('-') }}</td><td>{{ stats.low.year_built | default('-') }}</td><td>{{ stats.medium.year_built | default('-') }}</td><td>{{ stats.high.year_built | default('-') }}</td></tr>
-          <tr><td>Lot Size</td><td>{{ stats.piq.lot_size | format_number }}</td><td>{{ stats.low.lot_size | format_number }}</td><td>{{ stats.medium.lot_size | format_number }}</td><td>{{ stats.high.lot_size | format_number }}</td></tr>
-          <tr><td>Bedrooms</td><td>{{ stats.piq.bedrooms | default('-') }}</td><td>{{ stats.low.bedrooms | default('-') }}</td><td>{{ stats.medium.bedrooms | default('-') }}</td><td>{{ stats.high.bedrooms | default('-') }}</td></tr>
-          <tr><td>Bathrooms</td><td>{{ stats.piq.bathrooms | default('-') }}</td><td>{{ stats.low.bathrooms | default('-') }}</td><td>{{ stats.medium.bathrooms | default('-') }}</td><td>{{ stats.high.bathrooms | default('-') }}</td></tr>
+          <tr><td>Distance</td><td>0</td><td>0.6</td><td>0.3</td><td>0.5</td></tr>
+          <tr><td>Living Area</td><td>1344.0</td><td>1280.0</td><td>1400.0</td><td>1560.0</td></tr>
+          <tr><td>Price/Sq.Ft.</td><td>$312</td><td>$449</td><td>$442</td><td>$445</td></tr>
+          <tr><td>Year Built</td><td>1956.0</td><td>1954.0</td><td>1958.0</td><td>1962.0</td></tr>
+          <tr><td>Lot Size</td><td>7,500</td><td>6,500</td><td>6,800</td><td>7,200</td></tr>
+          <tr><td>Bedrooms</td><td>3.0</td><td>3.0</td><td>3.0</td><td>3.0</td></tr>
+          <tr><td>Bathrooms</td><td>2.0</td><td>1.0</td><td>2.0</td><td>2.0</td></tr>
         </tbody>
-        <tfoot><tr><td>Sale Price</td><td>{{ stats.piq.price | format_currency }}</td><td>{{ stats.low.price | format_currency }}</td><td>{{ stats.medium.price | format_currency }}</td><td>{{ stats.high.price | format_currency }}</td></tr></tfoot>
+        <tfoot><tr><td>Sale Price</td><td>$420,000</td><td>$575,000</td><td>$620,000</td><td>$695,000</td></tr></tfoot>
       </table>
       <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">05</div></div>
     </section>
-    {% endif %}
 
-    {% if "comparables" in _pages %}
     <!-- PAGE 6: COMPARABLES -->
     <section class="page comparables">
       <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="property-header"><div class="property-label">Recent Transactions</div><h2 class="property-title">Sales Comparables</h2><div class="gold-rule"></div></div>
       <div class="comp-grid">
-        {% for comp in comparables[:4] %}
         <div class="comp-card">
-          <div class="comp-card-image" {% if comp.map_image_url %}style="background-image: url('{{ comp.map_image_url }}'); background-size: cover; background-position: center;"{% endif %}>
-            <div class="comp-card-badge">{{ comp.sale_price | format_currency }}</div>
+          <div class="comp-card-image" >
+            <div class="comp-card-badge">$620,000</div>
           </div>
           <div class="comp-card-body">
-            <div class="comp-card-address"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>{{ comp.address }}</div>
+            <div class="comp-card-address"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>1240 Arrow Hwy, La Verne, CA 91750</div>
             <div class="comp-card-stats">
-              <div class="comp-stat"><div class="comp-stat-label">{{ comp.sold_date_label | default('Sold') }}</div><div class="comp-stat-value">{{ comp.sold_date }}</div></div>
-              <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">{{ comp.sqft | format_number }}</div></div>
-              <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">{{ comp.bedrooms }}/{{ comp.bathrooms }}</div></div>
-              <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">{{ comp.price_per_sqft | format_currency }}</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Listed</div><div class="comp-stat-value"></div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">1,400</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">3/2</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">$442</div></div>
             </div>
           </div>
         </div>
-        {% endfor %}
+        <div class="comp-card">
+          <div class="comp-card-image" >
+            <div class="comp-card-badge">$695,000</div>
+          </div>
+          <div class="comp-card-body">
+            <div class="comp-card-address"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>1425 Baseline Rd, La Verne, CA 91750</div>
+            <div class="comp-card-stats">
+              <div class="comp-stat"><div class="comp-stat-label">Listed</div><div class="comp-stat-value"></div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">1,560</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">3/2</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">$445</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="comp-card">
+          <div class="comp-card-image" >
+            <div class="comp-card-badge">$575,000</div>
+          </div>
+          <div class="comp-card-body">
+            <div class="comp-card-address"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>2110 3rd St, La Verne, CA 91750</div>
+            <div class="comp-card-stats">
+              <div class="comp-stat"><div class="comp-stat-label">Listed</div><div class="comp-stat-value"></div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">1,280</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">3/1</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">$449</div></div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">06</div></div>
     </section>
-    {% endif %}
 
-    {% if "range" in _pages %}
     <!-- PAGE 7: RANGE -->
     <section class="page range">
       <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="property-header"><div class="property-label">Valuation Summary</div><h2 class="property-title">Range of Sales</h2><div class="gold-rule"></div></div>
-      <div class="range-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}></div>
+      <div class="range-map" ></div>
       <div class="range-stats">
-        <div class="range-stat"><div class="range-stat-num">{{ '%02d' | format(stats.total_comps | default(0)) }}</div><div class="range-stat-label">Total Comps</div></div>
-        <div class="range-stat"><div class="range-stat-num">{{ stats.avg_sqft | default(0) | int }}</div><div class="range-stat-label">Avg. Sqft</div></div>
-        <div class="range-stat"><div class="range-stat-num">{{ '%02d' | format(stats.avg_beds | default(0) | int) }}</div><div class="range-stat-label">Avg. Beds</div></div>
-        <div class="range-stat"><div class="range-stat-num">{{ '%02d' | format(stats.avg_baths | default(0) | int) }}</div><div class="range-stat-label">Avg. Baths</div></div>
+        <div class="range-stat"><div class="range-stat-num">03</div><div class="range-stat-label">Total Comps</div></div>
+        <div class="range-stat"><div class="range-stat-num">1413</div><div class="range-stat-label">Avg. Sqft</div></div>
+        <div class="range-stat"><div class="range-stat-num">03</div><div class="range-stat-label">Avg. Beds</div></div>
+        <div class="range-stat"><div class="range-stat-num">02</div><div class="range-stat-label">Avg. Baths</div></div>
       </div>
       <div class="range-slider">
-        <div class="range-slider-labels"><span>{{ stats.price_low | format_currency_short }}</span><span>{{ stats.price_high | format_currency_short }}</span></div>
+        <div class="range-slider-labels"><span>$575k</span><span>$695k</span></div>
         <div class="range-slider-track"><div class="range-slider-dot" style="left:5%;"></div><div class="range-slider-dot" style="left:95%;"></div></div>
       </div>
       <p class="range-note">The above statistics represent average property details for comparable homes sold within the last 12 months. The price range indicates the low and high sale prices for properties matching your home's characteristics including square footage, bedrooms, bathrooms, and lot size.</p>
       <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">07</div></div>
     </section>
-    {% endif %}
 
   </div>
 </body>

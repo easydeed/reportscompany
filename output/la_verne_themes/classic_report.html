@@ -10,7 +10,7 @@
   <style>
     :root {
       /* Primary accent color - can be overridden by theme_color */
-      --navy: {{ theme_color | default('#1B365D') }};
+      --navy: None;
       --navy-light: #2C4A7C;
       --sky: #4A90A4;
       --sand: #C4B7A6;
@@ -382,10 +382,8 @@
   </style>
 </head>
 <body>
-  {% set _pages = page_set | default(["cover","contents","aerial","property","analysis","comparables","range","market_trends"]) %}
   <div class="sheet">
 
-    {% if "cover" in _pages %}
     <!-- PAGE 1: COVER -->
     <section class="page cover">
       <div class="cover-top">
@@ -393,11 +391,11 @@
           <div class="cover-brand-icon">
             <svg viewBox="0 0 24 24"><path d="M12 3L4 9v12h16V9l-8-6zm0 2.5L18 10v9H6v-9l6-4.5z"/></svg>
           </div>
-          <div class="cover-brand-text">{{ agent.company_name | default('TrendyReports') }}</div>
+          <div class="cover-brand-text">Luxury Estates Realty</div>
         </div>
         <div class="cover-contact-strip">
-          <span>☎ {{ agent.phone | default('(000) 000-0000') }}</span>
-          <span>✉ {{ agent.email | default('info@example.com') }}</span>
+          <span>☎ (310) 555-4567</span>
+          <span>✉ jennifer@luxuryestates.com</span>
         </div>
       </div>
 
@@ -408,32 +406,29 @@
           <div class="divider"></div>
         </div>
         <div class="cover-address">
-          <div class="cover-street">{{ property.street_address }}</div>
-          <div class="cover-city">{{ property.city }}, {{ property.state }} {{ property.zip_code }}</div>
+          <div class="cover-street">1358 5th St</div>
+          <div class="cover-city">La Verne, CA 91750</div>
         </div>
       </div>
 
       <div class="cover-bottom">
         <div class="cover-agent-photo">
-          {% if agent.photo_url %}<img src="{{ agent.photo_url }}" alt="{{ agent.name }} headshot" />{% endif %}
-        </div>
+<img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Jennifer Martinez headshot" />        </div>
         <div class="cover-agent-info">
-          <div class="cover-agent-name">{{ agent.name }}</div>
-          <div class="cover-agent-title">{{ agent.title | default('Licensed Real Estate Agent') }} • {{ agent.license | default('') }}</div>
+          <div class="cover-agent-name">Jennifer Martinez</div>
+          <div class="cover-agent-title">Luxury Home Specialist • CA BRE#02156789</div>
           <div class="cover-agent-details">
-            <span><svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>{{ agent.phone | default('(000) 000-0000') }}</span>
-            <span><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>{{ agent.email | default('agent@example.com') }}</span>
+            <span><svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>(310) 555-4567</span>
+            <span><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>jennifer@luxuryestates.com</span>
           </div>
         </div>
         <div class="cover-logo-area">
-          <div class="cover-logo">{{ agent.company_name | default('REALTY GROUP') }}</div>
-          <div class="cover-logo-sub">{{ agent.company_tagline | default('') }}</div>
+          <div class="cover-logo">Luxury Estates Realty</div>
+          <div class="cover-logo-sub"></div>
         </div>
       </div>
     </section>
-    {% endif %}
 
-    {% if "contents" in _pages %}
     <!-- PAGE 2: CONTENTS -->
     <section class="page contents">
       <div class="page-header">
@@ -449,16 +444,14 @@
       </div>
       <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">02</div></div>
     </section>
-    {% endif %}
 
-    {% if "aerial" in _pages %}
     <!-- PAGE 3: AERIAL -->
     <section class="page aerial">
       <div class="aerial-header">
         <div class="page-header-label">Location Overview</div>
         <h2 class="page-header-title">Aerial View</h2>
       </div>
-      <div class="aerial-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}>
+      <div class="aerial-map" >
         <div class="aerial-map-overlay">
           <div class="aerial-info-cards">
             <div class="aerial-info-card">
@@ -474,9 +467,7 @@
       </div>
       <div class="page-footer" style="border-color: rgba(255,255,255,.2);"><div class="brand" style="color:#fff;">Classic Collection • TrendyReports</div><div class="num" style="color:#fff;">03</div></div>
     </section>
-    {% endif %}
 
-    {% if "property" in _pages %}
     <!-- PAGE 4: PROPERTY -->
     <section class="page property">
       <div class="page-header">
@@ -488,19 +479,19 @@
           <div class="property-section">
             <div class="property-section-header">Owner Information</div>
             <table class="property-table">
-              <tr><td>Primary Owner</td><td>{{ property.owner_name | default('-') }}</td></tr>
-              <tr><td>Secondary Owner</td><td>{{ property.secondary_owner | default('-') }}</td></tr>
-              <tr><td>Site Address</td><td>{{ property.full_address }}</td></tr>
-              <tr><td>Mailing Address</td><td>{{ property.mailing_address | default(property.full_address) }}</td></tr>
+              <tr><td>Primary Owner</td><td>Owner On Record</td></tr>
+              <tr><td>Secondary Owner</td><td>None</td></tr>
+              <tr><td>Site Address</td><td>1358 5th St, La Verne, CA 91750</td></tr>
+              <tr><td>Mailing Address</td><td>None</td></tr>
             </table>
           </div>
           <div class="property-section">
             <div class="property-section-header">Tax & Assessment</div>
             <table class="property-table">
-              <tr><td>Assessed Value</td><td>{{ property.assessed_value | format_currency }}</td></tr>
-              <tr><td>Land Value</td><td>{{ property.land_value | format_currency }}</td></tr>
-              <tr><td>Annual Tax</td><td>{{ property.tax_amount | format_currency }}</td></tr>
-              <tr><td>Tax Year</td><td>{{ property.tax_year | default('-') }}</td></tr>
+              <tr><td>Assessed Value</td><td>$420,000</td></tr>
+              <tr><td>Land Value</td><td>$280,000</td></tr>
+              <tr><td>Annual Tax</td><td>$5,250</td></tr>
+              <tr><td>Tax Year</td><td>2024</td></tr>
             </table>
           </div>
         </div>
@@ -508,30 +499,28 @@
           <div class="property-section">
             <div class="property-section-header">Legal Information</div>
             <table class="property-table">
-              <tr><td>APN</td><td>{{ property.apn | default('-') }}</td></tr>
-              <tr><td>County</td><td>{{ property.county | default('-') }}</td></tr>
-              <tr><td>Census Tract</td><td>{{ property.census_tract | default('-') }}</td></tr>
-              <tr><td>Legal Description</td><td>{{ property.legal_description | default('-') }}</td></tr>
+              <tr><td>APN</td><td>8392-006-007</td></tr>
+              <tr><td>County</td><td>Los Angeles</td></tr>
+              <tr><td>Census Tract</td><td>None</td></tr>
+              <tr><td>Legal Description</td><td></td></tr>
             </table>
           </div>
           <div class="property-section">
             <div class="property-section-header">Property Details</div>
             <table class="property-table">
-              <tr><td>Bedrooms</td><td>{{ property.bedrooms | default('-') }}</td></tr>
-              <tr><td>Bathrooms</td><td>{{ property.bathrooms | default('-') }}</td></tr>
-              <tr><td>Square Feet</td><td>{{ property.sqft | default('-') | int | format_number }}</td></tr>
-              <tr><td>Lot Size</td><td>{{ property.lot_size | default('-') | int | format_number }} sq ft</td></tr>
-              <tr><td>Year Built</td><td>{{ property.year_built | default('-') }}</td></tr>
-              <tr><td>Property Type</td><td>{{ property.property_type | default('Single Family') }}</td></tr>
+              <tr><td>Bedrooms</td><td>3</td></tr>
+              <tr><td>Bathrooms</td><td>2.0</td></tr>
+              <tr><td>Square Feet</td><td>1,344</td></tr>
+              <tr><td>Lot Size</td><td>7,500 sq ft</td></tr>
+              <tr><td>Year Built</td><td>1956</td></tr>
+              <tr><td>Property Type</td><td>Single Family Residence</td></tr>
             </table>
           </div>
         </div>
       </div>
       <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">04</div></div>
     </section>
-    {% endif %}
 
-    {% if "analysis" in _pages %}
     <!-- PAGE 5: ANALYSIS -->
     <section class="page analysis">
       <div class="page-header">
@@ -541,12 +530,18 @@
       <div class="analysis-chart">
         <div class="chart-title">Recent Comparable Sales Activity</div>
         <div class="chart-bars">
-          {% for comp in comparables[:4] %}
           <div class="chart-bar-wrap">
-            <div class="chart-bar" style="height: {{ [40, (comp.sale_price / 8000) | int] | max }}px;"></div>
-            <div class="chart-bar-label">{{ comp.sold_date | default('-') }}</div>
+            <div class="chart-bar" style="height: 77px;"></div>
+            <div class="chart-bar-label"></div>
           </div>
-          {% endfor %}
+          <div class="chart-bar-wrap">
+            <div class="chart-bar" style="height: 86px;"></div>
+            <div class="chart-bar-label"></div>
+          </div>
+          <div class="chart-bar-wrap">
+            <div class="chart-bar" style="height: 71px;"></div>
+            <div class="chart-bar-label"></div>
+          </div>
         </div>
       </div>
       <table class="analysis-table">
@@ -554,23 +549,21 @@
           <tr><th>Metric</th><th>Subject</th><th>Low</th><th>Medium</th><th>High</th></tr>
         </thead>
         <tbody>
-          <tr><td>Distance (mi)</td><td>{{ stats.piq.distance | default('0') }}</td><td>{{ stats.low.distance | default('-') }}</td><td>{{ stats.medium.distance | default('-') }}</td><td>{{ stats.high.distance | default('-') }}</td></tr>
-          <tr><td>Living Area (sf)</td><td>{{ stats.piq.sqft | default('-') }}</td><td>{{ stats.low.sqft | default('-') }}</td><td>{{ stats.medium.sqft | default('-') }}</td><td>{{ stats.high.sqft | default('-') }}</td></tr>
-          <tr><td>Price/Sq.Ft.</td><td>{{ stats.piq.price_per_sqft | format_currency }}</td><td>{{ stats.low.price_per_sqft | format_currency }}</td><td>{{ stats.medium.price_per_sqft | format_currency }}</td><td>{{ stats.high.price_per_sqft | format_currency }}</td></tr>
-          <tr><td>Year Built</td><td>{{ stats.piq.year_built | default('-') }}</td><td>{{ stats.low.year_built | default('-') }}</td><td>{{ stats.medium.year_built | default('-') }}</td><td>{{ stats.high.year_built | default('-') }}</td></tr>
-          <tr><td>Lot Size (sf)</td><td>{{ stats.piq.lot_size | format_number }}</td><td>{{ stats.low.lot_size | format_number }}</td><td>{{ stats.medium.lot_size | format_number }}</td><td>{{ stats.high.lot_size | format_number }}</td></tr>
-          <tr><td>Bedrooms</td><td>{{ stats.piq.bedrooms | default('-') }}</td><td>{{ stats.low.bedrooms | default('-') }}</td><td>{{ stats.medium.bedrooms | default('-') }}</td><td>{{ stats.high.bedrooms | default('-') }}</td></tr>
-          <tr><td>Bathrooms</td><td>{{ stats.piq.bathrooms | default('-') }}</td><td>{{ stats.low.bathrooms | default('-') }}</td><td>{{ stats.medium.bathrooms | default('-') }}</td><td>{{ stats.high.bathrooms | default('-') }}</td></tr>
+          <tr><td>Distance (mi)</td><td>0</td><td>0.6</td><td>0.3</td><td>0.5</td></tr>
+          <tr><td>Living Area (sf)</td><td>1344.0</td><td>1280.0</td><td>1400.0</td><td>1560.0</td></tr>
+          <tr><td>Price/Sq.Ft.</td><td>$312</td><td>$449</td><td>$442</td><td>$445</td></tr>
+          <tr><td>Year Built</td><td>1956.0</td><td>1954.0</td><td>1958.0</td><td>1962.0</td></tr>
+          <tr><td>Lot Size (sf)</td><td>7,500</td><td>6,500</td><td>6,800</td><td>7,200</td></tr>
+          <tr><td>Bedrooms</td><td>3.0</td><td>3.0</td><td>3.0</td><td>3.0</td></tr>
+          <tr><td>Bathrooms</td><td>2.0</td><td>1.0</td><td>2.0</td><td>2.0</td></tr>
         </tbody>
         <tfoot>
-          <tr><td>Sale Price</td><td>{{ stats.piq.price | format_currency }}</td><td>{{ stats.low.price | format_currency }}</td><td>{{ stats.medium.price | format_currency }}</td><td>{{ stats.high.price | format_currency }}</td></tr>
+          <tr><td>Sale Price</td><td>$420,000</td><td>$575,000</td><td>$620,000</td><td>$695,000</td></tr>
         </tfoot>
       </table>
       <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">05</div></div>
     </section>
-    {% endif %}
 
-    {% if "comparables" in _pages %}
     <!-- PAGE 6: COMPARABLES -->
     <section class="page comparables">
       <div class="page-header">
@@ -578,48 +571,78 @@
         <h2 class="page-header-title">Sales Comparables</h2>
       </div>
       <div class="comp-grid">
-        {% for comp in comparables[:4] %}
         <div class="comp-card">
-          <div class="comp-card-image" {% if comp.map_image_url %}style="background-image: url('{{ comp.map_image_url }}'); background-size: cover; background-position: center;"{% endif %}>
-            <div class="comp-card-price">{{ comp.sale_price | format_currency }}</div>
+          <div class="comp-card-image" >
+            <div class="comp-card-price">$620,000</div>
           </div>
           <div class="comp-card-body">
             <div class="comp-card-address">
               <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
-              {{ comp.address }}
+              1240 Arrow Hwy, La Verne, CA 91750
             </div>
             <div class="comp-card-stats">
-              <div class="comp-stat"><div class="comp-stat-label">{{ comp.sold_date_label | default('Sold') }}</div><div class="comp-stat-value">{{ comp.sold_date }}</div></div>
-              <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">{{ comp.sqft | format_number }}</div></div>
-              <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">{{ comp.bedrooms }}/{{ comp.bathrooms }}</div></div>
-              <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">{{ comp.price_per_sqft | format_currency }}</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Listed</div><div class="comp-stat-value"></div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">1,400</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">3/2</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">$442</div></div>
             </div>
           </div>
         </div>
-        {% endfor %}
+        <div class="comp-card">
+          <div class="comp-card-image" >
+            <div class="comp-card-price">$695,000</div>
+          </div>
+          <div class="comp-card-body">
+            <div class="comp-card-address">
+              <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+              1425 Baseline Rd, La Verne, CA 91750
+            </div>
+            <div class="comp-card-stats">
+              <div class="comp-stat"><div class="comp-stat-label">Listed</div><div class="comp-stat-value"></div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">1,560</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">3/2</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">$445</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="comp-card">
+          <div class="comp-card-image" >
+            <div class="comp-card-price">$575,000</div>
+          </div>
+          <div class="comp-card-body">
+            <div class="comp-card-address">
+              <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+              2110 3rd St, La Verne, CA 91750
+            </div>
+            <div class="comp-card-stats">
+              <div class="comp-stat"><div class="comp-stat-label">Listed</div><div class="comp-stat-value"></div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">1,280</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">3/1</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">$449</div></div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">06</div></div>
     </section>
-    {% endif %}
 
-    {% if "range" in _pages %}
     <!-- PAGE 7: RANGE -->
     <section class="page range">
       <div class="page-header">
         <div class="page-header-label">Valuation Summary</div>
         <h2 class="page-header-title">Range of Sales</h2>
       </div>
-      <div class="range-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}></div>
+      <div class="range-map" ></div>
       <div class="range-stats">
-        <div class="range-stat"><div class="range-stat-num">{{ '%02d' | format(stats.total_comps | default(0)) }}</div><div class="range-stat-label">Total Comps</div></div>
-        <div class="range-stat"><div class="range-stat-num">{{ stats.avg_sqft | default(0) | int }}</div><div class="range-stat-label">Avg. Sq.Ft.</div></div>
-        <div class="range-stat"><div class="range-stat-num">{{ '%02d' | format(stats.avg_beds | default(0) | int) }}</div><div class="range-stat-label">Avg. Beds</div></div>
-        <div class="range-stat"><div class="range-stat-num">{{ '%02d' | format(stats.avg_baths | default(0) | int) }}</div><div class="range-stat-label">Avg. Baths</div></div>
+        <div class="range-stat"><div class="range-stat-num">03</div><div class="range-stat-label">Total Comps</div></div>
+        <div class="range-stat"><div class="range-stat-num">1413</div><div class="range-stat-label">Avg. Sq.Ft.</div></div>
+        <div class="range-stat"><div class="range-stat-num">03</div><div class="range-stat-label">Avg. Beds</div></div>
+        <div class="range-stat"><div class="range-stat-num">02</div><div class="range-stat-label">Avg. Baths</div></div>
       </div>
       <div class="range-slider">
         <div class="range-slider-header">
-          <div class="range-slider-price">{{ stats.price_low | format_currency_short }}</div>
-          <div class="range-slider-price">{{ stats.price_high | format_currency_short }}</div>
+          <div class="range-slider-price">$575k</div>
+          <div class="range-slider-price">$695k</div>
         </div>
         <div class="range-slider-track">
           <div class="range-slider-dot" style="left: 5%;"></div>
@@ -629,7 +652,6 @@
       </div>
       <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">07</div></div>
     </section>
-    {% endif %}
 
   </div>
 </body>

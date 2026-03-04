@@ -30,13 +30,13 @@ logger = logging.getLogger(__name__)
 TEMPLATES_DIR = Path(__file__).parent / "templates" / "property"
 
 # Theme template paths (relative to templates/property/)
-# v2.0: Templates now use inheritance from _base/base.jinja2
+# v3.0: Standalone self-contained templates (unique cover + CSS per theme)
 THEME_TEMPLATES = {
-    "teal": "teal/teal.jinja2",
-    "bold": "bold/bold.jinja2",
-    "classic": "classic/classic.jinja2",
-    "modern": "modern/modern.jinja2",
-    "elegant": "elegant/elegant.jinja2",
+    "teal": "teal/teal_report.jinja2",
+    "bold": "bold/bold_report.jinja2",
+    "classic": "classic/classic_report.jinja2",
+    "modern": "modern/modern_report.jinja2",
+    "elegant": "elegant/elegant_report.jinja2",
 }
 
 # Theme number to name mapping (for backward compatibility)
@@ -309,6 +309,11 @@ class PropertyReportBuilder:
             "address": agent_address,  # V0 template expects full address string
             "photo_url": agent.get("photo_url"),
             "logo_url": agent.get("logo_url") or branding.get("logo_url"),
+            # Standalone template fields (with safe defaults in templates)
+            "company_short": agent.get("company_short") or (
+                (agent.get("company_name") or "TR")[:2].upper()
+            ),
+            "company_tagline": agent.get("company_tagline", ""),
         }
     
     def _build_comparables_context(self) -> List[Dict[str, Any]]:

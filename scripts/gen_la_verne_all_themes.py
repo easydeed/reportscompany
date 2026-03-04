@@ -610,7 +610,7 @@ def render_theme(theme_name: str, report_data: dict,
     if pdf_generated and pdf_path.exists():
         pg = _count_pdf_pages(pdf_path)
         result["page_count"] = pg
-        tag = "[PASS]" if pg == 8 else f"[WARN] expected 8"
+        tag = "[PASS]" if pg == 7 else f"[WARN] expected 7"
         print(f"  Pages: {pg} {tag}")
 
     print(f"  Total: {time.perf_counter()-t0:.2f}s")
@@ -684,15 +684,11 @@ def main():
         "agent":            SAMPLE_AGENT,
         "cover_image_url":  COVER_IMAGE,
         "comparables":      comps,
-        # All 8 pages including market_trends
+        # 7 core pages (market_trends will be added when ported to standalone templates)
         "selected_pages": [
             "cover", "contents", "aerial", "property",
-            "analysis", "market_trends", "comparables", "range",
+            "analysis", "comparables", "range",
         ],
-        # Inject sample market trends so the page renders with demo credentials
-        # (live SimplyRETS demo feed has no La Verne data).
-        # In production the builder fetches real data and ignores this key.
-        "market_trends_data": _get_sample_market_trends(),
     }
 
     # Print summary
@@ -731,9 +727,9 @@ def main():
         all_pass = True
         for r in pdf_results:
             pg   = r["page_count"]
-            tag  = "[PASS]" if pg == 8 else "[FAIL] expected 8"
+            tag  = "[PASS]" if pg == 7 else "[FAIL] expected 7"
             print(f"    {r['theme']:10s}  {pg} pages  {tag}")
-            if pg != 8:
+            if pg != 7:
                 all_pass = False
         print()
         if all_pass:
