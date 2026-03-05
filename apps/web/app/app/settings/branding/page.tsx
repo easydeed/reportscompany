@@ -471,7 +471,7 @@ export default function BrandingPage() {
                 label=""
                 value={branding.agent_photo_url}
                 onChange={(url) => update({ agent_photo_url: url })}
-                assetType="avatar"
+                assetType="headshot"
                 aspectRatio="square"
                 helpText="Square photo, at least 200×200px"
               />
