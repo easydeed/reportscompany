@@ -32,6 +32,7 @@
 |-----|--------|-----------|
 | [modules/worker-core.md](./modules/worker-core.md) | Celery app, schedule tick, Redis cache, limit checker | `app.py` `schedules_tick.py` `cache.py` `limit_checker.py` |
 | [modules/worker-tasks.md](./modules/worker-tasks.md) | Celery task definitions (market + property report pipelines) | `tasks.py` |
+| [modules/email-template.md](./modules/email-template.md) | V16 modular email template engine (8 report types, adaptive layouts) | `email/template.py` |
 | [modules/property-builder.md](./modules/property-builder.md) | Jinja2 HTML renderer for property reports (5 themes, 7 pages) | `property_builder.py` `templates/property/` |
 | [modules/filter-resolver.md](./modules/filter-resolver.md) | Market-adaptive filter resolution + elastic widening | `filter_resolver.py` |
 | [modules/worker-simplyrets-vendor.md](./modules/worker-simplyrets-vendor.md) | Synchronous SimplyRETS client with rate limiter + pagination | `vendors/simplyrets.py` |
@@ -91,6 +92,8 @@ apps/
     tasks.py                     # generate_report, generate_property_report_task
     schedules_tick.py            # Every-minute schedule executor
     property_builder.py          # ← Jinja2 HTML renderer, 5 themes [new]
+    email/
+      template.py                # ← V16 modular email template engine [new]
     filter_resolver.py           # ← Market-adaptive filters + elastic widen [new]
     limit_checker.py             # Worker-context plan enforcement
     cache.py                     # Redis caching layer
@@ -128,14 +131,16 @@ apps/
       api/proxy/                 # ~60 proxy routes to backend
     components/
       ui/                        # 75 Radix/shadcn primitives
-      report-builder/            # Market report creation wizard
-      schedule-builder/          # Schedule creation wizard
+      unified-wizard/            # ← Unified report wizard (5 stories, Send Now/Schedule) [new]
+      shared/email-preview/      # ← SharedEmailPreview (V16 layouts, used in wizard + branding) [new]
+      report-builder/            # Market report creation wizard (legacy, superseded by unified-wizard)
+      schedule-builder/          # Schedule creation wizard (legacy, superseded by unified-wizard)
       property/                  # Property search + comps picker
-      property-wizard/           # Property report wizard steps
+      property-wizard/           # Property report wizard steps (now syncs defaults from branding)
       admin/                     # Admin dashboard components
       marketing/                 # Landing page sections
       onboarding/                # Onboarding wizard
-      branding/                  # Branding preview + tools
+      branding/                  # Branding preview + tools (legacy, page rebuilt in app/settings/branding)
 
 tests/
   test_property_templates.py     # pytest: 5 themes × 6 test classes [new]

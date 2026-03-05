@@ -179,7 +179,7 @@
     .mt-gauge-zone--buyers{background:#dc2626;}
     .mt-gauge-marker{position:absolute; top:-8px; transform:translateX(-50%); text-align:center;}
     .mt-gauge-pip{font-size:16px; color:var(--burgundy-on-light); line-height:1;}
-    .mt-gauge-val{display:block; font-size:11px; font-weight:700; color:var(--burgundy-on-light);}
+    .mt-gauge-val{display:inline-block; background:var(--burgundy); color:#fff; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:700; white-space:nowrap;}
     .mt-gauge-tick-labels{display:flex; justify-content:space-between; font-size:8.5px; color:#999; margin-top:6px; max-width:90%; margin-left:auto; margin-right:auto;}
     .mt-attribution{margin-top:18px; text-align:center;}
     .mt-attribution p{font-size:7.5px; color:#aaa; line-height:1.5; margin:0 0 2px;}
@@ -261,12 +261,8 @@
     <section class="page page-overview">
       <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
-      <div class="page-content">
-        <div class="overview-header">
-          <div class="overview-label">Executive Summary</div>
-          <h2 class="overview-title">Property Overview</h2>
-          <div class="overview-accent"></div>
-        </div>
+      <div class="property-header"><div class="property-label">Executive Summary</div><h2 class="property-title">Property Overview</h2><div class="gold-rule"></div></div>
+      <div class="page-content" style="padding:0; padding-top:14px;">
         <div class="overview-body">
           {% for para in overview_text.split('\n\n') %}
           {% if para.strip() %}
@@ -299,14 +295,15 @@
         <div class="gold-rule"></div>
       </div>
       <div class="contents-list">
-        <div class="contents-item"><div class="contents-num">01</div><div class="contents-text">Aerial Property View</div><div class="contents-dots"></div><div class="contents-page">03</div></div>
-        <div class="contents-item"><div class="contents-num">02</div><div class="contents-text">Property Information</div><div class="contents-dots"></div><div class="contents-page">04</div></div>
-        <div class="contents-item"><div class="contents-num">03</div><div class="contents-text">Area Sales Analysis</div><div class="contents-dots"></div><div class="contents-page">05</div></div>
-        <div class="contents-item"><div class="contents-num">04</div><div class="contents-text">Market Trends</div><div class="contents-dots"></div><div class="contents-page">06</div></div>
-        <div class="contents-item"><div class="contents-num">05</div><div class="contents-text">Comparable Sales</div><div class="contents-dots"></div><div class="contents-page">07</div></div>
-        <div class="contents-item"><div class="contents-num">06</div><div class="contents-text">Estimated Value Range</div><div class="contents-dots"></div><div class="contents-page">08</div></div>
+        <div class="contents-item"><div class="contents-num">01</div><div class="contents-text">Executive Summary</div><div class="contents-dots"></div><div class="contents-page">02</div></div>
+        <div class="contents-item"><div class="contents-num">02</div><div class="contents-text">Aerial Property View</div><div class="contents-dots"></div><div class="contents-page">04</div></div>
+        <div class="contents-item"><div class="contents-num">03</div><div class="contents-text">Property Information</div><div class="contents-dots"></div><div class="contents-page">05</div></div>
+        <div class="contents-item"><div class="contents-num">04</div><div class="contents-text">Area Sales Analysis</div><div class="contents-dots"></div><div class="contents-page">06</div></div>
+        <div class="contents-item"><div class="contents-num">05</div><div class="contents-text">Market Trends</div><div class="contents-dots"></div><div class="contents-page">07</div></div>
+        <div class="contents-item"><div class="contents-num">06</div><div class="contents-text">Comparable Sales</div><div class="contents-dots"></div><div class="contents-page">08</div></div>
+        <div class="contents-item"><div class="contents-num">07</div><div class="contents-text">Estimated Value Range</div><div class="contents-dots"></div><div class="contents-page">09</div></div>
       </div>
-      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">02</div></div>
+      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">03</div></div>
     </section>
     {% endif %}
 

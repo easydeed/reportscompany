@@ -53,7 +53,7 @@
 | Path | File | Purpose |
 |------|------|---------|
 | `/app/reports` | `app/app/reports/page.tsx` | Reports list |
-| `/app/reports/new` | `app/app/reports/new/page.tsx` | Create new report (wizard) |
+| `/app/reports/new` | `app/app/reports/new/page.tsx` | Create new report → **UnifiedReportWizard** (Send Now mode) |
 
 ### Property Reports
 | Path | File | Purpose |
@@ -67,9 +67,9 @@
 | Path | File | Purpose |
 |------|------|---------|
 | `/app/schedules` | `app/app/schedules/page.tsx` | Schedules list |
-| `/app/schedules/new` | `app/app/schedules/new/page.tsx` | Create schedule (wizard) |
+| `/app/schedules/new` | `app/app/schedules/new/page.tsx` | Create schedule → **UnifiedReportWizard** (Schedule mode) |
 | `/app/schedules/[id]` | `app/app/schedules/[id]/page.tsx` | Schedule detail |
-| `/app/schedules/[id]/edit` | `app/app/schedules/[id]/edit/page.tsx` | Edit schedule |
+| `/app/schedules/[id]/edit` | `app/app/schedules/[id]/edit/page.tsx` | Edit schedule → **UnifiedReportWizard** (edit mode) |
 
 ### People & Leads
 | Path | File | Purpose |
@@ -85,7 +85,7 @@
 | `/app/settings/profile` | `app/app/settings/profile/page.tsx` | Profile settings |
 | `/app/settings/billing` | `app/app/settings/billing/page.tsx` | Billing settings |
 | `/app/settings/security` | `app/app/settings/security/page.tsx` | Security settings |
-| `/app/settings/branding` | `app/app/settings/branding/page.tsx` | Branding settings |
+| `/app/settings/branding` | `app/app/settings/branding/page.tsx` | Branding settings (rebuilt: single-page with live preview, theme selector, agent info) |
 
 ### Billing & Branding
 | Path | File | Purpose |

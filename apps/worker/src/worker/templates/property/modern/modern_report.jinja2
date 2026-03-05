@@ -341,13 +341,9 @@
 
     {% if "overview" in _pages and overview_text %}
     <!-- PAGE: EXECUTIVE SUMMARY / OVERVIEW -->
-    <section class="page page-overview">
-      <div class="page-content">
-        <div class="overview-header">
-          <div class="overview-label">Executive Summary</div>
-          <h2 class="overview-title">Property Overview</h2>
-          <div class="overview-accent"></div>
-        </div>
+    <section class="page page-overview" style="background: var(--pure); padding: var(--pad);">
+      <div class="property-header"><div><span class="pill">Executive Summary</span><h2 class="property-title">Property Overview</h2></div></div>
+      <div class="page-content" style="padding:0;">
         <div class="overview-body">
           {% for para in overview_text.split('\n\n') %}
           {% if para.strip() %}
@@ -378,14 +374,15 @@
         <p class="contents-subtitle">A comprehensive analysis of your property including market comparables, valuation data, and neighborhood insights.</p>
       </div>
       <div class="contents-right">
-        <div class="contents-item"><div class="contents-num">01</div><div class="contents-text">Aerial Property View</div><div class="contents-page">03</div></div>
-        <div class="contents-item"><div class="contents-num">02</div><div class="contents-text">Property Information</div><div class="contents-page">04</div></div>
-        <div class="contents-item"><div class="contents-num">03</div><div class="contents-text">Area Sales Analysis</div><div class="contents-page">05</div></div>
-        <div class="contents-item"><div class="contents-num">04</div><div class="contents-text">Market Trends</div><div class="contents-page">06</div></div>
-        <div class="contents-item"><div class="contents-num">05</div><div class="contents-text">Sales Comparables</div><div class="contents-page">07</div></div>
-        <div class="contents-item"><div class="contents-num">06</div><div class="contents-text">Estimated Value Range</div><div class="contents-page">08</div></div>
+        <div class="contents-item"><div class="contents-num">01</div><div class="contents-text">Executive Summary</div><div class="contents-page">02</div></div>
+        <div class="contents-item"><div class="contents-num">02</div><div class="contents-text">Aerial Property View</div><div class="contents-page">04</div></div>
+        <div class="contents-item"><div class="contents-num">03</div><div class="contents-text">Property Information</div><div class="contents-page">05</div></div>
+        <div class="contents-item"><div class="contents-num">04</div><div class="contents-text">Area Sales Analysis</div><div class="contents-page">06</div></div>
+        <div class="contents-item"><div class="contents-num">05</div><div class="contents-text">Market Trends</div><div class="contents-page">07</div></div>
+        <div class="contents-item"><div class="contents-num">06</div><div class="contents-text">Sales Comparables</div><div class="contents-page">08</div></div>
+        <div class="contents-item"><div class="contents-num">07</div><div class="contents-text">Estimated Value Range</div><div class="contents-page">09</div></div>
       </div>
-      <div class="page-footer"><div class="brand"><span class="brand-dot"></span>Modern Collection</div><div class="num">02</div></div>
+      <div class="page-footer"><div class="brand"><span class="brand-dot"></span>Modern Collection</div><div class="num">03</div></div>
     </section>
     {% endif %}
 

@@ -1,7 +1,7 @@
 "use client"
 
 import { use } from "react"
-import { ScheduleBuilder } from "@/components/schedule-builder"
+import { UnifiedReportWizard } from "@/components/unified-wizard"
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -9,7 +9,5 @@ interface PageProps {
 
 export default function EditSchedulePage({ params }: PageProps) {
   const resolvedParams = use(params)
-  
-  return <ScheduleBuilder scheduleId={resolvedParams.id} />
+  return <UnifiedReportWizard defaultMode="schedule" scheduleId={resolvedParams.id} />
 }
-

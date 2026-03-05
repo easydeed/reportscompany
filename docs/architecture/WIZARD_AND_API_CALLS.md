@@ -81,19 +81,44 @@ sequenceDiagram
 
 ---
 
-## 2. Market Report (Schedule) Wizard
+## 2. Unified Report Wizard (Replaces Schedule Builder + Report Builder)
+
+> Component: `components/unified-wizard/index.tsx`
+> Routes: `/app/reports/new` (Send Now mode), `/app/schedules/new` (Schedule mode), `/app/schedules/[id]/edit` (edit)
 
 ### Steps Overview
 
 | Step | UI Component | What Happens |
 |------|-------------|---------------|
-| 1 | Report Type | Select from 8 report types |
+| 1 | **What story?** | 5 story cards (What Just Listed, What Just Sold, Market Update, What's Available, Showcase) → maps to `report_type` |
+| 2 | **Who's it for?** | 6 audience cards (only for "What Just Listed") — All, First-Time, Luxury, Family, Condo, Investor |
+| 3 | **Where & When?** | City or ZIP codes + timeframe (7/14/30/60/90 days) with smart defaults per story |
+| 4 | **Deliver** | Toggle: Send Now (browser/PDF/email) or Schedule (cadence/day/time/recipients) |
+
+### Story → Report Type Mapping
+
+| Story Card | Internal `report_type` | Default Lookback |
+|---|---|---|
+| What Just Listed | `new_listings_gallery` | 14 days |
+| What Just Sold | `closed` | 30 days |
+| Market Update | `market_snapshot` | 30 days |
+| What's Available | `inventory` | 30 days |
+| Showcase My Listings | `featured_listings` | 90 days |
+
+### Sidebar: Live Email Preview
+
+Right panel shows `SharedEmailPreview` — real V16 template layout with the agent's actual branding (colors, logo, agent footer). Updates live as the user changes story, audience, area, and timeframe. Content is sample data; layout and branding are real.
+
+### Legacy Steps (previous Schedule Builder)
+
+| Step | UI Component | What Happens |
+|------|-------------|---------------|
+| 1 | Report Type | Select from 3 report types (old schedule builder) |
 | 2 | Area | Enter city name (free text) |
 | 3 | Audience | Select preset or custom filters |
 | 4 | Recipients | Select contacts, groups, or enter emails |
-| 5 | Cadence | Weekly / biweekly / monthly |
+| 5 | Cadence | Weekly / Monthly |
 | 6 | Review | Preview settings, confirm |
-| 7 | Deliver | Save schedule; optionally trigger immediate delivery |
 
 ### Market Report Generation Flow (Sequence Diagram)
 
@@ -138,7 +163,7 @@ sequenceDiagram
     OpenAI-->>Worker: AI insights text
 
     Worker->>Worker: Build report context (listings, stats, insights, branding)
-    Worker->>Worker: Render Jinja2 email template → HTML
+    Worker->>Worker: schedule_email_html() → V16 modular email HTML
 
     alt PDF delivery enabled
         Worker->>PDFShift: POST /convert (report HTML → PDF)

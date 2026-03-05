@@ -1,0 +1,747 @@
+# THEMED_EMAIL_IMPLEMENTATION.md
+# TrendyReports — Themed Email Report Implementation Guide
+
+> Comprehensive guide for implementing the V0-designed email report templates into the existing `template.py` f-string architecture. Covers assessment, design system, all 13 changes across 4 V0 layouts, email client compatibility, and implementation order.
+
+---
+
+## Table of Contents
+
+1. System Overview
+2. Current Architecture
+3. Assessment: What Works vs. What Needs Fixing
+4. V0 Design Reference
+5. Design System — Shared Across All Layouts
+6. The 13 Changes — V0 → Email-Safe HTML
+7. Layout-Specific Implementation
+8. Email Client Compatibility
+9. What NOT to Change
+10. Implementation Order & Cursor Prompt
+11. Expected Impact
+12. Testing Checklist
+
+---
+
+## 1. System Overview
+
+### Two Report Systems (Don't Confuse Them)
+
+**Property Reports** — Single property, 7-page PDF, 5 themes (Bold/Classic/Elegant/Modern/Teal), Jinja2 templates in the worker service. These have their own separate redesign workflow.
+
+**Market/Email Reports** (THIS DOCUMENT) — Multi-listing reports built in `template.py`, sent via Resend email and also rendered to PDF. These are the 8 report types that get **emailed to contacts** via scheduled delivery.
+
+### Target File
+
+`apps/worker/src/worker/email/template.py` — A ~2,020-line Python file that builds email-safe HTML using f-strings. It evolved through 14 versions of incremental improvements. The orchestrator (`send.py`) handles recipient filtering, unsubscribe tokens, and delegates to this template for HTML generation.
+
+---
+
+## 2. Current Architecture
+
+### Tech Stack
+- **Not Jinja2** — Pure Python f-string interpolation with inline HTML
+- **Email-safe tables** — Proper `<table role="presentation">` layout (not CSS grid/flex)
+- **Outlook support** — VML fallbacks for gradient header and circular agent photos
+- **Dark mode** — CSS `prefers-color-scheme` support
+- **Mobile responsive** — `@media` queries for stacking metrics
+- **8 report types** with conditional sections based on `REPORT_CONFIG` flags
+- **AI insights** — Calls OpenAI for personalized market commentary, with template fallbacks
+- **White-label branding** — Custom colors, logos, agent photos, contact info
+
+### Report Types Supported
+
+| Type | Hero Metrics | Insight | Gallery | Listings Table | Extra Sections |
+|------|:-----------:|:-------:|:-------:|:--------------:|:--------------|
+| Market Snapshot | 4-metric | Yes | — | — | Core Indicators, Property Types, Price Tiers |
+| New Listings | 4-metric | Yes | — | — | — |
+| Inventory | 4-metric | Yes | — | Yes | — |
+| Closed Sales | 4-metric | Yes | — | Yes | — |
+| Price Bands | 4-metric | Yes | — | — | Price Bands rows |
+| Open Houses | 3-metric | — | — | — | — |
+| New Listings Gallery | 3-metric | Yes | Yes | — | — |
+| Featured Listings | 3-metric | Yes | Yes | — | — |
+
+### Current Email Structure (All Types)
+```
+┌─────────────────────────────┐
+│  GRADIENT HEADER            │  Brand colors → accent color
+│  Logo (centered)            │
+│  [Badge pill]               │  Brand name or report type
+│  Report Title – Area        │  "Market Snapshot – Los Angeles"
+│  Period • Source: MLS Data  │
+├─────────────────────────────┤
+│  MAIN CONTENT (white)       │
+│                             │
+│  [Filter Description]       │  Optional - audience criteria
+│  [Insight Paragraph]        │  AI or fallback text, gray box
+│  [Headline Metric]          │  48px bold number
+│  [3-metric row]             │  Bordered card with dividers
+│  [Core Indicators]          │  Market Snapshot only
+│  [Listings Table]           │  Inventory/Closed only
+│  [Property Types]           │  Market Snapshot only
+│  [Price Tiers]              │  Market Snapshot only
+│  [Price Bands]              │  Price Bands only
+│  [Photo Gallery]            │  Gallery types only
+│                             │
+│  Quick Take (italic)        │  One-liner market summary
+│  [View Full Report] button  │  Brand-colored CTA
+│  ─── divider ───            │
+│  Agent photo + info         │  Circular photo, name, contact
+├─────────────────────────────┤
+│  FOOTER (gray)              │
+│  Powered by + Unsubscribe   │
+└─────────────────────────────┘
+```
+
+---
+
+## 3. Assessment: What Works vs. What Needs Fixing
+
+### What Works Well
+1. **Table-based email architecture** — Proper `<table role="presentation">` everywhere
+2. **Outlook VML conditionals** — Gradient header and circular photos have Outlook fallbacks
+3. **Dark mode support** — `@media (prefers-color-scheme: dark)` CSS
+4. **Mobile stacking** — `@media` queries handle narrow viewports
+5. **AI insight integration** — OpenAI-powered market commentary with graceful fallbacks
+6. **Report config system** — `REPORT_CONFIG` dict cleanly controls which sections show for each type
+7. **White-label branding** — All colors, logos, contact info are parameterized
+
+### The Core Problem
+
+**Brand colors vanish after the header gradient.** Everything below the header is monotone:
+- Identical `#fafaf9` background boxes with `#e7e5e4` borders
+- Section labels are gray `#57534e` — no brand identity
+- No visual hierarchy between the headline metric and supporting data
+- Quick Take is invisible — same gray as everything else
+- Agent footer feels like an afterthought — white background, plain text links
+- Gallery cards are data rows, not marketing pieces
+
+**Result:** The header says "premium real estate brand" but the body says "generic data export."
+
+---
+
+## 4. V0 Design Reference
+
+V0 generated 4 distinct layouts plus shared header/footer components:
+
+### V0 Source Files (in `docs/v0-design/components/email/`)
+- `email-header.tsx` — Shared header (all 4 layouts)
+- `email-footer.tsx` — Agent footer + disclaimer
+- `market-snapshot.tsx` — Layout 1: Market Snapshot (data-heavy)
+- `listings-gallery.tsx` — Layout 2: Listings Gallery (photo-heavy)
+- `table-view.tsx` — Layout 3: Table View (Closed Sales/Inventory)
+- `market-analytics.tsx` — Layout 4: Analytics Dashboard
+
+### Report Type → V0 Layout Mapping
+
+| Report Type | V0 Layout |
+|---|---|
+| Market Snapshot | Market Snapshot |
+| New Listings | Market Snapshot |
+| Inventory | Table View |
+| Closed Sales | Table View |
+| Price Bands | Market Snapshot |
+| Open Houses | Market Snapshot (simplified) |
+| New Listings Gallery | Listings Gallery |
+| Featured Listings | Listings Gallery |
+
+---
+
+## 5. Design System — Shared Across All Layouts
+
+### Color Usage
+
+| Element | V0 Uses | Email Translation |
+|---------|---------|-------------------|
+| Header gradient | `#1e3a5f → #b8860b` | Already exists — replace with `{primary_color} → {accent_color}` |
+| Accent bar | `gradient 90deg same colors` | `background: linear-gradient(90deg, {primary_color}, {accent_color})` |
+| Hero metric number | `text-[#1e3a5f]` | `color: {primary_color}` |
+| Hero metric background | `from-[#1e3a5f]/[0.06]` | `background-color: {primary_color}08` |
+| Section label text | `text-[#1e3a5f]` | `color: {primary_color}` |
+| Section label bar | `h-0.5 w-5 bg-[#1e3a5f]` | 20×2px div with `background-color: {primary_color}` |
+| Metric icons | `text-[#b8860b]` (gold) | Unicode `●` in `{accent_color}` |
+| Quick Take border | `border-[#b8860b]/20` | `border: 1px solid {accent_color}33; background-color: {accent_color}0F` |
+| CTA button | `bg-[#1e3a5f]` | `background-color: {primary_color}` (already exists) |
+| CTA area background | `bg-[#1e3a5f]/[0.04]` | `background-color: {primary_color}0A` |
+| Agent footer bg | `bg-[#1e3a5f]/[0.03]` | `background-color: {primary_color}08` |
+| Contact pill borders | `border-[#1e3a5f]/15` | `border: 1px solid {primary_color}26` |
+| Gallery card badges | `bg-[#1e3a5f]/[0.07]` | `background-color: {primary_color}12` |
+| Table header row | `bg-[#1e3a5f]` white text | `background-color: {primary_color}; color: #ffffff` |
+
+### Typography
+
+| Element | V0 Style | Email Translation |
+|---------|----------|-------------------|
+| Hero metric | `font-serif text-5xl font-bold` | `font-family: Georgia, serif; font-size: 48px; font-weight: 700` |
+| Section labels | `text-xs uppercase tracking-widest` | `font-size: 11px; text-transform: uppercase; letter-spacing: 2px` |
+| Metric values | `font-serif text-2xl font-bold` | `font-family: Georgia, serif; font-size: 24px; font-weight: 700` |
+| Metric labels | `text-[10px] uppercase tracking-wider` | `font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px` |
+| Body text | `text-sm leading-relaxed` | `font-size: 14px; line-height: 1.6` |
+| Table stats | `font-serif text-lg font-bold` | `font-family: Georgia, serif; font-size: 18px; font-weight: 700; color: {primary_color}` |
+
+**Key typography change:** Georgia serif for hero metrics and key numbers — creates the "premium real estate" feel.
+
+---
+
+## 6. The 13 Changes — V0 → Email-Safe HTML
+
+### Change 1: Accent Bar (Below Header)
+
+**What changed:** No transition between colorful header and white body. V0 adds a thin branded bar.
+```python
+# Insert immediately after the gradient header closing tags
+f'''
+<!-- ACCENT BAR -->
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+  <tr>
+    <td style="height: 4px; background: linear-gradient(90deg, {primary_color}, {accent_color}); font-size: 0; line-height: 0;">&nbsp;</td>
+  </tr>
+</table>
+'''
+```
+
+**Outlook note:** `linear-gradient` falls back to solid `{primary_color}`. Acceptable.
+
+---
+
+### Change 2: AI Insight Restyle
+
+**What changed:** Gray box → brand-colored left border with tinted background.
+```python
+f'''
+<td style="padding: 16px 20px; background-color: {primary_color}05;
+    border-left: 4px solid {primary_color}40; border-radius: 0 8px 8px 0;">
+  <p style="margin: 0; font-size: 14px; line-height: 1.7; color: #44403c;">
+    {insight_text}
+  </p>
+</td>
+'''
+```
+
+---
+
+### Change 3: Hero Metric Card
+
+**What changed:** Hero metric floats on white → wrapped in lightly branded card.
+```python
+f'''
+<!-- HERO METRIC CARD -->
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%"
+       style="margin-bottom: 24px;">
+  <tr>
+    <td style="padding: 28px 24px; background-color: {primary_color}08;
+        border: 1px solid {primary_color}15; border-radius: 12px; text-align: center;">
+      <p style="margin: 0 0 6px; font-size: 10px; font-weight: 600; color: #78716c;
+         text-transform: uppercase; letter-spacing: 1px;">
+        {h1_label}
+      </p>
+      <p style="margin: 0 0 8px; font-family: Georgia, 'Times New Roman', serif;
+         font-size: 48px; font-weight: 700; color: {primary_color}; line-height: 1.1;">
+        {h1_value}
+      </p>
+      <p style="margin: 0; font-size: 13px; color: #57534e;">
+        {h1_subtext}
+      </p>
+    </td>
+  </tr>
+</table>
+'''
+```
+
+---
+
+### Change 4: Metrics Row (3-Metric Cards)
+
+**What changed:** Single bordered box → separate cards with accent dots and Georgia serif numbers.
+```python
+f'''
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%"
+       style="margin-bottom: 24px;">
+  <tr>
+    <td width="33%" style="padding-right: 6px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%"
+             style="border: 1px solid #e7e5e4; border-radius: 8px; background-color: #ffffff;">
+        <tr>
+          <td align="center" style="padding: 18px 8px;">
+            <p style="margin: 0 0 6px 0; font-size: 14px; color: {accent_color};">&#9679;</p>
+            <p style="margin: 0 0 4px 0; font-family: Georgia, serif;
+               font-size: 24px; font-weight: 700; color: #1c1917;">
+              {h2_value}
+            </p>
+            <p style="margin: 0; font-size: 10px; font-weight: 600; color: #78716c;
+               text-transform: uppercase; letter-spacing: 0.5px;">
+              {h2_label}
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+    <!-- Repeat for h3 and h4 -->
+  </tr>
+</table>
+'''
+```
+
+---
+
+### Change 5: Section Labels
+
+**What changed:** Gray `#57534e` text → brand-colored text + 20×2px accent bar.
+```python
+def _section_label_html(label: str, primary_color: str) -> str:
+    return f'''
+    <table role="presentation" cellpadding="0" cellspacing="0"
+           style="margin-bottom: 14px;">
+      <tr>
+        <td style="width: 20px; padding-right: 8px; vertical-align: middle;">
+          <div style="width: 20px; height: 2px; background-color: {primary_color};
+               border-radius: 2px;"></div>
+        </td>
+        <td style="vertical-align: middle;">
+          <p style="margin: 0; font-size: 11px; font-weight: 700; color: {primary_color};
+             text-transform: uppercase; letter-spacing: 2px;">
+            {label}
+          </p>
+        </td>
+      </tr>
+    </table>'''
+```
+
+**Apply to:** "Market Activity", "By Property Type", "By Price Range", "Price Tiers", all listings section headers.
+
+---
+
+### Change 6: Core Indicators (Market Snapshot Only)
+
+**What changed:** Plain text rows → bordered cards with trend arrows. Green `▲` for positive, red `▼` for negative, in 11px font.
+
+---
+
+### Change 7: Side-by-Side Property Types + Price Tiers
+
+**What changed:** Separate stacked sections → single bordered container with thin branded divider.
+```python
+f'''
+<td style="padding: 16px 20px; background-color: #ffffff;
+    border-radius: 8px; border: 1px solid #e7e5e4;">
+  <!-- Property Types content -->
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%"
+         style="margin: 16px 0; border-top: 1px solid {primary_color}15;">
+    <tr><td style="height: 1px;"></td></tr>
+  </table>
+  <!-- Price Tiers content -->
+</td>
+'''
+```
+
+---
+
+### Change 8: Quick Take Callout
+
+**What changed:** Invisible italic → accent-colored callout with border and tinted background.
+```python
+f'''
+<!-- QUICK TAKE CALLOUT -->
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%"
+       style="margin-bottom: 28px;">
+  <tr>
+    <td style="padding: 18px 20px; background-color: {accent_color}0F;
+        border: 1px solid {accent_color}33; border-radius: 8px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+          <td width="28" style="vertical-align: top; padding-right: 12px;">
+            <span style="font-size: 20px; color: {accent_color};">&#36;</span>
+          </td>
+          <td style="vertical-align: top;">
+            <p style="margin: 0; font-size: 14px; font-weight: 500;
+               line-height: 1.6; color: #1c1917;">
+              {quick_take}
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+'''
+```
+
+---
+
+### Change 9: CTA Button Area
+
+**What changed:** Button on white → button in lightly tinted container.
+```python
+f'''
+<!-- CTA AREA -->
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%"
+       style="margin-bottom: 28px;">
+  <tr>
+    <td align="center" style="padding: 24px; background-color: {primary_color}0A;
+        border-radius: 8px;">
+      <!--[if mso]>
+      <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="{pdf_url}"
+        style="height:48px;v-text-anchor:middle;width:220px;"
+        arcsize="8%" stroke="f" fillcolor="{primary_color}">
+        <w:anchorlock/>
+        <center style="color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,
+          'Segoe UI',Roboto,Arial,sans-serif;font-size:14px;font-weight:600;">
+          View Full Report
+        </center>
+      </v:roundrect>
+      <![endif]-->
+      <!--[if !mso]><!-->
+      <a href="{pdf_url}" target="_blank"
+         style="display: inline-block; background-color: {primary_color};
+         color: #ffffff; font-size: 14px; font-weight: 600;
+         text-decoration: none; padding: 14px 36px; border-radius: 8px;
+         letter-spacing: 0.3px;">
+        View Full Report
+      </a>
+      <!--<![endif]-->
+    </td>
+  </tr>
+</table>
+'''
+```
+
+---
+
+### Change 10: Agent Footer
+
+**What changed:** White bg, plain text → branded tinted bg, serif name, pill contact buttons.
+```python
+agent_footer_html = f'''
+<!-- AGENT FOOTER -->
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%"
+       style="margin-top: 4px;">
+  <tr>
+    <td style="padding: 28px 0; border-top: 1px solid {primary_color}15;">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%"
+             style="background-color: {primary_color}08; border-radius: 10px;">
+        <tr>
+          <td style="padding: 24px;">
+            <table role="presentation" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="vertical-align: top; padding-right: 20px;">
+                  <!--[if mso]>
+                  <v:oval xmlns:v="urn:schemas-microsoft-com:vml"
+                    style="width:80px;height:80px;" stroke="f">
+                    <v:fill type="frame" src="{rep_photo_url}"/>
+                  </v:oval>
+                  <![endif]-->
+                  <!--[if !mso]><!-->
+                  <img src="{rep_photo_url}" alt="{rep_name}" width="80" height="80"
+                    style="display: block; width: 80px; height: 80px;
+                    border-radius: 50%; object-fit: cover;
+                    border: 2px solid {primary_color}33;">
+                  <!--<![endif]-->
+                </td>
+                <td style="vertical-align: middle;">
+                  <p style="margin: 0 0 4px; font-family: Georgia, serif;
+                     font-size: 18px; font-weight: 700; color: #1c1917;">
+                    {rep_name}
+                  </p>
+                  <p style="margin: 0 0 12px; font-size: 12px; color: #78716c;">
+                    {contact_line2}
+                  </p>
+                  <table role="presentation" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="padding-right: 8px;">
+                        <a href="tel:{rep_phone}"
+                           style="display: inline-block; padding: 6px 14px;
+                           border: 1px solid {primary_color}26;
+                           border-radius: 20px; color: {primary_color};
+                           text-decoration: none; font-size: 12px; font-weight: 500;">
+                          &#128222; {rep_phone}
+                        </a>
+                      </td>
+                      <td>
+                        <a href="mailto:{rep_email}"
+                           style="display: inline-block; padding: 6px 14px;
+                           border: 1px solid {primary_color}26;
+                           border-radius: 20px; color: {primary_color};
+                           text-decoration: none; font-size: 12px; font-weight: 500;">
+                          &#9993; {rep_email}
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+'''
+```
+
+---
+
+### Change 11: Gallery Cards (Listings Gallery & Featured Listings)
+
+**What changed:** Data rows with tiny thumbnails → full-width marketing cards with large photos, badge overlays, and serif pricing.
+
+Gallery count badge:
+```python
+f'''
+<table role="presentation" cellpadding="0" cellspacing="0"
+       style="margin-bottom: 16px;">
+  <tr>
+    <td style="display: inline-block; padding: 6px 16px;
+        background-color: {primary_color}; color: #ffffff;
+        font-size: 12px; font-weight: 600; border-radius: 20px;">
+      Showing {listing_count} {report_label}
+    </td>
+  </tr>
+</table>
+'''
+```
+
+Property card:
+```python
+f'''
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%"
+       style="margin-bottom: 16px; border: 1px solid #e7e5e4;
+       border-radius: 12px; overflow: hidden;">
+  <tr>
+    <td>
+      <img src="{photo_url}" alt="{address}" width="560" height="280"
+           style="display: block; width: 100%; height: 280px; object-fit: cover;">
+    </td>
+  </tr>
+  <tr>
+    <td style="padding: 16px 20px;">
+      <p style="margin: 0 0 4px; font-family: Georgia, serif;
+         font-size: 18px; font-weight: 800; color: {primary_color};">
+        {price_str}
+      </p>
+      <p style="margin: 0 0 8px; font-size: 14px; font-weight: 500; color: #1c1917;">
+        {address}
+      </p>
+      <table role="presentation" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="padding-right: 6px;">
+            <span style="display: inline-block; padding: 3px 10px;
+              background-color: {primary_color}12; color: {primary_color};
+              font-size: 11px; font-weight: 600; border-radius: 4px;">
+              {beds} Bd / {baths} Ba
+            </span>
+          </td>
+          <td>
+            <span style="display: inline-block; padding: 3px 10px;
+              background-color: #f5f5f4; color: #57534e;
+              font-size: 11px; font-weight: 600; border-radius: 4px;">
+              {sqft} SF
+            </span>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+'''
+```
+
+---
+
+### Change 12: Table View Header & Stats (Closed Sales/Inventory)
+
+**What changed:** Gray `#f5f5f4` table header → solid brand color with white text. NEW summary stat cards above table.
+```python
+# Brand-colored table header
+f'''
+<tr style="background-color: {primary_color};">
+  <td style="padding: 10px 12px; font-size: 10px; font-weight: 700;
+      color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">
+    Address
+  </td>
+  <td align="center" style="padding: 10px 8px; font-size: 10px;
+      font-weight: 700; color: #ffffff; text-transform: uppercase;">
+    Bd/Ba
+  </td>
+  <td align="right" style="padding: 10px 12px; font-size: 10px;
+      font-weight: 700; color: #ffffff; text-transform: uppercase;">
+    Price
+  </td>
+  <td align="center" style="padding: 10px 8px; font-size: 10px;
+      font-weight: 700; color: #ffffff; text-transform: uppercase;">
+    DOM
+  </td>
+</tr>
+'''
+```
+
+Also: Sale-to-list ratio badges — green for ≥100%, red for <97%, gray for neutral.
+
+---
+
+### Change 13: Analytics Layout (KPI Cards + YoY Table)
+
+**Reality check:** V0's charts (Recharts AreaChart/BarChart) cannot render in email.
+
+**Email-safe alternatives:**
+
+KPI stat cards with trend indicators (2×2 grid):
+```python
+f'''
+<td width="50%" style="padding: 0 4px 8px 0;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%"
+         style="border: 1px solid #e7e5e4; border-radius: 8px;">
+    <tr>
+      <td style="padding: 16px;">
+        <p style="margin: 0 0 6px; font-size: 10px; font-weight: 600;
+           color: #78716c; text-transform: uppercase;">{label}</p>
+        <p style="margin: 0 0 8px; font-family: Georgia, serif;
+           font-size: 24px; font-weight: 700; color: #1c1917;">{value}</p>
+        <p style="margin: 0; font-size: 11px;">
+          <span style="color: {"#059669" if positive else "#dc2626"};
+             font-weight: 600;">{"▲" if positive else "▼"} {change}</span>
+          <span style="color: #78716c;"> vs last yr</span>
+        </p>
+      </td>
+    </tr>
+  </table>
+</td>
+'''
+```
+
+Charts deferred to future phase (need server-side PNG rendering).
+
+---
+
+## 7. Layout-Specific: Which Changes Apply Where
+
+| Change | Market Snapshot | Listings Gallery | Table View | Analytics |
+|--------|:-:|:-:|:-:|:-:|
+| 1. Accent bar | ✓ | ✓ | ✓ | ✓ |
+| 2. AI insight restyle | ✓ | ✓ | ✓ | ✓ |
+| 3. Hero metric card | ✓ | — | — | — |
+| 4. Metrics row | ✓ | ✓ | ✓ | — |
+| 5. Section labels | ✓ | ✓ | ✓ | ✓ |
+| 6. Core indicators | ✓ | — | — | — |
+| 7. Side-by-side types/tiers | ✓ | — | — | — |
+| 8. Quick Take callout | ✓ | ✓ | ✓ | ✓ |
+| 9. CTA button area | ✓ | ✓ | ✓ | ✓ |
+| 10. Agent footer | ✓ | ✓ | ✓ | ✓ |
+| 11. Gallery cards | — | ✓ | — | — |
+| 12. Table header + stats | — | — | ✓ | — |
+| 13. Analytics KPI cards | — | — | — | ✓ |
+
+---
+
+## 8. Email Client Compatibility
+
+| Feature | Gmail | Apple Mail | Outlook | Yahoo |
+|---------|:-----:|:----------:|:-------:|:-----:|
+| `border-radius` | ✅ | ✅ | ❌ (ignored) | ✅ |
+| `background-color` hex+alpha | ✅ | ✅ | ❌ | ✅ |
+| `linear-gradient` | ✅ | ✅ | ❌ (solid fallback) | ✅ |
+| `border-left: 4px solid` | ✅ | ✅ | ✅ | ✅ |
+| `font-family: Georgia, serif` | ✅ | ✅ | ✅ | ✅ |
+| `<div>` for accent bars | ✅ | ✅ | ⚠️ | ✅ |
+| VML `<v:roundrect>` | N/A | N/A | ✅ | N/A |
+
+**Outlook philosophy:** Brand tinting is a progressive enhancement. Outlook users get clean white sections — the layout and typography still work, just without the subtle color washes. This is acceptable.
+
+---
+
+## 9. What NOT to Change
+
+1. **HTML email table architecture** — All layout = `<table role="presentation">`
+2. **VML/MSO Outlook conditionals** — Keep all `<!--[if mso]>` blocks
+3. **Dark mode CSS** — Keep `@media (prefers-color-scheme: dark)`
+4. **Mobile `@media` queries** — Keep stacking behavior
+5. **Helper functions** — `_format_price`, `_get_hero_4_metrics`, etc. are clean
+6. **AI insights logic** — Only change the display, not the generation
+7. **f-string architecture** — Not switching to Jinja2 for emails
+8. **`REPORT_CONFIG` dict** — Section toggle system works well
+9. **`send.py` orchestrator** — Don't touch recipient filtering or unsubscribe logic
+
+---
+
+## 10. Implementation Order & Cursor Prompt
+
+### Priority Order
+
+| # | Change | Impact | Difficulty |
+|---|--------|--------|------------|
+| 1 | Accent bar | High | Trivial |
+| 2 | Hero metric card | High | Easy |
+| 3 | AI insight restyle | Medium | Easy |
+| 4 | Section labels | High | Easy |
+| 5 | Quick Take callout | Medium | Easy |
+| 6 | CTA area | Medium | Trivial |
+| 7 | Metrics row | Medium | Medium |
+| 8 | Agent footer | Medium | Medium |
+| 9 | Gallery cards | High | Medium |
+| 10 | Side-by-side types/tiers | Medium | Medium |
+| 11 | Table view header | Medium | Easy |
+| 12 | Core indicators | Low | Easy |
+| 13 | Analytics layout | Low | Hard |
+
+### Cursor Prompt
+```
+I need visual upgrades to apps/worker/src/worker/email/template.py — the
+scheduled report email template. Read THEMED_EMAIL_IMPLEMENTATION.md for
+the full spec.
+
+RULES:
+- Keep ALL table-based layout — this is email HTML
+- Keep ALL VML/MSO Outlook conditionals
+- Keep ALL dark mode and mobile @media support
+- Keep ALL helper functions unchanged
+- Only modify HTML output in schedule_email_html() and section builders
+
+CHANGES (priority order):
+1. ACCENT BAR: 4px branded gradient bar below header
+2. HERO METRIC: Wrap in branded card ({primary_color}08 bg)
+3. AI INSIGHT: Left-bordered card (4px {primary_color}40 border)
+4. SECTION LABELS: Brand-colored with 20×2px accent bar
+5. QUICK TAKE: Accent-colored callout card
+6. CTA AREA: Tinted container ({primary_color}0A bg)
+7. METRICS ROW: 3 separate cards with Georgia serif numbers
+8. AGENT FOOTER: Tinted bg + pill contact buttons
+9. DIVIDERS: {primary_color}20 instead of #e5e7eb
+10. PROPERTY TYPES + PRICE TIERS: Single bordered container
+
+Test with schedule_email_html(report_type="market_snapshot").
+```
+
+---
+
+## 11. Expected Impact
+
+| Before | After |
+|--------|-------|
+| Brand disappears after header | Brand color threads through entire email |
+| Every section looks identical | Clear visual hierarchy |
+| Quick Take invisible | Standout callout that drives clicks |
+| Gallery cards are data rows | Mini property marketing pieces |
+| Agent footer is afterthought | Personal invitation to connect |
+| Monotone gray throughout | Warm, branded, professional aesthetic |
+| Generic data export feel | Compass-quality marketing email |
+
+---
+
+## 12. Testing Checklist
+
+- [ ] Accent bar renders below header
+- [ ] Hero metric card has branded background
+- [ ] AI insight has brand-colored left border
+- [ ] All section labels use primary_color
+- [ ] Quick Take has accent-colored styling
+- [ ] CTA button in tinted container
+- [ ] Metrics = 3 separate cards with Georgia serif
+- [ ] Agent footer has tinted bg + pill buttons
+- [ ] Gallery cards show large photos + serif pricing
+- [ ] Table header uses brand color bg + white text
+- [ ] Dividers use brand-tinted color
+- [ ] Dark mode still works
+- [ ] Mobile stacking still works
+- [ ] All 8 report types render without errors
+- [ ] Outlook VML conditionals preserved
+- [ ] All helper functions still work

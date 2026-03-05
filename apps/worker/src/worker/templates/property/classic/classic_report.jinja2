@@ -570,13 +570,12 @@
 
     {% if "overview" in _pages and overview_text %}
     <!-- PAGE: EXECUTIVE SUMMARY / OVERVIEW -->
-    <section class="page page-overview">
-      <div class="page-content">
-        <div class="overview-header">
-          <div class="overview-label">Executive Summary</div>
-          <h2 class="overview-title">Property Overview</h2>
-          <div class="overview-accent"></div>
-        </div>
+    <section class="page page-overview" style="background: var(--warm-white); padding: var(--pad);">
+      <div class="page-header">
+        <div class="page-header-label">Executive Summary</div>
+        <h2 class="page-header-title">Property Overview</h2>
+      </div>
+      <div class="page-content" style="padding:0;">
         <div class="overview-body">
           {% for para in overview_text.split('\n\n') %}
           {% if para.strip() %}
@@ -606,14 +605,15 @@
         <h2 class="page-header-title">Table of Contents</h2>
       </div>
       <div class="contents-list">
-        <div class="contents-item"><div class="contents-num">1</div><div class="contents-text">Aerial Property View</div><div class="contents-dots"></div><div class="contents-page">03</div></div>
-        <div class="contents-item"><div class="contents-num">2</div><div class="contents-text">Property Information</div><div class="contents-dots"></div><div class="contents-page">04</div></div>
-        <div class="contents-item"><div class="contents-num">3</div><div class="contents-text">Area Sales Analysis</div><div class="contents-dots"></div><div class="contents-page">05</div></div>
-        <div class="contents-item"><div class="contents-num">4</div><div class="contents-text">Market Trends</div><div class="contents-dots"></div><div class="contents-page">06</div></div>
-        <div class="contents-item"><div class="contents-num">5</div><div class="contents-text">Sales Comparables</div><div class="contents-dots"></div><div class="contents-page">07</div></div>
-        <div class="contents-item"><div class="contents-num">6</div><div class="contents-text">Estimated Value Range</div><div class="contents-dots"></div><div class="contents-page">08</div></div>
+        <div class="contents-item"><div class="contents-num">1</div><div class="contents-text">Executive Summary</div><div class="contents-dots"></div><div class="contents-page">02</div></div>
+        <div class="contents-item"><div class="contents-num">2</div><div class="contents-text">Aerial Property View</div><div class="contents-dots"></div><div class="contents-page">04</div></div>
+        <div class="contents-item"><div class="contents-num">3</div><div class="contents-text">Property Information</div><div class="contents-dots"></div><div class="contents-page">05</div></div>
+        <div class="contents-item"><div class="contents-num">4</div><div class="contents-text">Area Sales Analysis</div><div class="contents-dots"></div><div class="contents-page">06</div></div>
+        <div class="contents-item"><div class="contents-num">5</div><div class="contents-text">Market Trends</div><div class="contents-dots"></div><div class="contents-page">07</div></div>
+        <div class="contents-item"><div class="contents-num">6</div><div class="contents-text">Sales Comparables</div><div class="contents-dots"></div><div class="contents-page">08</div></div>
+        <div class="contents-item"><div class="contents-num">7</div><div class="contents-text">Estimated Value Range</div><div class="contents-dots"></div><div class="contents-page">09</div></div>
       </div>
-      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">02</div></div>
+      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">03</div></div>
     </section>
     {% endif %}
 
@@ -738,12 +738,12 @@
 
     {% if "market_trends" in _pages and market_trends %}
     <!-- PAGE 6: MARKET TRENDS -->
-    <section class="page page-market-trends">
+    <section class="page page-market-trends" style="background: var(--warm-white); padding: var(--pad);">
       <div class="page-header">
         <div class="page-header-label">Market Intelligence</div>
         <h2 class="page-header-title">Market Trends</h2>
       </div>
-      <div class="page-content">
+      <div class="page-content" style="padding-left:0; padding-right:0;">
         {%- set _mt_subtitle = (market_trends.city ~ ' - ' if market_trends.city else '') ~ (market_trends.period_label | default('')) -%}
         <div class="mt-header">
           {% if _mt_subtitle %}<div class="mt-subtitle">{{ _mt_subtitle }}</div>{% endif %}

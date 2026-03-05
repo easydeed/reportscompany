@@ -1,7 +1,7 @@
 "use client"
 
-import { ScheduleBuilder } from "@/components/schedule-builder"
+import { UnifiedReportWizard } from "@/components/unified-wizard"
 
 export default function NewSchedulePage() {
-  return <ScheduleBuilder />
+  return <UnifiedReportWizard defaultMode="schedule" />
 }

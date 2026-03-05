@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft,
@@ -56,12 +56,32 @@ export function PropertyWizard() {
   const [radiusMiles, setRadiusMiles] = useState(1.0);
   const [fallbackLevel, setFallbackLevel] = useState<string | null>(null);
 
-  // Step 3
+  // Step 3 — defaults overridden by account branding if available
   const [selectedThemeId, setSelectedThemeId] = useState(4);
   const [accentColor, setAccentColor] = useState("#34d1c3");
   const [selectedPageIds, setSelectedPageIds] = useState<string[]>(
     COMPACT_PAGES.map((p) => p.id)
   );
+
+  // Load account-level defaults (default theme + accent color sync)
+  useEffect(() => {
+    async function loadAccountDefaults() {
+      try {
+        const res = await fetch("/api/proxy/v1/account", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.default_theme_id && data.default_theme_id >= 1 && data.default_theme_id <= 5) {
+          setSelectedThemeId(data.default_theme_id);
+          const theme = THEMES.find((t) => t.id === data.default_theme_id);
+          if (theme) setAccentColor(theme.accentDefault);
+        }
+        if (data.secondary_color) {
+          setAccentColor(data.secondary_color);
+        }
+      } catch { /* use defaults */ }
+    }
+    loadAccountDefaults();
+  }, []);
 
   // Step 4
   const [generationPhase, setGenerationPhase] = useState<

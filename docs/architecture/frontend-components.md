@@ -26,34 +26,72 @@
 
 ---
 
-## Report Builder (`report-builder/`)
+## Unified Report Wizard (`unified-wizard/`) — NEW
 
-Multi-step wizard for creating reports.
+Story-first 4-step wizard that replaces both the old Report Builder and Schedule Builder. One flow, two delivery modes (Send Now / Schedule). Both `/app/reports/new` and `/app/schedules/new` mount this component.
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| UnifiedReportWizard | `unified-wizard/index.tsx` | Main shell: step nav, sidebar preview, submit logic |
+| StepStory | `unified-wizard/step-story.tsx` | 5 story cards (What Just Listed, What Just Sold, Market Update, What's Available, Showcase) |
+| StepAudience | `unified-wizard/step-audience.tsx` | 6 audience cards (conditional — only for "What Just Listed") |
+| StepWhereWhen | `unified-wizard/step-where-when.tsx` | Area (city/ZIP) + timeframe (7/14/30/60/90 days) combined |
+| StepDeliver | `unified-wizard/step-deliver.tsx` | Send Now (browser/PDF/email) or Schedule (cadence/day/time/timezone) |
+| types | `unified-wizard/types.ts` | Story→report_type mapping, audience presets, state interfaces |
+
+**Key features:**
+- 5 stories map to 5 `report_type` values internally — agent never sees `new_listings_gallery` or `market_snapshot`
+- Audience step auto-skips for non-gallery stories
+- Smart lookback defaults per story (14d for listings, 30d for market, 90d for showcase)
+- Right sidebar shows SharedEmailPreview with real branding, updating live as the user configures
+- Zero backend changes — same POST payloads to `/api/proxy/v1/reports` and `/api/proxy/v1/schedules`
+
+---
+
+## Shared Email Preview (`shared/email-preview/`) — NEW
+
+Single preview component used in both the Unified Wizard and the Branding page. Renders a React interpretation of the V16 email template layouts with real agent branding and sample data.
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| SharedEmailPreview | `shared/email-preview/index.tsx` | Main component, routes to layout per report type |
+| PreviewHeader | `shared/email-preview/preview-header.tsx` | Gradient header with logo, title, period |
+| PreviewNarrative | `shared/email-preview/preview-narrative.tsx` | AI insight placeholder |
+| PreviewHeroStat | `shared/email-preview/preview-hero-stat.tsx` | Big serif number (56px Georgia) |
+| PreviewPhotoGrid | `shared/email-preview/preview-photo-grid.tsx` | 2×2, 3×2, stacked, large-cards layouts |
+| PreviewStackedStats | `shared/email-preview/preview-stacked-stats.tsx` | Horizontal stat bar or vertical rows |
+| PreviewDataTable | `shared/email-preview/preview-data-table.tsx` | Sales/inventory table with branded header |
+| PreviewQuickTake | `shared/email-preview/preview-quick-take.tsx` | Accent callout box |
+| PreviewCta | `shared/email-preview/preview-cta.tsx` | Branded CTA button |
+| PreviewAgentFooter | `shared/email-preview/preview-agent-footer.tsx` | Agent photo, name, contact pills |
+| PreviewGalleryCount | `shared/email-preview/preview-gallery-count.tsx` | Count badge |
+| sample-data | `shared/email-preview/sample-data.ts` | Per-type placeholder content (stats, listings, narrative text) |
+
+**What's real vs. sample:**
+- Real: gradient colors, logo, agent info, report title, period line, CTA color
+- Sample: metric values, property photos (Unsplash), AI narrative, listing details
+
+---
+
+## Report Builder (`report-builder/`) — LEGACY
+
+> Superseded by Unified Wizard. Kept as fallback.
 
 | Component | File | Purpose |
 |-----------|------|---------|
 | ReportBuilder | `report-builder/index.tsx` | Main wizard container |
 | ReportPreview | `report-builder/report-preview.tsx` | Live report preview |
-| ReportTypeSection | `report-builder/sections/report-type-section.tsx` | Report type selection step |
-| AreaSection | `report-builder/sections/area-section.tsx` | Area/location selection step |
-| LookbackSection | `report-builder/sections/lookback-section.tsx` | Date range selection step |
-| DeliverySection | `report-builder/sections/delivery-section.tsx` | Delivery method selection step |
 
 ---
 
-## Schedule Builder (`schedule-builder/`)
+## Schedule Builder (`schedule-builder/`) — LEGACY
 
-Multi-step wizard for creating scheduled reports.
+> Superseded by Unified Wizard. Kept as fallback.
 
 | Component | File | Purpose |
 |-----------|------|---------|
 | ScheduleBuilder | `schedule-builder/index.tsx` | Main wizard container |
-| EmailPreview | `schedule-builder/email-preview.tsx` | Email preview |
-| ReportTypeSection | `schedule-builder/sections/report-type-section.tsx` | Report type step |
-| AreaSection | `schedule-builder/sections/area-section.tsx` | Area selection step |
-| LookbackSection | `schedule-builder/sections/lookback-section.tsx` | Lookback step |
-| CadenceSection | `schedule-builder/sections/cadence-section.tsx` | Frequency selection step |
-| RecipientsSection | `schedule-builder/sections/recipients-section.tsx` | Recipient selection step |
+| EmailPreview | `schedule-builder/email-preview.tsx` | Email preview (React mockup, sample data) |
 
 ---
 
@@ -95,16 +133,43 @@ Multi-step wizard for creating property reports.
 - **Smart Color System badge** — explains auto-adjustment for readability
 - Report page checklist with 9 pages including Executive Summary (`overview`); required pages (`property`, `comparables`) locked
 
+**Branding sync (NEW):**
+- On mount, `property-wizard.tsx` fetches `/api/proxy/v1/account` to read `default_theme_id` and `secondary_color`
+- If the account has a default theme set (1-5), the wizard pre-selects it instead of hardcoded Teal (4)
+- If the account has an accent color, the wizard uses it as the initial accent instead of the theme's `accentDefault`
+- Agent can still override both per-report in the theme step
+
 ---
 
-## Branding (`branding/`)
+## Branding Page (`app/settings/branding/`) — REBUILT
+
+Single-page layout with controls (left) and persistent live preview (right). Replaces the old 3-tab layout.
+
+**Sections:**
+1. **Brand Identity** — display name, tagline (NEW)
+2. **Colors** — primary/accent pickers, 6 presets, gradient preview
+3. **Default Property Theme** — 5 theme cards with font info, sets account default (NEW)
+4. **Logos** — 2 uploads (header light + footer dark), simplified from 4
+5. **Agent Info** — name, title, phone, email, photo (NEW, consolidated from profile)
+
+**Right panel:**
+- Email/PDF toggle
+- SharedEmailPreview (real V16 layouts, live-updating as user edits branding)
+- PropertyPreviewMini (cover page thumbnail with selected theme)
+- Test actions: Download Sample PDF, Send Test Email
+
+**Accent sync:** When accent color changes on branding page, it also becomes the default accent for property reports (property wizard reads `account.secondary_color` on mount).
+
+**Theme sync:** When default theme changes on branding page, property wizard pre-selects it instead of hardcoded Teal.
+
+---
+
+## Branding Components (`branding/`) — LEGACY
 
 | Component | File | Purpose |
 |-----------|------|---------|
-| BrandingForm | `branding-form.tsx` | Brand settings form (logos, colors, contact) |
-| BrandingPreview | `branding-preview.tsx` | Live branding preview |
 | DownloadTools | `branding/download-tools.tsx` | Download branded assets |
-| ReportPreview | `branding/report-preview.tsx` | Report with branding preview |
+| ReportPreview | `branding/report-preview.tsx` | Report with branding preview (legacy) |
 
 ---
 
@@ -172,6 +237,7 @@ Landing page sections.
 
 | Component | File | Purpose |
 |-----------|------|---------|
+| SharedEmailPreview | `shared/email-preview/index.tsx` | Unified email preview (V16 layouts, real branding) — used in wizard + branding |
 | Wizard | `Wizard.tsx` | Generic wizard/stepper container |
 | Stepper | `stepper.tsx` | Step progress indicator |
 | StatusBadge | `status-badge.tsx` | Status indicator badge |

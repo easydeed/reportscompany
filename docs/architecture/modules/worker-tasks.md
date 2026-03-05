@@ -32,7 +32,7 @@ Full report generation pipeline:
 4. `resolve_filters()` — apply price strategy
 5. Re-fetch filtered listings; `elastic_widen_filters()` if <6 results
 6. Build report context (AI insights, gallery, stats)
-7. Render email via Jinja2 template
+7. Render email via `schedule_email_html()` in `email/template.py` (V16 modular architecture)
 8. Generate social image (if enabled)
 9. Generate PDF (if enabled) via `pdf_engine.py`
 10. Upload PDF to Cloudflare R2

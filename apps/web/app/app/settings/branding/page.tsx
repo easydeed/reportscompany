@@ -20,29 +20,31 @@ import {
   Download,
   Send,
   Check,
-  Lightbulb,
   Sparkles,
   Eye,
-  Image,
-  Droplets,
   Upload,
+  User,
+  Type,
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { cn } from "@/lib/utils"
-import { REPORT_TYPE_OPTIONS, ReportType } from "@/lib/sample-report-data"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { REPORT_TYPE_OPTIONS, type ReportType } from "@/lib/sample-report-data"
+import {
+  SharedEmailPreview,
+  type PreviewReportType,
+} from "@/components/shared/email-preview"
 
-type BrandingData = {
-  primary_color: string
-  accent_color: string
-  pdf_header_logo_url: string | null
-  pdf_footer_logo_url: string | null
-  email_header_logo_url: string | null
-  email_footer_logo_url: string | null
-}
+// ─── Theme definitions (mirror property-wizard/types.ts) ───
 
-// Color presets for quick selection
+const THEMES = [
+  { id: 1, name: "Classic", style: "Timeless & Professional", font: "Merriweather + System Sans", gradient: "linear-gradient(135deg, #1B365D 0%, #2D5F8A 100%)", previewImage: "/previews/1.jpg" },
+  { id: 2, name: "Modern", style: "Clean & Contemporary", font: "DM Sans", gradient: "linear-gradient(135deg, #1A1F36 0%, #FF6B5B 100%)", previewImage: "/previews/2.jpg" },
+  { id: 3, name: "Elegant", style: "Sophisticated & Refined", font: "Playfair Display", gradient: "linear-gradient(135deg, #1a1a1a 0%, #C9A962 100%)", previewImage: "/previews/3.jpg" },
+  { id: 4, name: "Teal", style: "Vibrant & Modern", font: "Montserrat", gradient: "linear-gradient(135deg, #18235c 0%, #34d1c3 100%)", previewImage: "/previews/4.jpg" },
+  { id: 5, name: "Bold", style: "Impactful & Striking", font: "Clash Display + DM Sans", gradient: "linear-gradient(135deg, #15216E 0%, #D69649 100%)", previewImage: "/previews/5.jpg" },
+]
+
 const COLOR_PRESETS = [
   { name: "Indigo", primary: "#4F46E5", accent: "#F59E0B" },
   { name: "Ocean", primary: "#0EA5E9", accent: "#10B981" },
@@ -52,32 +54,60 @@ const COLOR_PRESETS = [
   { name: "Royal", primary: "#7C3AED", accent: "#EC4899" },
 ]
 
+const PREVIEW_REPORT_TYPES: { value: PreviewReportType; label: string }[] = [
+  { value: "market_snapshot", label: "Market Update" },
+  { value: "new_listings_gallery", label: "New Listings" },
+  { value: "closed", label: "Closed Sales" },
+  { value: "inventory", label: "Inventory" },
+  { value: "featured_listings", label: "Featured" },
+]
+
+type BrandingData = {
+  display_name: string
+  tagline: string
+  primary_color: string
+  accent_color: string
+  default_theme_id: number
+  header_logo_url: string | null
+  footer_logo_url: string | null
+  agent_name: string
+  agent_title: string
+  agent_phone: string
+  agent_email: string
+  agent_photo_url: string | null
+}
+
 export default function BrandingPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
 
   const [branding, setBranding] = useState<BrandingData>({
+    display_name: "",
+    tagline: "",
     primary_color: "#818CF8",
     accent_color: "#F59E0B",
-    pdf_header_logo_url: null,
-    pdf_footer_logo_url: null,
-    email_header_logo_url: null,
-    email_footer_logo_url: null,
+    default_theme_id: 4,
+    header_logo_url: null,
+    footer_logo_url: null,
+    agent_name: "",
+    agent_title: "",
+    agent_phone: "",
+    agent_email: "",
+    agent_photo_url: null,
   })
 
-  // Test branding state
+  // Preview state
+  const [previewMode, setPreviewMode] = useState<"email" | "property">("email")
+  const [previewReportType, setPreviewReportType] = useState<PreviewReportType>("market_snapshot")
+
+  // Test branding
   const [reportType, setReportType] = useState<ReportType>("market_snapshot")
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false)
-  const [isDownloadingJpg, setIsDownloadingJpg] = useState(false)
   const [downloadSuccess, setDownloadSuccess] = useState<string | null>(null)
   const [testEmail, setTestEmail] = useState("")
   const [isSending, setIsSending] = useState(false)
   const [sendSuccess, setSendSuccess] = useState(false)
-
-  // User profile for preview
-  const [userName, setUserName] = useState("")
-  const [companyName, setCompanyName] = useState("")
 
   useEffect(() => {
     loadData()
@@ -93,30 +123,33 @@ export default function BrandingPage() {
 
       if (accountRes.ok) {
         const data = await accountRes.json()
-        setBranding({
+        setBranding((prev) => ({
+          ...prev,
+          display_name: data.display_name || data.name || "",
           primary_color: data.primary_color || "#818CF8",
           accent_color: data.secondary_color || "#F59E0B",
-          pdf_header_logo_url: data.logo_url || null,
-          pdf_footer_logo_url: data.footer_logo_url || null,
-          email_header_logo_url: data.email_logo_url || null,
-          email_footer_logo_url: data.email_footer_logo_url || null,
-        })
+          default_theme_id: data.default_theme_id || 4,
+          header_logo_url: data.logo_url || data.email_logo_url || null,
+          footer_logo_url: data.footer_logo_url || data.email_footer_logo_url || null,
+        }))
       }
 
       if (profileRes.ok) {
         const profile = await profileRes.json()
         const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(" ")
-        setUserName(fullName || profile.email?.split("@")[0] || "User")
-        setCompanyName(profile.company_name || "")
+        setBranding((prev) => ({
+          ...prev,
+          agent_name: fullName || "",
+          agent_title: profile.job_title || "",
+          agent_phone: profile.phone || "",
+          agent_email: profile.email || "",
+          agent_photo_url: profile.avatar_url || null,
+        }))
         setTestEmail(profile.email || "")
       }
     } catch (error) {
       console.error("Failed to load branding:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load branding settings",
-        variant: "destructive",
-      })
+      toast({ title: "Error", description: "Failed to load branding settings", variant: "destructive" })
     } finally {
       setLoading(false)
     }
@@ -129,27 +162,21 @@ export default function BrandingPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          display_name: branding.display_name || undefined,
+          tagline: branding.tagline || undefined,
           primary_color: branding.primary_color,
           secondary_color: branding.accent_color,
-          logo_url: branding.pdf_header_logo_url,
-          footer_logo_url: branding.pdf_footer_logo_url,
-          email_logo_url: branding.email_header_logo_url,
-          email_footer_logo_url: branding.email_footer_logo_url,
+          default_theme_id: branding.default_theme_id,
+          logo_url: branding.header_logo_url,
+          footer_logo_url: branding.footer_logo_url,
+          email_logo_url: branding.header_logo_url,
+          email_footer_logo_url: branding.footer_logo_url,
         }),
       })
-
       if (!res.ok) throw new Error("Failed to save branding")
-
-      toast({
-        title: "Branding Saved",
-        description: "Your branding has been updated successfully.",
-      })
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save branding",
-        variant: "destructive",
-      })
+      toast({ title: "Branding Saved", description: "Your branding has been updated successfully." })
+    } catch {
+      toast({ title: "Error", description: "Failed to save branding", variant: "destructive" })
     } finally {
       setSaving(false)
     }
@@ -164,12 +191,7 @@ export default function BrandingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ report_type: reportType }),
       })
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
-        throw new Error(data.error || data.detail || "Failed to generate PDF")
-      }
-
+      if (!response.ok) throw new Error("Failed to generate PDF")
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement("a")
@@ -179,55 +201,12 @@ export default function BrandingPage() {
       link.click()
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
-
       setDownloadSuccess("pdf")
       setTimeout(() => setDownloadSuccess(null), 3000)
     } catch (err) {
-      toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : "Download failed",
-        variant: "destructive",
-      })
+      toast({ title: "Error", description: err instanceof Error ? err.message : "Download failed", variant: "destructive" })
     } finally {
       setIsDownloadingPdf(false)
-    }
-  }
-
-  async function handleDownloadJpg() {
-    setIsDownloadingJpg(true)
-    setDownloadSuccess(null)
-    try {
-      const response = await fetch("/api/proxy/v1/branding/sample-jpg", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ report_type: reportType }),
-      })
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
-        throw new Error(data.error || data.detail || "Failed to generate image")
-      }
-
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement("a")
-      link.href = url
-      link.download = `sample-${reportType.replace(/_/g, "-")}-social.jpg`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
-
-      setDownloadSuccess("jpg")
-      setTimeout(() => setDownloadSuccess(null), 3000)
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : "Download failed",
-        variant: "destructive",
-      })
-    } finally {
-      setIsDownloadingJpg(false)
     }
   }
 
@@ -236,7 +215,6 @@ export default function BrandingPage() {
       toast({ title: "Error", description: "Please enter a valid email", variant: "destructive" })
       return
     }
-
     setIsSending(true)
     setSendSuccess(false)
     try {
@@ -245,27 +223,18 @@ export default function BrandingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: testEmail, report_type: reportType }),
       })
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
-        throw new Error(data.error || data.detail || "Failed to send email")
-      }
-
+      if (!response.ok) throw new Error("Failed to send email")
       setSendSuccess(true)
       setTimeout(() => setSendSuccess(false), 5000)
     } catch (err) {
-      toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : "Send failed",
-        variant: "destructive",
-      })
+      toast({ title: "Error", description: err instanceof Error ? err.message : "Send failed", variant: "destructive" })
     } finally {
       setIsSending(false)
     }
   }
 
-  const primaryColor = branding.primary_color
-  const accentColor = branding.accent_color
+  const update = (patch: Partial<BrandingData>) => setBranding((prev) => ({ ...prev, ...patch }))
+  const selectedTheme = THEMES.find((t) => t.id === branding.default_theme_id) || THEMES[3]
 
   if (loading) {
     return (
@@ -279,629 +248,483 @@ export default function BrandingPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      {/* Page Header */}
-      <div className="flex items-center justify-between mb-8">
+    <div className="max-w-[1400px] mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Branding</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Customize how your reports and emails look
+            Control how your reports and emails look across every touchpoint
           </p>
         </div>
         <Button onClick={save} disabled={saving}>
           {saving ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              Saving...
-            </>
+            <><Loader2 className="w-4 h-4 animate-spin mr-2" />Saving...</>
           ) : (
-            <>
-              <Save className="w-4 h-4 mr-2" />
-              Save Changes
-            </>
+            <><Save className="w-4 h-4 mr-2" />Save Changes</>
           )}
         </Button>
       </div>
 
-      {/* Main Content - Tabs Layout */}
-      <Tabs defaultValue="colors" className="space-y-6">
-        <TabsList className="bg-muted/50 p-1">
-          <TabsTrigger value="colors" className="gap-2">
-            <Droplets className="w-4 h-4" />
-            Colors
-          </TabsTrigger>
-          <TabsTrigger value="logos" className="gap-2">
-            <Image className="w-4 h-4" />
-            Logos
-          </TabsTrigger>
-          <TabsTrigger value="preview" className="gap-2">
-            <Eye className="w-4 h-4" />
-            Preview & Test
-          </TabsTrigger>
-        </TabsList>
+      {/* Two-column layout: Controls left, Preview right */}
+      <div className="grid lg:grid-cols-[1fr_420px] gap-6">
+        {/* ─── Left: Controls ─── */}
+        <div className="space-y-5">
 
-        {/* Colors Tab */}
-        <TabsContent value="colors" className="space-y-6">
-          <div className="grid lg:grid-cols-2 gap-6">
-            {/* Color Picker Card */}
-            <div className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)] overflow-hidden">
-              <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-amber-500 flex items-center justify-center">
-                  <Palette className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground">Brand Colors</h3>
-                  <p className="text-xs text-muted-foreground">Choose your primary and accent colors</p>
-                </div>
+          {/* Brand Identity */}
+          <Section icon={<Sparkles className="w-4 h-4 text-indigo-600" />} iconBg="bg-indigo-50" title="Brand Identity" subtitle="Your display name and tagline">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Display Name</Label>
+                <Input
+                  value={branding.display_name}
+                  onChange={(e) => update({ display_name: e.target.value })}
+                  placeholder="Acme Realty"
+                  className="h-10"
+                />
               </div>
-              
-              <div className="p-6 space-y-6">
-                {/* Primary Color */}
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium text-foreground">Primary Color</Label>
-                  <p className="text-xs text-muted-foreground -mt-2">Used for headers, ribbons, and backgrounds</p>
-                  <div className="flex gap-3">
-                    <div
-                      className="w-16 h-12 rounded-xl border-2 border-border cursor-pointer relative shadow-inner flex-shrink-0 transition-all hover:scale-105 hover:shadow-md"
-                      style={{ backgroundColor: primaryColor }}
-                    >
-                      <input
-                        type="color"
-                        value={primaryColor}
-                        onChange={(e) => setBranding({ ...branding, primary_color: e.target.value })}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      />
-                    </div>
-                    <Input
-                      value={primaryColor}
-                      onChange={(e) => setBranding({ ...branding, primary_color: e.target.value })}
-                      className="font-mono text-sm uppercase h-12 flex-1"
-                      maxLength={7}
-                    />
-                  </div>
-                </div>
-
-                {/* Accent Color */}
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium text-foreground">Accent Color</Label>
-                  <p className="text-xs text-muted-foreground -mt-2">Used for buttons, highlights, and CTAs</p>
-                  <div className="flex gap-3">
-                    <div
-                      className="w-16 h-12 rounded-xl border-2 border-border cursor-pointer relative shadow-inner flex-shrink-0 transition-all hover:scale-105 hover:shadow-md"
-                      style={{ backgroundColor: accentColor }}
-                    >
-                      <input
-                        type="color"
-                        value={accentColor}
-                        onChange={(e) => setBranding({ ...branding, accent_color: e.target.value })}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      />
-                    </div>
-                    <Input
-                      value={accentColor}
-                      onChange={(e) => setBranding({ ...branding, accent_color: e.target.value })}
-                      className="font-mono text-sm uppercase h-12 flex-1"
-                      maxLength={7}
-                    />
-                  </div>
-                </div>
-
-                {/* Gradient Preview */}
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Gradient Preview</Label>
-                  <div
-                    className="h-16 rounded-xl shadow-inner"
-                    style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Tagline <span className="text-muted-foreground">(optional)</span></Label>
+                <Input
+                  value={branding.tagline}
+                  onChange={(e) => update({ tagline: e.target.value })}
+                  placeholder="Your Home Expert"
+                  className="h-10"
+                />
               </div>
             </div>
+          </Section>
 
-            {/* Color Presets */}
-            <div className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)] overflow-hidden">
-              <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-indigo-600" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground">Quick Presets</h3>
-                  <p className="text-xs text-muted-foreground">Start with a professional color scheme</p>
-                </div>
-              </div>
+          {/* Colors */}
+          <Section icon={<Palette className="w-4 h-4 text-violet-600" />} iconBg="bg-violet-50" title="Brand Colors" subtitle="Primary and accent colors for all reports and emails">
+            <div className="grid sm:grid-cols-2 gap-5">
+              <ColorPicker
+                label="Primary Color"
+                help="Headers, gradients, text accents"
+                value={branding.primary_color}
+                onChange={(v) => update({ primary_color: v })}
+              />
+              <ColorPicker
+                label="Accent Color"
+                help="Buttons, highlights, CTAs"
+                value={branding.accent_color}
+                onChange={(v) => update({ accent_color: v })}
+              />
+            </div>
 
-              <div className="p-6">
-                <div className="grid grid-cols-2 gap-3">
-                  {COLOR_PRESETS.map((preset) => (
+            {/* Gradient preview */}
+            <div className="mt-4">
+              <Label className="text-xs text-muted-foreground mb-1.5 block">Gradient Preview</Label>
+              <div
+                className="h-12 rounded-lg shadow-inner"
+                style={{ background: `linear-gradient(135deg, ${branding.primary_color} 0%, ${branding.accent_color} 100%)` }}
+              />
+            </div>
+
+            {/* Presets */}
+            <div className="mt-4">
+              <Label className="text-xs text-muted-foreground mb-2 block">Quick Presets</Label>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                {COLOR_PRESETS.map((preset) => {
+                  const active = branding.primary_color === preset.primary && branding.accent_color === preset.accent
+                  return (
                     <button
                       key={preset.name}
-                      onClick={() => setBranding({ ...branding, primary_color: preset.primary, accent_color: preset.accent })}
+                      onClick={() => update({ primary_color: preset.primary, accent_color: preset.accent })}
                       className={cn(
-                        "group relative p-4 rounded-xl border-2 transition-all hover:scale-[1.02]",
-                        primaryColor === preset.primary && accentColor === preset.accent
-                          ? "border-indigo-500 bg-indigo-50/50 shadow-md"
-                          : "border-border hover:border-indigo-200 hover:bg-muted/30"
+                        "group relative rounded-lg border-2 p-2.5 transition-all hover:scale-[1.03]",
+                        active ? "border-indigo-500 bg-indigo-50/50 shadow-md" : "border-border hover:border-indigo-200"
                       )}
                     >
-                      <div className="flex gap-2 mb-2">
-                        <div
-                          className="w-8 h-8 rounded-lg shadow-sm"
-                          style={{ backgroundColor: preset.primary }}
-                        />
-                        <div
-                          className="w-8 h-8 rounded-lg shadow-sm"
-                          style={{ backgroundColor: preset.accent }}
-                        />
+                      <div className="flex gap-1.5 mb-1.5">
+                        <div className="w-5 h-5 rounded" style={{ backgroundColor: preset.primary }} />
+                        <div className="w-5 h-5 rounded" style={{ backgroundColor: preset.accent }} />
                       </div>
-                      <p className="text-xs font-medium text-foreground text-left">{preset.name}</p>
-                      {primaryColor === preset.primary && accentColor === preset.accent && (
-                        <div className="absolute top-2 right-2">
-                          <Check className="w-4 h-4 text-indigo-600" />
-                        </div>
-                      )}
+                      <p className="text-[10px] font-medium text-foreground">{preset.name}</p>
+                      {active && <Check className="absolute top-1 right-1 w-3.5 h-3.5 text-indigo-600" />}
                     </button>
-                  ))}
-                </div>
+                  )
+                })}
               </div>
             </div>
-          </div>
-        </TabsContent>
+          </Section>
 
-        {/* Logos Tab */}
-        <TabsContent value="logos" className="space-y-6">
-          <div className="grid lg:grid-cols-2 gap-6">
-            {/* PDF Logos */}
-            <div className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)] overflow-hidden">
-              <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center">
-                  <FileText className="w-4 h-4 text-red-600" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground">PDF Report Logos</h3>
-                  <p className="text-xs text-muted-foreground">Logos for downloadable PDF reports</p>
-                </div>
-              </div>
-
-              <div className="p-6 space-y-6">
-                {/* Header Logo */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label className="text-sm font-medium text-foreground">Header Logo</Label>
-                      <p className="text-xs text-muted-foreground">Light/white version for gradient background</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div 
-                      className="w-24 h-16 rounded-lg flex items-center justify-center p-2"
-                      style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
-                    >
-                      {branding.pdf_header_logo_url ? (
-                        <img
-                          src={branding.pdf_header_logo_url}
-                          className="max-h-full max-w-full object-contain brightness-0 invert"
-                          alt="Header logo"
-                        />
+          {/* Default Property Theme */}
+          <Section icon={<Type className="w-4 h-4 text-teal-600" />} iconBg="bg-teal-50" title="Default Property Theme" subtitle="New property reports will start with this theme">
+            <div className="grid grid-cols-5 gap-2">
+              {THEMES.map((theme) => {
+                const active = branding.default_theme_id === theme.id
+                return (
+                  <button
+                    key={theme.id}
+                    onClick={() => update({ default_theme_id: theme.id })}
+                    className={cn(
+                      "group relative rounded-lg border-2 overflow-hidden transition-all hover:scale-[1.02]",
+                      active ? "border-indigo-500 shadow-lg ring-2 ring-indigo-200" : "border-border hover:border-indigo-200"
+                    )}
+                  >
+                    <div className="aspect-[3/4] overflow-hidden">
+                      {theme.previewImage ? (
+                        <img src={theme.previewImage} alt={theme.name} className="w-full h-full object-cover object-top" />
                       ) : (
-                        <Upload className="w-6 h-6 text-white/50" />
+                        <div className="w-full h-full" style={{ background: theme.gradient }} />
                       )}
                     </div>
-                    <div className="flex-1">
-                      <ImageUpload
-                        label=""
-                        value={branding.pdf_header_logo_url}
-                        onChange={(url) => setBranding({ ...branding, pdf_header_logo_url: url })}
-                        assetType="logo"
-                        aspectRatio="wide"
-                        helpText="PNG/SVG with transparent bg"
-                      />
+                    <div className="p-1.5 bg-white">
+                      <p className="text-[10px] font-semibold text-center">{theme.name}</p>
                     </div>
-                  </div>
-                </div>
-
-                {/* Footer Logo */}
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-sm font-medium text-foreground">Footer Logo</Label>
-                    <p className="text-xs text-muted-foreground">Standard/dark version for light backgrounds</p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="w-24 h-16 rounded-lg bg-slate-50 border border-border flex items-center justify-center p-2">
-                      {branding.pdf_footer_logo_url ? (
-                        <img
-                          src={branding.pdf_footer_logo_url}
-                          className="max-h-full max-w-full object-contain"
-                          alt="Footer logo"
-                        />
-                      ) : (
-                        <Upload className="w-6 h-6 text-muted-foreground/30" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <ImageUpload
-                        label=""
-                        value={branding.pdf_footer_logo_url}
-                        onChange={(url) => setBranding({ ...branding, pdf_footer_logo_url: url })}
-                        assetType="logo"
-                        aspectRatio="wide"
-                        helpText="PNG/SVG with transparent bg"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+                    {active && (
+                      <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center">
+                        <Check className="w-3 h-3 text-white" />
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
             </div>
-
-            {/* Email Logos */}
-            <div className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)] overflow-hidden">
-              <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center">
-                  <Mail className="w-4 h-4 text-indigo-600" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground">Email Logos</h3>
-                  <p className="text-xs text-muted-foreground">Logos for email reports</p>
-                </div>
-              </div>
-
-              <div className="p-6 space-y-6">
-                {/* Email Header Logo */}
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-sm font-medium text-foreground">Header Logo</Label>
-                    <p className="text-xs text-muted-foreground">Appears at top of email</p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div 
-                      className="w-24 h-16 rounded-lg flex items-center justify-center p-2"
-                      style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
-                    >
-                      {branding.email_header_logo_url || branding.pdf_header_logo_url ? (
-                        <img
-                          src={branding.email_header_logo_url || branding.pdf_header_logo_url || ""}
-                          className="max-h-full max-w-full object-contain"
-                          alt="Email header logo"
-                        />
-                      ) : (
-                        <Upload className="w-6 h-6 text-white/50" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <ImageUpload
-                        label=""
-                        value={branding.email_header_logo_url}
-                        onChange={(url) => setBranding({ ...branding, email_header_logo_url: url })}
-                        assetType="logo"
-                        aspectRatio="wide"
-                        helpText="Falls back to PDF header logo"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Email Footer Logo */}
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-sm font-medium text-foreground">Footer Logo</Label>
-                    <p className="text-xs text-muted-foreground">Appears at bottom of email</p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="w-24 h-16 rounded-lg bg-white border border-border flex items-center justify-center p-2">
-                      {branding.email_footer_logo_url || branding.pdf_footer_logo_url ? (
-                        <img
-                          src={branding.email_footer_logo_url || branding.pdf_footer_logo_url || ""}
-                          className="max-h-full max-w-full object-contain"
-                          alt="Email footer logo"
-                        />
-                      ) : (
-                        <Upload className="w-6 h-6 text-muted-foreground/30" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <ImageUpload
-                        label=""
-                        value={branding.email_footer_logo_url}
-                        onChange={(url) => setBranding({ ...branding, email_footer_logo_url: url })}
-                        assetType="logo"
-                        aspectRatio="wide"
-                        helpText="Falls back to PDF footer logo"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Tip */}
-                <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
-                  <p className="text-xs text-amber-800 flex items-start gap-2">
-                    <Lightbulb className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                    Email logos may render differently across email clients. Test before sending.
-                  </p>
-                </div>
-              </div>
+            <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+              <Type className="w-3.5 h-3.5" />
+              <span>
+                <strong>{selectedTheme.name}</strong> — {selectedTheme.font}
+              </span>
             </div>
-          </div>
-        </TabsContent>
+          </Section>
 
-        {/* Preview & Test Tab */}
-        <TabsContent value="preview" className="space-y-6">
-          <div className="grid lg:grid-cols-[1fr_380px] gap-6">
-            {/* Live Previews */}
-            <div className="space-y-6">
-              {/* PDF Preview */}
-              <div className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)] overflow-hidden">
-                <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center">
-                    <FileText className="w-4 h-4 text-red-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-foreground">PDF Report Preview</h3>
-                    <p className="text-xs text-muted-foreground">How your PDF reports will look</p>
-                  </div>
-                </div>
-                
-                <div className="p-6">
-                  <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-slate-200">
-                    {/* Header */}
-                    <div
-                      className="p-6"
-                      style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
-                    >
-                      <div className="flex items-center gap-4">
-                        {branding.pdf_header_logo_url ? (
-                          <img
-                            src={branding.pdf_header_logo_url}
-                            className="h-10 w-auto max-w-[100px] object-contain brightness-0 invert"
-                            alt=""
-                          />
-                        ) : (
-                          <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center text-white font-bold text-lg">
-                            {companyName?.[0] || "T"}
-                          </div>
-                        )}
-                        <div className="text-white">
-                          <div className="font-semibold text-base">Market Update</div>
-                          <div className="text-sm text-white/70">January 2026 • Los Angeles, CA</div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Content placeholder */}
-                    <div className="p-6 space-y-3">
-                      <div className="h-3 bg-slate-100 rounded w-full" />
-                      <div className="h-3 bg-slate-100 rounded w-3/4" />
-                      <div className="h-3 bg-slate-100 rounded w-5/6" />
-                      <div className="grid grid-cols-3 gap-3 mt-4">
-                        <div className="h-16 bg-slate-50 rounded-lg border border-slate-100" />
-                        <div className="h-16 bg-slate-50 rounded-lg border border-slate-100" />
-                        <div className="h-16 bg-slate-50 rounded-lg border border-slate-100" />
-                      </div>
-                    </div>
-                    
-                    {/* Footer */}
-                    <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                      <div className="text-sm text-slate-600">{userName || "Agent Name"}</div>
-                      {branding.pdf_footer_logo_url ? (
-                        <img
-                          src={branding.pdf_footer_logo_url}
-                          className="h-6 w-auto max-w-[80px] object-contain"
-                          alt=""
-                        />
-                      ) : (
-                        <div className="text-xs font-semibold" style={{ color: primaryColor }}>
-                          {companyName || "Your Brand"}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Email Preview */}
-              <div className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)] overflow-hidden">
-                <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center">
-                    <Mail className="w-4 h-4 text-indigo-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-foreground">Email Preview</h3>
-                    <p className="text-xs text-muted-foreground">How your email reports will look</p>
-                  </div>
-                </div>
-                
-                <div className="p-6">
-                  <div className="bg-slate-100 rounded-xl p-4">
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden max-w-md mx-auto">
-                      {/* Email Header */}
-                      <div
-                        className="p-4"
-                        style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
-                      >
-                        <div className="flex items-center gap-3">
-                          {branding.email_header_logo_url || branding.pdf_header_logo_url ? (
-                            <img
-                              src={branding.email_header_logo_url || branding.pdf_header_logo_url || ""}
-                              className="h-8 w-auto max-w-[80px] object-contain"
-                              alt=""
-                            />
-                          ) : (
-                            <div className="h-8 w-8 rounded bg-white/20 flex items-center justify-center text-white font-bold text-sm">
-                              {companyName?.[0] || "T"}
-                            </div>
-                          )}
-                          <div className="text-white text-sm font-semibold">
-                            {companyName || "Your Brand"}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Email Content */}
-                      <div className="p-4 space-y-3">
-                        <div className="text-sm text-slate-700">Your market report is ready!</div>
-                        <div className="h-2 bg-slate-100 rounded w-full" />
-                        <div className="h-2 bg-slate-100 rounded w-2/3" />
-                        <Button 
-                          size="sm" 
-                          className="mt-2"
-                          style={{ backgroundColor: accentColor }}
-                        >
-                          View Report
-                        </Button>
-                      </div>
-                      
-                      {/* Email Footer */}
-                      <div className="px-4 py-3 bg-white border-t border-slate-100 flex items-center justify-between">
-                        <div className="text-xs text-slate-500">{userName || "Agent Name"}</div>
-                        {branding.email_footer_logo_url || branding.pdf_footer_logo_url ? (
-                          <img
-                            src={branding.email_footer_logo_url || branding.pdf_footer_logo_url || ""}
-                            className="h-5 w-auto max-w-[60px] object-contain"
-                            alt=""
-                          />
-                        ) : (
-                          <div className="text-[10px] font-semibold" style={{ color: primaryColor }}>
-                            {companyName || "Your Brand"}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Test Panel */}
-            <div className="space-y-6">
-              <div className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)] overflow-hidden sticky top-20">
-                <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
-                    <Eye className="w-4 h-4 text-emerald-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-foreground">Test Your Branding</h3>
-                    <p className="text-xs text-muted-foreground">Download samples or send test</p>
-                  </div>
-                </div>
-
-                <div className="p-6 space-y-5">
-                  {/* Report Type */}
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-muted-foreground">Report Type</Label>
-                    <Select value={reportType} onValueChange={(v) => setReportType(v as ReportType)}>
-                      <SelectTrigger className="h-10">
-                        <SelectValue placeholder="Select report type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {REPORT_TYPE_OPTIONS.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Download Buttons */}
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-muted-foreground">Download Sample</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        onClick={handleDownloadPdf}
-                        disabled={isDownloadingPdf}
-                        variant="outline"
-                        className={cn(
-                          "h-20 flex-col gap-2",
-                          downloadSuccess === "pdf" && "border-emerald-500 text-emerald-600 bg-emerald-50"
-                        )}
-                      >
-                        {isDownloadingPdf ? (
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : downloadSuccess === "pdf" ? (
-                          <Check className="w-5 h-5" />
-                        ) : (
-                          <Download className="w-5 h-5" />
-                        )}
-                        <span className="text-xs">{downloadSuccess === "pdf" ? "Downloaded!" : "PDF Report"}</span>
-                      </Button>
-
-                      <Button
-                        onClick={handleDownloadJpg}
-                        disabled={isDownloadingJpg}
-                        variant="outline"
-                        className={cn(
-                          "h-20 flex-col gap-2",
-                          downloadSuccess === "jpg" && "border-emerald-500 text-emerald-600 bg-emerald-50"
-                        )}
-                      >
-                        {isDownloadingJpg ? (
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : downloadSuccess === "jpg" ? (
-                          <Check className="w-5 h-5" />
-                        ) : (
-                          <Sparkles className="w-5 h-5" />
-                        )}
-                        <span className="text-xs">{downloadSuccess === "jpg" ? "Downloaded!" : "Social Image"}</span>
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Divider */}
-                  <div className="relative py-2">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-border" />
-                    </div>
-                    <div className="relative flex justify-center">
-                      <span className="bg-card px-3 text-xs text-muted-foreground">or</span>
-                    </div>
-                  </div>
-
-                  {/* Email Test */}
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-muted-foreground">Send Test Email</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="email"
-                        value={testEmail}
-                        onChange={(e) => setTestEmail(e.target.value)}
-                        placeholder="your@email.com"
-                        className="flex-1 h-10"
-                      />
-                      <Button
-                        onClick={handleSendTestEmail}
-                        disabled={isSending}
-                        className={cn(
-                          "h-10 w-10 p-0",
-                          sendSuccess && "bg-emerald-600 hover:bg-emerald-700"
-                        )}
-                      >
-                        {isSending ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : sendSuccess ? (
-                          <Check className="w-4 h-4" />
-                        ) : (
-                          <Send className="w-4 h-4" />
-                        )}
-                      </Button>
-                    </div>
-                    {sendSuccess && (
-                      <p className="text-xs text-emerald-600 flex items-center gap-1">
-                        <Check className="w-3 h-3" />
-                        Test email sent! Check your inbox.
-                      </p>
+          {/* Logos */}
+          <Section icon={<FileText className="w-4 h-4 text-rose-600" />} iconBg="bg-rose-50" title="Logos" subtitle="Used in PDF reports and emails">
+            <div className="grid sm:grid-cols-2 gap-5">
+              <div className="space-y-2">
+                <Label className="text-xs font-medium">Header Logo <span className="text-muted-foreground">(light version)</span></Label>
+                <p className="text-[11px] text-muted-foreground -mt-1">For gradient backgrounds. PNG/SVG with transparent bg.</p>
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-20 h-14 rounded-lg flex items-center justify-center p-1.5"
+                    style={{ background: `linear-gradient(135deg, ${branding.primary_color} 0%, ${branding.accent_color} 100%)` }}
+                  >
+                    {branding.header_logo_url ? (
+                      <img src={branding.header_logo_url} className="max-h-full max-w-full object-contain" alt="Header logo" />
+                    ) : (
+                      <Upload className="w-5 h-5 text-white/40" />
                     )}
                   </div>
-
-                  {/* Tip */}
-                  <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
-                    <p className="text-xs text-amber-800 flex items-start gap-2">
-                      <Lightbulb className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                      Remember to save your changes before testing!
-                    </p>
+                  <div className="flex-1">
+                    <ImageUpload
+                      label=""
+                      value={branding.header_logo_url}
+                      onChange={(url) => update({ header_logo_url: url })}
+                      assetType="logo"
+                      aspectRatio="wide"
+                      helpText=""
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-medium">Footer Logo <span className="text-muted-foreground">(dark version)</span></Label>
+                <p className="text-[11px] text-muted-foreground -mt-1">For light backgrounds. PNG/SVG with transparent bg.</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-20 h-14 rounded-lg bg-stone-50 border border-border flex items-center justify-center p-1.5">
+                    {branding.footer_logo_url ? (
+                      <img src={branding.footer_logo_url} className="max-h-full max-w-full object-contain" alt="Footer logo" />
+                    ) : (
+                      <Upload className="w-5 h-5 text-muted-foreground/30" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <ImageUpload
+                      label=""
+                      value={branding.footer_logo_url}
+                      onChange={(url) => update({ footer_logo_url: url })}
+                      assetType="logo"
+                      aspectRatio="wide"
+                      helpText=""
+                    />
                   </div>
                 </div>
               </div>
             </div>
+          </Section>
+
+          {/* Agent Info */}
+          <Section icon={<User className="w-4 h-4 text-amber-600" />} iconBg="bg-amber-50" title="Agent Info" subtitle="Appears in email footers and report cover pages">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Full Name</Label>
+                <Input value={branding.agent_name} onChange={(e) => update({ agent_name: e.target.value })} placeholder="Sarah Chen" className="h-10" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Title</Label>
+                <Input value={branding.agent_title} onChange={(e) => update({ agent_title: e.target.value })} placeholder="Senior Realtor" className="h-10" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Phone</Label>
+                <Input value={branding.agent_phone} onChange={(e) => update({ agent_phone: e.target.value })} placeholder="(310) 555-1234" className="h-10" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Email</Label>
+                <Input value={branding.agent_email} onChange={(e) => update({ agent_email: e.target.value })} placeholder="sarah@acmerealty.com" className="h-10" />
+              </div>
+            </div>
+            <div className="mt-3 space-y-1.5">
+              <Label className="text-xs font-medium">Agent Photo</Label>
+              <ImageUpload
+                label=""
+                value={branding.agent_photo_url}
+                onChange={(url) => update({ agent_photo_url: url })}
+                assetType="avatar"
+                aspectRatio="square"
+                helpText="Square photo, at least 200×200px"
+              />
+            </div>
+          </Section>
+        </div>
+
+        {/* ─── Right: Live Preview + Actions ─── */}
+        <div className="lg:sticky lg:top-6 lg:self-start space-y-4">
+          {/* Preview Card */}
+          <div className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)] overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Live Preview</h3>
+              </div>
+              <div className="flex gap-1 bg-muted rounded-md p-0.5">
+                <button
+                  onClick={() => setPreviewMode("email")}
+                  className={cn("px-2.5 py-1 rounded text-[10px] font-medium transition-colors", previewMode === "email" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
+                >
+                  <Mail className="w-3 h-3 inline mr-1" />Email
+                </button>
+                <button
+                  onClick={() => setPreviewMode("property")}
+                  className={cn("px-2.5 py-1 rounded text-[10px] font-medium transition-colors", previewMode === "property" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
+                >
+                  <FileText className="w-3 h-3 inline mr-1" />PDF
+                </button>
+              </div>
+            </div>
+
+            {/* Report type switcher for email preview */}
+            {previewMode === "email" && (
+              <div className="flex gap-1 px-4 py-2 border-b border-border bg-muted/10 overflow-x-auto">
+                {PREVIEW_REPORT_TYPES.map((rt) => (
+                  <button
+                    key={rt.value}
+                    onClick={() => setPreviewReportType(rt.value)}
+                    className={cn(
+                      "whitespace-nowrap px-2 py-1 rounded text-[10px] font-medium transition-colors",
+                      previewReportType === rt.value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    {rt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="p-4 bg-stone-100/50">
+              {previewMode === "email" ? (
+                <SharedEmailPreview
+                  primaryColor={branding.primary_color}
+                  accentColor={branding.accent_color}
+                  headerLogoUrl={branding.header_logo_url}
+                  displayName={branding.display_name}
+                  agentName={branding.agent_name || "Agent Name"}
+                  agentTitle={branding.agent_title || null}
+                  agentPhone={branding.agent_phone || null}
+                  agentEmail={branding.agent_email || null}
+                  agentPhotoUrl={branding.agent_photo_url}
+                  reportType={previewReportType}
+                  areaName="Los Angeles, CA"
+                  lookbackDays={30}
+                  scale={0.95}
+                />
+              ) : (
+                <PropertyPreviewMini
+                  theme={selectedTheme}
+                  headerLogoUrl={branding.header_logo_url}
+                  footerLogoUrl={branding.footer_logo_url}
+                  agentName={branding.agent_name}
+                  companyName={branding.display_name}
+                  primaryColor={branding.primary_color}
+                  accentColor={branding.accent_color}
+                />
+              )}
+            </div>
           </div>
-        </TabsContent>
-      </Tabs>
+
+          {/* Actions Card */}
+          <div className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)] overflow-hidden">
+            <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center gap-2">
+              <Eye className="w-4 h-4 text-emerald-600" />
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Test Your Branding</h3>
+            </div>
+            <div className="p-4 space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Report Type</Label>
+                <Select value={reportType} onValueChange={(v) => setReportType(v as ReportType)}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {REPORT_TYPE_OPTIONS.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button
+                onClick={handleDownloadPdf}
+                disabled={isDownloadingPdf}
+                variant="outline"
+                className="w-full h-9 text-xs"
+              >
+                {isDownloadingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : downloadSuccess === "pdf" ? <Check className="w-3.5 h-3.5 mr-2" /> : <Download className="w-3.5 h-3.5 mr-2" />}
+                {downloadSuccess === "pdf" ? "Downloaded!" : "Download Sample PDF"}
+              </Button>
+
+              <div className="relative py-1">
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
+                <div className="relative flex justify-center"><span className="bg-card px-2 text-[10px] text-muted-foreground">or</span></div>
+              </div>
+
+              <div className="flex gap-2">
+                <Input
+                  type="email"
+                  value={testEmail}
+                  onChange={(e) => setTestEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  className="flex-1 h-9 text-xs"
+                />
+                <Button onClick={handleSendTestEmail} disabled={isSending} className={cn("h-9 w-9 p-0", sendSuccess && "bg-emerald-600 hover:bg-emerald-700")}>
+                  {isSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : sendSuccess ? <Check className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
+                </Button>
+              </div>
+              {sendSuccess && (
+                <p className="text-[11px] text-emerald-600 flex items-center gap-1"><Check className="w-3 h-3" />Test email sent!</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Helper components ───
+
+function Section({
+  icon,
+  iconBg,
+  title,
+  subtitle,
+  children,
+}: {
+  icon: React.ReactNode
+  iconBg: string
+  title: string
+  subtitle: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)] overflow-hidden">
+      <div className="px-5 py-3.5 border-b border-border bg-muted/30 flex items-center gap-3">
+        <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", iconBg)}>
+          {icon}
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+          <p className="text-xs text-muted-foreground">{subtitle}</p>
+        </div>
+      </div>
+      <div className="p-5">{children}</div>
+    </div>
+  )
+}
+
+function ColorPicker({
+  label,
+  help,
+  value,
+  onChange,
+}: {
+  label: string
+  help: string
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs font-medium">{label}</Label>
+      <p className="text-[11px] text-muted-foreground -mt-1">{help}</p>
+      <div className="flex gap-2.5">
+        <div
+          className="w-14 h-10 rounded-lg border-2 border-border cursor-pointer relative shadow-inner flex-shrink-0 transition-all hover:scale-105"
+          style={{ backgroundColor: value }}
+        >
+          <input
+            type="color"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          />
+        </div>
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="font-mono text-xs uppercase h-10 flex-1"
+          maxLength={7}
+        />
+      </div>
+    </div>
+  )
+}
+
+function PropertyPreviewMini({
+  theme,
+  headerLogoUrl,
+  footerLogoUrl,
+  agentName,
+  companyName,
+  primaryColor,
+  accentColor,
+}: {
+  theme: (typeof THEMES)[number]
+  headerLogoUrl: string | null
+  footerLogoUrl: string | null
+  agentName: string
+  companyName: string
+  primaryColor: string
+  accentColor: string
+}) {
+  return (
+    <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-stone-200 max-w-sm mx-auto">
+      {/* Cover page mini */}
+      <div className="aspect-[3/4] relative overflow-hidden">
+        {theme.previewImage ? (
+          <img src={theme.previewImage} alt={theme.name} className="w-full h-full object-cover object-top" />
+        ) : (
+          <div className="w-full h-full" style={{ background: theme.gradient }}>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-4">
+              {headerLogoUrl && (
+                <img src={headerLogoUrl} alt="" className="h-8 w-auto mb-3 object-contain" />
+              )}
+              <div className="text-lg font-bold text-center">Property Report</div>
+              <div className="text-xs opacity-70 mt-1">123 Main Street</div>
+            </div>
+          </div>
+        )}
+      </div>
+      {/* Footer bar */}
+      <div className="px-4 py-3 bg-stone-50 border-t border-stone-100 flex items-center justify-between">
+        <div className="text-xs text-stone-600">{agentName || "Agent Name"}</div>
+        {footerLogoUrl ? (
+          <img src={footerLogoUrl} alt="" className="h-5 w-auto max-w-[70px] object-contain" />
+        ) : (
+          <div className="text-[10px] font-semibold" style={{ color: primaryColor }}>
+            {companyName || "Your Brand"}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
