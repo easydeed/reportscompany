@@ -5,6 +5,7 @@ from datetime import datetime
 import json
 import traceback
 from ..db import db_conn, set_rls, fetchone_dict, fetchall_dicts
+from ..crmls_cities import VALID_CITY_NAMES
 
 
 # ====== Filter Schema ======
@@ -302,6 +303,13 @@ def create_schedule(
         traceback.print_exc()
         raise HTTPException(status_code=400, detail=f"Invalid schedule parameters: {str(e)}")
     
+    if payload.city and payload.city not in VALID_CITY_NAMES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"'{payload.city}' is not a recognized CRMLS city. "
+                   f"Please select a city from the dropdown.",
+        )
+    
     try:
         with db_conn() as (conn, cur):
             set_rls(conn, account_id)
@@ -513,6 +521,12 @@ def update_schedule(
         params.append(payload.name)
     
     if payload.city is not None:
+        if payload.city and payload.city not in VALID_CITY_NAMES:
+            raise HTTPException(
+                status_code=422,
+                detail=f"'{payload.city}' is not a recognized CRMLS city. "
+                       f"Please select a city from the dropdown.",
+            )
         updates.append("city = %s")
         params.append(payload.city)
     

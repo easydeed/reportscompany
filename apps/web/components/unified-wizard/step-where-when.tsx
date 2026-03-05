@@ -4,7 +4,8 @@ import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
-import { MapPin, X } from "lucide-react"
+import { X } from "lucide-react"
+import { CityCombobox } from "@/components/shared/city-combobox"
 import type { WizardState } from "./types"
 
 interface StepWhereWhenProps {
@@ -62,15 +63,11 @@ export function StepWhereWhen({ state, onChange }: StepWhereWhenProps) {
         </div>
 
         {state.areaType === "city" ? (
-          <div className="relative">
-            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              value={state.city || ""}
-              onChange={(e) => onChange({ city: e.target.value })}
-              placeholder="Search city..."
-              className="pl-9 h-10"
-            />
-          </div>
+          <CityCombobox
+            value={state.city}
+            onChange={(city) => onChange({ city: city?.city || null })}
+            placeholder="Search for a city..."
+          />
         ) : (
           <div className="space-y-2">
             <div className="flex gap-2">

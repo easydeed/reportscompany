@@ -4,6 +4,7 @@ from typing import List, Optional, Dict, Any
 import json
 from ..db import db_conn, set_rls, fetchone_dict, fetchall_dicts
 from ..services import evaluate_report_limit, log_limit_decision, LimitDecision
+from ..crmls_cities import VALID_CITY_NAMES
 
 router = APIRouter(prefix="/v1")
 
@@ -55,6 +56,13 @@ def create_report(
     Enforces monthly report limits based on account's plan.
     Returns 429 if limit exceeded (for non-overage plans).
     """
+    if payload.city and payload.city not in VALID_CITY_NAMES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"'{payload.city}' is not a recognized CRMLS city. "
+                   f"Please select a city from the dropdown.",
+        )
+
     params = {
         "city": payload.city,
         "zips": payload.zips,

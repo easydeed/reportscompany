@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Search, MapPin, X, Check, Hash } from "lucide-react"
+import { useState } from "react"
+import { MapPin, X, Check, Hash, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
+import { CityCombobox } from "@/components/shared/city-combobox"
 import type { ScheduleBuilderState } from "../types"
 
 interface AreaSectionProps {
@@ -15,36 +16,8 @@ interface AreaSectionProps {
   stepNumber?: number
 }
 
-const SAMPLE_CITIES = [
-  "Irvine, CA", "Los Angeles, CA", "San Francisco, CA", "San Diego, CA",
-  "Sacramento, CA", "Oakland, CA", "Long Beach, CA", "Anaheim, CA",
-  "Santa Ana, CA", "Newport Beach, CA", "Huntington Beach, CA", "Pasadena, CA",
-  "La Verne, CA", "Riverside, CA",
-]
-
 export function AreaSection({ areaType, city, zipCodes, onChange, isComplete, stepNumber = 3 }: AreaSectionProps) {
-  const [citySearch, setCitySearch] = useState(city || "")
-  const [showSuggestions, setShowSuggestions] = useState(false)
   const [zipInput, setZipInput] = useState("")
-
-  useEffect(() => {
-    if (city) setCitySearch(city)
-  }, [city])
-
-  const filteredCities = SAMPLE_CITIES.filter((c) =>
-    c.toLowerCase().includes(citySearch.toLowerCase())
-  )
-
-  const handleCitySelect = (selectedCity: string) => {
-    setCitySearch(selectedCity)
-    onChange({ city: selectedCity })
-    setShowSuggestions(false)
-  }
-
-  const handleClearCity = () => {
-    setCitySearch("")
-    onChange({ city: null })
-  }
 
   const handleZipAdd = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && zipInput.trim()) {
@@ -66,11 +39,8 @@ export function AreaSection({ areaType, city, zipCodes, onChange, isComplete, st
       onChange({ zipCodes: [] })
     } else {
       onChange({ city: null })
-      setCitySearch("")
     }
   }
-
-  const showDropdown = showSuggestions && citySearch && !city && filteredCities.length > 0
 
   return (
     <section className={cn(
@@ -116,49 +86,11 @@ export function AreaSection({ areaType, city, zipCodes, onChange, isComplete, st
         </div>
 
         {areaType === "city" && (
-          <div>
-            {city ? (
-              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
-                <MapPin className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-700 flex-1">{city}</span>
-                <button onClick={handleClearCity} className="text-gray-400 hover:text-gray-600">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  value={citySearch}
-                  onChange={(e) => {
-                    setCitySearch(e.target.value)
-                    setShowSuggestions(true)
-                  }}
-                  onFocus={() => setShowSuggestions(true)}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                  placeholder="Search city..."
-                  className="pl-9"
-                />
-                
-                {showDropdown && (
-                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-                    <div className="max-h-48 overflow-auto">
-                      {filteredCities.map((c) => (
-                        <button
-                          key={c}
-                          onClick={() => handleCitySelect(c)}
-                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left hover:bg-gray-50"
-                        >
-                          <MapPin className="w-4 h-4 text-gray-400" />
-                          {c}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <CityCombobox
+            value={city}
+            onChange={(c) => onChange({ city: c?.city || null })}
+            placeholder="Search for a city..."
+          />
         )}
 
         {areaType === "zip" && (

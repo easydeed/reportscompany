@@ -35,7 +35,7 @@ Story-first 4-step wizard that replaces both the old Report Builder and Schedule
 | UnifiedReportWizard | `unified-wizard/index.tsx` | Main shell: step nav, sidebar preview, submit logic |
 | StepStory | `unified-wizard/step-story.tsx` | 5 story cards (What Just Listed, What Just Sold, Market Update, What's Available, Showcase) |
 | StepAudience | `unified-wizard/step-audience.tsx` | 6 audience cards (conditional — only for "What Just Listed") |
-| StepWhereWhen | `unified-wizard/step-where-when.tsx` | Area (city/ZIP) + timeframe (7/14/30/60/90 days) combined |
+| StepWhereWhen | `unified-wizard/step-where-when.tsx` | Area (CityCombobox/ZIP) + timeframe (7/14/30/60/90 days) combined |
 | StepDeliver | `unified-wizard/step-deliver.tsx` | Send Now (browser/PDF/email) or Schedule (cadence/day/time/timezone) |
 | types | `unified-wizard/types.ts` | Story→report_type mapping, audience presets, state interfaces |
 
@@ -43,6 +43,7 @@ Story-first 4-step wizard that replaces both the old Report Builder and Schedule
 - 5 stories map to 5 `report_type` values internally — agent never sees `new_listings_gallery` or `market_snapshot`
 - Audience step auto-skips for non-gallery stories
 - Smart lookback defaults per story (14d for listings, 30d for market, 90d for showcase)
+- City selection uses `CityCombobox` (searchable dropdown from `crmls-cities.ts`) — eliminates free-text spelling errors
 - Right sidebar shows SharedEmailPreview with real branding, updating live as the user configures
 - Zero backend changes — same POST payloads to `/api/proxy/v1/reports` and `/api/proxy/v1/schedules`
 
@@ -238,6 +239,7 @@ Landing page sections.
 | Component | File | Purpose |
 |-----------|------|---------|
 | SharedEmailPreview | `shared/email-preview/index.tsx` | Unified email preview (V16 layouts, real branding) — used in wizard + branding |
+| CityCombobox | `shared/city-combobox.tsx` | Searchable city dropdown (CRMLS 6-county list, grouped by county) — used in wizard + schedule builder |
 | Wizard | `Wizard.tsx` | Generic wizard/stepper container |
 | Stepper | `stepper.tsx` | Step progress indicator |
 | StatusBadge | `status-badge.tsx` | Status indicator badge |

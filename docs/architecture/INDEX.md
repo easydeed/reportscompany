@@ -83,6 +83,7 @@ apps/
     routes/                      # 26 route modules (see backend-routes.md)
       property.py                # ← comparables fallback ladder L0-L5 [updated]
       admin_metrics.py           # ← platform analytics [new]
+    crmls_cities.py              # ← CRMLS city validation set (mirrors frontend list) [new]
     services/                    # 15+ service modules (see backend-services.md)
       simplyrets.py              # ← API-layer SimplyRETS client [new]
       sitex.py                   # ← SiteX Pro client [new]
@@ -113,6 +114,7 @@ apps/
       api.ts                     # Client-side fetch (goes through /api/proxy)
       api-server.ts              # Server-side fetch (direct to backend)
       utils.ts                   # cn(), helpers
+      crmls-cities.ts            # ← Static CRMLS city list (300+ cities, 6 counties) [new]
       hooks/
         use-user.ts              # React Query user hook
         use-plan-usage.ts        # Plan usage hook
@@ -133,6 +135,7 @@ apps/
       ui/                        # 75 Radix/shadcn primitives
       unified-wizard/            # ← Unified report wizard (5 stories, Send Now/Schedule) [new]
       shared/email-preview/      # ← SharedEmailPreview (V16 layouts, used in wizard + branding) [new]
+      shared/city-combobox.tsx    # ← Searchable CRMLS city dropdown (6 SoCal counties) [new]
       report-builder/            # Market report creation wizard (legacy, superseded by unified-wizard)
       schedule-builder/          # Schedule creation wizard (legacy, superseded by unified-wizard)
       property/                  # Property search + comps picker

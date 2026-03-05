@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { Building2, MapPin, Search, X } from "lucide-react"
+import { useState } from "react"
+import { Building2, MapPin, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { CityCombobox } from "@/components/shared/city-combobox"
 import type { ReportBuilderState } from "./types"
-import { SIMULATED_CITIES, RECENT_AREAS } from "./types"
 
 interface StepAreaProps {
   state: ReportBuilderState
@@ -12,22 +12,7 @@ interface StepAreaProps {
 }
 
 export function StepArea({ state, onChange }: StepAreaProps) {
-  const [cityQuery, setCityQuery] = useState("")
-  const [showSuggestions, setShowSuggestions] = useState(false)
   const [zipInput, setZipInput] = useState("")
-
-  const filteredCities = useMemo(() => {
-    if (!cityQuery.trim()) return []
-    return SIMULATED_CITIES.filter((c) =>
-      c.toLowerCase().includes(cityQuery.toLowerCase())
-    )
-  }, [cityQuery])
-
-  function selectCity(city: string) {
-    onChange({ city })
-    setCityQuery(city)
-    setShowSuggestions(false)
-  }
 
   function addZip(zip: string) {
     const trimmed = zip.trim()
@@ -97,54 +82,11 @@ export function StepArea({ state, onChange }: StepAreaProps) {
 
       {/* City search */}
       {state.areaType === "city" && (
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search for a city..."
-            value={cityQuery}
-            onChange={(e) => {
-              setCityQuery(e.target.value)
-              setShowSuggestions(true)
-              if (!e.target.value.trim()) onChange({ city: null })
-            }}
-            onFocus={() => setShowSuggestions(true)}
-            className="pl-10"
-          />
-          {showSuggestions && filteredCities.length > 0 && (
-            <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-card shadow-lg">
-              {filteredCities.map((city) => (
-                <button
-                  key={city}
-                  type="button"
-                  onClick={() => selectCity(city)}
-                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm hover:bg-muted"
-                >
-                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                  {city}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Recent areas */}
-          {!state.city && (
-            <div className="mt-4">
-              <p className="text-sm font-medium text-muted-foreground">Recent areas</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {RECENT_AREAS.map((area) => (
-                  <button
-                    key={area}
-                    type="button"
-                    onClick={() => selectCity(area)}
-                    className="rounded-full border border-border bg-card px-3.5 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-                  >
-                    {area}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <CityCombobox
+          value={state.city}
+          onChange={(c) => onChange({ city: c?.city || null })}
+          placeholder="Search for a city..."
+        />
       )}
 
       {/* ZIP entry */}
