@@ -158,22 +158,38 @@ export default function BrandingPage() {
   async function save() {
     setSaving(true)
     try {
-      const res = await fetch("/api/proxy/v1/account/branding", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          display_name: branding.display_name || undefined,
-          tagline: branding.tagline || undefined,
-          primary_color: branding.primary_color,
-          secondary_color: branding.accent_color,
-          default_theme_id: branding.default_theme_id,
-          logo_url: branding.header_logo_url,
-          footer_logo_url: branding.footer_logo_url,
-          email_logo_url: branding.header_logo_url,
-          email_footer_logo_url: branding.footer_logo_url,
+      const [brandingRes, profileRes] = await Promise.all([
+        fetch("/api/proxy/v1/account/branding", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            display_name: branding.display_name || undefined,
+            tagline: branding.tagline || undefined,
+            primary_color: branding.primary_color,
+            secondary_color: branding.accent_color,
+            default_theme_id: branding.default_theme_id,
+            logo_url: branding.header_logo_url,
+            footer_logo_url: branding.footer_logo_url,
+            email_logo_url: branding.header_logo_url,
+            email_footer_logo_url: branding.footer_logo_url,
+          }),
         }),
-      })
-      if (!res.ok) throw new Error("Failed to save branding")
+        fetch("/api/proxy/v1/users/me", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...(branding.agent_name ? {
+              first_name: branding.agent_name.split(" ")[0],
+              last_name: branding.agent_name.split(" ").slice(1).join(" ") || undefined,
+            } : {}),
+            ...(branding.agent_title ? { job_title: branding.agent_title } : {}),
+            ...(branding.agent_phone ? { phone: branding.agent_phone } : {}),
+            ...(branding.agent_photo_url !== null ? { avatar_url: branding.agent_photo_url } : {}),
+          }),
+        }),
+      ])
+      if (!brandingRes.ok) throw new Error("Failed to save branding")
+      if (!profileRes.ok) console.warn("Failed to save agent profile — branding saved OK")
       toast({ title: "Branding Saved", description: "Your branding has been updated successfully." })
     } catch {
       toast({ title: "Error", description: "Failed to save branding", variant: "destructive" })

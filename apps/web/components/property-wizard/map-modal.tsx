@@ -51,7 +51,7 @@ export function MapModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl w-full sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MapPin className="h-5 w-5 text-[#6366F1]" />
@@ -83,6 +83,9 @@ export function MapModal({
                 </div>
                 <span className="mt-1 text-[10px] font-bold bg-white px-1.5 py-0.5 rounded shadow text-foreground">
                   Subject
+                </span>
+                <span className="mt-2 text-[10px] text-muted-foreground bg-white/80 px-2 py-1 rounded shadow">
+                  Map preview unavailable — approximate positions shown
                 </span>
               </div>
               {/* Comp markers */}

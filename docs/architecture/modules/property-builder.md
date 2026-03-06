@@ -185,6 +185,12 @@ python scripts/generate_theme_preview_jpgs.py
 
 | Date | Change |
 |------|--------|
+| 2026-03 | **Fix: Accent color priority.** `_get_theme_color()` now prioritizes `self.accent_color` (wizard-selected) over `branding.primary_color`. Previously every account with a branding `primary_color` would silently override the wizard's per-report accent choice. |
+| 2026-03 | **Fix: Modern aerial footer.** Replaced undefined `var(--accent)` with `var(--coral-on-dark)` in `modern_report.jinja2` aerial page footer. Audited all 5 themes — others were correct. |
+| 2026-03 | **Enhancement: GOOGLE_MAPS_API_KEY startup logging.** Added `logger.info()` on module load to log whether the key is configured and its length (not the key itself), aiding environment debugging. |
+| 2026-03 | **Fix: Theme reset on "Create Another Report".** `handleReset` in `property-wizard.tsx` now restores cached account defaults (theme + accent) instead of hardcoded Teal values. Uses `useRef` to cache values loaded from `/v1/account` on mount. |
+| 2026-03 | **Fix: Agent photo saving from branding.** `branding/page.tsx` `save()` now dispatches parallel PATCH to `/v1/account/branding` (account data) and `/v1/users/me` (agent name, title, phone, avatar_url). |
+| 2026-03 | **Fix: Map modal positioning.** Added explicit `w-full sm:max-w-3xl` to `DialogContent` in `map-modal.tsx` and added fallback message when map preview is unavailable. |
 | 2026-03 | **Fix: Comparable photos now used.** All 5 standalone `*_report.jinja2` templates updated to render `comp.photo_url` (MLS property photo) with fallback to `comp.map_image_url` (Google Maps satellite). Previously only map images were shown. |
 | 2026-03 | **Fix: Dynamic TOC for Executive Summary.** TOC entry for "Executive Summary" now wrapped in `{% if "overview" in _pages and overview_text %}` conditional across all 5 themes, preventing phantom entry when AI generation fails. |
 | 2026-03 | **Fix: Branding default theme sync.** Added `default_theme_id` column to `accounts` table (migration `0043`), `AccountOut` model, `BrandingPatch` model, GET/PATCH handlers in `account.py`. Property wizard now correctly reads the account's default theme on mount. |

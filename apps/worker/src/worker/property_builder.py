@@ -187,6 +187,7 @@ THEME_NUMBER_MAP = {
 # Configuration from environment
 ASSETS_BASE_URL = os.getenv("ASSETS_BASE_URL", "https://assets.trendyreports.com")
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "")
+logger.info("GOOGLE_MAPS_API_KEY configured: %s (length: %d)", bool(GOOGLE_MAPS_API_KEY), len(GOOGLE_MAPS_API_KEY))
 
 
 class PropertyReportBuilder:
@@ -917,8 +918,8 @@ class PropertyReportBuilder:
         """
         branding = self.report_data.get("branding") or {}
         return (
-            branding.get("primary_color") or 
-            self.accent_color or 
+            self.accent_color or
+            branding.get("primary_color") or
             self._THEME_DEFAULT_COLORS.get(self.theme_name, "#34d1c3")
         )
     

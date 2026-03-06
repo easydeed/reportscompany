@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft,
@@ -63,6 +63,9 @@ export function PropertyWizard() {
     COMPACT_PAGES.map((p) => p.id)
   );
 
+  // Cache account defaults so handleReset can reuse them without an extra API call
+  const accountDefaultsRef = useRef({ themeId: 4, accentColor: "#34d1c3" });
+
   // Load account-level defaults (default theme + accent color sync)
   useEffect(() => {
     async function loadAccountDefaults() {
@@ -70,14 +73,19 @@ export function PropertyWizard() {
         const res = await fetch("/api/proxy/v1/account", { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
+        let themeId = 4;
+        let accent = "#34d1c3";
         if (data.default_theme_id && data.default_theme_id >= 1 && data.default_theme_id <= 5) {
-          setSelectedThemeId(data.default_theme_id);
-          const theme = THEMES.find((t) => t.id === data.default_theme_id);
-          if (theme) setAccentColor(theme.accentDefault);
+          themeId = data.default_theme_id;
+          const theme = THEMES.find((t) => t.id === themeId);
+          if (theme) accent = theme.accentDefault;
         }
         if (data.secondary_color) {
-          setAccentColor(data.secondary_color);
+          accent = data.secondary_color;
         }
+        setSelectedThemeId(themeId);
+        setAccentColor(accent);
+        accountDefaultsRef.current = { themeId, accentColor: accent };
       } catch { /* use defaults */ }
     }
     loadAccountDefaults();
@@ -277,8 +285,8 @@ export function PropertyWizard() {
     setSqftTolerance(0.20);
     setRadiusMiles(1.0);
     setFallbackLevel(null);
-    setSelectedThemeId(4);
-    setAccentColor("#34d1c3");
+    setSelectedThemeId(accountDefaultsRef.current.themeId);
+    setAccentColor(accountDefaultsRef.current.accentColor);
     setSelectedPageIds(COMPACT_PAGES.map((p) => p.id));
     setGenerationPhase("idle");
     setGenerationProgress(0);
