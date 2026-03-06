@@ -398,52 +398,45 @@ export function StepTheme({
         </div>
 
         <TooltipProvider>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-3">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-9 gap-3">
             {pages.map((page) => {
               const isSelected = selectedPageIds.includes(page.id);
+              const previewSrc = `/previews/pages/${selectedThemeId}/${page.id}.jpg`;
               return (
                 <Tooltip key={page.id}>
                   <TooltipTrigger asChild>
                     <button
                       type="button"
                       onClick={() => togglePage(page.id)}
-                      className={`relative aspect-[8.5/11] rounded-lg border-2 transition-all duration-200 flex flex-col items-center justify-center p-1.5 text-center ${
+                      className={`relative aspect-[8.5/11] rounded-lg border-2 overflow-hidden transition-all duration-200 ${
                         isSelected
-                          ? "border-[#6366F1] bg-[#EEF2FF]"
-                          : "border-border bg-card opacity-60 hover:opacity-100"
+                          ? "border-[#6366F1] ring-1 ring-[#6366F1]/20 shadow-sm"
+                          : "border-border opacity-50 hover:opacity-100 hover:border-stone-300"
                       }`}
                     >
-                      {/* Mini page decoration */}
-                      <div className="space-y-1 w-full px-1 mb-1.5">
-                        <div
-                          className={`h-[2px] w-3/4 mx-auto rounded-full ${
-                            isSelected
-                              ? "bg-[#6366F1]/30"
-                              : "bg-muted-foreground/20"
-                          }`}
-                        />
-                        <div
-                          className={`h-[2px] w-1/2 mx-auto rounded-full ${
-                            isSelected
-                              ? "bg-[#6366F1]/20"
-                              : "bg-muted-foreground/15"
-                          }`}
-                        />
-                        <div
-                          className={`h-[2px] w-2/3 mx-auto rounded-full ${
-                            isSelected
-                              ? "bg-[#6366F1]/15"
-                              : "bg-muted-foreground/10"
-                          }`}
-                        />
-                      </div>
+                      {/* Page preview image */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={previewSrc}
+                        alt={`${page.name} preview`}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        loading="lazy"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+
+                      {/* Deselected overlay */}
+                      {!isSelected && (
+                        <div className="absolute inset-0 bg-white/40" />
+                      )}
 
                       {/* Selected check */}
                       {isSelected && (
                         <motion.div
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#6366F1] flex items-center justify-center"
+                          className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#6366F1] flex items-center justify-center shadow"
                         >
                           <Check className="h-2.5 w-2.5 text-white" />
                         </motion.div>
@@ -451,7 +444,7 @@ export function StepTheme({
 
                       {/* Required lock */}
                       {page.required && (
-                        <div className="absolute bottom-1 right-1">
+                        <div className="absolute bottom-1 right-1 bg-white/80 rounded-full p-0.5">
                           <Lock className="h-2.5 w-2.5 text-muted-foreground" />
                         </div>
                       )}

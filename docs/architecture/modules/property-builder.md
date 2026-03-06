@@ -175,8 +175,12 @@ python scripts/gen_la_verne_all_themes.py --html-only # HTML only (fast)
 # Generate sample PDFs for all themes (static data, no AI overview)
 python scripts/generate_all_property_pdfs.py
 
-# Generate JPG theme previews for the wizard UI (requires gen_la_verne output)
+# Generate JPG cover previews for the wizard theme gallery (requires gen_la_verne output)
 python scripts/generate_theme_preview_jpgs.py
+
+# Generate JPG page previews for the wizard page selector (requires gen_la_verne output)
+# Outputs 45 images: 5 themes × 9 pages → apps/web/public/previews/pages/{themeId}/{pageKey}.jpg
+python scripts/generate_page_preview_jpgs.py
 ```
 
 ---
@@ -185,6 +189,7 @@ python scripts/generate_theme_preview_jpgs.py
 
 | Date | Change |
 |------|--------|
+| 2026-03 | **Page preview JPGs for wizard.** New script `scripts/generate_page_preview_jpgs.py` renders 45 JPGs (5 themes × 9 pages) from pre-generated HTML via Playwright. `step-theme.tsx` page selector now shows real page thumbnails at `/previews/pages/{themeId}/{pageKey}.jpg` instead of decorative line placeholders, updating dynamically when the user switches themes. |
 | 2026-03 | **Fix: Accent color priority.** `_get_theme_color()` now prioritizes `self.accent_color` (wizard-selected) over `branding.primary_color`. Previously every account with a branding `primary_color` would silently override the wizard's per-report accent choice. |
 | 2026-03 | **Fix: Modern aerial footer.** Replaced undefined `var(--accent)` with `var(--coral-on-dark)` in `modern_report.jinja2` aerial page footer. Audited all 5 themes — others were correct. |
 | 2026-03 | **Enhancement: GOOGLE_MAPS_API_KEY startup logging.** Added `logger.info()` on module load to log whether the key is configured and its length (not the key itself), aiding environment debugging. |
