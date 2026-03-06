@@ -12,7 +12,7 @@
 | `auth.py` | `/v1/auth` | login, signup, password reset, token refresh, verify-email, accept-invite | Authentication |
 | `reports.py` | `/v1` | `POST /reports`, `GET /reports`, `GET /reports/{id}` | Report CRUD + limit enforcement |
 | `report_data.py` | `/v1` | `GET /reports/{id}/data` | Raw report data (public for PDF gen) |
-| `account.py` | `/v1/account` | plan-usage, settings, account info | Account management |
+| `account.py` | `/v1/account` | plan-usage, branding (logos, colors, default_theme_id), account info | Account management |
 | `usage.py` | `/v1` | Usage tracking endpoints | API/feature usage |
 | `schedules.py` | `/v1` | Schedule CRUD | Automated report delivery |
 | `billing.py` | `/v1/billing` | Checkout, customer portal | Stripe subscription management |

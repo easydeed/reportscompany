@@ -34,7 +34,7 @@ The default page set contains **9 pages** (7 core + 2 optional):
 |------|-----|-------------|----------|
 | 1 | `cover` | Cover page (hero image, address, agent branding) | — |
 | 2 | `overview` | AI-generated Executive Summary / Property Overview (GPT-4o-mini) | — |
-| 3 | `contents` | Table of contents (dynamic, reflects selected pages) | — |
+| 3 | `contents` | Table of contents (dynamic — Executive Summary entry conditionally shown only when overview page renders) | — |
 | 4 | `aerial` | Aerial map (Google Maps satellite + street view) | — |
 | 5 | `property` | Subject property details (beds, baths, sqft, APN, owner, tax info, HOA, lot) | ✅ |
 | 6 | `analysis` | Market area analysis (price per sqft, year built, lot size trends) | — |
@@ -185,6 +185,9 @@ python scripts/generate_theme_preview_jpgs.py
 
 | Date | Change |
 |------|--------|
+| 2026-03 | **Fix: Comparable photos now used.** All 5 standalone `*_report.jinja2` templates updated to render `comp.photo_url` (MLS property photo) with fallback to `comp.map_image_url` (Google Maps satellite). Previously only map images were shown. |
+| 2026-03 | **Fix: Dynamic TOC for Executive Summary.** TOC entry for "Executive Summary" now wrapped in `{% if "overview" in _pages and overview_text %}` conditional across all 5 themes, preventing phantom entry when AI generation fails. |
+| 2026-03 | **Fix: Branding default theme sync.** Added `default_theme_id` column to `accounts` table (migration `0043`), `AccountOut` model, `BrandingPatch` model, GET/PATCH handlers in `account.py`. Property wizard now correctly reads the account's default theme on mount. |
 | 2026-03 | **AI Executive Summary page:** Added `overview` page (key `overview`) to all 5 themes. Powered by `ai_overview.py` (GPT-4o-mini, 4–5 paragraphs, 180–250 words). `overview_text` can be pre-injected via `report_data` to skip the API call. If generation fails or no API key is set, the page is silently removed from the page set. |
 | 2026-03 | **Smart Color System:** Added `compute_color_roles()` — derives 6 color variants from a single accent hex (light, dark, on_dark, on_light, text). All 5 templates updated to use `on_dark`/`on_light` CSS variables for WCAG-safe contrast. Each theme defines its dark background color in `_THEME_DARK_BG`. |
 | 2026-03 | **Page count updated:** Default page set now includes `overview` and `market_trends` (9 pages total, up from 7). Frontend `types.ts` `pageCount` updated to 9. |

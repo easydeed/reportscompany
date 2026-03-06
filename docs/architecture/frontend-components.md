@@ -161,7 +161,7 @@ Single-page layout with controls (left) and persistent live preview (right). Rep
 
 **Accent sync:** When accent color changes on branding page, it also becomes the default accent for property reports (property wizard reads `account.secondary_color` on mount).
 
-**Theme sync:** When default theme changes on branding page, property wizard pre-selects it instead of hardcoded Teal.
+**Theme sync:** When default theme changes on branding page, it is persisted to `accounts.default_theme_id` via `PATCH /v1/account/branding`. The property wizard reads this on mount via `GET /v1/account` and pre-selects it instead of hardcoded Teal. (Backend support added: migration `0043_add_default_theme_id`, `AccountOut` + `BrandingPatch` models updated.)
 
 ---
 

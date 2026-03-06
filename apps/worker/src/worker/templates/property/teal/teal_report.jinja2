@@ -1255,12 +1255,14 @@
         </div>
 
         <div class="toc">
+          {% if "overview" in _pages and overview_text %}
           <div class="toc-item">
             <span class="num">01</span>
             <span class="name">Executive Summary</span>
             <span class="dots"></span>
             <span class="pg-num">02</span>
           </div>
+          {% endif %}
           <div class="toc-item">
             <span class="num">02</span>
             <span class="name">Aerial Snapshot</span>
@@ -1622,7 +1624,7 @@
       <div class="comps-grid">
         {% for comp in comparables[:4] %}
         <article class="comp-card">
-          <div class="comp-map" {% if comp.map_image_url %}style="background-image: url('{{ comp.map_image_url }}'); background-size: cover; background-position: center;"{% endif %}>
+          <div class="comp-map" {% if comp.photo_url or comp.map_image_url %}style="background-image: url('{{ comp.photo_url | default(comp.map_image_url) }}'); background-size: cover; background-position: center;"{% endif %}>
             <div class="comp-pin" aria-hidden="true"></div>
           </div>
           <div class="comp-body">

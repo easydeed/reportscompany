@@ -374,7 +374,9 @@
         <p class="contents-subtitle">A comprehensive analysis of your property including market comparables, valuation data, and neighborhood insights.</p>
       </div>
       <div class="contents-right">
+        {% if "overview" in _pages and overview_text %}
         <div class="contents-item"><div class="contents-num">01</div><div class="contents-text">Executive Summary</div><div class="contents-page">02</div></div>
+        {% endif %}
         <div class="contents-item"><div class="contents-num">02</div><div class="contents-text">Aerial Property View</div><div class="contents-page">04</div></div>
         <div class="contents-item"><div class="contents-num">03</div><div class="contents-text">Property Information</div><div class="contents-page">05</div></div>
         <div class="contents-item"><div class="contents-num">04</div><div class="contents-text">Area Sales Analysis</div><div class="contents-page">06</div></div>
@@ -593,7 +595,7 @@
       <div class="comp-grid">
         {% for comp in comparables[:4] %}
         <div class="comp-card">
-          <div class="comp-card-image" {% if comp.map_image_url %}style="background-image: url('{{ comp.map_image_url }}'); background-size: cover; background-position: center;"{% endif %}>
+          <div class="comp-card-image" {% if comp.photo_url or comp.map_image_url %}style="background-image: url('{{ comp.photo_url | default(comp.map_image_url) }}'); background-size: cover; background-position: center;"{% endif %}>
             <div class="comp-card-price">{{ comp.sale_price | format_currency }}</div>
           </div>
           <div class="comp-card-body">

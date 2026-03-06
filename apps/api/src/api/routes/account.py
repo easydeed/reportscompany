@@ -34,6 +34,8 @@ class AccountOut(BaseModel):
     contact_line1: Optional[str] = None
     contact_line2: Optional[str] = None
     website_url: Optional[str] = None
+    # Theme
+    default_theme_id: Optional[int] = None
     # Plan/subscription
     subscription_status: Optional[str] = None
     monthly_report_limit: Optional[int] = None
@@ -57,6 +59,8 @@ class BrandingPatch(BaseModel):
     # Colors
     primary_color: Optional[constr(pattern=r'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$')] = None
     secondary_color: Optional[constr(pattern=r'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$')] = None
+    # Theme
+    default_theme_id: Optional[int] = Field(None, ge=1, le=5)
 
 
 def build_contact_lines(first_name: str, last_name: str, job_title: str, 
@@ -101,7 +105,8 @@ def get_account(request: Request, account_id: str = Depends(require_account_id))
                    logo_url, footer_logo_url, email_logo_url, email_footer_logo_url,
                    primary_color, secondary_color,
                    subscription_status, monthly_report_limit, api_rate_limit,
-                   plan_slug, billing_status, stripe_customer_id
+                   plan_slug, billing_status, stripe_customer_id,
+                   default_theme_id
             FROM accounts
             WHERE id = %s
         """, (account_id,))
@@ -144,6 +149,7 @@ def get_account(request: Request, account_id: str = Depends(require_account_id))
             email_footer_logo_url=acc_row[6],
             primary_color=acc_row[7],
             secondary_color=acc_row[8],
+            default_theme_id=acc_row[15],
             rep_photo_url=rep_photo_url,
             contact_line1=contact_line1,
             contact_line2=contact_line2,
@@ -185,6 +191,10 @@ def patch_branding(payload: BrandingPatch, request: Request, account_id: str = D
         sets.append("primary_color = %s"); params.append(payload.primary_color)
     if payload.secondary_color is not None:
         sets.append("secondary_color = %s"); params.append(payload.secondary_color)
+    
+    # Theme
+    if payload.default_theme_id is not None:
+        sets.append("default_theme_id = %s"); params.append(payload.default_theme_id)
 
     if not sets:
         raise HTTPException(status_code=400, detail="No branding fields provided.")
@@ -202,7 +212,8 @@ def patch_branding(payload: BrandingPatch, request: Request, account_id: str = D
                    logo_url, footer_logo_url, email_logo_url, email_footer_logo_url,
                    primary_color, secondary_color,
                    subscription_status, monthly_report_limit, api_rate_limit,
-                   plan_slug, billing_status, stripe_customer_id
+                   plan_slug, billing_status, stripe_customer_id,
+                   default_theme_id
             FROM accounts WHERE id = %s
         """, (account_id,))
         acc_row = cur.fetchone()
@@ -242,6 +253,7 @@ def patch_branding(payload: BrandingPatch, request: Request, account_id: str = D
             email_footer_logo_url=acc_row[6],
             primary_color=acc_row[7],
             secondary_color=acc_row[8],
+            default_theme_id=acc_row[15],
             rep_photo_url=rep_photo_url,
             contact_line1=contact_line1,
             contact_line2=contact_line2,
