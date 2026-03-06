@@ -26,6 +26,9 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 logger = logging.getLogger(__name__)
 
+_BUILDER_VERSION = "2026-03-05-v1"
+logger.warning("[DIAGNOSTIC] PropertyReportBuilder version: %s", _BUILDER_VERSION)
+
 
 # =============================================================================
 # Color Utility Functions — compute derived roles from a single accent hex
@@ -187,7 +190,11 @@ THEME_NUMBER_MAP = {
 # Configuration from environment
 ASSETS_BASE_URL = os.getenv("ASSETS_BASE_URL", "https://assets.trendyreports.com")
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "")
-logger.info("GOOGLE_MAPS_API_KEY configured: %s (length: %d)", bool(GOOGLE_MAPS_API_KEY), len(GOOGLE_MAPS_API_KEY))
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+logger.warning("[DIAGNOSTIC] property_builder loaded at startup")
+logger.warning("[DIAGNOSTIC] GOOGLE_MAPS_API_KEY present: %s, length: %d", bool(GOOGLE_MAPS_API_KEY), len(GOOGLE_MAPS_API_KEY))
+logger.warning("[DIAGNOSTIC] OPENAI_API_KEY present: %s, length: %d", bool(OPENAI_API_KEY), len(OPENAI_API_KEY))
+logger.warning("[DIAGNOSTIC] TEMPLATES_DIR: %s, exists: %s", TEMPLATES_DIR, TEMPLATES_DIR.exists())
 
 
 class PropertyReportBuilder:
@@ -470,7 +477,8 @@ class PropertyReportBuilder:
         - SimplyRETS sends: latitude/longitude, photos, etc.
         """
         raw_comps = self.report_data.get("comparables") or []
-        
+        logger.warning("[DIAGNOSTIC] _build_comparables_context: %d raw comps", len(raw_comps))
+
         comparables = []
         for comp in raw_comps[:6]:  # Max 6 comparables (3 rows of 2)
             # Handle field name variations from different sources
@@ -484,7 +492,14 @@ class PropertyReportBuilder:
                 comp.get("photo_url") or 
                 (comp.get("photos", [None])[0] if comp.get("photos") else None)
             )
-            
+            logger.warning(
+                "[DIAGNOSTIC] Comp %s: photo_url=%s, map_image_url=%s, resolved_image=%s",
+                comp.get("address", "?")[:30],
+                bool(comp.get("photo_url")),
+                bool(comp.get("map_image_url")),
+                bool(image_url),
+            )
+
             # Frontend: distance_miles, Backend: distance
             distance_raw = comp.get("distance") or comp.get("distance_miles", "")
             distance_formatted = distance_raw
@@ -862,10 +877,12 @@ class PropertyReportBuilder:
         lat = sitex_data.get("latitude") or sitex_data.get("lat")
         lng = sitex_data.get("longitude") or sitex_data.get("lng")
 
+        logger.warning("[DIAGNOSTIC] _build_images_context: lat=%s, lng=%s", lat, lng)
+        logger.warning("[DIAGNOSTIC] GOOGLE_MAPS_API_KEY truthy: %s", bool(GOOGLE_MAPS_API_KEY))
+
         # --- Hero / Cover image -------------------------------------------
         hero = self.report_data.get("cover_image_url")
         if not hero and lat and lng and GOOGLE_MAPS_API_KEY:
-            # Street View gives a realistic photo of the property exterior
             hero = (
                 f"https://maps.googleapis.com/maps/api/streetview"
                 f"?size=1200x800"
@@ -884,7 +901,14 @@ class PropertyReportBuilder:
                 f"&markers=color:0x1e3a5f%7C{lat},{lng}"
                 f"&key={GOOGLE_MAPS_API_KEY}"
             )
+            logger.warning("[DIAGNOSTIC] aerial_map URL generated: %s", aerial_map[:80])
+        else:
+            logger.warning(
+                "[DIAGNOSTIC] aerial_map SKIPPED — lat:%s lng:%s key:%s",
+                bool(lat), bool(lng), bool(GOOGLE_MAPS_API_KEY),
+            )
 
+        logger.warning("[DIAGNOSTIC] hero image: %s", "SET" if hero else "NONE")
         return {
             "hero": hero,
             "aerial_map": aerial_map,
@@ -912,16 +936,23 @@ class PropertyReportBuilder:
 
     def _get_theme_color(self) -> str:
         """
-        Get the theme color, preferring branding over report accent_color.
+        Get the theme color, preferring wizard accent over branding primary.
         Falls back to the theme's built-in default so CSS variables are
         never rendered as the literal string ``None``.
         """
         branding = self.report_data.get("branding") or {}
-        return (
-            self.accent_color or
-            branding.get("primary_color") or
-            self._THEME_DEFAULT_COLORS.get(self.theme_name, "#34d1c3")
+        accent = self.accent_color
+        branding_primary = branding.get("primary_color")
+        theme_default = self._THEME_DEFAULT_COLORS.get(self.theme_name, "#34d1c3")
+
+        logger.warning(
+            "[DIAGNOSTIC] _get_theme_color: accent_color=%s, branding_primary=%s, theme_default=%s",
+            accent, branding_primary, theme_default,
         )
+
+        result = accent or branding_primary or theme_default
+        logger.warning("[DIAGNOSTIC] _get_theme_color result: %s", result)
+        return result
     
     def _build_default_content_sections(self) -> Dict[str, Any]:
         """
@@ -1055,17 +1086,38 @@ class PropertyReportBuilder:
         context["overview_text"] = overview_text or ""
         
         try:
-            # Simple theme lookup - all templates are self-contained
             template_path = THEME_TEMPLATES.get(self.theme_name, THEME_TEMPLATES["teal"])
+            full_template_path = TEMPLATES_DIR / template_path
+            logger.warning("[DIAGNOSTIC] Using template: %s, exists: %s", full_template_path, full_template_path.exists())
+
+            # Verify the Jinja2 template contains the photo_url fix
+            try:
+                tmpl_content = full_template_path.read_text(encoding="utf-8")
+                has_photo_fix = "comp.photo_url" in tmpl_content
+                has_default_fallback = "default(comp.map_image_url)" in tmpl_content
+                logger.warning(
+                    "[DIAGNOSTIC] Template has photo_url ref: %s, has default(map) fallback: %s",
+                    has_photo_fix, has_default_fallback,
+                )
+            except Exception as _tmpl_read_exc:
+                logger.warning("[DIAGNOSTIC] Could not read template for inspection: %s", _tmpl_read_exc)
+
+            # Log image context summary
+            images_ctx = context.get("images", {})
+            for key, val in images_ctx.items():
+                logger.warning("[DIAGNOSTIC] Image %s: %s", key, str(val)[:100] if val else "NONE/EMPTY")
+
             template = self.env.get_template(template_path)
-            
             html = template.render(**context)
             
-            logger.info(f"Rendered {self.report_type} report: theme={self.theme_name} ({self.theme_number}), template={template_path}")
+            logger.warning(
+                "[DIAGNOSTIC] Rendered %s report: theme=%s (%s), pages=%s, html_len=%d",
+                self.report_type, self.theme_name, self.theme_number, page_set, len(html),
+            )
             return html
             
         except Exception as e:
-            logger.error(f"Failed to render report with theme {self.theme_name}: {e}")
+            logger.error("Failed to render report with theme %s: %s", self.theme_name, e)
             raise
     
     def render_preview(self, pages: List[str] = None) -> str:
