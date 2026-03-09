@@ -79,6 +79,7 @@ class LeadPageSettingsUpdate(BaseModel):
     subheadline: Optional[str] = None
     theme_color: Optional[str] = None
     enabled: Optional[bool] = None
+    agent_code: Optional[str] = None
 
 
 @router.get("/me/lead-page")
@@ -188,20 +189,18 @@ def update_lead_page_settings(updates: LeadPageSettingsUpdate, request: Request)
         if not user_id:
             raise HTTPException(status_code=404, detail="User not found")
         
-        # Build dynamic UPDATE
         fields = []
         values = []
         
         if updates.headline is not None:
             fields.append("landing_page_headline = %s")
-            values.append(updates.headline[:255])  # Limit length
+            values.append(updates.headline[:255])
         
         if updates.subheadline is not None:
             fields.append("landing_page_subheadline = %s")
             values.append(updates.subheadline[:1000])
         
         if updates.theme_color is not None:
-            # Validate hex color
             color = updates.theme_color
             if not color.startswith("#") or len(color) != 7:
                 raise HTTPException(status_code=400, detail="Invalid color format. Use #RRGGBB")
@@ -211,6 +210,17 @@ def update_lead_page_settings(updates: LeadPageSettingsUpdate, request: Request)
         if updates.enabled is not None:
             fields.append("landing_page_enabled = %s")
             values.append(updates.enabled)
+        
+        if updates.agent_code is not None:
+            import re as _re
+            code = _re.sub(r'[^A-Za-z0-9]', '', updates.agent_code).upper()
+            if len(code) < 3 or len(code) > 20:
+                raise HTTPException(status_code=400, detail="Agent code must be 3-20 alphanumeric characters")
+            cur.execute("SELECT 1 FROM users WHERE agent_code = %s AND id != %s::uuid", (code, user_id))
+            if cur.fetchone():
+                raise HTTPException(status_code=409, detail="Agent code already taken")
+            fields.append("agent_code = %s")
+            values.append(code)
         
         if not fields:
             raise HTTPException(status_code=400, detail="No fields to update")

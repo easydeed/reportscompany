@@ -61,33 +61,45 @@ export function LeadPageClient({ initialSettings, initialLeads }: LeadPageClient
   const [saving, setSaving] = useState(false);
   const [filter, setFilter] = useState<'all' | 'hot' | 'contacted'>('all');
   
-  // Editable settings
   const [headline, setHeadline] = useState(initialSettings?.headline || '');
   const [subheadline, setSubheadline] = useState(initialSettings?.subheadline || '');
   const [themeColor, setThemeColor] = useState(initialSettings?.theme_color || '#818CF8');
   const [enabled, setEnabled] = useState(initialSettings?.enabled !== false);
+  const [agentCode, setAgentCode] = useState(initialSettings?.agent_code || '');
   const [showSettings, setShowSettings] = useState(false);
+  const [codeError, setCodeError] = useState('');
 
   const saveSettings = async () => {
     setSaving(true);
+    setCodeError('');
     try {
+      const payload: Record<string, unknown> = {
+        headline,
+        subheadline,
+        theme_color: themeColor,
+        enabled,
+      };
+      if (agentCode && agentCode !== settings?.agent_code) {
+        payload.agent_code = agentCode;
+      }
       const updated = await apiFetch('/v1/me/lead-page', {
         method: 'PATCH',
-        body: JSON.stringify({
-          headline,
-          subheadline,
-          theme_color: themeColor,
-          enabled,
-        }),
+        body: JSON.stringify(payload),
       });
       
       setSettings(updated);
+      setAgentCode(updated.agent_code);
       toast.success('Settings saved!');
       setShowSettings(false);
       
-    } catch (err) {
-      console.error('Failed to save settings', err);
-      toast.error('Failed to save settings');
+    } catch (err: any) {
+      const msg = err?.message || '';
+      if (msg.includes('already taken') || msg.includes('409')) {
+        setCodeError('This agent code is already taken. Try another.');
+      } else {
+        console.error('Failed to save settings', err);
+        toast.error('Failed to save settings');
+      }
     } finally {
       setSaving(false);
     }
@@ -177,11 +189,29 @@ export function LeadPageClient({ initialSettings, initialLeads }: LeadPageClient
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
+              <Label>Agent Code</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-sm text-muted-foreground whitespace-nowrap">trendyreports.io/cma/</span>
+                <Input
+                  value={agentCode}
+                  onChange={(e) => {
+                    setAgentCode(e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase());
+                    setCodeError('');
+                  }}
+                  placeholder="SARAHC2025"
+                  className="w-40 font-mono uppercase"
+                  maxLength={20}
+                />
+              </div>
+              {codeError && <p className="text-sm text-red-500 mt-1">{codeError}</p>}
+              <p className="text-xs text-muted-foreground mt-1">3-20 alphanumeric characters. This is your permanent shareable URL.</p>
+            </div>
+            <div>
               <Label>Headline</Label>
               <Input
                 value={headline}
                 onChange={(e) => setHeadline(e.target.value)}
-                placeholder="Get Your Free Home Value Report"
+                placeholder="What's Your Home Worth?"
               />
             </div>
             <div>
@@ -189,7 +219,7 @@ export function LeadPageClient({ initialSettings, initialLeads }: LeadPageClient
               <Input
                 value={subheadline}
                 onChange={(e) => setSubheadline(e.target.value)}
-                placeholder="Find out what your home is worth..."
+                placeholder="Get a free, professional property report in seconds."
               />
             </div>
             <div className="flex items-center gap-4">

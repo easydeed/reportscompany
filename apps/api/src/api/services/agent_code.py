@@ -82,14 +82,9 @@ def get_or_create_agent_code(conn, cursor, user_id: str) -> str:
 def validate_agent_code(code: str) -> bool:
     """
     Validate that a code follows the expected format.
-    
-    Args:
-        code: The agent code to validate
-        
-    Returns:
-        True if valid, False otherwise
+    Accepts 3-20 alphanumeric characters.
     """
-    if not code or len(code) != 6:
+    if not code or len(code) < 3 or len(code) > 20:
         return False
     
     return all(c in ALLOWED_CHARS for c in code.upper())
@@ -98,13 +93,7 @@ def validate_agent_code(code: str) -> bool:
 def get_agent_by_code(cursor, agent_code: str) -> Optional[dict]:
     """
     Look up an agent by their unique code.
-    
-    Args:
-        cursor: Database cursor
-        agent_code: The agent's unique code
-        
-    Returns:
-        Agent info dict or None if not found
+    Joins accounts to pull branding (logo, primary_color).
     """
     cursor.execute(
         """
@@ -124,8 +113,12 @@ def get_agent_by_code(cursor, agent_code: str) -> Optional[dict]:
             u.landing_page_subheadline,
             u.landing_page_theme_color,
             u.landing_page_enabled,
-            u.landing_page_visits
+            u.landing_page_visits,
+            a.logo_url,
+            a.primary_color,
+            u.website_url
         FROM users u
+        JOIN accounts a ON a.id = u.account_id
         WHERE u.agent_code = %s
         """,
         (agent_code.upper(),)
@@ -147,11 +140,14 @@ def get_agent_by_code(cursor, agent_code: str) -> Optional[dict]:
         "photo_url": row[8],
         "license_number": row[9],
         "agent_code": row[10],
-        "landing_page_headline": row[11] or "Get Your Free Home Value Report",
-        "landing_page_subheadline": row[12] or "Find out what your home is worth in today's market.",
+        "landing_page_headline": row[11] or "What's Your Home Worth?",
+        "landing_page_subheadline": row[12] or "Get a free, professional property report in seconds.",
         "landing_page_theme_color": row[13] or "#8B5CF6",
         "landing_page_enabled": row[14] if row[14] is not None else True,
         "landing_page_visits": row[15] or 0,
+        "logo_url": row[16],
+        "primary_color": row[17],
+        "website_url": row[18],
     }
 
 

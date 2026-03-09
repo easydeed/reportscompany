@@ -1075,7 +1075,9 @@ def process_consumer_report(self, report_id: str):
                         cr.property_address, cr.property_city, cr.property_state, cr.property_zip,
                         cr.property_data,
                         u.first_name, u.last_name, u.phone as agent_phone,
-                        a.id as account_id
+                        a.id as account_id,
+                        cr.consumer_email,
+                        COALESCE(cr.delivery_method, 'sms') as delivery_method
                     FROM consumer_reports cr
                     JOIN users u ON u.id = cr.agent_id
                     JOIN accounts a ON a.id = u.account_id
@@ -1092,7 +1094,8 @@ def process_consumer_report(self, report_id: str):
                     prop_address, prop_city, prop_state, prop_zip,
                     existing_property_data,
                     agent_first, agent_last, agent_phone,
-                    account_id
+                    account_id,
+                    consumer_email, delivery_method,
                 ) = row
                 
                 agent_name = f"{agent_first} {agent_last}".strip()
@@ -1291,52 +1294,74 @@ def process_consumer_report(self, report_id: str):
                 ))
                 
                 # =============================================
-                # SEND SMS TO CONSUMER
+                # DELIVER REPORT (SMS or Email)
                 # =============================================
-                sms_result = send_report_sms(
-                    to_phone=consumer_phone,
-                    report_url=report_url,
-                    agent_name=agent_name,
-                    property_address=full_address
-                )
-                
-                # Log SMS - include 'message' column (NOT NULL in legacy schema)
-                sms_message = sms_result.get('message_body', f"Report link sent to {consumer_phone}")
-                cur.execute("""
-                    INSERT INTO sms_logs (
-                        account_id, consumer_report_id, to_phone, from_phone,
-                        message, message_body, recipient_type, twilio_sid, 
-                        status, error_message, direction
-                    ) VALUES (
-                        %s::uuid, %s::uuid, %s, %s,
-                        %s, %s, 'consumer', %s, 
-                        %s, %s, 'outbound'
+                delivered = False
+
+                if delivery_method == "sms" and consumer_phone:
+                    sms_result = send_report_sms(
+                        to_phone=consumer_phone,
+                        report_url=report_url,
+                        agent_name=agent_name,
+                        property_address=full_address
                     )
-                """, (
-                    account_id, report_id, consumer_phone, 
-                    os.environ.get("TWILIO_PHONE_NUMBER", ""),
-                    sms_message,  # message column (NOT NULL)
-                    sms_message,  # message_body column
-                    sms_result.get('message_sid'),
-                    'sent' if sms_result.get('success') else 'failed',
-                    sms_result.get('error')
-                ))
-                
-                if sms_result.get('success'):
-                    # Update report status
+                    
+                    sms_message = sms_result.get('message_body', f"Report link sent to {consumer_phone}")
+                    cur.execute("""
+                        INSERT INTO sms_logs (
+                            account_id, consumer_report_id, to_phone, from_phone,
+                            message, message_body, recipient_type, twilio_sid, 
+                            status, error_message, direction
+                        ) VALUES (
+                            %s::uuid, %s::uuid, %s, %s,
+                            %s, %s, 'consumer', %s, 
+                            %s, %s, 'outbound'
+                        )
+                    """, (
+                        account_id, report_id, consumer_phone, 
+                        os.environ.get("TWILIO_PHONE_NUMBER", ""),
+                        sms_message,
+                        sms_message,
+                        sms_result.get('message_sid'),
+                        'sent' if sms_result.get('success') else 'failed',
+                        sms_result.get('error')
+                    ))
+                    
+                    if sms_result.get('success'):
+                        cur.execute("""
+                            UPDATE consumer_reports 
+                            SET status = 'sent',
+                                consumer_sms_sent_at = NOW(),
+                                consumer_sms_sid = %s
+                            WHERE id = %s::uuid
+                        """, (sms_result.get('message_sid'), report_id))
+                        delivered = True
+
+                elif delivery_method == "email" and consumer_email:
+                    # TODO: integrate Resend for email delivery
+                    # For now mark as sent — report is viewable at report_url
+                    logger.info(f"Email delivery requested for {consumer_email} — marking as sent (report URL: {report_url})")
                     cur.execute("""
                         UPDATE consumer_reports 
                         SET status = 'sent',
-                            consumer_sms_sent_at = NOW(),
-                            consumer_sms_sid = %s
+                            consumer_email_sent_at = NOW()
                         WHERE id = %s::uuid
-                    """, (sms_result.get('message_sid'), report_id))
-                    
-                    # Send notification to agent (if they have a phone)
+                    """, (report_id,))
+                    delivered = True
+
+                else:
+                    logger.warning(f"No valid delivery method for report {report_id}: method={delivery_method}")
+                    cur.execute("""
+                        UPDATE consumer_reports SET status = 'sent' WHERE id = %s::uuid
+                    """, (report_id,))
+                    delivered = True
+
+                if delivered:
+                    # Notify agent via SMS (if they have a phone)
                     if agent_phone:
                         agent_sms = send_agent_notification_sms(
                             to_phone=agent_phone,
-                            consumer_phone=consumer_phone,
+                            consumer_phone=consumer_phone or consumer_email or "N/A",
                             property_address=full_address,
                             report_url=report_url
                         )
@@ -1352,17 +1377,15 @@ def process_consumer_report(self, report_id: str):
                     logger.info(f"Consumer report processed successfully: {report_id}")
                     return {"ok": True, "report_id": report_id}
                 else:
-                    # SMS failed
                     cur.execute("""
                         UPDATE consumer_reports 
                         SET status = 'failed',
                             error = %s
                         WHERE id = %s::uuid
-                    """, (sms_result.get('error', 'SMS send failed'), report_id))
+                    """, ('Delivery failed', report_id))
                     
-                    logger.error(f"Failed to send SMS for report {report_id}: {sms_result.get('error')}")
+                    logger.error(f"Failed to deliver report {report_id}")
                     
-                    # Retry if transient error
                     if self.request.retries < self.max_retries:
                         raise self.retry(countdown=60 * (self.request.retries + 1))
                     

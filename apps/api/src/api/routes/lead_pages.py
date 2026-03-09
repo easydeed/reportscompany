@@ -36,6 +36,8 @@ class AgentLandingPageInfo(BaseModel):
     headline: str
     subheadline: str
     theme_color: str
+    logo_url: Optional[str] = None
+    website_url: Optional[str] = None
 
 
 class PropertySearchRequest(BaseModel):
@@ -61,8 +63,10 @@ class PropertySearchResult(BaseModel):
 
 
 class ReportRequestPayload(BaseModel):
-    """Consumer requesting their report."""
-    phone: str
+    """Consumer requesting their report. Accepts phone OR email."""
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    delivery_method: str = "sms"  # "sms" or "email"
     property_apn: str
     property_fips: str
     property_address: str
@@ -70,7 +74,7 @@ class ReportRequestPayload(BaseModel):
     property_state: str
     property_zip: str
     consent_given: bool = False
-    # Optional property details from search
+    name: Optional[str] = None
     owner_name: Optional[str] = None
     bedrooms: Optional[int] = None
     bathrooms: Optional[float] = None
@@ -81,6 +85,8 @@ class ReportRequestPayload(BaseModel):
     @field_validator('phone')
     @classmethod
     def validate_phone(cls, v):
+        if v is None:
+            return v
         digits = re.sub(r'\D', '', v)
         if len(digits) != 10:
             raise ValueError('Phone must be 10 digits')
@@ -133,9 +139,11 @@ async def get_landing_page_info(
             phone=agent.get("phone"),
             email=agent.get("email"),
             license_number=agent.get("license_number"),
-            headline=agent.get("landing_page_headline", "Get Your Free Home Value Report"),
-            subheadline=agent.get("landing_page_subheadline", "Find out what your home is worth in today's market."),
-            theme_color=agent.get("landing_page_theme_color", "#8B5CF6")
+            headline=agent.get("landing_page_headline", "What's Your Home Worth?"),
+            subheadline=agent.get("landing_page_subheadline", "Get a free, professional property report in seconds."),
+            theme_color=agent.get("landing_page_theme_color", "#8B5CF6"),
+            logo_url=agent.get("logo_url"),
+            website_url=agent.get("website_url"),
         )
 
 
@@ -201,10 +209,14 @@ async def request_report(
 ):
     """
     Consumer requests their home value report.
-    This is the main submission endpoint.
+    Accepts phone (SMS) or email delivery. Also writes to unified leads table.
     """
+    if payload.delivery_method == "sms" and not payload.phone:
+        raise HTTPException(status_code=422, detail="Phone number required for SMS delivery")
+    if payload.delivery_method == "email" and not payload.email:
+        raise HTTPException(status_code=422, detail="Email required for email delivery")
+
     with db_conn() as (conn, cur):
-        # Get agent
         agent = get_agent_by_code(cur, agent_code)
         
         if not agent:
@@ -216,7 +228,6 @@ async def request_report(
         agent_id = agent.get("id")
         account_id = agent.get("account_id")
         
-        # Get SMS credits
         cur.execute(
             "SELECT sms_credits FROM accounts WHERE id = %s",
             (account_id,)
@@ -224,7 +235,6 @@ async def request_report(
         result = cur.fetchone()
         sms_credits = result[0] if result else 0
         
-        # Rate limit check (5 per hour per IP)
         ip = request.client.host if request.client else None
         if ip:
             cur.execute(
@@ -238,11 +248,9 @@ async def request_report(
             if recent_count >= 5:
                 raise HTTPException(status_code=429, detail="Too many requests. Please try again later.")
         
-        # Detect device
         user_agent = request.headers.get("user-agent", "")
         device_type = detect_device_type(user_agent)
         
-        # Build property_data JSON with all available details
         property_data = {
             "address": payload.property_address,
             "city": payload.property_city,
@@ -257,20 +265,21 @@ async def request_report(
             "year_built": payload.year_built,
             "lot_size": payload.lot_size,
         }
-        # Remove None values
         property_data = {k: v for k, v in property_data.items() if v is not None}
         
-        # Create report record with full property data
+        # Create consumer_report record (tracks the generated PDF/data)
         cur.execute(
             """
             INSERT INTO consumer_reports (
-                agent_id, agent_code, consumer_phone,
+                agent_id, agent_code, consumer_phone, consumer_email,
+                delivery_method,
                 property_address, property_city, property_state, property_zip,
                 property_data,
                 consent_given, consent_timestamp,
                 ip_address, user_agent, device_type, status
             ) VALUES (
-                %s, %s, %s,
+                %s, %s, %s, %s,
+                %s,
                 %s, %s, %s, %s,
                 %s::jsonb,
                 %s, NOW(),
@@ -282,6 +291,8 @@ async def request_report(
                 agent_id,
                 agent_code.upper(),
                 payload.phone,
+                payload.email,
+                payload.delivery_method,
                 payload.property_address,
                 payload.property_city,
                 payload.property_state,
@@ -290,14 +301,40 @@ async def request_report(
                 payload.consent_given,
                 ip,
                 user_agent[:500] if user_agent else None,
-                device_type
+                device_type,
             )
         )
         report_id = cur.fetchone()[0]
+
+        # Also write to unified leads table
+        full_address = f"{payload.property_address}, {payload.property_city}, {payload.property_state} {payload.property_zip}"
+        cur.execute(
+            """
+            INSERT INTO leads (
+                account_id, name, email, phone, message,
+                source, consent_given, status,
+                ip_address, user_agent, consumer_report_id
+            ) VALUES (
+                %s::uuid, %s, %s, %s, %s,
+                'cma_page', %s, 'new',
+                %s, %s, %s
+            )
+            """,
+            (
+                account_id,
+                payload.name or payload.owner_name,
+                payload.email,
+                payload.phone,
+                f"CMA report requested for {full_address}",
+                payload.consent_given,
+                ip,
+                user_agent[:500] if user_agent else None,
+                str(report_id),
+            )
+        )
+
         conn.commit()
         
-        # Queue processing task
-        # Import here to avoid circular imports
         try:
             from celery import current_app
             current_app.send_task(
@@ -307,13 +344,16 @@ async def request_report(
             logger.info(f"Queued consumer report processing: {report_id}")
         except Exception as e:
             logger.warning(f"Failed to queue task, will process inline: {e}")
-            # If Celery isn't available, we could process inline
-            # For now, just log the warning
         
+        delivery_msg = (
+            "You'll receive a text in a few seconds."
+            if payload.delivery_method == "sms"
+            else "Check your email for your report."
+        )
         return {
             "success": True,
-            "message": "Your report is being generated! You'll receive a text in a few seconds.",
-            "report_id": str(report_id)
+            "message": f"Your report is being generated! {delivery_msg}",
+            "report_id": str(report_id),
         }
 
 
