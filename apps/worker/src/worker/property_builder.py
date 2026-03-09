@@ -516,7 +516,7 @@ class PropertyReportBuilder:
                     f"https://maps.googleapis.com/maps/api/staticmap"
                     f"?center={latitude},{longitude}"
                     f"&zoom=16&size=400x200&maptype=roadmap"
-                    f"&markers=color:0x1e3a5f%7C{latitude},{longitude}"
+                    f"&markers={latitude},{longitude}"
                     f"&key={GOOGLE_MAPS_API_KEY}"
                 )
             
@@ -934,7 +934,7 @@ class PropertyReportBuilder:
                 f"https://maps.googleapis.com/maps/api/staticmap"
                 f"?center={lat},{lng}"
                 f"&zoom=15&size=800x600&maptype=roadmap"
-                f"&markers=color:0x1e3a5f%7C{lat},{lng}"
+                f"&markers={lat},{lng}"
                 f"&key={GOOGLE_MAPS_API_KEY}"
             )
             logger.warning("[DIAGNOSTIC] aerial_map URL generated: %s", aerial_map[:80])
