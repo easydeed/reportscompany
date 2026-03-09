@@ -111,38 +111,38 @@ Questions? Reply to this text or contact {agent_name} directly.
 
 def send_agent_notification_sms(
     to_phone: str,
-    consumer_phone: str,
     property_address: str,
     report_url: str,
+    lead_name: str | None = None,
+    consumer_phone: str | None = None,
+    consumer_email: str | None = None,
 ) -> dict:
     """
-    Send notification to agent about new lead.
-    
-    Args:
-        to_phone: Agent's phone number
-        consumer_phone: Consumer's phone
-        property_address: Property address
-        report_url: URL to the report
+    Send notification to agent about new CMA lead.
     """
-    # Format consumer phone for display
-    digits = ''.join(filter(str.isdigit, consumer_phone))
-    if len(digits) == 10:
-        display_phone = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
-    else:
-        display_phone = consumer_phone
-    
-    message = f"""🔔 New Lead Alert!
+    contact_lines = []
+    if consumer_phone:
+        digits = ''.join(filter(str.isdigit, consumer_phone))
+        if len(digits) == 10:
+            display_phone = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+        else:
+            display_phone = consumer_phone
+        contact_lines.append(f"📱 {display_phone}")
+    if consumer_email:
+        contact_lines.append(f"📧 {consumer_email}")
+    contact_block = "\n".join(contact_lines) if contact_lines else "No contact info"
 
-Someone just requested a home value report.
+    who = lead_name or "Someone"
 
-Phone: {display_phone}
-Property: {property_address}
+    message = f"""🏠 New CMA Lead!
 
-View report: {report_url}
+{who} is interested in:
+{property_address}
 
-Reply to this text or call them now while they're engaged!
+{contact_block}
 
+Respond quickly — they're actively evaluating!
 - TrendyReports"""
-    
+
     return send_sms(to_phone, message)
 

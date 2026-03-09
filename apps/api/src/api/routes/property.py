@@ -1188,19 +1188,12 @@ async def create_property_report(payload: PropertyReportCreate, request: Request
         row = cur.fetchone()
         report_id, short_code, status, created_at = row
         
-        # 4. Generate QR code and upload to R2
-        qr_code_url = await generate_qr_code_for_report(
-            short_code=short_code,
-            report_id=report_id,
-            accent_color=payload.accent_color
-        )
-        
-        # Update with QR code URL
+        # 4. Set status to processing (QR code generation removed — CMA page is the lead funnel now)
         cur.execute("""
             UPDATE property_reports
-            SET qr_code_url = %s, status = 'processing'
+            SET status = 'processing'
             WHERE id = %s::uuid
-        """, (qr_code_url, report_id))
+        """, (report_id,))
         
         conn.commit()
         
@@ -1224,7 +1217,7 @@ async def create_property_report(payload: PropertyReportCreate, request: Request
             id=report_id,
             status="processing",
             short_code=short_code,
-            qr_code_url=qr_code_url,
+            qr_code_url=None,
             property_address=full_address,
             report_type=payload.report_type,
             created_at=created_at,

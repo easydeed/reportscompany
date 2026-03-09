@@ -3,18 +3,13 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import {
   ArrowLeft,
   Download,
   ExternalLink,
-  QrCode,
   Settings,
   Trash2,
-  Copy,
   Check,
-  Users,
-  Eye,
   RefreshCw,
   Loader2,
   Home,
@@ -41,12 +36,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { apiFetch } from "@/lib/api";
 
 interface PropertyReport {
@@ -83,15 +72,6 @@ interface PropertyReport {
   updated_at: string;
 }
 
-interface Lead {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  status: string;
-  created_at: string;
-}
-
 export default function PropertyReportDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -100,16 +80,14 @@ export default function PropertyReportDetailPage() {
   const justCreated = searchParams.get("created") === "true";
 
   const [report, setReport] = useState<PropertyReport | null>(null);
-  const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+
   const [deleting, setDeleting] = useState(false);
   const [polling, setPolling] = useState(false);
 
   useEffect(() => {
     loadReport();
-    loadLeads();
   }, [reportId]);
 
   // Poll for status updates if processing
@@ -149,15 +127,6 @@ export default function PropertyReportDetailPage() {
     }
   }
 
-  async function loadLeads() {
-    try {
-      const data = await apiFetch(`/v1/leads?property_report_id=${reportId}&limit=5`);
-      setLeads(data.leads || []);
-    } catch (e) {
-      // Ignore lead errors
-    }
-  }
-
   async function handleDelete() {
     try {
       setDeleting(true);
@@ -169,14 +138,6 @@ export default function PropertyReportDetailPage() {
     }
   }
 
-  const copyLink = () => {
-    if (report?.short_code) {
-      const url = `${window.location.origin}/p/${report.short_code}`;
-      navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -246,8 +207,6 @@ export default function PropertyReportDetailPage() {
     );
   }
 
-  const landingPageUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/p/${report.short_code}`;
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -288,8 +247,7 @@ export default function PropertyReportDetailPage() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete Property Report</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete this report? This will also remove the
-                  landing page and QR code. This action cannot be undone.
+                  Are you sure you want to delete this report? This action cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -328,10 +286,9 @@ export default function PropertyReportDetailPage() {
         </div>
       )}
 
-      {/* Main Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left Column - Property Info & PDF */}
-        <div className="lg:col-span-2 space-y-6">
+      {/* Main Content */}
+      <div className="grid gap-6 lg:grid-cols-1">
+        <div className="space-y-6">
           {/* Property Details */}
           <Card>
             <CardHeader>
@@ -420,142 +377,6 @@ export default function PropertyReportDetailPage() {
           </Card>
         </div>
 
-        {/* Right Column - QR, Landing Page, Leads */}
-        <div className="space-y-6">
-          {/* QR Code & Landing Page */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <QrCode className="w-5 h-5" />
-                QR Code & Landing Page
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* QR Code */}
-              <div className="flex justify-center">
-                {report.qr_code_url ? (
-                  <div className="bg-white p-4 rounded-lg border">
-                    <Image
-                      src={report.qr_code_url}
-                      alt="QR Code"
-                      width={160}
-                      height={160}
-                      className="w-40 h-40"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-40 h-40 bg-muted rounded-lg flex items-center justify-center">
-                    <QrCode className="w-12 h-12 text-muted-foreground" />
-                  </div>
-                )}
-              </div>
-
-              {/* Landing Page URL */}
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Landing Page URL</p>
-                <div className="flex gap-2">
-                  <code className="flex-1 text-sm bg-muted px-3 py-2 rounded truncate">
-                    {landingPageUrl}
-                  </code>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="outline" size="icon" onClick={copyLink}>
-                          {copied ? (
-                            <Check className="w-4 h-4 text-green-600" />
-                          ) : (
-                            <Copy className="w-4 h-4" />
-                          )}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {copied ? "Copied!" : "Copy link"}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <a href={landingPageUrl} target="_blank" rel="noopener noreferrer">
-                    <Button variant="outline" size="icon">
-                      <ExternalLink className="w-4 h-4" />
-                    </Button>
-                  </a>
-                </div>
-              </div>
-
-              {/* Status */}
-              <div className="flex items-center justify-between text-sm pt-2 border-t">
-                <span className="text-muted-foreground">Status</span>
-                <Badge variant={report.is_active ? "default" : "secondary"}>
-                  {report.is_active ? "Active" : "Inactive"}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Stats */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Eye className="w-5 h-5" />
-                Analytics
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-4 bg-muted/50 rounded-lg">
-                  <p className="text-3xl font-bold">{report.view_count}</p>
-                  <p className="text-sm text-muted-foreground">Total Views</p>
-                </div>
-                <div className="text-center p-4 bg-muted/50 rounded-lg">
-                  <p className="text-3xl font-bold">{report.unique_visitors}</p>
-                  <p className="text-sm text-muted-foreground">Unique Visitors</p>
-                </div>
-              </div>
-              {report.last_viewed_at && (
-                <p className="text-xs text-muted-foreground mt-3 text-center">
-                  Last viewed: {new Date(report.last_viewed_at).toLocaleString()}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Leads */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                Recent Leads
-              </CardTitle>
-              <Link href={`/app/leads?property_report_id=${reportId}`}>
-                <Button variant="ghost" size="sm">
-                  View All
-                </Button>
-              </Link>
-            </CardHeader>
-            <CardContent>
-              {leads.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No leads captured yet
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {leads.map((lead) => (
-                    <div
-                      key={lead.id}
-                      className="flex items-center justify-between text-sm border-b pb-2 last:border-0"
-                    >
-                      <div>
-                        <p className="font-medium">{lead.name}</p>
-                        <p className="text-xs text-muted-foreground">{lead.email}</p>
-                      </div>
-                      <Badge variant="outline" className="text-xs">
-                        {lead.status}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>

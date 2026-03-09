@@ -4,7 +4,6 @@ import { useRef, useState, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Check,
-  Copy,
   Download,
   ExternalLink,
   Loader2,
@@ -50,7 +49,7 @@ export function StepGenerate({
   onSetProgress,
   onSetStage,
 }: StepGenerateProps) {
-  const [copied, setCopied] = useState(false);
+
   const [reportResult, setReportResult] = useState<PropertyReportResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const generatingRef = useRef(false);
@@ -72,7 +71,7 @@ export function StepGenerate({
       { label: `Analyzing ${selectedComps.length} comparables` },
       { label: `Rendering ${selectedPageIds.length} report pages` },
       { label: "Generating PDF" },
-      { label: "Finalizing QR code & share link" },
+      { label: "Finalizing report" },
     ],
     [selectedComps.length, selectedPageIds.length]
   );
@@ -233,15 +232,6 @@ export function StepGenerate({
     onSetProgress,
     onSetStage,
   ]);
-
-  function handleCopy() {
-    const shareUrl = reportResult?.short_code
-      ? `${window.location.origin}/p/${reportResult.short_code}`
-      : "Link not available";
-    navigator.clipboard.writeText(shareUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
 
   // Idle / Review
   if (generationPhase === "idle") {
@@ -488,10 +478,6 @@ export function StepGenerate({
 
   // Success
   if (generationPhase === "success") {
-    const shareUrl = reportResult?.short_code
-      ? `${typeof window !== "undefined" ? window.location.origin : ""}/p/${reportResult.short_code}`
-      : null;
-
     return (
       <div className="flex flex-col items-center justify-center py-12 max-w-lg mx-auto">
         <motion.div
@@ -530,79 +516,28 @@ export function StepGenerate({
           transition={{ delay: 0.4 }}
           className="mt-8 w-full rounded-2xl border border-border bg-card p-6"
         >
-          <div className="flex flex-col sm:flex-row gap-6 items-center">
-            {/* QR Code */}
-            <div className="w-32 h-32 rounded-xl bg-muted border border-border shrink-0 relative overflow-hidden">
-              {reportResult?.qr_code_url ? (
-                <img
-                  src={reportResult.qr_code_url}
-                  alt="QR Code"
-                  className="w-full h-full object-contain p-1"
-                />
-              ) : (
-                <>
-                  <div
-                    className="absolute inset-2"
-                    style={{
-                      backgroundImage:
-                        "repeating-conic-gradient(hsl(var(--foreground)) 0% 25%, transparent 0% 50%) 0 0 / 8px 8px",
-                      opacity: 0.15,
-                    }}
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-[8px] font-bold text-muted-foreground bg-card px-1.5 py-0.5 rounded">
-                      QR CODE
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="flex-1 space-y-3 w-full">
-              <Button
-                className="w-full bg-[#6366F1] text-white hover:bg-[#4F46E5] gap-2"
-                onClick={() => {
-                  if (reportResult?.pdf_url) {
-                    window.open(reportResult.pdf_url, "_blank");
-                  }
-                }}
-              >
-                <Download className="h-4 w-4" />
-                Download PDF
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full gap-2 bg-transparent"
-                onClick={handleCopy}
-              >
-                {copied ? (
-                  <>
-                    <Check className="h-4 w-4" />
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-4 w-4" />
-                    Copy Share Link
-                  </>
-                )}
-              </Button>
-              {shareUrl && (
-                <p className="text-xs text-muted-foreground text-center">
-                  {shareUrl}
-                </p>
-              )}
-              <Button
-                variant="ghost"
-                className="w-full gap-2 text-muted-foreground"
-                onClick={() => {
-                  window.location.href = "/app/property";
-                }}
-              >
-                <ExternalLink className="h-4 w-4" />
-                View All Reports
-              </Button>
-            </div>
+          <div className="flex flex-col gap-3 w-full">
+            <Button
+              className="w-full bg-[#6366F1] text-white hover:bg-[#4F46E5] gap-2"
+              onClick={() => {
+                if (reportResult?.pdf_url) {
+                  window.open(reportResult.pdf_url, "_blank");
+                }
+              }}
+            >
+              <Download className="h-4 w-4" />
+              Download PDF
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full gap-2 bg-transparent"
+              onClick={() => {
+                window.location.href = "/app/property";
+              }}
+            >
+              <ExternalLink className="h-4 w-4" />
+              View All Reports
+            </Button>
           </div>
         </motion.div>
 

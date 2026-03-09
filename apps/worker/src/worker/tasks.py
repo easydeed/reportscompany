@@ -1335,6 +1335,12 @@ def process_consumer_report(self, report_id: str):
                                 consumer_sms_sid = %s
                             WHERE id = %s::uuid
                         """, (sms_result.get('message_sid'), report_id))
+                        # Decrement SMS credits for consumer delivery only
+                        cur.execute("""
+                            UPDATE accounts 
+                            SET sms_credits = GREATEST(sms_credits - 1, 0)
+                            WHERE id = %s::uuid
+                        """, (account_id,))
                         delivered = True
 
                 elif delivery_method == "email" and consumer_email:
@@ -1357,22 +1363,29 @@ def process_consumer_report(self, report_id: str):
                     delivered = True
 
                 if delivered:
-                    # Notify agent via SMS (if they have a phone)
+                    # Notify agent via SMS (free — no credit decrement)
                     if agent_phone:
+                        lead_name = property_data.get("owner_name")
+                        logger.info(f"Sending agent notification to {agent_phone} for lead on {full_address}")
                         agent_sms = send_agent_notification_sms(
                             to_phone=agent_phone,
-                            consumer_phone=consumer_phone or consumer_email or "N/A",
                             property_address=full_address,
-                            report_url=report_url
+                            report_url=report_url,
+                            lead_name=lead_name,
+                            consumer_phone=consumer_phone,
+                            consumer_email=consumer_email,
                         )
                         
                         if agent_sms.get('success'):
+                            logger.info(f"Agent notification sent: {agent_sms.get('message_sid')}")
                             cur.execute("""
                                 UPDATE consumer_reports 
                                 SET agent_sms_sent_at = NOW(),
                                     agent_sms_sid = %s
                                 WHERE id = %s::uuid
                             """, (agent_sms.get('message_sid'), report_id))
+                        else:
+                            logger.error(f"Agent notification failed: {agent_sms.get('error')}")
                     
                     logger.info(f"Consumer report processed successfully: {report_id}")
                     return {"ok": True, "report_id": report_id}
