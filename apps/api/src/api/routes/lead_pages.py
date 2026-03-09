@@ -28,6 +28,7 @@ router = APIRouter(prefix="/v1/cma", tags=["lead-pages"])
 class AgentLandingPageInfo(BaseModel):
     """Agent info displayed on landing page."""
     name: str
+    job_title: Optional[str] = None
     photo_url: Optional[str] = None
     company_name: Optional[str] = None
     phone: Optional[str] = None
@@ -36,6 +37,7 @@ class AgentLandingPageInfo(BaseModel):
     headline: str
     subheadline: str
     theme_color: str
+    accent_color: str
     logo_url: Optional[str] = None
     website_url: Optional[str] = None
 
@@ -132,8 +134,12 @@ async def get_landing_page_info(
         # Track visit
         increment_landing_page_visits(conn, cur, agent_code)
         
+        primary = agent.get("primary_color") or agent.get("landing_page_theme_color") or "#8B5CF6"
+        accent = agent.get("accent_color") or primary
+
         return AgentLandingPageInfo(
             name=agent.get("full_name", ""),
+            job_title=agent.get("job_title"),
             photo_url=agent.get("photo_url"),
             company_name=agent.get("company_name"),
             phone=agent.get("phone"),
@@ -141,7 +147,8 @@ async def get_landing_page_info(
             license_number=agent.get("license_number"),
             headline=agent.get("landing_page_headline", "What's Your Home Worth?"),
             subheadline=agent.get("landing_page_subheadline", "Get a free, professional property report in seconds."),
-            theme_color=agent.get("primary_color") or agent.get("landing_page_theme_color") or "#8B5CF6",
+            theme_color=primary,
+            accent_color=accent,
             logo_url=agent.get("logo_url"),
             website_url=agent.get("website_url"),
         )

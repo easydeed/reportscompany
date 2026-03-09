@@ -116,7 +116,9 @@ def get_agent_by_code(cursor, agent_code: str) -> Optional[dict]:
             u.landing_page_visits,
             a.logo_url,
             a.primary_color,
-            a.website_url
+            a.website_url,
+            u.job_title,
+            a.secondary_color
         FROM users u
         JOIN accounts a ON a.id = u.account_id
         WHERE u.agent_code = %s
@@ -148,6 +150,8 @@ def get_agent_by_code(cursor, agent_code: str) -> Optional[dict]:
         "logo_url": row[16],
         "primary_color": row[17],
         "website_url": row[18],
+        "job_title": row[19],
+        "accent_color": row[20],
     }
 
 

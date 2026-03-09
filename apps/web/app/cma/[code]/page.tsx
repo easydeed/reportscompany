@@ -10,6 +10,7 @@ interface PageProps {
 
 export interface AgentInfo {
   name: string;
+  job_title: string | null;
   photo_url: string | null;
   company_name: string | null;
   phone: string | null;
@@ -18,6 +19,7 @@ export interface AgentInfo {
   headline: string;
   subheadline: string;
   theme_color: string;
+  accent_color: string;
   logo_url: string | null;
   website_url: string | null;
 }
@@ -84,16 +86,18 @@ export default async function CmaLandingPage({ params, searchParams }: PageProps
   }
 
   const tc = agent.theme_color;
+  const ac = agent.accent_color;
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Gradient Hero */}
-      <div
-        className="relative overflow-hidden"
-        style={{
-          background: `linear-gradient(135deg, ${tc} 0%, ${tc}dd 50%, ${tc}aa 100%)`,
-        }}
-      >
+      {/* Gradient Hero — matches email banner */}
+      <div className="relative overflow-hidden">
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `linear-gradient(135deg, ${tc} 0%, ${ac} 100%)`,
+          }}
+        />
         <div
           className="absolute inset-0 opacity-10"
           style={{
@@ -118,6 +122,12 @@ export default async function CmaLandingPage({ params, searchParams }: PageProps
             {agent.subheadline}
           </p>
         </div>
+
+        {/* Accent stripe — matches email banner divider */}
+        <div
+          className="h-1 w-full relative z-10"
+          style={{ background: `linear-gradient(90deg, ${tc} 0%, ${ac} 100%)` }}
+        />
       </div>
 
       {/* Main content card — overlapping hero */}
@@ -141,6 +151,9 @@ export default async function CmaLandingPage({ params, searchParams }: PageProps
             )}
             <div className="min-w-0">
               <h2 className="text-lg font-semibold text-slate-900 truncate">{agent.name}</h2>
+              {agent.job_title && (
+                <p className="text-sm font-medium truncate" style={{ color: tc }}>{agent.job_title}</p>
+              )}
               {agent.company_name && (
                 <p className="text-slate-600 text-sm truncate">{agent.company_name}</p>
               )}
