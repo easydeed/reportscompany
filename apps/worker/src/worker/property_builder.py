@@ -862,6 +862,31 @@ class PropertyReportBuilder:
             "high": extract_comp_stats(high_comp),
         }
     
+    @staticmethod
+    def _geocode_address(address: str) -> tuple:
+        """
+        Geocode an address via Google Maps Geocoding API.
+        Returns (lat, lng) or (None, None) on failure.
+        """
+        if not address or not GOOGLE_MAPS_API_KEY:
+            return None, None
+        try:
+            import httpx
+            resp = httpx.get(
+                "https://maps.googleapis.com/maps/api/geocode/json",
+                params={"address": address, "key": GOOGLE_MAPS_API_KEY},
+                timeout=10.0,
+            )
+            data = resp.json()
+            if data.get("status") == "OK" and data.get("results"):
+                loc = data["results"][0]["geometry"]["location"]
+                logger.warning("[DIAGNOSTIC] Geocoded '%s' → %s, %s", address[:50], loc["lat"], loc["lng"])
+                return loc["lat"], loc["lng"]
+            logger.warning("[DIAGNOSTIC] Geocode failed for '%s': %s", address[:50], data.get("status"))
+        except Exception as e:
+            logger.warning("[DIAGNOSTIC] Geocode error: %s", e)
+        return None, None
+
     def _build_images_context(self) -> Dict[str, Any]:
         """
         Build images context for V0 Teal template.
@@ -874,8 +899,19 @@ class PropertyReportBuilder:
         Aerial map: Google Static Maps roadmap with property pin.
         """
         sitex_data = self.report_data.get("sitex_data") or {}
-        lat = sitex_data.get("latitude") or sitex_data.get("lat")
-        lng = sitex_data.get("longitude") or sitex_data.get("lng")
+        lat = sitex_data.get("latitude") or sitex_data.get("lat") or None
+        lng = sitex_data.get("longitude") or sitex_data.get("lng") or None
+
+        # SiteX often returns 0/0 when it has no coordinates — treat as missing
+        if lat is not None and lng is not None and float(lat) == 0 and float(lng) == 0:
+            lat, lng = None, None
+
+        # Fallback: geocode the address if we have no coordinates
+        if (lat is None or lng is None) and GOOGLE_MAPS_API_KEY:
+            prop = self._build_property_context()
+            full_addr = prop.get("full_address") or ""
+            if full_addr:
+                lat, lng = self._geocode_address(full_addr)
 
         logger.warning("[DIAGNOSTIC] _build_images_context: lat=%s, lng=%s", lat, lng)
         logger.warning("[DIAGNOSTIC] GOOGLE_MAPS_API_KEY truthy: %s", bool(GOOGLE_MAPS_API_KEY))
