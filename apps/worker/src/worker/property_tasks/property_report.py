@@ -23,6 +23,7 @@ Usage:
 """
 
 import os
+import re
 import time
 import logging
 import psycopg
@@ -33,6 +34,7 @@ from celery import shared_task
 from ..app import celery
 from ..property_builder import PropertyReportBuilder
 from ..pdf_engine import render_pdf
+from ..utils.image_proxy import fetch_image_as_base64
 
 logger = logging.getLogger(__name__)
 
@@ -292,6 +294,62 @@ def update_report_comparables(report_id: str, comparables: list):
             """, (json.dumps(comparables), report_id))
 
 
+def embed_images_as_base64(html: str) -> str:
+    """
+    Scan rendered HTML for external image URLs in <img src="..."> and
+    CSS background-image: url('...') patterns, fetch each one server-side,
+    and replace with base64 data URIs.
+
+    PDFShift renders HTML from its own servers, so external URLs that rely on
+    referrer headers, API key IP-allowlists, or hotlink protection will fail.
+    Embedding as base64 guarantees images appear in the PDF.
+    """
+    seen: dict[str, str | None] = {}
+
+    def _replace(url: str) -> str:
+        if not url or url.startswith("data:"):
+            return url
+        if url in seen:
+            return seen[url] if seen[url] else url
+        logger.info("[IMG-EMBED] Fetching: %s", url[:100])
+        b64 = fetch_image_as_base64(url)
+        seen[url] = b64
+        if b64:
+            logger.info("[IMG-EMBED] OK (%d chars)", len(b64))
+        else:
+            logger.warning("[IMG-EMBED] FAILED, keeping original URL")
+        return b64 if b64 else url
+
+    def _img_src_replacer(m: re.Match) -> str:
+        prefix, url, suffix = m.group(1), m.group(2), m.group(3)
+        return f'{prefix}{_replace(url)}{suffix}'
+
+    def _bg_url_replacer(m: re.Match) -> str:
+        prefix, url, suffix = m.group(1), m.group(2), m.group(3)
+        return f'{prefix}{_replace(url)}{suffix}'
+
+    html = re.sub(
+        r'''(src\s*=\s*["'])([^"']+)(["'])''',
+        _img_src_replacer,
+        html,
+    )
+    html = re.sub(
+        r"""(background-image\s*:\s*url\s*\(\s*['"]?)([^'")]+)(['"]?\s*\))""",
+        _bg_url_replacer,
+        html,
+    )
+    html = re.sub(
+        r"""(background\s*:[^;]*url\s*\(\s*['"]?)([^'")]+)(['"]?\s*\))""",
+        _bg_url_replacer,
+        html,
+    )
+
+    total = len(seen)
+    ok = sum(1 for v in seen.values() if v)
+    logger.warning("[IMG-EMBED] Embedded %d/%d images as base64", ok, total)
+    return html
+
+
 @celery.task(
     name="generate_property_report",
     bind=True,
@@ -342,7 +400,15 @@ def generate_property_report(self, report_id: str):
         # Render the full HTML
         html_content = builder.render_html()
         logger.info(f"Generated HTML: {len(html_content)} chars")
-        
+
+        # 3b. Embed external images as base64 data URIs.
+        # PDFShift renders from its own servers, so Google Maps API URLs,
+        # MLS photo CDNs, and other external images fail due to referrer/IP
+        # restrictions. Base64 embedding guarantees they appear in the PDF.
+        logger.info("Embedding images as base64 for PDF rendering...")
+        html_content = embed_images_as_base64(html_content)
+        logger.info(f"HTML after image embedding: {len(html_content)} chars")
+
         # 4. Generate PDF with PDFShift
         logger.info(f"Generating PDF for report: {report_id}")
         pdf_path, _ = render_pdf(
