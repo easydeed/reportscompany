@@ -59,6 +59,11 @@ interface ReportData {
     company_name?: string;
     license_number?: string;
   };
+  branding?: {
+    primary_color: string;
+    accent_color: string;
+    logo_url?: string;
+  };
   has_pdf: boolean;
 }
 
@@ -221,9 +226,10 @@ export function MobileReportViewer({ report, reportId }: Props) {
               onClick={() => setActiveTab(tab.id)}
               className={`flex flex-col items-center px-3 py-1 rounded-lg transition-colors ${
                 isActive 
-                  ? 'text-indigo-600 bg-indigo-50' 
+                  ? '' 
                   : 'text-gray-500 hover:text-gray-700'
               }`}
+              style={isActive ? { color: report.branding?.primary_color || '#6366f1', backgroundColor: `${report.branding?.primary_color || '#6366f1'}15` } : {}}
             >
               <Icon className="w-5 h-5" />
               <span className="text-xs mt-0.5">{tab.label}</span>
@@ -244,7 +250,7 @@ function OverviewTab({ report, formatPrice }: { report: ReportData; formatPrice:
   return (
     <div className="p-4 space-y-4">
       {/* Hero Card */}
-      <div className="bg-gradient-to-br from-violet-600 to-indigo-700 rounded-2xl p-6 text-white">
+      <div className="rounded-2xl p-6 text-white" style={{ background: `linear-gradient(135deg, ${report.branding?.primary_color || '#6366f1'} 0%, ${report.branding?.accent_color || '#8b5cf6'} 100%)` }}>
         <p className="text-violet-200 text-sm mb-1">Estimated Value Range</p>
         <p className="text-3xl font-bold mb-2">
           {formatPrice(report.value_estimate.low)} - {formatPrice(report.value_estimate.high)}
@@ -580,7 +586,8 @@ function AgentTab({
           <a
             href={`tel:${report.agent.phone}`}
             onClick={() => onContactClick('call')}
-            className="flex items-center justify-center gap-3 w-full py-4 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition"
+            className="flex items-center justify-center gap-3 w-full py-4 text-white rounded-xl font-semibold transition"
+            style={{ backgroundColor: report.branding?.primary_color || '#6366f1' }}
           >
             <Phone className="w-5 h-5" />
             Call {report.agent.name.split(' ')[0]}
@@ -591,7 +598,8 @@ function AgentTab({
           <a
             href={`sms:${report.agent.phone}`}
             onClick={() => onContactClick('text')}
-            className="flex items-center justify-center gap-3 w-full py-4 bg-white border-2 border-violet-600 text-indigo-600 rounded-xl font-semibold hover:bg-indigo-50 transition"
+            className="flex items-center justify-center gap-3 w-full py-4 bg-white border-2 rounded-xl font-semibold transition"
+            style={{ borderColor: report.branding?.primary_color || '#6366f1', color: report.branding?.primary_color || '#6366f1' }}
           >
             <MessageSquare className="w-5 h-5" />
             Send Text

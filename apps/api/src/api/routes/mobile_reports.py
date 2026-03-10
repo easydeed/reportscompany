@@ -95,6 +95,7 @@ class MobileReportResponse(BaseModel):
     value_estimate: ValueEstimate
     market_stats: MarketStats
     agent: AgentInfo
+    branding: Optional[dict] = None
     has_pdf: bool
     created_at: datetime
 
@@ -238,6 +239,24 @@ async def get_report_data(
         company_name=report.get("company_name")
     )
     
+    # Fetch branding for viewer
+    branding_data = None
+    with db_conn() as (conn, cur):
+        cur.execute("""
+            SELECT a.primary_color, a.secondary_color, a.logo_url
+            FROM accounts a
+            JOIN users u ON u.account_id = a.id
+            WHERE u.id = %s
+            LIMIT 1
+        """, (str(report.get("agent_id")),))
+        brand_row = cur.fetchone()
+        if brand_row:
+            branding_data = {
+                "primary_color": brand_row[0] or "#6366f1",
+                "accent_color": brand_row[1] or "#8b5cf6",
+                "logo_url": brand_row[2],
+            }
+    
     return MobileReportResponse(
         id=str(report["id"]),
         property=prop,
@@ -245,6 +264,7 @@ async def get_report_data(
         value_estimate=val_est,
         market_stats=mkt_stats,
         agent=agent,
+        branding=branding_data,
         has_pdf=report.get("pdf_url") is not None,
         created_at=report["created_at"]
     )

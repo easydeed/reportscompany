@@ -1140,9 +1140,10 @@ def process_consumer_report(self, report_id: str):
                     six_months_ago = (datetime.now() - timedelta(days=180)).strftime("%Y-%m-%d")
                     
                     sr_params = {
-                        "type": "RES",
+                        "type": "residential",
                         "status": "Closed",
                         "postalCodes": prop_zip,
+                        "cities": prop_city,
                         "mindate": six_months_ago,
                         "sort": "-closeDate",
                     }
@@ -1161,7 +1162,34 @@ def process_consumer_report(self, report_id: str):
                     # Fetch from SimplyRETS
                     raw_comps = fetch_properties(sr_params, limit=10)
                     logger.info(f"SimplyRETS returned {len(raw_comps)} comparables")
-                    
+
+                    # Fallback 1: Remove sqft/bed filters
+                    if len(raw_comps) == 0:
+                        logger.info("No comps with initial filters, retrying without bed/sqft constraints")
+                        fallback_params = {
+                            "type": "residential",
+                            "status": "Closed",
+                            "postalCodes": prop_zip,
+                            "cities": prop_city,
+                            "mindate": six_months_ago,
+                            "sort": "-closeDate",
+                        }
+                        raw_comps = fetch_properties(fallback_params, limit=10)
+                        logger.info(f"Fallback 1 returned {len(raw_comps)} comparables")
+
+                    # Fallback 2: City-only search without zip
+                    if len(raw_comps) == 0 and prop_city:
+                        logger.info("No comps with zip, retrying with city only")
+                        city_params = {
+                            "type": "residential",
+                            "status": "Closed",
+                            "cities": prop_city,
+                            "mindate": six_months_ago,
+                            "sort": "-closeDate",
+                        }
+                        raw_comps = fetch_properties(city_params, limit=10)
+                        logger.info(f"Fallback 2 (city-only) returned {len(raw_comps)} comparables")
+
                     # Parse comparables
                     comp_prices = []
                     comp_ppsf = []

@@ -62,6 +62,8 @@ class PropertySearchResult(BaseModel):
     bathrooms: Optional[float] = None
     sqft: Optional[int] = None
     year_built: Optional[int] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 
 class ReportRequestPayload(BaseModel):
@@ -83,6 +85,8 @@ class ReportRequestPayload(BaseModel):
     sqft: Optional[int] = None
     year_built: Optional[int] = None
     lot_size: Optional[int] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     
     @field_validator('phone')
     @classmethod
@@ -271,6 +275,8 @@ async def request_report(
             "sqft": payload.sqft,
             "year_built": payload.year_built,
             "lot_size": payload.lot_size,
+            "latitude": payload.latitude,
+            "longitude": payload.longitude,
         }
         property_data = {k: v for k, v in property_data.items() if v is not None}
         
