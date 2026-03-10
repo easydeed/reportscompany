@@ -83,9 +83,9 @@ export function ReportBuilder() {
           const data = await brandingRes.json()
           setBranding({
             primaryColor: data.primary_color || DEFAULT_BRANDING.primaryColor,
-            accentColor: data.accent_color || DEFAULT_BRANDING.accentColor,
+            accentColor: data.accent_color || data.secondary_color || DEFAULT_BRANDING.accentColor,
             pdfHeaderLogoUrl: data.pdf_header_logo_url || null,
-            displayName: data.display_name || null,
+            displayName: data.display_name || data.name || null,
           })
         }
 

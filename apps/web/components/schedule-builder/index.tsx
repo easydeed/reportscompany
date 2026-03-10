@@ -100,9 +100,9 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
           const data = await brandingRes.json()
           setBranding({
             primaryColor: data.primary_color || DEFAULT_BRANDING.primaryColor,
-            accentColor: data.accent_color || DEFAULT_BRANDING.accentColor,
-            emailLogoUrl: data.email_logo_url || null,
-            displayName: data.display_name || null,
+            accentColor: data.accent_color || data.secondary_color || DEFAULT_BRANDING.accentColor,
+            emailLogoUrl: data.email_logo_url || data.logo_url || null,
+            displayName: data.display_name || data.name || null,
           })
         }
 
