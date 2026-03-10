@@ -303,7 +303,7 @@ async def request_report(
             (
                 agent_id,
                 agent_code.upper(),
-                payload.phone,
+                payload.phone or "",
                 payload.email,
                 payload.delivery_method,
                 payload.property_address,
