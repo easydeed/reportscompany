@@ -376,8 +376,6 @@ export default function PropertyReportDetailPage() {
             </CardContent>
           </Card>
         </div>
-
-        </div>
       </div>
     </div>
   );
