@@ -1363,27 +1363,44 @@ def process_consumer_report(self, report_id: str):
 
                     builder_comps = []
                     for comp in comparables[:6]:
+                        _sold = comp.get("sold_price") or 0
+                        _addr = comp.get("address", "")
+                        _sqft = comp.get("sqft") or 0
+                        _dist = comp.get("distance_miles") or 0
                         builder_comps.append({
-                            "address": comp.get("address", ""),
+                            "address": _addr,
+                            "full_address": _addr,
+                            "street_address": _addr,
                             "latitude": comp.get("latitude"),
                             "longitude": comp.get("longitude"),
                             "photo_url": comp.get("photo_url"),
+                            "image_url": comp.get("photo_url"),
                             "map_image_url": comp.get("map_image_url"),
-                            "price": comp.get("sold_price", 0),
-                            "close_price": comp.get("sold_price", 0),
-                            "sale_price": comp.get("sold_price", 0),
+                            "price": _sold,
+                            "close_price": _sold,
+                            "sale_price": _sold,
+                            "list_price": _sold,
                             "sold_date": comp.get("sold_date", ""),
                             "close_date": comp.get("sold_date", ""),
                             "days_on_market": comp.get("days_ago", 0),
-                            "distance_miles": comp.get("distance_miles", 0),
-                            "distance": comp.get("distance_miles", 0),
-                            "sqft": comp.get("sqft", 0),
+                            "distance_miles": _dist,
+                            "distance": _dist,
+                            "sqft": _sqft,
+                            "living_area": _sqft,
+                            "area": _sqft,
                             "bedrooms": comp.get("bedrooms", 0),
                             "bathrooms": comp.get("bathrooms", 0),
                             "year_built": comp.get("year_built", 0),
                             "lot_size": comp.get("lot_size", 0),
                             "status": "Closed",
                         })
+                    logger.warning("[CMA_DEBUG] builder_comps built: %d comps", len(builder_comps))
+                    if builder_comps:
+                        c0 = builder_comps[0]
+                        logger.warning(
+                            "[CMA_DEBUG] First builder_comp: addr=%s, price=%s, sqft=%s, keys=%s",
+                            c0.get("address", "?")[:30], c0.get("price"), c0.get("sqft"), list(c0.keys()),
+                        )
 
                     report_data_for_pdf = {
                         "report_type": "seller",

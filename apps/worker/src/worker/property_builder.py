@@ -477,7 +477,18 @@ class PropertyReportBuilder:
         - SimplyRETS sends: latitude/longitude, photos, etc.
         """
         raw_comps = self.report_data.get("comparables") or []
-        logger.warning("[DIAGNOSTIC] _build_comparables_context: %d raw comps", len(raw_comps))
+        logger.warning("[CMA_DEBUG] _build_comparables_context: %d raw comps received", len(raw_comps))
+        if raw_comps:
+            logger.warning("[CMA_DEBUG] First comp keys: %s", list(raw_comps[0].keys()))
+            first = raw_comps[0]
+            logger.warning(
+                "[CMA_DEBUG] First comp data: address=%s, price=%s, sale_price=%s, close_price=%s, sqft=%s",
+                first.get("address", "?")[:40],
+                first.get("price"),
+                first.get("sale_price"),
+                first.get("close_price"),
+                first.get("sqft"),
+            )
 
         comparables = []
         for comp in raw_comps[:6]:  # Max 6 comparables (3 rows of 2)
@@ -542,8 +553,19 @@ class PropertyReportBuilder:
             display_date = self._fmt_date(list_date_raw if is_active else sold_date_raw)
             display_date_label = "Listed" if is_active else "Sold"
 
+            resolved_addr = comp.get("address") or comp.get("full_address", "")
+            logger.warning(
+                "[CMA_DEBUG] Comp %d: addr=%s, raw_price=%s, raw_price_num=%s, sqft=%s, image=%s",
+                len(comparables) + 1,
+                resolved_addr[:30],
+                raw_price,
+                raw_price_num,
+                comp_sqft,
+                "yes" if image_url else "no",
+            )
+
             comparables.append({
-                "address": comp.get("address") or comp.get("full_address", ""),
+                "address": resolved_addr,
                 "latitude": latitude,
                 "longitude": longitude,
                 "image_url": image_url,
@@ -572,6 +594,7 @@ class PropertyReportBuilder:
                 "pool": comp.get("pool") if isinstance(comp.get("pool"), bool) else (comp.get("pool", "No") == "Yes"),
             })
         
+        logger.warning("[CMA_DEBUG] _build_comparables_context: returning %d processed comps", len(comparables))
         return comparables
     
     def _format_price(self, price: Any) -> str:
@@ -675,6 +698,20 @@ class PropertyReportBuilder:
             "sale_price_high": area.get("sale_price_high"),
         }
     
+    @staticmethod
+    def _extract_price(comp: Dict) -> Optional[float]:
+        """Extract a numeric price from a comp dict, checking all known field names."""
+        for key in ("price", "close_price", "sale_price", "list_price", "sold_price"):
+            val = comp.get(key)
+            if val is not None and val != "" and val != "-":
+                try:
+                    fval = float(val)
+                    if fval > 0:
+                        return fval
+                except (ValueError, TypeError):
+                    continue
+        return None
+
     def _build_range_of_sales_context(self) -> Dict[str, Any]:
         """
         Build range of sales context from comparables.
@@ -684,18 +721,15 @@ class PropertyReportBuilder:
         if not comparables:
             return {}
         
-        # Calculate statistics from comparables
         prices = []
         sqfts = []
         beds = []
         baths = []
         
         for comp in comparables:
-            if comp.get("price") or comp.get("close_price"):
-                try:
-                    prices.append(float(comp.get("price") or comp.get("close_price")))
-                except (ValueError, TypeError):
-                    pass
+            price_val = self._extract_price(comp)
+            if price_val is not None:
+                prices.append(price_val)
             if comp.get("sqft"):
                 try:
                     sqfts.append(float(comp.get("sqft")))
@@ -743,15 +777,13 @@ class PropertyReportBuilder:
         days_on_market = []
         
         for comp in comparables:
-            raw_price = comp.get("price") or comp.get("close_price") or comp.get("sale_price") or comp.get("list_price")
-            if raw_price:
+            price_val = self._extract_price(comp)
+            if price_val is not None:
+                prices.append(price_val)
+            sqft_val = comp.get("sqft") or comp.get("living_area") or comp.get("area")
+            if sqft_val:
                 try:
-                    prices.append(float(raw_price))
-                except (ValueError, TypeError):
-                    pass
-            if comp.get("sqft"):
-                try:
-                    sqfts.append(float(comp.get("sqft")))
+                    sqfts.append(float(sqft_val))
                 except (ValueError, TypeError):
                     pass
             if comp.get("bedrooms"):
@@ -783,11 +815,13 @@ class PropertyReportBuilder:
                     days_on_market.append(int(dom))
                 except (ValueError, TypeError):
                     pass
+
+        logger.warning("[CMA_DEBUG] _build_stats_context: %d prices, %d sqfts from %d comps", len(prices), len(sqfts), len(comparables))
         
         # Sort comparables by price to get low/medium/high
         sorted_by_price = sorted(
-            [c for c in comparables if c.get("price") or c.get("close_price") or c.get("sale_price") or c.get("list_price")],
-            key=lambda x: float(x.get("price") or x.get("close_price") or x.get("sale_price") or x.get("list_price") or 0)
+            [c for c in comparables if self._extract_price(c) is not None],
+            key=lambda x: self._extract_price(x) or 0
         )
         
         # Get low, medium, high comps
@@ -806,8 +840,8 @@ class PropertyReportBuilder:
                 return default
 
         def extract_comp_stats(comp):
-            raw_price = comp.get("price") or comp.get("close_price") or comp.get("sale_price") or comp.get("list_price")
-            sqft = comp.get("sqft") or comp.get("area")
+            raw_price = self._extract_price(comp) or 0
+            sqft = comp.get("sqft") or comp.get("living_area") or comp.get("area")
             return {
                 "distance": _safe_num(comp.get("distance_miles") or comp.get("distance"), 0),
                 "sqft": _safe_num(sqft, 0),
@@ -1039,17 +1073,17 @@ class PropertyReportBuilder:
             city     = self.report_data.get("property_city", "")
             zip_code = self.report_data.get("property_zip", "")
             state    = self.report_data.get("property_state", "")
+            logger.warning("[CMA_DEBUG] market_trends: auto-fetching for city=%s, zip=%s, state=%s", city, zip_code, state)
             try:
                 from worker.compute.market_trends import fetch_and_compute_market_trends
                 market_trends_data = fetch_and_compute_market_trends(city, zip_code, state)
+                logger.warning("[CMA_DEBUG] market_trends: fetch returned %s", "data" if market_trends_data else "None")
             except Exception as _mt_exc:
-                logger.warning("market_trends: fetch failed — %s", _mt_exc)
+                logger.warning("[CMA_DEBUG] market_trends: fetch FAILED — %s", _mt_exc)
 
         if market_trends_data is None and "market_trends" in page_set:
-            # Not enough data or API error — silently drop the page rather than
-            # rendering a broken/empty Market Trends page.
             page_set = [p for p in page_set if p != "market_trends"]
-            logger.info("market_trends: page removed from page_set (insufficient data)")
+            logger.warning("[CMA_DEBUG] market_trends: page REMOVED from page_set (no data returned)")
 
         # ── Compute Color Roles ───────────────────────────────────────────
         dark_bg = self._THEME_DARK_BG.get(self.theme_name, "#18235c")
@@ -1120,7 +1154,13 @@ class PropertyReportBuilder:
             logger.info("ai_overview: page removed from page_set (no API key or generation failed)")
 
         context["overview_text"] = overview_text or ""
-        
+
+        logger.warning("[CMA_DEBUG] Final page_set: %s", page_set)
+        logger.warning("[CMA_DEBUG] Context comparables count: %d", len(context.get("comparables", [])))
+        logger.warning("[CMA_DEBUG] Context stats.total_comps: %s", context.get("stats", {}).get("total_comps"))
+        logger.warning("[CMA_DEBUG] Context stats.price_low: %s", context.get("stats", {}).get("price_low"))
+        logger.warning("[CMA_DEBUG] Context stats.price_high: %s", context.get("stats", {}).get("price_high"))
+
         try:
             template_path = THEME_TEMPLATES.get(self.theme_name, THEME_TEMPLATES["teal"])
             full_template_path = TEMPLATES_DIR / template_path
