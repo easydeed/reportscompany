@@ -1,5 +1,3 @@
-import Link from "next/link"
-
 export function MarketingFooter() {
   return (
     <footer className="bg-[#0F172A] px-6 py-24 text-[#94A3B8]">
@@ -26,7 +24,7 @@ export function MarketingFooter() {
               </li>
               <li>
                 <a href="mailto:sales@trendyreports.com" className="text-sm transition-colors hover:text-white">
-                  For Affiliates
+                  For Title Companies
                 </a>
               </li>
               <li>
@@ -48,6 +46,11 @@ export function MarketingFooter() {
                   Contact Us
                 </a>
               </li>
+              <li>
+                <a href="#faq" className="text-sm transition-colors hover:text-white">
+                  FAQ
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -58,23 +61,23 @@ export function MarketingFooter() {
             </p>
             <ul className="mt-4 space-y-3">
               <li>
-                <Link href="/privacy" className="text-sm transition-colors hover:text-white">
+                <a href="/privacy" className="text-sm transition-colors hover:text-white">
                   Privacy Policy
-                </Link>
+                </a>
               </li>
               <li>
-                <Link href="/terms" className="text-sm transition-colors hover:text-white">
+                <a href="/terms" className="text-sm transition-colors hover:text-white">
                   Terms of Service
-                </Link>
+                </a>
               </li>
             </ul>
           </div>
         </div>
 
         <div className="mt-16 border-t border-white/10 pt-10 text-center text-sm">
-          {`\u00A9 ${new Date().getFullYear()} TrendyReports. All rights reserved.`}
+          {"\u00A9 2026 TrendyReports. All rights reserved."}
         </div>
       </div>
     </footer>
-  )
+  );
 }

@@ -1,23 +1,23 @@
-"use client"
+"use client";
 
-import { motion } from "framer-motion"
-import { Check } from "lucide-react"
+import { motion } from "framer-motion";
+import { Check } from "lucide-react";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-}
+};
 
 const plans = [
   {
     name: "Starter",
     price: "$0",
-    description: "Get started for free",
+    description: "See what TrendyReports can do",
     features: [
       "50 reports/month",
       "Core report types",
       "Email & PDF delivery",
-      "Basic branding",
+      "Your logo and brand colors",
     ],
     cta: "Start free trial",
     featured: false,
@@ -25,12 +25,12 @@ const plans = [
   {
     name: "Pro",
     price: "$29",
-    description: "For individual agents",
+    description: "Your marketing on autopilot",
     features: [
       "300 reports/month",
       "All 8 report types",
       "Automated scheduling",
-      "Full white-label branding",
+      "Full white-label — no one knows we exist",
     ],
     cta: "Start free trial",
     featured: true,
@@ -38,17 +38,17 @@ const plans = [
   {
     name: "Team",
     price: "$99",
-    description: "For teams & affiliates",
+    description: "For title companies, lenders & brokerages",
     features: [
       "Unlimited reports",
-      "Sponsor agents",
+      "Sponsor unlimited agents",
       "Admin dashboard",
       "Dedicated support",
     ],
     cta: "Start free trial",
     featured: false,
   },
-]
+];
 
 export function Pricing() {
   return (
@@ -88,10 +88,14 @@ export function Pricing() {
 
               <h3 className="text-xl font-bold text-foreground">{plan.name}</h3>
               <div className="mt-3 flex items-baseline gap-1">
-                <span className="text-4xl font-bold text-foreground">{plan.price}</span>
+                <span className="text-4xl font-bold text-foreground">
+                  {plan.price}
+                </span>
                 <span className="text-muted-foreground">/month</span>
               </div>
-              <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {plan.description}
+              </p>
 
               <ul className="mt-6 space-y-3">
                 {plan.features.map((f) => (
@@ -124,5 +128,5 @@ export function Pricing() {
         </motion.p>
       </motion.div>
     </section>
-  )
+  );
 }

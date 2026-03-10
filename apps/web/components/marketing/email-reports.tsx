@@ -1,19 +1,19 @@
-"use client"
+"use client";
 
-import { motion } from "framer-motion"
-import { ReportCarousel } from "./report-carousel"
+import { motion } from "framer-motion";
+import { ReportCarousel } from "./report-carousel";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-}
+};
 
 const badges = [
-  "Your logo & colors",
-  "Mobile-first design",
-  "Key market metrics",
-  "Your contact info",
-]
+  "Your brand, front and center",
+  "Built for phones first",
+  "Real data, not filler",
+  "One tap to reach you",
+];
 
 function StatGrid() {
   return (
@@ -24,7 +24,10 @@ function StatGrid() {
           { label: "Active listings", value: "1,247" },
           { label: "Avg DOM", value: "28" },
         ].map((s) => (
-          <div key={s.label} className="rounded-lg bg-[#F8FAFC] p-3 text-center">
+          <div
+            key={s.label}
+            className="rounded-lg bg-[#F8FAFC] p-3 text-center"
+          >
             <p className="text-base font-bold text-foreground">{s.value}</p>
             <p className="text-xs text-muted-foreground">{s.label}</p>
           </div>
@@ -37,9 +40,14 @@ function StatGrid() {
           { label: "Days on market", pct: "40%", color: "bg-[#6366F1]" },
         ].map((b) => (
           <div key={b.label} className="flex items-center gap-3">
-            <span className="w-24 text-xs text-muted-foreground">{b.label}</span>
+            <span className="w-24 text-xs text-muted-foreground">
+              {b.label}
+            </span>
             <div className="h-2 flex-1 rounded-full bg-muted">
-              <div className={`h-2 rounded-full ${b.color}`} style={{ width: b.pct }} />
+              <div
+                className={`h-2 rounded-full ${b.color}`}
+                style={{ width: b.pct }}
+              />
             </div>
           </div>
         ))}
@@ -50,12 +58,14 @@ function StatGrid() {
           SJ
         </div>
         <div>
-          <p className="text-sm font-semibold text-foreground">Sarah Johnson</p>
+          <p className="text-sm font-semibold text-foreground">
+            Sarah Johnson
+          </p>
           <p className="text-xs text-muted-foreground">Compass</p>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function ListingsGrid() {
@@ -68,28 +78,48 @@ function ListingsGrid() {
           { addr: "903 Elm Dr", price: "$612,000" },
           { addr: "221 Maple Ln", price: "$445,000" },
         ].map((p) => (
-          <div key={p.addr} className="overflow-hidden rounded-lg border border-border">
+          <div
+            key={p.addr}
+            className="overflow-hidden rounded-lg border border-border"
+          >
             <div className="h-20 bg-gradient-to-br from-[#E0E7FF] to-[#C7D2FE]" />
             <div className="p-2.5">
-              <p className="text-xs font-semibold text-foreground">{p.price}</p>
+              <p className="text-xs font-semibold text-foreground">
+                {p.price}
+              </p>
               <p className="text-[10px] text-muted-foreground">{p.addr}</p>
             </div>
           </div>
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 function FeaturedListings() {
   return (
     <div className="space-y-3">
       {[
-        { addr: "1205 Lakeview Blvd", price: "$875,000", beds: 4, baths: 3, sqft: "3,200" },
-        { addr: "437 Sunset Dr", price: "$650,000", beds: 3, baths: 2, sqft: "2,100" },
+        {
+          addr: "1205 Lakeview Blvd",
+          price: "$875,000",
+          beds: 4,
+          baths: 3,
+          sqft: "3,200",
+        },
+        {
+          addr: "437 Sunset Dr",
+          price: "$650,000",
+          beds: 3,
+          baths: 2,
+          sqft: "2,100",
+        },
       ].map((p) => (
-        <div key={p.addr} className="overflow-hidden rounded-lg border border-border">
-          <div className="h-24 bg-gradient-to-br from-[#E0E7FF] to-[#C7D2FE]" />
+        <div
+          key={p.addr}
+          className="overflow-hidden rounded-lg border border-border"
+        >
+            <div className="h-24 bg-gradient-to-br from-[#E0E7FF] to-[#C7D2FE]" />
           <div className="p-3">
             <p className="text-sm font-bold text-foreground">{p.price}</p>
             <p className="text-xs text-muted-foreground">{p.addr}</p>
@@ -100,12 +130,13 @@ function FeaturedListings() {
         </div>
       ))}
     </div>
-  )
+  );
 }
 
 function MarketAnalysis() {
   return (
     <div className="space-y-3">
+      {/* Chart placeholder */}
       <div className="flex h-36 items-end gap-1.5 rounded-lg bg-[#F8FAFC] p-4">
         {[40, 55, 45, 65, 50, 70, 60, 75, 80, 72, 85, 90].map((h, i) => (
           <div
@@ -129,15 +160,31 @@ function MarketAnalysis() {
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 const emailCards = [
-  { title: "Market Snapshot", gradient: "bg-gradient-to-r from-[#6366F1] to-[#818CF8]", content: <StatGrid /> },
-  { title: "New Listings Gallery", gradient: "bg-gradient-to-r from-[#6366F1] to-[#818CF8]", content: <ListingsGrid /> },
-  { title: "Featured Listings", gradient: "bg-gradient-to-r from-[#4338CA] to-[#6366F1]", content: <FeaturedListings /> },
-  { title: "Market Analysis", gradient: "bg-gradient-to-r from-[#312E81] to-[#4338CA]", content: <MarketAnalysis /> },
-]
+  {
+    title: "Market Snapshot",
+    gradient: "bg-gradient-to-r from-[#6366F1] to-[#818CF8]",
+    content: <StatGrid />,
+  },
+  {
+    title: "New Listings Gallery",
+    gradient: "bg-gradient-to-r from-[#6366F1] to-[#818CF8]",
+    content: <ListingsGrid />,
+  },
+  {
+    title: "Featured Listings",
+    gradient: "bg-gradient-to-r from-[#4338CA] to-[#6366F1]",
+    content: <FeaturedListings />,
+  },
+  {
+    title: "Market Analysis",
+    gradient: "bg-gradient-to-r from-[#312E81] to-[#4338CA]",
+    content: <MarketAnalysis />,
+  },
+];
 
 export function EmailReports() {
   return (
@@ -151,17 +198,20 @@ export function EmailReports() {
       >
         <motion.div variants={fadeUp} className="text-center">
           <h2 className="text-4xl font-bold tracking-tight text-foreground md:text-5xl">
-            Email reports clients actually open
+            Market updates your sphere actually opens
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-            Mobile-optimized HTML emails with your brand front and center
+            Branded, mobile-friendly emails with real MLS data — not generic
+            content your clients ignore.
           </p>
         </motion.div>
 
         <div className="mt-14 grid items-center gap-12 md:grid-cols-2">
           {/* Feature badges */}
           <motion.div variants={fadeUp}>
-            <h3 className="text-2xl font-bold text-foreground">What makes them great</h3>
+            <h3 className="text-2xl font-bold text-foreground">
+              Why agents love them
+            </h3>
             <div className="mt-4 flex flex-wrap gap-3">
               {badges.map((b) => (
                 <span
@@ -173,9 +223,10 @@ export function EmailReports() {
               ))}
             </div>
             <p className="mt-6 leading-relaxed text-muted-foreground">
-              Every report is branded with your logo, colors, and contact
-              information. Clients see a professional, mobile-friendly email that
-              keeps you top of mind.
+              Logo, colors, and contact info on every report. Your clients see a
+              polished, mobile-friendly email from you — not from us. Real MLS
+              data, no filler content, and your phone number is always one tap
+              away.
             </p>
           </motion.div>
 
@@ -186,5 +237,5 @@ export function EmailReports() {
         </div>
       </motion.div>
     </section>
-  )
+  );
 }

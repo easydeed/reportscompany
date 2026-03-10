@@ -1,39 +1,39 @@
-"use client"
+"use client";
 
-import { motion } from "framer-motion"
-import { FileText, MapPin, BarChart3, QrCode } from "lucide-react"
+import { motion } from "framer-motion";
+import { FileText, MapPin, BarChart3, QrCode } from "lucide-react";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-}
+};
 
 const features = [
   {
     icon: FileText,
-    title: "5 designer templates",
+    title: "5 templates, each with a personality",
     description:
-      "Bold, Classic, Elegant, Modern, and Teal \u2014 each with its own personality",
+      "From bold and modern to classic and elegant. Pick the one that matches your brand.",
   },
   {
     icon: MapPin,
-    title: "Aerial maps & hero images",
+    title: "Aerial maps that show you did your homework",
     description:
-      "Google Maps integration with satellite views of the property",
+      "Google Maps satellite views of the property and surrounding neighborhood, built into the report.",
   },
   {
     icon: BarChart3,
-    title: "Comparable sales analysis",
+    title: "Comps that tell the story",
     description:
-      "Up to 6 comps with price, sqft, beds/baths, and distance",
+      "Up to 6 comparable sales with price, square footage, beds/baths, and distance. The data sellers need to price with confidence.",
   },
   {
     icon: QrCode,
-    title: "Built-in lead capture",
+    title: "Every report is a lead source",
     description:
-      "Every report gets a QR code that links to a branded landing page",
+      "A unique QR code on every report links to a branded landing page with a contact form. Print it on flyers, postcards, or yard signs.",
   },
-]
+];
 
 export function PropertyReports() {
   return (
@@ -47,11 +47,12 @@ export function PropertyReports() {
       >
         <motion.div variants={fadeUp} className="text-center">
           <h2 className="text-4xl font-bold tracking-tight text-foreground md:text-5xl">
-            Stunning property reports that win listings
+            The listing presentation piece that makes sellers say yes
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-            Generate branded CMA-style reports with 5 designer templates. Every
-            report includes a QR code that captures leads automatically.
+            Generate a branded CMA-style report in 60 seconds. Five designer
+            templates, aerial maps, comparable sales, and a built-in QR code
+            that captures leads for you.
           </p>
         </motion.div>
 
@@ -173,5 +174,5 @@ export function PropertyReports() {
         </div>
       </motion.div>
     </section>
-  )
+  );
 }

@@ -1,11 +1,12 @@
-"use client"
+"use client";
 
-import { motion } from "framer-motion"
+import { motion } from "framer-motion";
+import { MapPin } from "lucide-react";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-}
+};
 
 function ReportMockup() {
   return (
@@ -14,22 +15,18 @@ function ReportMockup() {
         className="rounded-2xl border border-border bg-card shadow-2xl"
         style={{ transform: "rotateY(-4deg) rotateX(2deg)" }}
       >
-        {/* Email header */}
         <div className="rounded-t-2xl bg-gradient-to-r from-[#6366F1] to-[#818CF8] px-8 py-6">
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-sm font-bold text-white">
               TR
             </div>
             <div>
-              <p className="text-base font-semibold text-white">
-                Market Snapshot &mdash; Austin, TX
-              </p>
+              <p className="text-base font-semibold text-white">Market Snapshot — Irvine, CA</p>
               <p className="text-sm text-white/70">January 2026 Report</p>
             </div>
           </div>
         </div>
 
-        {/* Stats grid */}
         <div className="grid grid-cols-3 gap-4 px-8 py-6">
           {[
             { label: "Median price", value: "$485,000" },
@@ -43,7 +40,6 @@ function ReportMockup() {
           ))}
         </div>
 
-        {/* Trend bars */}
         <div className="px-8 pb-6">
           <div className="space-y-3">
             <div className="flex items-center gap-3">
@@ -70,7 +66,6 @@ function ReportMockup() {
           </div>
         </div>
 
-        {/* Agent footer */}
         <div className="flex items-center gap-3 rounded-b-2xl border-t border-border bg-muted/50 px-8 py-5">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#6366F1] text-sm font-bold text-white">
             SJ
@@ -82,7 +77,7 @@ function ReportMockup() {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export function Hero() {
@@ -93,22 +88,21 @@ export function Hero() {
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true }}
-        variants={{
-          visible: { transition: { staggerChildren: 0.1 } },
-        }}
+        variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
       >
         <motion.h1
           variants={fadeUp}
           className="text-balance text-5xl font-bold tracking-tight text-foreground md:text-6xl lg:text-7xl"
         >
-          Market reports your clients actually want to read
+          You know you should be sending market updates. Now you actually will.
         </motion.h1>
         <motion.p
           variants={fadeUp}
           className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground"
         >
-          Create beautiful, branded market reports from live MLS data. Schedule
-          them once &mdash; they deliver themselves.
+          TrendyReports pulls live MLS data, brands it with your logo, and
+          delivers polished reports to your sphere on autopilot. Set it up in 2
+          minutes.
         </motion.p>
 
         <motion.div
@@ -129,11 +123,8 @@ export function Hero() {
           </a>
         </motion.div>
 
-        <motion.p
-          variants={fadeUp}
-          className="mt-5 text-sm text-muted-foreground/70"
-        >
-          {"Free for 14 days \u00B7 No credit card \u00B7 Takes 2 minutes"}
+        <motion.p variants={fadeUp} className="mt-5 text-sm text-muted-foreground/70">
+          {"Free for 14 days \u00B7 No credit card \u00B7 Your first report in under 2 minutes"}
         </motion.p>
 
         <motion.div variants={fadeUp}>
@@ -141,5 +132,5 @@ export function Hero() {
         </motion.div>
       </motion.div>
     </section>
-  )
+  );
 }

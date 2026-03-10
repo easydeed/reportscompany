@@ -1,19 +1,19 @@
-"use client"
+"use client";
 
-import { motion } from "framer-motion"
-import { ReportCarousel } from "./report-carousel"
+import { motion } from "framer-motion";
+import { ReportCarousel } from "./report-carousel";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-}
+};
 
 const badges = [
-  "Professional header",
-  "Property galleries",
-  "Charts & visualizations",
-  "Agent footer",
-]
+  "Professional headers",
+  "Property photo galleries",
+  "Market charts & trends",
+  "Your branded footer",
+];
 
 function PdfStatPage() {
   return (
@@ -42,7 +42,7 @@ function PdfStatPage() {
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 function PdfListingsGallery() {
@@ -65,7 +65,7 @@ function PdfListingsGallery() {
         </div>
       ))}
     </div>
-  )
+  );
 }
 
 function PdfFeatured() {
@@ -87,12 +87,13 @@ function PdfFeatured() {
         </div>
       ))}
     </div>
-  )
+  );
 }
 
 function PdfPriceTrends() {
   return (
     <div className="space-y-4">
+      {/* Chart area */}
       <div className="rounded-md bg-[#F8FAFC] p-4">
         <svg viewBox="0 0 200 60" className="w-full" aria-label="Price trend chart">
           <polyline
@@ -120,6 +121,7 @@ function PdfPriceTrends() {
           </div>
         </div>
       </div>
+      {/* Comparison table */}
       <div className="rounded-md border border-border text-[10px]">
         <div className="grid grid-cols-3 gap-px bg-muted font-semibold text-foreground">
           <div className="bg-card p-1.5">Metric</div>
@@ -139,15 +141,31 @@ function PdfPriceTrends() {
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 const pdfCards = [
-  { title: "Market Snapshot PDF", gradient: "bg-gradient-to-r from-[#6366F1] to-[#818CF8]", content: <PdfStatPage /> },
-  { title: "Listings Gallery PDF", gradient: "bg-gradient-to-r from-[#6366F1] to-[#818CF8]", content: <PdfListingsGallery /> },
-  { title: "Featured Listings PDF", gradient: "bg-gradient-to-r from-[#4338CA] to-[#6366F1]", content: <PdfFeatured /> },
-  { title: "Price Trends PDF", gradient: "bg-gradient-to-r from-[#312E81] to-[#4338CA]", content: <PdfPriceTrends /> },
-]
+  {
+    title: "Market Snapshot PDF",
+    gradient: "bg-gradient-to-r from-[#6366F1] to-[#818CF8]",
+    content: <PdfStatPage />,
+  },
+  {
+    title: "Listings Gallery PDF",
+    gradient: "bg-gradient-to-r from-[#6366F1] to-[#818CF8]",
+    content: <PdfListingsGallery />,
+  },
+  {
+    title: "Featured Listings PDF",
+    gradient: "bg-gradient-to-r from-[#4338CA] to-[#6366F1]",
+    content: <PdfFeatured />,
+  },
+  {
+    title: "Price Trends PDF",
+    gradient: "bg-gradient-to-r from-[#312E81] to-[#4338CA]",
+    content: <PdfPriceTrends />,
+  },
+];
 
 export function PdfReports() {
   return (
@@ -161,10 +179,11 @@ export function PdfReports() {
       >
         <motion.div variants={fadeUp} className="text-center">
           <h2 className="text-4xl font-bold tracking-tight text-foreground md:text-5xl">
-            Print-ready PDFs that look expensive
+            Print-ready PDFs that look like you hired a designer
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-            {"8.5\u00D711 formatted for perfect printing and digital sharing"}
+            Hand them out at open houses, attach them to listing presentations,
+            or text them to a curious buyer. They look polished every time.
           </p>
         </motion.div>
 
@@ -176,7 +195,9 @@ export function PdfReports() {
 
           {/* Feature badges on right */}
           <motion.div variants={fadeUp} className="order-1 md:order-2">
-            <h3 className="text-2xl font-bold text-foreground">Built for print and digital</h3>
+            <h3 className="text-2xl font-bold text-foreground">
+              Built for print and digital
+            </h3>
             <div className="mt-4 flex flex-wrap gap-3">
               {badges.map((b) => (
                 <span
@@ -188,13 +209,11 @@ export function PdfReports() {
               ))}
             </div>
             <p className="mt-6 leading-relaxed text-muted-foreground">
-              Every PDF is print-ready at 8.5 x 11 inches with professional
-              headers, property galleries, charts, and your agent branding in
-              the footer.
+              {"Every PDF is 8.5\u00D711, print-ready, and fully branded with your logo, colors, and contact info. Professional headers, property galleries, charts, and your agent footer \u2014 ready for print or screen."}
             </p>
           </motion.div>
         </div>
       </motion.div>
     </section>
-  )
+  );
 }

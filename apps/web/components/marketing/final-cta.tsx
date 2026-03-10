@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { motion } from "framer-motion"
+import { motion } from "framer-motion";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-}
+};
 
 export function FinalCta() {
   return (
@@ -21,10 +21,10 @@ export function FinalCta() {
           variants={fadeUp}
           className="text-4xl font-bold tracking-tight text-foreground md:text-5xl"
         >
-          Ready to try it?
+          Your sphere is waiting to hear from you.
         </motion.h2>
         <motion.p variants={fadeUp} className="mt-4 text-muted-foreground">
-          Set up takes 2 minutes. Your first report is free.
+          Set up takes 2 minutes. Your first report is on us.
         </motion.p>
         <motion.div variants={fadeUp} className="mt-8">
           <a
@@ -42,5 +42,5 @@ export function FinalCta() {
         </motion.p>
       </motion.div>
     </section>
-  )
+  );
 }

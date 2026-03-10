@@ -1,39 +1,39 @@
-"use client"
+"use client";
 
-import { motion } from "framer-motion"
-import { QrCode, FileInput, Bell, MapPin, Smartphone } from "lucide-react"
+import { motion } from "framer-motion";
+import { QrCode, FileInput, Bell, MapPin, Smartphone } from "lucide-react";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-}
+};
 
 const features = [
   {
     icon: QrCode,
     title: "QR codes on every report",
     description:
-      "Every property report includes a unique QR code and short link. Print it on flyers, postcards, or yard signs.",
+      "Print the report, stick it on a flyer or yard sign. The QR code links directly to your branded landing page.",
   },
   {
     icon: Smartphone,
     title: "Branded landing pages",
     description:
-      "Prospects land on a mobile-optimized page with property details, photos, and a simple contact form.",
+      "Prospects see the property, your branding, and a simple contact form. No friction, no app to download.",
   },
   {
     icon: FileInput,
     title: "Instant lead capture",
     description:
-      "Name, email, phone \u2014 captured in one tap. Leads flow straight into your contact list automatically.",
+      "Name, email, phone — captured and organized in your dashboard automatically. No copy-pasting from email.",
   },
   {
     icon: Bell,
     title: "Real-time notifications",
     description:
-      "Get an email and optional SMS alert the moment a lead comes in. Follow up while they\u2019re still interested.",
+      "Get an email alert the moment someone submits. Follow up while the property is still on their mind.",
   },
-]
+];
 
 export function LeadCapture() {
   return (
@@ -47,11 +47,11 @@ export function LeadCapture() {
       >
         <motion.div variants={fadeUp} className="text-center">
           <h2 className="text-4xl font-bold tracking-tight text-foreground md:text-5xl">
-            Every report is a lead magnet
+            Turn every report into a lead source
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-            QR codes and landing pages turn your property reports into 24/7 lead
-            generation machines.
+            Every property report includes a QR code and a branded landing page.
+            Prospects scan, fill out a form, and you get notified instantly.
           </p>
         </motion.div>
 
@@ -167,5 +167,5 @@ export function LeadCapture() {
         </div>
       </motion.div>
     </section>
-  )
+  );
 }

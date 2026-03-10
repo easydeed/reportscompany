@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { motion } from "framer-motion"
+import { motion } from "framer-motion";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-}
+};
 
 export function WhoItsFor() {
   return (
@@ -21,7 +21,7 @@ export function WhoItsFor() {
           variants={fadeUp}
           className="text-center text-4xl font-bold tracking-tight text-foreground md:text-5xl"
         >
-          Built for real estate professionals
+          Built for how you actually work
         </motion.h2>
 
         <div className="mt-14 grid gap-8 md:grid-cols-2">
@@ -30,11 +30,14 @@ export function WhoItsFor() {
             variants={fadeUp}
             className="rounded-2xl bg-[#EEF2FF] p-8 md:p-10"
           >
-            <h3 className="text-2xl font-bold text-foreground">For agents</h3>
+            <h3 className="text-2xl font-bold text-foreground">
+              For Real Estate Agents
+            </h3>
             <p className="mt-4 leading-relaxed text-muted-foreground">
-              Impress clients with branded market reports on autopilot. Generate
-              from live MLS data, customize with your branding, and deliver by
-              email on a schedule.
+              Stop spending hours on market updates — or paying a marketing
+              company to do it. TrendyReports gives you polished, branded
+              reports from live MLS data, delivered to your sphere
+              automatically. You focus on selling. We handle the marketing.
             </p>
             <a
               href="/register"
@@ -50,21 +53,24 @@ export function WhoItsFor() {
             className="rounded-2xl bg-[#F1F5F9] p-8 md:p-10"
           >
             <h3 className="text-2xl font-bold text-foreground">
-              {"For title & lending teams"}
+              {"For Title Companies & Lenders"}
             </h3>
             <p className="mt-4 leading-relaxed text-muted-foreground">
-              Sponsor agents, strengthen relationships, and track engagement &mdash;
-              all under one plan with co-branded reports.
+              Give your agents something they actually want. Sponsor
+              TrendyReports for your agent partners — they get branded market
+              reports on autopilot with your logo alongside theirs. Strengthen
+              relationships, drive repeat business, and finally have a reason
+              to call that isn't "just checking in."
             </p>
             <a
               href="mailto:sales@trendyreports.com"
               className="mt-6 inline-flex items-center rounded-full border border-foreground/20 bg-transparent px-6 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-foreground/5"
             >
-              Talk to us
+              Learn more
             </a>
           </motion.div>
         </div>
       </motion.div>
     </section>
-  )
+  );
 }
