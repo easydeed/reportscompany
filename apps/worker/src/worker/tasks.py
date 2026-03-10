@@ -1129,185 +1129,126 @@ def process_consumer_report(self, report_id: str):
                 
                 # =============================================
                 # FETCH COMPARABLES FROM SIMPLYRETS
+                # Uses the SAME approach as the working
+                # POST /v1/property/comparables endpoint
                 # =============================================
                 comparables = []
                 market_stats = {}
-                
+
                 try:
-                    logger.warning(f"[CMA_DEBUG] Fetching comparables for {prop_city}, {prop_state} {prop_zip}")
-                    
-                    six_months_ago = (datetime.now() - timedelta(days=180)).strftime("%Y-%m-%d")
+                    from math import radians, cos, sin, asin, sqrt as math_sqrt
 
-                    from .query_builders import _common_params, ALLOW_SORTING
+                    logger.warning("[CMA] Fetching comparables for %s, %s %s", prop_city, prop_state, prop_zip)
 
-                    sr_params = {
-                        **_common_params(),
-                        "type": "RES",
-                        "status": "Closed",
-                        "q": f"{prop_city}",
-                        "mindate": six_months_ago,
-                    }
-                    if ALLOW_SORTING:
-                        sr_params["sort"] = "-closeDate"
-                    
-                    if property_data.get("bedrooms"):
-                        beds = property_data["bedrooms"]
-                        sr_params["minbeds"] = max(1, beds - 1)
-                        sr_params["maxbeds"] = beds + 1
-                    
-                    if property_data.get("sqft"):
-                        sqft = property_data["sqft"]
-                        sr_params["minarea"] = int(sqft * 0.75)
-                        sr_params["maxarea"] = int(sqft * 1.25)
-                    
-                    logger.warning(f"[CMA_DEBUG] SimplyRETS query params: {sr_params}")
-                    raw_comps = fetch_properties(sr_params, limit=10)
-                    logger.warning(f"[CMA_DEBUG] SimplyRETS returned {len(raw_comps)} comparables")
+                    subject_beds = property_data.get("bedrooms")
+                    subject_sqft = property_data.get("sqft")
+                    subject_lat = property_data.get("latitude")
+                    subject_lng = property_data.get("longitude")
 
-                    # Fallback 1: Remove sqft/bed filters, keep city
-                    if len(raw_comps) == 0:
-                        logger.warning("[CMA_DEBUG] Fallback 1: removing bed/sqft constraints")
-                        fallback_params = {
-                            **_common_params(),
-                            "type": "RES",
+                    def _cma_params(include_beds=True, include_sqft=True):
+                        """Mirror the API endpoint's _build_params exactly."""
+                        p = {
+                            "type": "residential",
                             "status": "Closed",
-                            "q": f"{prop_city}",
-                            "mindate": six_months_ago,
+                            "limit": 50,
                         }
-                        if ALLOW_SORTING:
-                            fallback_params["sort"] = "-closeDate"
-                        raw_comps = fetch_properties(fallback_params, limit=10)
-                        logger.warning(f"[CMA_DEBUG] Fallback 1 returned {len(raw_comps)} comparables")
+                        if prop_zip:
+                            p["postalCodes"] = prop_zip
+                        if prop_city:
+                            p["cities"] = prop_city
+                        if include_beds and subject_beds:
+                            p["minbeds"] = max(1, subject_beds - 1)
+                            p["maxbeds"] = subject_beds + 1
+                        if include_sqft and subject_sqft:
+                            p["minarea"] = int(subject_sqft * 0.75)
+                            p["maxarea"] = int(subject_sqft * 1.25)
+                        return p
 
-                    # Fallback 2: Try with ZIP code instead of city
-                    if len(raw_comps) == 0 and prop_zip:
-                        logger.warning("[CMA_DEBUG] Fallback 2: using postalCodes instead of city")
-                        zip_params = {
-                            **_common_params(),
-                            "type": "RES",
-                            "status": "Closed",
-                            "postalCodes": prop_zip,
-                            "mindate": six_months_ago,
-                        }
-                        if ALLOW_SORTING:
-                            zip_params["sort"] = "-closeDate"
-                        raw_comps = fetch_properties(zip_params, limit=10)
-                        logger.warning(f"[CMA_DEBUG] Fallback 2 returned {len(raw_comps)} comparables")
+                    def _haversine(lat1, lon1, lat2, lon2):
+                        lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+                        dlat, dlon = lat2 - lat1, lon2 - lon1
+                        a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+                        return round(3956 * 2 * asin(math_sqrt(a)), 2)
 
-                    # Fallback 3: Broadest search — city only, no type filter
-                    if len(raw_comps) == 0 and prop_city:
-                        logger.warning("[CMA_DEBUG] Fallback 3: city-only, no type filter")
-                        broad_params = {
-                            **_common_params(),
-                            "status": "Closed",
-                            "q": f"{prop_city}",
-                            "mindate": six_months_ago,
-                        }
-                        raw_comps = fetch_properties(broad_params, limit=10)
-                        logger.warning(f"[CMA_DEBUG] Fallback 3 returned {len(raw_comps)} comparables")
+                    # Fallback ladder (same concept as property wizard)
+                    ladder = [
+                        ("strict",     _cma_params(True, True)),
+                        ("no-sqft",    _cma_params(True, False)),
+                        ("no-filters", _cma_params(False, False)),
+                    ]
 
-                    # Parse comparables
-                    comp_prices = []
-                    comp_ppsf = []
-                    comp_dom = []
+                    raw_comps = []
+                    for label, sr_params in ladder:
+                        logger.warning("[CMA] %s: params=%s", label, sr_params)
+                        raw_comps = fetch_properties(sr_params, limit=15)
+                        logger.warning("[CMA] %s: got %d results", label, len(raw_comps))
+                        if len(raw_comps) >= 3:
+                            break
 
-                    if raw_comps:
-                        first = raw_comps[0]
-                        logger.warning("[CMA_DEBUG] First raw comp keys: %s", list(first.keys()))
-                        logger.warning(
-                            "[CMA_DEBUG] First raw comp: closePrice=%s, listPrice=%s, address=%s",
-                            first.get("closePrice"), first.get("listPrice"),
-                            first.get("address", {}).get("full", "?")[:40],
-                        )
+                    # Normalize into EXACT same dict format as the
+                    # working API endpoint (property.py lines 725-749)
+                    for listing in raw_comps[:15]:
+                        prop_info = listing.get("property") or {}
+                        addr_obj = listing.get("address") or {}
+                        geo = listing.get("geo") or {}
+                        mls_obj = listing.get("mls") or {}
+                        photos = listing.get("photos") or []
 
-                    for comp in raw_comps:
-                        prop_info = comp.get("property", {})
-                        addr_info = comp.get("address", {})
-                        geo = comp.get("geo", {})
-                        photos = comp.get("photos", [])
-                        
-                        close_price = comp.get("closePrice") or comp.get("listPrice") or 0
-                        sqft = prop_info.get("area") or 1
-                        close_date = comp.get("closeDate", "")
-                        
-                        # Calculate days ago
-                        days_ago = 0
-                        if close_date:
-                            try:
-                                close_dt = datetime.fromisoformat(close_date.replace("Z", "+00:00"))
-                                days_ago = (datetime.now(close_dt.tzinfo) - close_dt).days
-                            except:
-                                pass
-                        
-                        # Calculate distance (simple approximation)
-                        distance_miles = 0
-                        if geo.get("lat") and geo.get("lng") and property_data.get("latitude"):
-                            # Haversine approximation
-                            lat_diff = abs(geo["lat"] - property_data.get("latitude", 0))
-                            lng_diff = abs(geo["lng"] - property_data.get("longitude", 0))
-                            distance_miles = round(((lat_diff ** 2 + lng_diff ** 2) ** 0.5) * 69, 1)
-                        
-                        comp_lat = geo.get("lat")
-                        comp_lng = geo.get("lng")
-                        comp_photo = photos[0] if photos else None
-                        comp_map_url = None
-                        if not comp_photo and comp_lat and comp_lng:
-                            gmap_key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
-                            if gmap_key:
-                                comp_map_url = (
-                                    f"https://maps.googleapis.com/maps/api/staticmap"
-                                    f"?center={comp_lat},{comp_lng}"
-                                    f"&zoom=18&size=400x300&maptype=satellite"
-                                    f"&key={gmap_key}"
-                                )
+                        dist = None
+                        if subject_lat and subject_lng and geo.get("lat") and geo.get("lng"):
+                            dist = _haversine(subject_lat, subject_lng, geo["lat"], geo["lng"])
 
-                        parsed_comp = {
-                            "address": addr_info.get("full", ""),
-                            "city": addr_info.get("city", ""),
-                            "state": addr_info.get("state", prop_state),
-                            "zip": addr_info.get("postalCode", ""),
-                            "sold_price": close_price,
-                            "sold_date": close_date[:10] if close_date else "",
-                            "days_ago": days_ago,
+                        comparables.append({
+                            "mls_id": str(listing.get("mlsId") or ""),
+                            "address": addr_obj.get("full") or "",
+                            "city": addr_obj.get("city") or "",
+                            "state": addr_obj.get("state") or "",
+                            "zip_code": addr_obj.get("postalCode") or "",
+                            "price": listing.get("closePrice") or listing.get("listPrice") or 0,
+                            "list_price": listing.get("listPrice"),
+                            "close_price": listing.get("closePrice"),
                             "bedrooms": prop_info.get("bedrooms") or 0,
                             "bathrooms": prop_info.get("bathsFull") or 0,
-                            "sqft": sqft,
-                            "price_per_sqft": int(close_price / sqft) if sqft else 0,
-                            "distance_miles": distance_miles,
-                            "photo_url": comp_photo,
-                            "map_image_url": comp_map_url,
-                            "latitude": comp_lat,
-                            "longitude": comp_lng,
-                            "year_built": prop_info.get("yearBuilt") or 0,
-                            "lot_size": prop_info.get("lotSize") or 0,
-                        }
-                        comparables.append(parsed_comp)
-                        
-                        # Collect stats
-                        if close_price:
-                            comp_prices.append(close_price)
-                            if sqft:
-                                comp_ppsf.append(close_price / sqft)
-                        dom = comp.get("mls", {}).get("daysOnMarket")
-                        if dom is not None:
-                            comp_dom.append(dom)
-                    
-                    # =============================================
-                    # CALCULATE MARKET STATS
-                    # =============================================
+                            "sqft": prop_info.get("area") or 0,
+                            "year_built": prop_info.get("yearBuilt"),
+                            "lot_size": prop_info.get("lotSize"),
+                            "photo_url": photos[0] if photos else None,
+                            "photos": photos,
+                            "status": mls_obj.get("status") or "Closed",
+                            "dom": mls_obj.get("daysOnMarket"),
+                            "days_on_market": mls_obj.get("daysOnMarket"),
+                            "list_date": listing.get("listDate"),
+                            "close_date": listing.get("closeDate"),
+                            "lat": geo.get("lat"),
+                            "lng": geo.get("lng"),
+                            "distance_miles": dist,
+                        })
+
+                    logger.warning("[CMA] Parsed %d comparables", len(comparables))
+                    if comparables:
+                        c0 = comparables[0]
+                        logger.warning(
+                            "[CMA] First comp: addr=%s price=%s sqft=%s",
+                            c0.get("address", "?")[:40], c0.get("price"), c0.get("sqft"),
+                        )
+
+                    # Market stats from normalized comps
+                    comp_prices = [c["price"] for c in comparables if c.get("price")]
+                    comp_ppsf = [c["price"] / c["sqft"] for c in comparables if c.get("price") and c.get("sqft")]
+                    comp_dom = [c["days_on_market"] for c in comparables if c.get("days_on_market") is not None]
+
                     if comp_prices:
                         sorted_prices = sorted(comp_prices)
-                        median_idx = len(sorted_prices) // 2
                         market_stats = {
-                            "median_price": sorted_prices[median_idx] if sorted_prices else None,
+                            "median_price": sorted_prices[len(sorted_prices) // 2],
                             "avg_price_per_sqft": int(sum(comp_ppsf) / len(comp_ppsf)) if comp_ppsf else None,
                             "avg_days_on_market": int(sum(comp_dom) / len(comp_dom)) if comp_dom else None,
                             "total_sold_last_6mo": len(comparables),
                         }
-                        logger.info(f"Market stats calculated: {market_stats}")
-                
+                        logger.info("Market stats: %s", market_stats)
+
                 except Exception as e:
-                    logger.warning(f"Failed to fetch comparables: {e}")
+                    logger.warning("Failed to fetch comparables: %s", e, exc_info=True)
                     market_stats = {}
                 
                 # =============================================
@@ -1316,7 +1257,7 @@ def process_consumer_report(self, report_id: str):
                 value_estimate = {"low": 0, "mid": 0, "high": 0, "confidence": "low"}
                 
                 if comparables:
-                    prices = [c["sold_price"] for c in comparables if c.get("sold_price")]
+                    prices = [c["price"] for c in comparables if c.get("price")]
                     if prices:
                         avg_price = sum(prices) / len(prices)
                         price_range = max(prices) - min(prices) if len(prices) > 1 else avg_price * 0.1
@@ -1386,47 +1327,6 @@ def process_consumer_report(self, report_id: str):
                         website_url = ""
                         job_title = license_number = agent_photo = company_name = agent_email_addr = ""
 
-                    builder_comps = []
-                    for comp in comparables[:6]:
-                        _sold = comp.get("sold_price") or 0
-                        _addr = comp.get("address", "")
-                        _sqft = comp.get("sqft") or 0
-                        _dist = comp.get("distance_miles") or 0
-                        builder_comps.append({
-                            "address": _addr,
-                            "full_address": _addr,
-                            "street_address": _addr,
-                            "latitude": comp.get("latitude"),
-                            "longitude": comp.get("longitude"),
-                            "photo_url": comp.get("photo_url"),
-                            "image_url": comp.get("photo_url"),
-                            "map_image_url": comp.get("map_image_url"),
-                            "price": _sold,
-                            "close_price": _sold,
-                            "sale_price": _sold,
-                            "list_price": _sold,
-                            "sold_date": comp.get("sold_date", ""),
-                            "close_date": comp.get("sold_date", ""),
-                            "days_on_market": comp.get("days_ago", 0),
-                            "distance_miles": _dist,
-                            "distance": _dist,
-                            "sqft": _sqft,
-                            "living_area": _sqft,
-                            "area": _sqft,
-                            "bedrooms": comp.get("bedrooms", 0),
-                            "bathrooms": comp.get("bathrooms", 0),
-                            "year_built": comp.get("year_built", 0),
-                            "lot_size": comp.get("lot_size", 0),
-                            "status": "Closed",
-                        })
-                    logger.warning("[CMA_DEBUG] builder_comps built: %d comps", len(builder_comps))
-                    if builder_comps:
-                        c0 = builder_comps[0]
-                        logger.warning(
-                            "[CMA_DEBUG] First builder_comp: addr=%s, price=%s, sqft=%s, keys=%s",
-                            c0.get("address", "?")[:30], c0.get("price"), c0.get("sqft"), list(c0.keys()),
-                        )
-
                     report_data_for_pdf = {
                         "report_type": "seller",
                         "theme": default_theme_id or 4,
@@ -1447,7 +1347,7 @@ def process_consumer_report(self, report_id: str):
                             "assessed_value": 0,
                             "owner_name": property_data.get("owner_name", ""),
                         },
-                        "comparables": builder_comps,
+                        "comparables": comparables[:6],
                         "agent": {
                             "name": agent_name,
                             "title": job_title or "Realtor\u00ae",

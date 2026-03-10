@@ -477,18 +477,7 @@ class PropertyReportBuilder:
         - SimplyRETS sends: latitude/longitude, photos, etc.
         """
         raw_comps = self.report_data.get("comparables") or []
-        logger.warning("[CMA_DEBUG] _build_comparables_context: %d raw comps received", len(raw_comps))
-        if raw_comps:
-            logger.warning("[CMA_DEBUG] First comp keys: %s", list(raw_comps[0].keys()))
-            first = raw_comps[0]
-            logger.warning(
-                "[CMA_DEBUG] First comp data: address=%s, price=%s, sale_price=%s, close_price=%s, sqft=%s",
-                first.get("address", "?")[:40],
-                first.get("price"),
-                first.get("sale_price"),
-                first.get("close_price"),
-                first.get("sqft"),
-            )
+        logger.info("_build_comparables_context: %d raw comps received", len(raw_comps))
 
         comparables = []
         for comp in raw_comps[:6]:  # Max 6 comparables (3 rows of 2)
@@ -554,15 +543,6 @@ class PropertyReportBuilder:
             display_date_label = "Listed" if is_active else "Sold"
 
             resolved_addr = comp.get("address") or comp.get("full_address", "")
-            logger.warning(
-                "[CMA_DEBUG] Comp %d: addr=%s, raw_price=%s, raw_price_num=%s, sqft=%s, image=%s",
-                len(comparables) + 1,
-                resolved_addr[:30],
-                raw_price,
-                raw_price_num,
-                comp_sqft,
-                "yes" if image_url else "no",
-            )
 
             comparables.append({
                 "address": resolved_addr,
@@ -594,7 +574,7 @@ class PropertyReportBuilder:
                 "pool": comp.get("pool") if isinstance(comp.get("pool"), bool) else (comp.get("pool", "No") == "Yes"),
             })
         
-        logger.warning("[CMA_DEBUG] _build_comparables_context: returning %d processed comps", len(comparables))
+        logger.info("_build_comparables_context: returning %d processed comps", len(comparables))
         return comparables
     
     def _format_price(self, price: Any) -> str:
@@ -816,7 +796,7 @@ class PropertyReportBuilder:
                 except (ValueError, TypeError):
                     pass
 
-        logger.warning("[CMA_DEBUG] _build_stats_context: %d prices, %d sqfts from %d comps", len(prices), len(sqfts), len(comparables))
+        logger.info("_build_stats_context: %d prices, %d sqfts from %d comps", len(prices), len(sqfts), len(comparables))
         
         # Sort comparables by price to get low/medium/high
         sorted_by_price = sorted(
@@ -1073,17 +1053,17 @@ class PropertyReportBuilder:
             city     = self.report_data.get("property_city", "")
             zip_code = self.report_data.get("property_zip", "")
             state    = self.report_data.get("property_state", "")
-            logger.warning("[CMA_DEBUG] market_trends: auto-fetching for city=%s, zip=%s, state=%s", city, zip_code, state)
+            logger.info("market_trends: auto-fetching for city=%s, zip=%s, state=%s", city, zip_code, state)
             try:
                 from worker.compute.market_trends import fetch_and_compute_market_trends
                 market_trends_data = fetch_and_compute_market_trends(city, zip_code, state)
-                logger.warning("[CMA_DEBUG] market_trends: fetch returned %s", "data" if market_trends_data else "None")
+                logger.info("market_trends: fetch returned %s", "data" if market_trends_data else "None")
             except Exception as _mt_exc:
-                logger.warning("[CMA_DEBUG] market_trends: fetch FAILED — %s", _mt_exc)
+                logger.warning("market_trends: fetch FAILED — %s", _mt_exc)
 
         if market_trends_data is None and "market_trends" in page_set:
             page_set = [p for p in page_set if p != "market_trends"]
-            logger.warning("[CMA_DEBUG] market_trends: page REMOVED from page_set (no data returned)")
+            logger.info("market_trends: page REMOVED from page_set (no data returned)")
 
         # ── Compute Color Roles ───────────────────────────────────────────
         dark_bg = self._THEME_DARK_BG.get(self.theme_name, "#18235c")
@@ -1155,11 +1135,12 @@ class PropertyReportBuilder:
 
         context["overview_text"] = overview_text or ""
 
-        logger.warning("[CMA_DEBUG] Final page_set: %s", page_set)
-        logger.warning("[CMA_DEBUG] Context comparables count: %d", len(context.get("comparables", [])))
-        logger.warning("[CMA_DEBUG] Context stats.total_comps: %s", context.get("stats", {}).get("total_comps"))
-        logger.warning("[CMA_DEBUG] Context stats.price_low: %s", context.get("stats", {}).get("price_low"))
-        logger.warning("[CMA_DEBUG] Context stats.price_high: %s", context.get("stats", {}).get("price_high"))
+        logger.info("Final page_set: %s", page_set)
+        logger.info("Context comparables: %d, price_low: %s, price_high: %s",
+            len(context.get("comparables", [])),
+            context.get("stats", {}).get("price_low"),
+            context.get("stats", {}).get("price_high"),
+        )
 
         try:
             template_path = THEME_TEMPLATES.get(self.theme_name, THEME_TEMPLATES["teal"])
