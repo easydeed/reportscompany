@@ -37,6 +37,7 @@ interface Property {
   year_built?: number;
   latitude?: number;
   longitude?: number;
+  property_type?: string;
 }
 
 const SEARCH_STAGES = [
@@ -229,6 +230,7 @@ export function CmaFunnel({
           year_built: selectedProperty!.year_built,
           latitude: selectedProperty!.latitude,
           longitude: selectedProperty!.longitude,
+          property_type: selectedProperty!.property_type,
         }),
       });
       if (!res.ok) {

@@ -20,6 +20,85 @@ from .filter_resolver import compute_market_stats, resolve_filters, build_filter
 from .sms import send_report_sms, send_agent_notification_sms
 import boto3
 from botocore.client import Config
+from typing import Optional
+
+# =============================================================================
+# PROPERTY TYPE MAPPING — copied from property.py (API endpoint)
+# Maps SiteX UseCode → SimplyRETS (type, subtype) for comp filtering
+# =============================================================================
+
+_PROPERTY_TYPE_MAP = {
+    "sfr": ("residential", "SingleFamilyResidence"),
+    "rsfr": ("residential", "SingleFamilyResidence"),
+    "single family": ("residential", "SingleFamilyResidence"),
+    "singlefamily": ("residential", "SingleFamilyResidence"),
+    "single family residential": ("residential", "SingleFamilyResidence"),
+    "residential": ("residential", "SingleFamilyResidence"),
+    "pud": ("residential", "SingleFamilyResidence"),
+    "condo": ("residential", "Condominium"),
+    "condominium": ("residential", "Condominium"),
+    "townhouse": ("residential", "Townhouse"),
+    "th": ("residential", "Townhouse"),
+    "townhome": ("residential", "Townhouse"),
+    "duplex": ("multifamily", "Duplex"),
+    "triplex": ("multifamily", "Triplex"),
+    "quadplex": ("multifamily", "Quadruplex"),
+    "quadruplex": ("multifamily", "Quadruplex"),
+    "multi-family": ("multifamily", None),
+    "multifamily": ("multifamily", None),
+    "mobile": ("residential", "ManufacturedHome"),
+    "mobilehome": ("residential", "ManufacturedHome"),
+    "manufactured": ("residential", "ManufacturedHome"),
+    "land": ("land", None),
+    "vacant land": ("land", None),
+    "commercial": ("commercial", None),
+}
+
+_POST_FILTER_ALLOWED_SUBTYPES = {
+    "singlefamilyresidence": {"SingleFamilyResidence", "Detached"},
+    "condominium": {"Condominium", "StockCooperative", "Attached"},
+    "townhouse": {"Townhouse", "Attached"},
+    "duplex": {"Duplex"},
+    "triplex": {"Triplex"},
+    "quadruplex": {"Quadruplex"},
+    "manufacturedhome": {"ManufacturedHome", "ManufacturedOnLand", "MobileHome"},
+}
+
+
+def _resolve_simplyrets_type(sitex_use_code: Optional[str]) -> tuple:
+    """Resolve SiteX UseCode → SimplyRETS (type, subtype). Defaults to SFR."""
+    if not sitex_use_code:
+        return ("residential", "SingleFamilyResidence")
+    key = sitex_use_code.strip().lower()
+    if key in _PROPERTY_TYPE_MAP:
+        return _PROPERTY_TYPE_MAP[key]
+    for pattern, mapping in _PROPERTY_TYPE_MAP.items():
+        if pattern in key or key in pattern:
+            return mapping
+    logger.warning("Unknown SiteX UseCode '%s', defaulting to SFR", sitex_use_code)
+    return ("residential", "SingleFamilyResidence")
+
+
+def _post_filter_by_property_type(listings: list, simplyrets_subtype: Optional[str]) -> list:
+    """Post-filter SimplyRETS listings to match subject property type."""
+    if not simplyrets_subtype:
+        return listings
+    allowed = _POST_FILTER_ALLOWED_SUBTYPES.get(simplyrets_subtype.lower())
+    if not allowed:
+        return listings
+    filtered = []
+    removed = 0
+    for listing in listings:
+        prop = listing.get("property", {})
+        listing_subtype = prop.get("subType") or prop.get("subTypeText") or ""
+        if not listing_subtype or listing_subtype in allowed:
+            filtered.append(listing)
+        else:
+            removed += 1
+    if removed > 0:
+        logger.warning("Post-filter removed %d listings (wanted subtype: %s)", removed, simplyrets_subtype)
+    return filtered
+
 
 def safe_json_dumps(obj):
     """
@@ -1138,17 +1217,27 @@ def process_consumer_report(self, report_id: str):
                 try:
                     from math import radians, cos, sin, asin, sqrt as math_sqrt
 
-                    logger.warning("[CMA] Fetching comparables for %s, %s %s", prop_city, prop_state, prop_zip)
-
                     subject_beds = property_data.get("bedrooms")
                     subject_sqft = property_data.get("sqft")
                     subject_lat = property_data.get("latitude")
                     subject_lng = property_data.get("longitude")
+                    subject_prop_type = property_data.get("property_type")
 
-                    def _cma_params(include_beds=True, include_sqft=True):
+                    # FIX 1: Property type filter — same as property.py
+                    sr_type, sr_subtype = _resolve_simplyrets_type(subject_prop_type)
+
+                    # FIX 3: Log lat/lng to confirm they're populated
+                    logger.warning(
+                        "[CMA] Subject: city=%s zip=%s type=%s→sr(%s,%s) lat=%s lng=%s beds=%s sqft=%s",
+                        prop_city, prop_zip, subject_prop_type,
+                        sr_type, sr_subtype,
+                        subject_lat, subject_lng, subject_beds, subject_sqft,
+                    )
+
+                    def _cma_params(include_beds=True, include_sqft=True, include_subtype=True):
                         """Mirror the API endpoint's _build_params exactly."""
                         p = {
-                            "type": "residential",
+                            "type": sr_type,
                             "status": "Closed",
                             "limit": 50,
                         }
@@ -1156,6 +1245,8 @@ def process_consumer_report(self, report_id: str):
                             p["postalCodes"] = prop_zip
                         if prop_city:
                             p["cities"] = prop_city
+                        if include_subtype and sr_subtype:
+                            p["subtype"] = sr_subtype
                         if include_beds and subject_beds:
                             p["minbeds"] = max(1, subject_beds - 1)
                             p["maxbeds"] = subject_beds + 1
@@ -1171,17 +1262,24 @@ def process_consumer_report(self, report_id: str):
                         return round(3956 * 2 * asin(math_sqrt(a)), 2)
 
                     # Fallback ladder (same concept as property wizard)
+                    # L0: strict (type + subtype + beds + sqft)
+                    # L1: drop subtype (type + beds + sqft)
+                    # L2: drop sqft (type + beds only)
+                    # L3: drop all filters (type only)
                     ladder = [
-                        ("strict",     _cma_params(True, True)),
-                        ("no-sqft",    _cma_params(True, False)),
-                        ("no-filters", _cma_params(False, False)),
+                        ("L0:strict",     _cma_params(True, True, True)),
+                        ("L1:no-subtype", _cma_params(True, True, False)),
+                        ("L2:no-sqft",    _cma_params(True, False, False)),
+                        ("L3:no-filters", _cma_params(False, False, False)),
                     ]
 
                     raw_comps = []
                     for label, sr_params in ladder:
                         logger.warning("[CMA] %s: params=%s", label, sr_params)
-                        raw_comps = fetch_properties(sr_params, limit=15)
-                        logger.warning("[CMA] %s: got %d results", label, len(raw_comps))
+                        raw_comps = fetch_properties(sr_params, limit=25)
+                        # FIX 1: Post-filter by property type (safety net)
+                        raw_comps = _post_filter_by_property_type(raw_comps, sr_subtype)
+                        logger.warning("[CMA] %s: %d results after type filter", label, len(raw_comps))
                         if len(raw_comps) >= 3:
                             break
 
@@ -1194,6 +1292,7 @@ def process_consumer_report(self, report_id: str):
                         mls_obj = listing.get("mls") or {}
                         photos = listing.get("photos") or []
 
+                        # FIX 3: Distance — uses subject lat/lng + haversine
                         dist = None
                         if subject_lat and subject_lng and geo.get("lat") and geo.get("lng"):
                             dist = _haversine(subject_lat, subject_lng, geo["lat"], geo["lng"])
@@ -1204,6 +1303,7 @@ def process_consumer_report(self, report_id: str):
                             "city": addr_obj.get("city") or "",
                             "state": addr_obj.get("state") or "",
                             "zip_code": addr_obj.get("postalCode") or "",
+                            # FIX 2: For Closed, prefer closePrice
                             "price": listing.get("closePrice") or listing.get("listPrice") or 0,
                             "list_price": listing.get("listPrice"),
                             "close_price": listing.get("closePrice"),
@@ -1214,10 +1314,12 @@ def process_consumer_report(self, report_id: str):
                             "lot_size": prop_info.get("lotSize"),
                             "photo_url": photos[0] if photos else None,
                             "photos": photos,
+                            # FIX 2: Status from MLS data (should be "Closed")
                             "status": mls_obj.get("status") or "Closed",
                             "dom": mls_obj.get("daysOnMarket"),
                             "days_on_market": mls_obj.get("daysOnMarket"),
                             "list_date": listing.get("listDate"),
+                            # FIX 2: closeDate from SimplyRETS → close_date
                             "close_date": listing.get("closeDate"),
                             "lat": geo.get("lat"),
                             "lng": geo.get("lng"),
@@ -1228,8 +1330,10 @@ def process_consumer_report(self, report_id: str):
                     if comparables:
                         c0 = comparables[0]
                         logger.warning(
-                            "[CMA] First comp: addr=%s price=%s sqft=%s",
-                            c0.get("address", "?")[:40], c0.get("price"), c0.get("sqft"),
+                            "[CMA] First comp: addr=%s price=%s close_date=%s dist=%s status=%s",
+                            c0.get("address", "?")[:40], c0.get("price"),
+                            c0.get("close_date"), c0.get("distance_miles"),
+                            c0.get("status"),
                         )
 
                     # Market stats from normalized comps

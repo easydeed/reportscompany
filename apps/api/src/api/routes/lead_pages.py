@@ -64,6 +64,7 @@ class PropertySearchResult(BaseModel):
     year_built: Optional[int] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    property_type: Optional[str] = None
 
 
 class ReportRequestPayload(BaseModel):
@@ -87,6 +88,7 @@ class ReportRequestPayload(BaseModel):
     lot_size: Optional[int] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    property_type: Optional[str] = None
     
     @field_validator('phone')
     @classmethod
@@ -206,6 +208,7 @@ async def search_property(
             year_built=property_data.year_built,
             latitude=property_data.latitude,
             longitude=property_data.longitude,
+            property_type=property_data.property_type or None,
         )]
         
     except Exception as e:
@@ -279,6 +282,7 @@ async def request_report(
             "lot_size": payload.lot_size,
             "latitude": payload.latitude,
             "longitude": payload.longitude,
+            "property_type": payload.property_type,
         }
         property_data = {k: v for k, v in property_data.items() if v is not None}
         
