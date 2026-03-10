@@ -1223,10 +1223,8 @@ def process_consumer_report(self, report_id: str):
                     subject_lng = property_data.get("longitude")
                     subject_prop_type = property_data.get("property_type")
 
-                    # FIX 1: Property type filter — same as property.py
                     sr_type, sr_subtype = _resolve_simplyrets_type(subject_prop_type)
 
-                    # FIX 3: Log lat/lng to confirm they're populated
                     logger.warning(
                         "[CMA] Subject: city=%s zip=%s type=%s→sr(%s,%s) lat=%s lng=%s beds=%s sqft=%s",
                         prop_city, prop_zip, subject_prop_type,
@@ -1277,7 +1275,6 @@ def process_consumer_report(self, report_id: str):
                     for label, sr_params in ladder:
                         logger.warning("[CMA] %s: params=%s", label, sr_params)
                         raw_comps = fetch_properties(sr_params, limit=25)
-                        # FIX 1: Post-filter by property type (safety net)
                         raw_comps = _post_filter_by_property_type(raw_comps, sr_subtype)
                         logger.warning("[CMA] %s: %d results after type filter", label, len(raw_comps))
                         if len(raw_comps) >= 3:
@@ -1292,7 +1289,6 @@ def process_consumer_report(self, report_id: str):
                         mls_obj = listing.get("mls") or {}
                         photos = listing.get("photos") or []
 
-                        # FIX 3: Distance — uses subject lat/lng + haversine
                         dist = None
                         if subject_lat and subject_lng and geo.get("lat") and geo.get("lng"):
                             dist = _haversine(subject_lat, subject_lng, geo["lat"], geo["lng"])
@@ -1303,7 +1299,6 @@ def process_consumer_report(self, report_id: str):
                             "city": addr_obj.get("city") or "",
                             "state": addr_obj.get("state") or "",
                             "zip_code": addr_obj.get("postalCode") or "",
-                            # FIX 2: For Closed, prefer closePrice
                             "price": listing.get("closePrice") or listing.get("listPrice") or 0,
                             "list_price": listing.get("listPrice"),
                             "close_price": listing.get("closePrice"),
@@ -1314,12 +1309,10 @@ def process_consumer_report(self, report_id: str):
                             "lot_size": prop_info.get("lotSize"),
                             "photo_url": photos[0] if photos else None,
                             "photos": photos,
-                            # FIX 2: Status from MLS data (should be "Closed")
                             "status": mls_obj.get("status") or "Closed",
                             "dom": mls_obj.get("daysOnMarket"),
                             "days_on_market": mls_obj.get("daysOnMarket"),
                             "list_date": listing.get("listDate"),
-                            # FIX 2: closeDate from SimplyRETS → close_date
                             "close_date": listing.get("closeDate"),
                             "lat": geo.get("lat"),
                             "lng": geo.get("lng"),
