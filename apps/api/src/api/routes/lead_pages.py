@@ -204,6 +204,8 @@ async def search_property(
             bathrooms=property_data.bathrooms,
             sqft=property_data.sqft,
             year_built=property_data.year_built,
+            latitude=property_data.latitude,
+            longitude=property_data.longitude,
         )]
         
     except Exception as e:

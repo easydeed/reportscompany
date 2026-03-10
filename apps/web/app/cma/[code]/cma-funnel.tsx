@@ -35,6 +35,8 @@ interface Property {
   bathrooms?: number;
   sqft?: number;
   year_built?: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 const SEARCH_STAGES = [
@@ -225,6 +227,8 @@ export function CmaFunnel({
           bathrooms: selectedProperty!.bathrooms,
           sqft: selectedProperty!.sqft,
           year_built: selectedProperty!.year_built,
+          latitude: selectedProperty!.latitude,
+          longitude: selectedProperty!.longitude,
         }),
       });
       if (!res.ok) {
