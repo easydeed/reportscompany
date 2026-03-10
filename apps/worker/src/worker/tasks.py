@@ -1134,21 +1134,22 @@ def process_consumer_report(self, report_id: str):
                 market_stats = {}
                 
                 try:
-                    logger.info(f"Fetching comparables for {prop_city}, {prop_state} {prop_zip}")
+                    logger.warning(f"[CMA_DEBUG] Fetching comparables for {prop_city}, {prop_state} {prop_zip}")
                     
-                    # Build SimplyRETS params for closed sales
                     six_months_ago = (datetime.now() - timedelta(days=180)).strftime("%Y-%m-%d")
-                    
+
+                    from .query_builders import _common_params, ALLOW_SORTING
+
                     sr_params = {
-                        "type": "residential",
+                        **_common_params(),
+                        "type": "RES",
                         "status": "Closed",
-                        "postalCodes": prop_zip,
-                        "cities": prop_city,
+                        "q": f"{prop_city}",
                         "mindate": six_months_ago,
-                        "sort": "-closeDate",
                     }
+                    if ALLOW_SORTING:
+                        sr_params["sort"] = "-closeDate"
                     
-                    # Add bedroom/bathroom filters if we have them
                     if property_data.get("bedrooms"):
                         beds = property_data["bedrooms"]
                         sr_params["minbeds"] = max(1, beds - 1)
@@ -1159,42 +1160,66 @@ def process_consumer_report(self, report_id: str):
                         sr_params["minarea"] = int(sqft * 0.75)
                         sr_params["maxarea"] = int(sqft * 1.25)
                     
-                    # Fetch from SimplyRETS
+                    logger.warning(f"[CMA_DEBUG] SimplyRETS query params: {sr_params}")
                     raw_comps = fetch_properties(sr_params, limit=10)
-                    logger.info(f"SimplyRETS returned {len(raw_comps)} comparables")
+                    logger.warning(f"[CMA_DEBUG] SimplyRETS returned {len(raw_comps)} comparables")
 
-                    # Fallback 1: Remove sqft/bed filters
+                    # Fallback 1: Remove sqft/bed filters, keep city
                     if len(raw_comps) == 0:
-                        logger.info("No comps with initial filters, retrying without bed/sqft constraints")
+                        logger.warning("[CMA_DEBUG] Fallback 1: removing bed/sqft constraints")
                         fallback_params = {
-                            "type": "residential",
+                            **_common_params(),
+                            "type": "RES",
+                            "status": "Closed",
+                            "q": f"{prop_city}",
+                            "mindate": six_months_ago,
+                        }
+                        if ALLOW_SORTING:
+                            fallback_params["sort"] = "-closeDate"
+                        raw_comps = fetch_properties(fallback_params, limit=10)
+                        logger.warning(f"[CMA_DEBUG] Fallback 1 returned {len(raw_comps)} comparables")
+
+                    # Fallback 2: Try with ZIP code instead of city
+                    if len(raw_comps) == 0 and prop_zip:
+                        logger.warning("[CMA_DEBUG] Fallback 2: using postalCodes instead of city")
+                        zip_params = {
+                            **_common_params(),
+                            "type": "RES",
                             "status": "Closed",
                             "postalCodes": prop_zip,
-                            "cities": prop_city,
                             "mindate": six_months_ago,
-                            "sort": "-closeDate",
                         }
-                        raw_comps = fetch_properties(fallback_params, limit=10)
-                        logger.info(f"Fallback 1 returned {len(raw_comps)} comparables")
+                        if ALLOW_SORTING:
+                            zip_params["sort"] = "-closeDate"
+                        raw_comps = fetch_properties(zip_params, limit=10)
+                        logger.warning(f"[CMA_DEBUG] Fallback 2 returned {len(raw_comps)} comparables")
 
-                    # Fallback 2: City-only search without zip
+                    # Fallback 3: Broadest search — city only, no type filter
                     if len(raw_comps) == 0 and prop_city:
-                        logger.info("No comps with zip, retrying with city only")
-                        city_params = {
-                            "type": "residential",
+                        logger.warning("[CMA_DEBUG] Fallback 3: city-only, no type filter")
+                        broad_params = {
+                            **_common_params(),
                             "status": "Closed",
-                            "cities": prop_city,
+                            "q": f"{prop_city}",
                             "mindate": six_months_ago,
-                            "sort": "-closeDate",
                         }
-                        raw_comps = fetch_properties(city_params, limit=10)
-                        logger.info(f"Fallback 2 (city-only) returned {len(raw_comps)} comparables")
+                        raw_comps = fetch_properties(broad_params, limit=10)
+                        logger.warning(f"[CMA_DEBUG] Fallback 3 returned {len(raw_comps)} comparables")
 
                     # Parse comparables
                     comp_prices = []
                     comp_ppsf = []
                     comp_dom = []
-                    
+
+                    if raw_comps:
+                        first = raw_comps[0]
+                        logger.warning("[CMA_DEBUG] First raw comp keys: %s", list(first.keys()))
+                        logger.warning(
+                            "[CMA_DEBUG] First raw comp: closePrice=%s, listPrice=%s, address=%s",
+                            first.get("closePrice"), first.get("listPrice"),
+                            first.get("address", {}).get("full", "?")[:40],
+                        )
+
                     for comp in raw_comps:
                         prop_info = comp.get("property", {})
                         addr_info = comp.get("address", {})
