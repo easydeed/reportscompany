@@ -472,17 +472,17 @@ function CompsTab({
           <div className="flex justify-between text-sm">
             <span className="text-gray-600">
               <Calendar className="w-4 h-4 inline mr-1" />
-              Sold {comp.days_ago} days ago
+              {comp.sold_date ? `Sold ${comp.sold_date}` : comp.days_ago ? `Sold ${comp.days_ago} days ago` : 'Sold'}
             </span>
             <span className="text-gray-600">
               <MapPin className="w-4 h-4 inline mr-1" />
-              {comp.distance_miles.toFixed(1)} mi away
+              {comp.distance_miles > 0 ? `${comp.distance_miles.toFixed(1)} mi away` : '—'}
             </span>
           </div>
 
           <div className="mt-3 pt-3 border-t">
-            <p className="text-center text-indigo-600 font-semibold">
-              ${comp.price_per_sqft}/sqft
+            <p className="text-center font-semibold" style={{ color: report.branding?.primary_color || '#6366f1' }}>
+              {comp.price_per_sqft > 0 ? `$${comp.price_per_sqft}/sqft` : '—'}
             </p>
           </div>
         </div>

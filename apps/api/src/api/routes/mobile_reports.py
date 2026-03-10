@@ -189,24 +189,55 @@ async def get_report_data(
     )
     
     # Build comparables list
+    # Handles BOTH old format (sold_price, sold_date, days_ago)
+    # and new normalized format (price, close_price, close_date, days_on_market)
     comp_list = []
     for c in comparables:
         try:
+            sold_price = c.get("sold_price") or c.get("price") or c.get("close_price") or 0
+            sqft_val = c.get("sqft") or 0
+
+            # price_per_sqft: compute if not stored
+            ppsf = c.get("price_per_sqft") or c.get("pricePerSqft") or 0
+            if not ppsf and sold_price and sqft_val:
+                ppsf = int(sold_price / sqft_val)
+
+            # sold_date: prefer stored, else format from close_date ISO string
+            sold_date_str = c.get("sold_date") or ""
+            close_date_raw = c.get("close_date") or ""
+            if not sold_date_str and close_date_raw:
+                try:
+                    raw_d = str(close_date_raw).split("T")[0]
+                    sold_date_str = datetime.strptime(raw_d, "%Y-%m-%d").strftime("%b %d, %Y")
+                except (ValueError, AttributeError):
+                    sold_date_str = close_date_raw[:10]
+
+            # days_ago: compute from close_date if not stored
+            days_ago_val = c.get("days_ago") or c.get("daysAgo") or 0
+            if not days_ago_val and close_date_raw:
+                try:
+                    close_dt = datetime.fromisoformat(str(close_date_raw).replace("Z", "+00:00"))
+                    days_ago_val = max(0, (datetime.now(close_dt.tzinfo) - close_dt).days)
+                except (ValueError, AttributeError):
+                    pass
+
+            dist = c.get("distance_miles") or c.get("distanceMiles") or 0
+
             comp_list.append(Comparable(
                 address=c.get("address", ""),
                 city=c.get("city", ""),
                 state=c.get("state", ""),
-                zip=c.get("zip", ""),
-                sold_price=c.get("sold_price") or c.get("soldPrice") or 0,
-                sold_date=c.get("sold_date") or c.get("soldDate") or "",
-                days_ago=c.get("days_ago") or c.get("daysAgo") or 0,
+                zip=c.get("zip") or c.get("zip_code", ""),
+                sold_price=sold_price,
+                sold_date=sold_date_str,
+                days_ago=days_ago_val,
                 bedrooms=c.get("bedrooms") or 0,
                 bathrooms=c.get("bathrooms") or 0,
-                sqft=c.get("sqft") or 0,
+                sqft=sqft_val,
                 lot_size=c.get("lot_size") or c.get("lotSize"),
                 year_built=c.get("year_built") or c.get("yearBuilt"),
-                price_per_sqft=c.get("price_per_sqft") or c.get("pricePerSqft") or 0,
-                distance_miles=c.get("distance_miles") or c.get("distanceMiles") or 0,
+                price_per_sqft=ppsf,
+                distance_miles=round(float(dist), 1) if dist else 0,
                 photo_url=c.get("photo_url") or c.get("photoUrl")
             ))
         except Exception as e:
