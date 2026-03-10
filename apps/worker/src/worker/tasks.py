@@ -1424,24 +1424,34 @@ def process_consumer_report(self, report_id: str):
                 # =============================================
                 # UPDATE DATABASE WITH ALL DATA
                 # =============================================
-                cur.execute("""
-                    UPDATE consumer_reports 
-                    SET property_data = %s::jsonb,
-                        comparables = %s::jsonb,
-                        value_estimate = %s::jsonb,
-                        market_stats = %s::jsonb,
-                        pdf_url = %s,
-                        pdf_generated_at = CASE WHEN %s IS NOT NULL THEN NOW() ELSE pdf_generated_at END
-                    WHERE id = %s::uuid
-                """, (
+                update_params = [
                     json.dumps(property_data),
                     json.dumps(comparables),
                     json.dumps(value_estimate),
                     json.dumps(market_stats),
                     pdf_url,
-                    pdf_url,
-                    report_id
-                ))
+                    report_id,
+                ]
+                if pdf_url:
+                    cur.execute("""
+                        UPDATE consumer_reports
+                        SET property_data = %s::jsonb,
+                            comparables = %s::jsonb,
+                            value_estimate = %s::jsonb,
+                            market_stats = %s::jsonb,
+                            pdf_url = %s,
+                            pdf_generated_at = NOW()
+                        WHERE id = %s::uuid
+                    """, update_params)
+                else:
+                    cur.execute("""
+                        UPDATE consumer_reports
+                        SET property_data = %s::jsonb,
+                            comparables = %s::jsonb,
+                            value_estimate = %s::jsonb,
+                            market_stats = %s::jsonb
+                        WHERE id = %s::uuid
+                    """, update_params[:4] + [report_id])
                 
                 # =============================================
                 # DELIVER REPORT (SMS or Email)
