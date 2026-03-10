@@ -1194,6 +1194,20 @@ def process_consumer_report(self, report_id: str):
                             lng_diff = abs(geo["lng"] - property_data.get("longitude", 0))
                             distance_miles = round(((lat_diff ** 2 + lng_diff ** 2) ** 0.5) * 69, 1)
                         
+                        comp_lat = geo.get("lat")
+                        comp_lng = geo.get("lng")
+                        comp_photo = photos[0] if photos else None
+                        comp_map_url = None
+                        if not comp_photo and comp_lat and comp_lng:
+                            gmap_key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
+                            if gmap_key:
+                                comp_map_url = (
+                                    f"https://maps.googleapis.com/maps/api/staticmap"
+                                    f"?center={comp_lat},{comp_lng}"
+                                    f"&zoom=18&size=400x300&maptype=satellite"
+                                    f"&key={gmap_key}"
+                                )
+
                         parsed_comp = {
                             "address": addr_info.get("full", ""),
                             "city": addr_info.get("city", ""),
@@ -1207,7 +1221,12 @@ def process_consumer_report(self, report_id: str):
                             "sqft": sqft,
                             "price_per_sqft": int(close_price / sqft) if sqft else 0,
                             "distance_miles": distance_miles,
-                            "photo_url": photos[0] if photos else None,
+                            "photo_url": comp_photo,
+                            "map_image_url": comp_map_url,
+                            "latitude": comp_lat,
+                            "longitude": comp_lng,
+                            "year_built": prop_info.get("yearBuilt") or 0,
+                            "lot_size": prop_info.get("lotSize") or 0,
                         }
                         comparables.append(parsed_comp)
                         
@@ -1276,6 +1295,133 @@ def process_consumer_report(self, report_id: str):
                         logger.info(f"Value estimate: {value_estimate}")
                 
                 # =============================================
+                # GENERATE BRANDED PDF REPORT
+                # =============================================
+                pdf_url = None
+                try:
+                    cur.execute("""
+                        SELECT
+                            a.primary_color, a.secondary_color,
+                            a.logo_url, a.email_logo_url,
+                            a.default_theme_id, a.name,
+                            a.website_url,
+                            u.job_title, u.license_number,
+                            COALESCE(u.photo_url, u.avatar_url),
+                            u.company_name, u.email
+                        FROM accounts a
+                        JOIN users u ON u.account_id = a.id
+                        WHERE a.id = %s::uuid
+                        LIMIT 1
+                    """, (account_id,))
+                    brand_row = cur.fetchone()
+
+                    if brand_row:
+                        (
+                            primary_color, secondary_color,
+                            brand_logo, email_logo,
+                            default_theme_id, account_name,
+                            website_url,
+                            job_title, license_number,
+                            agent_photo, company_name, agent_email_addr,
+                        ) = brand_row
+                    else:
+                        primary_color = "#1B365D"
+                        secondary_color = "#B8860B"
+                        brand_logo = email_logo = None
+                        default_theme_id = 4
+                        account_name = ""
+                        website_url = ""
+                        job_title = license_number = agent_photo = company_name = agent_email_addr = ""
+
+                    builder_comps = []
+                    for comp in comparables[:6]:
+                        builder_comps.append({
+                            "address": comp.get("address", ""),
+                            "latitude": comp.get("latitude"),
+                            "longitude": comp.get("longitude"),
+                            "photo_url": comp.get("photo_url"),
+                            "map_image_url": comp.get("map_image_url"),
+                            "price": comp.get("sold_price", 0),
+                            "close_price": comp.get("sold_price", 0),
+                            "sale_price": comp.get("sold_price", 0),
+                            "sold_date": comp.get("sold_date", ""),
+                            "close_date": comp.get("sold_date", ""),
+                            "days_on_market": comp.get("days_ago", 0),
+                            "distance_miles": comp.get("distance_miles", 0),
+                            "distance": comp.get("distance_miles", 0),
+                            "sqft": comp.get("sqft", 0),
+                            "bedrooms": comp.get("bedrooms", 0),
+                            "bathrooms": comp.get("bathrooms", 0),
+                            "year_built": comp.get("year_built", 0),
+                            "lot_size": comp.get("lot_size", 0),
+                            "status": "Closed",
+                        })
+
+                    report_data_for_pdf = {
+                        "report_type": "seller",
+                        "theme": default_theme_id or 4,
+                        "accent_color": secondary_color or primary_color or "#34d1c3",
+                        "property_address": prop_address,
+                        "property_city": prop_city,
+                        "property_state": prop_state,
+                        "property_zip": prop_zip,
+                        "owner_name": property_data.get("owner_name", ""),
+                        "sitex_data": {
+                            "latitude": property_data.get("latitude"),
+                            "longitude": property_data.get("longitude"),
+                            "bedrooms": property_data.get("bedrooms"),
+                            "bathrooms": property_data.get("bathrooms"),
+                            "sqft": property_data.get("sqft"),
+                            "lot_size": property_data.get("lot_size"),
+                            "year_built": property_data.get("year_built"),
+                            "assessed_value": 0,
+                            "owner_name": property_data.get("owner_name", ""),
+                        },
+                        "comparables": builder_comps,
+                        "agent": {
+                            "name": agent_name,
+                            "title": job_title or "Realtor\u00ae",
+                            "phone": agent_phone or "",
+                            "email": agent_email_addr or "",
+                            "license_number": license_number or "",
+                            "photo_url": agent_photo or "",
+                            "company_name": company_name or account_name or "",
+                            "logo_url": brand_logo or "",
+                        },
+                        "branding": {
+                            "display_name": account_name or "",
+                            "logo_url": brand_logo or "",
+                            "primary_color": primary_color or "#1B365D",
+                            "accent_color": secondary_color or "#B8860B",
+                        },
+                        "selected_pages": [
+                            "cover", "aerial", "property",
+                            "comparables", "range",
+                            "market_trends", "overview",
+                        ],
+                    }
+
+                    from .property_builder import PropertyReportBuilder
+                    builder = PropertyReportBuilder(report_data_for_pdf)
+                    html_content = builder.render_html()
+                    logger.info("CMA PDF HTML rendered: %d chars", len(html_content))
+
+                    pdf_path, _ = render_pdf(
+                        run_id=str(report_id),
+                        account_id=str(account_id),
+                        html_content=html_content,
+                        print_base=DEV_BASE,
+                    )
+
+                    s3_key = f"consumer-reports/{account_id}/{report_id}.pdf"
+                    pdf_url = upload_to_r2(pdf_path, s3_key)
+                    logger.info("CMA PDF uploaded: %s", pdf_url[:100] if pdf_url else "None")
+
+                except Exception as pdf_exc:
+                    logger.warning("CMA PDF generation failed (non-fatal): %s", pdf_exc)
+                    pdf_url = None
+
+                # =============================================
                 # UPDATE DATABASE WITH ALL DATA
                 # =============================================
                 cur.execute("""
@@ -1283,13 +1429,17 @@ def process_consumer_report(self, report_id: str):
                     SET property_data = %s::jsonb,
                         comparables = %s::jsonb,
                         value_estimate = %s::jsonb,
-                        market_stats = %s::jsonb
+                        market_stats = %s::jsonb,
+                        pdf_url = %s,
+                        pdf_generated_at = CASE WHEN %s IS NOT NULL THEN NOW() ELSE pdf_generated_at END
                     WHERE id = %s::uuid
                 """, (
                     json.dumps(property_data),
                     json.dumps(comparables),
                     json.dumps(value_estimate),
                     json.dumps(market_stats),
+                    pdf_url,
+                    pdf_url,
                     report_id
                 ))
                 
