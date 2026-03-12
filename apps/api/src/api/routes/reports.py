@@ -23,6 +23,7 @@ class ReportRow(BaseModel):
     id: str
     report_type: str
     status: str
+    city: Optional[str] = None
     html_url: Optional[str] = None
     json_url: Optional[str] = None
     csv_url: Optional[str] = None
@@ -134,7 +135,9 @@ def get_report(report_id: str, request: Request, account_id: str = Depends(requi
         # CRITICAL: Always filter by account_id for data isolation
         cur.execute(
             """
-            SELECT id::text, report_type, status, html_url, json_url, csv_url, pdf_url,
+            SELECT id::text, report_type, status,
+                   input_params->>'city' AS city,
+                   html_url, json_url, csv_url, pdf_url,
                    generated_at::text
             FROM report_generations
             WHERE id = %s AND account_id = %s
@@ -178,7 +181,9 @@ def list_reports(
     with db_conn() as (conn, cur):
         set_rls(cur, account_id)
         sql = f"""
-          SELECT id::text, report_type, status, html_url, json_url, csv_url, pdf_url,
+          SELECT id::text, report_type, status,
+                 input_params->>'city' AS city,
+                 html_url, json_url, csv_url, pdf_url,
                  generated_at::text
           FROM report_generations
           WHERE {' AND '.join(where)}
