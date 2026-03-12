@@ -157,6 +157,7 @@ Produces a 4–5 paragraph, 180–250 word AI executive summary for the property
 | No `OPENAI_API_KEY` set | `ai_overview.py` returns `None`; overview page omitted |
 | Template file missing | Raises `TemplateNotFound` → task fails with `"failed"` status |
 | Jinja2 render error (undefined var) | Raises `UndefinedError` → task fails |
+| B1-B3 helpers unavailable (`ImportError` or runtime error in `compute_price_cut_stats` / `compute_dom_distribution` / `compute_timeline_metrics`) | `market_trends` page still renders with core metrics (median price, MOI, absorption rate, gauge); price-cut / DOM-distribution / escrow-timeline blocks are hidden by Jinja2 `{% if %}` guards |
 
 The test suite (`tests/test_property_templates.py`) validates all 5 themes against both minimal and full contexts, ensuring no undefined variables exist in production template paths.
 
@@ -189,6 +190,7 @@ python scripts/generate_page_preview_jpgs.py
 
 | Date | Change |
 |------|--------|
+| 2026-03 | **Fix: Market Trends B1-B3 graceful fallback.** `market_trends.py` `_compute_trends()` now wraps the import of `compute_price_cut_stats`, `compute_dom_distribution`, and `compute_timeline_metrics` in a `try/except`. If the helpers are missing or fail, the three metric variables default to `None` and the page renders with its core metrics only. Previously, an `ImportError` caused `fetch_and_compute_market_trends()` to return `None`, which made `property_builder.py` silently remove the entire `market_trends` page from the report. Root cause: the three helper functions were never added to `report_builders.py`. |
 | 2026-03 | **Page preview JPGs for wizard.** New script `scripts/generate_page_preview_jpgs.py` renders 45 JPGs (5 themes × 9 pages) from pre-generated HTML via Playwright. `step-theme.tsx` page selector now shows real page thumbnails at `/previews/pages/{themeId}/{pageKey}.jpg` instead of decorative line placeholders, updating dynamically when the user switches themes. |
 | 2026-03 | **Fix: Accent color priority.** `_get_theme_color()` now prioritizes `self.accent_color` (wizard-selected) over `branding.primary_color`. Previously every account with a branding `primary_color` would silently override the wizard's per-report accent choice. |
 | 2026-03 | **Fix: Modern aerial footer.** Replaced undefined `var(--accent)` with `var(--coral-on-dark)` in `modern_report.jinja2` aerial page footer. Audited all 5 themes — others were correct. |

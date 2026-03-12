@@ -296,16 +296,25 @@ def _compute_trends(
     if moi is not None:
         gauge_pct = min(int(moi / 12 * 100), 98)
 
-    # ── B1-B3: New metrics on current_closed + active ─────────────────────────
-    from worker.report_builders import (
-        compute_price_cut_stats,
-        compute_dom_distribution,
-        compute_timeline_metrics,
-    )
+    # ── B1-B3: Optional extended metrics ─────────────────────────────────────
+    # These helpers are not yet implemented in report_builders.py.
+    # Graceful fallback: core metrics render; B1-B3 template blocks are guarded
+    # by {% if market_trends.price_cut_stats %} so None values are safe.
+    price_cut_stats:  Optional[Dict[str, Any]] = None
+    dom_distribution: Optional[Dict[str, Any]] = None
+    timeline_metrics: Optional[Dict[str, Any]] = None
 
-    price_cut_stats  = compute_price_cut_stats(active_listings)
-    dom_distribution = compute_dom_distribution(current_dom_vals)
-    timeline_metrics = compute_timeline_metrics(current_closed)
+    try:
+        from worker.report_builders import (
+            compute_price_cut_stats,
+            compute_dom_distribution,
+            compute_timeline_metrics,
+        )
+        price_cut_stats  = compute_price_cut_stats(active_listings)
+        dom_distribution = compute_dom_distribution(current_dom_vals)
+        timeline_metrics = compute_timeline_metrics(current_closed)
+    except (ImportError, Exception) as _b_exc:
+        logger.info("market_trends: B1-B3 helpers unavailable (%s) — page will render without extended metrics", _b_exc)
 
     # ── Build the full context dict ───────────────────────────────────────────
     now = datetime.now()

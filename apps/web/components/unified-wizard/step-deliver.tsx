@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { Globe, FileDown, Mail, Calendar, Clock, X } from "lucide-react"
+import { RecipientsSection } from "@/components/schedule-builder/sections/recipients-section"
 import type { WizardState, DeliveryMode, Cadence } from "./types"
 
 interface StepDeliverProps {
@@ -185,8 +186,8 @@ function ScheduleOptions({
       {/* Frequency */}
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Frequency</Label>
-        <div className="grid grid-cols-4 gap-2">
-          {(["weekly", "biweekly", "monthly", "quarterly"] as Cadence[]).map((c) => (
+        <div className="grid grid-cols-2 gap-2">
+          {(["weekly", "monthly"] as Cadence[]).map((c) => (
             <button
               key={c}
               onClick={() => onChange({ cadence: c })}
@@ -203,7 +204,7 @@ function ScheduleOptions({
 
       {/* Day + Time */}
       <div className="grid grid-cols-2 gap-3">
-        {(state.cadence === "weekly" || state.cadence === "biweekly") && (
+        {state.cadence === "weekly" && (
           <div className="space-y-1.5">
             <Label className="text-xs font-medium">Day</Label>
             <Select value={String(state.dayOfWeek)} onValueChange={(v) => onChange({ dayOfWeek: Number(v) })}>
@@ -217,7 +218,7 @@ function ScheduleOptions({
           </div>
         )}
 
-        {(state.cadence === "monthly" || state.cadence === "quarterly") && (
+        {state.cadence === "monthly" && (
           <div className="space-y-1.5">
             <Label className="text-xs font-medium">Day of Month</Label>
             <Select value={String(state.dayOfMonth)} onValueChange={(v) => onChange({ dayOfMonth: Number(v) })}>
@@ -262,10 +263,12 @@ function ScheduleOptions({
         </Select>
       </div>
 
-      {/* Recipients placeholder — future: contact/group search */}
-      <div className="rounded-lg border border-dashed border-gray-300 p-3 text-center text-xs text-gray-400">
-        Recipient search (contacts &amp; groups) coming soon. For now, recipients are managed on the schedules list page.
-      </div>
+      <RecipientsSection
+        recipients={state.recipients}
+        onChange={(patch) => onChange(patch as Partial<WizardState>)}
+        hasRecipients={state.recipients.length > 0}
+        stepNumber={undefined}
+      />
     </div>
   )
 }

@@ -105,7 +105,7 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
       case 2: return (state.areaType === "city" ? !!state.city : state.zipCodes.length > 0) && !!state.lookbackDays
       case 3: return state.deliveryMode === "send_now"
         ? (state.viewInBrowser || state.downloadPdf || state.sendViaEmail)
-        : !!state.scheduleName.trim()
+        : !!state.scheduleName.trim() && state.recipients.length > 0
       default: return false
     }
   }, [step, state])
@@ -149,12 +149,6 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
         const data = await res.json()
         router.push(`/app/reports/${data.report_id || data.id}`)
       } else {
-        const cadenceMap: Record<string, string> = {
-          weekly: "weekly",
-          biweekly: "weekly",
-          monthly: "monthly",
-          quarterly: "monthly",
-        }
         const res = await fetch("/api/proxy/v1/schedules", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -164,13 +158,18 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
             city: state.areaType === "city" ? state.city : null,
             zip_codes: state.areaType === "zip" ? state.zipCodes : null,
             lookback_days: state.lookbackDays,
-            cadence: cadenceMap[state.cadence] || "weekly",
-            weekly_dow: (state.cadence === "weekly" || state.cadence === "biweekly") ? state.dayOfWeek : null,
-            monthly_dom: (state.cadence === "monthly" || state.cadence === "quarterly") ? state.dayOfMonth : null,
+            cadence: state.cadence,
+            weekly_dow: state.cadence === "weekly" ? state.dayOfWeek : null,
+            monthly_dom: state.cadence === "monthly" ? state.dayOfMonth : null,
             send_hour: state.sendHour,
             send_minute: state.sendMinute,
             timezone: state.timezone,
-            recipients: [],
+            recipients: state.recipients.map(r => {
+              if (r.type === "manual_email") return r.email;
+              if (r.type === "contact") return { type: "contact", id: r.id };
+              if (r.type === "group") return { type: "group", id: r.id };
+              return r;
+            }),
             include_attachment: true,
             active: true,
             filters,
