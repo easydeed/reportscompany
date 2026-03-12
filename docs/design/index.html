@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market Report Designs — TrendyReports Phase 1</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #f8fafc; color: #1e293b; padding: 40px; }
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+  .subtitle { font-size: 14px; color: #64748b; margin-bottom: 40px; }
+  h2 { font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #334155; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 40px; }
+  .card { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; transition: box-shadow 0.2s; text-decoration: none; color: inherit; }
+  .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+  .card h3 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .card p { font-size: 13px; color: #64748b; line-height: 1.5; }
+  .badge { display: inline-block; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 4px; margin-top: 8px; }
+  .badge-layout { background: #dbeafe; color: #1d4ed8; }
+  .badge-theme { background: #f0fdf4; color: #15803d; }
+  .swatch { display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.1); vertical-align: middle; margin-right: 4px; }
+</style>
+</head>
+<body>
+  <h1>Market Report PDF Designs</h1>
+  <p class="subtitle">Phase 1 deliverables — Open each file in Chrome and use Print Preview (Ctrl+P) to verify at US Letter size.</p>
+
+  <h2>Layouts (P1-T1 through P1-T4)</h2>
+  <div class="grid">
+    <a class="card" href="gallery-layout.html">
+      <h3>Gallery Layout</h3>
+      <p>3×2 photo grid with listing cards. Used by: new_listings_gallery, featured_listings, open_houses.</p>
+      <span class="badge badge-layout">P1-T1</span>
+    </a>
+    <a class="card" href="market-narrative-layout.html">
+      <h3>Market Narrative Layout</h3>
+      <p>Hero stat, AI narrative, 2×2 photo grid, stats bar, quick take. Used by: market_snapshot.</p>
+      <span class="badge badge-layout">P1-T2</span>
+    </a>
+    <a class="card" href="closed-inventory-layout.html">
+      <h3>Closed / Inventory Layout</h3>
+      <p>Hero stat, photo grid with status badges, data table, stats bar. Used by: closed, inventory.</p>
+      <span class="badge badge-layout">P1-T3</span>
+    </a>
+    <a class="card" href="analytics-layout.html">
+      <h3>Analytics Layout</h3>
+      <p>Hero stat, stat blocks, vertical property cards (multi-page). Used by: price_bands, new_listings.</p>
+      <span class="badge badge-layout">P1-T4</span>
+    </a>
+  </div>
+
+  <h2>Theme Variants — Gallery (P1-T5)</h2>
+  <div class="grid">
+    <a class="card" href="theme-gallery-teal.html">
+      <h3><span class="swatch" style="background:#0d9488;"></span> Teal</h3>
+      <p>Navy header (#18235c), teal accent (#0d9488). Inter + Playfair Display.</p>
+      <span class="badge badge-theme">Theme</span>
+    </a>
+    <a class="card" href="theme-gallery-bold.html">
+      <h3><span class="swatch" style="background:#D4A853;"></span> Bold</h3>
+      <p>Navy header (#1B365D), gold accent (#D4A853). Montserrat + Libre Baskerville.</p>
+      <span class="badge badge-theme">Theme</span>
+    </a>
+    <a class="card" href="theme-gallery-classic.html">
+      <h3><span class="swatch" style="background:#4a90d9;"></span> Classic</h3>
+      <p>Navy header (#1e3a5f), sky blue accent (#4a90d9). System sans + Georgia.</p>
+      <span class="badge badge-theme">Theme</span>
+    </a>
+    <a class="card" href="theme-gallery-elegant.html">
+      <h3><span class="swatch" style="background:#8B2252;"></span> Elegant</h3>
+      <p>Charcoal header (#1a1a1a), burgundy accent (#8B2252). Montserrat + Cormorant Garamond.</p>
+      <span class="badge badge-theme">Theme</span>
+    </a>
+    <a class="card" href="theme-gallery-modern.html">
+      <h3><span class="swatch" style="background:#FF6B54;"></span> Modern</h3>
+      <p>Midnight header (#0f172a), coral accent (#FF6B54). DM Sans + Space Grotesk.</p>
+      <span class="badge badge-theme">Theme</span>
+    </a>
+  </div>
+</body>
+</html>

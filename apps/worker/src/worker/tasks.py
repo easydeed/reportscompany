@@ -655,15 +655,89 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                 cur.execute("UPDATE report_generations SET result_json=%s WHERE id=%s", (safe_json_dumps(result), run_id))
         print(f"✅ REPORT RUN {run_id}: save_result_json complete")
 
-        # 5) Generate PDF (via configured engine: playwright or pdfshift)
-        print(f"🔍 REPORT RUN {run_id}: step=generate_pdf")
-        print(f"🔍 REPORT RUN {run_id}: pdf_backend=<checking pdf_engine module>")
-        pdf_path, html_url = render_pdf(
-            run_id=run_id,
-            account_id=account_id,
-            html_content=None,  # Will navigate to /print/{run_id}
-            print_base=DEV_BASE
-        )
+        # 5) Generate PDF — server-side (themed) or legacy (frontend navigation)
+        #
+        # Strategy B: If theme_id is set on the report_generations row, render
+        # server-side via MarketReportBuilder and pass HTML directly to PDFShift.
+        # Otherwise, fall back to the legacy frontend /print/{runId} path.
+        # (Same html_content pattern used by process_consumer_report.)
+        theme_id = None
+        theme_accent = None
+        with psycopg.connect(DATABASE_URL, autocommit=False) as conn:
+            with conn.cursor() as cur:
+                cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
+                cur.execute(
+                    "SELECT theme_id, accent_color FROM report_generations WHERE id=%s",
+                    (run_id,),
+                )
+                theme_row = cur.fetchone()
+                if theme_row:
+                    theme_id, theme_accent = theme_row
+            conn.commit()
+
+        if theme_id:
+            print(f"🔍 REPORT RUN {run_id}: step=generate_pdf (server-side, theme={theme_id})")
+            from .market_builder import MarketReportBuilder
+
+            # Load branding for the account (agent info, logo, colors)
+            branding_ctx = {}
+            with psycopg.connect(DATABASE_URL, autocommit=False) as conn:
+                with conn.cursor() as cur:
+                    cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
+                    cur.execute("""
+                        SELECT
+                            u.first_name, u.last_name, u.job_title, u.phone,
+                            u.email, COALESCE(u.photo_url, u.avatar_url),
+                            u.company_name, a.logo_url, a.name,
+                            a.primary_color, a.secondary_color
+                        FROM accounts a
+                        LEFT JOIN users u ON u.account_id = a.id
+                        WHERE a.id = %s::uuid
+                        LIMIT 1
+                    """, (account_id,))
+                    brow = cur.fetchone()
+                    if brow:
+                        agent_name = f"{brow[0] or ''} {brow[1] or ''}".strip()
+                        branding_ctx = {
+                            "agent_name": agent_name,
+                            "agent_title": brow[2] or "",
+                            "agent_phone": brow[3] or "",
+                            "agent_email": brow[4] or "",
+                            "agent_photo_url": brow[5],
+                            "company_name": brow[6] or brow[8] or "",
+                            "logo_url": brow[7],
+                            "primary_color": brow[9],
+                            "accent_color": brow[10],
+                        }
+                conn.commit()
+
+            # Merge result_json + branding + theme for the builder
+            builder_data = {}
+            if isinstance(result, dict):
+                builder_data.update(result)
+            builder_data["report_type"] = report_type
+            builder_data["theme_id"] = theme_id
+            builder_data["accent_color"] = theme_accent or branding_ctx.get("accent_color")
+            builder_data["branding"] = branding_ctx
+
+            builder = MarketReportBuilder(builder_data)
+            html_content = builder.render_html()
+            print(f"🔍 REPORT RUN {run_id}: server-side HTML rendered ({len(html_content)} chars)")
+
+            pdf_path, html_url = render_pdf(
+                run_id=run_id,
+                account_id=account_id,
+                html_content=html_content,
+                print_base=DEV_BASE,
+            )
+        else:
+            print(f"🔍 REPORT RUN {run_id}: step=generate_pdf (legacy frontend)")
+            pdf_path, html_url = render_pdf(
+                run_id=run_id,
+                account_id=account_id,
+                html_content=None,
+                print_base=DEV_BASE,
+            )
         print(f"✅ REPORT RUN {run_id}: generate_pdf complete (path={pdf_path})")
         
         # 6) Upload PDF to Cloudflare R2

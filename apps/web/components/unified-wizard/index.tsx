@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Loader2, ChevronLeft, ChevronRight, Sparkles, Check } from "lucide-react"
+import { ArrowLeft, Loader2, ChevronLeft, ChevronRight, Sparkles, Check, FileDown, Globe, CheckCircle2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { SharedEmailPreview } from "@/components/shared/email-preview"
@@ -23,6 +23,25 @@ import {
   getAreaDisplay,
   STORIES,
 } from "./types"
+
+const THEME_ID_MAP: Record<number, string> = {
+  1: "teal", 2: "bold", 3: "classic", 4: "elegant", 5: "modern",
+}
+
+const THEME_HEADER_BG: Record<string, string> = {
+  teal: "#18235c", bold: "#1B365D", classic: "#1e3a5f",
+  elegant: "#1a1a1a", modern: "#0f172a",
+}
+
+const REPORT_TYPE_LABELS: Record<string, string> = {
+  new_listings_gallery: "New Listings Gallery",
+  closed: "Recently Sold",
+  market_snapshot: "Market Snapshot",
+  inventory: "Active Inventory",
+  featured_listings: "Featured Listings",
+}
+
+type GenerationState = "idle" | "creating" | "polling" | "complete" | "error"
 
 interface UnifiedWizardProps {
   defaultMode?: DeliveryMode
@@ -49,6 +68,12 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
     email: "agent@example.com",
     photoUrl: null as string | null,
   })
+  const [themeId, setThemeId] = useState("teal")
+  const [generationState, setGenerationState] = useState<GenerationState>("idle")
+  const [generatedReportId, setGeneratedReportId] = useState<string | null>(null)
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+  const [generationError, setGenerationError] = useState<string | null>(null)
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Audience step only shows for "just_listed" story
   const needsAudience = state.story === "just_listed"
@@ -59,9 +84,10 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
   useEffect(() => {
     async function loadBranding() {
       try {
-        const [bRes, pRes] = await Promise.all([
+        const [bRes, pRes, aRes] = await Promise.all([
           fetch("/api/proxy/v1/account/branding"),
           fetch("/api/proxy/v1/users/me"),
+          fetch("/api/proxy/v1/account", { cache: "no-store" }),
         ])
         if (bRes.ok) {
           const d = await bRes.json()
@@ -81,6 +107,15 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
             email: p.email || "agent@example.com",
             photoUrl: p.avatar_url || null,
           })
+        }
+        if (aRes.ok) {
+          const a = await aRes.json()
+          if (a.default_theme_id && THEME_ID_MAP[a.default_theme_id]) {
+            setThemeId(THEME_ID_MAP[a.default_theme_id])
+          }
+          if (a.secondary_color) {
+            setBranding((prev) => ({ ...prev, accentColor: a.secondary_color }))
+          }
         }
       } catch { /* silent */ }
     }
@@ -123,6 +158,48 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
     if (idx > 0) setStep(effectiveSteps[idx - 1])
   }
 
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current)
+    }
+  }, [])
+
+  function startPolling(reportId: string) {
+    setGenerationState("polling")
+    pollingRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/proxy/v1/reports/${reportId}`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (data.status === "completed" || data.status === "complete") {
+          if (pollingRef.current) clearInterval(pollingRef.current)
+          pollingRef.current = null
+          setPdfUrl(data.pdf_url || null)
+          setGenerationState("complete")
+          if (data.pdf_url) {
+            if (state.viewInBrowser) window.open(data.pdf_url, "_blank")
+            if (state.downloadPdf) triggerDownload(data.pdf_url)
+          }
+        } else if (data.status === "failed") {
+          if (pollingRef.current) clearInterval(pollingRef.current)
+          pollingRef.current = null
+          setGenerationError("Report generation failed. Please try again.")
+          setGenerationState("error")
+        }
+      } catch { /* ignore polling errors */ }
+    }, 3000)
+  }
+
+  function triggerDownload(url: string) {
+    const a = document.createElement("a")
+    a.href = url
+    a.download = ""
+    a.target = "_blank"
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
+
   async function handleSubmit() {
     if (!state.story) return
     setIsSubmitting(true)
@@ -134,6 +211,7 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
 
     try {
       if (state.deliveryMode === "send_now") {
+        setGenerationState("creating")
         const res = await fetch("/api/proxy/v1/reports", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -143,11 +221,15 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
             zips: state.areaType === "zip" ? state.zipCodes : null,
             lookback_days: state.lookbackDays,
             filters,
+            theme_id: themeId,
+            accent_color: branding.accentColor,
           }),
         })
         if (!res.ok) throw new Error("Failed to create report")
         const data = await res.json()
-        router.push(`/app/reports/${data.report_id || data.id}`)
+        const reportId = data.report_id || data.id
+        setGeneratedReportId(reportId)
+        startPolling(reportId)
       } else {
         const res = await fetch("/api/proxy/v1/schedules", {
           method: "POST",
@@ -179,7 +261,10 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
         router.push("/app/schedules")
       }
     } catch (err) {
-      console.error("Submit error:", err)
+      if (state.deliveryMode === "send_now") {
+        setGenerationError(err instanceof Error ? err.message : "Something went wrong")
+        setGenerationState("error")
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -237,47 +322,139 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
       {/* Main content */}
       <main className="max-w-[1400px] mx-auto px-6 py-6">
         <div className="grid lg:grid-cols-[1fr_420px] gap-6">
-          {/* Left: Step content */}
+          {/* Left: Step content or generation state */}
           <div>
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 min-h-[480px]">
-              {step === 0 && <StepStory selected={state.story} onSelect={(s) => update({ story: s, audience: "all" })} />}
-              {step === 1 && <StepAudience selected={state.audience} onSelect={(a) => update({ audience: a })} />}
-              {step === 2 && <StepWhereWhen state={state} onChange={update} />}
-              {step === 3 && <StepDeliver state={state} onChange={update} />}
-            </div>
-
-            {/* Navigation */}
-            <div className="flex items-center justify-between mt-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={goBack}
-                disabled={currentStepIndex === 0}
-                className="gap-1.5"
-              >
-                <ChevronLeft className="w-4 h-4" /> Back
-              </Button>
-
-              {isLastStep ? (
-                <Button
-                  onClick={handleSubmit}
-                  disabled={!canContinue || isSubmitting}
-                  className="gap-1.5"
-                >
-                  {isSubmitting ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" />Processing...</>
-                  ) : state.deliveryMode === "schedule" ? (
-                    <><Sparkles className="w-4 h-4" />Create Schedule</>
-                  ) : (
-                    <><Sparkles className="w-4 h-4" />Generate Report</>
+            {generationState !== "idle" ? (
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 min-h-[480px] flex items-center justify-center">
+                <div className="text-center max-w-sm mx-auto space-y-4">
+                  {(generationState === "creating" || generationState === "polling") && (
+                    <>
+                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-semibold text-gray-900">
+                          {generationState === "creating" ? "Creating your report..." : "Generating your report..."}
+                        </h2>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {generationState === "polling"
+                            ? "This usually takes 30–60 seconds. Please don\u2019t close this page."
+                            : "Setting things up..."}
+                        </p>
+                      </div>
+                      {generationState === "polling" && (
+                        <div className="flex justify-center gap-1 pt-2">
+                          {[0, 1, 2].map((i) => (
+                            <div
+                              key={i}
+                              className="w-2 h-2 rounded-full bg-primary/40 animate-bounce"
+                              style={{ animationDelay: `${i * 150}ms` }}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
-                </Button>
-              ) : (
-                <Button onClick={goNext} disabled={!canContinue} className="gap-1.5">
-                  Continue <ChevronRight className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
+
+                  {generationState === "complete" && (
+                    <>
+                      <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto">
+                        <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-semibold text-gray-900">Your report is ready!</h2>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {pdfUrl ? "Your themed PDF has been generated." : "Your report has been generated."}
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-2 pt-2">
+                        {pdfUrl && (
+                          <>
+                            <Button onClick={() => window.open(pdfUrl!, "_blank")} className="gap-2">
+                              <Globe className="w-4 h-4" /> View in Browser
+                            </Button>
+                            <Button variant="outline" onClick={() => triggerDownload(pdfUrl!)} className="gap-2">
+                              <FileDown className="w-4 h-4" /> Download PDF
+                            </Button>
+                          </>
+                        )}
+                        <Button
+                          variant="ghost"
+                          onClick={() => router.push(`/app/reports/${generatedReportId}`)}
+                          className="gap-2"
+                        >
+                          View Report Details
+                        </Button>
+                      </div>
+                    </>
+                  )}
+
+                  {generationState === "error" && (
+                    <>
+                      <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto">
+                        <AlertCircle className="w-8 h-8 text-red-500" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-semibold text-gray-900">Generation failed</h2>
+                        <p className="text-sm text-red-600 mt-1">{generationError || "Something went wrong."}</p>
+                      </div>
+                      <div className="flex gap-2 justify-center pt-2">
+                        <Button variant="outline" onClick={() => {
+                          setGenerationState("idle")
+                          setGenerationError(null)
+                          setIsSubmitting(false)
+                        }}>
+                          Go Back
+                        </Button>
+                        <Button onClick={handleSubmit}>Try Again</Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 min-h-[480px]">
+                  {step === 0 && <StepStory selected={state.story} onSelect={(s) => update({ story: s, audience: "all" })} />}
+                  {step === 1 && <StepAudience selected={state.audience} onSelect={(a) => update({ audience: a })} />}
+                  {step === 2 && <StepWhereWhen state={state} onChange={update} />}
+                  {step === 3 && <StepDeliver state={state} onChange={update} defaultMode={defaultMode} />}
+                </div>
+
+                {/* Navigation */}
+                <div className="flex items-center justify-between mt-4">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={goBack}
+                    disabled={currentStepIndex === 0}
+                    className="gap-1.5"
+                  >
+                    <ChevronLeft className="w-4 h-4" /> Back
+                  </Button>
+
+                  {isLastStep ? (
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={!canContinue || isSubmitting}
+                      className="gap-1.5"
+                    >
+                      {isSubmitting ? (
+                        <><Loader2 className="w-4 h-4 animate-spin" />Processing...</>
+                      ) : state.deliveryMode === "schedule" ? (
+                        <><Sparkles className="w-4 h-4" />Create Schedule</>
+                      ) : (
+                        <><Sparkles className="w-4 h-4" />Generate Report</>
+                      )}
+                    </Button>
+                  ) : (
+                    <Button onClick={goNext} disabled={!canContinue} className="gap-1.5">
+                      Continue <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Right: Live preview */}
@@ -285,7 +462,9 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
             <div className="sticky top-20 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 bg-gray-50/50">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <h3 className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Email Preview</h3>
+                <h3 className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+                  {defaultMode === "schedule" ? "Email Preview" : "Report Preview"}
+                </h3>
                 <span className="ml-auto text-[10px] text-gray-400">Updates as you build</span>
               </div>
 
@@ -300,22 +479,35 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
               </div>
 
               <div className="p-4 bg-stone-100/50 max-h-[calc(100vh-220px)] overflow-y-auto">
-                <SharedEmailPreview
-                  primaryColor={branding.primaryColor}
-                  accentColor={branding.accentColor}
-                  headerLogoUrl={branding.headerLogoUrl}
-                  displayName={branding.displayName}
-                  agentName={profile.name}
-                  agentTitle={profile.title}
-                  agentPhone={profile.phone}
-                  agentEmail={profile.email}
-                  agentPhotoUrl={profile.photoUrl}
-                  reportType={previewReportType}
-                  audienceLabel={audienceLabel}
-                  areaName={areaName}
-                  lookbackDays={state.lookbackDays || 30}
-                  scale={0.92}
-                />
+                {defaultMode === "schedule" ? (
+                  <SharedEmailPreview
+                    primaryColor={branding.primaryColor}
+                    accentColor={branding.accentColor}
+                    headerLogoUrl={branding.headerLogoUrl}
+                    displayName={branding.displayName}
+                    agentName={profile.name}
+                    agentTitle={profile.title}
+                    agentPhone={profile.phone}
+                    agentEmail={profile.email}
+                    agentPhotoUrl={profile.photoUrl}
+                    reportType={previewReportType}
+                    audienceLabel={audienceLabel}
+                    areaName={areaName}
+                    lookbackDays={state.lookbackDays || 30}
+                    scale={0.92}
+                  />
+                ) : (
+                  <ReportPreview
+                    themeId={themeId}
+                    accentColor={branding.accentColor}
+                    displayName={branding.displayName}
+                    agentName={profile.name}
+                    reportType={previewReportType}
+                    areaName={areaName}
+                    lookbackDays={state.lookbackDays || 30}
+                    logoUrl={branding.headerLogoUrl}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -330,5 +522,130 @@ function Pill({ children }: { children: React.ReactNode }) {
     <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
       {children}
     </span>
+  )
+}
+
+function ReportPreview({
+  themeId,
+  accentColor,
+  displayName,
+  agentName,
+  reportType,
+  areaName,
+  lookbackDays,
+  logoUrl,
+}: {
+  themeId: string
+  accentColor: string
+  displayName: string | null
+  agentName: string
+  reportType: string
+  areaName: string
+  lookbackDays: number
+  logoUrl: string | null
+}) {
+  const headerBg = THEME_HEADER_BG[themeId] || THEME_HEADER_BG.teal
+  const label = REPORT_TYPE_LABELS[reportType] || "Market Report"
+  const isGallery = reportType === "new_listings_gallery" || reportType === "featured_listings"
+  const isSnapshot = reportType === "market_snapshot"
+
+  return (
+    <div
+      className="aspect-[8.5/11] rounded-lg overflow-hidden shadow-md border border-gray-200 bg-white"
+      style={{ fontSize: "10px" }}
+    >
+      {/* Gradient header */}
+      <div
+        className="px-3 py-4 text-white"
+        style={{ background: `linear-gradient(135deg, ${headerBg}, ${headerBg}dd)` }}
+      >
+        <div className="flex items-center gap-1.5 mb-2">
+          {logoUrl ? (
+            <img src={logoUrl} alt="" className="h-3 w-auto max-w-[40px] object-contain brightness-0 invert" />
+          ) : (
+            <div className="w-3 h-3 rounded-sm bg-white/30" />
+          )}
+          <span className="text-[7px] font-medium text-white/70 truncate">
+            {displayName || "Your Brand"}
+          </span>
+        </div>
+        <h4 className="text-[11px] font-bold leading-tight">{label}</h4>
+        <p className="text-[7px] text-white/70 mt-0.5">
+          {areaName} &middot; Last {lookbackDays} days
+        </p>
+      </div>
+
+      {/* Accent divider */}
+      <div className="h-0.5" style={{ backgroundColor: accentColor }} />
+
+      {/* Content preview */}
+      <div className="px-3 py-2.5 space-y-2 flex-1">
+        {/* Hero stat */}
+        {!isGallery && (
+          <div className="text-center py-1.5">
+            <div className="text-[16px] font-bold" style={{ color: headerBg }}>$825,000</div>
+            <div className="text-[6px] text-gray-400 uppercase tracking-wider">
+              {isSnapshot ? "Median Price" : "Avg. Sale Price"}
+            </div>
+          </div>
+        )}
+
+        {isGallery && (
+          <div className="flex items-center justify-center gap-1 py-1">
+            <div
+              className="w-4 h-4 rounded-full flex items-center justify-center text-[6px] font-bold text-white"
+              style={{ backgroundColor: accentColor }}
+            >
+              12
+            </div>
+            <span className="text-[7px] text-gray-500">New Listings</span>
+          </div>
+        )}
+
+        {/* Photo grid placeholders */}
+        <div className={cn("grid gap-1", isGallery ? "grid-cols-3" : "grid-cols-2")}>
+          {Array.from({ length: isGallery ? 6 : 4 }).map((_, i) => (
+            <div key={i} className="aspect-[4/3] rounded bg-gray-100 flex items-center justify-center">
+              <svg className="w-3 h-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+              </svg>
+            </div>
+          ))}
+        </div>
+
+        {/* Stats bar */}
+        <div className="flex justify-between px-1">
+          {["Active", "Pending", "Sold", "DOM"].map((s) => (
+            <div key={s} className="text-center">
+              <div className="text-[8px] font-bold" style={{ color: headerBg }}>—</div>
+              <div className="text-[5px] text-gray-400">{s}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* AI insight placeholder */}
+        {isSnapshot && (
+          <div className="rounded border px-2 py-1.5" style={{ borderColor: `${accentColor}30`, backgroundColor: `${accentColor}08` }}>
+            <div className="flex items-center gap-1 mb-0.5">
+              <div className="w-0.5 h-2 rounded-full" style={{ backgroundColor: accentColor }} />
+              <span className="text-[5px] font-semibold text-gray-400 uppercase tracking-wider">AI Insight</span>
+            </div>
+            <div className="h-1.5 bg-gray-100 rounded w-full mb-0.5" />
+            <div className="h-1.5 bg-gray-100 rounded w-3/4" />
+          </div>
+        )}
+      </div>
+
+      {/* Agent footer */}
+      <div className="px-3 py-1.5 border-t border-gray-100 mt-auto">
+        <div className="flex items-center gap-1.5">
+          <div className="w-4 h-4 rounded-full bg-gray-200 flex-shrink-0" />
+          <div>
+            <div className="text-[6px] font-semibold text-gray-700 truncate">{agentName}</div>
+            <div className="text-[5px] text-gray-400">{displayName || "Your Brokerage"}</div>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }

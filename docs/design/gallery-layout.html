@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gallery Layout — TrendyReports Market Report</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    /* Theme colors — filled by compute_color_roles in production */
+    --primary-color: #0d9488;
+    --accent-color: #0d9488;
+    --accent-light: #a6e4de;
+    --accent-dark: #09756b;
+    --accent-on-dark: #5eead4;
+    --accent-on-light: #0d7268;
+    --accent-text: #ffffff;
+    --header-bg: #18235c;
+
+    /* Layout constants */
+    --page-width: 8.5in;
+    --page-height: 11in;
+    --page-padding: 0.45in;
+    --header-height: 140px;
+    --footer-height: 100px;
+
+    /* Typography */
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+
+    /* Neutral palette */
+    --white: #ffffff;
+    --gray-50: #fafaf9;
+    --gray-100: #f5f5f4;
+    --gray-200: #e7e5e4;
+    --gray-300: #d6d3d1;
+    --gray-400: #a8a29e;
+    --gray-500: #78716c;
+    --gray-600: #57534e;
+    --gray-700: #44403c;
+    --gray-800: #292524;
+    --gray-900: #1c1917;
+
+    /* Shadows */
+    --shadow-card: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-elevated: 0 4px 12px rgba(0,0,0,0.1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  @page { size: letter; margin: 0; }
+
+  @media print {
+    html, body { background: white; margin: 0; padding: 0; }
+    .page { box-shadow: none; page-break-after: always; page-break-inside: avoid; }
+    .page:last-child { page-break-after: auto; }
+    .avoid-break { page-break-inside: avoid; break-inside: avoid; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+
+  html, body {
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--gray-900);
+    background: #e5e5e5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    width: var(--page-width);
+    height: var(--page-height);
+    background: var(--white);
+    margin: 20px auto;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ===================== GRADIENT HEADER ===================== */
+  .report-header {
+    background: linear-gradient(135deg, var(--header-bg) 0%, #2a3870 60%, var(--primary-color) 100%);
+    padding: 24px var(--page-padding) 20px;
+    color: var(--white);
+    flex-shrink: 0;
+  }
+
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .header-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: contain;
+    background: rgba(255,255,255,0.15);
+    padding: 4px;
+  }
+
+  .header-brand-name {
+    font-family: var(--font-body);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--white);
+    letter-spacing: 0.02em;
+  }
+
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(4px);
+    color: var(--white);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 5px 12px;
+    border-radius: 20px;
+  }
+
+  .header-title {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--white);
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+
+  .header-subtitle {
+    font-size: 12px;
+    color: rgba(255,255,255,0.75);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+  }
+
+  .header-subtitle span {
+    color: var(--accent-on-dark);
+    font-weight: 600;
+  }
+
+  /* ===================== CONTENT AREA ===================== */
+  .page-content {
+    flex: 1;
+    padding: 0 var(--page-padding);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ===================== COUNT BADGE ===================== */
+  .count-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 0 12px;
+    border-bottom: 1px solid var(--gray-200);
+    margin-bottom: 16px;
+  }
+
+  .count-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: var(--accent-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .count-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-900);
+  }
+
+  .count-sublabel {
+    font-size: 11px;
+    color: var(--gray-500);
+    font-weight: 400;
+  }
+
+  .count-divider {
+    flex: 1;
+    height: 1px;
+    background: var(--gray-200);
+  }
+
+  /* ===================== PHOTO GRID ===================== */
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    flex: 1;
+  }
+
+  .gallery-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .gallery-grid.cols-1 { grid-template-columns: 1fr; max-width: 360px; }
+
+  .listing-card {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-card);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .listing-photo {
+    width: 100%;
+    height: 140px;
+    background-color: var(--gray-100);
+    background-size: cover;
+    background-position: center;
+    position: relative;
+  }
+
+  /* Fallback when image fails to load */
+  .listing-photo.no-image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gray-400);
+  }
+
+  .listing-photo.no-image::after {
+    content: "\1F3E0";
+    font-size: 32px;
+    opacity: 0.5;
+  }
+
+  .listing-status {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: var(--primary-color);
+    color: var(--accent-text);
+  }
+
+  .listing-info {
+    padding: 10px 12px 12px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .listing-price {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 2px;
+  }
+
+  .listing-address {
+    font-size: 11px;
+    color: var(--gray-600);
+    margin-bottom: 8px;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .listing-details {
+    display: flex;
+    gap: 10px;
+    margin-top: auto;
+  }
+
+  .listing-detail {
+    font-size: 11px;
+    color: var(--gray-500);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .listing-detail strong {
+    color: var(--gray-700);
+    font-weight: 600;
+  }
+
+  /* ===================== AGENT FOOTER ===================== */
+  .agent-footer {
+    flex-shrink: 0;
+    padding: 14px var(--page-padding) 16px;
+    border-top: 1px solid var(--gray-200);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--gray-50);
+  }
+
+  .agent-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .agent-photo {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--accent-light);
+    flex-shrink: 0;
+  }
+
+  .agent-photo-placeholder {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--accent-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--primary-color);
+    flex-shrink: 0;
+  }
+
+  .agent-name {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 1px;
+  }
+
+  .agent-title {
+    font-size: 11px;
+    color: var(--gray-500);
+    margin-bottom: 4px;
+  }
+
+  .agent-contact {
+    display: flex;
+    gap: 8px;
+  }
+
+  .agent-contact-pill {
+    font-size: 10px;
+    color: var(--accent-on-light);
+    border: 1px solid var(--accent-light);
+    padding: 2px 8px;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .agent-footer-logo {
+    max-height: 32px;
+    max-width: 120px;
+    object-fit: contain;
+    opacity: 0.7;
+  }
+
+  /* ===================== PAGE FOOTER ===================== */
+  .page-footer {
+    flex-shrink: 0;
+    text-align: center;
+    padding: 6px var(--page-padding);
+    font-size: 9px;
+    color: var(--gray-400);
+    border-top: 1px solid var(--gray-100);
+  }
+</style>
+</head>
+<body>
+
+<!-- Font preload trigger (invisible, forces font download before PDF capture) -->
+<div style="position:absolute;left:-9999px;top:-9999px;opacity:0;pointer-events:none;" aria-hidden="true">
+  <span style="font-family:'Playfair Display';font-weight:600;">.</span>
+  <span style="font-family:'Playfair Display';font-weight:700;">.</span>
+  <span style="font-family:'Inter';font-weight:400;">.</span>
+  <span style="font-family:'Inter';font-weight:500;">.</span>
+  <span style="font-family:'Inter';font-weight:600;">.</span>
+  <span style="font-family:'Inter';font-weight:700;">.</span>
+</div>
+
+<!-- ==================== PAGE 1 ==================== -->
+<div class="page">
+
+  <!-- {{ header block }} -->
+  <header class="report-header">
+    <div class="header-top">
+      <div class="header-brand">
+        <!-- {{ logo_url }} -->
+        <img class="header-logo" src="https://placehold.co/80x80/18235c/ffffff?text=TR" alt="Logo">
+        <!-- {{ company_name }} -->
+        <span class="header-brand-name">TrendyReports</span>
+      </div>
+      <span class="header-badge">New Listings</span>
+    </div>
+    <!-- {{ report_title }} -->
+    <h1 class="header-title">New Listings Gallery — Irvine</h1>
+    <!-- {{ subtitle: period + audience + source }} -->
+    <p class="header-subtitle">
+      Last <span>30 days</span> · First-Time Buyer · Live MLS Data
+    </p>
+  </header>
+
+  <div class="page-content">
+    <!-- {{ count badge }} -->
+    <div class="count-bar">
+      <div class="count-circle">
+        <!-- {{ listings_count }} -->
+        6
+      </div>
+      <div>
+        <!-- {{ count_label }} -->
+        <div class="count-label">New Listings</div>
+        <div class="count-sublabel">2+ beds, under $560,000</div>
+      </div>
+      <div class="count-divider"></div>
+    </div>
+
+    <!-- {{ listings loop — 3×2 grid for 5-6 listings }} -->
+    <div class="gallery-grid">
+
+      <div class="listing-card avoid-break">
+        <div class="listing-photo" style="background-image: url('https://placehold.co/400x300/e7e5e4/78716c?text=MLS+Photo');">
+          <span class="listing-status">New</span>
+        </div>
+        <div class="listing-info">
+          <div class="listing-price">$548,000</div>
+          <div class="listing-address">123 Main St, Irvine, CA 92618</div>
+          <div class="listing-details">
+            <span class="listing-detail"><strong>3</strong> bd</span>
+            <span class="listing-detail"><strong>2</strong> ba</span>
+            <span class="listing-detail"><strong>1,850</strong> sf</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="listing-card avoid-break">
+        <div class="listing-photo" style="background-image: url('https://placehold.co/400x300/d6d3d1/57534e?text=MLS+Photo');">
+          <span class="listing-status">New</span>
+        </div>
+        <div class="listing-info">
+          <div class="listing-price">$525,000</div>
+          <div class="listing-address">456 Oak Ave, Irvine, CA 92602</div>
+          <div class="listing-details">
+            <span class="listing-detail"><strong>2</strong> bd</span>
+            <span class="listing-detail"><strong>2</strong> ba</span>
+            <span class="listing-detail"><strong>1,200</strong> sf</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="listing-card avoid-break">
+        <div class="listing-photo" style="background-image: url('https://placehold.co/400x300/a8a29e/44403c?text=MLS+Photo');">
+          <span class="listing-status">New</span>
+        </div>
+        <div class="listing-info">
+          <div class="listing-price">$499,900</div>
+          <div class="listing-address">789 Elm Dr, Irvine, CA 92620</div>
+          <div class="listing-details">
+            <span class="listing-detail"><strong>3</strong> bd</span>
+            <span class="listing-detail"><strong>2.5</strong> ba</span>
+            <span class="listing-detail"><strong>1,650</strong> sf</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="listing-card avoid-break">
+        <div class="listing-photo" style="background-image: url('https://placehold.co/400x300/e7e5e4/78716c?text=MLS+Photo');">
+          <span class="listing-status">New</span>
+        </div>
+        <div class="listing-info">
+          <div class="listing-price">$539,000</div>
+          <div class="listing-address">101 Pine Ln, Irvine, CA 92604</div>
+          <div class="listing-details">
+            <span class="listing-detail"><strong>2</strong> bd</span>
+            <span class="listing-detail"><strong>2</strong> ba</span>
+            <span class="listing-detail"><strong>1,380</strong> sf</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="listing-card avoid-break">
+        <div class="listing-photo" style="background-image: url('https://placehold.co/400x300/d6d3d1/57534e?text=MLS+Photo');">
+          <span class="listing-status">New</span>
+        </div>
+        <div class="listing-info">
+          <div class="listing-price">$555,000</div>
+          <div class="listing-address">202 Birch Ct, Irvine, CA 92612</div>
+          <div class="listing-details">
+            <span class="listing-detail"><strong>3</strong> bd</span>
+            <span class="listing-detail"><strong>2</strong> ba</span>
+            <span class="listing-detail"><strong>1,720</strong> sf</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="listing-card avoid-break">
+        <div class="listing-photo no-image">
+          <span class="listing-status">New</span>
+        </div>
+        <div class="listing-info">
+          <div class="listing-price">$510,000</div>
+          <div class="listing-address">303 Cedar Way, Irvine, CA 92606</div>
+          <div class="listing-details">
+            <span class="listing-detail"><strong>2</strong> bd</span>
+            <span class="listing-detail"><strong>1</strong> ba</span>
+            <span class="listing-detail"><strong>1,100</strong> sf</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- {{ end listings loop }} -->
+  </div>
+
+  <!-- {{ agent footer block }} -->
+  <div class="agent-footer">
+    <div class="agent-info">
+      <!-- {{ agent_photo_url }} -->
+      <img class="agent-photo" src="https://placehold.co/104x104/a6e4de/0d9488?text=JS" alt="Agent Photo">
+      <div>
+        <!-- {{ agent_name }} -->
+        <div class="agent-name">Jane Smith</div>
+        <!-- {{ agent_title }} -->
+        <div class="agent-title">Realtor · RE/MAX Premier</div>
+        <div class="agent-contact">
+          <!-- {{ agent_phone }} -->
+          <span class="agent-contact-pill">(949) 555-1234</span>
+          <!-- {{ agent_email }} -->
+          <span class="agent-contact-pill">jane@example.com</span>
+        </div>
+      </div>
+    </div>
+    <!-- {{ logo_url }} -->
+    <img class="agent-footer-logo" src="https://placehold.co/240x64/f5f5f4/78716c?text=LOGO" alt="Company Logo">
+  </div>
+
+  <div class="page-footer">
+    <!-- {{ company_name }} · {{ report_date }} -->
+    Report generated by TrendyReports · Data source: MLS · March 12, 2026
+  </div>
+
+</div>
+
+</body>
+</html>

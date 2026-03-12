@@ -22,6 +22,9 @@ __pycache__/
 # OS
 Thumbs.db
 
+# Build output (generated HTML/PDF for local testing)
+output/
+
 # Intake (design drops / zips)
 _intake/
 

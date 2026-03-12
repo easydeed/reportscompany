@@ -1,0 +1,20 @@
+{% extends '_base/base.jinja2' %}
+
+{% block fonts %}
+{# Classic uses system fonts — Georgia + system sans — no Google Fonts needed #}
+{% endblock %}
+
+{% block theme_styles %}
+:root {
+  --primary-color: #1e3a5f;
+  --accent-color: {{ theme_color | default('#4a90d9', true) }};
+  --accent-on-dark: {{ theme_color_on_dark | default('#4a90d9', true) }};
+  --accent-on-light: {{ theme_color_on_light | default('#2d6cb5', true) }};
+  --accent-light: {{ theme_color_light | default('#dce8f5', true) }};
+  --header-bg: linear-gradient(135deg, #1e3a5f 0%, #254a70 60%, {{ theme_color | default('#4a90d9', true) }} 100%);
+  --bg-light: #f2f5f8;
+  --border-color: #d8dfe6;
+  --font-display: Georgia, 'Times New Roman', serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+{% endblock %}

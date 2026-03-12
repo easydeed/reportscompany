@@ -17,6 +17,8 @@ class ReportCreate(BaseModel):
     lookback_days: int = 30
     filters: Optional[Dict[str, Any]] = None
     additional_params: Optional[dict] = None
+    theme_id: Optional[str] = None
+    accent_color: Optional[str] = None
 
 
 class ReportRow(BaseModel):
@@ -28,6 +30,7 @@ class ReportRow(BaseModel):
     json_url: Optional[str] = None
     csv_url: Optional[str] = None
     pdf_url: Optional[str] = None
+    theme_id: Optional[str] = None
     generated_at: Optional[str] = None
 
 
@@ -97,14 +100,34 @@ def create_report(
             response.headers["X-TrendyReports-Usage-Warning"] = info["message"]
         # ===== END PHASE 29B =====
         
+        # Resolve theme defaults from account if not provided
+        theme_id = payload.theme_id
+        accent_color = payload.accent_color
+        if not theme_id:
+            cur.execute(
+                "SELECT default_theme_id FROM accounts WHERE id = %s::uuid",
+                (account_id,),
+            )
+            acct_row = cur.fetchone()
+            if acct_row and acct_row[0]:
+                theme_id = str(acct_row[0])
+        if not accent_color:
+            cur.execute(
+                "SELECT secondary_color FROM accounts WHERE id = %s::uuid",
+                (account_id,),
+            )
+            acct_row2 = cur.fetchone()
+            if acct_row2 and acct_row2[0]:
+                accent_color = acct_row2[0]
+
         cur.execute(
             """
             INSERT INTO report_generations
-              (account_id, report_type, input_params, status)
-            VALUES (%s, %s, %s::jsonb, 'pending')
+              (account_id, report_type, input_params, status, theme_id, accent_color)
+            VALUES (%s, %s, %s::jsonb, 'pending', %s, %s)
             RETURNING id::text, status
             """,
-            (account_id, payload.report_type, json.dumps(params)),
+            (account_id, payload.report_type, json.dumps(params), theme_id, accent_color),
         )
         row = fetchone_dict(cur)
 
@@ -138,7 +161,7 @@ def get_report(report_id: str, request: Request, account_id: str = Depends(requi
             SELECT id::text, report_type, status,
                    input_params->>'city' AS city,
                    html_url, json_url, csv_url, pdf_url,
-                   generated_at::text
+                   theme_id, generated_at::text
             FROM report_generations
             WHERE id = %s AND account_id = %s
             """,
@@ -184,7 +207,7 @@ def list_reports(
           SELECT id::text, report_type, status,
                  input_params->>'city' AS city,
                  html_url, json_url, csv_url, pdf_url,
-                 generated_at::text
+                 theme_id, generated_at::text
           FROM report_generations
           WHERE {' AND '.join(where)}
           ORDER BY generated_at DESC

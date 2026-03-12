@@ -27,17 +27,22 @@ import { apiFetch } from "@/lib/api";
 interface MarketReport {
   id: string;
   report_type: string;
-  status: "completed" | "processing" | "pending" | "failed";
+  status: "completed" | "complete" | "processing" | "pending" | "failed";
   city?: string;
   html_url?: string;
   json_url?: string;
   csv_url?: string;
   pdf_url?: string;
+  theme_id?: string;
   generated_at?: string;
 }
 
 const STATUS_BADGE: Record<string, { className: string; label: string }> = {
   completed: {
+    className: "bg-green-500/10 text-green-700 hover:bg-green-500/20",
+    label: "Completed",
+  },
+  complete: {
     className: "bg-green-500/10 text-green-700 hover:bg-green-500/20",
     label: "Completed",
   },
@@ -179,7 +184,7 @@ export default function MarketReportDetailPage() {
           </div>
         </div>
 
-        {report.status === "completed" && (
+        {(report.status === "completed" || report.status === "complete") && (
           <Button variant="outline" size="sm" onClick={loadReport}>
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
@@ -251,7 +256,7 @@ export default function MarketReportDetailPage() {
       </Card>
 
       {/* Actions / Downloads */}
-      {report.status === "completed" && (
+      {(report.status === "completed" || report.status === "complete") && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -261,6 +266,29 @@ export default function MarketReportDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-3">
+              {report.pdf_url && (
+                <a
+                  href={report.pdf_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button>
+                    <Eye className="w-4 h-4 mr-2" />
+                    View in Browser
+                  </Button>
+                </a>
+              )}
+              {report.pdf_url && (
+                <a
+                  href={report.pdf_url}
+                  download
+                >
+                  <Button variant="outline">
+                    <Download className="w-4 h-4 mr-2" />
+                    Download PDF
+                  </Button>
+                </a>
+              )}
               {report.html_url && (
                 <a
                   href={report.html_url}
@@ -270,18 +298,6 @@ export default function MarketReportDetailPage() {
                   <Button variant="outline">
                     <Eye className="w-4 h-4 mr-2" />
                     Preview HTML
-                  </Button>
-                </a>
-              )}
-              {report.pdf_url && (
-                <a
-                  href={report.pdf_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Button>
-                    <Download className="w-4 h-4 mr-2" />
-                    Download PDF
                   </Button>
                 </a>
               )}

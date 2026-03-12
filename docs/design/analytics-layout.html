@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analytics Layout — TrendyReports Market Report</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --primary-color: #0d9488;
+    --accent-color: #0d9488;
+    --accent-light: #a6e4de;
+    --accent-dark: #09756b;
+    --accent-on-dark: #5eead4;
+    --accent-on-light: #0d7268;
+    --accent-text: #ffffff;
+    --header-bg: #18235c;
+
+    --page-width: 8.5in;
+    --page-height: 11in;
+    --page-padding: 0.45in;
+
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+
+    --white: #ffffff;
+    --gray-50: #fafaf9;
+    --gray-100: #f5f5f4;
+    --gray-200: #e7e5e4;
+    --gray-300: #d6d3d1;
+    --gray-400: #a8a29e;
+    --gray-500: #78716c;
+    --gray-600: #57534e;
+    --gray-700: #44403c;
+    --gray-800: #292524;
+    --gray-900: #1c1917;
+
+    --shadow-card: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  @page { size: letter; margin: 0; }
+
+  @media print {
+    html, body { background: white; margin: 0; padding: 0; }
+    .page { box-shadow: none; page-break-after: always; page-break-inside: avoid; }
+    .page:last-child { page-break-after: auto; }
+    .avoid-break { page-break-inside: avoid; break-inside: avoid; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+
+  html, body {
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--gray-900);
+    background: #e5e5e5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    width: var(--page-width);
+    height: var(--page-height);
+    background: var(--white);
+    margin: 20px auto;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ===================== GRADIENT HEADER ===================== */
+  .report-header {
+    background: linear-gradient(135deg, var(--header-bg) 0%, #2a3870 60%, var(--primary-color) 100%);
+    padding: 24px var(--page-padding) 20px;
+    color: var(--white);
+    flex-shrink: 0;
+  }
+
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .header-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: contain;
+    background: rgba(255,255,255,0.15);
+    padding: 4px;
+  }
+
+  .header-brand-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--white);
+  }
+
+  .header-badge {
+    display: inline-flex;
+    background: rgba(255,255,255,0.15);
+    color: var(--white);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 5px 12px;
+    border-radius: 20px;
+  }
+
+  .header-title {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--white);
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+
+  .header-subtitle {
+    font-size: 12px;
+    color: rgba(255,255,255,0.75);
+  }
+
+  .header-subtitle span {
+    color: var(--accent-on-dark);
+    font-weight: 600;
+  }
+
+  /* ===================== CONTENT ===================== */
+  .page-content {
+    flex: 1;
+    padding: 0 var(--page-padding);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ===================== HERO STAT ===================== */
+  .hero-stat {
+    text-align: center;
+    padding: 18px 0 14px;
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  .hero-stat-value {
+    font-family: var(--font-display);
+    font-size: 56px;
+    font-weight: 700;
+    color: var(--primary-color);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .hero-stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  /* ===================== STAT BLOCKS (2×2 grid) ===================== */
+  .stat-blocks {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  .stat-block {
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+
+  .stat-block-value {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--gray-900);
+    line-height: 1.1;
+    margin-bottom: 2px;
+  }
+
+  .stat-block-label {
+    font-size: 10px;
+    color: var(--gray-500);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+
+  .stat-block-accent .stat-block-value {
+    color: var(--primary-color);
+  }
+
+  .stat-block-accent {
+    background: var(--accent-light);
+    border-color: transparent;
+  }
+
+  /* ===================== VERTICAL PROPERTY LIST ===================== */
+  .property-list {
+    flex: 1;
+    padding: 14px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .property-card {
+    display: flex;
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: var(--shadow-card);
+  }
+
+  .property-card-photo {
+    width: 140px;
+    min-height: 110px;
+    background-color: var(--gray-100);
+    background-size: cover;
+    background-position: center;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .property-card-photo.no-image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gray-400);
+    font-size: 28px;
+  }
+
+  .property-card-badge {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: var(--primary-color);
+    color: var(--accent-text);
+  }
+
+  .property-card-info {
+    flex: 1;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .property-card-price {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 2px;
+  }
+
+  .property-card-address {
+    font-size: 12px;
+    color: var(--gray-600);
+    margin-bottom: 8px;
+  }
+
+  .property-card-details {
+    display: flex;
+    gap: 14px;
+  }
+
+  .property-card-detail {
+    font-size: 11px;
+    color: var(--gray-500);
+  }
+
+  .property-card-detail strong {
+    color: var(--gray-700);
+    font-weight: 600;
+  }
+
+  /* "More listings" indicator for multi-page */
+  .page-continuation {
+    text-align: center;
+    padding: 10px 0;
+    font-size: 11px;
+    color: var(--gray-400);
+    margin-top: auto;
+  }
+
+  /* ===================== AGENT FOOTER ===================== */
+  .agent-footer {
+    flex-shrink: 0;
+    padding: 12px var(--page-padding) 14px;
+    border-top: 1px solid var(--gray-200);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--gray-50);
+  }
+
+  .agent-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .agent-photo {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--accent-light);
+    flex-shrink: 0;
+  }
+
+  .agent-name {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 1px;
+  }
+
+  .agent-title {
+    font-size: 10px;
+    color: var(--gray-500);
+    margin-bottom: 3px;
+  }
+
+  .agent-contact {
+    display: flex;
+    gap: 6px;
+  }
+
+  .agent-contact-pill {
+    font-size: 9px;
+    color: var(--accent-on-light);
+    border: 1px solid var(--accent-light);
+    padding: 2px 7px;
+    border-radius: 12px;
+    font-weight: 500;
+  }
+
+  .agent-footer-logo {
+    max-height: 28px;
+    max-width: 100px;
+    object-fit: contain;
+    opacity: 0.7;
+  }
+
+  .page-footer {
+    flex-shrink: 0;
+    text-align: center;
+    padding: 5px var(--page-padding);
+    font-size: 9px;
+    color: var(--gray-400);
+    border-top: 1px solid var(--gray-100);
+  }
+</style>
+</head>
+<body>
+
+<div style="position:absolute;left:-9999px;top:-9999px;opacity:0;pointer-events:none;" aria-hidden="true">
+  <span style="font-family:'Playfair Display';font-weight:600;">.</span>
+  <span style="font-family:'Playfair Display';font-weight:700;">.</span>
+  <span style="font-family:'Inter';font-weight:400;">.</span>
+  <span style="font-family:'Inter';font-weight:600;">.</span>
+  <span style="font-family:'Inter';font-weight:700;">.</span>
+</div>
+
+<!-- ==================== PAGE 1 ==================== -->
+<div class="page">
+
+  <!-- {{ header block }} -->
+  <header class="report-header">
+    <div class="header-top">
+      <div class="header-brand">
+        <img class="header-logo" src="https://placehold.co/80x80/18235c/ffffff?text=TR" alt="Logo">
+        <span class="header-brand-name">TrendyReports</span>
+      </div>
+      <!-- {{ badge: "Price Bands" for price_bands, "New Listings" for new_listings }} -->
+      <span class="header-badge">Price Bands</span>
+    </div>
+    <h1 class="header-title">Price Band Analysis — Irvine</h1>
+    <p class="header-subtitle">
+      Last <span>30 days</span> · All Properties · Live MLS Data
+    </p>
+  </header>
+
+  <div class="page-content">
+
+    <!-- {{ hero stat block }} -->
+    <div class="hero-stat avoid-break">
+      <!-- {{ total listing count or median price }} -->
+      <div class="hero-stat-value">42</div>
+      <div class="hero-stat-label">Active Listings</div>
+    </div>
+
+    <!-- {{ stat blocks — 2×2 summary metrics }} -->
+    <div class="stat-blocks avoid-break">
+      <!-- {{ metrics loop }} -->
+      <div class="stat-block stat-block-accent">
+        <div class="stat-block-value">$785k</div>
+        <div class="stat-block-label">Median Price</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-block-value">18</div>
+        <div class="stat-block-label">Avg DOM</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-block-value">$520</div>
+        <div class="stat-block-label">Price / Sq Ft</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-block-value">2.4</div>
+        <div class="stat-block-label">Months Supply</div>
+      </div>
+      <!-- {{ end metrics loop }} -->
+    </div>
+
+    <!-- {{ vertical property list — large cards, 3-4 per page }} -->
+    <div class="property-list">
+      <!-- {{ listings_sample loop }} -->
+
+      <div class="property-card avoid-break">
+        <div class="property-card-photo" style="background-image: url('https://placehold.co/400x300/e7e5e4/78716c?text=MLS+Photo');">
+          <span class="property-card-badge">$500k–$600k</span>
+        </div>
+        <div class="property-card-info">
+          <div class="property-card-price">$548,000</div>
+          <div class="property-card-address">123 Main St, Irvine, CA 92618</div>
+          <div class="property-card-details">
+            <span class="property-card-detail"><strong>3</strong> beds</span>
+            <span class="property-card-detail"><strong>2</strong> baths</span>
+            <span class="property-card-detail"><strong>1,850</strong> sqft</span>
+            <span class="property-card-detail"><strong>12</strong> DOM</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="property-card avoid-break">
+        <div class="property-card-photo" style="background-image: url('https://placehold.co/400x300/d6d3d1/57534e?text=MLS+Photo');">
+          <span class="property-card-badge">$500k–$600k</span>
+        </div>
+        <div class="property-card-info">
+          <div class="property-card-price">$525,000</div>
+          <div class="property-card-address">456 Oak Ave, Irvine, CA 92602</div>
+          <div class="property-card-details">
+            <span class="property-card-detail"><strong>2</strong> beds</span>
+            <span class="property-card-detail"><strong>2</strong> baths</span>
+            <span class="property-card-detail"><strong>1,200</strong> sqft</span>
+            <span class="property-card-detail"><strong>8</strong> DOM</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="property-card avoid-break">
+        <div class="property-card-photo" style="background-image: url('https://placehold.co/400x300/a8a29e/44403c?text=MLS+Photo');">
+          <span class="property-card-badge">$400k–$500k</span>
+        </div>
+        <div class="property-card-info">
+          <div class="property-card-price">$499,900</div>
+          <div class="property-card-address">789 Elm Dr, Irvine, CA 92620</div>
+          <div class="property-card-details">
+            <span class="property-card-detail"><strong>3</strong> beds</span>
+            <span class="property-card-detail"><strong>2.5</strong> baths</span>
+            <span class="property-card-detail"><strong>1,650</strong> sqft</span>
+            <span class="property-card-detail"><strong>22</strong> DOM</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- {{ end listings_sample loop }} -->
+
+      <!-- {{ if more listings on next page }} -->
+      <div class="page-continuation">Continued on next page →</div>
+    </div>
+
+  </div>
+
+  <!-- {{ agent footer block }} -->
+  <div class="agent-footer">
+    <div class="agent-info">
+      <img class="agent-photo" src="https://placehold.co/96x96/a6e4de/0d9488?text=JS" alt="Agent Photo">
+      <div>
+        <div class="agent-name">Jane Smith</div>
+        <div class="agent-title">Realtor · RE/MAX Premier</div>
+        <div class="agent-contact">
+          <span class="agent-contact-pill">(949) 555-1234</span>
+          <span class="agent-contact-pill">jane@example.com</span>
+        </div>
+      </div>
+    </div>
+    <img class="agent-footer-logo" src="https://placehold.co/200x56/f5f5f4/78716c?text=LOGO" alt="Company Logo">
+  </div>
+
+  <div class="page-footer">
+    Report generated by TrendyReports · Data source: MLS · March 12, 2026
+  </div>
+
+</div>
+
+<!-- ==================== PAGE 2 (continuation) ==================== -->
+<div class="page">
+
+  <header class="report-header" style="padding: 16px var(--page-padding) 14px;">
+    <div class="header-top" style="margin-bottom: 0;">
+      <div class="header-brand">
+        <img class="header-logo" src="https://placehold.co/80x80/18235c/ffffff?text=TR" alt="Logo">
+        <span class="header-brand-name">TrendyReports</span>
+      </div>
+      <span class="header-badge">Page 2</span>
+    </div>
+  </header>
+
+  <div class="page-content" style="padding-top: 14px;">
+    <div class="property-list">
+
+      <div class="property-card avoid-break">
+        <div class="property-card-photo" style="background-image: url('https://placehold.co/400x300/e7e5e4/78716c?text=MLS+Photo');">
+          <span class="property-card-badge">$700k–$800k</span>
+        </div>
+        <div class="property-card-info">
+          <div class="property-card-price">$739,000</div>
+          <div class="property-card-address">404 Willow Dr, Irvine, CA 92614</div>
+          <div class="property-card-details">
+            <span class="property-card-detail"><strong>4</strong> beds</span>
+            <span class="property-card-detail"><strong>3</strong> baths</span>
+            <span class="property-card-detail"><strong>2,100</strong> sqft</span>
+            <span class="property-card-detail"><strong>6</strong> DOM</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="property-card avoid-break">
+        <div class="property-card-photo" style="background-image: url('https://placehold.co/400x300/d6d3d1/57534e?text=MLS+Photo');">
+          <span class="property-card-badge">$800k–$900k</span>
+        </div>
+        <div class="property-card-info">
+          <div class="property-card-price">$855,000</div>
+          <div class="property-card-address">505 Maple Ct, Irvine, CA 92603</div>
+          <div class="property-card-details">
+            <span class="property-card-detail"><strong>4</strong> beds</span>
+            <span class="property-card-detail"><strong>3.5</strong> baths</span>
+            <span class="property-card-detail"><strong>2,450</strong> sqft</span>
+            <span class="property-card-detail"><strong>10</strong> DOM</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="property-card avoid-break">
+        <div class="property-card-photo no-image">
+          🏠
+          <span class="property-card-badge">$900k+</span>
+        </div>
+        <div class="property-card-info">
+          <div class="property-card-price">$960,000</div>
+          <div class="property-card-address">606 Cypress Blvd, Irvine, CA 92604</div>
+          <div class="property-card-details">
+            <span class="property-card-detail"><strong>5</strong> beds</span>
+            <span class="property-card-detail"><strong>4</strong> baths</span>
+            <span class="property-card-detail"><strong>3,200</strong> sqft</span>
+            <span class="property-card-detail"><strong>3</strong> DOM</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="agent-footer">
+    <div class="agent-info">
+      <img class="agent-photo" src="https://placehold.co/96x96/a6e4de/0d9488?text=JS" alt="Agent Photo">
+      <div>
+        <div class="agent-name">Jane Smith</div>
+        <div class="agent-title">Realtor · RE/MAX Premier</div>
+        <div class="agent-contact">
+          <span class="agent-contact-pill">(949) 555-1234</span>
+          <span class="agent-contact-pill">jane@example.com</span>
+        </div>
+      </div>
+    </div>
+    <img class="agent-footer-logo" src="https://placehold.co/200x56/f5f5f4/78716c?text=LOGO" alt="Company Logo">
+  </div>
+
+  <div class="page-footer">
+    Report generated by TrendyReports · Data source: MLS · March 12, 2026 · Page 2
+  </div>
+
+</div>
+
+</body>
+</html>

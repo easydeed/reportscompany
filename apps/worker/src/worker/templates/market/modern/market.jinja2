@@ -1,0 +1,20 @@
+{% extends '_base/base.jinja2' %}
+
+{% block fonts %}
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block theme_styles %}
+:root {
+  --primary-color: #0f172a;
+  --accent-color: {{ theme_color | default('#FF6B54', true) }};
+  --accent-on-dark: {{ theme_color_on_dark | default('#FF6B54', true) }};
+  --accent-on-light: {{ theme_color_on_light | default('#d44e39', true) }};
+  --accent-light: {{ theme_color_light | default('#ffe0db', true) }};
+  --header-bg: linear-gradient(135deg, #0f172a 0%, #1a2942 60%, {{ theme_color | default('#FF6B54', true) }} 100%);
+  --bg-light: #f1f5f9;
+  --border-color: #e2e8f0;
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+}
+{% endblock %}

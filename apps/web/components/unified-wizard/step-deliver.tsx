@@ -18,6 +18,7 @@ import type { WizardState, DeliveryMode, Cadence } from "./types"
 interface StepDeliverProps {
   state: WizardState
   onChange: (patch: Partial<WizardState>) => void
+  defaultMode?: DeliveryMode
 }
 
 const DAYS_OF_WEEK = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
@@ -32,7 +33,7 @@ const TIMEZONES = [
   { value: "Pacific/Honolulu", label: "Hawaii" },
 ]
 
-export function StepDeliver({ state, onChange }: StepDeliverProps) {
+export function StepDeliver({ state, onChange, defaultMode }: StepDeliverProps) {
   const [emailInput, setEmailInput] = useState("")
 
   const addEmail = () => {
@@ -51,26 +52,29 @@ export function StepDeliver({ state, onChange }: StepDeliverProps) {
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-semibold text-gray-900">How do you want to deliver it?</h2>
-        <p className="text-sm text-gray-500 mt-1">Send now or set up a recurring schedule.</p>
+        <p className="text-sm text-gray-500 mt-1">
+          {defaultMode ? "Choose your delivery options." : "Send now or set up a recurring schedule."}
+        </p>
       </div>
 
-      {/* Mode toggle */}
-      <div className="grid grid-cols-2 gap-2">
-        <ModeCard
-          active={state.deliveryMode === "send_now"}
-          onClick={() => onChange({ deliveryMode: "send_now" })}
-          icon={<Mail className="w-5 h-5" />}
-          title="Send Now"
-          description="Generate and deliver immediately"
-        />
-        <ModeCard
-          active={state.deliveryMode === "schedule"}
-          onClick={() => onChange({ deliveryMode: "schedule" })}
-          icon={<Calendar className="w-5 h-5" />}
-          title="Schedule"
-          description="Set up recurring delivery"
-        />
-      </div>
+      {!defaultMode && (
+        <div className="grid grid-cols-2 gap-2">
+          <ModeCard
+            active={state.deliveryMode === "send_now"}
+            onClick={() => onChange({ deliveryMode: "send_now" })}
+            icon={<Mail className="w-5 h-5" />}
+            title="Send Now"
+            description="Generate and deliver immediately"
+          />
+          <ModeCard
+            active={state.deliveryMode === "schedule"}
+            onClick={() => onChange({ deliveryMode: "schedule" })}
+            icon={<Calendar className="w-5 h-5" />}
+            title="Schedule"
+            description="Set up recurring delivery"
+          />
+        </div>
+      )}
 
       {state.deliveryMode === "send_now" ? (
         <SendNowOptions state={state} onChange={onChange} emailInput={emailInput} setEmailInput={setEmailInput} addEmail={addEmail} removeEmail={removeEmail} />

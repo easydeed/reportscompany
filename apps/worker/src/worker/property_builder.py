@@ -23,6 +23,12 @@ import colorsys
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from worker.template_filters import (
+    format_currency as _fmt_currency,
+    format_currency_short as _fmt_currency_short,
+    format_number as _fmt_number,
+    truncate as _truncate_fn,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -293,11 +299,11 @@ class PropertyReportBuilder:
             lstrip_blocks=True
         )
         
-        # Add custom filters
-        self.env.filters['format_currency'] = self._format_currency
-        self.env.filters['format_currency_short'] = self._format_currency_short
-        self.env.filters['format_number'] = self._format_number
-        self.env.filters['truncate'] = self._truncate
+        # Add custom filters (shared with MarketReportBuilder via template_filters.py)
+        self.env.filters['format_currency'] = _fmt_currency
+        self.env.filters['format_currency_short'] = _fmt_currency_short
+        self.env.filters['format_number'] = _fmt_number
+        self.env.filters['truncate'] = _truncate_fn
         
     @staticmethod
     def _format_currency(value: Any) -> str:
