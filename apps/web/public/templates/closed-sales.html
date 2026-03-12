@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Closed Sales — Market Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #18235c;
+      --accent-color: #0d9488;
+      --accent-on-dark: #5eead4;
+      --accent-on-light: #0f766e;
+      --header-bg: linear-gradient(135deg, #18235c 0%, #1e3a5f 60%, #0d9488 100%);
+      --accent-light: #ccfbf1;
+      --text-primary: #1e293b;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --bg-light: #f8fafc;
+      --positive-color: #059669;
+      --negative-color: #dc2626;
+      --sold-badge-bg: #dc2626;
+      --active-badge-bg: #059669;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    @page {
+      size: letter;
+      margin: 0;
+    }
+
+    html, body {
+      width: 8.5in;
+      height: 11in;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 10px;
+      line-height: 1.4;
+      color: var(--text-primary);
+      background: white;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .page {
+      width: 8.5in;
+      height: 11in;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: white;
+    }
+
+    /* ============================================
+       1. HEADER BAR (identical to Gallery)
+       ============================================ */
+    .header-bar {
+      background: var(--header-bg);
+      padding: 0.3in 0.4in;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.15in;
+    }
+
+    .header-logo {
+      width: 0.42in;
+      height: 0.42in;
+      background: white;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 11px;
+      color: var(--primary-color);
+    }
+
+    .header-logo img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .header-text {
+      color: white;
+    }
+
+    .header-company {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .header-subtitle {
+      font-size: 9px;
+      opacity: 0.85;
+      margin-top: 1px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 0.12in;
+    }
+
+    .tagline-pill {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      font-size: 8px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.02em;
+    }
+
+    .pdf-badge {
+      position: absolute;
+      top: 0.1in;
+      right: 0.1in;
+      background: var(--accent-color);
+      color: white;
+      font-size: 7px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 3px;
+      letter-spacing: 0.05em;
+    }
+
+    /* ============================================
+       2. TITLE SECTION
+       ============================================ */
+    .title-section {
+      padding: 0.18in 0.4in 0.12in;
+      background: white;
+      flex-shrink: 0;
+    }
+
+    .title-main {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary-color);
+      letter-spacing: -0.02em;
+      margin-bottom: 3px;
+    }
+
+    .title-subtitle {
+      font-size: 9px;
+      color: var(--text-muted);
+    }
+
+    .title-divider {
+      height: 3px;
+      background: var(--accent-color);
+      border-radius: 2px;
+      margin-top: 0.08in;
+      width: 1in;
+    }
+
+    /* ============================================
+       3. HERO STAT
+       ============================================ */
+    .hero-stat-section {
+      padding: 0.12in 0.4in;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .hero-stat-box {
+      display: inline-block;
+      padding: 0.1in 0.35in;
+      background: var(--bg-light);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+    }
+
+    .hero-stat-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 2px;
+    }
+
+    .hero-stat-value {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--primary-color);
+      line-height: 1.1;
+      margin-bottom: 2px;
+    }
+
+    .hero-stat-sub {
+      font-size: 9px;
+      color: var(--text-muted);
+    }
+
+    /* ============================================
+       4. PHOTO GRID (2x2 with SOLD/ACTIVE badges)
+       ============================================ */
+    .grid-section {
+      padding: 0 0.4in 0.1in;
+      flex-shrink: 0;
+    }
+
+    .grid-label {
+      font-size: 8px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.06in;
+    }
+
+    .property-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.1in;
+    }
+
+    .property-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .property-image-wrapper {
+      aspect-ratio: 16 / 9;
+      background: var(--bg-light);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .property-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .property-image-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-light);
+      color: var(--text-muted);
+      font-size: 8px;
+    }
+
+    .property-image-placeholder svg {
+      width: 20px;
+      height: 20px;
+      opacity: 0.4;
+    }
+
+    /* Status Badge - SOLD or ACTIVE */
+    .status-badge {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      font-size: 8px;
+      font-weight: 700;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 3px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .status-badge.sold {
+      background: var(--sold-badge-bg);
+    }
+
+    .status-badge.active {
+      background: var(--active-badge-bg);
+    }
+
+    .property-details {
+      padding: 6px 8px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .property-address {
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .property-city {
+      font-size: 8px;
+      color: var(--text-muted);
+      margin-bottom: 3px;
+    }
+
+    .property-price {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--primary-color);
+      margin-bottom: 3px;
+    }
+
+    .property-specs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 8px;
+      color: var(--text-muted);
+      margin-top: auto;
+    }
+
+    .spec-item {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .spec-item svg {
+      width: 9px;
+      height: 9px;
+      opacity: 0.6;
+    }
+
+    /* ============================================
+       5. DATA TABLE
+       ============================================ */
+    .table-section {
+      padding: 0.08in 0.4in 0.1in;
+      flex-shrink: 0;
+    }
+
+    .table-label {
+      font-size: 8px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.05in;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9px;
+    }
+
+    .data-table thead th {
+      background: var(--primary-color);
+      color: white;
+      font-weight: 600;
+      padding: 5px 8px;
+      text-align: left;
+      font-size: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .data-table thead th:first-child {
+      border-radius: 4px 0 0 0;
+    }
+
+    .data-table thead th:last-child {
+      border-radius: 0 4px 0 0;
+    }
+
+    .data-table thead th.right {
+      text-align: right;
+    }
+
+    .data-table tbody tr:nth-child(odd) {
+      background: white;
+    }
+
+    .data-table tbody tr:nth-child(even) {
+      background: var(--bg-light);
+    }
+
+    .data-table tbody td {
+      padding: 5px 8px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .data-table tbody td.right {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .data-table tbody td.price {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+
+    /* ============================================
+       6. STATS BAR
+       ============================================ */
+    .stats-bar {
+      padding: 0.08in 0.4in;
+      flex-shrink: 0;
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 0.1in;
+      background: var(--bg-light);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.08in 0.12in;
+    }
+
+    .stat-block {
+      flex: 1;
+      text-align: center;
+      border-right: 1px solid var(--border-color);
+      padding-right: 0.1in;
+    }
+
+    .stat-block:last-child {
+      border-right: none;
+      padding-right: 0;
+    }
+
+    .stat-value {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--primary-color);
+      margin-bottom: 1px;
+    }
+
+    .stat-label {
+      font-size: 8px;
+      color: var(--text-muted);
+      margin-bottom: 1px;
+    }
+
+    .stat-sub {
+      font-size: 8px;
+      font-weight: 600;
+    }
+
+    .stat-sub.positive {
+      color: var(--positive-color);
+    }
+
+    .stat-sub.negative {
+      color: var(--negative-color);
+    }
+
+    .stat-sub.neutral {
+      color: var(--accent-on-light);
+    }
+
+    /* ============================================
+       7. QUICK TAKE
+       ============================================ */
+    .quicktake-section {
+      padding: 0 0.4in 0.1in;
+      flex-shrink: 0;
+    }
+
+    .quicktake-box {
+      background: linear-gradient(135deg, var(--primary-color) 0%, #1e3a5f 100%);
+      border-radius: 6px;
+      padding: 0.08in 0.12in;
+      display: flex;
+      align-items: center;
+      gap: 0.08in;
+    }
+
+    .quicktake-icon {
+      width: 18px;
+      height: 18px;
+      background: var(--accent-color);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .quicktake-icon svg {
+      width: 10px;
+      height: 10px;
+      color: white;
+    }
+
+    .quicktake-text {
+      font-size: 9px;
+      font-weight: 500;
+      color: white;
+      line-height: 1.4;
+    }
+
+    /* ============================================
+       8. AGENT FOOTER
+       ============================================ */
+    .agent-footer {
+      background: var(--bg-light);
+      padding: 0.12in 0.4in;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .agent-info {
+      display: flex;
+      align-items: center;
+      gap: 0.1in;
+    }
+
+    .agent-photo {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .agent-details {
+      line-height: 1.35;
+    }
+
+    .agent-name {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .agent-title {
+      font-size: 8px;
+      color: var(--text-muted);
+      margin-bottom: 1px;
+    }
+
+    .agent-contact {
+      font-size: 8px;
+      color: var(--text-muted);
+    }
+
+    .agent-contact a {
+      color: var(--accent-on-light);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .footer-logo {
+      height: 0.3in;
+      opacity: 0.7;
+    }
+
+    /* ============================================
+       9. POWERED BY FOOTER
+       ============================================ */
+    .powered-footer {
+      padding: 0.06in 0.4in;
+      text-align: center;
+      font-size: 7px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    /* ============================================
+       PRINT STYLES
+       ============================================ */
+    @media print {
+      html, body {
+        width: 8.5in;
+        height: 11in;
+      }
+      .page {
+        page-break-after: avoid;
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- ========================================
+         1. HEADER BAR
+         ======================================== -->
+    <header class="header-bar">
+      <div class="header-left">
+        <div class="header-logo">
+          <!-- {{ company_logo }} -->
+          <img src="https://placehold.co/80x80/18235c/ffffff?text=Logo" alt="Company Logo">
+        </div>
+        <div class="header-text">
+          <div class="header-company"><!-- {{ company_name }} -->Acme Realty Group</div>
+          <div class="header-subtitle">Closed Sales Report</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <span class="tagline-pill">Your Trusted Partner</span>
+      </div>
+      <span class="pdf-badge">PDF</span>
+    </header>
+
+    <!-- ========================================
+         2. TITLE SECTION
+         ======================================== -->
+    <section class="title-section">
+      <h1 class="title-main"><!-- {{ report_type: "Closed Sales" | "Inventory" }} -->Closed Sales — <!-- {{ city }} -->Downey</h1>
+      <p class="title-subtitle">Period: <!-- {{ period }} -->Last 30 days &bull; Source: Live MLS Data &bull; Report Date: <!-- {{ report_date }} -->March 08, 2026</p>
+      <div class="title-divider"></div>
+    </section>
+
+    <!-- ========================================
+         3. HERO STAT
+         ======================================== -->
+    <section class="hero-stat-section">
+      <div class="hero-stat-box">
+        <div class="hero-stat-label"><!-- {{ hero_label: "Total Closed" | "Active Listings" }} -->Total Closed</div>
+        <div class="hero-stat-value"><!-- {{ hero_value }} -->42</div>
+        <div class="hero-stat-sub"><!-- {{ hero_sub }} -->in the last 30 days</div>
+      </div>
+    </section>
+
+    <!-- ========================================
+         4. PHOTO GRID (2x2 with SOLD badges)
+         ======================================== -->
+    <section class="grid-section">
+      <div class="grid-label">Notable Sales</div>
+      <!-- {{ listings loop }} -->
+      <div class="property-grid">
+        <!-- Listing 1 -->
+        <div class="property-card">
+          <div class="property-image-wrapper">
+            <img 
+              class="property-image" 
+              src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=225&fit=crop" 
+              alt="Property"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+            >
+            <div class="property-image-placeholder" style="display:none;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z"/></svg>
+            </div>
+            <!-- {{ badge_type: "sold" | "active" }} -->
+            <span class="status-badge sold">SOLD</span>
+          </div>
+          <div class="property-details">
+            <div class="property-address"><!-- {{ address }} -->8432 Florence Ave</div>
+            <div class="property-city"><!-- {{ city_zip }} -->Downey, CA 90240</div>
+            <div class="property-price"><!-- {{ price }} -->$875,000</div>
+            <div class="property-specs">
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                <!-- {{ beds }} -->4 bd
+              </span>
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/></svg>
+                <!-- {{ baths }} -->3 ba
+              </span>
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+                <!-- {{ sqft }} -->2,450 sf
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Listing 2 -->
+        <div class="property-card">
+          <div class="property-image-wrapper">
+            <img 
+              class="property-image" 
+              src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&h=225&fit=crop" 
+              alt="Property"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+            >
+            <div class="property-image-placeholder" style="display:none;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z"/></svg>
+            </div>
+            <span class="status-badge sold">SOLD</span>
+          </div>
+          <div class="property-details">
+            <div class="property-address">12051 Paramount Blvd</div>
+            <div class="property-city">Downey, CA 90242</div>
+            <div class="property-price">$1,250,000</div>
+            <div class="property-specs">
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                5 bd
+              </span>
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/></svg>
+                4 ba
+              </span>
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+                3,200 sf
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Listing 3 -->
+        <div class="property-card">
+          <div class="property-image-wrapper">
+            <img 
+              class="property-image" 
+              src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=400&h=225&fit=crop" 
+              alt="Property"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+            >
+            <div class="property-image-placeholder" style="display:none;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z"/></svg>
+            </div>
+            <span class="status-badge sold">SOLD</span>
+          </div>
+          <div class="property-details">
+            <div class="property-address">7654 Firestone Blvd</div>
+            <div class="property-city">Downey, CA 90241</div>
+            <div class="property-price">$725,000</div>
+            <div class="property-specs">
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                3 bd
+              </span>
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/></svg>
+                2 ba
+              </span>
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+                1,850 sf
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Listing 4 -->
+        <div class="property-card">
+          <div class="property-image-wrapper">
+            <img 
+              class="property-image" 
+              src="https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=400&h=225&fit=crop" 
+              alt="Property"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+            >
+            <div class="property-image-placeholder" style="display:none;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z"/></svg>
+            </div>
+            <span class="status-badge sold">SOLD</span>
+          </div>
+          <div class="property-details">
+            <div class="property-address">9821 Telegraph Rd</div>
+            <div class="property-city">Downey, CA 90240</div>
+            <div class="property-price">$949,000</div>
+            <div class="property-specs">
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                4 bd
+              </span>
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/></svg>
+                3 ba
+              </span>
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+                2,680 sf
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- {{ /listings loop }} -->
+    </section>
+
+    <!-- ========================================
+         5. DATA TABLE
+         ======================================== -->
+    <section class="table-section">
+      <div class="table-label">Recent Transactions</div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Address</th>
+            <th class="right">Beds</th>
+            <th class="right">Baths</th>
+            <th class="right">Sq Ft</th>
+            <th class="right">Price</th>
+            <th class="right">DOM</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- {{ table_rows loop }} -->
+          <tr>
+            <td><!-- {{ address }} -->8432 Florence Ave</td>
+            <td class="right"><!-- {{ beds }} -->4</td>
+            <td class="right"><!-- {{ baths }} -->3</td>
+            <td class="right"><!-- {{ sqft }} -->2,450</td>
+            <td class="right price"><!-- {{ price }} -->$875,000</td>
+            <td class="right"><!-- {{ dom }} -->12</td>
+          </tr>
+          <tr>
+            <td>12051 Paramount Blvd</td>
+            <td class="right">5</td>
+            <td class="right">4</td>
+            <td class="right">3,200</td>
+            <td class="right price">$1,250,000</td>
+            <td class="right">8</td>
+          </tr>
+          <tr>
+            <td>7654 Firestone Blvd</td>
+            <td class="right">3</td>
+            <td class="right">2</td>
+            <td class="right">1,850</td>
+            <td class="right price">$725,000</td>
+            <td class="right">21</td>
+          </tr>
+          <tr>
+            <td>9821 Telegraph Rd</td>
+            <td class="right">4</td>
+            <td class="right">3</td>
+            <td class="right">2,680</td>
+            <td class="right price">$949,000</td>
+            <td class="right">15</td>
+          </tr>
+          <tr>
+            <td>5430 Lakewood Blvd</td>
+            <td class="right">3</td>
+            <td class="right">2</td>
+            <td class="right">1,620</td>
+            <td class="right price">$689,000</td>
+            <td class="right">28</td>
+          </tr>
+          <!-- {{ /table_rows loop }} -->
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ========================================
+         6. STATS BAR
+         ======================================== -->
+    <section class="stats-bar">
+      <div class="stats-row">
+        <div class="stat-block">
+          <div class="stat-value"><!-- {{ stat1_value }} -->$1.08M</div>
+          <div class="stat-label"><!-- {{ stat1_label }} -->Median Sold</div>
+          <div class="stat-sub positive"><!-- {{ stat1_change }} -->+2.1%</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-value"><!-- {{ stat2_value }} -->18</div>
+          <div class="stat-label"><!-- {{ stat2_label }} -->Avg DOM</div>
+          <div class="stat-sub negative"><!-- {{ stat2_change }} -->-5 days</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-value"><!-- {{ stat3_value }} -->98.2%</div>
+          <div class="stat-label"><!-- {{ stat3_label }} -->Close-to-List</div>
+          <div class="stat-sub neutral"><!-- {{ stat3_change }} -->on target</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================
+         7. QUICK TAKE
+         ======================================== -->
+    <section class="quicktake-section">
+      <div class="quicktake-box">
+        <div class="quicktake-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <div class="quicktake-text">
+          <!-- {{ quick_take }} -->
+          <strong>Quick Take:</strong> Strong seller's market with homes selling near asking price. Buyers should act quickly on well-priced listings.
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================
+         8. AGENT FOOTER
+         ======================================== -->
+    <footer class="agent-footer">
+      <div class="agent-info">
+        <img 
+          class="agent-photo" 
+          src="https://randomuser.me/api/portraits/women/44.jpg" 
+          alt="Agent Photo"
+          onerror="this.src='https://placehold.co/80x80/18235c/ffffff?text=Agent'"
+        >
+        <div class="agent-details">
+          <div class="agent-name"><!-- {{ agent_name }} -->Sarah Chen</div>
+          <div class="agent-title"><!-- {{ agent_title }} -->Senior Realtor &bull; DRE #01234567</div>
+          <div class="agent-contact">
+            <!-- {{ agent_phone }} -->(310) 555-1234 &bull; 
+            <a href="mailto:sarah@acmerealty.com"><!-- {{ agent_email }} -->sarah@acmerealty.com</a>
+          </div>
+        </div>
+      </div>
+      <img 
+        class="footer-logo" 
+        src="https://placehold.co/120x40/18235c/ffffff?text=Acme+Realty" 
+        alt="Company Logo"
+      >
+    </footer>
+
+    <!-- ========================================
+         9. POWERED BY FOOTER
+         ======================================== -->
+    <div class="powered-footer">
+      Powered by <!-- {{ platform_name }} -->ReportsCompany &bull; Data updated <!-- {{ data_updated }} -->March 08, 2026 at 9:15 AM PST
+    </div>
+  </div>
+</body>
+</html>
