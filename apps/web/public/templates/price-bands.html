@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Price Bands — Market Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #18235c;
+      --accent-color: #0d9488;
+      --accent-on-dark: #5eead4;
+      --accent-on-light: #0f766e;
+      --header-bg: linear-gradient(135deg, #18235c 0%, #1e3a5f 60%, #0d9488 100%);
+      --accent-light: #ccfbf1;
+      --text-primary: #1e293b;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --bg-light: #f8fafc;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    @page {
+      size: letter;
+      margin: 0;
+    }
+
+    html, body {
+      width: 8.5in;
+      height: 11in;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 10px;
+      line-height: 1.4;
+      color: var(--text-primary);
+      background: white;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .page {
+      width: 8.5in;
+      height: 11in;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: white;
+    }
+
+    /* ============================================
+       1. HEADER BAR
+       ============================================ */
+    .header-bar {
+      background: var(--header-bg);
+      padding: 0.35in 0.4in;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.15in;
+    }
+
+    .header-logo {
+      width: 0.45in;
+      height: 0.45in;
+      background: white;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 11px;
+      color: var(--primary-color);
+    }
+
+    .header-logo img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .header-text {
+      color: white;
+    }
+
+    .header-company {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .header-subtitle {
+      font-size: 10px;
+      opacity: 0.85;
+      margin-top: 1px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 0.12in;
+    }
+
+    .tagline-pill {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      font-size: 9px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.02em;
+    }
+
+    .pdf-badge {
+      position: absolute;
+      top: 0.12in;
+      right: 0.12in;
+      background: var(--accent-color);
+      color: white;
+      font-size: 8px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 3px;
+      letter-spacing: 0.05em;
+    }
+
+    /* ============================================
+       2. TITLE SECTION
+       ============================================ */
+    .title-section {
+      padding: 0.22in 0.4in 0.15in;
+      background: white;
+      flex-shrink: 0;
+    }
+
+    .title-main {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--primary-color);
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+    }
+
+    .title-subtitle {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .title-divider {
+      height: 3px;
+      background: var(--accent-color);
+      border-radius: 2px;
+      margin-top: 0.1in;
+      width: 1.2in;
+    }
+
+    /* ============================================
+       3. HERO STAT
+       ============================================ */
+    .hero-stat-section {
+      padding: 0.15in 0.4in 0.18in;
+      display: flex;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .hero-stat-box {
+      text-align: center;
+      background: var(--bg-light);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.18in 0.5in;
+    }
+
+    .hero-stat-value {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 42px;
+      font-weight: 700;
+      color: var(--primary-color);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .hero-stat-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+    }
+
+    .hero-stat-sub {
+      font-size: 9px;
+      color: var(--text-muted);
+    }
+
+    /* ============================================
+       4. STAT BLOCKS (2x2 Grid)
+       ============================================ */
+    .stats-section {
+      padding: 0 0.4in 0.15in;
+      flex-shrink: 0;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.12in;
+    }
+
+    .stat-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.12in 0.15in;
+      text-align: center;
+    }
+
+    .stat-card-value {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary-color);
+      margin-bottom: 2px;
+    }
+
+    .stat-card-label {
+      font-size: 9px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .stat-card-trend {
+      font-size: 9px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .stat-card-trend.up {
+      color: #16a34a;
+    }
+
+    .stat-card-trend.down {
+      color: #dc2626;
+    }
+
+    .stat-card-trend svg {
+      width: 10px;
+      height: 10px;
+    }
+
+    /* ============================================
+       5. PROPERTY LIST (Vertical)
+       ============================================ */
+    .list-section {
+      flex: 1;
+      padding: 0 0.4in;
+      overflow: hidden;
+    }
+
+    .list-header {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--primary-color);
+      margin-bottom: 0.1in;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .property-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .property-row {
+      display: flex;
+      align-items: center;
+      gap: 0.15in;
+      padding: 0.12in 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .property-row:last-child {
+      border-bottom: none;
+    }
+
+    .property-row-image {
+      width: 120px;
+      height: 90px;
+      border-radius: 6px;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: var(--bg-light);
+    }
+
+    .property-row-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .property-row-image-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+    }
+
+    .property-row-image-placeholder svg {
+      width: 28px;
+      height: 28px;
+      opacity: 0.4;
+    }
+
+    .property-row-details {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .property-row-address {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .property-row-city {
+      font-size: 9px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .property-row-price {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--primary-color);
+      margin-bottom: 6px;
+    }
+
+    .property-row-specs {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 9px;
+      color: var(--text-muted);
+    }
+
+    .spec-item {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .spec-item svg {
+      width: 12px;
+      height: 12px;
+      opacity: 0.6;
+    }
+
+    .property-row-badge {
+      flex-shrink: 0;
+    }
+
+    .status-badge {
+      font-size: 8px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 4px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .status-badge.active {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .status-badge.pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .status-badge.new {
+      background: var(--accent-light);
+      color: var(--accent-on-light);
+    }
+
+    /* ============================================
+       6. QUICK TAKE CALLOUT
+       ============================================ */
+    .quick-take-section {
+      padding: 0.12in 0.4in 0.15in;
+      flex-shrink: 0;
+    }
+
+    .quick-take {
+      background: var(--primary-color);
+      border-radius: 8px;
+      padding: 0.15in 0.2in;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.12in;
+    }
+
+    .quick-take-icon {
+      width: 20px;
+      height: 20px;
+      background: var(--accent-on-dark);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .quick-take-icon svg {
+      width: 12px;
+      height: 12px;
+      color: var(--primary-color);
+    }
+
+    .quick-take-content {
+      flex: 1;
+    }
+
+    .quick-take-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 3px;
+    }
+
+    .quick-take-text {
+      font-size: 9px;
+      color: rgba(255,255,255,0.85);
+      line-height: 1.5;
+    }
+
+    /* ============================================
+       7. AGENT FOOTER
+       ============================================ */
+    .agent-footer {
+      background: var(--bg-light);
+      padding: 0.18in 0.4in;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .agent-info {
+      display: flex;
+      align-items: center;
+      gap: 0.12in;
+    }
+
+    .agent-photo {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .agent-details {
+      line-height: 1.35;
+    }
+
+    .agent-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .agent-title {
+      font-size: 9px;
+      color: var(--text-muted);
+      margin-bottom: 3px;
+    }
+
+    .agent-contact {
+      font-size: 9px;
+      color: var(--text-muted);
+    }
+
+    .agent-contact a {
+      color: var(--accent-on-light);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .footer-logo {
+      height: 0.35in;
+      opacity: 0.7;
+    }
+
+    /* ============================================
+       8. POWERED BY FOOTER
+       ============================================ */
+    .powered-footer {
+      padding: 0.1in 0.4in;
+      text-align: center;
+      font-size: 8px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    /* ============================================
+       PRINT STYLES
+       ============================================ */
+    @media print {
+      html, body {
+        width: 8.5in;
+        height: 11in;
+      }
+      .page {
+        page-break-after: avoid;
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- ========================================
+         1. HEADER BAR
+         ======================================== -->
+    <header class="header-bar">
+      <div class="header-left">
+        <div class="header-logo">
+          <!-- {{ company_logo }} -->
+          <img src="https://placehold.co/80x80/18235c/ffffff?text=Logo" alt="Company Logo">
+        </div>
+        <div class="header-text">
+          <div class="header-company"><!-- {{ company_name }} -->Acme Realty Group</div>
+          <div class="header-subtitle">Price Band Analysis</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <span class="tagline-pill">Your Trusted Partner</span>
+      </div>
+      <span class="pdf-badge">PDF</span>
+    </header>
+
+    <!-- ========================================
+         2. TITLE SECTION
+         ======================================== -->
+    <section class="title-section">
+      <h1 class="title-main">Price Bands — <!-- {{ city }} -->Beverly Hills</h1>
+      <p class="title-subtitle">Period: <!-- {{ period }} -->Last 30 days &bull; Source: Live MLS Data &bull; Report Date: <!-- {{ report_date }} -->March 12, 2026</p>
+      <div class="title-divider"></div>
+    </section>
+
+    <!-- ========================================
+         3. HERO STAT
+         ======================================== -->
+    <section class="hero-stat-section">
+      <div class="hero-stat-box">
+        <div class="hero-stat-value"><!-- {{ total_listings }} -->186</div>
+        <div class="hero-stat-label">Total Listings Analyzed</div>
+        <div class="hero-stat-sub">across <!-- {{ segment_count }} -->5 price segments</div>
+      </div>
+    </section>
+
+    <!-- ========================================
+         4. STAT BLOCKS (1x4 Grid)
+         ======================================== -->
+    <section class="stats-section">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-card-value"><!-- {{ median_price }} -->$925K</div>
+          <div class="stat-card-label">Median Price</div>
+          <span class="stat-card-trend up">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L5.29 9.77a.75.75 0 01-1.08-1.04l5.25-5.5a.75.75 0 011.08 0l5.25 5.5a.75.75 0 11-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0110 17z" clip-rule="evenodd"/></svg>
+            +4.2% YoY
+          </span>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value"><!-- {{ avg_dom }} -->24</div>
+          <div class="stat-card-label">Avg Days on Market</div>
+          <span class="stat-card-trend down">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a.75.75 0 01.75.75v10.638l3.96-4.158a.75.75 0 111.08 1.04l-5.25 5.5a.75.75 0 01-1.08 0l-5.25-5.5a.75.75 0 111.08-1.04l3.96 4.158V3.75A.75.75 0 0110 3z" clip-rule="evenodd"/></svg>
+            -12% YoY
+          </span>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value"><!-- {{ price_sqft }} -->$520</div>
+          <div class="stat-card-label">Price / Sq Ft</div>
+          <span class="stat-card-trend up">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L5.29 9.77a.75.75 0 01-1.08-1.04l5.25-5.5a.75.75 0 011.08 0l5.25 5.5a.75.75 0 11-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0110 17z" clip-rule="evenodd"/></svg>
+            +6.8% YoY
+          </span>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value"><!-- {{ absorption_rate }} -->68%</div>
+          <div class="stat-card-label">Absorption Rate</div>
+          <span class="stat-card-trend up">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L5.29 9.77a.75.75 0 01-1.08-1.04l5.25-5.5a.75.75 0 011.08 0l5.25 5.5a.75.75 0 11-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0110 17z" clip-rule="evenodd"/></svg>
+            +8.5% YoY
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================
+         5. PROPERTY LIST (Vertical)
+         ======================================== -->
+    <section class="list-section">
+      <div class="list-header">Featured in $900K–$1.2M Band</div>
+      <div class="property-list">
+        <!-- {{ listings loop }} -->
+        
+        <!-- Property 1 -->
+        <div class="property-row">
+          <div class="property-row-image">
+            <img 
+              src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop" 
+              alt="Property"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+            >
+            <div class="property-row-image-placeholder" style="display:none;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z"/></svg>
+            </div>
+          </div>
+          <div class="property-row-details">
+            <div class="property-row-address"><!-- {{ address }} -->1247 Maple Drive</div>
+            <div class="property-row-city"><!-- {{ city_zip }} -->Beverly Hills, CA 90210</div>
+            <div class="property-row-price"><!-- {{ price }} -->$1,125,000</div>
+            <div class="property-row-specs">
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                <!-- {{ beds }} -->4 bd
+              </span>
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/></svg>
+                <!-- {{ baths }} -->3 ba
+              </span>
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+                <!-- {{ sqft }} -->2,850 sqft
+              </span>
+            </div>
+          </div>
+          <div class="property-row-badge">
+            <span class="status-badge active"><!-- {{ status }} -->Active</span>
+          </div>
+        </div>
+
+        <!-- Property 2 -->
+        <div class="property-row">
+          <div class="property-row-image">
+            <img 
+              src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&h=300&fit=crop" 
+              alt="Property"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+            >
+            <div class="property-row-image-placeholder" style="display:none;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z"/></svg>
+            </div>
+          </div>
+          <div class="property-row-details">
+            <div class="property-row-address"><!-- {{ address }} -->892 Sunset Boulevard</div>
+            <div class="property-row-city"><!-- {{ city_zip }} -->Beverly Hills, CA 90210</div>
+            <div class="property-row-price"><!-- {{ price }} -->$985,000</div>
+            <div class="property-row-specs">
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                3 bd
+              </span>
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/></svg>
+                2.5 ba
+              </span>
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+                2,420 sqft
+              </span>
+            </div>
+          </div>
+          <div class="property-row-badge">
+            <span class="status-badge new">New</span>
+          </div>
+        </div>
+
+        <!-- Property 3 -->
+        <div class="property-row">
+          <div class="property-row-image">
+            <img 
+              src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=400&h=300&fit=crop" 
+              alt="Property"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+            >
+            <div class="property-row-image-placeholder" style="display:none;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z"/></svg>
+            </div>
+          </div>
+          <div class="property-row-details">
+            <div class="property-row-address"><!-- {{ address }} -->456 Palm Avenue</div>
+            <div class="property-row-city"><!-- {{ city_zip }} -->Beverly Hills, CA 90212</div>
+            <div class="property-row-price"><!-- {{ price }} -->$1,075,000</div>
+            <div class="property-row-specs">
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                4 bd
+              </span>
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/></svg>
+                3.5 ba
+              </span>
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+                3,100 sqft
+              </span>
+            </div>
+          </div>
+          <div class="property-row-badge">
+            <span class="status-badge pending">Pending</span>
+          </div>
+        </div>
+
+        <!-- Property 4 -->
+        <div class="property-row">
+          <div class="property-row-image">
+            <img 
+              src="https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=400&h=300&fit=crop" 
+              alt="Property"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+            >
+            <div class="property-row-image-placeholder" style="display:none;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z"/></svg>
+            </div>
+          </div>
+          <div class="property-row-details">
+            <div class="property-row-address"><!-- {{ address }} -->789 Rodeo Lane</div>
+            <div class="property-row-city"><!-- {{ city_zip }} -->Beverly Hills, CA 90210</div>
+            <div class="property-row-price"><!-- {{ price }} -->$1,195,000</div>
+            <div class="property-row-specs">
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                5 bd
+              </span>
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/></svg>
+                4 ba
+              </span>
+              <span class="spec-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+                3,450 sqft
+              </span>
+            </div>
+          </div>
+          <div class="property-row-badge">
+            <span class="status-badge active">Active</span>
+          </div>
+        </div>
+
+        <!-- {{ /listings loop }} -->
+      </div>
+    </section>
+
+    <!-- ========================================
+         6. QUICK TAKE CALLOUT
+         ======================================== -->
+    <section class="quick-take-section">
+      <div class="quick-take">
+        <div class="quick-take-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </div>
+        <div class="quick-take-content">
+          <div class="quick-take-title">Quick Take</div>
+          <div class="quick-take-text"><!-- {{ quick_take }} -->The $900K–$1.2M segment shows the strongest absorption rate at 68%, indicating high buyer demand. Properties in this band are moving 12% faster than last year, with average DOM down to just 24 days.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================
+         7. AGENT FOOTER
+         ======================================== -->
+    <footer class="agent-footer">
+      <div class="agent-info">
+        <img 
+          class="agent-photo" 
+          src="https://randomuser.me/api/portraits/women/44.jpg" 
+          alt="Agent Photo"
+          onerror="this.src='https://placehold.co/96x96/18235c/ffffff?text=Agent'"
+        >
+        <div class="agent-details">
+          <div class="agent-name"><!-- {{ agent_name }} -->Sarah Chen</div>
+          <div class="agent-title"><!-- {{ agent_title }} -->Senior Realtor &bull; DRE #01234567</div>
+          <div class="agent-contact">
+            <!-- {{ agent_phone }} -->(310) 555-1234 &bull; 
+            <a href="mailto:sarah@acmerealty.com"><!-- {{ agent_email }} -->sarah@acmerealty.com</a>
+          </div>
+        </div>
+      </div>
+      <img 
+        class="footer-logo" 
+        src="https://placehold.co/120x40/18235c/ffffff?text=Acme+Realty" 
+        alt="Company Logo"
+      >
+    </footer>
+
+    <!-- ========================================
+         8. POWERED BY FOOTER
+         ======================================== -->
+    <div class="powered-footer">
+      Powered by Reports Company &bull; Data believed reliable but not guaranteed &bull; <!-- {{ report_date }} -->March 12, 2026
+    </div>
+  </div>
+</body>
+</html>
