@@ -172,7 +172,7 @@ class MarketReportBuilder:
                 "sqft": item.get("sqft") or item.get("living_area", 0),
                 "status": item.get("status", "Active"),
                 "days_on_market": item.get("days_on_market") or item.get("dom", 0),
-                "photo_url": item.get("photo_url") or item.get("image_url"),
+                "photo_url": item.get("hero_photo_url") or item.get("photo_url") or item.get("image_url"),
                 "lat": item.get("lat") or item.get("latitude"),
                 "lng": item.get("lng") or item.get("longitude"),
             })

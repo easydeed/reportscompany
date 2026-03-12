@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import { Globe, FileDown, Mail, Calendar, Clock, X } from "lucide-react"
+import { FileDown, Mail, Calendar, Clock, X, Check } from "lucide-react"
 import { RecipientsSection } from "@/components/schedule-builder/sections/recipients-section"
 import type { WizardState, DeliveryMode, Cadence } from "./types"
 
@@ -129,40 +129,97 @@ function SendNowOptions({
   removeEmail: (email: string) => void
 }) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Delivery Options</Label>
 
-      <div className="space-y-2">
-        <Checkbox checked={state.viewInBrowser} onChange={(v) => onChange({ viewInBrowser: v })} icon={<Globe className="w-4 h-4" />} label="View in browser" />
-        <Checkbox checked={state.downloadPdf} onChange={(v) => onChange({ downloadPdf: v })} icon={<FileDown className="w-4 h-4" />} label="Download PDF" />
-        <Checkbox checked={state.sendViaEmail} onChange={(v) => onChange({ sendViaEmail: v })} icon={<Mail className="w-4 h-4" />} label="Send via email" />
-      </div>
-
-      {state.sendViaEmail && (
-        <div className="space-y-2 pl-6">
-          <Label className="text-xs text-gray-600">Recipients</Label>
-          <div className="flex gap-2">
-            <Input
-              value={emailInput}
-              onChange={(e) => setEmailInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addEmail()}
-              placeholder="email@example.com"
-              className="h-9 text-xs flex-1"
-            />
-            <button onClick={addEmail} className="px-3 h-9 rounded-lg bg-primary text-white text-xs font-medium">Add</button>
+      <div className="grid gap-2.5">
+        {/* Download PDF card */}
+        <button
+          onClick={() => onChange({ downloadPdf: !state.downloadPdf })}
+          className={cn(
+            "group relative flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all",
+            state.downloadPdf
+              ? "border-primary bg-primary/5 shadow-sm"
+              : "border-gray-200 hover:border-primary/40 hover:bg-gray-50/50"
+          )}
+        >
+          <div className={cn(
+            "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg transition-colors",
+            state.downloadPdf ? "bg-primary/10 text-primary" : "bg-gray-100 text-gray-400"
+          )}>
+            <FileDown className="w-5 h-5" />
           </div>
-          {state.recipientEmails.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {state.recipientEmails.map((email) => (
-                <span key={email} className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-700">
-                  {email}
-                  <button onClick={() => removeEmail(email)} className="hover:text-red-500"><X className="h-3 w-3" /></button>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-gray-900">Download PDF</span>
+              {state.downloadPdf && (
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary">
+                  <Check className="h-3 w-3 text-white" />
                 </span>
-              ))}
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mt-0.5">Get a branded PDF ready to print or share</p>
+          </div>
+        </button>
+
+        {/* Email Report card */}
+        <div>
+          <button
+            onClick={() => onChange({ sendViaEmail: !state.sendViaEmail })}
+            className={cn(
+              "group relative flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all w-full",
+              state.sendViaEmail
+                ? "border-primary bg-primary/5 shadow-sm"
+                : "border-gray-200 hover:border-primary/40 hover:bg-gray-50/50",
+              state.sendViaEmail && "rounded-b-none border-b-0"
+            )}
+          >
+            <div className={cn(
+              "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg transition-colors",
+              state.sendViaEmail ? "bg-primary/10 text-primary" : "bg-gray-100 text-gray-400"
+            )}>
+              <Mail className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-gray-900">Email as Attachment</span>
+                {state.sendViaEmail && (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary">
+                    <Check className="h-3 w-3 text-white" />
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">Send the PDF directly to your contacts</p>
+            </div>
+          </button>
+
+          {state.sendViaEmail && (
+            <div className="space-y-2.5 rounded-b-xl border-2 border-t-0 border-primary bg-primary/5 px-4 pb-4 pt-3">
+              <Label className="text-xs font-medium text-gray-700">Recipients</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={emailInput}
+                  onChange={(e) => setEmailInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addEmail()}
+                  placeholder="email@example.com"
+                  className="h-9 text-xs flex-1 bg-white"
+                />
+                <button onClick={addEmail} className="px-3 h-9 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90 transition-colors">Add</button>
+              </div>
+              {state.recipientEmails.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {state.recipientEmails.map((email) => (
+                    <span key={email} className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs text-gray-700 border border-gray-200">
+                      {email}
+                      <button onClick={() => removeEmail(email)} className="hover:text-red-500 transition-colors"><X className="h-3 w-3" /></button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   )
 }
@@ -277,30 +334,3 @@ function ScheduleOptions({
   )
 }
 
-function Checkbox({
-  checked,
-  onChange,
-  icon,
-  label,
-}: {
-  checked: boolean
-  onChange: (v: boolean) => void
-  icon: React.ReactNode
-  label: string
-}) {
-  return (
-    <button
-      onClick={() => onChange(!checked)}
-      className={cn(
-        "flex items-center gap-3 w-full rounded-lg border-2 px-3 py-2.5 text-left transition-all",
-        checked ? "border-primary/30 bg-primary/5" : "border-gray-200 hover:bg-gray-50"
-      )}
-    >
-      <div className={cn("flex-shrink-0", checked ? "text-primary" : "text-gray-400")}>{icon}</div>
-      <span className="text-sm text-gray-700 flex-1">{label}</span>
-      <div className={cn("w-4 h-4 rounded border-2 flex items-center justify-center transition-colors", checked ? "border-primary bg-primary" : "border-gray-300")}>
-        {checked && <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" fill="none" /></svg>}
-      </div>
-    </button>
-  )
-}

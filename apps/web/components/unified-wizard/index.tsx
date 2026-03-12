@@ -7,6 +7,7 @@ import { ArrowLeft, Loader2, ChevronLeft, ChevronRight, Sparkles, Check, FileDow
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { SharedEmailPreview } from "@/components/shared/email-preview"
+import { SAMPLE_PHOTOS } from "@/components/shared/email-preview/sample-data"
 import { StepStory } from "./step-story"
 import { StepAudience } from "./step-audience"
 import { StepWhereWhen } from "./step-where-when"
@@ -139,7 +140,7 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
       case 1: return true // audience always has "all" default
       case 2: return (state.areaType === "city" ? !!state.city : state.zipCodes.length > 0) && !!state.lookbackDays
       case 3: return state.deliveryMode === "send_now"
-        ? (state.viewInBrowser || state.downloadPdf || state.sendViaEmail)
+        ? (state.downloadPdf || state.sendViaEmail)
         : !!state.scheduleName.trim() && state.recipients.length > 0
       default: return false
     }
@@ -177,7 +178,7 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
           setPdfUrl(data.pdf_url || null)
           setGenerationState("complete")
           if (data.pdf_url) {
-            if (state.viewInBrowser) window.open(data.pdf_url, "_blank")
+            window.open(data.pdf_url, "_blank")
             if (state.downloadPdf) triggerDownload(data.pdf_url)
           }
         } else if (data.status === "failed") {
@@ -602,13 +603,11 @@ function ReportPreview({
           </div>
         )}
 
-        {/* Photo grid placeholders */}
+        {/* Photo grid */}
         <div className={cn("grid gap-1", isGallery ? "grid-cols-3" : "grid-cols-2")}>
-          {Array.from({ length: isGallery ? 6 : 4 }).map((_, i) => (
-            <div key={i} className="aspect-[4/3] rounded bg-gray-100 flex items-center justify-center">
-              <svg className="w-3 h-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-              </svg>
+          {SAMPLE_PHOTOS.slice(0, isGallery ? 6 : 4).map((url, i) => (
+            <div key={i} className="aspect-[4/3] rounded overflow-hidden bg-gray-100">
+              <img src={url} alt="" className="w-full h-full object-cover" />
             </div>
           ))}
         </div>

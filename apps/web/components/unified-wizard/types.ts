@@ -24,7 +24,6 @@ export interface WizardState {
   lookbackDays: 7 | 14 | 30 | 60 | 90 | null
   deliveryMode: DeliveryMode
   // Send now
-  viewInBrowser: boolean
   downloadPdf: boolean
   sendViaEmail: boolean
   recipientEmails: string[]
@@ -47,8 +46,7 @@ export const INITIAL_STATE: WizardState = {
   zipCodes: [],
   lookbackDays: null,
   deliveryMode: "send_now",
-  viewInBrowser: true,
-  downloadPdf: false,
+  downloadPdf: true,
   sendViaEmail: false,
   recipientEmails: [],
   scheduleName: "",

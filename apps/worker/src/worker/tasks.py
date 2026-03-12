@@ -637,7 +637,11 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
         # - Do this *after* cache_get/cache_set so we don't cache run-specific signed URLs.
         # - Do this *before* saving result_json so the /print/[runId] page uses proxied photos.
         rt_norm = (report_type or "").lower()
-        if rt_norm in ("new_listings_gallery", "featured_listings") and isinstance(result, dict):
+        PHOTO_PROXY_REPORT_TYPES = {
+            "new_listings_gallery", "featured_listings", "open_houses",
+            "market_snapshot", "closed", "inventory", "price_bands", "new_listings",
+        }
+        if rt_norm in PHOTO_PROXY_REPORT_TYPES and isinstance(result, dict):
             try:
                 print(f"🖼️  Photo proxy to R2: report_type={rt_norm}, run_id={run_id}")
                 # Mutate in place; safe because we only do this on the per-run `result`
