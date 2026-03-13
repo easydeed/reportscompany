@@ -37,7 +37,6 @@
     <span class="tagline-pill">{{ agent.title }}</span>
     {% endif %}
   </div>
-  <span class="pdf-badge">PDF</span>
 </header>
 
 <section class="title-section">
@@ -61,13 +60,12 @@
 {% endmacro %}
 
 
-{# ── Hero Stat ─────────────────────────────────────────────────────────────── #}
+{# ── Hero Stat (compact pill — same pattern as count_badge) ────────────────── #}
 {% macro hero_stat(label, value, sub) %}
-<section class="hero-stat-section">
-  <div class="hero-stat-box">
-    <div class="hero-stat-label">{{ label }}</div>
-    <div class="hero-stat-value">{{ value }}</div>
-    {% if sub %}<div class="hero-stat-sub">{{ sub }}</div>{% endif %}
+<section class="count-section">
+  <div class="count-badge">
+    <span class="count-number">{{ value }}</span>
+    <span>{{ label | upper }}{% if sub %} &mdash; {{ sub | upper }}{% endif %}</span>
   </div>
 </section>
 {% endmacro %}

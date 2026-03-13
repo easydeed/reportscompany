@@ -500,9 +500,14 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
                 ) : (
                   <ReportPreview
                     themeId={themeId}
+                    primaryColor={branding.primaryColor}
                     accentColor={branding.accentColor}
                     displayName={branding.displayName}
                     agentName={profile.name}
+                    agentTitle={profile.title}
+                    agentPhone={profile.phone}
+                    agentEmail={profile.email}
+                    agentPhotoUrl={profile.photoUrl}
                     reportType={previewReportType}
                     areaName={areaName}
                     lookbackDays={state.lookbackDays || 30}
@@ -528,78 +533,101 @@ function Pill({ children }: { children: React.ReactNode }) {
 
 function ReportPreview({
   themeId,
+  primaryColor,
   accentColor,
   displayName,
   agentName,
+  agentTitle,
+  agentPhone,
+  agentEmail,
+  agentPhotoUrl,
   reportType,
   areaName,
   lookbackDays,
   logoUrl,
 }: {
   themeId: string
+  primaryColor: string
   accentColor: string
   displayName: string | null
   agentName: string
+  agentTitle?: string | null
+  agentPhone?: string | null
+  agentEmail?: string | null
+  agentPhotoUrl?: string | null
   reportType: string
   areaName: string
   lookbackDays: number
   logoUrl: string | null
 }) {
-  const headerBg = THEME_HEADER_BG[themeId] || THEME_HEADER_BG.teal
+  const darkBg = THEME_HEADER_BG[themeId] || THEME_HEADER_BG.teal
   const label = REPORT_TYPE_LABELS[reportType] || "Market Report"
   const isGallery = reportType === "new_listings_gallery" || reportType === "featured_listings"
   const isSnapshot = reportType === "market_snapshot"
+  const contactParts = [agentPhone, agentEmail].filter(Boolean)
 
   return (
     <div
-      className="aspect-[8.5/11] rounded-lg overflow-hidden shadow-md border border-gray-200 bg-white"
+      className="aspect-[8.5/11] rounded-lg overflow-hidden shadow-md border border-gray-200 bg-white flex flex-col"
       style={{ fontSize: "10px" }}
     >
-      {/* Gradient header */}
+      {/* Header bar — mirrors PDF template header-bar */}
       <div
-        className="px-3 py-4 text-white"
-        style={{ background: `linear-gradient(135deg, ${headerBg}, ${headerBg}dd)` }}
+        className="px-3 py-2.5 text-white flex items-center justify-between"
+        style={{ background: `linear-gradient(135deg, ${darkBg} 0%, ${darkBg}dd 60%, ${accentColor} 100%)` }}
       >
-        <div className="flex items-center gap-1.5 mb-2">
-          {logoUrl ? (
-            <img src={logoUrl} alt="" className="h-3 w-auto max-w-[40px] object-contain brightness-0 invert" />
-          ) : (
-            <div className="w-3 h-3 rounded-sm bg-white/30" />
-          )}
-          <span className="text-[7px] font-medium text-white/70 truncate">
-            {displayName || "Your Brand"}
-          </span>
+        <div className="flex items-center gap-1.5">
+          <div className="w-5 h-5 rounded bg-white/90 flex items-center justify-center overflow-hidden flex-shrink-0">
+            {logoUrl ? (
+              <img src={logoUrl} alt="" className="w-full h-full object-contain" />
+            ) : (
+              <span className="text-[6px] font-bold" style={{ color: darkBg }}>
+                {(displayName || "MR").slice(0, 2).toUpperCase()}
+              </span>
+            )}
+          </div>
+          <div>
+            <div className="text-[7px] font-semibold text-white/90 truncate max-w-[100px]">
+              {displayName || "Your Brokerage"}
+            </div>
+            <div className="text-[5px] text-white/60">{label}</div>
+          </div>
         </div>
-        <h4 className="text-[11px] font-bold leading-tight">{label}</h4>
-        <p className="text-[7px] text-white/70 mt-0.5">
-          {areaName} &middot; Last {lookbackDays} days
-        </p>
+        {agentTitle && (
+          <div className="text-[5px] bg-white/15 px-1.5 py-0.5 rounded-full text-white/80 truncate max-w-[80px]">
+            {agentTitle}
+          </div>
+        )}
       </div>
 
-      {/* Accent divider */}
-      <div className="h-0.5" style={{ backgroundColor: accentColor }} />
+      {/* Title section */}
+      <div className="px-3 pt-2 pb-1.5">
+        <div className="text-[11px] font-bold" style={{ color: primaryColor }}>{label} — {areaName}</div>
+        <div className="text-[6px] text-gray-400 mt-0.5">Last {lookbackDays} days &bull; Live MLS Data</div>
+        <div className="h-[2px] rounded mt-1.5 w-12" style={{ backgroundColor: accentColor }} />
+      </div>
 
-      {/* Content preview */}
-      <div className="px-3 py-2.5 space-y-2 flex-1">
+      {/* Content area */}
+      <div className="px-3 py-1.5 space-y-2 flex-1 min-h-0">
         {/* Hero stat */}
         {!isGallery && (
-          <div className="text-center py-1.5">
-            <div className="text-[16px] font-bold" style={{ color: headerBg }}>$825,000</div>
-            <div className="text-[6px] text-gray-400 uppercase tracking-wider">
-              {isSnapshot ? "Median Price" : "Avg. Sale Price"}
+          <div className="text-center py-1">
+            <div className="text-[6px] text-gray-400 uppercase tracking-wider mb-0.5">
+              {isSnapshot ? "Median Sale Price" : "Avg. Sale Price"}
             </div>
+            <div className="text-[18px] font-bold font-serif" style={{ color: primaryColor }}>$825,000</div>
           </div>
         )}
 
         {isGallery && (
-          <div className="flex items-center justify-center gap-1 py-1">
+          <div className="flex items-center justify-center gap-1 py-0.5">
             <div
               className="w-4 h-4 rounded-full flex items-center justify-center text-[6px] font-bold text-white"
               style={{ backgroundColor: accentColor }}
             >
               12
             </div>
-            <span className="text-[7px] text-gray-500">New Listings</span>
+            <span className="text-[7px] text-gray-500 uppercase tracking-wider">Listings</span>
           </div>
         )}
 
@@ -613,36 +641,54 @@ function ReportPreview({
         </div>
 
         {/* Stats bar */}
-        <div className="flex justify-between px-1">
-          {["Active", "Pending", "Sold", "DOM"].map((s) => (
-            <div key={s} className="text-center">
-              <div className="text-[8px] font-bold" style={{ color: headerBg }}>—</div>
-              <div className="text-[5px] text-gray-400">{s}</div>
+        <div className="flex justify-between bg-gray-50 rounded px-2 py-1.5">
+          {[
+            { label: "Active", val: "67" },
+            { label: "Pending", val: "12" },
+            { label: "Sold", val: "38" },
+            { label: "Avg DOM", val: "12" },
+          ].map((s) => (
+            <div key={s.label} className="text-center">
+              <div className="text-[8px] font-bold" style={{ color: primaryColor }}>{s.val}</div>
+              <div className="text-[5px] text-gray-400">{s.label}</div>
             </div>
           ))}
         </div>
 
-        {/* AI insight placeholder */}
+        {/* AI insight */}
         {isSnapshot && (
-          <div className="rounded border px-2 py-1.5" style={{ borderColor: `${accentColor}30`, backgroundColor: `${accentColor}08` }}>
-            <div className="flex items-center gap-1 mb-0.5">
-              <div className="w-0.5 h-2 rounded-full" style={{ backgroundColor: accentColor }} />
-              <span className="text-[5px] font-semibold text-gray-400 uppercase tracking-wider">AI Insight</span>
-            </div>
+          <div className="rounded px-2 py-1.5" style={{ backgroundColor: `${accentColor}08`, borderLeft: `3px solid ${accentColor}` }}>
             <div className="h-1.5 bg-gray-100 rounded w-full mb-0.5" />
             <div className="h-1.5 bg-gray-100 rounded w-3/4" />
           </div>
         )}
       </div>
 
-      {/* Agent footer */}
-      <div className="px-3 py-1.5 border-t border-gray-100 mt-auto">
+      {/* Agent footer — mirrors PDF agent-footer */}
+      <div className="px-3 py-2 bg-gray-50 border-t border-gray-100 mt-auto">
         <div className="flex items-center gap-1.5">
-          <div className="w-4 h-4 rounded-full bg-gray-200 flex-shrink-0" />
-          <div>
-            <div className="text-[6px] font-semibold text-gray-700 truncate">{agentName}</div>
-            <div className="text-[5px] text-gray-400">{displayName || "Your Brokerage"}</div>
+          <div
+            className="w-5 h-5 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center bg-gray-200"
+            style={{ border: `1.5px solid ${primaryColor}33` }}
+          >
+            {agentPhotoUrl ? (
+              <img src={agentPhotoUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-[5px] font-semibold text-gray-400">{agentName?.charAt(0) || "?"}</span>
+            )}
           </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[7px] font-semibold text-gray-800 truncate">{agentName}</div>
+            {agentTitle && <div className="text-[5px] text-gray-400">{agentTitle}</div>}
+            {contactParts.length > 0 && (
+              <div className="text-[5px] truncate" style={{ color: accentColor }}>
+                {contactParts.join(" \u2022 ")}
+              </div>
+            )}
+          </div>
+          {logoUrl && (
+            <img src={logoUrl} alt="" className="h-3 w-auto object-contain opacity-50 flex-shrink-0" />
+          )}
         </div>
       </div>
     </div>

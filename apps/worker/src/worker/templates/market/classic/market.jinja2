@@ -6,12 +6,12 @@
 
 {% block theme_styles %}
 :root {
-  --primary-color: #1e3a5f;
+  --primary-color: {{ user_primary_color | default('#1e3a5f', true) }};
   --accent-color: {{ theme_color | default('#4a90d9', true) }};
   --accent-on-dark: {{ theme_color_on_dark | default('#4a90d9', true) }};
   --accent-on-light: {{ theme_color_on_light | default('#2d6cb5', true) }};
   --accent-light: {{ theme_color_light | default('#dce8f5', true) }};
-  --header-bg: linear-gradient(135deg, #1e3a5f 0%, #254a70 60%, {{ theme_color | default('#4a90d9', true) }} 100%);
+  --header-bg: linear-gradient(135deg, {{ user_primary_color | default('#1e3a5f', true) }} 0%, #254a70 60%, {{ theme_color | default('#4a90d9', true) }} 100%);
   --bg-light: #f2f5f8;
   --border-color: #d8dfe6;
   --font-display: Georgia, 'Times New Roman', serif;

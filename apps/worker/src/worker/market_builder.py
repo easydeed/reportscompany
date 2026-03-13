@@ -219,6 +219,9 @@ class MarketReportBuilder:
         dark_bg = _THEME_DARK_BG.get(self.theme_name, "#18235c")
         color_roles = compute_color_roles(theme_color, dark_bg)
 
+        branding = self.report_data.get("branding") or {}
+        user_primary = branding.get("primary_color")
+
         context: Dict[str, Any] = {
             # Theme + layout
             "theme_name": self.theme_name,
@@ -226,6 +229,7 @@ class MarketReportBuilder:
             "report_type": self.report_type,
             # Colour roles
             **color_roles,
+            "user_primary_color": user_primary,
             # Section contexts
             "header": self._build_header_context(),
             "listings": self._build_listings_context(),
