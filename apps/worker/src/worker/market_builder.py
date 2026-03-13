@@ -2,8 +2,8 @@
 Market Report Builder
 =====================
 
-Renders themed market reports (8 types × 5 themes) using Jinja2 templates.
-Mirrors PropertyReportBuilder patterns — same class shape, same color system.
+Renders brand-driven market reports (8 types) using a single Jinja2 template.
+Colors come from the agent's branding (primary_color, accent_color).
 
 Report types → layout mapping:
   Gallery:         new_listings_gallery, featured_listings, open_houses
@@ -32,35 +32,14 @@ from worker.template_filters import (
 logger = logging.getLogger(__name__)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Constants (duplicated from PropertyReportBuilder — static 5-line dicts,
-# coupling to class internals is worse than the duplication)
+# Constants
 # ─────────────────────────────────────────────────────────────────────────────
 
-_THEME_DARK_BG: Dict[str, str] = {
-    "teal": "#18235c",
-    "modern": "#1A1F36",
-    "classic": "#1B365D",
-    "bold": "#15216E",
-    "elegant": "#1a1a1a",
-}
-
-_THEME_DEFAULT_COLORS: Dict[str, str] = {
-    "teal": "#34d1c3",
-    "modern": "#FF6B5B",
-    "classic": "#1B365D",
-    "bold": "#15216E",
-    "elegant": "#1a1a1a",
-}
+DEFAULT_PRIMARY = "#18235c"
+DEFAULT_ACCENT = "#0d9488"
 
 TEMPLATES_DIR = Path(__file__).parent / "templates" / "market"
-
-THEME_TEMPLATES: Dict[str, str] = {
-    "teal": "teal/market.jinja2",
-    "bold": "bold/market.jinja2",
-    "classic": "classic/market.jinja2",
-    "modern": "modern/market.jinja2",
-    "elegant": "elegant/market.jinja2",
-}
+TEMPLATE_PATH = "market.jinja2"
 
 LAYOUT_MAP: Dict[str, str] = {
     "new_listings_gallery": "gallery",
@@ -74,15 +53,14 @@ LAYOUT_MAP: Dict[str, str] = {
 }
 
 ALL_REPORT_TYPES = list(LAYOUT_MAP.keys())
-ALL_THEMES = list(THEME_TEMPLATES.keys())
 
 
 class MarketReportBuilder:
     """
-    Builds themed HTML market reports using Jinja2 templates.
+    Builds brand-driven HTML market reports using Jinja2 templates.
 
-    Accepts a single ``report_data`` dict (same shape as the worker task's
-    result_json merged with branding).
+    Colors derive from branding.primary_color and branding.accent_color.
+    Falls back to navy + teal when brand colors aren't provided.
     """
 
     def __init__(self, report_data: Dict[str, Any]):
@@ -98,15 +76,6 @@ class MarketReportBuilder:
 
         self.layout: str = LAYOUT_MAP[self.report_type]
 
-        # Theme resolution: name string → template path
-        theme_input = report_data.get("theme_id") or report_data.get("theme", "teal")
-        if isinstance(theme_input, str) and theme_input in THEME_TEMPLATES:
-            self.theme_name = theme_input
-        else:
-            self.theme_name = "teal"
-
-        self.accent_color: str | None = report_data.get("accent_color")
-
         # Jinja2 environment rooted at templates/market/
         self.env = Environment(
             loader=FileSystemLoader(str(TEMPLATES_DIR)),
@@ -119,20 +88,18 @@ class MarketReportBuilder:
         self.env.filters["format_number"] = format_number
         self.env.filters["truncate"] = truncate
 
-    # ── colour helpers ────────────────────────────────────────────────────
+    # ── colour resolution ──────────────────────────────────────────────────
 
-    def _get_theme_color(self) -> str:
-        """
-        Accent priority: explicit accent_color → branding.accent_color →
-        branding.primary_color → theme default.
-        """
+    def _resolve_colors(self) -> tuple[str, str]:
+        """Return (primary_color, accent_color) from branding, with defaults."""
         branding = self.report_data.get("branding") or {}
-        return (
-            self.accent_color
+        primary = branding.get("primary_color") or DEFAULT_PRIMARY
+        accent = (
+            self.report_data.get("accent_color")
             or branding.get("accent_color")
-            or branding.get("primary_color")
-            or _THEME_DEFAULT_COLORS.get(self.theme_name, "#34d1c3")
+            or DEFAULT_ACCENT
         )
+        return primary, accent
 
     # ── context builders ──────────────────────────────────────────────────
 
@@ -209,27 +176,19 @@ class MarketReportBuilder:
     # ── render ────────────────────────────────────────────────────────────
 
     def render_html(self) -> str:
-        """
-        Render the complete HTML report.
-
-        Returns:
-            Complete HTML string ready for PDF generation via PDFShift.
-        """
-        theme_color = self._get_theme_color()
-        dark_bg = _THEME_DARK_BG.get(self.theme_name, "#18235c")
-        color_roles = compute_color_roles(theme_color, dark_bg)
-
-        branding = self.report_data.get("branding") or {}
-        user_primary = branding.get("primary_color")
+        """Render the complete HTML report."""
+        primary_color, accent_color = self._resolve_colors()
+        color_roles = compute_color_roles(accent_color, primary_color)
 
         context: Dict[str, Any] = {
-            # Theme + layout
-            "theme_name": self.theme_name,
             "layout": self.layout,
             "report_type": self.report_type,
-            # Colour roles
-            **color_roles,
-            "user_primary_color": user_primary,
+            # Brand colours
+            "primary_color": primary_color,
+            "accent_color": accent_color,
+            "accent_on_dark": color_roles["theme_color_on_dark"],
+            "accent_on_light": color_roles["theme_color_on_light"],
+            "accent_light": color_roles["theme_color_light"],
             # Section contexts
             "header": self._build_header_context(),
             "listings": self._build_listings_context(),
@@ -241,27 +200,22 @@ class MarketReportBuilder:
             "price_bands": self.report_data.get("price_bands") or [],
         }
 
-        template_path = THEME_TEMPLATES.get(self.theme_name, THEME_TEMPLATES["teal"])
         logger.info(
-            "Rendering market report: type=%s, theme=%s, layout=%s",
+            "Rendering market report: type=%s, layout=%s, primary=%s, accent=%s",
             self.report_type,
-            self.theme_name,
             self.layout,
+            primary_color,
+            accent_color,
         )
 
         try:
-            template = self.env.get_template(template_path)
+            template = self.env.get_template(TEMPLATE_PATH)
             html = template.render(**context)
-            logger.info(
-                "Rendered market report: theme=%s, html_len=%d",
-                self.theme_name,
-                len(html),
-            )
+            logger.info("Rendered market report: html_len=%d", len(html))
             return html
         except Exception as e:
             logger.error(
-                "Failed to render market report (theme=%s, type=%s): %s",
-                self.theme_name,
+                "Failed to render market report (type=%s): %s",
                 self.report_type,
                 e,
             )

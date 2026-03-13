@@ -1,0 +1,18 @@
+{% extends '_base/base.jinja2' %}
+
+{% block fonts %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block theme_styles %}
+:root {
+  --primary-color: {{ primary_color | default('#18235c', true) }};
+  --accent-color: {{ accent_color | default('#0d9488', true) }};
+  --accent-on-dark: {{ accent_on_dark | default('#5eead4', true) }};
+  --accent-on-light: {{ accent_on_light | default('#0f766e', true) }};
+  --accent-light: {{ accent_light | default('#ccfbf1', true) }};
+  --header-bg: linear-gradient(135deg, {{ primary_color | default('#18235c', true) }} 0%, {{ primary_color | default('#18235c', true) }} 50%, {{ accent_color | default('#0d9488', true) }} 100%);
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+{% endblock %}

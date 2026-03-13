@@ -1,22 +1,20 @@
 """
-Market Report Theme Generation Script
-======================================
+Market Report Generation Script
+================================
 
-Generates all 5 themes × 8 report types = 40 HTML files (and optionally PDFs)
+Generates all 8 report types as HTML (and optionally PDFs)
 using hardcoded sample data (no API calls, no database needed).
 
 Usage (from repo root):
-    python scripts/gen_market_all_themes.py                              # HTML + PDF via Playwright
-    python scripts/gen_market_all_themes.py --html-only                  # HTML only
-    python scripts/gen_market_all_themes.py --theme bold                 # One theme, all types
-    python scripts/gen_market_all_themes.py --report-type market_snapshot # One type, all themes
-    python scripts/gen_market_all_themes.py --pdf-engine pdfshift        # Use PDFShift cloud API
-    python scripts/gen_market_all_themes.py --open                       # Open output after
+    python scripts/gen_market_reports.py                              # HTML + PDF via Playwright
+    python scripts/gen_market_reports.py --html-only                  # HTML only
+    python scripts/gen_market_reports.py --report-type market_snapshot # One type only
+    python scripts/gen_market_reports.py --pdf-engine pdfshift        # Use PDFShift cloud API
 
 Output:
-    output/market_themes/{theme}_{report_type}.html
-    output/market_themes/{theme}_{report_type}.pdf   (when not --html-only)
-    output/market_themes/index.html  (links to all variants)
+    output/market_reports/{report_type}.html
+    output/market_reports/{report_type}.pdf   (when not --html-only)
+    output/market_reports/index.html          (links to all variants)
 """
 
 import argparse
@@ -33,9 +31,8 @@ REPO_ROOT = SCRIPT_DIR.parent
 WORKER_SRC = REPO_ROOT / "apps" / "worker" / "src"
 sys.path.insert(0, str(WORKER_SRC))
 
-OUTPUT_DIR = REPO_ROOT / "output" / "market_themes"
+OUTPUT_DIR = REPO_ROOT / "output" / "market_reports"
 
-ALL_THEMES = ["teal", "bold", "classic", "elegant", "modern"]
 ALL_REPORT_TYPES = [
     "new_listings_gallery",
     "featured_listings",
@@ -145,16 +142,14 @@ SAMPLE_BRANDING = {
     "company_name": "Luxury Estates Realty",
     "logo_url": "https://placehold.co/200x60/1B365D/white?text=Luxury+Estates",
     "primary_color": "#1B365D",
-    "accent_color": None,
+    "accent_color": "#0d9488",
 }
 
 
-def build_sample_data(report_type: str, theme_id: str) -> dict:
+def build_sample_data(report_type: str) -> dict:
     """Build a complete report_data dict for the builder."""
     return {
         "report_type": report_type,
-        "theme_id": theme_id,
-        "accent_color": None,
         "city": "Irvine",
         "lookback_days": 30,
         "filters_label": "2+ beds, SFR, under $1.5M (First-Time Buyer)",
@@ -231,26 +226,25 @@ def _pdf_via_pdfshift(html: str, pdf_path: Path) -> int:
 
 # ─── Rendering ───────────────────────────────────────────────────────────────
 
-def render_variant(theme: str, report_type: str, html_only: bool, pdf_engine: str = "playwright") -> dict:
+def render_variant(report_type: str, html_only: bool, pdf_engine: str = "playwright") -> dict:
     from worker.market_builder import MarketReportBuilder
 
-    data = build_sample_data(report_type, theme)
+    data = build_sample_data(report_type)
     builder = MarketReportBuilder(data)
 
     t0 = time.perf_counter()
     html = builder.render_html()
     elapsed = time.perf_counter() - t0
 
-    filename = f"{theme}_{report_type}"
-    html_path = OUTPUT_DIR / f"{filename}.html"
+    html_path = OUTPUT_DIR / f"{report_type}.html"
     html_path.write_text(html, encoding="utf-8")
 
     status = "OK" if len(html) > 500 else "WARN:short"
 
-    result = {"theme": theme, "report_type": report_type, "ok": status == "OK", "html_len": len(html)}
+    result = {"report_type": report_type, "ok": status == "OK", "html_len": len(html)}
 
     if not html_only:
-        pdf_path = OUTPUT_DIR / f"{filename}.pdf"
+        pdf_path = OUTPUT_DIR / f"{report_type}.pdf"
         try:
             if pdf_engine == "pdfshift":
                 size = _pdf_via_pdfshift(html, pdf_path)
@@ -258,12 +252,12 @@ def render_variant(theme: str, report_type: str, html_only: bool, pdf_engine: st
                 size = _pdf_via_playwright(html, pdf_path)
             result["pdf_size"] = size
             size_kb = size / 1024
-            print(f"  {theme:8s} × {report_type:24s}  {len(html):>7,} chars  {size_kb:>6.0f} KB pdf  {elapsed:.2f}s  [{status}]")
+            print(f"  {report_type:28s}  {len(html):>7,} chars  {size_kb:>6.0f} KB pdf  {elapsed:.2f}s  [{status}]")
         except Exception as e:
-            print(f"  {theme:8s} × {report_type:24s}  {len(html):>7,} chars  PDF FAIL  {elapsed:.2f}s  [{status}]")
+            print(f"  {report_type:28s}  {len(html):>7,} chars  PDF FAIL  {elapsed:.2f}s  [{status}]")
             print(f"    ⚠ {type(e).__name__}: {e}")
     else:
-        print(f"  {theme:8s} × {report_type:24s}  {len(html):>7,} chars  {elapsed:.2f}s  [{status}]")
+        print(f"  {report_type:28s}  {len(html):>7,} chars  {elapsed:.2f}s  [{status}]")
 
     return result
 
@@ -272,8 +266,8 @@ def generate_index(results: list):
     """Write index.html with links to all generated files."""
     has_pdfs = any(r.get("pdf_size") for r in results)
     rows = []
-    for r in sorted(results, key=lambda x: (x["theme"], x["report_type"])):
-        fname = f"{r['theme']}_{r['report_type']}"
+    for r in sorted(results, key=lambda x: x["report_type"]):
+        fname = r["report_type"]
         status = "✅" if r["ok"] else "⚠️"
         pdf_cell = ""
         if has_pdfs:
@@ -283,18 +277,15 @@ def generate_index(results: list):
             else:
                 pdf_cell = "<td>—</td>"
         rows.append(
-            f'<tr><td>{status}</td><td><a href="{fname}.html">{r["theme"]}</a></td>'
-            f'<td>{r["report_type"]}</td><td>{r["html_len"]:,}</td>{pdf_cell}</tr>'
+            f'<tr><td>{status}</td><td><a href="{fname}.html">{r["report_type"]}</a></td>'
+            f'<td>{r["html_len"]:,}</td>{pdf_cell}</tr>'
         )
 
     pdf_header = "<th>PDF</th>" if has_pdfs else ""
-    pdf_count = sum(1 for r in results if r.get("pdf_size"))
-    subtitle = f"{len(results)} variants generated ({sum(1 for r in results if r['ok'])} OK)"
-    if has_pdfs:
-        subtitle += f" — {pdf_count} PDFs"
+    subtitle = f"{len(results)} reports generated ({sum(1 for r in results if r['ok'])} OK)"
 
     html = f"""<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Market Report Theme Index</title>
+<html><head><meta charset="utf-8"><title>Market Report Index</title>
 <style>
 body {{ font-family: system-ui; padding: 40px; background: #f5f5f5; }}
 table {{ border-collapse: collapse; width: 100%; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.1); }}
@@ -303,10 +294,10 @@ th {{ background: #1B365D; color: white; }}
 a {{ color: #4a90d9; text-decoration: none; }} a:hover {{ text-decoration: underline; }}
 h1 {{ margin-bottom: 20px; }}
 </style></head><body>
-<h1>Market Report Theme Index</h1>
+<h1>Market Report Index</h1>
 <p>{subtitle}</p>
 <table>
-<thead><tr><th></th><th>Theme</th><th>Report Type</th><th>HTML</th>{pdf_header}</tr></thead>
+<thead><tr><th></th><th>Report Type</th><th>HTML</th>{pdf_header}</tr></thead>
 <tbody>{''.join(rows)}</tbody>
 </table></body></html>"""
 
@@ -330,40 +321,35 @@ def _open_file(path: str):
 # ─── Main ────────────────────────────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate all market report theme variants")
+    parser = argparse.ArgumentParser(description="Generate market report HTML/PDF variants")
     parser.add_argument("--html-only", action="store_true", help="Skip PDF generation (HTML only)")
     parser.add_argument("--pdf-engine", default="playwright", choices=["playwright", "pdfshift"],
                         help="PDF engine: playwright (local, free) or pdfshift (cloud API key)")
     parser.add_argument("--no-open", action="store_true", help="Skip opening output in browser")
-    parser.add_argument("--theme", default="all", choices=ALL_THEMES + ["all"])
     parser.add_argument("--report-type", default="all", choices=ALL_REPORT_TYPES + ["all"])
     args = parser.parse_args()
 
-    themes = ALL_THEMES if args.theme == "all" else [args.theme]
     report_types = ALL_REPORT_TYPES if args.report_type == "all" else [args.report_type]
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    total = len(themes) * len(report_types)
     mode = "HTML only" if args.html_only else f"HTML + PDF ({args.pdf_engine})"
     print(f"\n{'='*60}")
-    print(f"  Market Report PDF Generator")
-    print(f"  {total} variants ({len(themes)} themes x {len(report_types)} types)")
+    print(f"  Market Report Generator")
+    print(f"  {len(report_types)} report types")
     print(f"  Mode: {mode}")
     print(f"  Output: {OUTPUT_DIR}")
     print(f"{'='*60}\n")
 
     t_all = time.perf_counter()
     results = []
-    for theme in themes:
-        for rt in report_types:
-            try:
-                r = render_variant(theme, rt, html_only=args.html_only, pdf_engine=args.pdf_engine)
-                results.append(r)
-            except Exception as e:
-                print(f"  {theme:8s} x {rt:24s}  ERROR: {e}")
-                results.append({"theme": theme, "report_type": rt, "ok": False, "html_len": 0})
+    for rt in report_types:
+        try:
+            r = render_variant(rt, html_only=args.html_only, pdf_engine=args.pdf_engine)
+            results.append(r)
+        except Exception as e:
+            print(f"  {rt:28s}  ERROR: {e}")
+            results.append({"report_type": rt, "ok": False, "html_len": 0})
 
-    # Cleanup Playwright browser if we used it
     global _playwright_browser
     if _playwright_browser is not None:
         _playwright_browser.close()
@@ -373,9 +359,8 @@ def main():
     generate_index(results)
 
     ok_count = sum(1 for r in results if r["ok"])
-    pdf_count = sum(1 for r in results if r.get("pdf_size"))
+    total = len(report_types)
     fail_count = total - ok_count
-    total_pdf_mb = sum(r.get("pdf_size", 0) for r in results) / (1024 * 1024)
 
     print(f"\n{'='*60}")
     print(f"  Done in {total_time:.1f}s — {ok_count}/{total} OK", end="")
@@ -383,8 +368,6 @@ def main():
         print(f", {fail_count} FAILED")
     else:
         print(" [ALL PASS]")
-    if pdf_count:
-        print(f"  PDFs: {pdf_count} files, {total_pdf_mb:.1f} MB total")
     print(f"  Output: {OUTPUT_DIR}")
     print(f"{'='*60}\n")
 

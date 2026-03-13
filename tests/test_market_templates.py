@@ -1,7 +1,7 @@
 # tests/test_market_templates.py
 """
 Unit tests for market report templates.
-Ensures all 5 themes × 8 report types render correctly (40 combinations).
+Ensures all 8 report types render correctly with brand colors.
 """
 
 import sys
@@ -16,8 +16,6 @@ sys.path.insert(0, str(WORKER_SRC))
 from worker.market_builder import (
     MarketReportBuilder,
     ALL_REPORT_TYPES,
-    ALL_THEMES,
-    THEME_TEMPLATES,
     TEMPLATES_DIR,
 )
 
@@ -30,7 +28,6 @@ def minimal_data():
     """Minimal report data — tests graceful handling of missing fields."""
     return {
         "report_type": "market_snapshot",
-        "theme_id": "teal",
         "city": "Test City",
         "lookback_days": 30,
         "listings": [],
@@ -45,8 +42,6 @@ def full_data():
     """Complete report data with all fields populated."""
     return {
         "report_type": "new_listings_gallery",
-        "theme_id": "teal",
-        "accent_color": None,
         "city": "Irvine",
         "lookback_days": 30,
         "filters_label": "2+ beds, SFR, under $1.5M",
@@ -132,12 +127,10 @@ def full_data():
 # ============================================================================
 
 class TestTemplateExistence:
-    """Verify all theme templates exist."""
+    """Verify template files exist."""
 
-    @pytest.mark.parametrize("theme,path", THEME_TEMPLATES.items())
-    def test_template_file_exists(self, theme, path):
-        full_path = TEMPLATES_DIR / path
-        assert full_path.exists(), f"Missing template for {theme}: {full_path}"
+    def test_template_file_exists(self):
+        assert (TEMPLATES_DIR / "market.jinja2").exists()
 
     def test_base_template_exists(self):
         assert (TEMPLATES_DIR / "_base" / "base.jinja2").exists()
@@ -145,33 +138,25 @@ class TestTemplateExistence:
     def test_macros_file_exists(self):
         assert (TEMPLATES_DIR / "_base" / "macros.jinja2").exists()
 
-    def test_all_five_themes_defined(self):
-        expected = {"teal", "bold", "classic", "modern", "elegant"}
-        assert set(THEME_TEMPLATES.keys()) == expected
-
 
 # ============================================================================
-# Template Rendering Tests — 5 themes × 8 report types = 40 combinations
+# Template Rendering Tests — 8 report types
 # ============================================================================
 
 class TestTemplateRendering:
-    """Test that every theme × report_type combination renders without error."""
+    """Test that every report_type renders without error."""
 
-    @pytest.mark.parametrize("theme", ALL_THEMES)
     @pytest.mark.parametrize("report_type", ALL_REPORT_TYPES)
-    def test_renders_with_full_data(self, full_data, theme, report_type):
-        full_data["theme_id"] = theme
+    def test_renders_with_full_data(self, full_data, report_type):
         full_data["report_type"] = report_type
         builder = MarketReportBuilder(full_data)
         html = builder.render_html()
 
         assert html is not None
-        assert len(html) > 500, f"{theme}/{report_type}: output suspiciously short ({len(html)} chars)"
+        assert len(html) > 500, f"{report_type}: output suspiciously short ({len(html)} chars)"
 
-    @pytest.mark.parametrize("theme", ALL_THEMES)
     @pytest.mark.parametrize("report_type", ALL_REPORT_TYPES)
-    def test_renders_with_minimal_data(self, minimal_data, theme, report_type):
-        minimal_data["theme_id"] = theme
+    def test_renders_with_minimal_data(self, minimal_data, report_type):
         minimal_data["report_type"] = report_type
         builder = MarketReportBuilder(minimal_data)
         html = builder.render_html()
@@ -187,38 +172,32 @@ class TestTemplateRendering:
 class TestHTMLStructure:
     """Verify generated HTML has correct structure."""
 
-    @pytest.mark.parametrize("theme", ALL_THEMES)
-    def test_valid_html_structure(self, full_data, theme):
-        full_data["theme_id"] = theme
+    def test_valid_html_structure(self, full_data):
         builder = MarketReportBuilder(full_data)
         html = builder.render_html()
 
-        assert "<html" in html, f"{theme}: Missing <html> tag"
-        assert "</html>" in html, f"{theme}: Missing </html> tag"
-        assert "<head>" in html, f"{theme}: Missing <head> tag"
-        assert "<body>" in html, f"{theme}: Missing <body> tag"
+        assert "<html" in html, "Missing <html> tag"
+        assert "</html>" in html, "Missing </html> tag"
+        assert "<head>" in html, "Missing <head> tag"
+        assert "<body>" in html, "Missing <body> tag"
 
-    @pytest.mark.parametrize("theme", ALL_THEMES)
     @pytest.mark.parametrize("report_type", ALL_REPORT_TYPES)
-    def test_no_unrendered_jinja(self, full_data, theme, report_type):
-        full_data["theme_id"] = theme
+    def test_no_unrendered_jinja(self, full_data, report_type):
         full_data["report_type"] = report_type
         builder = MarketReportBuilder(full_data)
         html = builder.render_html()
 
-        assert "{{" not in html, f"{theme}/{report_type}: Unrendered Jinja2 variable"
-        assert "{%" not in html, f"{theme}/{report_type}: Unrendered Jinja2 block"
+        assert "{{" not in html, f"{report_type}: Unrendered Jinja2 variable"
+        assert "{%" not in html, f"{report_type}: Unrendered Jinja2 block"
 
-    @pytest.mark.parametrize("theme", ALL_THEMES)
     @pytest.mark.parametrize("report_type", ALL_REPORT_TYPES)
-    def test_no_undefined_values(self, full_data, theme, report_type):
-        full_data["theme_id"] = theme
+    def test_no_undefined_values(self, full_data, report_type):
         full_data["report_type"] = report_type
         builder = MarketReportBuilder(full_data)
         html = builder.render_html()
 
-        assert "undefined" not in html.lower(), f"{theme}/{report_type}: 'undefined' in output"
-        assert ">None<" not in html, f"{theme}/{report_type}: Bare 'None' value in output"
+        assert "undefined" not in html.lower(), f"{report_type}: 'undefined' in output"
+        assert ">None<" not in html, f"{report_type}: Bare 'None' value in output"
 
 
 # ============================================================================
@@ -228,26 +207,31 @@ class TestHTMLStructure:
 class TestContentRendering:
     """Verify specific content renders correctly."""
 
-    @pytest.mark.parametrize("theme", ALL_THEMES)
-    def test_city_name_rendered(self, full_data, theme):
-        full_data["theme_id"] = theme
+    def test_city_name_rendered(self, full_data):
         builder = MarketReportBuilder(full_data)
         html = builder.render_html()
-        assert "Irvine" in html, f"{theme}: City name not rendered"
+        assert "Irvine" in html, "City name not rendered"
 
-    @pytest.mark.parametrize("theme", ALL_THEMES)
-    def test_agent_name_rendered(self, full_data, theme):
-        full_data["theme_id"] = theme
+    def test_agent_name_rendered(self, full_data):
         builder = MarketReportBuilder(full_data)
         html = builder.render_html()
-        assert "Jennifer Martinez" in html, f"{theme}: Agent name not rendered"
+        assert "Jennifer Martinez" in html, "Agent name not rendered"
 
-    @pytest.mark.parametrize("theme", ALL_THEMES)
-    def test_listing_prices_rendered(self, full_data, theme):
-        full_data["theme_id"] = theme
+    def test_listing_prices_rendered(self, full_data):
         builder = MarketReportBuilder(full_data)
         html = builder.render_html()
-        assert "$950,000" in html or "$950k" in html, f"{theme}: Listing price not rendered"
+        assert "$950,000" in html or "$950k" in html, "Listing price not rendered"
+
+    def test_brand_primary_color_in_css(self, full_data):
+        builder = MarketReportBuilder(full_data)
+        html = builder.render_html()
+        assert "#1B365D" in html or "#1b365d" in html, "Primary color not in CSS"
+
+    def test_custom_accent_color(self, full_data):
+        full_data["branding"]["accent_color"] = "#FF6B54"
+        builder = MarketReportBuilder(full_data)
+        html = builder.render_html()
+        assert "#FF6B54" in html or "#ff6b54" in html, "Custom accent color not in CSS"
 
 
 # ============================================================================
@@ -257,27 +241,21 @@ class TestContentRendering:
 class TestPrintCSS:
     """Verify print-related CSS is present."""
 
-    @pytest.mark.parametrize("theme", ALL_THEMES)
-    def test_has_page_size_rule(self, full_data, theme):
-        full_data["theme_id"] = theme
+    def test_has_page_size_rule(self, full_data):
         builder = MarketReportBuilder(full_data)
         html = builder.render_html()
-        assert "@page" in html, f"{theme}: Missing @page CSS rule"
+        assert "@page" in html, "Missing @page CSS rule"
 
-    @pytest.mark.parametrize("theme", ALL_THEMES)
-    def test_has_print_media_query(self, full_data, theme):
-        full_data["theme_id"] = theme
+    def test_has_print_media_query(self, full_data):
         builder = MarketReportBuilder(full_data)
         html = builder.render_html()
-        assert "@media print" in html, f"{theme}: Missing @media print rule"
+        assert "@media print" in html, "Missing @media print rule"
 
-    @pytest.mark.parametrize("theme", ALL_THEMES)
-    def test_has_page_break_rules(self, full_data, theme):
-        full_data["theme_id"] = theme
+    def test_has_page_break_rules(self, full_data):
         builder = MarketReportBuilder(full_data)
         html = builder.render_html()
         assert "page-break-after" in html or "page-break-inside" in html, \
-            f"{theme}: Missing page-break CSS rules"
+            "Missing page-break CSS rules"
 
 
 # ============================================================================
@@ -287,22 +265,19 @@ class TestPrintCSS:
 class TestEdgeCases:
     """Test edge cases and error handling."""
 
-    @pytest.mark.parametrize("theme", ALL_THEMES)
-    def test_zero_listings(self, minimal_data, theme):
+    @pytest.mark.parametrize("report_type", ALL_REPORT_TYPES)
+    def test_zero_listings(self, minimal_data, report_type):
         """Templates should handle 0 listings gracefully."""
-        minimal_data["theme_id"] = theme
-        minimal_data["report_type"] = "new_listings_gallery"
+        minimal_data["report_type"] = report_type
         builder = MarketReportBuilder(minimal_data)
         html = builder.render_html()
         assert "<html" in html
         assert "</html>" in html
 
-    @pytest.mark.parametrize("theme", ALL_THEMES)
-    def test_missing_optional_metrics(self, theme):
+    def test_missing_optional_metrics(self):
         """Templates should handle missing metrics gracefully."""
         data = {
             "report_type": "market_snapshot",
-            "theme_id": theme,
             "city": "City",
             "listings": [],
             "metrics": {},
@@ -313,12 +288,10 @@ class TestEdgeCases:
         html = builder.render_html()
         assert "<html" in html
 
-    @pytest.mark.parametrize("theme", ALL_THEMES)
-    def test_none_values_handled(self, theme):
+    def test_none_values_handled(self):
         """Templates should handle None values without crashing."""
         data = {
             "report_type": "closed",
-            "theme_id": theme,
             "city": "City",
             "listings": [
                 {
@@ -350,17 +323,32 @@ class TestEdgeCases:
         html = builder.render_html()
         assert ">None<" not in html
 
-    def test_unknown_theme_falls_back_to_teal(self, full_data):
-        full_data["theme_id"] = "nonexistent"
-        builder = MarketReportBuilder(full_data)
-        assert builder.theme_name == "teal"
+    def test_no_brand_colors_uses_defaults(self):
+        """Reports render with default navy+teal when no brand colors given."""
+        data = {
+            "report_type": "new_listings_gallery",
+            "city": "Anywhere",
+            "listings": [],
+            "metrics": {},
+            "counts": {},
+            "branding": {"agent_name": "Agent"},
+        }
+        builder = MarketReportBuilder(data)
         html = builder.render_html()
+        assert "#18235c" in html, "Default primary color not found"
         assert "<html" in html
 
     def test_unknown_report_type_falls_back(self, full_data):
         full_data["report_type"] = "nonexistent_type"
         builder = MarketReportBuilder(full_data)
         assert builder.report_type == "market_snapshot"
+
+    def test_theme_id_ignored_gracefully(self, full_data):
+        """Old theme_id field doesn't break anything."""
+        full_data["theme_id"] = "bold"
+        builder = MarketReportBuilder(full_data)
+        html = builder.render_html()
+        assert "<html" in html
 
 
 # ============================================================================

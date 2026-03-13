@@ -140,7 +140,7 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
       case 1: return true // audience always has "all" default
       case 2: return (state.areaType === "city" ? !!state.city : state.zipCodes.length > 0) && !!state.lookbackDays
       case 3: return state.deliveryMode === "send_now"
-        ? (state.downloadPdf || state.sendViaEmail)
+        ? (!state.sendViaEmail || state.recipients.length > 0)
         : !!state.scheduleName.trim() && state.recipients.length > 0
       default: return false
     }
@@ -224,6 +224,15 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
             filters,
             theme_id: themeId,
             accent_color: branding.accentColor,
+            ...(state.sendViaEmail && state.recipients.length > 0 && {
+              send_email: true,
+              recipients: state.recipients.map(r => {
+                if (r.type === "manual_email") return r.email;
+                if (r.type === "contact") return { type: "contact", id: r.id };
+                if (r.type === "group") return { type: "group", id: r.id };
+                return r;
+              }),
+            }),
           }),
         })
         if (!res.ok) throw new Error("Failed to create report")
@@ -444,6 +453,8 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
                         <><Loader2 className="w-4 h-4 animate-spin" />Processing...</>
                       ) : state.deliveryMode === "schedule" ? (
                         <><Sparkles className="w-4 h-4" />Create Schedule</>
+                      ) : state.sendViaEmail && state.recipients.length > 0 ? (
+                        <><Sparkles className="w-4 h-4" />Generate &amp; Send</>
                       ) : (
                         <><Sparkles className="w-4 h-4" />Generate Report</>
                       )}
