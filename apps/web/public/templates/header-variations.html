@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Header Bar Variations — PDF Report</title>
+  <title>Compact Header Variations — PDF Report</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -11,9 +11,10 @@
     :root {
       --header-bg: linear-gradient(135deg, #18235c 0%, #1e3a5f 50%, #0d9488 100%);
       --accent-color: #0d9488;
-      --accent-on-dark: rgba(13, 148, 136, 0.20);
+      --accent-on-dark: rgba(13, 148, 136, 0.18);
       --text-white: #ffffff;
       --text-white-muted: rgba(255, 255, 255, 0.65);
+      --accent-teal: #5eead4;
     }
 
     * {
@@ -24,7 +25,7 @@
 
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #f5f5f4;
+      background: #e7e5e4;
       padding: 40px;
     }
 
@@ -34,46 +35,55 @@
     }
 
     .variation-label {
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.08em;
       color: #78716c;
-      margin-bottom: 12px;
-      margin-top: 32px;
+      margin-bottom: 10px;
+      margin-top: 36px;
     }
 
     .variation-label:first-child {
       margin-top: 0;
     }
 
-    .header-wrapper {
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    .variation-desc {
+      font-size: 11px;
+      color: #a8a29e;
+      margin-bottom: 12px;
+      font-style: italic;
     }
 
+    .header-wrapper {
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+    }
+
+
     /* ════════════════════════════════════════════════════════════════
-       VARIATION A — Classic Horizontal
-       Title left, pill right. Clean flex layout.
+       VARIATION A — Balanced Classic
+       Clean hierarchy. Title left with period below. Pill right.
+       Compact but with intentional breathing room.
        ════════════════════════════════════════════════════════════════ */
     .header-a {
       background: var(--header-bg);
-      padding: 18px 28px;
+      padding: 14px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      min-height: 0.65in;
+      height: 0.65in;
     }
 
     .header-a .header-left {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 3px;
     }
 
     .header-a .report-title {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 700;
       color: var(--text-white);
       letter-spacing: -0.02em;
@@ -84,202 +94,211 @@
       font-size: 9px;
       font-weight: 400;
       color: var(--text-white-muted);
-      letter-spacing: 0.01em;
+      letter-spacing: 0.005em;
     }
 
     .header-a .metric-pill {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       background: var(--accent-on-dark);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 20px;
-      padding: 8px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 6px 12px;
     }
 
     .header-a .metric-pill .metric-value {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 700;
       color: var(--text-white);
     }
 
     .header-a .metric-pill .metric-label {
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 400;
       color: var(--text-white-muted);
     }
 
     .header-a .metric-pill .metric-dot {
-      color: rgba(255, 255, 255, 0.4);
-      font-size: 8px;
+      color: rgba(255, 255, 255, 0.35);
+      font-size: 6px;
     }
 
     .header-a .metric-pill .audience-tag {
-      font-size: 10px;
-      font-weight: 500;
-      color: #5eead4;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-    }
-
-
-    /* ════════════════════════════════════════════════════════════════
-       VARIATION B — Stacked Compact
-       Title + period stacked tight. Pill with accent glow.
-       ════════════════════════════════════════════════════════════════ */
-    .header-b {
-      background: var(--header-bg);
-      padding: 16px 28px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      min-height: 0.6in;
-    }
-
-    .header-b .header-left {
-      display: flex;
-      align-items: baseline;
-      gap: 16px;
-    }
-
-    .header-b .report-title {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--text-white);
-      letter-spacing: -0.02em;
-      line-height: 1;
-    }
-
-    .header-b .report-period {
       font-size: 9px;
-      font-weight: 400;
-      color: var(--text-white-muted);
-      letter-spacing: 0.01em;
-      border-left: 1px solid rgba(255, 255, 255, 0.2);
-      padding-left: 16px;
-    }
-
-    .header-b .metric-pill {
-      display: inline-flex;
-      align-items: center;
-      background: rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 6px;
-      padding: 6px 14px;
-      box-shadow: 0 0 20px var(--accent-on-dark);
-    }
-
-    .header-b .metric-pill .metric-value {
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--text-white);
-      margin-right: 6px;
-    }
-
-    .header-b .metric-pill .metric-label {
-      font-size: 10px;
-      font-weight: 500;
-      color: var(--text-white-muted);
+      font-weight: 600;
+      color: var(--accent-teal);
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
 
 
     /* ════════════════════════════════════════════════════════════════
-       VARIATION C — Minimal Edge
-       Ultra-clean. Title dominates, pill is subtle inline.
+       VARIATION B — Ultra-Compact Editorial
+       Single-line feel. Title and period on baseline with separator.
+       Minimal pill. Maximum density without feeling cramped.
+       ════════════════════════════════════════════════════════════════ */
+    .header-b {
+      background: var(--header-bg);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 0.55in;
+    }
+
+    .header-b .header-left {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .header-b .report-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-white);
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+
+    .header-b .separator {
+      width: 1px;
+      height: 12px;
+      background: rgba(255, 255, 255, 0.25);
+      align-self: center;
+    }
+
+    .header-b .report-period {
+      font-size: 9px;
+      font-weight: 400;
+      color: var(--text-white-muted);
+      letter-spacing: 0.005em;
+    }
+
+    .header-b .metric-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 4px;
+      padding: 5px 10px;
+    }
+
+    .header-b .metric-pill .metric-value {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-white);
+    }
+
+    .header-b .metric-pill .metric-label {
+      font-size: 9px;
+      font-weight: 500;
+      color: var(--text-white-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+
+    /* ════════════════════════════════════════════════════════════════
+       VARIATION C — Right-Heavy Metric Emphasis
+       Title compact left. Large, prominent metric pill dominates right.
+       For reports where the key number IS the story.
        ════════════════════════════════════════════════════════════════ */
     .header-c {
       background: var(--header-bg);
-      padding: 20px 28px;
+      padding: 14px 24px;
       display: flex;
-      align-items: flex-end;
+      align-items: center;
       justify-content: space-between;
-      min-height: 0.7in;
+      height: 0.65in;
     }
 
     .header-c .header-left {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 2px;
     }
 
     .header-c .report-title {
-      font-size: 24px;
+      font-size: 17px;
       font-weight: 700;
       color: var(--text-white);
-      letter-spacing: -0.025em;
-      line-height: 1;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .header-c .report-title .inline-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      background: var(--accent-on-dark);
-      border-radius: 4px;
-      padding: 4px 10px;
-      font-size: 12px;
-      font-weight: 600;
-      vertical-align: middle;
-    }
-
-    .header-c .report-title .inline-pill .pill-value {
-      color: #5eead4;
-    }
-
-    .header-c .report-title .inline-pill .pill-label {
-      color: var(--text-white-muted);
-      font-weight: 400;
+      letter-spacing: -0.015em;
+      line-height: 1.1;
     }
 
     .header-c .report-period {
       font-size: 9px;
       font-weight: 400;
       color: var(--text-white-muted);
-      letter-spacing: 0.01em;
+      letter-spacing: 0.005em;
     }
 
-    .header-c .header-right {
+    .header-c .metric-block {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
+    }
+
+    .header-c .metric-main {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 1px;
+    }
+
+    .header-c .metric-main .metric-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-white);
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+
+    .header-c .metric-main .metric-label {
+      font-size: 9px;
+      font-weight: 500;
+      color: var(--text-white-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
 
     .header-c .audience-badge {
-      font-size: 9px;
+      font-size: 8px;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: #5eead4;
-      background: rgba(94, 234, 212, 0.12);
-      border: 1px solid rgba(94, 234, 212, 0.25);
+      letter-spacing: 0.05em;
+      color: var(--accent-teal);
+      background: rgba(94, 234, 212, 0.1);
+      border: 1px solid rgba(94, 234, 212, 0.2);
       border-radius: 3px;
-      padding: 4px 10px;
+      padding: 4px 8px;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      transform: rotate(180deg);
     }
+
   </style>
 </head>
 <body>
   <div class="demo-container">
 
     <!-- ═══════════════════════════════════════════════════════════════════
-         VARIATION A — Classic Horizontal
+         VARIATION A — Balanced Classic
          ═══════════════════════════════════════════════════════════════════ -->
-    <p class="variation-label">Variation A — Classic Horizontal</p>
+    <p class="variation-label">Variation A — Balanced Classic</p>
+    <p class="variation-desc">Clean hierarchy with title stacked over period. Pill rounded and restrained. ~0.65in height.</p>
     <div class="header-wrapper">
       <header class="header-a">
         <div class="header-left">
           <h1 class="report-title">Closed Sales — Irvine</h1>
-          <p class="report-period">Period: Last 30 days • Source: Live MLS Data • March 12, 2026</p>
+          <p class="report-period">Period: Last 30 days · Source: Live MLS Data · March 12, 2026</p>
         </div>
         <div class="metric-pill">
           <span class="metric-value">42</span>
           <span class="metric-label">Sold</span>
-          <span class="metric-dot">•</span>
+          <span class="metric-dot">·</span>
           <span class="audience-tag">Luxury</span>
         </div>
       </header>
@@ -287,14 +306,16 @@
 
 
     <!-- ═══════════════════════════════════════════════════════════════════
-         VARIATION B — Stacked Compact
+         VARIATION B — Ultra-Compact Editorial
          ═══════════════════════════════════════════════════════════════════ -->
-    <p class="variation-label">Variation B — Stacked Compact</p>
+    <p class="variation-label">Variation B — Ultra-Compact Editorial</p>
+    <p class="variation-desc">Single baseline layout. Maximum density. Subtle rectangular pill. ~0.55in height.</p>
     <div class="header-wrapper">
       <header class="header-b">
         <div class="header-left">
           <h1 class="report-title">New Listings — Newport Beach</h1>
-          <p class="report-period">Last 7 days • Live MLS • Mar 12, 2026</p>
+          <span class="separator"></span>
+          <p class="report-period">Last 7 days · Live MLS · Mar 12, 2026</p>
         </div>
         <div class="metric-pill">
           <span class="metric-value">127</span>
@@ -305,23 +326,22 @@
 
 
     <!-- ═══════════════════════════════════════════════════════════════════
-         VARIATION C — Minimal Edge
+         VARIATION C — Right-Heavy Metric Emphasis
          ═══════════════════════════════════════════════════════════════════ -->
-    <p class="variation-label">Variation C — Minimal Edge</p>
+    <p class="variation-label">Variation C — Right-Heavy Metric Emphasis</p>
+    <p class="variation-desc">Title subdued left. Large metric dominates right. Vertical audience badge. ~0.65in height.</p>
     <div class="header-wrapper">
       <header class="header-c">
         <div class="header-left">
-          <h1 class="report-title">
-            Market Snapshot — Laguna Beach
-            <span class="inline-pill">
-              <span class="pill-value">$925K</span>
-              <span class="pill-label">Median</span>
-            </span>
-          </h1>
-          <p class="report-period">Period: Last 30 days • Source: Live MLS Data • March 12, 2026</p>
+          <h1 class="report-title">Market Snapshot — Laguna Beach</h1>
+          <p class="report-period">Period: Last 30 days · Source: Live MLS Data · March 12, 2026</p>
         </div>
-        <div class="header-right">
-          <span class="audience-badge">First-Time Buyer</span>
+        <div class="metric-block">
+          <div class="metric-main">
+            <span class="metric-value">$925K</span>
+            <span class="metric-label">Median Price</span>
+          </div>
+          <span class="audience-badge">First-Time</span>
         </div>
       </header>
     </div>
