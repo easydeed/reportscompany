@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Header Bar Variations — PDF Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --header-bg: linear-gradient(135deg, #18235c 0%, #1e3a5f 50%, #0d9488 100%);
+      --accent-color: #0d9488;
+      --accent-on-dark: rgba(13, 148, 136, 0.20);
+      --text-white: #ffffff;
+      --text-white-muted: rgba(255, 255, 255, 0.65);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f5f5f4;
+      padding: 40px;
+    }
+
+    .demo-container {
+      max-width: 8.5in;
+      margin: 0 auto;
+    }
+
+    .variation-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #78716c;
+      margin-bottom: 12px;
+      margin-top: 32px;
+    }
+
+    .variation-label:first-child {
+      margin-top: 0;
+    }
+
+    .header-wrapper {
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       VARIATION A — Classic Horizontal
+       Title left, pill right. Clean flex layout.
+       ════════════════════════════════════════════════════════════════ */
+    .header-a {
+      background: var(--header-bg);
+      padding: 18px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 0.65in;
+    }
+
+    .header-a .header-left {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .header-a .report-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-white);
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+
+    .header-a .report-period {
+      font-size: 9px;
+      font-weight: 400;
+      color: var(--text-white-muted);
+      letter-spacing: 0.01em;
+    }
+
+    .header-a .metric-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent-on-dark);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 8px 16px;
+    }
+
+    .header-a .metric-pill .metric-value {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-white);
+    }
+
+    .header-a .metric-pill .metric-label {
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--text-white-muted);
+    }
+
+    .header-a .metric-pill .metric-dot {
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 8px;
+    }
+
+    .header-a .metric-pill .audience-tag {
+      font-size: 10px;
+      font-weight: 500;
+      color: #5eead4;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+
+    /* ════════════════════════════════════════════════════════════════
+       VARIATION B — Stacked Compact
+       Title + period stacked tight. Pill with accent glow.
+       ════════════════════════════════════════════════════════════════ */
+    .header-b {
+      background: var(--header-bg);
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 0.6in;
+    }
+
+    .header-b .header-left {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+    }
+
+    .header-b .report-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-white);
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+
+    .header-b .report-period {
+      font-size: 9px;
+      font-weight: 400;
+      color: var(--text-white-muted);
+      letter-spacing: 0.01em;
+      border-left: 1px solid rgba(255, 255, 255, 0.2);
+      padding-left: 16px;
+    }
+
+    .header-b .metric-pill {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      padding: 6px 14px;
+      box-shadow: 0 0 20px var(--accent-on-dark);
+    }
+
+    .header-b .metric-pill .metric-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-white);
+      margin-right: 6px;
+    }
+
+    .header-b .metric-pill .metric-label {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-white-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+
+    /* ════════════════════════════════════════════════════════════════
+       VARIATION C — Minimal Edge
+       Ultra-clean. Title dominates, pill is subtle inline.
+       ════════════════════════════════════════════════════════════════ */
+    .header-c {
+      background: var(--header-bg);
+      padding: 20px 28px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      min-height: 0.7in;
+    }
+
+    .header-c .header-left {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .header-c .report-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-white);
+      letter-spacing: -0.025em;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-c .report-title .inline-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--accent-on-dark);
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      vertical-align: middle;
+    }
+
+    .header-c .report-title .inline-pill .pill-value {
+      color: #5eead4;
+    }
+
+    .header-c .report-title .inline-pill .pill-label {
+      color: var(--text-white-muted);
+      font-weight: 400;
+    }
+
+    .header-c .report-period {
+      font-size: 9px;
+      font-weight: 400;
+      color: var(--text-white-muted);
+      letter-spacing: 0.01em;
+    }
+
+    .header-c .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-c .audience-badge {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #5eead4;
+      background: rgba(94, 234, 212, 0.12);
+      border: 1px solid rgba(94, 234, 212, 0.25);
+      border-radius: 3px;
+      padding: 4px 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-container">
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         VARIATION A — Classic Horizontal
+         ═══════════════════════════════════════════════════════════════════ -->
+    <p class="variation-label">Variation A — Classic Horizontal</p>
+    <div class="header-wrapper">
+      <header class="header-a">
+        <div class="header-left">
+          <h1 class="report-title">Closed Sales — Irvine</h1>
+          <p class="report-period">Period: Last 30 days • Source: Live MLS Data • March 12, 2026</p>
+        </div>
+        <div class="metric-pill">
+          <span class="metric-value">42</span>
+          <span class="metric-label">Sold</span>
+          <span class="metric-dot">•</span>
+          <span class="audience-tag">Luxury</span>
+        </div>
+      </header>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         VARIATION B — Stacked Compact
+         ═══════════════════════════════════════════════════════════════════ -->
+    <p class="variation-label">Variation B — Stacked Compact</p>
+    <div class="header-wrapper">
+      <header class="header-b">
+        <div class="header-left">
+          <h1 class="report-title">New Listings — Newport Beach</h1>
+          <p class="report-period">Last 7 days • Live MLS • Mar 12, 2026</p>
+        </div>
+        <div class="metric-pill">
+          <span class="metric-value">127</span>
+          <span class="metric-label">Properties</span>
+        </div>
+      </header>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         VARIATION C — Minimal Edge
+         ═══════════════════════════════════════════════════════════════════ -->
+    <p class="variation-label">Variation C — Minimal Edge</p>
+    <div class="header-wrapper">
+      <header class="header-c">
+        <div class="header-left">
+          <h1 class="report-title">
+            Market Snapshot — Laguna Beach
+            <span class="inline-pill">
+              <span class="pill-value">$925K</span>
+              <span class="pill-label">Median</span>
+            </span>
+          </h1>
+          <p class="report-period">Period: Last 30 days • Source: Live MLS Data • March 12, 2026</p>
+        </div>
+        <div class="header-right">
+          <span class="audience-badge">First-Time Buyer</span>
+        </div>
+      </header>
+    </div>
+
+  </div>
+</body>
+</html>
