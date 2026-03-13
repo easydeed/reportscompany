@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Listings Gallery — Redesign Variations</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #18235c;
+      --accent-color: #0d9488;
+      --accent-on-dark: rgba(13, 148, 136, 0.9);
+      --accent-on-light: #0d9488;
+      --header-bg: linear-gradient(135deg, #18235c 0%, #1e3a5f 60%, #0d9488 100%);
+      --accent-light: #f0fdfa;
+      --text-dark: #1a1a1a;
+      --text-muted: #6b7280;
+      --border-light: #e5e7eb;
+      --card-radius: 4px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #f3f4f6;
+      padding: 40px 20px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* Page container */
+    .page {
+      width: 8.5in;
+      height: 11in;
+      margin: 0 auto 60px;
+      background: #fff;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .variation-label {
+      position: absolute;
+      top: -28px;
+      left: 0;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--primary-color);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* ========================================
+       VARIATION A: Editorial Compact
+       ======================================== */
+    .v-a .header {
+      background: var(--header-bg);
+      padding: 12px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 52px;
+    }
+
+    .v-a .header-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .v-a .header-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -0.2px;
+    }
+
+    .v-a .header-meta {
+      font-size: 9px;
+      color: rgba(255,255,255,0.7);
+      letter-spacing: 0.1px;
+    }
+
+    .v-a .header-right {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .v-a .header-metric {
+      font-family: Georgia, serif;
+      font-size: 28px;
+      font-weight: 400;
+      color: #fff;
+      line-height: 1;
+    }
+
+    .v-a .header-metric-label {
+      font-size: 9px;
+      color: rgba(255,255,255,0.75);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    /* Summary strip */
+    .v-a .summary-strip {
+      background: var(--accent-light);
+      padding: 6px 28px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .v-a .summary-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 9px;
+      color: var(--text-muted);
+    }
+
+    .v-a .summary-value {
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    .v-a .summary-divider {
+      width: 1px;
+      height: 10px;
+      background: var(--border-light);
+    }
+
+    /* Grid */
+    .v-a .grid-section {
+      flex: 1;
+      padding: 16px 28px 12px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .v-a .listing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      flex: 1;
+    }
+
+    .v-a .listing-card {
+      border: 1px solid var(--border-light);
+      border-radius: var(--card-radius);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .v-a .listing-photo {
+      width: 100%;
+      height: 110px;
+      object-fit: cover;
+      background: #e5e7eb;
+    }
+
+    .v-a .listing-info {
+      padding: 8px 10px 10px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .v-a .listing-address {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-dark);
+      line-height: 1.25;
+      margin-bottom: 2px;
+    }
+
+    .v-a .listing-city {
+      font-size: 9px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .v-a .listing-price {
+      font-family: Georgia, serif;
+      font-size: 14px;
+      color: var(--primary-color);
+      margin-bottom: 4px;
+    }
+
+    .v-a .listing-specs {
+      font-size: 8px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 8px;
+      margin-top: auto;
+    }
+
+    .v-a .listing-specs span {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .v-a .listing-specs svg {
+      width: 10px;
+      height: 10px;
+      opacity: 0.6;
+    }
+
+    /* Agent footer */
+    .v-a .agent-footer {
+      background: #fafafa;
+      border-top: 1px solid var(--border-light);
+      padding: 10px 28px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .v-a .agent-photo {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid var(--border-light);
+    }
+
+    .v-a .agent-info {
+      flex: 1;
+    }
+
+    .v-a .agent-name {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    .v-a .agent-title {
+      font-size: 8px;
+      color: var(--text-muted);
+    }
+
+    .v-a .agent-contact {
+      display: flex;
+      gap: 12px;
+      font-size: 8px;
+      color: var(--text-muted);
+    }
+
+    .v-a .agent-contact a {
+      color: var(--accent-color);
+      text-decoration: none;
+    }
+
+    /* Powered by */
+    .v-a .powered-footer {
+      background: var(--primary-color);
+      padding: 4px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .v-a .powered-text {
+      font-size: 7px;
+      color: rgba(255,255,255,0.5);
+    }
+
+    .v-a .powered-logo {
+      font-size: 8px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.7);
+    }
+
+    /* ========================================
+       VARIATION B: Data-Forward Tight
+       ======================================== */
+    .v-b .header {
+      background: var(--header-bg);
+      padding: 8px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 44px;
+    }
+
+    .v-b .header-left {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .v-b .header-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .v-b .header-meta {
+      font-size: 8px;
+      color: rgba(255,255,255,0.6);
+    }
+
+    .v-b .header-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .v-b .header-stat {
+      text-align: right;
+    }
+
+    .v-b .header-stat-value {
+      font-family: Georgia, serif;
+      font-size: 22px;
+      color: #fff;
+      line-height: 1;
+    }
+
+    .v-b .header-stat-label {
+      font-size: 7px;
+      color: rgba(255,255,255,0.6);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .v-b .header-divider {
+      width: 1px;
+      height: 24px;
+      background: rgba(255,255,255,0.2);
+    }
+
+    .v-b .header-secondary {
+      text-align: right;
+    }
+
+    .v-b .header-secondary-value {
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .v-b .header-secondary-label {
+      font-size: 7px;
+      color: rgba(255,255,255,0.6);
+    }
+
+    /* Inline summary */
+    .v-b .inline-summary {
+      padding: 5px 28px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-bottom: 1px solid var(--border-light);
+      background: #fff;
+    }
+
+    .v-b .inline-tag {
+      font-size: 8px;
+      padding: 2px 6px;
+      background: var(--accent-light);
+      color: var(--accent-color);
+      border-radius: 2px;
+      font-weight: 500;
+    }
+
+    .v-b .inline-text {
+      font-size: 8px;
+      color: var(--text-muted);
+    }
+
+    /* Grid */
+    .v-b .grid-section {
+      flex: 1;
+      padding: 12px 28px 10px;
+    }
+
+    .v-b .listing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      height: 100%;
+    }
+
+    .v-b .listing-card {
+      border: 1px solid var(--border-light);
+      border-radius: 3px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .v-b .listing-photo {
+      width: 100%;
+      height: 105px;
+      object-fit: cover;
+      background: #e5e7eb;
+    }
+
+    .v-b .listing-info {
+      padding: 6px 8px 8px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .v-b .listing-address {
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--text-dark);
+      line-height: 1.2;
+    }
+
+    .v-b .listing-city {
+      font-size: 8px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .v-b .listing-price {
+      font-family: Georgia, serif;
+      font-size: 13px;
+      color: var(--primary-color);
+      margin-bottom: 3px;
+    }
+
+    .v-b .listing-specs {
+      font-size: 7px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 6px;
+      margin-top: auto;
+    }
+
+    .v-b .listing-specs span {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .v-b .listing-specs svg {
+      width: 9px;
+      height: 9px;
+      opacity: 0.5;
+    }
+
+    /* Agent footer */
+    .v-b .agent-footer {
+      background: #fafafa;
+      border-top: 1px solid var(--border-light);
+      padding: 8px 28px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .v-b .agent-photo {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .v-b .agent-info {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .v-b .agent-name {
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    .v-b .agent-contact {
+      font-size: 8px;
+      color: var(--text-muted);
+    }
+
+    .v-b .agent-contact a {
+      color: var(--accent-color);
+      text-decoration: none;
+      margin-left: 8px;
+    }
+
+    /* Powered by */
+    .v-b .powered-footer {
+      background: var(--primary-color);
+      padding: 3px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .v-b .powered-text {
+      font-size: 6px;
+      color: rgba(255,255,255,0.4);
+    }
+
+    .v-b .powered-logo {
+      font-size: 7px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.6);
+    }
+
+    /* ========================================
+       VARIATION C: Luxury Minimal
+       ======================================== */
+    .v-c .header {
+      background: var(--header-bg);
+      padding: 14px 32px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      min-height: 56px;
+    }
+
+    .v-c .header-left h1 {
+      font-size: 16px;
+      font-weight: 500;
+      color: #fff;
+      letter-spacing: -0.3px;
+      margin-bottom: 3px;
+    }
+
+    .v-c .header-meta {
+      font-size: 8px;
+      color: rgba(255,255,255,0.55);
+      letter-spacing: 0.2px;
+    }
+
+    .v-c .header-right {
+      text-align: right;
+    }
+
+    .v-c .header-metric {
+      font-family: Georgia, serif;
+      font-size: 32px;
+      font-weight: 400;
+      color: #fff;
+      line-height: 0.9;
+      letter-spacing: -1px;
+    }
+
+    .v-c .header-metric-sub {
+      font-size: 8px;
+      color: rgba(255,255,255,0.6);
+      margin-top: 2px;
+    }
+
+    /* Accent line */
+    .v-c .accent-line {
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent-color) 0%, transparent 100%);
+    }
+
+    /* Grid */
+    .v-c .grid-section {
+      flex: 1;
+      padding: 20px 32px 16px;
+    }
+
+    .v-c .listing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      height: 100%;
+    }
+
+    .v-c .listing-card {
+      border: 1px solid #eee;
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+    }
+
+    .v-c .listing-photo {
+      width: 100%;
+      height: 115px;
+      object-fit: cover;
+      background: #e5e7eb;
+    }
+
+    .v-c .listing-info {
+      padding: 10px 12px 12px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .v-c .listing-price {
+      font-family: Georgia, serif;
+      font-size: 15px;
+      color: var(--primary-color);
+      margin-bottom: 6px;
+    }
+
+    .v-c .listing-address {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-dark);
+      line-height: 1.3;
+    }
+
+    .v-c .listing-city {
+      font-size: 9px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .v-c .listing-specs {
+      font-size: 8px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 10px;
+      margin-top: auto;
+      padding-top: 6px;
+      border-top: 1px solid #f0f0f0;
+    }
+
+    .v-c .listing-specs span {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .v-c .listing-specs svg {
+      width: 10px;
+      height: 10px;
+      opacity: 0.5;
+    }
+
+    /* Agent footer */
+    .v-c .agent-footer {
+      border-top: 1px solid var(--border-light);
+      padding: 12px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .v-c .agent-photo {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #f0f0f0;
+    }
+
+    .v-c .agent-info {
+      flex: 1;
+    }
+
+    .v-c .agent-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-dark);
+      margin-bottom: 1px;
+    }
+
+    .v-c .agent-title {
+      font-size: 8px;
+      color: var(--text-muted);
+    }
+
+    .v-c .agent-contact {
+      text-align: right;
+    }
+
+    .v-c .agent-contact a {
+      display: block;
+      font-size: 9px;
+      color: var(--accent-color);
+      text-decoration: none;
+      line-height: 1.5;
+    }
+
+    /* Powered by */
+    .v-c .powered-footer {
+      background: var(--primary-color);
+      padding: 5px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .v-c .powered-text {
+      font-size: 7px;
+      color: rgba(255,255,255,0.45);
+    }
+
+    .v-c .powered-logo {
+      font-size: 8px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.65);
+    }
+
+    /* Print styles */
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+      .page {
+        box-shadow: none;
+        margin: 0;
+        page-break-after: always;
+      }
+      .variation-label {
+        display: none;
+      }
+      @page {
+        size: letter;
+        margin: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============================================
+       VARIATION A: Editorial Compact
+       ============================================ -->
+  <div class="page v-a">
+    <span class="variation-label">Variation A: Editorial Compact</span>
+
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <h1 class="header-title">New Listings — Irvine</h1>
+        <p class="header-meta">Last 30 days • Live MLS Data • March 12, 2026</p>
+      </div>
+      <div class="header-right">
+        <span class="header-metric">127</span>
+        <span class="header-metric-label">Properties</span>
+      </div>
+    </header>
+
+    <!-- Summary strip -->
+    <div class="summary-strip">
+      <div class="summary-item">
+        <span class="summary-value">$1.2M</span>
+        <span>Median</span>
+      </div>
+      <div class="summary-divider"></div>
+      <div class="summary-item">
+        <span class="summary-value">18</span>
+        <span>Avg DOM</span>
+      </div>
+      <div class="summary-divider"></div>
+      <div class="summary-item">
+        <span class="summary-value">$685</span>
+        <span>$/SqFt</span>
+      </div>
+      <div class="summary-divider"></div>
+      <div class="summary-item">
+        <span>Audience:</span>
+        <span class="summary-value">Investors</span>
+      </div>
+    </div>
+
+    <!-- Grid section -->
+    <div class="grid-section">
+      <!-- {{ listings loop start }} -->
+      <div class="listing-grid">
+        <div class="listing-card">
+          <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=250&fit=crop" alt="Property" class="listing-photo">
+          <div class="listing-info">
+            <p class="listing-address">2847 Lighthouse Point</p>
+            <p class="listing-city">Irvine, CA 92603</p>
+            <p class="listing-price">$2,495,000</p>
+            <div class="listing-specs">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>4 bd</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H9"></path><rect x="2" y="4" width="7" height="16" rx="1"></rect></svg>3 ba</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>3,240 sf</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="listing-card">
+          <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&h=250&fit=crop" alt="Property" class="listing-photo">
+          <div class="listing-info">
+            <p class="listing-address">15 San Clemente</p>
+            <p class="listing-city">Irvine, CA 92614</p>
+            <p class="listing-price">$1,875,000</p>
+            <div class="listing-specs">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>3 bd</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H9"></path><rect x="2" y="4" width="7" height="16" rx="1"></rect></svg>2.5 ba</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>2,680 sf</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="listing-card">
+          <img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=400&h=250&fit=crop" alt="Property" class="listing-photo">
+          <div class="listing-info">
+            <p class="listing-address">892 Turtle Ridge</p>
+            <p class="listing-city">Irvine, CA 92603</p>
+            <p class="listing-price">$3,150,000</p>
+            <div class="listing-specs">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>5 bd</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H9"></path><rect x="2" y="4" width="7" height="16" rx="1"></rect></svg>4 ba</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>4,120 sf</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="listing-card">
+          <img src="https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=400&h=250&fit=crop" alt="Property" class="listing-photo">
+          <div class="listing-info">
+            <p class="listing-address">44 Meadowbrook</p>
+            <p class="listing-city">Irvine, CA 92620</p>
+            <p class="listing-price">$1,425,000</p>
+            <div class="listing-specs">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>3 bd</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H9"></path><rect x="2" y="4" width="7" height="16" rx="1"></rect></svg>2 ba</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>2,180 sf</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="listing-card">
+          <img src="https://images.unsplash.com/photo-1600573472550-8090b5e0745e?w=400&h=250&fit=crop" alt="Property" class="listing-photo">
+          <div class="listing-info">
+            <p class="listing-address">1201 Spectrum View</p>
+            <p class="listing-city">Irvine, CA 92618</p>
+            <p class="listing-price">$985,000</p>
+            <div class="listing-specs">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>2 bd</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H9"></path><rect x="2" y="4" width="7" height="16" rx="1"></rect></svg>2 ba</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>1,640 sf</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="listing-card">
+          <img src="https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=400&h=250&fit=crop" alt="Property" class="listing-photo">
+          <div class="listing-info">
+            <p class="listing-address">78 Crystal Cove</p>
+            <p class="listing-city">Irvine, CA 92657</p>
+            <p class="listing-price">$4,250,000</p>
+            <div class="listing-specs">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>6 bd</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H9"></path><rect x="2" y="4" width="7" height="16" rx="1"></rect></svg>5 ba</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>5,680 sf</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- {{ listings loop end }} -->
+    </div>
+
+    <!-- Agent footer -->
+    <footer class="agent-footer">
+      <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Sarah Chen" class="agent-photo">
+      <div class="agent-info">
+        <p class="agent-name">Sarah Chen</p>
+        <p class="agent-title">Senior Realtor • DRE #01234567</p>
+      </div>
+      <div class="agent-contact">
+        <span>(310) 555-1234</span>
+        <a href="mailto:sarah@luxuryirvine.com">sarah@luxuryirvine.com</a>
+      </div>
+    </footer>
+
+    <!-- Powered by -->
+    <div class="powered-footer">
+      <span class="powered-text">Powered by</span>
+      <span class="powered-logo">ReportsCompany</span>
+    </div>
+  </div>
+
+
+  <!-- ============================================
+       VARIATION B: Data-Forward Tight
+       ============================================ -->
+  <div class="page v-b">
+    <span class="variation-label">Variation B: Data-Forward Tight</span>
+
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <h1 class="header-title">New Listings — Irvine</h1>
+        <span class="header-meta">30 days • MLS • Mar 12, 2026</span>
+      </div>
+      <div class="header-right">
+        <div class="header-stat">
+          <p class="header-stat-value">127</p>
+          <p class="header-stat-label">Listings</p>
+        </div>
+        <div class="header-divider"></div>
+        <div class="header-secondary">
+          <p class="header-secondary-value">$1.2M</p>
+          <p class="header-secondary-label">Median</p>
+        </div>
+        <div class="header-divider"></div>
+        <div class="header-secondary">
+          <p class="header-secondary-value">18d</p>
+          <p class="header-secondary-label">Avg DOM</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Inline summary -->
+    <div class="inline-summary">
+      <span class="inline-tag">Investors</span>
+      <span class="inline-text">• Showing 6 of 127 listings • $685/sf avg • 68% absorption rate</span>
+    </div>
+
+    <!-- Grid section -->
+    <div class="grid-section">
+      <!-- {{ listings loop start }} -->
+      <div class="listing-grid">
+        <div class="listing-card">
+          <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=250&fit=crop" alt="Property" class="listing-photo">
+          <div class="listing-info">
+            <p class="listing-address">2847 Lighthouse Point</p>
+            <p class="listing-city">Irvine, CA 92603</p>
+            <p class="listing-price">$2,495,000</p>
+            <div class="listing-specs">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>4 bd</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H9"></path><rect x="2" y="4" width="7" height="16" rx="1"></rect></svg>3 ba</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>3,240 sf</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="listing-card">
+          <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&h=250&fit=crop" alt="Property" class="listing-photo">
+          <div class="listing-info">
+            <p class="listing-address">15 San Clemente</p>
+            <p class="listing-city">Irvine, CA 92614</p>
+            <p class="listing-price">$1,875,000</p>
+            <div class="listing-specs">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>3 bd</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H9"></path><rect x="2" y="4" width="7" height="16" rx="1"></rect></svg>2.5 ba</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>2,680 sf</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="listing-card">
+          <img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=400&h=250&fit=crop" alt="Property" class="listing-photo">
+          <div class="listing-info">
+            <p class="listing-address">892 Turtle Ridge</p>
+            <p class="listing-city">Irvine, CA 92603</p>
+            <p class="listing-price">$3,150,000</p>
+            <div class="listing-specs">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>5 bd</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H9"></path><rect x="2" y="4" width="7" height="16" rx="1"></rect></svg>4 ba</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>4,120 sf</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="listing-card">
+          <img src="https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=400&h=250&fit=crop" alt="Property" class="listing-photo">
+          <div class="listing-info">
+            <p class="listing-address">44 Meadowbrook</p>
+            <p class="listing-city">Irvine, CA 92620</p>
+            <p class="listing-price">$1,425,000</p>
+            <div class="listing-specs">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>3 bd</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H9"></path><rect x="2" y="4" width="7" height="16" rx="1"></rect></svg>2 ba</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>2,180 sf</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="listing-card">
+          <img src="https://images.unsplash.com/photo-1600573472550-8090b5e0745e?w=400&h=250&fit=crop" alt="Property" class="listing-photo">
+          <div class="listing-info">
+            <p class="listing-address">1201 Spectrum View</p>
+            <p class="listing-city">Irvine, CA 92618</p>
+            <p class="listing-price">$985,000</p>
+            <div class="listing-specs">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>2 bd</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H9"></path><rect x="2" y="4" width="7" height="16" rx="1"></rect></svg>2 ba</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>1,640 sf</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="listing-card">
+          <img src="https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=400&h=250&fit=crop" alt="Property" class="listing-photo">
+          <div class="listing-info">
+            <p class="listing-address">78 Crystal Cove</p>
+            <p class="listing-city">Irvine, CA 92657</p>
+            <p class="listing-price">$4,250,000</p>
+            <div class="listing-specs">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>6 bd</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H9"></path><rect x="2" y="4" width="7" height="16" rx="1"></rect></svg>5 ba</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>5,680 sf</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- {{ listings loop end }} -->
+    </div>
+
+    <!-- Agent footer -->
+    <footer class="agent-footer">
+      <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Sarah Chen" class="agent-photo">
+      <div class="agent-info">
+        <span class="agent-name">Sarah Chen</span>
+        <span class="agent-contact">DRE #01234567 <a href="tel:3105551234">(310) 555-1234</a> <a href="mailto:sarah@luxuryirvine.com">Email</a></span>
+      </div>
+    </footer>
+
+    <!-- Powered by -->
+    <div class="powered-footer">
+      <span class="powered-text">Powered by</span>
+      <span class="powered-logo">ReportsCompany</span>
+    </div>
+  </div>
+
+
+  <!-- ============================================
+       VARIATION C: Luxury Minimal
+       ============================================ -->
+  <div class="page v-c">
+    <span class="variation-label">Variation C: Luxury Minimal</span>
+
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <h1>New Listings — Irvine</h1>
+        <p class="header-meta">Last 30 days • Live MLS Data • March 12, 2026</p>
+      </div>
+      <div class="header-right">
+        <p class="header-metric">127</p>
+        <p class="header-metric-sub">Properties Listed</p>
+      </div>
+    </header>
+
+    <!-- Accent line -->
+    <div class="accent-line"></div>
+
+    <!-- Grid section -->
+    <div class="grid-section">
+      <!-- {{ listings loop start }} -->
+      <div class="listing-grid">
+        <div class="listing-card">
+          <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=250&fit=crop" alt="Property" class="listing-photo">
+          <div class="listing-info">
+            <p class="listing-price">$2,495,000</p>
+            <p class="listing-address">2847 Lighthouse Point</p>
+            <p class="listing-city">Irvine, CA 92603</p>
+            <div class="listing-specs">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>4 Beds</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H9"></path><rect x="2" y="4" width="7" height="16" rx="1"></rect></svg>3 Baths</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>3,240 SF</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="listing-card">
+          <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&h=250&fit=crop" alt="Property" class="listing-photo">
+          <div class="listing-info">
+            <p class="listing-price">$1,875,000</p>
+            <p class="listing-address">15 San Clemente</p>
+            <p class="listing-city">Irvine, CA 92614</p>
+            <div class="listing-specs">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>3 Beds</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H9"></path><rect x="2" y="4" width="7" height="16" rx="1"></rect></svg>2.5 Baths</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>2,680 SF</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="listing-card">
+          <img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=400&h=250&fit=crop" alt="Property" class="listing-photo">
+          <div class="listing-info">
+            <p class="listing-price">$3,150,000</p>
+            <p class="listing-address">892 Turtle Ridge</p>
+            <p class="listing-city">Irvine, CA 92603</p>
+            <div class="listing-specs">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>5 Beds</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H9"></path><rect x="2" y="4" width="7" height="16" rx="1"></rect></svg>4 Baths</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>4,120 SF</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="listing-card">
+          <img src="https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=400&h=250&fit=crop" alt="Property" class="listing-photo">
+          <div class="listing-info">
+            <p class="listing-price">$1,425,000</p>
+            <p class="listing-address">44 Meadowbrook</p>
+            <p class="listing-city">Irvine, CA 92620</p>
+            <div class="listing-specs">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>3 Beds</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H9"></path><rect x="2" y="4" width="7" height="16" rx="1"></rect></svg>2 Baths</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>2,180 SF</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="listing-card">
+          <img src="https://images.unsplash.com/photo-1600573472550-8090b5e0745e?w=400&h=250&fit=crop" alt="Property" class="listing-photo">
+          <div class="listing-info">
+            <p class="listing-price">$985,000</p>
+            <p class="listing-address">1201 Spectrum View</p>
+            <p class="listing-city">Irvine, CA 92618</p>
+            <div class="listing-specs">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>2 Beds</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H9"></path><rect x="2" y="4" width="7" height="16" rx="1"></rect></svg>2 Baths</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>1,640 SF</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="listing-card">
+          <img src="https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=400&h=250&fit=crop" alt="Property" class="listing-photo">
+          <div class="listing-info">
+            <p class="listing-price">$4,250,000</p>
+            <p class="listing-address">78 Crystal Cove</p>
+            <p class="listing-city">Irvine, CA 92657</p>
+            <div class="listing-specs">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>6 Beds</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H9"></path><rect x="2" y="4" width="7" height="16" rx="1"></rect></svg>5 Baths</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>5,680 SF</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- {{ listings loop end }} -->
+    </div>
+
+    <!-- Agent footer -->
+    <footer class="agent-footer">
+      <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Sarah Chen" class="agent-photo">
+      <div class="agent-info">
+        <p class="agent-name">Sarah Chen</p>
+        <p class="agent-title">Senior Realtor • DRE #01234567</p>
+      </div>
+      <div class="agent-contact">
+        <a href="tel:3105551234">(310) 555-1234</a>
+        <a href="mailto:sarah@luxuryirvine.com">sarah@luxuryirvine.com</a>
+      </div>
+    </footer>
+
+    <!-- Powered by -->
+    <div class="powered-footer">
+      <span class="powered-text">Powered by</span>
+      <span class="powered-logo">ReportsCompany</span>
+    </div>
+  </div>
+
+</body>
+</html>
