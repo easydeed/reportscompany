@@ -334,7 +334,7 @@ def main():
     parser.add_argument("--html-only", action="store_true", help="Skip PDF generation (HTML only)")
     parser.add_argument("--pdf-engine", default="playwright", choices=["playwright", "pdfshift"],
                         help="PDF engine: playwright (local, free) or pdfshift (cloud API key)")
-    parser.add_argument("--open", action="store_true", help="Open output folder after generation")
+    parser.add_argument("--no-open", action="store_true", help="Skip opening output in browser")
     parser.add_argument("--theme", default="all", choices=ALL_THEMES + ["all"])
     parser.add_argument("--report-type", default="all", choices=ALL_REPORT_TYPES + ["all"])
     args = parser.parse_args()
@@ -388,7 +388,8 @@ def main():
     print(f"  Output: {OUTPUT_DIR}")
     print(f"{'='*60}\n")
 
-    if args.open:
+    if not args.no_open:
+        print("  Opening index in browser...")
         _open_file(str(OUTPUT_DIR / "index.html"))
 
 

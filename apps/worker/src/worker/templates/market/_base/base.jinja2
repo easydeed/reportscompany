@@ -1,7 +1,6 @@
 {# =============================================================================
-   BASE MARKET REPORT TEMPLATE — V0 Design Spec
-   Page geometry, print CSS, font loading, layout primitives.
-   CSS matches output/v0_designs/ exactly.
+   BASE MARKET REPORT TEMPLATE — V0 Final Design (trendy-reports.html)
+   CSS copied from the V0 spec. Theme files override :root vars.
    ============================================================================= #}
 
 {% import '_base/macros.jinja2' as macros %}
@@ -20,749 +19,742 @@
 
   <style>
     /* ============================================
-       RESET & VARIABLES
+       CSS CUSTOM PROPERTIES (THEMEABLE)
        ============================================ */
     :root {
       --primary-color: #18235c;
       --accent-color: #0d9488;
+      --accent-light: #ccfbf1;
       --accent-on-dark: #5eead4;
       --accent-on-light: #0f766e;
-      --accent-light: #ccfbf1;
-      --header-bg: #18235c;
-      --text-primary: #1e293b;
-      --text-muted: #64748b;
-      --border-color: #e2e8f0;
-      --bg-light: #f8fafc;
-      --positive-color: #059669;
-      --negative-color: #dc2626;
-      --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --header-bg: linear-gradient(135deg, #18235c 0%, #1e3a5f 60%, #0d9488 100%);
+
+      --text-primary: #1f2937;
+      --text-secondary: #6b7280;
+      --text-muted: #9ca3af;
+      --border-color: #e5e7eb;
+      --border-light: #f3f4f6;
+      --bg-subtle: #f9fafb;
+      --bg-white: #ffffff;
+
+      --status-active: #059669;
+      --status-active-bg: #d1fae5;
+      --status-pending: #d97706;
+      --status-pending-bg: #fef3c7;
+      --status-sold: #dc2626;
+      --status-sold-bg: #fee2e2;
+
       --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    @page { size: letter; margin: 0; }
-
-    html, body {
-      width: 8.5in;
-      height: 11in;
-      font-family: var(--font-body);
-      font-size: 10px;
-      line-height: 1.4;
-      color: var(--text-primary);
-      background: white;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-
-    .page {
-      width: 8.5in;
-      height: 11in;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      background: white;
-    }
-
-    /* ============================================
-       1. HEADER BAR
-       ============================================ */
-    .header-bar {
-      background: var(--header-bg);
-      padding: 0.35in 0.4in;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: relative;
-      flex-shrink: 0;
-    }
-
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 0.15in;
-    }
-
-    .header-logo {
-      width: 0.45in;
-      height: 0.45in;
-      background: white;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 11px;
-      color: var(--primary-color);
-      overflow: hidden;
-    }
-
-    .header-logo img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-    }
-
-    .header-text { color: white; }
-
-    .header-company {
-      font-family: var(--font-display);
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: -0.01em;
-    }
-
-    .header-subtitle {
-      font-size: 10px;
-      opacity: 0.85;
-      margin-top: 1px;
-    }
-
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 0.12in;
-    }
-
-    .tagline-pill {
-      background: rgba(255,255,255,0.15);
-      color: white;
-      font-size: 9px;
-      font-weight: 600;
-      padding: 4px 10px;
-      border-radius: 20px;
-      letter-spacing: 0.02em;
-    }
-
-    /* ============================================
-       2. TITLE SECTION
-       ============================================ */
-    .title-section {
-      padding: 0.25in 0.4in 0.18in;
-      background: white;
-      flex-shrink: 0;
-    }
-
-    .title-main {
-      font-family: var(--font-display);
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--primary-color);
-      letter-spacing: -0.02em;
-      margin-bottom: 4px;
-    }
-
-    .title-subtitle {
-      font-size: 10px;
-      color: var(--text-muted);
-    }
-
-    .title-divider {
-      height: 3px;
-      background: var(--accent-color);
-      border-radius: 2px;
-      margin-top: 0.12in;
-      width: 1.2in;
-    }
-
-    /* ============================================
-       3. COUNT BADGE
-       ============================================ */
-    .count-section {
-      padding: 0 0.4in 0.15in;
-      flex-shrink: 0;
-    }
-
-    .count-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: var(--accent-light);
-      color: var(--accent-on-light);
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 600;
-    }
-
-    .count-badge .count-number {
-      font-size: 16px;
-      font-weight: 700;
-    }
-
-    /* ============================================
-       5. AI NARRATIVE
-       ============================================ */
-    .narrative-section {
-      padding: 0 0.4in 0.15in;
-      flex-shrink: 0;
-    }
-
-    .narrative-box {
-      background: var(--accent-light);
-      border-left: 4px solid var(--accent-color);
-      border-radius: 0 8px 8px 0;
-      padding: 0.12in 0.15in;
-    }
-
-    .narrative-text {
-      font-size: 10px;
-      line-height: 1.55;
-      color: var(--text-primary);
-    }
-
-    /* ============================================
-       6. PHOTO GRID & PROPERTY CARDS
-       ============================================ */
-    .grid-section {
-      padding: 0 0.4in;
-      flex-shrink: 0;
-    }
-
-    .grid-section--fill {
-      flex: 1;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .grid-label {
-      font-size: 9px;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 0.08in;
-      flex-shrink: 0;
-    }
-
-    .property-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.15in;
-    }
-
-    .grid-section--fill .property-grid {
-      flex: 1;
-    }
-
-    .property-grid--2 { grid-template-columns: repeat(2, 1fr); gap: 0.12in; }
-    .property-grid.grid-4 { grid-template-columns: repeat(2, 1fr); max-width: 5.5in; }
-    .property-grid.grid-single { grid-template-columns: 1fr; max-width: 4.5in; gap: 0.18in; }
-
-    .property-card {
-      background: white;
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .property-image-wrapper {
-      aspect-ratio: 16 / 10;
-      background: var(--bg-light);
-      overflow: hidden;
-      position: relative;
-    }
-
-    .property-image {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .property-image-placeholder {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--bg-light);
-      color: var(--text-muted);
-      font-size: 9px;
-    }
-
-    .property-image-placeholder svg {
-      width: 28px;
-      height: 28px;
-      opacity: 0.4;
-    }
-
-    .property-details {
-      padding: 10px 12px;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .property-address {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 2px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .property-city {
-      font-size: 9px;
-      color: var(--text-muted);
-      margin-bottom: 6px;
-    }
-
-    .property-price {
-      font-family: Georgia, 'Times New Roman', serif;
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--primary-color);
-      margin-bottom: 6px;
-    }
-
-    .property-specs {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 9px;
-      color: var(--text-muted);
-      margin-top: auto;
-    }
-
-    .spec-item {
-      display: flex;
-      align-items: center;
-      gap: 3px;
-    }
-
-    .spec-item svg {
-      width: 12px;
-      height: 12px;
-      opacity: 0.6;
-    }
-
-    /* Compact cards (Market Narrative — 2x2 featured) */
-    .grid-compact .property-image-wrapper { aspect-ratio: 16 / 9; }
-    .grid-compact .property-details { padding: 8px 10px; }
-    .grid-compact .property-address { font-size: 10px; }
-    .grid-compact .property-city { font-size: 8px; margin-bottom: 4px; }
-    .grid-compact .property-price { font-size: 13px; margin-bottom: 4px; }
-    .grid-compact .property-specs { font-size: 8px; gap: 8px; }
-    .grid-compact .spec-item svg { width: 10px; height: 10px; }
-    .grid-compact .property-image-placeholder svg { width: 24px; height: 24px; }
-
-    /* Compact-sm cards (Closed/Inventory — 2x2 with badges) */
-    .grid-compact-sm .property-image-wrapper { aspect-ratio: 16 / 9; }
-    .grid-compact-sm .property-card { border-radius: 6px; }
-    .grid-compact-sm .property-details { padding: 6px 8px; }
-    .grid-compact-sm .property-address { font-size: 9px; margin-bottom: 1px; }
-    .grid-compact-sm .property-city { font-size: 8px; margin-bottom: 3px; }
-    .grid-compact-sm .property-price { font-size: 12px; margin-bottom: 3px; }
-    .grid-compact-sm .property-specs { font-size: 8px; gap: 6px; }
-    .grid-compact-sm .spec-item svg { width: 9px; height: 9px; }
-    .grid-compact-sm .property-image-placeholder svg { width: 20px; height: 20px; }
-
-    .no-listings-msg {
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 11px;
-      padding: 2in 0;
-    }
-
-    /* ============================================
-       7. STATUS BADGES
-       ============================================ */
-    .status-badge {
-      position: absolute;
-      top: 6px;
-      left: 6px;
-      font-size: 8px;
-      font-weight: 700;
-      color: white;
-      padding: 2px 8px;
-      border-radius: 3px;
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
-    }
-
-    .status-badge.sold { background: #dc2626; }
-    .status-badge.closed { background: #dc2626; }
-    .status-badge.active { background: #059669; }
-    .status-badge.pending { background: #d97706; }
-    .status-badge.new { background: var(--accent-color); }
-
-    /* Row-level badges (analytics list) */
-    .property-row-badge .status-badge {
-      position: static;
-      padding: 4px 10px;
-      border-radius: 4px;
-    }
-
-    .property-row-badge .status-badge.active { background: #dcfce7; color: #166534; }
-    .property-row-badge .status-badge.pending { background: #fef3c7; color: #92400e; }
-    .property-row-badge .status-badge.new { background: var(--accent-light); color: var(--accent-on-light); }
-    .property-row-badge .status-badge.sold,
-    .property-row-badge .status-badge.closed { background: #fee2e2; color: #991b1b; }
-
-    /* ============================================
-       8. STATS BAR
-       ============================================ */
-    .stats-bar {
-      padding: 0.12in 0.4in;
-      flex-shrink: 0;
-    }
-
-    .stats-row {
-      display: flex;
-      gap: 0.12in;
-      background: var(--bg-light);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 0.1in 0.15in;
-    }
-
-    .stat-block {
-      flex: 1;
-      text-align: center;
-      border-right: 1px solid var(--border-color);
-      padding-right: 0.12in;
-    }
-
-    .stat-block:last-child {
-      border-right: none;
-      padding-right: 0;
-    }
-
-    .stat-value {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--primary-color);
-      margin-bottom: 2px;
-    }
-
-    .stat-label {
-      font-size: 9px;
-      color: var(--text-muted);
-    }
-
-    /* ============================================
-       9. QUICK TAKE
-       ============================================ */
-    .quicktake-section {
-      padding: 0 0.4in 0.12in;
-      flex-shrink: 0;
-    }
-
-    .quicktake-box {
-      background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color) 60%, #1e3a5f) 100%);
-      border-radius: 8px;
-      padding: 0.1in 0.15in;
-      display: flex;
-      align-items: center;
-      gap: 0.1in;
-    }
-
-    .quicktake-icon {
-      width: 20px;
-      height: 20px;
-      background: var(--accent-color);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .quicktake-icon svg {
-      width: 12px;
-      height: 12px;
-      color: white;
-    }
-
-    .quicktake-text {
-      font-size: 10px;
-      font-weight: 500;
-      color: white;
-      line-height: 1.4;
-    }
-
-    /* ============================================
-       10. DATA TABLE
-       ============================================ */
-    .table-section {
-      padding: 0.08in 0.4in 0.1in;
-      flex-shrink: 0;
-    }
-
-    .table-label {
-      font-size: 8px;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 0.05in;
-    }
-
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 9px;
-    }
-
-    .data-table thead th {
-      background: var(--primary-color);
-      color: white;
-      font-weight: 600;
-      padding: 5px 8px;
-      text-align: left;
-      font-size: 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-    }
-
-    .data-table thead th:first-child { border-radius: 4px 0 0 0; }
-    .data-table thead th:last-child { border-radius: 0 4px 0 0; }
-    .data-table thead th.right { text-align: right; }
-
-    .data-table tbody tr:nth-child(odd) { background: white; }
-    .data-table tbody tr:nth-child(even) { background: var(--bg-light); }
-
-    .data-table tbody td {
-      padding: 5px 8px;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .data-table tbody td.right {
-      text-align: right;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .data-table tbody td.price {
-      font-family: Georgia, 'Times New Roman', serif;
-      font-weight: 600;
-      color: var(--primary-color);
-    }
-
-    /* ============================================
-       11. STAT CARDS (analytics)
-       ============================================ */
-    .stats-section {
-      padding: 0 0.4in 0.15in;
-      flex-shrink: 0;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 0.12in;
-    }
-
-    .stat-card {
-      background: white;
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 0.12in 0.15in;
-      text-align: center;
-    }
-
-    .stat-card-value {
-      font-family: Georgia, 'Times New Roman', serif;
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--primary-color);
-      margin-bottom: 2px;
-    }
-
-    .stat-card-label {
-      font-size: 9px;
-      color: var(--text-muted);
-    }
-
-    /* ============================================
-       12. PROPERTY LIST (analytics vertical)
-       ============================================ */
-    .list-section {
-      flex: 1;
-      padding: 0 0.4in;
-      overflow: hidden;
-    }
-
-    .list-header {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--primary-color);
-      margin-bottom: 0.1in;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-    }
-
-    .property-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-    }
-
-    .property-row {
-      display: flex;
-      align-items: center;
-      gap: 0.15in;
-      padding: 0.12in 0;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .property-row:last-child { border-bottom: none; }
-
-    .property-row-image {
-      width: 120px;
-      height: 90px;
-      border-radius: 6px;
-      overflow: hidden;
-      flex-shrink: 0;
-      background: var(--bg-light);
-    }
-
-    .property-row-image img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .property-row-image-placeholder {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--text-muted);
-    }
-
-    .property-row-image-placeholder svg {
-      width: 28px;
-      height: 28px;
-      opacity: 0.4;
-    }
-
-    .property-row-details {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .property-row-address {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 2px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .property-row-city {
-      font-size: 9px;
-      color: var(--text-muted);
-      margin-bottom: 6px;
-    }
-
-    .property-row-price {
-      font-family: Georgia, 'Times New Roman', serif;
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--primary-color);
-      margin-bottom: 6px;
-    }
-
-    .property-row-specs {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 9px;
-      color: var(--text-muted);
-    }
-
-    .property-row-badge { flex-shrink: 0; }
-
-    /* ============================================
-       13. AGENT FOOTER
-       ============================================ */
-    .agent-footer {
-      background: var(--bg-light);
-      padding: 0.18in 0.4in;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-top: 1px solid var(--border-color);
-      flex-shrink: 0;
-    }
-
-    .agent-info {
-      display: flex;
-      align-items: center;
-      gap: 0.12in;
-    }
-
-    .agent-photo {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 2px solid white;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-
-    .agent-details { line-height: 1.35; }
-
-    .agent-name {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--text-primary);
-    }
-
-    .agent-title {
-      font-size: 9px;
-      color: var(--text-muted);
-      margin-bottom: 3px;
-    }
-
-    .agent-contact {
-      font-size: 9px;
-      color: var(--text-muted);
-    }
-
-    .agent-contact a {
-      color: var(--accent-on-light);
-      text-decoration: none;
-      font-weight: 500;
-    }
-
-    .footer-logo {
-      height: 0.35in;
-      opacity: 0.7;
-    }
-
-    /* ============================================
-       14. POWERED-BY FOOTER
-       ============================================ */
-    .powered-footer {
-      padding: 0.1in 0.4in;
-      text-align: center;
-      font-size: 8px;
-      color: var(--text-muted);
-      border-top: 1px solid var(--border-color);
-      flex-shrink: 0;
+      --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
     /* ============================================
        PRINT STYLES
        ============================================ */
+    @page { size: letter; margin: 0; }
+
     @media print {
-      html, body {
-        width: 8.5in;
-        height: 11in;
+      body {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        background: white !important;
       }
-      .page {
-        page-break-after: avoid;
+      .report-page {
+        box-shadow: none !important;
+        margin: 0 !important;
+        page-break-after: always;
         page-break-inside: avoid;
       }
+    }
+
+    /* ============================================
+       BASE STYLES
+       ============================================ */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-body);
+      background: white;
+      color: var(--text-primary);
+      line-height: 1.4;
+      -webkit-font-smoothing: antialiased;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* ============================================
+       REPORT PAGE SHELL
+       ============================================ */
+    .report-page {
+      width: 8.5in;
+      height: 11in;
+      background: var(--bg-white);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ============================================
+       HEADER
+       ============================================ */
+    .report-header {
+      background: var(--header-bg);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .report-header .title-block h1 {
+      color: white;
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .report-header .title-block h1 span {
+      font-weight: 400;
+    }
+
+    .report-header .title-block .meta {
+      color: var(--accent-on-dark);
+      font-size: 10px;
+      margin-top: 2px;
+    }
+
+    .report-header .metric-block {
+      text-align: right;
+    }
+
+    .report-header .metric-block .value {
+      color: white;
+      font-size: 22px;
+      font-weight: 600;
+      font-family: Georgia, serif;
+      letter-spacing: -0.02em;
+    }
+
+    .report-header .metric-block .label {
+      color: var(--accent-on-dark);
+      font-size: 10px;
+    }
+
+    /* ============================================
+       CONTENT ZONE
+       ============================================ */
+    .content-zone {
+      flex: 1;
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow: hidden;
+    }
+
+    /* ============================================
+       AGENT FOOTER
+       ============================================ */
+    .agent-footer {
+      padding: 12px 20px;
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-subtle);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .agent-footer .agent-photo {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .agent-footer .agent-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .agent-footer .agent-info .name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .agent-footer .agent-info .title {
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+
+    .agent-footer .contact-info {
+      text-align: right;
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+
+    .agent-footer .company-info {
+      padding-left: 12px;
+      border-left: 1px solid var(--border-color);
+    }
+
+    .agent-footer .company-info .company-name {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .agent-footer .company-info .company-url {
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+
+    /* ============================================
+       POWERED BY FOOTER
+       ============================================ */
+    .powered-by {
+      padding: 6px;
+      text-align: center;
+      border-top: 1px solid var(--border-light);
+    }
+
+    .powered-by p {
+      font-size: 9px;
+      color: var(--text-muted);
+    }
+
+    /* ============================================
+       GALLERY LAYOUT (Layout A)
+       ============================================ */
+    .gallery-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .listing-card {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .listing-card .photo {
+      aspect-ratio: 3/2.4;
+      background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
+      flex: 1;
+    }
+
+    .listing-card .photo .badge {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      font-size: 7px;
+      font-weight: 600;
+      padding: 2px 5px;
+      border-radius: 2px;
+      text-transform: uppercase;
+      z-index: 1;
+    }
+
+    .listing-card .photo .badge.featured {
+      background: #f59e0b;
+      color: white;
+    }
+
+    .listing-card .photo .badge.time {
+      background: var(--accent-color);
+      color: white;
+    }
+
+    .listing-card .photo .price-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+      padding: 8px;
+    }
+
+    .listing-card .photo .price-overlay .price {
+      font-size: 13px;
+      font-weight: 600;
+      font-family: Georgia, serif;
+      color: white;
+    }
+
+    .listing-card .details {
+      padding-top: 6px;
+    }
+
+    .listing-card .details .address {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.2;
+    }
+
+    .listing-card .details .location {
+      font-size: 9px;
+      color: var(--text-secondary);
+    }
+
+    .listing-card .details .price-specs {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-top: 2px;
+    }
+
+    .listing-card .details .price-specs .price {
+      font-size: 13px;
+      font-weight: 600;
+      font-family: Georgia, serif;
+      color: var(--primary-color);
+    }
+
+    .listing-card .details .price-specs .specs {
+      font-size: 9px;
+      color: var(--text-secondary);
+    }
+
+    /* ============================================
+       MARKET SNAPSHOT (Layout B)
+       ============================================ */
+    .snapshot-top {
+      display: flex;
+      gap: 10px;
+    }
+
+    .hero-metric {
+      width: 110px;
+      flex-shrink: 0;
+      background: linear-gradient(135deg, var(--primary-color) 0%, #1e3a5f 100%);
+      border-radius: 6px;
+      padding: 10px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .hero-metric .value {
+      font-size: 22px;
+      font-weight: 700;
+      font-family: Georgia, serif;
+      color: white;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-metric .label {
+      font-size: 9px;
+      color: var(--accent-on-dark);
+      margin-top: 1px;
+    }
+
+    .hero-metric .change {
+      font-size: 9px;
+      color: #5eead4;
+    }
+
+    .ai-insight {
+      flex: 1;
+      background: var(--accent-light);
+      border: 1px solid #99f6e4;
+      border-radius: 6px;
+      padding: 10px;
+    }
+
+    .ai-insight .insight-label {
+      font-size: 8px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent-on-light);
+      margin-bottom: 2px;
+    }
+
+    .ai-insight p {
+      font-size: 10px;
+      color: var(--text-primary);
+      line-height: 1.45;
+    }
+
+    .photo-grid-4 {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .photo-grid-4 .photo-item {
+      aspect-ratio: 3/4;
+      background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .photo-grid-4 .photo-item .overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+      padding: 10px;
+    }
+
+    .photo-grid-4 .photo-item .overlay .addr {
+      font-size: 10px;
+      font-weight: 500;
+      color: white;
+      line-height: 1.2;
+    }
+
+    .photo-grid-4 .photo-item .overlay .price {
+      font-size: 11px;
+      font-weight: 600;
+      font-family: Georgia, serif;
+      color: rgba(255,255,255,0.95);
+    }
+
+    .photo-grid-4 .photo-item .overlay .status {
+      font-size: 7px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: rgba(255,255,255,0.7);
+    }
+
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .stats-bar .stat {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+      padding: 6px;
+      text-align: center;
+    }
+
+    .stats-bar .stat .value {
+      font-size: 14px;
+      font-weight: 600;
+      font-family: Georgia, serif;
+      color: var(--primary-color);
+    }
+
+    .stats-bar .stat .label {
+      font-size: 8px;
+      color: var(--text-secondary);
+    }
+
+    .quick-take {
+      background: var(--accent-light);
+      border: 1px solid #99f6e4;
+      border-radius: 4px;
+      padding: 8px 10px;
+    }
+
+    .quick-take .qt-label {
+      font-size: 8px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent-on-light);
+      margin-bottom: 2px;
+    }
+
+    .quick-take p {
+      font-size: 10px;
+      color: var(--text-primary);
+      line-height: 1.4;
+    }
+
+    /* ============================================
+       CLOSED / INVENTORY (Layout C)
+       ============================================ */
+    .ci-top {
+      display: flex;
+      gap: 10px;
+    }
+
+    .ci-hero {
+      background: linear-gradient(135deg, var(--primary-color) 0%, #1e3a5f 100%);
+      border-radius: 6px;
+      padding: 10px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      aspect-ratio: 3/2.5;
+    }
+
+    .ci-hero .value {
+      font-size: 28px;
+      font-weight: 700;
+      font-family: Georgia, serif;
+      color: white;
+    }
+
+    .ci-hero .label {
+      font-size: 9px;
+      color: var(--accent-on-dark);
+    }
+
+    .ci-photo-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .ci-photo-grid .photo {
+      aspect-ratio: 3/2.5;
+      background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
+      border-radius: 3px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ci-photo-grid .photo .status-badge {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      font-size: 6px;
+      font-weight: 600;
+      padding: 2px 4px;
+      border-radius: 2px;
+      text-transform: uppercase;
+    }
+
+    .ci-photo-grid .photo .status-badge.active { background: var(--status-active); color: white; }
+    .ci-photo-grid .photo .status-badge.pending { background: var(--status-pending); color: white; }
+    .ci-photo-grid .photo .status-badge.sold { background: var(--status-sold); color: white; }
+    .ci-photo-grid .photo .status-badge.closed { background: var(--status-sold); color: white; }
+
+    .data-table {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .data-table table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9px;
+    }
+
+    .data-table th {
+      text-align: left;
+      padding: 4px 3px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .data-table th.center { text-align: center; }
+    .data-table th.right { text-align: right; }
+
+    .data-table td {
+      padding: 4px 3px;
+      border-bottom: 1px solid var(--border-light);
+      color: var(--text-primary);
+    }
+
+    .data-table td.center { text-align: center; color: var(--text-secondary); }
+    .data-table td.right { text-align: right; }
+    .data-table td.price {
+      font-weight: 500;
+      color: var(--primary-color);
+    }
+
+    .inline-badge {
+      display: inline-block;
+      font-size: 7px;
+      font-weight: 500;
+      padding: 2px 5px;
+      border-radius: 2px;
+    }
+
+    .inline-badge.active { background: var(--status-active-bg); color: var(--status-active); }
+    .inline-badge.pending { background: var(--status-pending-bg); color: var(--status-pending); }
+    .inline-badge.sold { background: var(--status-sold-bg); color: var(--status-sold); }
+    .inline-badge.closed { background: var(--status-sold-bg); color: var(--status-sold); }
+
+    .stats-bar-sm {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+    }
+
+    .stats-bar-sm .stat {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-light);
+      border-radius: 3px;
+      padding: 5px;
+      text-align: center;
+    }
+
+    .stats-bar-sm .stat .value {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+
+    .stats-bar-sm .stat .label {
+      font-size: 7px;
+      color: var(--text-secondary);
+    }
+
+    /* ============================================
+       ANALYTICS (Layout D)
+       ============================================ */
+    .analytics-top {
+      display: flex;
+      gap: 8px;
+    }
+
+    .analytics-hero {
+      width: 90px;
+      flex-shrink: 0;
+      background: linear-gradient(135deg, var(--primary-color) 0%, #1e3a5f 100%);
+      border-radius: 6px;
+      padding: 10px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .analytics-hero .value {
+      font-size: 20px;
+      font-weight: 700;
+      font-family: Georgia, serif;
+      color: white;
+    }
+
+    .analytics-hero .label {
+      font-size: 8px;
+      color: var(--accent-on-dark);
+    }
+
+    .stat-cards-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+    }
+
+    .stat-cards-grid .stat-card {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+      padding: 6px 4px;
+      text-align: center;
+    }
+
+    .stat-cards-grid .stat-card .value {
+      font-size: 14px;
+      font-weight: 600;
+      font-family: Georgia, serif;
+      color: var(--primary-color);
+    }
+
+    .stat-cards-grid .stat-card .label {
+      font-size: 7px;
+      color: var(--text-secondary);
+      line-height: 1.2;
+      margin-top: 1px;
+    }
+
+    .listing-rows {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .listing-row {
+      display: flex;
+      align-items: stretch;
+      gap: 12px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .listing-row .thumb {
+      width: 120px;
+      aspect-ratio: 4/3;
+      background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .listing-row .thumb .status-badge {
+      position: absolute;
+      bottom: 4px;
+      left: 4px;
+      font-size: 7px;
+      font-weight: 600;
+      padding: 2px 5px;
+      border-radius: 2px;
+    }
+
+    .listing-row .thumb .status-badge.active { background: var(--status-active-bg); color: var(--status-active); }
+    .listing-row .thumb .status-badge.pending { background: var(--status-pending-bg); color: var(--status-pending); }
+
+    .listing-row .info {
+      flex: 1;
+      min-width: 0;
+      padding: 8px 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .listing-row .info .addr {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .listing-row .info .city {
+      font-size: 9px;
+      color: var(--text-secondary);
+    }
+
+    .listing-row .info .specs {
+      font-size: 9px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .listing-row .price-block {
+      text-align: right;
+      padding-right: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .listing-row .price-block .price {
+      font-size: 16px;
+      font-weight: 600;
+      font-family: Georgia, serif;
+      color: var(--primary-color);
     }
 
     /* ============================================
@@ -772,31 +764,30 @@
   </style>
 </head>
 <body>
-  <div class="page">
-    {{ macros.report_header(header, agent) }}
+  <div class="report-page">
+    {{ macros.report_header(header, stats, report_type) }}
 
-    {% block content %}
-      {% if layout == "gallery" %}
-        {{ macros.gallery_layout(header, listings, stats, agent) }}
-      {% elif layout == "market_narrative" %}
-        {{ macros.market_narrative_layout(header, listings, stats, ai_insights, agent) }}
-      {% elif layout == "closed_inventory" %}
-        {{ macros.closed_inventory_layout(header, listings, stats, report_type, agent, ai_insights) }}
-      {% elif layout == "analytics" %}
-        {{ macros.analytics_layout(header, listings, stats, price_bands, agent, ai_insights) }}
-      {% else %}
-        {{ macros.gallery_layout(header, listings, stats, agent) }}
-      {% endif %}
-    {% endblock %}
+    <div class="content-zone">
+      {% block content %}
+        {% if layout == "gallery" %}
+          {{ macros.gallery_layout(header, listings, stats, report_type, agent) }}
+        {% elif layout == "market_narrative" %}
+          {{ macros.market_narrative_layout(header, listings, stats, ai_insights, agent) }}
+        {% elif layout == "closed_inventory" %}
+          {{ macros.closed_inventory_layout(header, listings, stats, report_type, agent, ai_insights) }}
+        {% elif layout == "analytics" %}
+          {{ macros.analytics_layout(header, listings, stats, price_bands, agent, ai_insights, report_type) }}
+        {% else %}
+          {{ macros.gallery_layout(header, listings, stats, report_type, agent) }}
+        {% endif %}
+      {% endblock %}
+    </div>
 
     {{ macros.agent_footer(agent) }}
-    {{ macros.powered_footer(agent) }}
+    {{ macros.powered_footer() }}
   </div>
 
-  {# Force font rendering before PDF capture — ensures all Google Fonts are loaded
-     and rasterized, preventing fallback to generic serif/sans-serif in PDF output.
-     First div triggers var(--font-display) and var(--font-body) at multiple weights.
-     Second div triggers all 8 market theme font families by explicit name. #}
+  {# Force font rendering before PDF capture #}
   <div style="position:absolute;left:-9999px;top:-9999px;opacity:0;pointer-events:none;" aria-hidden="true">
     <span style="font-family:var(--font-display);font-weight:400;">.</span>
     <span style="font-family:var(--font-display);font-weight:600;">.</span>

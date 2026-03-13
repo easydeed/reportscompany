@@ -1,416 +1,364 @@
 {# =============================================================================
-   MARKET REPORT MACROS — V0 Design Spec
+   MARKET REPORT MACROS — V0 Final Design (trendy-reports.html)
    Reusable components for all 4 market report layouts.
-   Matches output/v0_designs/ visual spec.
    ============================================================================= #}
 
-{# ── SVG Icon Helpers ──────────────────────────────────────────────────────── #}
-{% macro _svg_bed() %}<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>{% endmacro %}
 
-{% macro _svg_bath() %}<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/></svg>{% endmacro %}
-
-{% macro _svg_sqft() %}<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>{% endmacro %}
-
-{% macro _svg_placeholder() %}<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z"/></svg>{% endmacro %}
-
-{% macro _svg_bolt() %}<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>{% endmacro %}
-
-
-{# ── Report Header (gradient bar + title section) ─────────────────────────── #}
-{% macro report_header(header, agent) %}
-<header class="header-bar">
-  <div class="header-left">
-    <div class="header-logo">
-      {% if agent and agent.logo_url %}
-        <img src="{{ agent.logo_url }}" alt="{{ agent.company_name | default('') }}">
-      {% elif agent and agent.company_name %}
-        {{ agent.company_name[:2] | upper }}
-      {% endif %}
-    </div>
-    <div class="header-text">
-      <div class="header-company">{{ agent.company_name | default('Market Report') if agent else 'Market Report' }}</div>
-      <div class="header-subtitle">{{ header.title | default('Market Report') }}</div>
-    </div>
+{# ── Report Header ─────────────────────────────────────────────────────────── #}
+{% macro report_header(header, stats, report_type) %}
+<header class="report-header">
+  <div class="title-block">
+    <h1>{{ header.title | default('Market Report') }} <span>&mdash; {{ header.city | default('') }}</span></h1>
+    <p class="meta">Last {{ header.lookback_days | default(30) }} days &bull; Data via MLS &bull; TrendyReports</p>
   </div>
-  <div class="header-right">
-    {% if agent and agent.title %}
-    <span class="tagline-pill">{{ agent.title }}</span>
+  <div class="metric-block">
+    {% if report_type == 'new_listings_gallery' %}
+    <p class="value">{{ header.total_count | default(0) }}</p>
+    <p class="label">New This Week</p>
+    {% elif report_type == 'featured_listings' %}
+    <p class="value">{{ header.total_count | default(0) }}</p>
+    <p class="label">Premium Homes</p>
+    {% elif report_type == 'open_houses' %}
+    <p class="value">{{ header.total_count | default(0) }}</p>
+    <p class="label">Open This Weekend</p>
+    {% elif report_type == 'market_snapshot' %}
+    <p class="value">{% if stats.median_list_price %}{{ stats.median_list_price | format_currency_short }}{% else %}&mdash;{% endif %}</p>
+    <p class="label">Median Sale Price</p>
+    {% elif report_type == 'closed' %}
+    <p class="value">{{ stats.closed_count | default(0) }}</p>
+    <p class="label">Homes Sold</p>
+    {% elif report_type == 'inventory' %}
+    <p class="value">{{ stats.active_count | default(0) }}</p>
+    <p class="label">Active Listings</p>
+    {% elif report_type == 'price_bands' %}
+    <p class="value">{% if stats.median_list_price %}{{ stats.median_list_price | format_currency_short }}{% else %}&mdash;{% endif %}</p>
+    <p class="label">Median List Price</p>
+    {% elif report_type == 'new_listings' %}
+    <p class="value">{{ header.total_count | default(0) }}</p>
+    <p class="label">New This Month</p>
+    {% else %}
+    <p class="value">{{ header.total_count | default(0) }}</p>
+    <p class="label">Total Listings</p>
     {% endif %}
   </div>
 </header>
-
-<section class="title-section">
-  <h1 class="title-main">{{ header.title | default('Market Report') }} &mdash; {{ header.city | default('') }}</h1>
-  <p class="title-subtitle">Period: Last {{ header.lookback_days | default(30) }} days &bull; Source: Live MLS Data</p>
-  <div class="title-divider"></div>
-</section>
 {% endmacro %}
 
 
-{# ── Count Badge (gallery layout) ─────────────────────────────────────────── #}
-{% macro count_badge(header) %}
-{% if header.total_count %}
-<section class="count-section">
-  <div class="count-badge">
-    <span class="count-number">{{ header.total_count }}</span>
-    <span>{% if header.subtitle %}{{ header.subtitle | upper }}{% else %}LISTINGS &mdash; LAST {{ header.lookback_days | default(30) }} DAYS{% endif %}</span>
-  </div>
-</section>
-{% endif %}
-{% endmacro %}
-
-
-{# ── Hero Stat (compact pill — same pattern as count_badge) ────────────────── #}
-{% macro hero_stat(label, value, sub) %}
-<section class="count-section">
-  <div class="count-badge">
-    <span class="count-number">{{ value }}</span>
-    <span>{{ label | upper }}{% if sub %} &mdash; {{ sub | upper }}{% endif %}</span>
-  </div>
-</section>
-{% endmacro %}
-
-
-{# ── AI Narrative Box ──────────────────────────────────────────────────────── #}
-{% macro narrative_box(text) %}
-{% if text %}
-<section class="narrative-section">
-  <div class="narrative-box">
-    <p class="narrative-text">{{ text }}</p>
-  </div>
-</section>
-{% endif %}
-{% endmacro %}
-
-
-{# ── Photo Card ────────────────────────────────────────────────────────────── #}
-{% macro photo_card(listing, show_badge) %}
-<div class="property-card">
-  <div class="property-image-wrapper">
-    {% if listing.photo_url %}
-    <img class="property-image" src="{{ listing.photo_url }}" alt="Property"
-         onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-    <div class="property-image-placeholder" style="display:none;">{{ _svg_placeholder() }}</div>
-    {% else %}
-    <div class="property-image-placeholder">{{ _svg_placeholder() }}</div>
-    {% endif %}
-    {% if show_badge and listing.status %}
-    <span class="status-badge {{ listing.status | lower }}">{{ listing.status | upper }}</span>
-    {% endif %}
-  </div>
-  <div class="property-details">
-    <div class="property-address">{{ listing.address | default('Address unavailable') | truncate(38) }}</div>
-    {% if listing.city %}<div class="property-city">{{ listing.city }}</div>{% endif %}
-    <div class="property-price">{{ listing.list_price | format_currency }}</div>
-    <div class="property-specs">
-      {% if listing.beds %}<span class="spec-item">{{ _svg_bed() }} {{ listing.beds }} bd</span>{% endif %}
-      {% if listing.baths %}<span class="spec-item">{{ _svg_bath() }} {{ listing.baths }} ba</span>{% endif %}
-      {% if listing.sqft %}<span class="spec-item">{{ _svg_sqft() }} {{ listing.sqft | format_number }} sqft</span>{% endif %}
-    </div>
-  </div>
-</div>
-{% endmacro %}
-
-
-{# ── Stats Bar ─────────────────────────────────────────────────────────────── #}
-{% macro stats_bar(stats) %}
-<section class="stats-bar">
-  <div class="stats-row">
-    {% if stats.closed_count %}
-    <div class="stat-block">
-      <div class="stat-value">{{ stats.closed_count }}</div>
-      <div class="stat-label">Closed Sales</div>
-    </div>
-    {% endif %}
-    {% if stats.avg_dom %}
-    <div class="stat-block">
-      <div class="stat-value">{{ stats.avg_dom }}</div>
-      <div class="stat-label">Avg Days on Market</div>
-    </div>
-    {% endif %}
-    {% if stats.months_of_inventory %}
-    <div class="stat-block">
-      <div class="stat-value">{{ stats.months_of_inventory }}</div>
-      <div class="stat-label">Months of Inventory</div>
-    </div>
-    {% endif %}
-    {% if stats.list_to_sale_ratio %}
-    <div class="stat-block">
-      <div class="stat-value">{{ "%.1f" | format(stats.list_to_sale_ratio * 100 if stats.list_to_sale_ratio < 2 else stats.list_to_sale_ratio) }}%</div>
-      <div class="stat-label">List-to-Sale Ratio</div>
-    </div>
-    {% endif %}
-    {% if stats.median_list_price and not stats.closed_count %}
-    <div class="stat-block">
-      <div class="stat-value">{{ stats.median_list_price | format_currency_short }}</div>
-      <div class="stat-label">Median Price</div>
-    </div>
-    {% endif %}
-    {% if stats.price_per_sqft and not stats.closed_count %}
-    <div class="stat-block">
-      <div class="stat-value">${{ stats.price_per_sqft | format_number }}</div>
-      <div class="stat-label">$/Sq Ft</div>
-    </div>
-    {% endif %}
-  </div>
-</section>
-{% endmacro %}
-
-
-{# ── Quick Take ────────────────────────────────────────────────────────────── #}
-{% macro quick_take(text) %}
-{% if text %}
-<section class="quicktake-section">
-  <div class="quicktake-box">
-    <div class="quicktake-icon">{{ _svg_bolt() }}</div>
-    <p class="quicktake-text">{{ text }}</p>
-  </div>
-</section>
-{% endif %}
-{% endmacro %}
-
-
-{# ── Data Table (closed / inventory) ──────────────────────────────────────── #}
-{% macro listings_table(listings, report_type) %}
+{# ── Gallery Layout (A): new_listings_gallery, featured_listings, open_houses #}
+{% macro gallery_layout(header, listings, stats, report_type, agent) %}
 {% if listings %}
-<section class="table-section">
-  <div class="table-label">{% if report_type == 'closed' %}Recent Transactions{% else %}Listing Details{% endif %}</div>
-  <table class="data-table">
+<div class="gallery-grid">
+  {% for listing in listings[:6] %}
+  <div class="listing-card">
+    <div class="photo"{% if listing.photo_url %} style="background-image:url('{{ listing.photo_url }}');background-size:cover;background-position:center;"{% endif %}>
+      {% if report_type == 'featured_listings' %}
+      <span class="badge featured">Featured</span>
+      {% elif report_type == 'open_houses' %}
+      <span class="badge time">Open House</span>
+      {% endif %}
+    </div>
+    <div class="details">
+      <p class="address">{{ listing.address | default('Address unavailable') | truncate(38) }}</p>
+      <p class="location">{{ listing.city | default('') }}</p>
+      <div class="price-specs">
+        <span class="price">{% if listing.list_price %}{{ listing.list_price | format_currency }}{% else %}&mdash;{% endif %}</span>
+        <span class="specs">{% if listing.beds %}{{ listing.beds }}bd{% endif %}{% if listing.baths %} &bull; {{ listing.baths }}ba{% endif %}{% if listing.sqft %} &bull; {{ listing.sqft | format_number }}sf{% endif %}</span>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="gallery-grid">
+  <p style="grid-column:1/-1;text-align:center;color:var(--text-secondary);padding:2in 0;font-size:11px;">No listings found for this period.</p>
+</div>
+{% endif %}
+{% endmacro %}
+
+
+{# ── Market Narrative Layout (B): market_snapshot ───────────────────────────── #}
+{% macro market_narrative_layout(header, listings, stats, ai_insights, agent) %}
+<div class="snapshot-top">
+  <div class="hero-metric">
+    <p class="value">{% if stats.median_list_price %}{{ stats.median_list_price | format_currency_short }}{% else %}&mdash;{% endif %}</p>
+    <p class="label">Median Sale Price</p>
+  </div>
+  {% if ai_insights %}
+  <div class="ai-insight">
+    <p class="insight-label">AI Market Insight</p>
+    <p>{{ ai_insights }}</p>
+  </div>
+  {% endif %}
+</div>
+
+{% if listings %}
+<div class="photo-grid-4">
+  {% for listing in listings[:4] %}
+  <div class="photo-item"{% if listing.photo_url %} style="background-image:url('{{ listing.photo_url }}');background-size:cover;background-position:center;"{% endif %}>
+    <div class="overlay">
+      <p class="addr">{{ listing.address | default('') | truncate(24) }}</p>
+      <p class="price">{% if listing.list_price %}{{ listing.list_price | format_currency_short }}{% endif %}{% if listing.status %} &bull; {{ listing.status }}{% endif %}</p>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="stats-bar">
+  {% if stats.closed_count %}
+  <div class="stat">
+    <p class="value">{{ stats.closed_count }}</p>
+    <p class="label">Homes Sold</p>
+  </div>
+  {% endif %}
+  {% if stats.avg_dom %}
+  <div class="stat">
+    <p class="value">{{ stats.avg_dom }}</p>
+    <p class="label">Avg Days on Market</p>
+  </div>
+  {% endif %}
+  {% if stats.price_per_sqft %}
+  <div class="stat">
+    <p class="value">${{ stats.price_per_sqft | format_number }}</p>
+    <p class="label">Price per Sq Ft</p>
+  </div>
+  {% endif %}
+  {% if stats.list_to_sale_ratio %}
+  <div class="stat">
+    <p class="value">{{ "%.1f" | format(stats.list_to_sale_ratio * 100 if stats.list_to_sale_ratio < 2 else stats.list_to_sale_ratio) }}%</p>
+    <p class="label">List-to-Sale Ratio</p>
+  </div>
+  {% endif %}
+  {% if not stats.closed_count and stats.median_list_price %}
+  <div class="stat">
+    <p class="value">{{ stats.median_list_price | format_currency_short }}</p>
+    <p class="label">Median Price</p>
+  </div>
+  {% endif %}
+  {% if not stats.closed_count and stats.active_count %}
+  <div class="stat">
+    <p class="value">{{ stats.active_count }}</p>
+    <p class="label">Active Listings</p>
+  </div>
+  {% endif %}
+</div>
+
+{% if ai_insights %}
+<div class="quick-take">
+  <p class="qt-label">Quick Take</p>
+  <p>{{ ai_insights }}</p>
+</div>
+{% endif %}
+{% endmacro %}
+
+
+{# ── Closed / Inventory Layout (C): closed, inventory ─────────────────────── #}
+{% macro closed_inventory_layout(header, listings, stats, report_type, agent, ai_insights) %}
+<div class="ci-top">
+  <div class="ci-hero">
+    {% if report_type == 'closed' %}
+    <p class="value">{{ stats.closed_count | default(0) }}</p>
+    <p class="label">Homes Sold</p>
+    {% else %}
+    <p class="value">{{ stats.active_count | default(0) }}</p>
+    <p class="label">Active Listings</p>
+    {% endif %}
+  </div>
+  {% if listings %}
+  <div class="ci-photo-grid">
+    {% for listing in listings[:4] %}
+    <div class="photo"{% if listing.photo_url %} style="background-image:url('{{ listing.photo_url }}');background-size:cover;background-position:center;"{% endif %}>
+      {% if listing.status %}<span class="status-badge {{ listing.status | lower }}">{{ listing.status }}</span>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+{% if listings %}
+<div class="data-table">
+  <table>
     <thead>
       <tr>
         <th>Address</th>
-        <th class="right">Beds</th>
-        <th class="right">Baths</th>
+        <th class="center">Beds</th>
+        <th class="center">Baths</th>
         <th class="right">Sq Ft</th>
-        <th class="right">{% if report_type == 'closed' %}Price{% else %}List Price{% endif %}</th>
+        <th class="right">Price</th>
         <th class="right">DOM</th>
+        <th class="center">Status</th>
       </tr>
     </thead>
     <tbody>
       {% for l in listings[:8] %}
       <tr>
         <td>{{ l.address | default('-') | truncate(28) }}</td>
-        <td class="right">{{ l.beds if l.beds else '-' }}</td>
-        <td class="right">{{ l.baths if l.baths else '-' }}</td>
+        <td class="center">{{ l.beds if l.beds else '-' }}</td>
+        <td class="center">{{ l.baths if l.baths else '-' }}</td>
         <td class="right">{% if l.sqft %}{{ l.sqft | format_number }}{% else %}-{% endif %}</td>
         <td class="right price">{% if report_type == 'closed' and l.close_price %}{{ l.close_price | format_currency }}{% elif l.list_price %}{{ l.list_price | format_currency }}{% else %}-{% endif %}</td>
         <td class="right">{{ l.days_on_market if l.days_on_market else '-' }}</td>
+        <td class="center">{% if l.status %}<span class="inline-badge {{ l.status | lower }}">{{ l.status }}</span>{% else %}-{% endif %}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
-</section>
+</div>
+{% endif %}
+
+<div class="stats-bar-sm">
+  {% if stats.median_list_price %}
+  <div class="stat">
+    <p class="value">{{ stats.median_list_price | format_currency_short }}</p>
+    <p class="label">Median Price</p>
+  </div>
+  {% endif %}
+  {% if stats.avg_dom %}
+  <div class="stat">
+    <p class="value">{{ stats.avg_dom }}</p>
+    <p class="label">Avg DOM</p>
+  </div>
+  {% endif %}
+  {% if stats.price_per_sqft %}
+  <div class="stat">
+    <p class="value">${{ stats.price_per_sqft | format_number }}</p>
+    <p class="label">Price/Sq Ft</p>
+  </div>
+  {% endif %}
+  {% if stats.months_of_inventory %}
+  <div class="stat">
+    <p class="value">{{ stats.months_of_inventory }}</p>
+    <p class="label">Months Supply</p>
+  </div>
+  {% endif %}
+</div>
+
+{% if ai_insights %}
+<div class="quick-take">
+  <p class="qt-label">Quick Take</p>
+  <p>{{ ai_insights }}</p>
+</div>
 {% endif %}
 {% endmacro %}
 
 
-{# ── Stat Cards (analytics layout) ────────────────────────────────────────── #}
-{% macro stat_blocks(stats) %}
-<section class="stats-section">
-  <div class="stats-grid">
+{# ── Analytics Layout (D): price_bands, new_listings ─────────────────────── #}
+{% macro analytics_layout(header, listings, stats, price_bands, agent, ai_insights, report_type) %}
+<div class="analytics-top">
+  <div class="analytics-hero">
+    {% if report_type == 'price_bands' and stats.median_list_price %}
+    <p class="value">{{ stats.median_list_price | format_currency_short }}</p>
+    <p class="label">Median List</p>
+    {% elif stats.new_listings_count %}
+    <p class="value">{{ stats.new_listings_count }}</p>
+    <p class="label">New Listings</p>
+    {% else %}
+    <p class="value">{{ header.total_count | default(0) }}</p>
+    <p class="label">Total</p>
+    {% endif %}
+  </div>
+  <div class="stat-cards-grid">
+    {% if price_bands %}
+    {% for band in price_bands[:4] %}
+    <div class="stat-card">
+      <p class="value">{{ band.count | default(0) }}</p>
+      <p class="label">{{ band.label | default('') }}</p>
+    </div>
+    {% endfor %}
+    {% else %}
     {% if stats.median_list_price %}
     <div class="stat-card">
-      <div class="stat-card-value">{{ stats.median_list_price | format_currency_short }}</div>
-      <div class="stat-card-label">Median Price</div>
+      <p class="value">{{ stats.median_list_price | format_currency_short }}</p>
+      <p class="label">Median Price</p>
     </div>
     {% endif %}
     {% if stats.avg_dom %}
     <div class="stat-card">
-      <div class="stat-card-value">{{ stats.avg_dom }}</div>
-      <div class="stat-card-label">Avg Days on Market</div>
+      <p class="value">{{ stats.avg_dom }}</p>
+      <p class="label">Avg DOM</p>
     </div>
     {% endif %}
     {% if stats.price_per_sqft %}
     <div class="stat-card">
-      <div class="stat-card-value">${{ stats.price_per_sqft | format_number }}</div>
-      <div class="stat-card-label">Price / Sq Ft</div>
-    </div>
-    {% endif %}
-    {% if stats.list_to_sale_ratio %}
-    <div class="stat-card">
-      <div class="stat-card-value">{{ "%.1f" | format(stats.list_to_sale_ratio * 100 if stats.list_to_sale_ratio < 2 else stats.list_to_sale_ratio) }}%</div>
-      <div class="stat-card-label">Close-to-List</div>
+      <p class="value">${{ stats.price_per_sqft | format_number }}</p>
+      <p class="label">Price/Sq Ft</p>
     </div>
     {% endif %}
     {% if stats.active_count %}
     <div class="stat-card">
-      <div class="stat-card-value">{{ stats.active_count }}</div>
-      <div class="stat-card-label">Active Listings</div>
+      <p class="value">{{ stats.active_count }}</p>
+      <p class="label">Active</p>
     </div>
     {% endif %}
-    {% if stats.new_listings_count %}
-    <div class="stat-card">
-      <div class="stat-card-value">{{ stats.new_listings_count }}</div>
-      <div class="stat-card-label">New Listings</div>
-    </div>
     {% endif %}
   </div>
-</section>
-{% endmacro %}
-
-
-{# ── Listing Row (analytics vertical list) ────────────────────────────────── #}
-{% macro listing_card(listing) %}
-<div class="property-row">
-  <div class="property-row-image">
-    {% if listing.photo_url %}
-    <img src="{{ listing.photo_url }}" alt="Property"
-         onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-    <div class="property-row-image-placeholder" style="display:none;">{{ _svg_placeholder() }}</div>
-    {% else %}
-    <div class="property-row-image-placeholder">{{ _svg_placeholder() }}</div>
-    {% endif %}
-  </div>
-  <div class="property-row-details">
-    <div class="property-row-address">{{ listing.address | default('Address unavailable') | truncate(40) }}</div>
-    {% if listing.city %}<div class="property-row-city">{{ listing.city }}</div>{% endif %}
-    <div class="property-row-price">{{ listing.list_price | format_currency }}</div>
-    <div class="property-row-specs">
-      {% if listing.beds %}<span class="spec-item">{{ _svg_bed() }} {{ listing.beds }} bd</span>{% endif %}
-      {% if listing.baths %}<span class="spec-item">{{ _svg_bath() }} {{ listing.baths }} ba</span>{% endif %}
-      {% if listing.sqft %}<span class="spec-item">{{ _svg_sqft() }} {{ listing.sqft | format_number }} sqft</span>{% endif %}
-    </div>
-  </div>
-  {% if listing.status %}
-  <div class="property-row-badge">
-    <span class="status-badge {{ listing.status | lower }}">{{ listing.status }}</span>
-  </div>
-  {% endif %}
 </div>
+
+{% if listings %}
+<div class="listing-rows">
+  {% for listing in listings[:5] %}
+  <div class="listing-row">
+    <div class="thumb"{% if listing.photo_url %} style="background-image:url('{{ listing.photo_url }}');background-size:cover;background-position:center;"{% endif %}></div>
+    <div class="info">
+      <p class="addr">{{ listing.address | default('Address unavailable') | truncate(40) }}</p>
+      {% if listing.city %}<p class="city">{{ listing.city }}</p>{% endif %}
+      <p class="specs">{% if listing.beds %}{{ listing.beds }}bd{% endif %}{% if listing.baths %} &bull; {{ listing.baths }}ba{% endif %}{% if listing.sqft %} &bull; {{ listing.sqft | format_number }}sf{% endif %}</p>
+    </div>
+    <div class="price-block">
+      <p class="price">{% if listing.list_price %}{{ listing.list_price | format_currency }}{% else %}&mdash;{% endif %}</p>
+    </div>
+    {% if listing.status %}
+    <span class="inline-badge {{ listing.status | lower }}">{{ listing.status }}</span>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="listing-rows">
+  <p style="text-align:center;color:var(--text-secondary);padding:1in 0;font-size:11px;">No listings found for this period.</p>
+</div>
+{% endif %}
+
+{% if ai_insights %}
+<div class="quick-take">
+  <p class="qt-label">Quick Take</p>
+  <p>{{ ai_insights }}</p>
+</div>
+{% endif %}
 {% endmacro %}
 
 
-{# ── Agent Footer ──────────────────────────────────────────────────────────── #}
+{# ── Agent Footer ─────────────────────────────────────────────────────────── #}
 {% macro agent_footer(agent) %}
 <footer class="agent-footer">
-  <div class="agent-info">
+  <div class="agent-photo">
     {% if agent and agent.photo_url %}
-    <img class="agent-photo" src="{{ agent.photo_url }}" alt="{{ agent.name | default('') }}"
-         onerror="this.style.display='none';">
-    {% endif %}
-    {% if agent %}
-    <div class="agent-details">
-      <div class="agent-name">{{ agent.name | default('') }}</div>
-      {% if agent.title %}<div class="agent-title">{{ agent.title }}</div>{% endif %}
-      <div class="agent-contact">
-        {% if agent.phone %}{{ agent.phone }}{% endif %}
-        {% if agent.phone and agent.email %} &bull; {% endif %}
-        {% if agent.email %}<a href="mailto:{{ agent.email }}">{{ agent.email }}</a>{% endif %}
-      </div>
-    </div>
+    <img src="{{ agent.photo_url }}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display='none';">
     {% endif %}
   </div>
-  {% if agent and agent.logo_url %}
-  <img class="footer-logo" src="{{ agent.logo_url }}" alt="{{ agent.company_name | default('') }}">
+  <div class="agent-info">
+    <p class="name">{{ agent.name | default('') if agent else '' }}</p>
+    {% if agent and agent.title %}<p class="title">{{ agent.title }}</p>{% endif %}
+  </div>
+  {% if agent and (agent.phone or agent.email) %}
+  <div class="contact-info">
+    {% if agent.phone %}<p>{{ agent.phone }}</p>{% endif %}
+    {% if agent.email %}<p>{{ agent.email }}</p>{% endif %}
+  </div>
+  {% endif %}
+  {% if agent and agent.company_name %}
+  <div class="company-info">
+    <p class="company-name">{{ agent.company_name }}</p>
+  </div>
   {% endif %}
 </footer>
 {% endmacro %}
 
 
-{# ── Powered-By Footer ────────────────────────────────────────────────────── #}
-{% macro powered_footer(agent) %}
-<div class="powered-footer">
-  Report generated by {{ agent.company_name if agent and agent.company_name else 'TrendyReports' }} &bull; Data source: MLS
+{# ── Powered-By Footer ───────────────────────────────────────────────────── #}
+{% macro powered_footer() %}
+<div class="powered-by">
+  <p>Powered by TrendyReports</p>
 </div>
-{% endmacro %}
-
-
-{# =============================================================================
-   LAYOUT MACROS — one per layout type
-   ============================================================================= #}
-
-{# ── Gallery Layout (new_listings_gallery, featured_listings, open_houses) ── #}
-{% macro gallery_layout(header, listings, stats, agent) %}
-{{ count_badge(header) }}
-{% if listings %}
-  {% set count = listings | length %}
-  {% if count >= 5 %}{% set grid_cls = "" %}{% set show = listings[:6] %}
-  {% elif count == 4 %}{% set grid_cls = " grid-4" %}{% set show = listings[:4] %}
-  {% elif count >= 2 %}{% set grid_cls = "" %}{% set show = listings[:count] %}
-  {% else %}{% set grid_cls = " grid-single" %}{% set show = listings[:1] %}
-  {% endif %}
-  <section class="grid-section grid-section--fill">
-    <div class="property-grid{{ grid_cls }}">
-      {% for listing in show %}
-      {{ photo_card(listing, false) }}
-      {% endfor %}
-    </div>
-  </section>
-{% else %}
-  <section class="grid-section grid-section--fill">
-    <div class="no-listings-msg">No listings found for this period.</div>
-  </section>
-{% endif %}
-{% endmacro %}
-
-
-{# ── Market Narrative (market_snapshot) ──────────────────────────────────── #}
-{% macro market_narrative_layout(header, listings, stats, ai_insights, agent) %}
-{% if stats.median_list_price %}
-{{ hero_stat("Median Sale Price", stats.median_list_price | format_currency_short, "") }}
-{% endif %}
-{{ narrative_box(ai_insights) }}
-{% if listings %}
-<section class="grid-section grid-section--fill grid-compact">
-  <div class="grid-label">Featured Listings</div>
-  <div class="property-grid property-grid--2">
-    {% for listing in listings[:4] %}
-    {{ photo_card(listing, false) }}
-    {% endfor %}
-  </div>
-</section>
-{% else %}
-<section class="grid-section grid-section--fill grid-compact"></section>
-{% endif %}
-{{ stats_bar(stats) }}
-{{ quick_take(ai_insights) }}
-{% endmacro %}
-
-
-{# ── Closed / Inventory Layout ──────────────────────────────────────────── #}
-{% macro closed_inventory_layout(header, listings, stats, report_type, agent, ai_insights) %}
-{% if report_type == 'closed' and stats.closed_count %}
-{{ hero_stat("Total Closed", stats.closed_count, "in the last " ~ (header.lookback_days | default(30)) ~ " days") }}
-{% elif report_type == 'inventory' and stats.active_count %}
-{{ hero_stat("Active Listings", stats.active_count, "currently on market") }}
-{% elif stats.median_list_price %}
-{{ hero_stat("Median Price", stats.median_list_price | format_currency_short, "") }}
-{% endif %}
-{% if listings %}
-<section class="grid-section grid-compact-sm">
-  <div class="grid-label">{% if report_type == 'closed' %}Notable Sales{% else %}Active Listings{% endif %}</div>
-  <div class="property-grid property-grid--2">
-    {% for listing in listings[:4] %}
-    {{ photo_card(listing, true) }}
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
-{{ listings_table(listings, report_type) }}
-{{ stats_bar(stats) }}
-{{ quick_take(ai_insights) }}
-{% endmacro %}
-
-
-{# ── Analytics Layout (price_bands, new_listings) ───────────────────────── #}
-{% macro analytics_layout(header, listings, stats, price_bands, agent, ai_insights) %}
-{% if stats.median_list_price %}
-{{ hero_stat("Total Listings Analyzed", stats.active_count + stats.pending_count + stats.closed_count if stats.active_count or stats.pending_count or stats.closed_count else '', "across market segments") }}
-{% elif stats.active_count %}
-{{ hero_stat("Active Listings", stats.active_count, "") }}
-{% endif %}
-{{ stat_blocks(stats) }}
-{% if listings %}
-<section class="list-section">
-  <div class="list-header">Featured Listings</div>
-  <div class="property-list">
-    {% for listing in listings[:5] %}
-    {{ listing_card(listing) }}
-    {% endfor %}
-  </div>
-</section>
-{% else %}
-<section class="list-section"></section>
-{% endif %}
-{{ quick_take(ai_insights) }}
 {% endmacro %}
