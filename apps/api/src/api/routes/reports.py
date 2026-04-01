@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Query, status, Response
 from pydantic import BaseModel, Field, constr
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 import json
 from ..db import db_conn, set_rls, fetchone_dict, fetchall_dicts
 from ..services import evaluate_report_limit, log_limit_decision, LimitDecision
@@ -19,6 +19,8 @@ class ReportCreate(BaseModel):
     additional_params: Optional[dict] = None
     theme_id: Optional[str] = None
     accent_color: Optional[str] = None
+    send_email: Optional[bool] = None
+    recipients: Optional[list] = None
 
 
 class ReportRow(BaseModel):
@@ -73,7 +75,9 @@ def create_report(
         "polygon": payload.polygon,
         "lookback_days": payload.lookback_days,
         "filters": payload.filters or {},
-        "additional_params": payload.additional_params or {}
+        "additional_params": payload.additional_params or {},
+        "send_email": payload.send_email,
+        "recipients": payload.recipients,
     }
 
     with db_conn() as (conn, cur):

@@ -381,6 +381,227 @@ def _deliver_webhooks(account_id: str, event: str, payload: dict):
                   VALUES (%s,%s,%s,%s::jsonb,%s,%s,%s)
                 """, (account_id, hook_id, event, payload_json, status_code, elapsed, error))
 
+def _resolve_email_brand(cur, account_id: str):
+    """Resolve white-label brand and account_type for email sending."""
+    brand = None
+    acc_type = "REGULAR"
+    try:
+        cur.execute("""
+            SELECT account_type, sponsor_account_id::text
+            FROM accounts
+            WHERE id = %s::uuid
+        """, (account_id,))
+        acc_row = cur.fetchone()
+
+        if acc_row:
+            acc_type, sponsor_id = acc_row
+
+            if acc_type == 'REGULAR' and sponsor_id:
+                cur.execute("""
+                    SELECT
+                        brand_display_name, logo_url, email_logo_url,
+                        primary_color, accent_color, rep_photo_url,
+                        contact_line1, contact_line2, website_url
+                    FROM affiliate_branding
+                    WHERE account_id = %s::uuid
+                """, (sponsor_id,))
+                brand_row = cur.fetchone()
+                if brand_row:
+                    brand = {
+                        "display_name": brand_row[0], "logo_url": brand_row[1],
+                        "email_logo_url": brand_row[2], "primary_color": brand_row[3],
+                        "accent_color": brand_row[4], "rep_photo_url": brand_row[5],
+                        "contact_line1": brand_row[6], "contact_line2": brand_row[7],
+                        "website_url": brand_row[8],
+                    }
+            elif acc_type == 'INDUSTRY_AFFILIATE':
+                cur.execute("""
+                    SELECT
+                        brand_display_name, logo_url, email_logo_url,
+                        primary_color, accent_color, rep_photo_url,
+                        contact_line1, contact_line2, website_url
+                    FROM affiliate_branding
+                    WHERE account_id = %s::uuid
+                """, (account_id,))
+                brand_row = cur.fetchone()
+                if brand_row:
+                    brand = {
+                        "display_name": brand_row[0], "logo_url": brand_row[1],
+                        "email_logo_url": brand_row[2], "primary_color": brand_row[3],
+                        "accent_color": brand_row[4], "rep_photo_url": brand_row[5],
+                        "contact_line1": brand_row[6], "contact_line2": brand_row[7],
+                        "website_url": brand_row[8],
+                    }
+            else:
+                cur.execute("""
+                    SELECT
+                        u.avatar_url, u.first_name, u.last_name,
+                        u.job_title, u.phone, u.email, u.website,
+                        a.name, a.logo_url, a.email_logo_url,
+                        a.primary_color, a.secondary_color
+                    FROM accounts a
+                    LEFT JOIN users u ON u.account_id = a.id
+                    WHERE a.id = %s::uuid
+                    LIMIT 1
+                """, (account_id,))
+                acc_brand_row = cur.fetchone()
+                if acc_brand_row:
+                    first_name = acc_brand_row[1] or ""
+                    last_name = acc_brand_row[2] or ""
+                    job_title = acc_brand_row[3] or ""
+                    phone = acc_brand_row[4] or ""
+                    email = acc_brand_row[5] or ""
+                    website = acc_brand_row[6] or ""
+
+                    name = f"{first_name} {last_name}".strip()
+                    if name and job_title:
+                        contact_line1 = f"{name} • {job_title}"
+                    else:
+                        contact_line1 = name or job_title or ""
+
+                    phone_fmt = phone
+                    if phone_fmt and len(phone_fmt) == 10:
+                        phone_fmt = f"({phone_fmt[:3]}) {phone_fmt[3:6]}-{phone_fmt[6:]}"
+                    if phone_fmt and email:
+                        contact_line2 = f"{phone_fmt} • {email}"
+                    else:
+                        contact_line2 = phone_fmt or email or ""
+
+                    brand = {
+                        "display_name": acc_brand_row[7], "logo_url": acc_brand_row[8],
+                        "email_logo_url": acc_brand_row[9], "primary_color": acc_brand_row[10],
+                        "accent_color": acc_brand_row[11], "rep_photo_url": acc_brand_row[0],
+                        "contact_line1": contact_line1, "contact_line2": contact_line2,
+                        "website_url": website,
+                    }
+    except Exception as e:
+        print(f"⚠️  Error loading brand for email: {e}")
+    return brand, acc_type
+
+
+def _build_email_payload(report_type, city, zips, lookback, result, pdf_url):
+    """Build the email payload dict from report result data."""
+    email_metrics = result.get("metrics", {}).copy()
+    counts = result.get("counts", {})
+    email_metrics["total_active"] = counts.get("Active", 0)
+    email_metrics["total_closed"] = counts.get("Closed", 0)
+    email_metrics["total_pending"] = counts.get("Pending", 0)
+    email_metrics["new_listings_7d"] = counts.get("NewListings", email_metrics.get("new_listings_count", 0))
+    if "close_to_list_ratio" in email_metrics and "sale_to_list_ratio" not in email_metrics:
+        email_metrics["sale_to_list_ratio"] = email_metrics["close_to_list_ratio"]
+    if "median_dom" in email_metrics and "avg_dom" not in email_metrics:
+        email_metrics["avg_dom"] = email_metrics["median_dom"]
+
+    by_property_type = result.get("by_property_type", {})
+    if by_property_type:
+        email_metrics["sfr_count"] = by_property_type.get("SingleFamilyResidence", {}).get("count", 0) or by_property_type.get("Single Family Residence", {}).get("count", 0)
+        email_metrics["condo_count"] = by_property_type.get("Condominium", {}).get("count", 0) or by_property_type.get("Condo", {}).get("count", 0)
+        email_metrics["townhome_count"] = by_property_type.get("Townhouse", {}).get("count", 0) or by_property_type.get("Townhome", {}).get("count", 0)
+
+    price_tiers = result.get("price_tiers", {})
+    if price_tiers:
+        entry_tier = price_tiers.get("Entry", {})
+        moveup_tier = price_tiers.get("Move-Up", {})
+        luxury_tier = price_tiers.get("Luxury", {})
+        email_metrics["entry_tier_count"] = entry_tier.get("count", 0) + entry_tier.get("active_count", 0)
+        email_metrics["moveup_tier_count"] = moveup_tier.get("count", 0) + moveup_tier.get("active_count", 0)
+        email_metrics["luxury_tier_count"] = luxury_tier.get("count", 0) + luxury_tier.get("active_count", 0)
+
+    if report_type in ("new_listings_gallery", "featured_listings"):
+        email_metrics["total_listings"] = result.get("total_listings", len(result.get("listings", [])))
+
+    payload = {
+        "report_type": report_type,
+        "city": city,
+        "zip_codes": zips,
+        "lookback_days": lookback,
+        "metrics": email_metrics,
+        "pdf_url": pdf_url,
+        "preset_display_name": result.get("preset_display_name") if isinstance(result, dict) else None,
+        "filter_description": result.get("filters_label") if isinstance(result, dict) else None,
+        "total_listings": result.get("total_listings", 0) if isinstance(result, dict) else 0,
+        "total_shown": result.get("total_shown", 0) if isinstance(result, dict) else 0,
+        "audience_key": result.get("audience_key", "all") if isinstance(result, dict) else "all",
+    }
+
+    if report_type in ("new_listings_gallery", "featured_listings"):
+        payload["listings"] = result.get("listings", [])
+
+    if report_type == "inventory":
+        listings_sample = result.get("listings_sample", [])[:10]
+        payload["listings"] = [
+            {"street_address": l.get("street_address"), "city": l.get("city"),
+             "bedrooms": l.get("bedrooms"), "bathrooms": l.get("bathrooms"),
+             "list_price": l.get("list_price")}
+            for l in listings_sample
+        ]
+
+    if report_type == "closed":
+        listings_sample = result.get("listings_sample", [])[:10]
+        payload["listings"] = [
+            {"street_address": l.get("street_address"), "city": l.get("city"),
+             "bedrooms": l.get("bedrooms"), "bathrooms": l.get("bathrooms"),
+             "list_price": l.get("close_price")}
+            for l in listings_sample
+        ]
+
+    return payload
+
+
+def _send_and_log_report_email(
+    conn, cur, account_id, run_id, recipients,
+    report_type, city, zips, lookback, result, pdf_url,
+    schedule_id=None,
+):
+    """
+    Shared email delivery: resolve brand, build payload, send, and log.
+    Used by both the scheduled and ad-hoc email paths.
+    Returns (status_code, response_text).
+    """
+    cur.execute("SELECT name FROM accounts WHERE id = %s", (account_id,))
+    account_row = cur.fetchone()
+    account_name = account_row[0] if account_row else None
+
+    brand, acc_type = _resolve_email_brand(cur, account_id)
+    email_payload = _build_email_payload(report_type, city, zips, lookback, result, pdf_url)
+
+    status_code, response_text = send_schedule_email(
+        account_id=account_id,
+        recipients=recipients,
+        payload=email_payload,
+        account_name=account_name,
+        db_conn=conn,
+        brand=brand,
+        account_type=acc_type,
+    )
+
+    try:
+        if status_code == 202:
+            email_status = 'sent'
+        elif status_code == 200 and 'suppressed' in response_text.lower():
+            email_status = 'suppressed'
+        else:
+            email_status = 'failed'
+
+        subject = f"Your {report_type.replace('_', ' ').title()} Report"
+        cur.execute("""
+            INSERT INTO email_log (
+                account_id, schedule_id, report_id, provider,
+                to_emails, subject, response_code, status, error
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            account_id, schedule_id, run_id, 'sendgrid',
+            recipients, subject, status_code, email_status,
+            None if status_code in (200, 202) else response_text,
+        ))
+    except Exception as log_error:
+        logger.warning(f"Failed to log email send (non-critical): {log_error}")
+
+    print(f"✅ Email sent to {len(recipients)} recipient(s), status: {status_code}")
+    return status_code, response_text
+
+
 @celery.task(
     name="generate_report",
     bind=True,
@@ -791,302 +1012,30 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
         if schedule_id and pdf_url:
             try:
                 print(f"📧 Sending schedule email for schedule_id={schedule_id}")
-                
-                # Load schedule details and account name
+
                 with psycopg.connect(DATABASE_URL, autocommit=False) as conn:
                     with conn.cursor() as cur:
                         cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
-                        
-                        # Get schedule recipients
+
                         cur.execute("""
                             SELECT recipients, city, zip_codes
                             FROM schedules
                             WHERE id = %s
                         """, (schedule_id,))
                         schedule_row = cur.fetchone()
-                        
+
                         if not schedule_row:
                             print(f"⚠️  Schedule {schedule_id} not found, skipping email")
                         else:
-                            recipients_raw, city, zip_codes = schedule_row
-                            
-                            # Resolve typed recipients to email addresses
+                            recipients_raw, sched_city, sched_zips = schedule_row
                             recipients = resolve_recipients_to_emails(cur, account_id, recipients_raw)
-                            
-                            # Get account name
-                            cur.execute("SELECT name FROM accounts WHERE id = %s", (account_id,))
-                            account_row = cur.fetchone()
-                            account_name = account_row[0] if account_row else None
-                            
-                            # Phase 30: Resolve brand for white-label emails
-                            # V14: Also capture account_type for sender-aware AI insights
-                            brand = None
-                            acc_type = "REGULAR"  # V14: Default to agent
-                            try:
-                                # Determine branding account (sponsor for REGULAR, self for AFFILIATE)
-                                cur.execute("""
-                                    SELECT account_type, sponsor_account_id::text
-                                    FROM accounts
-                                    WHERE id = %s::uuid
-                                """, (account_id,))
-                                acc_row = cur.fetchone()
-                                
-                                if acc_row:
-                                    acc_type, sponsor_id = acc_row
-                                    
-                                    if acc_type == 'REGULAR' and sponsor_id:
-                                        # Sponsored regular user: use sponsor's branding from affiliate_branding
-                                        cur.execute("""
-                                            SELECT
-                                                brand_display_name,
-                                                logo_url,
-                                                email_logo_url,
-                                                primary_color,
-                                                accent_color,
-                                                rep_photo_url,
-                                                contact_line1,
-                                                contact_line2,
-                                                website_url
-                                            FROM affiliate_branding
-                                            WHERE account_id = %s::uuid
-                                        """, (sponsor_id,))
-                                        brand_row = cur.fetchone()
-                                        if brand_row:
-                                            brand = {
-                                                "display_name": brand_row[0],
-                                                "logo_url": brand_row[1],
-                                                "email_logo_url": brand_row[2],
-                                                "primary_color": brand_row[3],
-                                                "accent_color": brand_row[4],
-                                                "rep_photo_url": brand_row[5],
-                                                "contact_line1": brand_row[6],
-                                                "contact_line2": brand_row[7],
-                                                "website_url": brand_row[8],
-                                            }
-                                    elif acc_type == 'INDUSTRY_AFFILIATE':
-                                        # Affiliate: use their own branding from affiliate_branding
-                                        cur.execute("""
-                                            SELECT
-                                                brand_display_name,
-                                                logo_url,
-                                                email_logo_url,
-                                                primary_color,
-                                                accent_color,
-                                                rep_photo_url,
-                                                contact_line1,
-                                                contact_line2,
-                                                website_url
-                                            FROM affiliate_branding
-                                            WHERE account_id = %s::uuid
-                                        """, (account_id,))
-                                        brand_row = cur.fetchone()
-                                        if brand_row:
-                                            brand = {
-                                                "display_name": brand_row[0],
-                                                "logo_url": brand_row[1],
-                                                "email_logo_url": brand_row[2],
-                                                "primary_color": brand_row[3],
-                                                "accent_color": brand_row[4],
-                                                "rep_photo_url": brand_row[5],
-                                                "contact_line1": brand_row[6],
-                                                "contact_line2": brand_row[7],
-                                                "website_url": brand_row[8],
-                                            }
-                                    else:
-                                        # Un-sponsored regular user: use accounts table branding + user profile contact info
-                                        # Profile is the single source of truth for contact info
-                                        cur.execute("""
-                                            SELECT 
-                                                u.avatar_url, 
-                                                u.first_name, 
-                                                u.last_name, 
-                                                u.job_title, 
-                                                u.phone, 
-                                                u.email,
-                                                u.website,
-                                                a.name, 
-                                                a.logo_url, 
-                                                a.email_logo_url,
-                                                a.primary_color, 
-                                                a.secondary_color
-                                            FROM accounts a
-                                            LEFT JOIN users u ON u.account_id = a.id
-                                            WHERE a.id = %s::uuid
-                                            LIMIT 1
-                                        """, (account_id,))
-                                        acc_brand_row = cur.fetchone()
-                                        if acc_brand_row:
-                                            # Build contact lines from user profile (single source of truth)
-                                            first_name = acc_brand_row[1] or ""
-                                            last_name = acc_brand_row[2] or ""
-                                            job_title = acc_brand_row[3] or ""
-                                            phone = acc_brand_row[4] or ""
-                                            email = acc_brand_row[5] or ""
-                                            website = acc_brand_row[6] or ""
-                                            
-                                            # Line 1: Name • Title
-                                            name = f"{first_name} {last_name}".strip()
-                                            if name and job_title:
-                                                contact_line1 = f"{name} • {job_title}"
-                                            else:
-                                                contact_line1 = name or job_title or ""
-                                            
-                                            # Line 2: Phone • Email
-                                            phone_fmt = phone
-                                            if phone_fmt and len(phone_fmt) == 10:
-                                                phone_fmt = f"({phone_fmt[:3]}) {phone_fmt[3:6]}-{phone_fmt[6:]}"
-                                            if phone_fmt and email:
-                                                contact_line2 = f"{phone_fmt} • {email}"
-                                            else:
-                                                contact_line2 = phone_fmt or email or ""
-                                            
-                                            brand = {
-                                                "display_name": acc_brand_row[7],
-                                                "logo_url": acc_brand_row[8],
-                                                "email_logo_url": acc_brand_row[9],
-                                                "primary_color": acc_brand_row[10],
-                                                "accent_color": acc_brand_row[11],
-                                                "rep_photo_url": acc_brand_row[0],  # user's avatar_url
-                                                "contact_line1": contact_line1,
-                                                "contact_line2": contact_line2,
-                                                "website_url": website,
-                                            }
-                            except Exception as e:
-                                print(f"⚠️  Error loading brand for email: {e}")
-                                # Continue without brand (will use default branding)
-                            
-                            # Build email payload
-                            # Flatten counts into metrics for email template compatibility
-                            email_metrics = result.get("metrics", {}).copy()
-                            counts = result.get("counts", {})
-                            # Map counts to what email template expects
-                            email_metrics["total_active"] = counts.get("Active", 0)
-                            email_metrics["total_closed"] = counts.get("Closed", 0)
-                            email_metrics["total_pending"] = counts.get("Pending", 0)
-                            email_metrics["new_listings_7d"] = counts.get("NewListings", email_metrics.get("new_listings_count", 0))
-                            # Normalize key names for template compatibility
-                            if "close_to_list_ratio" in email_metrics and "sale_to_list_ratio" not in email_metrics:
-                                email_metrics["sale_to_list_ratio"] = email_metrics["close_to_list_ratio"]
-                            # Inventory report uses median_dom, template expects avg_dom
-                            if "median_dom" in email_metrics and "avg_dom" not in email_metrics:
-                                email_metrics["avg_dom"] = email_metrics["median_dom"]
-                            
-                            # Add property type breakdown for Market Snapshot
-                            by_property_type = result.get("by_property_type", {})
-                            if by_property_type:
-                                email_metrics["sfr_count"] = by_property_type.get("SingleFamilyResidence", {}).get("count", 0) or by_property_type.get("Single Family Residence", {}).get("count", 0)
-                                email_metrics["condo_count"] = by_property_type.get("Condominium", {}).get("count", 0) or by_property_type.get("Condo", {}).get("count", 0)
-                                email_metrics["townhome_count"] = by_property_type.get("Townhouse", {}).get("count", 0) or by_property_type.get("Townhome", {}).get("count", 0)
-                            
-                            # Add price tier breakdown for Market Snapshot
-                            price_tiers = result.get("price_tiers", {})
-                            if price_tiers:
-                                entry_tier = price_tiers.get("Entry", {})
-                                moveup_tier = price_tiers.get("Move-Up", {})
-                                luxury_tier = price_tiers.get("Luxury", {})
-                                email_metrics["entry_tier_count"] = entry_tier.get("count", 0) + entry_tier.get("active_count", 0)
-                                email_metrics["moveup_tier_count"] = moveup_tier.get("count", 0) + moveup_tier.get("active_count", 0)
-                                email_metrics["luxury_tier_count"] = luxury_tier.get("count", 0) + luxury_tier.get("active_count", 0)
-                            
-                            # For gallery reports, ensure total_listings is set from result
-                            # (metrics dict includes this, but also set it explicitly for backwards compat)
-                            if report_type in ("new_listings_gallery", "featured_listings"):
-                                email_metrics["total_listings"] = result.get("total_listings", len(result.get("listings", [])))
-                            
-                            email_payload = {
-                                "report_type": report_type,
-                                "city": city,
-                                "zip_codes": zip_codes,
-                                "lookback_days": lookback,
-                                "metrics": email_metrics,
-                                "pdf_url": pdf_url,
-                                # Pass preset_display_name for email headers (e.g., "First-Time Buyer" instead of "New Listings Gallery")
-                                "preset_display_name": result.get("preset_display_name") if isinstance(result, dict) else None,
-                                # V11: Pass filter_description for email blurb (e.g., "2+ beds, Condos, under $1.2M")
-                                "filter_description": result.get("filters_label") if isinstance(result, dict) else None,
-                                # V14: Sender-aware AI insights context
-                                "total_listings": result.get("total_listings", 0) if isinstance(result, dict) else 0,
-                                "total_shown": result.get("total_shown", 0) if isinstance(result, dict) else 0,
-                                "audience_key": result.get("audience_key", "all") if isinstance(result, dict) else "all",
-                            }
-                            
-                            # For gallery reports, include listings with photos
-                            if report_type in ("new_listings_gallery", "featured_listings"):
-                                email_payload["listings"] = result.get("listings", [])
-                            
-                            # For inventory reports, include listings table data
-                            if report_type == "inventory":
-                                # Get top 10 listings for email table (sorted by DOM desc)
-                                listings_sample = result.get("listings_sample", [])[:10]
-                                email_payload["listings"] = [
-                                    {
-                                        "street_address": l.get("street_address"),
-                                        "city": l.get("city"),
-                                        "bedrooms": l.get("bedrooms"),
-                                        "bathrooms": l.get("bathrooms"),
-                                        "list_price": l.get("list_price"),
-                                    }
-                                    for l in listings_sample
-                                ]
-                            
-                            # For closed reports, include listings table data (recently sold)
-                            if report_type == "closed":
-                                # Get top 10 closed listings for email table (sorted by close_date desc)
-                                listings_sample = result.get("listings_sample", [])[:10]
-                                email_payload["listings"] = [
-                                    {
-                                        "street_address": l.get("street_address"),
-                                        "city": l.get("city"),
-                                        "bedrooms": l.get("bedrooms"),
-                                        "bathrooms": l.get("bathrooms"),
-                                        "list_price": l.get("close_price"),  # Use close_price for sold properties
-                                    }
-                                    for l in listings_sample
-                                ]
-                            
-                            # Send email (with suppression checking + Phase 30 white-label brand + V14 sender type)
-                            status_code, response_text = send_schedule_email(
-                                account_id=account_id,
-                                recipients=recipients,
-                                payload=email_payload,
-                                account_name=account_name,
-                                db_conn=conn,  # Pass connection for suppression checking
-                                brand=brand,  # Phase 30: white-label branding
-                                account_type=acc_type,  # V14: sender-aware AI insights
+
+                            status_code, _ = _send_and_log_report_email(
+                                conn, cur, account_id, run_id, recipients,
+                                report_type, sched_city, sched_zips, lookback,
+                                result, pdf_url, schedule_id=schedule_id,
                             )
-                            
-                            # Log email send (defensive try/except)
-                            try:
-                                # Determine status based on response
-                                if status_code == 202:
-                                    email_status = 'sent'
-                                elif status_code == 200 and 'suppressed' in response_text.lower():
-                                    email_status = 'suppressed'
-                                else:
-                                    email_status = 'failed'
-                                
-                                subject = f"Your {report_type.replace('_', ' ').title()} Report"
-                                cur.execute("""
-                                    INSERT INTO email_log (
-                                        account_id, schedule_id, report_id, provider,
-                                        to_emails, subject, response_code, status, error
-                                    )
-                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                                """, (
-                                    account_id,
-                                    schedule_id,
-                                    run_id,
-                                    'sendgrid',
-                                    recipients,
-                                    subject,
-                                    status_code,
-                                    email_status,
-                                    None if status_code in (200, 202) else response_text
-                                ))
-                            except Exception as log_error:
-                                logger.warning(f"Failed to log email send (non-critical): {log_error}")
-                            
-                            # Update schedule_runs to mark as completed (defensive try/except)
+
                             try:
                                 run_status = 'completed' if status_code in (200, 202) else 'failed_email'
                                 cur.execute("""
@@ -1106,28 +1055,58 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                                 """, (run_status, run_id, schedule_id))
                             except Exception as update_error:
                                 logger.warning(f"Failed to update schedule_run status (non-critical): {update_error}")
-                            
+
                             conn.commit()
-                            print(f"✅ Email sent to {len(recipients)} recipient(s), status: {status_code}")
-                
+
             except Exception as email_error:
                 print(f"⚠️  Email send failed: {email_error}")
-                # Don't fail the whole task if email fails
                 with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
                     with conn.cursor() as cur:
                         cur.execute("""
                             INSERT INTO email_log (account_id, schedule_id, report_id, provider, to_emails, subject, response_code, error)
                             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                         """, (
-                            account_id,
-                            schedule_id,
-                            run_id,
-                            'sendgrid',
-                            [],
-                            'Failed to send',
-                            500,
-                            str(email_error)
+                            account_id, schedule_id, run_id, 'sendgrid',
+                            [], 'Failed to send', 500, str(email_error),
                         ))
+
+        # 6b) Ad-hoc email delivery (wizard "Generate & Send")
+        if not schedule_id and (params or {}).get("send_email") and (params or {}).get("recipients") and pdf_url:
+            try:
+                print(f"📧 REPORT RUN {run_id}: ad-hoc email delivery")
+
+                with psycopg.connect(DATABASE_URL, autocommit=False) as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
+
+                        # Normalize recipients: dicts become JSON strings for resolve_recipients_to_emails
+                        raw = params["recipients"]
+                        normalized = [json.dumps(r) if isinstance(r, dict) else str(r) for r in raw]
+                        recipients = resolve_recipients_to_emails(cur, account_id, normalized)
+
+                        # Always CC the agent (account owner)
+                        cur.execute("""
+                            SELECT u.email FROM users u
+                            WHERE u.account_id = %s::uuid
+                            ORDER BY u.created_at LIMIT 1
+                        """, (account_id,))
+                        agent_row = cur.fetchone()
+                        if agent_row and agent_row[0] and agent_row[0] not in recipients:
+                            recipients.append(agent_row[0])
+
+                        if not recipients:
+                            print(f"⚠️  REPORT RUN {run_id}: no valid recipients, skipping ad-hoc email")
+                        else:
+                            _send_and_log_report_email(
+                                conn, cur, account_id, run_id, recipients,
+                                report_type, city, zips, lookback,
+                                result, pdf_url,
+                            )
+                            conn.commit()
+
+            except Exception as email_error:
+                print(f"⚠️  Ad-hoc email send failed (non-fatal): {email_error}")
+                logger.warning(f"Ad-hoc email failed for run {run_id}: {email_error}")
 
         # 7) PASS S3: Reset consecutive failures on success
         if schedule_id:
