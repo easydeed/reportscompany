@@ -106,7 +106,7 @@ export function CityCombobox({
             role="combobox"
             aria-expanded={open}
             className={cn(
-              "flex h-10 w-full items-center justify-between rounded-lg border border-gray-200 bg-white px-3 text-sm transition-colors",
+              "flex h-14 w-full items-center justify-between rounded-lg border border-gray-200 bg-white px-3 text-sm transition-colors",
               "hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary",
               disabled && "opacity-50 cursor-not-allowed",
               !value && "text-gray-400"

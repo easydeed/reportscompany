@@ -76,13 +76,13 @@ export function StepWhereWhen({ state, onChange }: StepWhereWhenProps) {
                 onChange={(e) => setZipInput(e.target.value.replace(/\D/g, "").slice(0, 5))}
                 onKeyDown={(e) => e.key === "Enter" && addZip()}
                 placeholder="Enter ZIP code"
-                className="h-10 flex-1"
+                className="h-14 flex-1"
                 maxLength={5}
               />
               <button
                 onClick={addZip}
                 disabled={zipInput.length !== 5}
-                className="px-4 h-10 rounded-lg bg-primary text-white text-xs font-medium disabled:opacity-40 transition-opacity"
+                className="px-4 h-14 rounded-lg bg-primary text-white text-xs font-medium disabled:opacity-40 transition-opacity"
               >
                 Add
               </button>

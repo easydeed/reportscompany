@@ -227,7 +227,7 @@ export default function PropertyReportsPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/40 hover:bg-muted/40 border-b border-border">
-                  <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em] py-2.5">Property</TableHead>
+                  <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em] py-2.5 whitespace-nowrap">Property</TableHead>
                   <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em] py-2.5">Type</TableHead>
                   <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em] py-2.5">Status</TableHead>
                   <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em] py-2.5">Views</TableHead>
@@ -252,7 +252,7 @@ export default function PropertyReportsPage() {
                     <TableRow key={report.id} className="hover:bg-muted/30 transition-colors">
                       <TableCell>
                         <Link href={`/app/property/${report.id}`} className="hover:underline">
-                          <p className="text-sm font-medium">{report.property_address}</p>
+                          <p className="text-sm font-medium truncate max-w-[260px]">{report.property_address}</p>
                           <p className="text-xs text-muted-foreground">
                             {report.property_city}, {report.property_state}
                           </p>

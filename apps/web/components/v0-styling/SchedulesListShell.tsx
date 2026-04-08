@@ -1,6 +1,6 @@
 "use client"
 
-import { ScheduleTable } from "@repo/ui"
+import { ScheduleTable } from "@/components/schedules/schedule-table"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useRouter } from "next/navigation"

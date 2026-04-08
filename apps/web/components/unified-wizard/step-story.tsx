@@ -17,7 +17,7 @@ export function StepStory({ selected, onSelect }: StepStoryProps) {
         <p className="text-sm text-gray-500 mt-1">Choose the type of report to send your audience.</p>
       </div>
 
-      <div className="grid gap-2.5">
+      <div className="grid gap-3">
         {STORIES.map((story) => {
           const active = selected === story.id
           return (
@@ -25,7 +25,7 @@ export function StepStory({ selected, onSelect }: StepStoryProps) {
               key={story.id}
               onClick={() => onSelect(story.id)}
               className={cn(
-                "group relative flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all",
+                "group relative flex items-start gap-4 rounded-xl border-2 p-5 text-left transition-all",
                 active
                   ? "border-primary bg-primary/5 shadow-sm"
                   : "border-gray-200 hover:border-primary/40 hover:bg-gray-50/50"
@@ -34,15 +34,15 @@ export function StepStory({ selected, onSelect }: StepStoryProps) {
               <span className="text-2xl flex-shrink-0 mt-0.5">{story.icon}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-gray-900">{story.title}</span>
+                  <span className="text-base font-semibold text-gray-900">{story.title}</span>
                   {active && (
                     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary">
                       <Check className="h-3 w-3 text-white" />
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-gray-500 mt-0.5">{story.description}</p>
-                <p className="text-[10px] text-gray-400 mt-1">Best for: {story.bestFor}</p>
+                <p className="text-sm text-gray-500 mt-0.5">{story.description}</p>
+                <p className="text-xs text-gray-400 mt-1">Best for: {story.bestFor}</p>
               </div>
             </button>
           )

@@ -23,8 +23,8 @@ html {
   /* ── Brand ── */
   --primary: #4F46E5;               /* Indigo-600: authority + sophistication */
   --primary-foreground: #FFFFFF;
-  --accent: #D97706;                /* Amber-600: warm gold, real estate DNA */
-  --accent-foreground: #FFFFFF;
+  --accent: #EEF2FF;                /* Indigo-50: soft hover/selected state */
+  --accent-foreground: #3730A3;     /* Indigo-800: readable on light indigo */
   --accent-blue: #3B82F6;           /* Blue-500: data viz accent */
 
   /* ── Secondary ── */

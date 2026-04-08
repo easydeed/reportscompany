@@ -132,12 +132,12 @@ export const AUDIENCES: {
   label: string
   description: string
 }[] = [
-  { id: "all", label: "All Listings", description: "No filters applied" },
-  { id: "first_time", label: "First-Time Buyers", description: "2+ bed, 2+ bath, SFR, ≤70% median" },
-  { id: "luxury", label: "Luxury Homes", description: "SFR, ≥150% median" },
-  { id: "families", label: "Family Homes", description: "3+ bed, 2+ bath, SFR" },
-  { id: "condo", label: "Condo Watch", description: "Condos only" },
-  { id: "investors", label: "Investor Deals", description: "≤50% median" },
+  { id: "all", label: "All Listings", description: "Show all homes — no price or size filters" },
+  { id: "first_time", label: "First-Time Buyers", description: "Affordable single-family homes under 70% of local median price (2+ bed, 2+ bath)" },
+  { id: "luxury", label: "Luxury Homes", description: "Premium single-family homes priced above 150% of local median" },
+  { id: "families", label: "Family Homes", description: "Spacious family homes with 3+ bedrooms and 2+ bathrooms" },
+  { id: "condo", label: "Condo Watch", description: "All condominiums and townhomes in the area" },
+  { id: "investors", label: "Investor Deals", description: "Budget-friendly homes under 50% of local median — ideal for investors" },
 ]
 
 // Audience → API filters
