@@ -253,9 +253,11 @@ export default function PropertyReportsPage() {
                       <TableCell>
                         <Link href={`/app/property/${report.id}`} className="hover:underline">
                           <p className="text-sm font-medium truncate max-w-[260px]">{report.property_address}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {report.property_city}, {report.property_state}
-                          </p>
+                          {(report.property_city || report.property_state) && (
+                            <p className="text-xs text-muted-foreground">
+                              {[report.property_city, report.property_state].filter(Boolean).join(", ")}
+                            </p>
+                          )}
                         </Link>
                       </TableCell>
                       <TableCell>

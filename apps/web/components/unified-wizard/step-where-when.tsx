@@ -45,7 +45,7 @@ export function StepWhereWhen({ state, onChange }: StepWhereWhenProps) {
           <button
             onClick={() => onChange({ areaType: "city" })}
             className={cn(
-              "flex-1 rounded-lg border-2 py-2 text-xs font-medium transition-all",
+              "flex-1 rounded-lg border-2 py-3 text-sm font-medium transition-all",
               state.areaType === "city" ? "border-primary bg-primary/5 text-primary" : "border-gray-200 text-gray-500 hover:border-gray-300"
             )}
           >
@@ -54,7 +54,7 @@ export function StepWhereWhen({ state, onChange }: StepWhereWhenProps) {
           <button
             onClick={() => onChange({ areaType: "zip" })}
             className={cn(
-              "flex-1 rounded-lg border-2 py-2 text-xs font-medium transition-all",
+              "flex-1 rounded-lg border-2 py-3 text-sm font-medium transition-all",
               state.areaType === "zip" ? "border-primary bg-primary/5 text-primary" : "border-gray-200 text-gray-500 hover:border-gray-300"
             )}
           >
@@ -113,7 +113,7 @@ export function StepWhereWhen({ state, onChange }: StepWhereWhenProps) {
               key={days}
               onClick={() => onChange({ lookbackDays: days })}
               className={cn(
-                "rounded-lg border-2 py-2.5 text-center transition-all",
+                "rounded-lg border-2 py-3.5 text-center transition-all",
                 state.lookbackDays === days
                   ? "border-primary bg-primary/5 text-primary font-semibold"
                   : "border-gray-200 text-gray-500 hover:border-gray-300"

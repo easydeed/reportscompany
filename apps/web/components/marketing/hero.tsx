@@ -82,9 +82,19 @@ function ReportMockup() {
 
 export function Hero() {
   return (
-    <section className="bg-background px-6 pb-20 pt-16 md:pb-28 md:pt-24">
+    <section className="relative overflow-hidden bg-background px-6 pb-20 pt-16 md:pb-28 md:pt-24">
+      <div
+        className="absolute inset-0 grayscale"
+        style={{
+          backgroundImage: "url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1600&q=80')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      />
+      <div className="absolute inset-0 bg-white/[0.92]" />
+
       <motion.div
-        className="mx-auto max-w-4xl text-center"
+        className="relative z-10 mx-auto max-w-4xl text-center"
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true }}

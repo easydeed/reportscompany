@@ -209,35 +209,35 @@ function ScheduleOptions({
           </div>
         </div>
 
-        {state.cadence === "weekly" && (
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium">Day</Label>
-            <Select value={String(state.dayOfWeek)} onValueChange={(v) => onChange({ dayOfWeek: Number(v) })}>
-              <SelectTrigger className="h-10 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {DAYS_OF_WEEK.map((day, i) => (
-                  <SelectItem key={i} value={String(i)}>{day}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+        <div className="grid grid-cols-3 gap-3">
+          {state.cadence === "weekly" && (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Day</Label>
+              <Select value={String(state.dayOfWeek)} onValueChange={(v) => onChange({ dayOfWeek: Number(v) })}>
+                <SelectTrigger className="h-10 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {DAYS_OF_WEEK.map((day, i) => (
+                    <SelectItem key={i} value={String(i)}>{day}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-        {state.cadence === "monthly" && (
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium">Day of Month</Label>
-            <Select value={String(state.dayOfMonth)} onValueChange={(v) => onChange({ dayOfMonth: Number(v) })}>
-              <SelectTrigger className="h-10 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
-                  <SelectItem key={d} value={String(d)}>{d}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+          {state.cadence === "monthly" && (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Day of Month</Label>
+              <Select value={String(state.dayOfMonth)} onValueChange={(v) => onChange({ dayOfMonth: Number(v) })}>
+                <SelectTrigger className="h-10 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                    <SelectItem key={d} value={String(d)}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label className="text-xs font-medium">Time</Label>
             <div className="flex items-center gap-1.5">
