@@ -32,7 +32,7 @@ html {
   --secondary-foreground: #0F172A;
 
   /* ── Interactive ── */
-  --ring: #4F46E5;
+  --ring: #818CF8;
   --border: #E2E8F0;                /* Slate-200: softer than gray-200 */
   --input: #E2E8F0;
 
@@ -176,9 +176,6 @@ html {
     background: linear-gradient(180deg, rgba(79, 70, 229, 0.08) 0%, transparent 100%);
   }
 
-  *:focus-visible {
-    @apply outline-none ring-2 ring-offset-2 ring-offset-background ring-primary;
-  }
 
   @keyframes shimmer {
     0% { background-position: -1000px 0; }

@@ -312,7 +312,7 @@ function DashboardTopbar({ accountType, isAdmin, isAffiliate }: { accountType?: 
         </span>
       )}
       {accountType === "REGULAR" && (
-        <span className="rounded-full bg-indigo-50 text-indigo-600 text-[11px] font-semibold px-2.5 py-0.5 border border-indigo-200 uppercase tracking-wide">
+        <span className="rounded-full bg-indigo-50 text-indigo-600 text-[11px] font-semibold px-2.5 py-0.5 uppercase tracking-wide">
           Agent
         </span>
       )}
@@ -321,7 +321,7 @@ function DashboardTopbar({ accountType, isAdmin, isAffiliate }: { accountType?: 
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+          <Button variant="ghost" className="relative h-8 w-8 rounded-full focus-visible:ring-0 focus-visible:ring-offset-0">
             <Avatar className="h-8 w-8">
               <AvatarFallback className="bg-indigo-600 text-white text-xs font-semibold">{initials}</AvatarFallback>
             </Avatar>
