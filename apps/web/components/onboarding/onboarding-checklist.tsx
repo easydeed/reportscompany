@@ -54,6 +54,7 @@ export function OnboardingChecklist({
   const status = (initialStatus ?? fetchedStatus ?? null) as OnboardingStatus | null
   const loading = !initialStatus && queryLoading
   const [dismissing, setDismissing] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
     if (status?.is_complete && onComplete) {
@@ -68,7 +69,7 @@ export function OnboardingChecklist({
         method: "POST",
       })
       if (res.ok) {
-        setStatus((prev) => prev ? { ...prev, is_dismissed: true } : null)
+        setDismissed(true)
       }
     } catch (error) {
       console.error("Failed to dismiss onboarding:", error)
@@ -92,7 +93,7 @@ export function OnboardingChecklist({
     )
   }
 
-  if (!status || status.is_dismissed || status.is_complete) {
+  if (!status || status.is_dismissed || dismissed || status.is_complete) {
     return null
   }
 
