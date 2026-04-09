@@ -29,7 +29,7 @@
     
     /* Dark Mode — only adapts the outer chrome, NEVER the content card */
     @media (prefers-color-scheme: dark) {
-      .dark-bg { background-color: #1a1a2e !important; }
+      .dark-bg { background-color: #111827 !important; }
       .dark-text { color: #e5e5e5 !important; }
       .dark-border { border-color: #3d3d5c !important; }
     }
@@ -102,11 +102,6 @@
             </td>
           </tr>
           
-          <!-- Accent Strip -->
-          <tr>
-            <td style="height: 4px; background-color: #B8860B; font-size: 0; line-height: 0;">&nbsp;</td>
-          </tr>
-          
           <!-- ========== MAIN CONTENT ========== -->
           <tr>
             <td style="background-color: #ffffff; padding: 24px 28px;" class="mobile-padding">
@@ -115,7 +110,13 @@
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
                   <td style="background-color: #d0b060; border-left: 3px solid #B8860B; border-radius: 0 6px 6px 0; padding: 16px 20px;">
-                    <p style="margin: 0 0 8px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 600; color: #B8860B; text-transform: uppercase; letter-spacing: 0.5px;">Market Insight</p>
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom: 10px;">
+                      <tr>
+                        <td style="background-color: #B8860B; padding: 3px 10px; border-radius: 3px;">
+                          <span style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">Market Insight</span>
+                        </td>
+                      </tr>
+                    </table>
                     <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; line-height: 1.6; color: #374151;">
                       Great news for sellers in Los Angeles—the market is moving fast. With only 2.8 months of inventory and 124 homes sold at a median of $1.2M, buyers are competing for well-priced properties.
                     </p>
@@ -154,33 +155,6 @@
                       <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 700; color: #1B365D;">23</p>
                       <p style="margin: 4px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.3px;">New Listings</p>
                     </td>
-                </tr>
-              </table>
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
-                <tr>
-                  <td style="background-color: #1B365D; padding: 16px 20px; border-radius: 6px;">
-                    <p style="margin: 0 0 6px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; color: #B8860B; text-transform: uppercase; letter-spacing: 1px;">Quick Take</p>
-                    <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; line-height: 1.5; color: #ffffff;">
-                      Seller's market conditions: 2.8 months of inventory indicates strong demand in Los Angeles.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
-                <tr>
-                  <td align="center" style="padding: 8px 0;">
-                    <!--[if mso]>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://example.com/report.pdf" style="height:48px;v-text-anchor:middle;width:240px;" arcsize="8%" stroke="f" fillcolor="#B8860B">
-                      <w:anchorlock/>
-                      <center style="color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:14px;font-weight:600;">View Full Report</center>
-                    </v:roundrect>
-                    <![endif]-->
-                    <!--[if !mso]><!-->
-                    <a href="https://example.com/report.pdf" target="_blank" style="display: inline-block; background-color: #B8860B; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 6px;">
-                      View Full Report
-                    </a>
-                    <!--<![endif]-->
-                  </td>
                 </tr>
               </table>
 

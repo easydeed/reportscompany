@@ -203,7 +203,13 @@ def _build_ai_narrative(insight_text: str, accent_color: str = "#0d9488",
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
                   <td style="background-color: {accent_light}; border-left: 3px solid {accent_color}; border-radius: 0 6px 6px 0; padding: 16px 20px;">
-                    <p style="margin: 0 0 8px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 600; color: {accent_color}; text-transform: uppercase; letter-spacing: 0.5px;">Market Insight</p>
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom: 10px;">
+                      <tr>
+                        <td style="background-color: {accent_color}; padding: 3px 10px; border-radius: 3px;">
+                          <span style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">Market Insight</span>
+                        </td>
+                      </tr>
+                    </table>
                     <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; line-height: 1.6; color: #374151;">
                       {insight_text}
                     </p>
@@ -698,8 +704,8 @@ def _build_market_narrative_body(
         body += _build_gallery_count(len(show), "Notable Sales", primary_color)
         body += _build_2x2_photo_grid(show, accent_color)
     body += _build_stacked_stats(stats, primary_color)
-    body += _build_quick_take(quick_take, accent_color, primary_color)
-    body += _build_cta(pdf_url, accent_color)
+    if not insight_text:
+        body += _build_quick_take(quick_take, accent_color, primary_color)
     return body
 
 
@@ -747,8 +753,8 @@ def _build_gallery_2x2_body(
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
                 {rows}
               </table>'''
-    body += _build_quick_take(quick_take, accent_color, primary_color)
-    body += _build_cta(pdf_url, accent_color, "View All Listings")
+    if not insight_text:
+        body += _build_quick_take(quick_take, accent_color, primary_color)
     return body
 
 
@@ -776,8 +782,8 @@ def _build_gallery_3x2_body(
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
                 {rows}
               </table>'''
-    body += _build_quick_take(quick_take, accent_color, primary_color)
-    body += _build_cta(pdf_url, accent_color, "View All Listings")
+    if not insight_text:
+        body += _build_quick_take(quick_take, accent_color, primary_color)
     return body
 
 
@@ -794,7 +800,6 @@ def _build_single_stacked_body(
         body += _build_stacked_property_card(listing, primary_color, accent_color)
         if i < len(listings) - 1:
             body += _build_branded_divider(primary_color, accent_color)
-    body += _build_cta(pdf_url, accent_color, "Schedule a Showing")
     return body
 
 
@@ -815,8 +820,8 @@ def _build_large_list_body(
               <div style="margin-bottom: 32px;">
                 {rows_html}
               </div>'''
-    body += _build_quick_take(quick_take, accent_color, primary_color)
-    body += _build_cta(pdf_url, accent_color)
+    if not insight_text:
+        body += _build_quick_take(quick_take, accent_color, primary_color)
     return body
 
 
@@ -851,8 +856,8 @@ def _build_closed_sales_body(
               </table>'''
     body += _build_sales_table(listings or [], primary_color, accent_color)
     body += _build_stacked_stats(stats, primary_color)
-    body += _build_quick_take(quick_take, accent_color, primary_color)
-    body += _build_cta(pdf_url, accent_color, "View All Closed Sales")
+    if not insight_text:
+        body += _build_quick_take(quick_take, accent_color, primary_color)
     return body
 
 
@@ -950,8 +955,8 @@ def _build_analytics_body(
                 </tr>
               </table>'''
 
-    body += _build_quick_take(quick_take, accent_color, primary_color)
-    body += _build_cta(pdf_url, accent_color, "View All Listings by Price")
+    if not insight_text:
+        body += _build_quick_take(quick_take, accent_color, primary_color)
     return body
 
 
@@ -2031,7 +2036,7 @@ def schedule_email_html(
     
     /* Dark Mode — only adapts the outer chrome, NEVER the content card */
     @media (prefers-color-scheme: dark) {{
-      .dark-bg {{ background-color: #1a1a2e !important; }}
+      .dark-bg {{ background-color: #111827 !important; }}
       .dark-text {{ color: #e5e5e5 !important; }}
       .dark-border {{ border-color: #3d3d5c !important; }}
     }}
@@ -2102,11 +2107,6 @@ def schedule_email_html(
               </v:rect>
               <![endif]-->
             </td>
-          </tr>
-          
-          <!-- Accent Strip -->
-          <tr>
-            <td style="height: 4px; background-color: {accent_color}; font-size: 0; line-height: 0;">&nbsp;</td>
           </tr>
           
           <!-- ========== MAIN CONTENT ========== -->
