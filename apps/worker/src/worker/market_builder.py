@@ -28,8 +28,20 @@ from worker.template_filters import (
     format_number,
     truncate,
 )
+from worker.ai_market_narrative import generate_market_pdf_narrative
 
 logger = logging.getLogger(__name__)
+
+
+def _pct(val) -> str | None:
+    """Convert a ratio (0-1 or 90-110 range) to a percentage string for prompts."""
+    if val is None:
+        return None
+    v = float(val)
+    if v < 2:  # looks like 0.98 ratio
+        return f"{v * 100:.1f}"
+    return f"{v:.1f}"
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Constants
@@ -175,10 +187,45 @@ class MarketReportBuilder:
 
     # ── render ────────────────────────────────────────────────────────────
 
+    def _build_narrative_data(self) -> Dict[str, Any]:
+        """Build a flat dict of data points for the AI narrative prompt."""
+        metrics = self.report_data.get("metrics") or {}
+        counts = self.report_data.get("counts") or {}
+        listings = self.report_data.get("listings") or self.report_data.get("listings_sample") or []
+        prices = [l.get("list_price") or 0 for l in listings if l.get("list_price")]
+        return {
+            "lookback_days": self.report_data.get("lookback_days", 30),
+            "listing_count": self.report_data.get("total_listings") or sum(counts.values()) or len(listings),
+            "median_list_price": metrics.get("median_list_price"),
+            "median_price": metrics.get("median_close_price") or metrics.get("median_list_price"),
+            "avg_dom": metrics.get("avg_dom") or metrics.get("median_dom"),
+            "months_of_inventory": metrics.get("months_of_inventory"),
+            "list_to_sale_ratio": _pct(metrics.get("list_to_sale_ratio") or metrics.get("sale_to_list_ratio")),
+            "close_to_list_ratio": _pct(metrics.get("close_to_list_ratio") or metrics.get("sale_to_list_ratio")),
+            "closed_count": counts.get("Closed", 0),
+            "active_count": counts.get("Active", 0),
+            "min_price": min(prices) if prices else None,
+            "max_price": max(prices) if prices else None,
+            "price_bands": self.report_data.get("price_bands") or [],
+        }
+
     def render_html(self) -> str:
         """Render the complete HTML report."""
         primary_color, accent_color = self._resolve_colors()
         color_roles = compute_color_roles(accent_color, primary_color)
+
+        # Resolve AI narrative: use pre-supplied value, otherwise generate
+        ai_insights = self.report_data.get("ai_insights") or ""
+        if not ai_insights:
+            try:
+                city = self.report_data.get("city", "")
+                narrative_data = self._build_narrative_data()
+                ai_insights = generate_market_pdf_narrative(
+                    self.report_type, city, narrative_data,
+                ) or ""
+            except Exception as e:
+                logger.warning("AI narrative generation failed (non-fatal): %s", e)
+                ai_insights = ""
 
         context: Dict[str, Any] = {
             "layout": self.layout,
@@ -194,8 +241,9 @@ class MarketReportBuilder:
             "listings": self._build_listings_context(),
             "stats": self._build_stats_context(),
             "agent": self._build_agent_context(),
-            # AI narrative (optional)
-            "ai_insights": self.report_data.get("ai_insights", ""),
+            # AI narrative (optional — exposed under both names for template compat)
+            "ai_insights": ai_insights,
+            "ai_narrative": ai_insights,
             # Price bands data (analytics layout)
             "price_bands": self.report_data.get("price_bands") or [],
         }

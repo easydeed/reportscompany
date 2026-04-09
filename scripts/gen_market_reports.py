@@ -146,8 +146,66 @@ SAMPLE_BRANDING = {
 }
 
 
-def build_sample_data(report_type: str) -> dict:
+SAMPLE_NARRATIVES = {
+    "new_listings_gallery": (
+        "Irvine welcomed 117 new listings over the past 30 days with a median "
+        "asking price of $922K, signaling steady seller confidence. Buyers have "
+        "fresh options across a wide price spectrum from $620K condos to $1.35M "
+        "family homes — acting quickly on well-priced properties remains key."
+    ),
+    "featured_listings": (
+        "This curated selection of 6 premium Irvine properties represents the "
+        "top tier of current inventory, with prices reaching $1.35M. Each home "
+        "offers distinctive features that set it apart in a competitive market."
+    ),
+    "open_houses": (
+        "Six open houses are scheduled across Irvine this weekend, spanning "
+        "$620K to $1.35M — an excellent opportunity for buyers to tour homes "
+        "in person. Arriving early and coming prepared with financing details "
+        "will give serious buyers a meaningful edge."
+    ),
+    "market_snapshot": (
+        "Irvine's housing market remains firmly in seller-favorable territory "
+        "with just 2.1 months of inventory and a 98.2% sale-to-list ratio "
+        "across 38 recent closings. Homes are moving in an average of 12 days "
+        "at a median of $922K — buyers should be prepared to act decisively."
+    ),
+    "closed": (
+        "Thirty-eight homes closed in Irvine over the past 30 days at a "
+        "median sale price of $908K, with buyers paying 98.2% of asking — a "
+        "sign of accurate pricing and strong demand. The brisk 12-day average "
+        "time to close underscores continued market momentum."
+    ),
+    "inventory": (
+        "Irvine currently has 67 active listings at a median asking price of "
+        "$922K with just 2.1 months of supply on hand. Buyers should note that "
+        "low inventory is keeping competition elevated, though the range of "
+        "available homes provides options at multiple price points."
+    ),
+    "price_bands": (
+        "Activity in Irvine is concentrated around the $780K–$1.1M band where "
+        "the majority of recent listings are clustered, with a median asking "
+        "price of $922K. Move-up buyers and investors will find distinct "
+        "opportunities at both ends of the pricing spectrum."
+    ),
+    "new_listings": (
+        "Forty-two new listings entered the Irvine market over the past month, "
+        "keeping the flow of fresh inventory consistent. With a median list "
+        "price of $922K and 67 active listings overall, the market continues "
+        "to favor sellers who price competitively."
+    ),
+}
+
+
+def build_sample_data(report_type: str, use_ai: bool = False) -> dict:
     """Build a complete report_data dict for the builder."""
+    narrative = ""
+    if use_ai:
+        # Let the builder call GPT-4o at render time (requires OPENAI_API_KEY)
+        narrative = ""
+    else:
+        narrative = SAMPLE_NARRATIVES.get(report_type, SAMPLE_NARRATIVES["market_snapshot"])
+
     return {
         "report_type": report_type,
         "city": "Irvine",
@@ -159,14 +217,7 @@ def build_sample_data(report_type: str) -> dict:
         "counts": SAMPLE_COUNTS,
         "total_listings": sum(SAMPLE_COUNTS.values()),
         "branding": SAMPLE_BRANDING,
-        "ai_insights": (
-            "The Irvine market showed balanced activity this period with "
-            "67 active listings, 12 pending, and 38 recent closings. "
-            "Median list price sits at $922,500 with homes averaging "
-            "12 days on market. The 2.1 months of inventory indicates "
-            "continued seller advantage, though rising inventory suggests "
-            "a gradual shift toward equilibrium."
-        ),
+        "ai_insights": narrative,
         "price_bands": [],
     }
 
@@ -226,10 +277,10 @@ def _pdf_via_pdfshift(html: str, pdf_path: Path) -> int:
 
 # ─── Rendering ───────────────────────────────────────────────────────────────
 
-def render_variant(report_type: str, html_only: bool, pdf_engine: str = "playwright") -> dict:
+def render_variant(report_type: str, html_only: bool, pdf_engine: str = "playwright", use_ai: bool = False) -> dict:
     from worker.market_builder import MarketReportBuilder
 
-    data = build_sample_data(report_type)
+    data = build_sample_data(report_type, use_ai=use_ai)
     builder = MarketReportBuilder(data)
 
     t0 = time.perf_counter()
@@ -326,6 +377,8 @@ def main():
     parser.add_argument("--pdf-engine", default="playwright", choices=["playwright", "pdfshift"],
                         help="PDF engine: playwright (local, free) or pdfshift (cloud API key)")
     parser.add_argument("--no-open", action="store_true", help="Skip opening output in browser")
+    parser.add_argument("--with-ai", action="store_true",
+                        help="Generate real GPT-4o narratives (requires OPENAI_API_KEY)")
     parser.add_argument("--report-type", default="all", choices=ALL_REPORT_TYPES + ["all"])
     args = parser.parse_args()
 
@@ -333,6 +386,8 @@ def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     mode = "HTML only" if args.html_only else f"HTML + PDF ({args.pdf_engine})"
+    if args.with_ai:
+        mode += " + GPT-4o narratives"
     print(f"\n{'='*60}")
     print(f"  Market Report Generator")
     print(f"  {len(report_types)} report types")
@@ -344,7 +399,7 @@ def main():
     results = []
     for rt in report_types:
         try:
-            r = render_variant(rt, html_only=args.html_only, pdf_engine=args.pdf_engine)
+            r = render_variant(rt, html_only=args.html_only, pdf_engine=args.pdf_engine, use_ai=args.with_ai)
             results.append(r)
         except Exception as e:
             print(f"  {rt:28s}  ERROR: {e}")

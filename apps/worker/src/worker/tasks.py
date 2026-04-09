@@ -945,6 +945,21 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
             builder_data["accent_color"] = theme_accent or branding_ctx.get("accent_color")
             builder_data["branding"] = branding_ctx
 
+            # Generate AI narrative (non-fatal — report renders without it)
+            if not builder_data.get("ai_insights"):
+                try:
+                    from .ai_market_narrative import generate_market_pdf_narrative
+                    narrative = generate_market_pdf_narrative(
+                        report_type,
+                        builder_data.get("city", ""),
+                        builder_data,
+                    )
+                    if narrative:
+                        builder_data["ai_insights"] = narrative
+                        print(f"✅ REPORT RUN {run_id}: AI narrative generated ({len(narrative)} chars)")
+                except Exception as ai_err:
+                    print(f"⚠️  REPORT RUN {run_id}: AI narrative failed (non-fatal): {ai_err}")
+
             builder = MarketReportBuilder(builder_data)
             html_content = builder.render_html()
             print(f"🔍 REPORT RUN {run_id}: server-side HTML rendered ({len(html_content)} chars)")

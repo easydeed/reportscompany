@@ -99,7 +99,7 @@
        ============================================ */
     .report-header {
       background: var(--header-bg);
-      padding: 12px 20px;
+      padding: 16px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -107,7 +107,7 @@
 
     .report-header .title-block h1 {
       color: white;
-      font-size: 17px;
+      font-size: 20px;
       font-weight: 600;
       letter-spacing: -0.01em;
     }
@@ -128,7 +128,7 @@
 
     .report-header .metric-block .value {
       color: white;
-      font-size: 22px;
+      font-size: 26px;
       font-weight: 600;
       font-family: Georgia, serif;
       letter-spacing: -0.02em;
@@ -149,13 +149,40 @@
       flex-direction: column;
       gap: 10px;
       overflow: hidden;
+      justify-content: space-between;
+    }
+
+    .content-zone.has-narrative {
+      justify-content: flex-start;
+    }
+
+    .ai-narrative {
+      background: var(--accent-light);
+      border: 1px solid #99f6e4;
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+
+    .ai-narrative .narrative-label {
+      font-size: 8px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent-on-light);
+      margin-bottom: 2px;
+    }
+
+    .ai-narrative .narrative-text {
+      font-size: 10px;
+      color: var(--text-primary);
+      line-height: 1.5;
     }
 
     /* ============================================
        AGENT FOOTER
        ============================================ */
     .agent-footer {
-      padding: 12px 20px;
+      padding: 16px 24px;
       border-top: 1px solid var(--border-color);
       background: var(--bg-subtle);
       display: flex;
@@ -164,8 +191,8 @@
     }
 
     .agent-footer .agent-photo {
-      width: 40px;
-      height: 40px;
+      width: 56px;
+      height: 56px;
       border-radius: 50%;
       background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
       flex-shrink: 0;
@@ -178,13 +205,13 @@
     }
 
     .agent-footer .agent-info .name {
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 600;
       color: var(--text-primary);
     }
 
     .agent-footer .agent-info .title {
-      font-size: 10px;
+      font-size: 11px;
       color: var(--text-secondary);
     }
 
@@ -200,9 +227,16 @@
     }
 
     .agent-footer .company-info .company-name {
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 500;
       color: var(--text-primary);
+    }
+
+    .agent-footer .company-info .company-logo {
+      max-height: 32px;
+      width: auto;
+      display: block;
+      margin-bottom: 2px;
     }
 
     .agent-footer .company-info .company-url {
@@ -228,7 +262,6 @@
        GALLERY LAYOUT (Layout A)
        ============================================ */
     .gallery-grid {
-      flex: 1;
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 10px;
@@ -245,7 +278,6 @@
       border-radius: 4px;
       position: relative;
       overflow: hidden;
-      flex: 1;
     }
 
     .listing-card .photo .badge {
@@ -544,6 +576,7 @@
     .data-table {
       flex: 1;
       overflow: hidden;
+      margin-top: 8px;
     }
 
     .data-table table {
@@ -554,7 +587,7 @@
 
     .data-table th {
       text-align: left;
-      padding: 4px 3px;
+      padding: 6px 4px;
       font-weight: 500;
       color: var(--text-secondary);
       border-bottom: 1px solid var(--border-color);
@@ -564,7 +597,7 @@
     .data-table th.right { text-align: right; }
 
     .data-table td {
-      padding: 4px 3px;
+      padding: 6px 4px;
       border-bottom: 1px solid var(--border-light);
       color: var(--text-primary);
     }
@@ -767,18 +800,18 @@
   <div class="report-page">
     {{ macros.report_header(header, stats, report_type) }}
 
-    <div class="content-zone">
+    <div class="content-zone{% if ai_narrative %} has-narrative{% endif %}">
       {% block content %}
         {% if layout == "gallery" %}
-          {{ macros.gallery_layout(header, listings, stats, report_type, agent) }}
+          {{ macros.gallery_layout(header, listings, stats, report_type, agent, ai_narrative) }}
         {% elif layout == "market_narrative" %}
-          {{ macros.market_narrative_layout(header, listings, stats, ai_insights, agent) }}
+          {{ macros.market_narrative_layout(header, listings, stats, ai_insights, agent, ai_narrative) }}
         {% elif layout == "closed_inventory" %}
-          {{ macros.closed_inventory_layout(header, listings, stats, report_type, agent, ai_insights) }}
+          {{ macros.closed_inventory_layout(header, listings, stats, report_type, agent, ai_insights, ai_narrative) }}
         {% elif layout == "analytics" %}
-          {{ macros.analytics_layout(header, listings, stats, price_bands, agent, ai_insights, report_type) }}
+          {{ macros.analytics_layout(header, listings, stats, price_bands, agent, ai_insights, report_type, ai_narrative) }}
         {% else %}
-          {{ macros.gallery_layout(header, listings, stats, report_type, agent) }}
+          {{ macros.gallery_layout(header, listings, stats, report_type, agent, ai_narrative) }}
         {% endif %}
       {% endblock %}
     </div>

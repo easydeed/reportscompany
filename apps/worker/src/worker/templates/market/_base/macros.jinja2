@@ -46,7 +46,13 @@
 
 
 {# ── Gallery Layout (A): new_listings_gallery, featured_listings, open_houses #}
-{% macro gallery_layout(header, listings, stats, report_type, agent) %}
+{% macro gallery_layout(header, listings, stats, report_type, agent, ai_narrative=none) %}
+{% if ai_narrative %}
+<div class="ai-narrative">
+  <p class="narrative-label">Market Insight</p>
+  <p class="narrative-text">{{ ai_narrative }}</p>
+</div>
+{% endif %}
 {% if listings %}
 <div class="gallery-grid">
   {% for listing in listings[:6] %}
@@ -78,16 +84,16 @@
 
 
 {# ── Market Narrative Layout (B): market_snapshot ───────────────────────────── #}
-{% macro market_narrative_layout(header, listings, stats, ai_insights, agent) %}
+{% macro market_narrative_layout(header, listings, stats, ai_insights, agent, ai_narrative=none) %}
 <div class="snapshot-top">
   <div class="hero-metric">
     <p class="value">{% if stats.median_list_price %}{{ stats.median_list_price | format_currency_short }}{% else %}&mdash;{% endif %}</p>
     <p class="label">Median Sale Price</p>
   </div>
-  {% if ai_insights %}
+  {% if ai_narrative or ai_insights %}
   <div class="ai-insight">
     <p class="insight-label">AI Market Insight</p>
-    <p>{{ ai_insights }}</p>
+    <p>{{ ai_narrative or ai_insights }}</p>
   </div>
   {% endif %}
 </div>
@@ -154,7 +160,7 @@
 
 
 {# ── Closed / Inventory Layout (C): closed, inventory ─────────────────────── #}
-{% macro closed_inventory_layout(header, listings, stats, report_type, agent, ai_insights) %}
+{% macro closed_inventory_layout(header, listings, stats, report_type, agent, ai_insights, ai_narrative=none) %}
 <div class="ci-top">
   <div class="ci-hero">
     {% if report_type == 'closed' %}
@@ -175,6 +181,13 @@
   </div>
   {% endif %}
 </div>
+
+{% if ai_narrative %}
+<div class="ai-narrative">
+  <p class="narrative-label">Market Insight</p>
+  <p class="narrative-text">{{ ai_narrative }}</p>
+</div>
+{% endif %}
 
 {% if listings %}
 <div class="data-table">
@@ -244,7 +257,7 @@
 
 
 {# ── Analytics Layout (D): price_bands, new_listings ─────────────────────── #}
-{% macro analytics_layout(header, listings, stats, price_bands, agent, ai_insights, report_type) %}
+{% macro analytics_layout(header, listings, stats, price_bands, agent, ai_insights, report_type, ai_narrative=none) %}
 <div class="analytics-top">
   <div class="analytics-hero">
     {% if report_type == 'price_bands' and stats.median_list_price %}
@@ -294,6 +307,13 @@
     {% endif %}
   </div>
 </div>
+
+{% if ai_narrative %}
+<div class="ai-narrative">
+  <p class="narrative-label">Market Insight</p>
+  <p class="narrative-text">{{ ai_narrative }}</p>
+</div>
+{% endif %}
 
 {% if listings %}
 <div class="listing-rows">
@@ -349,6 +369,7 @@
   {% endif %}
   {% if agent and agent.company_name %}
   <div class="company-info">
+    {% if agent.logo_url %}<img src="{{ agent.logo_url }}" alt="" class="company-logo" onerror="this.style.display='none';">{% endif %}
     <p class="company-name">{{ agent.company_name }}</p>
   </div>
   {% endif %}
