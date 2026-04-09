@@ -75,6 +75,7 @@ export function AffiliateOnboarding({
   const status = (initialStatus ?? fetchedStatus ?? null) as OnboardingStatus | null
   const loading = !initialStatus && queryLoading
   const [dismissing, setDismissing] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
 
   async function dismissOnboarding() {
     setDismissing(true)
@@ -83,7 +84,7 @@ export function AffiliateOnboarding({
         method: "POST",
       })
       if (res.ok) {
-        setStatus((prev) => prev ? { ...prev, is_dismissed: true } : null)
+        setDismissed(true)
       }
     } catch (error) {
       console.error("Failed to dismiss onboarding:", error)
@@ -107,7 +108,7 @@ export function AffiliateOnboarding({
     )
   }
 
-  if (!status || status.is_dismissed) {
+  if (!status || status.is_dismissed || dismissed) {
     return null
   }
 
