@@ -225,16 +225,6 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
               </SidebarMenuItem>
             </Collapsible>
 
-            {/* Help Center */}
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname?.startsWith("/app/help")}>
-                <Link href="/app/help">
-                  <HelpCircle className="w-4 h-4" />
-                  <span className="text-[13px]">Help Center</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-
             {/* Admin Section */}
             {isAdmin && (
               <Collapsible defaultOpen={isInAdminSection} className="group/collapsible-admin">
@@ -268,6 +258,16 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
       </SidebarContent>
 
       <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={pathname?.startsWith("/app/help")}>
+              <Link href="/app/help">
+                <HelpCircle className="w-4 h-4" />
+                <span className="text-[13px]">Help Center</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
         <div className="px-3 py-3">
           <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/50 p-3">
             <div className="flex items-center justify-between mb-2">

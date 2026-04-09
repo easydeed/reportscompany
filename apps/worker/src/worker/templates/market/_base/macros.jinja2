@@ -144,14 +144,42 @@
 
 {# ── Closed / Inventory Layout (C): closed, inventory ─────────────────────── #}
 {% macro closed_inventory_layout(header, listings, stats, report_type, agent, ai_insights=none, ai_narrative=none) %}
-<div class="hero-stat avoid-break">
-  {% if report_type == 'closed' %}
-  <div class="hero-stat-value">{% if stats.median_close_price %}{{ stats.median_close_price | format_currency }}{% elif stats.median_list_price %}{{ stats.median_list_price | format_currency }}{% else %}{{ stats.closed_count | default(0) }}{% endif %}</div>
-  <div class="hero-stat-label">{% if stats.median_close_price or stats.median_list_price %}Median Sale Price{% else %}Homes Sold{% endif %}</div>
-  {% else %}
-  <div class="hero-stat-value">{{ stats.active_count | default(0) }}</div>
-  <div class="hero-stat-label">Active Listings</div>
-  {% endif %}
+<div class="hero-stat-row avoid-break">
+  <div class="hero-stat-left">
+    {% if report_type == 'closed' %}
+    <div class="hero-stat-value">{% if stats.median_close_price %}{{ stats.median_close_price | format_currency }}{% elif stats.median_list_price %}{{ stats.median_list_price | format_currency }}{% else %}{{ stats.closed_count | default(0) }}{% endif %}</div>
+    <div class="hero-stat-label">{% if stats.median_close_price or stats.median_list_price %}Median Sale Price{% else %}Homes Sold{% endif %}</div>
+    {% else %}
+    <div class="hero-stat-value">{{ stats.active_count | default(0) }}</div>
+    <div class="hero-stat-label">Active Listings</div>
+    {% endif %}
+  </div>
+  <div class="hero-stat-right">
+    {% if stats.avg_dom %}
+    <div class="mini-stat">
+      <div class="mini-stat-value">{{ stats.avg_dom }}</div>
+      <div class="mini-stat-label">Avg DOM</div>
+    </div>
+    {% endif %}
+    {% if stats.months_of_inventory %}
+    <div class="mini-stat">
+      <div class="mini-stat-value">{{ stats.months_of_inventory }}</div>
+      <div class="mini-stat-label">Mo. Supply</div>
+    </div>
+    {% endif %}
+    {% if stats.price_per_sqft %}
+    <div class="mini-stat">
+      <div class="mini-stat-value">${{ stats.price_per_sqft | format_number }}</div>
+      <div class="mini-stat-label">$/Sq Ft</div>
+    </div>
+    {% endif %}
+    {% if stats.list_to_sale_ratio %}
+    <div class="mini-stat">
+      <div class="mini-stat-value">{{ "%.1f" | format(stats.list_to_sale_ratio * 100 if stats.list_to_sale_ratio < 2 else stats.list_to_sale_ratio) }}%</div>
+      <div class="mini-stat-label">Sale Ratio</div>
+    </div>
+    {% endif %}
+  </div>
 </div>
 
 {% if listings %}
@@ -204,34 +232,6 @@
   </table>
 </div>
 {% endif %}
-
-<div class="stats-bar avoid-break">
-  {% if stats.avg_dom %}
-  <div class="stats-bar-row">
-    <span class="stats-bar-label">Avg Days on Market</span>
-    <span class="stats-bar-value">{{ stats.avg_dom }}</span>
-  </div>
-  {% endif %}
-  {% if stats.months_of_inventory %}
-  <div class="stats-bar-row">
-    <span class="stats-bar-label">Months of Inventory</span>
-    <span class="stats-bar-value">{{ stats.months_of_inventory }}</span>
-  </div>
-  {% endif %}
-  {% if stats.list_to_sale_ratio %}
-  <div class="stats-bar-row">
-    <span class="stats-bar-label">List-to-Sale Ratio</span>
-    <span class="stats-bar-value">{{ "%.1f" | format(stats.list_to_sale_ratio * 100 if stats.list_to_sale_ratio < 2 else stats.list_to_sale_ratio) }}%</span>
-  </div>
-  {% endif %}
-</div>
-
-{% if ai_insights or ai_narrative %}
-<div class="quick-take avoid-break">
-  <div class="quick-take-label">Quick Take</div>
-  <p class="quick-take-text">{{ ai_insights or ai_narrative }}</p>
-</div>
-{% endif %}
 {% endmacro %}
 
 
@@ -257,7 +257,7 @@
   {% endfor %}
   {% else %}
   {% if stats.median_list_price %}
-  <div class="stat-block stat-block-accent">
+  <div class="stat-block">
     <div class="stat-block-value">{{ stats.median_list_price | format_currency_short }}</div>
     <div class="stat-block-label">Median Price</div>
   </div>
@@ -292,10 +292,14 @@
 
 {% if listings %}
 <div class="property-list">
+  {% set tier_labels = ['Low', 'Median', 'High'] %}
+  {% set tier_classes = ['tier-low', 'tier-median', 'tier-high'] %}
   {% for listing in listings[:3] %}
   <div class="property-card avoid-break">
     <div class="property-card-photo{% if not listing.photo_url %} no-image{% endif %}"{% if listing.photo_url %} style="background-image: url('{{ listing.photo_url }}');"{% endif %}>
-      {% if listing.status %}
+      {% if report_type == 'new_listings' %}
+      <span class="listing-tier-badge {{ tier_classes[loop.index0] }}">{{ tier_labels[loop.index0] }}</span>
+      {% elif listing.status %}
       <span class="property-card-badge">{{ listing.status }}</span>
       {% endif %}
     </div>

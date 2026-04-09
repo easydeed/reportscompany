@@ -58,8 +58,8 @@
 
     @media print {
       html, body { background: white; margin: 0; padding: 0; }
-      .report-page { box-shadow: none; page-break-after: always; page-break-inside: avoid; }
-      .report-page:last-child { page-break-after: auto; }
+      .report-page { box-shadow: none; page-break-inside: avoid; }
+      .report-page + .report-page { page-break-before: always; }
       .avoid-break { page-break-inside: avoid; break-inside: avoid; }
       * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
@@ -87,7 +87,7 @@
     /* ===================== GRADIENT HEADER (2-column) ===================== */
     .report-header {
       background: linear-gradient(135deg, var(--header-bg) 0%, var(--header-bg) 50%, var(--primary-color) 100%);
-      padding: 15px 15px;
+      padding: 15px 25px;
       color: var(--white);
       flex-shrink: 0;
       display: flex;
@@ -178,7 +178,7 @@
       gap: 12px;
       padding: 16px 0 12px;
       border-bottom: 1px solid var(--gray-200);
-      margin-bottom: 16px;
+      margin-bottom: 5px;
     }
 
     .count-circle {
@@ -210,8 +210,7 @@
 
     .count-divider {
       flex: 1;
-      height: 1px;
-      background: var(--gray-200);
+      height: 0;
     }
 
     /* ===================== GALLERY GRID (Layout A) ===================== */
@@ -220,6 +219,7 @@
       grid-template-columns: repeat(3, 1fr);
       gap: 12px;
       flex: 1;
+      padding-bottom: 15px;
     }
 
     .listing-card {
@@ -233,7 +233,7 @@
 
     .listing-photo {
       width: 100%;
-      height: 140px;
+      height: 180px;
       background-color: var(--gray-100);
       background-size: cover;
       background-position: center;
@@ -280,7 +280,7 @@
 
     .listing-price {
       font-family: var(--font-display);
-      font-size: 18px;
+      font-size: 23px;
       font-weight: 700;
       color: var(--gray-900);
       margin-bottom: 2px;
@@ -320,6 +320,48 @@
       text-align: center;
       padding: 18px 0 14px;
       border-bottom: 1px solid var(--gray-200);
+    }
+
+    .hero-stat-row {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      padding: 14px 0 10px;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .hero-stat-row .hero-stat-left {
+      flex: 0 0 50%;
+      text-align: center;
+      border-right: 1px solid var(--gray-200);
+    }
+
+    .hero-stat-row .hero-stat-right {
+      flex: 0 0 50%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+
+    .hero-stat-row .hero-stat-right .mini-stat {
+      text-align: center;
+      padding: 6px 4px;
+    }
+
+    .hero-stat-row .hero-stat-right .mini-stat-value {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--gray-900);
+      line-height: 1.1;
+    }
+
+    .hero-stat-row .hero-stat-right .mini-stat-label {
+      font-size: 9px;
+      font-weight: 500;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .hero-stat-value {
@@ -363,7 +405,8 @@
     /* ===================== AI NARRATIVE ===================== */
     .ai-narrative {
       padding: 16px 0;
-      border-bottom: 1px solid var(--gray-200);
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
 
     .ai-narrative-label {
@@ -393,7 +436,7 @@
       border-radius: 8px;
       overflow: hidden;
       position: relative;
-      height: 105px;
+      height: 170px;
       background-color: var(--gray-100);
       background-size: cover;
       background-position: center;
@@ -604,6 +647,37 @@
     .stat-block-accent {
       background: var(--accent-light);
       border-color: transparent;
+    }
+
+    .stat-block-match .stat-block-value { color: var(--gray-900); }
+    .stat-block-match { background: var(--white); border-color: var(--gray-200); }
+
+    /* ===================== LISTING TIER BADGES ===================== */
+    .listing-tier-badge {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .listing-tier-badge.tier-low {
+      background: rgba(59, 130, 246, 0.15);
+      color: #2563eb;
+    }
+
+    .listing-tier-badge.tier-median {
+      background: rgba(34, 197, 94, 0.15);
+      color: #16a34a;
+    }
+
+    .listing-tier-badge.tier-high {
+      background: rgba(245, 158, 11, 0.15);
+      color: #d97706;
     }
 
     /* ===================== PROPERTY LIST (Analytics) ===================== */
