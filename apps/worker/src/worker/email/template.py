@@ -1715,7 +1715,11 @@ def schedule_email_html(
     contact_line1 = brand.get("contact_line1") or rep_name
     contact_line2 = brand.get("contact_line2") or rep_title
     website_url = brand.get("website_url")
-    logo_url_footer = brand.get("logo_url")
+    logo_url_footer = (
+        brand.get("email_footer_logo_url")
+        or brand.get("footer_logo_url")
+        or brand.get("logo_url")
+    )
 
     color_roles = compute_color_roles(accent_color, dark_bg=primary_color)
     accent_on_dark = color_roles["theme_color_on_dark"]

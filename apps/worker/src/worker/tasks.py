@@ -401,7 +401,8 @@ def _resolve_email_brand(cur, account_id: str):
                     SELECT
                         brand_display_name, logo_url, email_logo_url,
                         primary_color, accent_color, rep_photo_url,
-                        contact_line1, contact_line2, website_url
+                        contact_line1, contact_line2, website_url,
+                        footer_logo_url, email_footer_logo_url
                     FROM affiliate_branding
                     WHERE account_id = %s::uuid
                 """, (sponsor_id,))
@@ -413,13 +414,16 @@ def _resolve_email_brand(cur, account_id: str):
                         "accent_color": brand_row[4], "rep_photo_url": brand_row[5],
                         "contact_line1": brand_row[6], "contact_line2": brand_row[7],
                         "website_url": brand_row[8],
+                        "footer_logo_url": brand_row[9],
+                        "email_footer_logo_url": brand_row[10],
                     }
             elif acc_type == 'INDUSTRY_AFFILIATE':
                 cur.execute("""
                     SELECT
                         brand_display_name, logo_url, email_logo_url,
                         primary_color, accent_color, rep_photo_url,
-                        contact_line1, contact_line2, website_url
+                        contact_line1, contact_line2, website_url,
+                        footer_logo_url, email_footer_logo_url
                     FROM affiliate_branding
                     WHERE account_id = %s::uuid
                 """, (account_id,))
@@ -431,14 +435,18 @@ def _resolve_email_brand(cur, account_id: str):
                         "accent_color": brand_row[4], "rep_photo_url": brand_row[5],
                         "contact_line1": brand_row[6], "contact_line2": brand_row[7],
                         "website_url": brand_row[8],
+                        "footer_logo_url": brand_row[9],
+                        "email_footer_logo_url": brand_row[10],
                     }
             else:
                 cur.execute("""
                     SELECT
-                        u.avatar_url, u.first_name, u.last_name,
+                        COALESCE(u.photo_url, u.avatar_url),
+                        u.first_name, u.last_name,
                         u.job_title, u.phone, u.email, u.website,
                         a.name, a.logo_url, a.email_logo_url,
-                        a.primary_color, a.secondary_color
+                        a.primary_color, a.secondary_color,
+                        a.footer_logo_url, a.email_footer_logo_url
                     FROM accounts a
                     LEFT JOIN users u ON u.account_id = a.id
                     WHERE a.id = %s::uuid
@@ -473,6 +481,8 @@ def _resolve_email_brand(cur, account_id: str):
                         "accent_color": acc_brand_row[11], "rep_photo_url": acc_brand_row[0],
                         "contact_line1": contact_line1, "contact_line2": contact_line2,
                         "website_url": website,
+                        "footer_logo_url": acc_brand_row[12],
+                        "email_footer_logo_url": acc_brand_row[13],
                     }
     except Exception as e:
         print(f"⚠️  Error loading brand for email: {e}")
