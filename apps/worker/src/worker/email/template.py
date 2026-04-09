@@ -51,6 +51,13 @@ from typing import Dict, Optional, TypedDict, Tuple, List
 from worker.property_builder import compute_color_roles
 
 
+def hex_to_rgba(hex_color: str, opacity: float) -> str:
+    """Convert #RRGGBB to rgba(R, G, B, opacity)."""
+    hex_color = hex_color.lstrip('#')
+    r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
+    return f'rgba({r}, {g}, {b}, {opacity})'
+
+
 class Brand(TypedDict, total=False):
     """Brand configuration for white-label emails."""
     display_name: str
@@ -195,22 +202,18 @@ def _format_percent(value: Optional[float]) -> str:
 # ---------------------------------------------------------------------------
 
 def _build_ai_narrative(insight_text: str, accent_color: str = "#0d9488",
-                        accent_light: str = "#f0fdfa") -> str:
+                        accent_on_light: str = "#0d7c72") -> str:
     """Accent-bordered callout with MARKET INSIGHT label. Ref: V0 email designs."""
     if not insight_text:
         return ""
+    bg_tint = hex_to_rgba(accent_color, 0.06)
+    border_tint = hex_to_rgba(accent_color, 0.4)
     return f'''
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
-                  <td style="background-color: {accent_light}; border-left: 3px solid {accent_color}; border-radius: 0 6px 6px 0; padding: 16px 20px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom: 10px;">
-                      <tr>
-                        <td style="background-color: {accent_color}; padding: 3px 10px; border-radius: 3px;">
-                          <span style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">Market Insight</span>
-                        </td>
-                      </tr>
-                    </table>
-                    <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; line-height: 1.6; color: #374151;">
+                  <td style="background-color: {bg_tint}; border-left: 3px solid {border_tint}; border-radius: 0 6px 6px 0; padding: 16px 20px;">
+                    <p style="margin: 0 0 8px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; color: {accent_on_light}; text-transform: uppercase; letter-spacing: 0.5px;">Market Insight</p>
+                    <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; line-height: 1.6; color: #1f2937;">
                       {insight_text}
                     </p>
                   </td>
@@ -324,10 +327,11 @@ def _build_filter_blurb(filter_text: str, primary_color: str) -> str:
     """Optional report criteria callout."""
     if not filter_text:
         return ""
+    bg = hex_to_rgba(primary_color, 0.05)
     return f'''
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
                 <tr>
-                  <td style="padding: 12px 16px; background-color: {primary_color}08; border-radius: 8px; border-left: 3px solid {primary_color};">
+                  <td style="padding: 12px 16px; background-color: {bg}; border-radius: 8px; border-left: 3px solid {primary_color};">
                     <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #44403c;">
                       <span style="font-weight: 600; color: {primary_color};">Report Criteria:</span> {filter_text}
                     </p>
@@ -566,7 +570,8 @@ def _build_stacked_property_card(listing: Dict, primary_color: str, accent_color
         badge_items.append(f"{sqft:,} SF")
     badges = ""
     for b in badge_items:
-        badges += f'<td style="padding-right: 6px;"><span style="display: inline-block; padding: 4px 12px; background-color: {primary_color}0D; border-radius: 6px; font-size: 11px; font-weight: 500; color: {primary_color};">{b}</span></td>'
+        badge_bg = hex_to_rgba(primary_color, 0.08)
+        badges += f'<td style="padding-right: 6px;"><span style="display: inline-block; padding: 4px 12px; background-color: {badge_bg}; border-radius: 6px; font-size: 11px; font-weight: 500; color: {primary_color};">{b}</span></td>'
     return f'''
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 12px; overflow: hidden; background-color: #ffffff;">
                 <tr><td>{photo_html}</td></tr>
@@ -692,12 +697,12 @@ def _build_market_narrative_body(
     pdf_url: str, primary_color: str, accent_color: str,
     filter_description: str = None,
     listings: List[Dict] = None,
-    accent_light: str = "#f0fdfa",
+    accent_on_light: str = "#0d7c72",
 ) -> str:
     """Market Snapshot / New Listings / Price Bands layout.
     Ref: V0 market-narrative.tsx"""
     body = _build_filter_blurb(filter_description, primary_color)
-    body += _build_ai_narrative(insight_text, accent_color, accent_light)
+    body += _build_ai_narrative(insight_text, accent_color, accent_on_light)
     body += _build_hero_stat(hero_value, hero_label, primary_color)
     if listings and len(listings) >= 2:
         show = listings[:4]
@@ -733,11 +738,11 @@ def _build_gallery_2x2_body(
     insight_text: str, listings: List[Dict], quick_take: str,
     pdf_url: str, primary_color: str, accent_color: str,
     gallery_label: str = "Featured Listings", filter_description: str = None,
-    accent_light: str = "#f0fdfa",
+    accent_on_light: str = "#0d7c72",
 ) -> str:
     """Gallery 2x2 layout: large photo cards. Ref: V0 gallery-2x2.tsx"""
     body = _build_filter_blurb(filter_description, primary_color)
-    body += _build_ai_narrative(insight_text, accent_color, accent_light)
+    body += _build_ai_narrative(insight_text, accent_color, accent_on_light)
     body += _build_gallery_count(len(listings), gallery_label, primary_color)
     cards = [_build_gallery_card_large(l, accent_color) for l in listings[:4]]
     rows = ""
@@ -762,11 +767,11 @@ def _build_gallery_3x2_body(
     insight_text: str, listings: List[Dict], quick_take: str,
     pdf_url: str, primary_color: str, accent_color: str,
     gallery_label: str = "New Listings", filter_description: str = None,
-    accent_light: str = "#f0fdfa",
+    accent_on_light: str = "#0d7c72",
 ) -> str:
     """Gallery 3x2 layout: compact photo cards. Ref: V0 gallery-3x2.tsx"""
     body = _build_filter_blurb(filter_description, primary_color)
-    body += _build_ai_narrative(insight_text, accent_color, accent_light)
+    body += _build_ai_narrative(insight_text, accent_color, accent_on_light)
     body += _build_gallery_count(len(listings), gallery_label, primary_color)
     cards = [_build_gallery_card_compact(l, accent_color) for l in listings[:9]]
     rows = ""
@@ -791,11 +796,11 @@ def _build_single_stacked_body(
     insight_text: str, listings: List[Dict],
     pdf_url: str, primary_color: str, accent_color: str,
     filter_description: str = None,
-    accent_light: str = "#f0fdfa",
+    accent_on_light: str = "#0d7c72",
 ) -> str:
     """Single stacked full-width cards with branded dividers. Ref: V0 single-stacked.tsx"""
     body = _build_filter_blurb(filter_description, primary_color)
-    body += _build_ai_narrative(insight_text, accent_color, accent_light)
+    body += _build_ai_narrative(insight_text, accent_color, accent_on_light)
     for i, listing in enumerate(listings[:5]):
         body += _build_stacked_property_card(listing, primary_color, accent_color)
         if i < len(listings) - 1:
@@ -807,11 +812,11 @@ def _build_large_list_body(
     insight_text: str, listings: List[Dict], quick_take: str,
     pdf_url: str, primary_color: str, accent_color: str,
     gallery_label: str = "New Listings", filter_description: str = None,
-    accent_light: str = "#f0fdfa",
+    accent_on_light: str = "#0d7c72",
 ) -> str:
     """Vertical list: photo-left, details-right. Ref: V0 large-list.tsx"""
     body = _build_filter_blurb(filter_description, primary_color)
-    body += _build_ai_narrative(insight_text, accent_color, accent_light)
+    body += _build_ai_narrative(insight_text, accent_color, accent_on_light)
     body += _build_gallery_count(len(listings), gallery_label, primary_color)
     rows_html = ""
     for i, listing in enumerate(listings):
@@ -830,11 +835,11 @@ def _build_closed_sales_body(
     listings: List[Dict], stats: List[Tuple[str, str]], quick_take: str,
     pdf_url: str, primary_color: str, accent_color: str,
     filter_description: str = None,
-    accent_light: str = "#f0fdfa",
+    accent_on_light: str = "#0d7c72",
 ) -> str:
     """Closed Sales / Inventory table layout. Ref: V0 closed-sales-table.tsx"""
     body = _build_filter_blurb(filter_description, primary_color)
-    body += _build_ai_narrative(insight_text, accent_color, accent_light)
+    body += _build_ai_narrative(insight_text, accent_color, accent_on_light)
     body += _build_hero_stat(hero_value, hero_label, primary_color)
     if listings and len(listings) >= 2:
         show = listings[:4]
@@ -866,7 +871,7 @@ def _build_analytics_body(
     trend_stats: List[Tuple[str, str, str, bool]],
     quick_take: str, pdf_url: str, primary_color: str, accent_color: str,
     filter_description: str = None,
-    accent_light: str = "#f0fdfa",
+    accent_on_light: str = "#0d7c72",
     supporting_metrics: List[Tuple[str, str]] = None,
 ) -> str:
     """Analytics / Price Bands layout with bar chart. Ref: V0 email-price-bands.html
@@ -875,7 +880,7 @@ def _build_analytics_body(
     supporting_metrics: optional list of (label, value) for the bottom row.
     """
     body = _build_filter_blurb(filter_description, primary_color)
-    body += _build_ai_narrative(insight_text, accent_color, accent_light)
+    body += _build_ai_narrative(insight_text, accent_color, accent_on_light)
     body += _build_hero_stat(hero_value, hero_label, primary_color)
 
     if trend_stats:
@@ -1713,7 +1718,6 @@ def schedule_email_html(
     logo_url_footer = brand.get("logo_url")
 
     color_roles = compute_color_roles(accent_color, dark_bg=primary_color)
-    accent_light = color_roles["theme_color_light"]
     accent_on_dark = color_roles["theme_color_on_dark"]
     accent_on_light = color_roles["theme_color_on_light"]
 
@@ -1828,28 +1832,28 @@ def schedule_email_html(
                 insight_text=insight_text, listings=listings or [],
                 pdf_url=pdf_url, primary_color=primary_color, accent_color=accent_color,
                 filter_description=filter_description,
-                accent_light=accent_light,
+                accent_on_light=accent_on_light,
             )
         elif gallery_layout == "gallery_2x2":
             body_html = _build_gallery_2x2_body(
                 insight_text=insight_text, listings=listings or [], quick_take=quick_take,
                 pdf_url=pdf_url, primary_color=primary_color, accent_color=accent_color,
                 gallery_label=gallery_label, filter_description=filter_description,
-                accent_light=accent_light,
+                accent_on_light=accent_on_light,
             )
         elif gallery_layout == "gallery_3x2":
             body_html = _build_gallery_3x2_body(
                 insight_text=insight_text, listings=listings or [], quick_take=quick_take,
                 pdf_url=pdf_url, primary_color=primary_color, accent_color=accent_color,
                 gallery_label=gallery_label, filter_description=filter_description,
-                accent_light=accent_light,
+                accent_on_light=accent_on_light,
             )
         else:
             body_html = _build_large_list_body(
                 insight_text=insight_text, listings=listings or [], quick_take=quick_take,
                 pdf_url=pdf_url, primary_color=primary_color, accent_color=accent_color,
                 gallery_label=gallery_label, filter_description=filter_description,
-                accent_light=accent_light,
+                accent_on_light=accent_on_light,
             )
 
     elif layout == "closed_sales":
@@ -1865,7 +1869,7 @@ def schedule_email_html(
             listings=listings or [], stats=secondary, quick_take=quick_take,
             pdf_url=pdf_url, primary_color=primary_color, accent_color=accent_color,
             filter_description=filter_description,
-            accent_light=accent_light,
+            accent_on_light=accent_on_light,
         )
 
     elif layout == "analytics":
@@ -1898,7 +1902,7 @@ def schedule_email_html(
             trend_stats=band_stats, quick_take=quick_take,
             pdf_url=pdf_url, primary_color=primary_color, accent_color=accent_color,
             filter_description=filter_description,
-            accent_light=accent_light,
+            accent_on_light=accent_on_light,
             supporting_metrics=supporting,
         )
 
@@ -1918,7 +1922,7 @@ def schedule_email_html(
             pdf_url=pdf_url, primary_color=primary_color, accent_color=accent_color,
             filter_description=filter_description,
             listings=listings,
-            accent_light=accent_light,
+            accent_on_light=accent_on_light,
         )
     
     # ============================================================================
@@ -2004,6 +2008,13 @@ def schedule_email_html(
                 </tr>
               </table>'''
     
+    # Header logo (prefer email-specific light version, fall back to main logo)
+    header_logo_url = email_logo_url or logo_url
+    header_logo_html = (
+        f'<img src="{header_logo_url}" alt="{brand_name}" '
+        f'style="display: block; max-height: 40px; width: auto;" />'
+    ) if header_logo_url else ""
+
     # Build the complete HTML email
     html = f'''<!DOCTYPE html>
 <html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
@@ -2036,7 +2047,7 @@ def schedule_email_html(
     
     /* Dark Mode — only adapts the outer chrome, NEVER the content card */
     @media (prefers-color-scheme: dark) {{
-      .dark-bg {{ background-color: #111827 !important; }}
+      .dark-bg {{ background-color: #232323 !important; }}
       .dark-text {{ color: #e5e5e5 !important; }}
       .dark-border {{ border-color: #3d3d5c !important; }}
     }}
@@ -2068,15 +2079,15 @@ def schedule_email_html(
         <!-- Email Wrapper -->
         <table role="presentation" cellpadding="0" cellspacing="0" width="600" class="wrapper" style="max-width: 600px; width: 100%;">
           
-          <!-- ========== V0 HEADER: 2-column dark bar ========== -->
+          <!-- ========== V0 HEADER: 2-column gradient banner ========== -->
           <tr>
             <td>
               <!--[if mso]>
               <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;">
-                <v:fill type="solid" color="{primary_color}"/>
-                <v:textbox inset="24px,20px,24px,20px" style="mso-fit-shape-to-text:true">
+                <v:fill type="gradient" color="{primary_color}" color2="{accent_color}" angle="135"/>
+                <v:textbox inset="28px,24px,28px,24px" style="mso-fit-shape-to-text:true">
               <![endif]-->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: {primary_color}; border-radius: 8px 8px 0 0;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, {primary_color} 0%, {primary_color} 60%, {accent_color} 100%); background-color: {primary_color}; border-radius: 8px 8px 0 0;">
                 <tr>
                   <td style="padding: 24px 28px;">
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
@@ -2090,6 +2101,7 @@ def schedule_email_html(
                           </p>
                         </td>
                         <td style="vertical-align: middle; text-align: right; width: 140px;">
+                          {f'<img src="{header_logo_url}" alt="{brand_name}" style="display: block; max-height: 40px; width: auto; margin-left: auto; margin-bottom: 8px;" />' if header_logo_url else ''}
                           <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: bold; color: #ffffff;">
                             {h1_value if has_hero_4 else m1_value}
                           </p>
