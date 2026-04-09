@@ -60,7 +60,7 @@ LAYOUT_MAP: Dict[str, str] = {
     "market_snapshot": "market_narrative",
     "closed": "closed_inventory",
     "inventory": "closed_inventory",
-    "price_bands": "analytics",
+    "price_bands": "pricebands",
     "new_listings": "analytics",
 }
 

@@ -146,6 +146,14 @@ SAMPLE_BRANDING = {
 }
 
 
+SAMPLE_PRICE_BANDS = [
+    {"label": "Under $750K", "count": 12},
+    {"label": "$750K \u2013 $1M", "count": 18},
+    {"label": "$1M \u2013 $1.5M", "count": 11},
+    {"label": "$1.5M+", "count": 6},
+]
+
+
 SAMPLE_NARRATIVES = {
     "new_listings_gallery": (
         "Irvine welcomed 117 new listings over the past 30 days with a median "
@@ -218,7 +226,7 @@ def build_sample_data(report_type: str, use_ai: bool = False) -> dict:
         "total_listings": sum(SAMPLE_COUNTS.values()),
         "branding": SAMPLE_BRANDING,
         "ai_insights": narrative,
-        "price_bands": [],
+        "price_bands": SAMPLE_PRICE_BANDS if report_type == "price_bands" else [],
     }
 
 

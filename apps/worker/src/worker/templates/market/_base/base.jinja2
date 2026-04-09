@@ -766,6 +766,214 @@
       font-weight: 600;
     }
 
+    /* ===================== V0 PRICE BANDS — TOP ROW ===================== */
+    .top-row {
+      display: flex;
+      gap: 12px;
+      padding: 16px 0;
+      flex-shrink: 0;
+    }
+
+    .hero-card {
+      width: 100px;
+      background: var(--header-bg);
+      border-radius: 8px;
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .hero-card-value {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--accent-on-dark);
+      line-height: 1;
+    }
+
+    .hero-card-label {
+      font-size: 7px;
+      color: rgba(255, 255, 255, 0.8);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 6px;
+      text-align: center;
+    }
+
+    .stat-cards {
+      flex: 1;
+      display: flex;
+      gap: 10px;
+    }
+
+    .stat-card {
+      flex: 1;
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 14px 12px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .stat-card-value {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--header-bg);
+      line-height: 1;
+    }
+
+    .stat-card-label {
+      font-size: 8px;
+      color: var(--gray-600);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-top: 6px;
+      line-height: 1.3;
+    }
+
+    /* ===================== V0 PRICE BANDS — NARRATIVE ===================== */
+    .pb-narrative {
+      background: var(--accent-light);
+      border-left: 3px solid var(--primary-color);
+      padding: 14px 20px;
+      border-radius: 0 6px 6px 0;
+      flex-shrink: 0;
+    }
+
+    .pb-narrative p {
+      font-size: 10px;
+      color: var(--gray-700);
+      line-height: 1.6;
+    }
+
+    /* ===================== V0 PRICE BANDS — PROPERTY ROWS ===================== */
+    .property-rows {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      min-height: 0;
+    }
+
+    .property-row {
+      display: flex;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--gray-200);
+      gap: 16px;
+    }
+
+    .property-row:last-child {
+      border-bottom: none;
+    }
+
+    .property-photo {
+      width: 120px;
+      height: 90px;
+      border-radius: 6px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .property-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .property-photo.no-image {
+      background: var(--gray-100);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gray-400);
+      font-size: 24px;
+    }
+
+    .property-photo.no-image::after {
+      content: "\1F3E0";
+      font-size: 24px;
+      opacity: 0.5;
+    }
+
+    .property-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .property-address {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gray-800);
+      margin-bottom: 3px;
+    }
+
+    .property-city {
+      font-size: 10px;
+      color: var(--gray-500);
+    }
+
+    .property-details {
+      text-align: right;
+      margin-right: 16px;
+    }
+
+    .property-price {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary-color);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .property-specs {
+      font-size: 9px;
+      color: var(--gray-500);
+    }
+
+    .property-status {
+      flex-shrink: 0;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: 4px;
+      font-size: 8px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-badge.sold,
+    .status-badge.closed {
+      background: rgba(220, 38, 38, 0.1);
+      color: #dc2626;
+    }
+
+    .status-badge.active {
+      background: rgba(22, 163, 74, 0.1);
+      color: #16a34a;
+    }
+
+    .status-badge.pending {
+      background: rgba(202, 138, 4, 0.1);
+      color: #ca8a04;
+    }
+
+    .status-badge.new {
+      background: rgba(42, 157, 143, 0.1);
+      color: var(--primary-color);
+    }
+
     /* ===================== AGENT FOOTER ===================== */
     .agent-footer {
       flex-shrink: 0;
@@ -867,6 +1075,8 @@
           {{ macros.market_narrative_layout(header, listings, stats, report_type, agent, ai_insights, ai_narrative) }}
         {% elif layout == "closed_inventory" %}
           {{ macros.closed_inventory_layout(header, listings, stats, report_type, agent, ai_insights, ai_narrative) }}
+        {% elif layout == "pricebands" %}
+          {{ macros.pricebands_layout(header, listings, stats, price_bands, report_type, agent, ai_insights, ai_narrative) }}
         {% elif layout == "analytics" %}
           {{ macros.analytics_layout(header, listings, stats, price_bands, report_type, agent, ai_insights, ai_narrative) }}
         {% else %}

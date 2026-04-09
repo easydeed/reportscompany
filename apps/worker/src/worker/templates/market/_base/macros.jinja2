@@ -324,6 +324,96 @@
 {% endmacro %}
 
 
+{# ── Price Bands Layout: price_bands ──────────────────────────────────────── #}
+{% macro pricebands_layout(header, listings, stats, price_bands, report_type, agent, ai_insights=none, ai_narrative=none) %}
+<div class="top-row">
+  <div class="hero-card">
+    <div class="hero-card-value">{{ header.total_count | default(0) }}</div>
+    <div class="hero-card-label">Total Active Listings</div>
+  </div>
+  <div class="stat-cards">
+    {% if price_bands %}
+    {% for band in price_bands[:4] %}
+    <div class="stat-card">
+      <div class="stat-card-value">{{ band.count | default(0) }}</div>
+      <div class="stat-card-label">{{ band.label | default('') }}</div>
+    </div>
+    {% endfor %}
+    {% else %}
+    {% if stats.median_list_price %}
+    <div class="stat-card">
+      <div class="stat-card-value">{{ stats.median_list_price | format_currency_short }}</div>
+      <div class="stat-card-label">Median Price</div>
+    </div>
+    {% endif %}
+    {% if stats.avg_dom %}
+    <div class="stat-card">
+      <div class="stat-card-value">{{ stats.avg_dom }}</div>
+      <div class="stat-card-label">Avg DOM</div>
+    </div>
+    {% endif %}
+    {% if stats.price_per_sqft %}
+    <div class="stat-card">
+      <div class="stat-card-value">${{ stats.price_per_sqft | format_number }}</div>
+      <div class="stat-card-label">Price / Sq Ft</div>
+    </div>
+    {% endif %}
+    {% if stats.months_of_inventory %}
+    <div class="stat-card">
+      <div class="stat-card-value">{{ stats.months_of_inventory }}</div>
+      <div class="stat-card-label">Months Supply</div>
+    </div>
+    {% endif %}
+    {% endif %}
+  </div>
+</div>
+
+{% if ai_narrative or ai_insights %}
+<div class="pb-narrative avoid-break">
+  <p>{{ ai_narrative or ai_insights }}</p>
+</div>
+{% endif %}
+
+{% if listings %}
+<div class="property-rows">
+  {% for listing in listings[:5] %}
+  <div class="property-row">
+    <div class="property-photo{% if not listing.photo_url %} no-image{% endif %}">
+      {% if listing.photo_url %}
+      <img src="{{ listing.photo_url }}" alt="Property">
+      {% endif %}
+    </div>
+    <div class="property-info">
+      <div class="property-address">{{ listing.address | default('Address unavailable') | truncate(35) }}</div>
+      <div class="property-city">{% if listing.city %}{{ listing.city }}{% endif %}</div>
+    </div>
+    <div class="property-details">
+      <div class="property-price">{% if listing.list_price %}{{ listing.list_price | format_currency }}{% else %}&mdash;{% endif %}</div>
+      <div class="property-specs">{% if listing.beds %}{{ listing.beds }} bd{% endif %}{% if listing.baths %} &bull; {{ listing.baths }} ba{% endif %}{% if listing.sqft %} &bull; {{ listing.sqft | format_number }} sqft{% endif %}</div>
+    </div>
+    <div class="property-status">
+      {% if listing.status %}
+      <span class="status-badge {{ listing.status | lower }}">{{ listing.status }}</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="property-rows">
+  <p style="text-align:center;color:var(--gray-500);padding:1in 0;font-size:11px;">No listings found for this period.</p>
+</div>
+{% endif %}
+
+{% if ai_insights or ai_narrative %}
+<div class="quick-take avoid-break">
+  <div class="quick-take-label">Quick Take</div>
+  <p class="quick-take-text">{{ ai_insights or ai_narrative }}</p>
+</div>
+{% endif %}
+{% endmacro %}
+
+
 {# ── Agent Footer ─────────────────────────────────────────────────────────── #}
 {% macro agent_footer(agent) %}
 <div class="agent-footer">
