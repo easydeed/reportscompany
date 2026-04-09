@@ -6,8 +6,6 @@ import { PreviewHeroStat } from "./preview-hero-stat"
 import { PreviewPhotoGrid } from "./preview-photo-grid"
 import { PreviewStackedStats } from "./preview-stacked-stats"
 import { PreviewDataTable } from "./preview-data-table"
-import { PreviewQuickTake } from "./preview-quick-take"
-import { PreviewCta } from "./preview-cta"
 import { PreviewAgentFooter } from "./preview-agent-footer"
 import { PreviewGalleryCount } from "./preview-gallery-count"
 import { PREVIEW_CONTENT, type PreviewReportType } from "./sample-data"
@@ -24,6 +22,7 @@ export interface SharedEmailPreviewProps {
   agentPhone?: string | null
   agentEmail?: string | null
   agentPhotoUrl?: string | null
+  agentLogoUrl?: string | null
   reportType: PreviewReportType
   audienceLabel?: string | null
   areaName?: string
@@ -41,6 +40,7 @@ export function SharedEmailPreview({
   agentPhone,
   agentEmail,
   agentPhotoUrl,
+  agentLogoUrl,
   reportType,
   audienceLabel,
   areaName,
@@ -57,7 +57,9 @@ export function SharedEmailPreview({
       agentPhone={agentPhone}
       agentEmail={agentEmail}
       agentPhotoUrl={agentPhotoUrl}
+      agentLogoUrl={agentLogoUrl}
       primaryColor={primaryColor}
+      accentColor={accentColor}
     />
   )
 
@@ -104,7 +106,7 @@ function renderBody(
     case "market_snapshot":
       return (
         <>
-          <PreviewNarrative text={content.narrative} primaryColor={primary} />
+          <PreviewNarrative text={content.narrative} primaryColor={primary} accentColor={accent} />
           <PreviewHeroStat
             label={content.heroLabel}
             value={content.heroValue}
@@ -118,16 +120,15 @@ function renderBody(
             accentColor={accent}
           />
           <PreviewStackedStats stats={content.stats} primaryColor={primary} />
-          <PreviewQuickTake text={content.quickTake} accentColor={accent} />
-          <PreviewCta primaryColor={primary} />
           {agentFooter}
         </>
       )
 
     case "new_listings_gallery":
+    case "open_houses":
       return (
         <>
-          <PreviewNarrative text={content.narrative} primaryColor={primary} />
+          <PreviewNarrative text={content.narrative} primaryColor={primary} accentColor={accent} />
           <PreviewHeroStat
             label={content.heroLabel}
             value={content.heroValue}
@@ -148,8 +149,6 @@ function renderBody(
             primaryColor={primary}
             accentColor={accent}
           />
-          <PreviewQuickTake text={content.quickTake} accentColor={accent} />
-          <PreviewCta primaryColor={primary} />
           {agentFooter}
         </>
       )
@@ -157,7 +156,7 @@ function renderBody(
     case "closed":
       return (
         <>
-          <PreviewNarrative text={content.narrative} primaryColor={primary} />
+          <PreviewNarrative text={content.narrative} primaryColor={primary} accentColor={accent} />
           <PreviewHeroStat
             label={content.heroLabel}
             value={content.heroValue}
@@ -172,8 +171,6 @@ function renderBody(
             accentColor={accent}
           />
           <PreviewDataTable rows={content.tableRows} primaryColor={primary} />
-          <PreviewQuickTake text={content.quickTake} accentColor={accent} />
-          <PreviewCta primaryColor={primary} />
           {agentFooter}
         </>
       )
@@ -181,7 +178,7 @@ function renderBody(
     case "inventory":
       return (
         <>
-          <PreviewNarrative text={content.narrative} primaryColor={primary} />
+          <PreviewNarrative text={content.narrative} primaryColor={primary} accentColor={accent} />
           <PreviewHeroStat
             label={content.heroLabel}
             value={content.heroValue}
@@ -196,8 +193,6 @@ function renderBody(
             accentColor={accent}
           />
           <PreviewDataTable rows={content.tableRows} primaryColor={primary} />
-          <PreviewQuickTake text={content.quickTake} accentColor={accent} />
-          <PreviewCta primaryColor={primary} />
           {agentFooter}
         </>
       )
@@ -205,7 +200,7 @@ function renderBody(
     case "featured_listings":
       return (
         <>
-          <PreviewNarrative text={content.narrative} primaryColor={primary} />
+          <PreviewNarrative text={content.narrative} primaryColor={primary} accentColor={accent} />
           {content.galleryCount && (
             <PreviewGalleryCount
               count={content.galleryCount}
@@ -220,10 +215,53 @@ function renderBody(
             accentColor={accent}
           />
           <PreviewStackedStats stats={content.stats} primaryColor={primary} />
-          <PreviewQuickTake text={content.quickTake} accentColor={accent} />
-          <PreviewCta primaryColor={primary} />
           {agentFooter}
         </>
       )
+
+    case "new_listings":
+      return (
+        <>
+          <PreviewNarrative text={content.narrative} primaryColor={primary} accentColor={accent} />
+          <PreviewHeroStat
+            label={content.heroLabel}
+            value={content.heroValue}
+            sub={content.heroSub}
+            primaryColor={primary}
+          />
+          <PreviewStackedStats stats={content.stats} primaryColor={primary} />
+          <PreviewPhotoGrid
+            listings={content.listings}
+            layout="2x2"
+            primaryColor={primary}
+            accentColor={accent}
+          />
+          {agentFooter}
+        </>
+      )
+
+    case "price_bands":
+      return (
+        <>
+          <PreviewNarrative text={content.narrative} primaryColor={primary} accentColor={accent} />
+          <PreviewHeroStat
+            label={content.heroLabel}
+            value={content.heroValue}
+            sub={content.heroSub}
+            primaryColor={primary}
+          />
+          <PreviewStackedStats stats={content.stats} primaryColor={primary} />
+          <PreviewPhotoGrid
+            listings={content.listings}
+            layout="2x2"
+            primaryColor={primary}
+            accentColor={accent}
+          />
+          {agentFooter}
+        </>
+      )
+
+    default:
+      return agentFooter
   }
 }

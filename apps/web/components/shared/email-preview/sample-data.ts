@@ -1,9 +1,12 @@
 export type PreviewReportType =
   | "market_snapshot"
   | "new_listings_gallery"
+  | "new_listings"
   | "closed"
   | "inventory"
   | "featured_listings"
+  | "price_bands"
+  | "open_houses"
 
 export const SAMPLE_PHOTOS = [
   "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=280&h=200&fit=crop",
@@ -176,5 +179,78 @@ export const PREVIEW_CONTENT: Record<PreviewReportType, PreviewContent> = {
     tableRows: [],
     quickTake: "4 featured properties ranging from $875K to $1.5M. Prime locations with above-average square footage and move-in ready condition.",
     galleryCount: 4,
+  },
+
+  new_listings: {
+    heroLabel: "New This Month",
+    heroValue: "42",
+    heroSub: "new listings entered the market",
+    narrative:
+      "Forty-two new listings entered the market this month, keeping the flow of fresh inventory consistent. The median list price sits at $922K with options spanning from starter condos to luxury estates.",
+    stats: [
+      { label: "Median Price", value: "$922K" },
+      { label: "Avg DOM", value: "11", sub: "New" },
+      { label: "Price / Sq Ft", value: "$520" },
+      { label: "Months Supply", value: "2.1" },
+    ],
+    listings: SAMPLE_PHOTOS.slice(0, 3).map((photo, i) => ({
+      photo,
+      price: ["$625K", "$922K", "$1.35M"][i],
+      address: ["415 Birch Ct", "142 Oak Valley Dr", "8 Grandview Terrace"][i],
+      specs: ["2 bd | 2 ba | 1,200 sf", "4 bd | 3 ba | 2,450 sf", "5 bd | 4 ba | 3,200 sf"][i],
+      badge: ["Low", "Median", "High"][i],
+    })),
+    tableRows: [],
+    quickTake: "42 new listings with a median of $922K. Entry-level at $625K, luxury at $1.35M. Broad selection for every buyer segment.",
+  },
+
+  price_bands: {
+    heroLabel: "Active Listings",
+    heroValue: "117",
+    heroSub: "across all price bands",
+    narrative:
+      "Activity is concentrated in the $780K–$1.1M band where the majority of recent listings are clustered. Move-up buyers and investors will find distinct opportunities at both ends of the spectrum.",
+    stats: [
+      { label: "Under $700K", value: "18" },
+      { label: "$700K – $1M", value: "42" },
+      { label: "$1M – $1.5M", value: "38" },
+      { label: "Over $1.5M", value: "19" },
+    ],
+    listings: SAMPLE_PHOTOS.slice(0, 4).map((photo, i) => ({
+      photo,
+      price: ["$649K", "$895K", "$1.18M", "$1.72M"][i],
+      address: ["330 Elm Way", "89 Maple Heights", "78 Cedar Park", "12 Summit Ridge"][i],
+      specs: ["2 bd | 2 ba | 1,400 sf", "3 bd | 2 ba | 1,800 sf", "4 bd | 3 ba | 2,400 sf", "5 bd | 4 ba | 3,500 sf"][i],
+    })),
+    tableRows: [],
+    quickTake: "117 active listings across 4 price bands. Heaviest activity in the $700K–$1M segment with 42 homes available.",
+  },
+
+  open_houses: {
+    heroLabel: "Open Houses",
+    heroValue: "14",
+    heroSub: "this weekend",
+    narrative:
+      "Fourteen open houses are scheduled this weekend across a wide range of price points. Several newly listed properties will be showing for the first time — a great opportunity for serious buyers.",
+    stats: [
+      { label: "Median List Price", value: "$985K" },
+      { label: "Starting From", value: "$425K" },
+    ],
+    listings: SAMPLE_PHOTOS.map((photo, i) => ({
+      photo,
+      price: ["$1.29M", "$875K", "$1.05M", "$925K", "$650K", "$1.48M"][i],
+      address: ["142 Oak Valley Dr", "89 Maple Heights", "310 Sunset Blvd", "27 Pine Ridge Ct", "55 Lakeview Ln", "201 Hilltop Way"][i],
+      specs: [
+        "4 bd | 3 ba | 2,450 sf",
+        "3 bd | 2 ba | 1,800 sf",
+        "4 bd | 3 ba | 2,200 sf",
+        "3 bd | 2 ba | 1,950 sf",
+        "3 bd | 2 ba | 1,600 sf",
+        "5 bd | 4 ba | 3,100 sf",
+      ][i],
+    })),
+    tableRows: [],
+    quickTake: "14 open houses this weekend. Price range from $425K to $1.48M with something for every buyer.",
+    galleryCount: 14,
   },
 }

@@ -12,7 +12,7 @@ export function PreviewHeroStat({ label, value, sub, primaryColor }: PreviewHero
         {label}
       </div>
       <div
-        className="text-[28px] font-bold leading-none mt-0.5"
+        className="text-[40px] font-bold leading-none mt-0.5"
         style={{ color: primaryColor, fontFamily: "Georgia, 'Times New Roman', serif" }}
       >
         {value}
