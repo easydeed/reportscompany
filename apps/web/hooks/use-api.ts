@@ -31,6 +31,8 @@ async function apiFetchRQ(path: string, init?: RequestInit) {
 export const queryKeys = {
   // User / Account
   me: ["me"] as const,
+  account: () => ["account"] as const,
+  accounts: () => ["accounts"] as const,
   planUsage: ["plan-usage"] as const,
   onboarding: ["onboarding"] as const,
   branding: ["branding"] as const,
@@ -73,6 +75,10 @@ export const queryKeys = {
     stats: () => ["leads", "stats"] as const,
   },
 
+  // Lead Page
+  leadPageSettings: () => ["lead-page", "settings"] as const,
+  leadPageLeads: () => ["lead-page", "leads"] as const,
+
   // Affiliate
   affiliate: {
     overview: ["affiliate", "overview"] as const,
@@ -94,12 +100,30 @@ export function useMe() {
   })
 }
 
+/** Account settings */
+export function useAccount() {
+  return useQuery({
+    queryKey: queryKeys.account(),
+    queryFn: () => apiFetchRQ("/v1/account"),
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+/** Accounts list (used by AccountSwitcher) */
+export function useAccounts() {
+  return useQuery({
+    queryKey: queryKeys.accounts(),
+    queryFn: () => apiFetchRQ("/v1/account/accounts"),
+    staleTime: 10 * 60 * 1000,
+  })
+}
+
 /** Plan usage (shown on dashboard + sidebar) */
 export function usePlanUsage() {
   return useQuery({
     queryKey: queryKeys.planUsage,
     queryFn: () => apiFetchRQ("/v1/account/plan-usage"),
-    staleTime: 2 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
   })
 }
 
@@ -116,7 +140,7 @@ export function useOnboarding() {
   return useQuery({
     queryKey: queryKeys.onboarding,
     queryFn: () => apiFetchRQ("/v1/onboarding"),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
   })
 }
 
@@ -125,6 +149,7 @@ export function useReports() {
   return useQuery({
     queryKey: queryKeys.reports.list(),
     queryFn: () => apiFetchRQ("/v1/reports"),
+    staleTime: 5 * 60 * 1000,
   })
 }
 
@@ -133,6 +158,7 @@ export function usePropertyReports() {
   return useQuery({
     queryKey: queryKeys.propertyReports.list(),
     queryFn: () => apiFetchRQ("/v1/property/reports?limit=100"),
+    staleTime: 5 * 60 * 1000,
   })
 }
 
@@ -141,6 +167,7 @@ export function useSchedules() {
   return useQuery({
     queryKey: queryKeys.schedules.list(),
     queryFn: () => apiFetchRQ("/v1/schedules"),
+    staleTime: 5 * 60 * 1000,
   })
 }
 
@@ -176,6 +203,24 @@ export function useAllLeads() {
   return useQuery({
     queryKey: queryKeys.leads.all,
     queryFn: () => apiFetchRQ("/v1/leads?limit=100"),
+  })
+}
+
+/** Lead page settings */
+export function useLeadPageSettings() {
+  return useQuery({
+    queryKey: queryKeys.leadPageSettings(),
+    queryFn: () => apiFetchRQ("/v1/me/lead-page"),
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+/** Lead page leads */
+export function useLeadPageLeads() {
+  return useQuery({
+    queryKey: queryKeys.leadPageLeads(),
+    queryFn: () => apiFetchRQ("/v1/me/leads"),
+    staleTime: 2 * 60 * 1000,
   })
 }
 

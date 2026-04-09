@@ -1,6 +1,8 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
+import { useMe } from "@/hooks/use-api"
+import { useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -54,11 +56,13 @@ function formatPhoneNumber(value: string): string {
 }
 
 export default function ProfilePage() {
-  const [loading, setLoading] = useState(true)
+  const { data: meData, isLoading } = useMe()
+  const queryClient = useQueryClient()
+  const profile = meData as UserProfile | undefined
+  const [formInitialized, setFormInitialized] = useState(false)
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
 
-  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [formData, setFormData] = useState<ProfileFormData>({
     first_name: "",
     last_name: "",
@@ -69,47 +73,25 @@ export default function ProfilePage() {
     avatar_url: null,
   })
 
+  useEffect(() => {
+    if (profile && !formInitialized) {
+      setFormData({
+        first_name: profile.first_name || "",
+        last_name: profile.last_name || "",
+        job_title: profile.job_title || "",
+        company_name: profile.company_name || "",
+        phone: profile.phone ? formatPhoneNumber(profile.phone) : "",
+        website: profile.website || "",
+        avatar_url: profile.avatar_url,
+      })
+      setFormInitialized(true)
+    }
+  }, [profile, formInitialized])
+
   const handlePhoneChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhoneNumber(e.target.value)
     setFormData((prev) => ({ ...prev, phone: formatted }))
   }, [])
-
-  useEffect(() => {
-    loadProfile()
-  }, [])
-
-  async function loadProfile() {
-    setLoading(true)
-    try {
-      const res = await fetch("/api/proxy/v1/users/me", {
-        cache: "no-store",
-        credentials: "include",
-      })
-
-      if (res.ok) {
-        const data: UserProfile = await res.json()
-        setProfile(data)
-        setFormData({
-          first_name: data.first_name || "",
-          last_name: data.last_name || "",
-          job_title: data.job_title || "",
-          company_name: data.company_name || "",
-          phone: data.phone ? formatPhoneNumber(data.phone) : "",
-          website: data.website || "",
-          avatar_url: data.avatar_url,
-        })
-      }
-    } catch (error) {
-      console.error("Failed to load profile:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load profile",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
 
   async function saveProfile() {
     setSaving(true)
@@ -135,8 +117,8 @@ export default function ProfilePage() {
         throw new Error(error.detail || "Failed to save profile")
       }
 
-      const data = await res.json()
-      setProfile(data)
+      await res.json()
+      queryClient.invalidateQueries({ queryKey: ["me"] })
 
       toast({
         title: "Profile Updated",
@@ -162,7 +144,7 @@ export default function ProfilePage() {
     return "U"
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="text-center">

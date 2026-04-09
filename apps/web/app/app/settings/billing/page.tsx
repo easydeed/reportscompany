@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
+import { usePlanUsage } from "@/hooks/use-api"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -69,40 +70,11 @@ const plans = [
 ]
 
 export default function BillingPage() {
-  const [loading, setLoading] = useState(true)
+  const { data: planData, isLoading } = usePlanUsage()
+  const billingData = (planData as PlanUsageData) ?? null
   const [billingLoading, setBillingLoading] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
-
-  const [billingData, setBillingData] = useState<PlanUsageData | null>(null)
-
-  useEffect(() => {
-    loadBilling()
-  }, [])
-
-  async function loadBilling() {
-    setLoading(true)
-    try {
-      const res = await fetch("/api/proxy/v1/account/plan-usage", {
-        cache: "no-store",
-        credentials: "include",
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        setBillingData(data)
-      }
-    } catch (error) {
-      console.error("Failed to load billing:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load billing information",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
 
   async function checkout(planSlug: string) {
     setBillingLoading(true)
@@ -175,7 +147,7 @@ export default function BillingPage() {
     return Math.min(100, (billingData.usage.report_count / limit) * 100)
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="text-center">

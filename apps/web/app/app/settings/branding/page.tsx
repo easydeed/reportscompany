@@ -1,6 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useAccount, useMe } from "@/hooks/use-api"
+import { useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -78,7 +80,12 @@ type BrandingData = {
 }
 
 export default function BrandingPage() {
-  const [loading, setLoading] = useState(true)
+  const { data: accountData, isLoading: accountLoading } = useAccount()
+  const { data: meData, isLoading: meLoading } = useMe()
+  const queryClient = useQueryClient()
+  const isLoading = accountLoading || meLoading
+
+  const [formInitialized, setFormInitialized] = useState(false)
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
 
@@ -110,50 +117,28 @@ export default function BrandingPage() {
   const [sendSuccess, setSendSuccess] = useState(false)
 
   useEffect(() => {
-    loadData()
-  }, [])
-
-  async function loadData() {
-    setLoading(true)
-    try {
-      const [accountRes, profileRes] = await Promise.all([
-        fetch("/api/proxy/v1/account", { cache: "no-store", credentials: "include" }),
-        fetch("/api/proxy/v1/users/me", { cache: "no-store", credentials: "include" }),
-      ])
-
-      if (accountRes.ok) {
-        const data = await accountRes.json()
-        setBranding((prev) => ({
-          ...prev,
-          display_name: data.display_name || data.name || "",
-          primary_color: data.primary_color || "#818CF8",
-          accent_color: data.secondary_color || "#F59E0B",
-          default_theme_id: data.default_theme_id || 4,
-          header_logo_url: data.logo_url || data.email_logo_url || null,
-          footer_logo_url: data.footer_logo_url || data.email_footer_logo_url || null,
-        }))
-      }
-
-      if (profileRes.ok) {
-        const profile = await profileRes.json()
-        const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(" ")
-        setBranding((prev) => ({
-          ...prev,
-          agent_name: fullName || "",
-          agent_title: profile.job_title || "",
-          agent_phone: profile.phone || "",
-          agent_email: profile.email || "",
-          agent_photo_url: profile.avatar_url || null,
-        }))
-        setTestEmail(profile.email || "")
-      }
-    } catch (error) {
-      console.error("Failed to load branding:", error)
-      toast({ title: "Error", description: "Failed to load branding settings", variant: "destructive" })
-    } finally {
-      setLoading(false)
+    if (accountData && meData && !formInitialized) {
+      const acc = accountData as Record<string, any>
+      const profile = meData as Record<string, any>
+      const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(" ")
+      setBranding({
+        display_name: acc.display_name || acc.name || "",
+        tagline: "",
+        primary_color: acc.primary_color || "#818CF8",
+        accent_color: acc.secondary_color || "#F59E0B",
+        default_theme_id: acc.default_theme_id || 4,
+        header_logo_url: acc.logo_url || acc.email_logo_url || null,
+        footer_logo_url: acc.footer_logo_url || acc.email_footer_logo_url || null,
+        agent_name: fullName || "",
+        agent_title: profile.job_title || "",
+        agent_phone: profile.phone || "",
+        agent_email: profile.email || "",
+        agent_photo_url: profile.avatar_url || null,
+      })
+      setTestEmail(profile.email || "")
+      setFormInitialized(true)
     }
-  }
+  }, [accountData, meData, formInitialized])
 
   async function save() {
     setSaving(true)
@@ -190,6 +175,9 @@ export default function BrandingPage() {
       ])
       if (!brandingRes.ok) throw new Error("Failed to save branding")
       if (!profileRes.ok) console.warn("Failed to save agent profile — branding saved OK")
+      queryClient.invalidateQueries({ queryKey: ["account"] })
+      queryClient.invalidateQueries({ queryKey: ["me"] })
+      queryClient.invalidateQueries({ queryKey: ["branding"] })
       toast({ title: "Branding Saved", description: "Your branding has been updated successfully." })
     } catch {
       toast({ title: "Error", description: "Failed to save branding", variant: "destructive" })
@@ -252,7 +240,7 @@ export default function BrandingPage() {
   const update = (patch: Partial<BrandingData>) => setBranding((prev) => ({ ...prev, ...patch }))
   const selectedTheme = THEMES.find((t) => t.id === branding.default_theme_id) || THEMES[3]
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="text-center">

@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ChevronDown, Building2 } from 'lucide-react';
+import { useAccounts } from '@/hooks/use-api';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -28,42 +29,11 @@ interface AccountsResponse {
 }
 
 export function AccountSwitcher() {
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [currentAccount, setCurrentAccount] = useState<Account | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data, isLoading } = useAccounts();
+  const accounts: Account[] = (data as AccountsResponse)?.accounts ?? [];
+  const currentAccount: Account | null = accounts[0] ?? null;
   const [isSwitching, setIsSwitching] = useState(false);
   const { toast } = useToast();
-
-  useEffect(() => {
-    fetchAccounts();
-  }, []);
-
-  async function fetchAccounts() {
-    try {
-      const response = await fetch('/api/proxy/v1/account/accounts');
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch accounts');
-      }
-
-      const data: AccountsResponse = await response.json();
-      setAccounts(data.accounts);
-      
-      // Set the first account as current (backend determines which one is active)
-      if (data.accounts.length > 0) {
-        setCurrentAccount(data.accounts[0]);
-      }
-    } catch (error) {
-      console.error('Failed to load accounts:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load account information',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }
 
   async function switchAccount(accountId: string) {
     if (isSwitching) return;

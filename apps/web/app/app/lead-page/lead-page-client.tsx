@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLeadPageSettings, useLeadPageLeads } from '@/hooks/use-api';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,24 +55,37 @@ interface ConsumerLead {
   updated_at: string;
 }
 
-interface LeadPageClientProps {
-  initialSettings: LeadPageSettings | null;
-  initialLeads: ConsumerLead[];
-}
+export function LeadPageClient() {
+  const { data: settingsData, isLoading: settingsLoading } = useLeadPageSettings();
+  const { data: leadsData, isLoading: leadsLoading } = useLeadPageLeads();
+  const queryClient = useQueryClient();
 
-export function LeadPageClient({ initialSettings, initialLeads }: LeadPageClientProps) {
-  const [settings, setSettings] = useState<LeadPageSettings | null>(initialSettings);
-  const [leads, setLeads] = useState<ConsumerLead[]>(initialLeads);
+  const settings = (settingsData as LeadPageSettings) ?? null;
+  const leads: ConsumerLead[] = (leadsData as any)?.leads ?? [];
+  const isLoading = settingsLoading || leadsLoading;
+
+  const [formInitialized, setFormInitialized] = useState(false);
   const [saving, setSaving] = useState(false);
   const [filter, setFilter] = useState<'all' | 'hot' | 'contacted'>('all');
-  
-  const [headline, setHeadline] = useState(initialSettings?.headline || '');
-  const [subheadline, setSubheadline] = useState(initialSettings?.subheadline || '');
-  const [themeColor, setThemeColor] = useState(initialSettings?.theme_color || '#818CF8');
-  const [enabled, setEnabled] = useState(initialSettings?.enabled !== false);
-  const [agentCode, setAgentCode] = useState(initialSettings?.agent_code || '');
+
+  const [headline, setHeadline] = useState('');
+  const [subheadline, setSubheadline] = useState('');
+  const [themeColor, setThemeColor] = useState('#818CF8');
+  const [enabled, setEnabled] = useState(true);
+  const [agentCode, setAgentCode] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [codeError, setCodeError] = useState('');
+
+  useEffect(() => {
+    if (settings && !formInitialized) {
+      setHeadline(settings.headline || '');
+      setSubheadline(settings.subheadline || '');
+      setThemeColor(settings.theme_color || '#818CF8');
+      setEnabled(settings.enabled !== false);
+      setAgentCode(settings.agent_code || '');
+      setFormInitialized(true);
+    }
+  }, [settings, formInitialized]);
 
   const saveSettings = async () => {
     setSaving(true);
@@ -90,8 +105,8 @@ export function LeadPageClient({ initialSettings, initialLeads }: LeadPageClient
         body: JSON.stringify(payload),
       });
       
-      setSettings(updated);
       setAgentCode(updated.agent_code);
+      queryClient.invalidateQueries({ queryKey: ["lead-page"] });
       toast.success('Settings saved!');
       setShowSettings(false);
       
@@ -158,7 +173,17 @@ export function LeadPageClient({ initialSettings, initialLeads }: LeadPageClient
       : 0,
   };
 
-  // No loading state needed - data comes from server
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto mb-4" />
+          <p className="text-muted-foreground text-sm">Loading lead page...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!settings) {
     return (
       <div className="flex items-center justify-center h-96">
