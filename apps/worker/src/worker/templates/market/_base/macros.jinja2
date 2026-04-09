@@ -133,12 +133,6 @@
   {% endif %}
 </div>
 
-{% if ai_insights or ai_narrative %}
-<div class="quick-take avoid-break">
-  <div class="quick-take-label">Quick Take</div>
-  <p class="quick-take-text">{{ ai_insights or ai_narrative }}</p>
-</div>
-{% endif %}
 {% endmacro %}
 
 
@@ -219,7 +213,7 @@
       </tr>
     </thead>
     <tbody>
-      {% for l in listings[:6] %}
+      {% for l in listings[:5] %}
       <tr>
         <td class="td-address">{{ l.address | default('-') | truncate(28) }}</td>
         <td class="td-muted">{{ l.beds | default('-') }}/{{ l.baths | default('-') }}</td>
@@ -297,13 +291,14 @@
   {% for listing in listings[:3] %}
   <div class="property-card avoid-break">
     <div class="property-card-photo{% if not listing.photo_url %} no-image{% endif %}"{% if listing.photo_url %} style="background-image: url('{{ listing.photo_url }}');"{% endif %}>
-      {% if report_type == 'new_listings' %}
-      <span class="listing-tier-badge {{ tier_classes[loop.index0] }}">{{ tier_labels[loop.index0] }}</span>
-      {% elif listing.status %}
+      {% if report_type != 'new_listings' and listing.status %}
       <span class="property-card-badge">{{ listing.status }}</span>
       {% endif %}
     </div>
     <div class="property-card-info">
+      {% if report_type == 'new_listings' %}
+      <span class="listing-tier-badge {{ tier_classes[loop.index0] }}" style="position:absolute;top:10px;right:10px;">{{ tier_labels[loop.index0] }}</span>
+      {% endif %}
       <div class="property-card-price">{% if listing.list_price %}{{ listing.list_price | format_currency }}{% else %}&mdash;{% endif %}</div>
       <div class="property-card-address">{{ listing.address | default('Address unavailable') | truncate(40) }}{% if listing.city %}, {{ listing.city }}{% endif %}</div>
       <div class="property-card-details">
@@ -405,12 +400,6 @@
 </div>
 {% endif %}
 
-{% if ai_insights or ai_narrative %}
-<div class="quick-take avoid-break">
-  <div class="quick-take-label">Quick Take</div>
-  <p class="quick-take-text">{{ ai_insights or ai_narrative }}</p>
-</div>
-{% endif %}
 {% endmacro %}
 
 
