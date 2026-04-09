@@ -1407,103 +1407,134 @@ def _get_insight_paragraph(
     price_str = _format_price_clean(median_price) if median_price else "varying prices"
     dom_str = f"{avg_dom:.0f} days" if avg_dom else "typical time"
     
+    ctl_str = f"{ctl:.1f}%" if ctl else None
+    ppsf_str = f"${avg_ppsf:,.0f}/sq ft" if avg_ppsf else None
+
     if report_type == "market_snapshot":
-        # V13: Exciting market update language
         if moi and moi < 3:
             return (
                 f"Great news for sellers in {area}—the market is moving fast. "
                 f"With only {moi:.1f} months of inventory and {total_closed} homes sold at a median of {price_str}, "
-                f"buyers are competing for well-priced properties."
+                f"buyers are competing for well-priced properties. "
+                f"Homes are averaging {dom_str} on market, which means pricing right from day one is critical. "
+                f"For buyers, acting decisively and coming in with strong offers is the best strategy in this environment."
             )
         elif moi and moi > 6:
             return (
                 f"Buyers have excellent options in {area} right now. "
                 f"With {moi:.1f} months of inventory and homes averaging {dom_str} on market, "
-                f"there's room to find the perfect fit without rushing."
+                f"there's room to find the perfect fit without rushing. "
+                f"The median sale price sits at {price_str}, and sellers may be more open to negotiation. "
+                f"For sellers, competitive pricing and strong presentation are essential to stand out in a market with more choices."
             )
         else:
             return (
                 f"Healthy activity in {area} this month—{total_closed} families found their new home "
-                f"at a median price of {price_str}. With homes averaging {dom_str} on market, "
-                f"there's time to explore without missing out."
+                f"at a median price of {price_str}. "
+                f"Homes are averaging {dom_str} on market with {moi:.1f} months of inventory, "
+                f"suggesting a balanced environment for both buyers and sellers. "
+                f"Buyers have time to explore without the pressure of bidding wars, "
+                f"while sellers in this range are still seeing solid demand for well-prepared homes."
             )
-    
+
     elif report_type == "new_listings":
         return (
-            f"Fresh opportunities in {area}—{total_active} new properties just hit the market. "
-            f"With a median asking price of {price_str}, there's something for every buyer. "
-            f"These won't last long."
+            f"Fresh opportunities in {area}—{total_active} new properties just hit the market "
+            f"with a median asking price of {price_str}. "
+            f"Current inventory is averaging {dom_str} on market, "
+            f"which signals healthy buyer interest without extreme urgency. "
+            f"For buyers, this is a strong window to tour and compare before the best options go under contract. "
+            f"Sellers entering the market now benefit from steady demand and motivated buyers."
         )
-    
+
     elif report_type == "inventory":
         if moi and moi < 3:
             return (
-                f"Inventory is tight in {area}, so move quickly on properties you love. "
-                f"{total_active} active listings at a median of {price_str}—competition is real, but so are the opportunities."
+                f"Inventory is tight in {area} with just {moi:.1f} months of supply—well below the balanced threshold. "
+                f"{total_active} active listings at a median of {price_str} means competition is real. "
+                f"Homes are moving in an average of {dom_str}, rewarding buyers who act quickly with strong offers. "
+                f"For sellers, this is an excellent time to list—limited supply is keeping upward pressure on prices."
             )
         elif moi and moi > 6:
             return (
                 f"You have options in {area}—{total_active} active listings and {moi:.1f} months of inventory "
-                f"means time to find exactly what you're looking for at a median of {price_str}."
+                f"means time to find exactly what you're looking for at a median of {price_str}. "
+                f"Homes are averaging {dom_str} on market, giving buyers room to negotiate. "
+                f"Sellers should focus on pricing strategically and making homes show-ready to attract serious offers "
+                f"in a market where buyers have the luxury of comparison."
             )
         else:
             return (
-                f"The {area} market is well-balanced right now. "
-                f"{total_active} active listings at a median of {price_str} give you solid options without extreme competition."
+                f"The {area} market is well-balanced right now with {total_active} active listings "
+                f"and {moi:.1f} months of inventory at a median of {price_str}. "
+                f"Homes are averaging {dom_str} on market—neither rushed nor stagnant. "
+                f"Buyers can explore confidently without extreme competition, "
+                f"while sellers benefit from consistent demand that rewards well-priced, well-presented homes."
             )
-    
+
     elif report_type == "closed":
-        ctl_str = f"{ctl:.1f}%" if ctl else "competitive rates"
+        ctl_display = f"Buyers paid {ctl_str} of asking price, " if ctl_str else ""
         return (
             f"The {area} market is active—{total_closed} homes sold in the last {lookback_days} days "
-            f"at a median of {price_str}. Buyers are paying {ctl_str} of asking, "
-            f"showing confidence in property values."
+            f"at a median of {price_str}. "
+            f"{ctl_display}showing confidence in current property values. "
+            f"Homes closed in an average of {dom_str}, reflecting steady buyer demand. "
+            f"For sellers, these results confirm that well-priced properties are finding motivated buyers. "
+            f"For buyers, the pace of sales underscores the importance of being prepared to move when the right home appears."
         )
-    
+
     elif report_type == "price_bands":
         return (
-            f"Price analysis for {area} over the last {lookback_days} days. "
-            f"This report segments the market into price ranges to identify where inventory and buyer activity "
-            f"are concentrated. Faster-moving bands indicate stronger demand."
+            f"Price analysis for {area} over the last {lookback_days} days reveals where the market is most active. "
+            f"This report segments listings into price bands to show where inventory and buyer demand concentrate. "
+            f"The median sits at {price_str} with homes averaging {dom_str} on market. "
+            f"Bands with faster turnover indicate stronger demand—useful for both buyers targeting competitive price points "
+            f"and sellers positioning their listing price for maximum interest."
         )
-    
+
     elif report_type == "new_listings_gallery":
-        # V13: Gallery-specific insight
         total_listings = metrics.get("total_listings", 0)
         min_price = metrics.get("min_price")
         max_price = metrics.get("max_price")
         min_str = _format_price_clean(min_price) if min_price else "various"
         max_str = _format_price_clean(max_price) if max_price else "price points"
-        
+
         if filter_description:
             return (
                 f"Fresh opportunities for {filter_description} buyers in {area}. "
                 f"We found {total_listings} new listings in the last {lookback_days} days, "
-                f"with prices ranging from {min_str} to {max_str}. These curated properties match your specific criteria."
+                f"with prices ranging from {min_str} to {max_str}. "
+                f"These curated properties match your specific criteria and represent the strongest options available right now. "
+                f"Reach out to schedule showings on any that catch your eye—the best ones tend to move quickly."
             )
         else:
             return (
-                f"The newest listings hitting the market in {area}. "
-                f"{total_listings} properties listed in the last {lookback_days} days at a median of {price_str}. "
-                f"Don't miss these fresh opportunities."
+                f"The newest listings hitting the market in {area}—{total_listings} properties "
+                f"listed in the last {lookback_days} days at a median of {price_str}. "
+                f"Prices range from {min_str} to {max_str}, offering options across multiple budgets. "
+                f"Homes are averaging {dom_str} on market, so there's time to compare—but the standouts won't last. "
+                f"Let me know which properties interest you and I'll arrange private showings."
             )
-    
+
     elif report_type == "featured_listings":
-        # V13: Featured listings insight
         total_listings = metrics.get("total_listings", 0)
         max_price = metrics.get("max_price")
         max_str = _format_price_clean(max_price) if max_price else "premium pricing"
-        
+
         return (
             f"Hand-picked properties showcasing the best of {area}. "
             f"These {total_listings} featured homes represent exceptional value and quality, "
-            f"with prices reaching {max_str}."
+            f"with prices reaching {max_str}. "
+            f"Each one was selected for standout features—whether that's location, condition, or price relative to the market. "
+            f"Reach out to schedule private showings on any that catch your attention."
         )
-    
+
     else:
         return (
             f"Market report for {area} covering the last {lookback_days} days. "
-            f"Median price: {price_str}. Average days on market: {dom_str}."
+            f"The median price sits at {price_str} with homes averaging {dom_str} on market. "
+            f"These numbers reflect current conditions for both buyers and sellers in the area. "
+            f"Review the full report for a detailed breakdown of activity, pricing trends, and opportunities."
         )
 
 
@@ -2088,10 +2119,10 @@ def schedule_email_html(
             <td>
               <!--[if mso]>
               <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;height:130px;">
-                <v:fill type="gradient" color="{primary_color}" color2="{accent_color}" angle="135"/>
+                <v:fill type="gradient" color="{primary_color}" color2="{accent_color}" angle="115"/>
                 <v:textbox inset="24px,20px,24px,18px" style="mso-fit-shape-to-text:true">
               <![endif]-->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, {primary_color} 0%, {primary_color} 60%, {accent_color} 100%); background-color: {primary_color}; border-radius: 8px 8px 0 0;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(115deg, {primary_color} 0%, {primary_color} 30%, {accent_color} 100%); background-color: {primary_color}; border-radius: 8px 8px 0 0;">
                 <!-- ROW 1: Centered logo -->
                 <tr>
                   <td align="center" style="padding: 20px 24px 12px;">
