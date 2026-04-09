@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Loader2, ChevronLeft, ChevronRight, Sparkles, Check, FileDown, Globe, CheckCircle2, AlertCircle } from "lucide-react"
+import { Loader2, ChevronLeft, ChevronRight, Sparkles, Check, FileDown, Globe, CheckCircle2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { SharedEmailPreview } from "@/components/shared/email-preview"
@@ -292,8 +292,9 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
       <header className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-gray-200 px-6 py-3">
         <div className="flex items-center justify-between max-w-[1400px] mx-auto">
           <div className="flex items-center gap-3">
-            <Link href={defaultMode === "schedule" ? "/app/schedules" : "/app/reports"} className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
-              <ArrowLeft className="w-4 h-4" />
+            <Link href={defaultMode === "schedule" ? "/app/schedules" : "/app/reports"} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <ChevronLeft className="w-4 h-4" />
+              <span>{defaultMode === "schedule" ? "Schedules" : "Reports"}</span>
             </Link>
             <div>
               <h1 className="text-sm font-semibold text-gray-900">
@@ -305,26 +306,36 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
             </div>
           </div>
 
-          {/* Step indicators */}
-          <div className="hidden md:flex items-center gap-1.5">
-            {effectiveSteps.map((s, i) => {
-              const done = effectiveSteps.indexOf(step) > i
-              const current = s === step
-              return (
-                <div key={s} className="flex items-center gap-1.5">
-                  <div className={cn(
-                    "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold transition-colors",
-                    done ? "bg-emerald-500 text-white" : current ? "bg-primary text-white" : "bg-gray-200 text-gray-500"
-                  )}>
-                    {done ? <Check className="w-3 h-3" /> : i + 1}
+          <div className="flex items-center gap-4">
+            {/* Step indicators */}
+            <div className="hidden md:flex items-center gap-1.5">
+              {effectiveSteps.map((s, i) => {
+                const done = effectiveSteps.indexOf(step) > i
+                const current = s === step
+                return (
+                  <div key={s} className="flex items-center gap-1.5">
+                    <div className={cn(
+                      "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold transition-colors",
+                      done ? "bg-emerald-500 text-white" : current ? "bg-primary text-white" : "bg-gray-200 text-gray-500"
+                    )}>
+                      {done ? <Check className="w-3 h-3" /> : i + 1}
+                    </div>
+                    <span className={cn("text-[11px]", current ? "text-gray-900 font-medium" : "text-gray-400")}>
+                      {STEP_LABELS[s]}
+                    </span>
+                    {i < effectiveSteps.length - 1 && <div className="w-6 h-px bg-gray-300" />}
                   </div>
-                  <span className={cn("text-[11px]", current ? "text-gray-900 font-medium" : "text-gray-400")}>
-                    {STEP_LABELS[s]}
-                  </span>
-                  {i < effectiveSteps.length - 1 && <div className="w-6 h-px bg-gray-300" />}
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(defaultMode === "schedule" ? "/app/schedules" : "/app/reports")}
+            >
+              Cancel
+            </Button>
           </div>
         </div>
       </header>

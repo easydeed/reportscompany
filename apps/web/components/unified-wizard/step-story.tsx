@@ -1,8 +1,17 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { Check } from "lucide-react"
+import { Check, Home, BadgeDollarSign, TrendingUp, Building2, Award } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import { STORIES, type StoryType } from "./types"
+
+const iconMap: Record<string, LucideIcon> = {
+  home: Home,
+  "badge-dollar-sign": BadgeDollarSign,
+  "trending-up": TrendingUp,
+  "building-2": Building2,
+  award: Award,
+}
 
 interface StepStoryProps {
   selected: StoryType | null
@@ -20,6 +29,7 @@ export function StepStory({ selected, onSelect }: StepStoryProps) {
       <div className="grid gap-3">
         {STORIES.map((story) => {
           const active = selected === story.id
+          const Icon = iconMap[story.icon]
           return (
             <button
               key={story.id}
@@ -31,7 +41,14 @@ export function StepStory({ selected, onSelect }: StepStoryProps) {
                   : "border-gray-200 hover:border-primary/40 hover:bg-gray-50/50"
               )}
             >
-              <span className="text-2xl flex-shrink-0 mt-0.5">{story.icon}</span>
+              {Icon && (
+                <Icon
+                  className={cn(
+                    "w-6 h-6 flex-shrink-0 mt-0.5",
+                    active ? "text-primary" : "text-muted-foreground"
+                  )}
+                />
+              )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-base font-semibold text-gray-900">{story.title}</span>
