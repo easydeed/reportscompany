@@ -1,6 +1,7 @@
 {# =============================================================================
-   BASE MARKET REPORT TEMPLATE — V0 Final Design (trendy-reports.html)
-   CSS copied from the V0 spec. Theme files override :root vars.
+   BASE MARKET REPORT TEMPLATE — V0 Final Design System
+   CSS consolidated from the 4 V0 layout specs (docs/design/).
+   Theme files override :root vars via the theme_styles block.
    ============================================================================= #}
 
 {% import '_base/macros.jinja2' as macros %}
@@ -18,798 +19,782 @@
   {% block fonts %}{% endblock %}
 
   <style>
-    /* ============================================
-       CSS CUSTOM PROPERTIES (THEMEABLE)
-       ============================================ */
+    /* ===================== CSS CUSTOM PROPERTIES ===================== */
     :root {
-      --primary-color: #18235c;
+      --primary-color: #0d9488;
       --accent-color: #0d9488;
-      --accent-light: #ccfbf1;
+      --accent-light: #a6e4de;
       --accent-on-dark: #5eead4;
-      --accent-on-light: #0f766e;
-      --header-bg: linear-gradient(135deg, #18235c 0%, #1e3a5f 60%, #0d9488 100%);
+      --accent-on-light: #0d7268;
+      --accent-text: #ffffff;
+      --header-bg: #18235c;
 
-      --text-primary: #1f2937;
-      --text-secondary: #6b7280;
-      --text-muted: #9ca3af;
-      --border-color: #e5e7eb;
-      --border-light: #f3f4f6;
-      --bg-subtle: #f9fafb;
-      --bg-white: #ffffff;
+      --page-width: 8.5in;
+      --page-height: 11in;
+      --page-padding: 0.45in;
 
-      --status-active: #059669;
-      --status-active-bg: #d1fae5;
-      --status-pending: #d97706;
-      --status-pending-bg: #fef3c7;
-      --status-sold: #dc2626;
-      --status-sold-bg: #fee2e2;
+      --font-display: 'DM Serif Display', Georgia, serif;
+      --font-body: 'Inter', system-ui, -apple-system, sans-serif;
 
-      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --white: #ffffff;
+      --gray-50: #fafaf9;
+      --gray-100: #f5f5f4;
+      --gray-200: #e7e5e4;
+      --gray-300: #d6d3d1;
+      --gray-400: #a8a29e;
+      --gray-500: #78716c;
+      --gray-600: #57534e;
+      --gray-700: #44403c;
+      --gray-800: #292524;
+      --gray-900: #1c1917;
+
+      --shadow-card: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
     }
 
-    /* ============================================
-       PRINT STYLES
-       ============================================ */
+    /* ===================== RESET & PRINT ===================== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     @page { size: letter; margin: 0; }
 
     @media print {
-      body {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-        background: white !important;
-      }
-      .report-page {
-        box-shadow: none !important;
-        margin: 0 !important;
-        page-break-after: always;
-        page-break-inside: avoid;
-      }
+      html, body { background: white; margin: 0; padding: 0; }
+      .report-page { box-shadow: none; page-break-after: always; page-break-inside: avoid; }
+      .report-page:last-child { page-break-after: auto; }
+      .avoid-break { page-break-inside: avoid; break-inside: avoid; }
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
 
-    /* ============================================
-       BASE STYLES
-       ============================================ */
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
+    html, body {
       font-family: var(--font-body);
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--gray-900);
       background: white;
-      color: var(--text-primary);
-      line-height: 1.4;
       -webkit-font-smoothing: antialiased;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
     }
 
-    /* ============================================
-       REPORT PAGE SHELL
-       ============================================ */
+    /* ===================== PAGE SHELL ===================== */
     .report-page {
-      width: 8.5in;
-      height: 11in;
-      background: var(--bg-white);
+      width: var(--page-width);
+      height: var(--page-height);
+      background: var(--white);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ===================== GRADIENT HEADER (2-column) ===================== */
+    .report-header {
+      background: linear-gradient(135deg, var(--header-bg) 0%, var(--header-bg) 50%, var(--primary-color) 100%);
+      padding: 15px 15px;
+      color: var(--white);
+      flex-shrink: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header-left {
+      flex: 0 0 65%;
+      min-width: 0;
+    }
+
+    .header-right {
+      flex: 0 0 35%;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .header-logo {
+      max-height: 40px;
+      width: auto;
+      object-fit: contain;
+    }
+
+    .header-title {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--white);
+      line-height: 1.2;
+      margin-bottom: 4px;
+    }
+
+    .header-title span {
+      font-weight: 400;
+      opacity: 0.85;
+    }
+
+    .header-subtitle {
+      font-size: 11px;
+      color: rgba(255,255,255,0.7);
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      margin-bottom: 8px;
+    }
+
+    .header-subtitle span {
+      color: var(--accent-on-dark);
+      font-weight: 600;
+    }
+
+    .header-metric {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .header-metric-value {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--white);
+      line-height: 1;
+    }
+
+    .header-metric-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.7);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* ===================== CONTENT AREA ===================== */
+    .page-content {
+      flex: 1;
+      padding: 0 var(--page-padding);
       display: flex;
       flex-direction: column;
       overflow: hidden;
     }
 
-    /* ============================================
-       HEADER
-       ============================================ */
-    .report-header {
-      background: var(--header-bg);
-      padding: 16px 24px;
+    /* ===================== COUNT BADGE (Gallery) ===================== */
+    .count-bar {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 0 12px;
+      border-bottom: 1px solid var(--gray-200);
+      margin-bottom: 16px;
     }
 
-    .report-header .title-block h1 {
-      color: white;
-      font-size: 20px;
+    .count-circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--primary-color);
+      color: var(--accent-text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .count-label {
+      font-size: 14px;
       font-weight: 600;
-      letter-spacing: -0.01em;
+      color: var(--gray-900);
     }
 
-    .report-header .title-block h1 span {
+    .count-sublabel {
+      font-size: 11px;
+      color: var(--gray-500);
       font-weight: 400;
     }
 
-    .report-header .title-block .meta {
-      color: var(--accent-on-dark);
-      font-size: 10px;
-      margin-top: 2px;
-    }
-
-    .report-header .metric-block {
-      text-align: right;
-    }
-
-    .report-header .metric-block .value {
-      color: white;
-      font-size: 26px;
-      font-weight: 600;
-      font-family: Georgia, serif;
-      letter-spacing: -0.02em;
-    }
-
-    .report-header .metric-block .label {
-      color: var(--accent-on-dark);
-      font-size: 10px;
-    }
-
-    /* ============================================
-       CONTENT ZONE
-       ============================================ */
-    .content-zone {
+    .count-divider {
       flex: 1;
-      padding: 14px 18px;
+      height: 1px;
+      background: var(--gray-200);
+    }
+
+    /* ===================== GALLERY GRID (Layout A) ===================== */
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      flex: 1;
+    }
+
+    .listing-card {
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--gray-200);
+      box-shadow: var(--shadow-card);
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      overflow: hidden;
-      justify-content: space-between;
     }
 
-    .content-zone.has-narrative {
-      justify-content: flex-start;
+    .listing-photo {
+      width: 100%;
+      height: 140px;
+      background-color: var(--gray-100);
+      background-size: cover;
+      background-position: center;
+      position: relative;
     }
 
-    .ai-narrative {
-      background: var(--accent-light);
-      border: 1px solid #99f6e4;
-      border-radius: 6px;
-      padding: 10px 12px;
+    .listing-photo.no-image {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gray-400);
     }
 
-    .ai-narrative .narrative-label {
-      font-size: 8px;
-      font-weight: 600;
+    .listing-photo.no-image::after {
+      content: "\1F3E0";
+      font-size: 32px;
+      opacity: 0.5;
+    }
+
+    .listing-status {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      font-size: 9px;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--accent-on-light);
+      letter-spacing: 1px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: var(--primary-color);
+      color: var(--accent-text);
+    }
+
+    .listing-status.featured {
+      background: #f59e0b;
+    }
+
+    .listing-info {
+      padding: 10px 12px 12px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .listing-price {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--gray-900);
       margin-bottom: 2px;
     }
 
-    .ai-narrative .narrative-text {
-      font-size: 10px;
-      color: var(--text-primary);
-      line-height: 1.5;
+    .listing-address {
+      font-size: 11px;
+      color: var(--gray-600);
+      margin-bottom: 8px;
+      line-height: 1.3;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
-    /* ============================================
-       AGENT FOOTER
-       ============================================ */
+    .listing-details {
+      display: flex;
+      gap: 10px;
+      margin-top: auto;
+    }
+
+    .listing-detail {
+      font-size: 11px;
+      color: var(--gray-500);
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .listing-detail strong {
+      color: var(--gray-700);
+      font-weight: 600;
+    }
+
+    /* ===================== HERO STAT ===================== */
+    .hero-stat {
+      text-align: center;
+      padding: 18px 0 14px;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .hero-stat-value {
+      font-family: var(--font-display);
+      font-size: 56px;
+      font-weight: 700;
+      color: var(--primary-color);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .hero-stat-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .hero-stat-trend {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 6px;
+      padding: 3px 10px;
+      border-radius: 12px;
+    }
+
+    .hero-stat-trend.up {
+      color: #15803d;
+      background: #f0fdf4;
+    }
+
+    .hero-stat-trend.down {
+      color: #b91c1c;
+      background: #fef2f2;
+    }
+
+    /* ===================== AI NARRATIVE ===================== */
+    .ai-narrative {
+      padding: 16px 0;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .ai-narrative-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--accent-on-light);
+      margin-bottom: 8px;
+    }
+
+    .ai-narrative-text {
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--gray-700);
+    }
+
+    /* ===================== PHOTO GRID (2x2) ===================== */
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      padding: 14px 0;
+    }
+
+    .photo-grid-item {
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+      height: 105px;
+      background-color: var(--gray-100);
+      background-size: cover;
+      background-position: center;
+    }
+
+    .photo-badge {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      color: var(--white);
+    }
+
+    .photo-badge.sold { background: #b91c1c; }
+    .photo-badge.active { background: #15803d; }
+    .photo-badge.pending { background: #d97706; }
+
+    .photo-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 6px 10px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.6));
+      color: var(--white);
+    }
+
+    .photo-overlay-price {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .photo-overlay-address {
+      font-size: 9px;
+      opacity: 0.85;
+    }
+
+    /* ===================== DATA TABLE ===================== */
+    .data-table-section {
+      padding: 0 0 10px;
+    }
+
+    .data-table-title {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--accent-on-light);
+      margin-bottom: 8px;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--gray-200);
+    }
+
+    .data-table thead th {
+      background: var(--header-bg);
+      color: var(--white);
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 8px 10px;
+      text-align: left;
+    }
+
+    .data-table thead th:last-child,
+    .data-table thead th:nth-child(n+3) {
+      text-align: right;
+    }
+
+    .data-table tbody td {
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--gray-100);
+      vertical-align: middle;
+    }
+
+    .data-table tbody tr:nth-child(even) { background: var(--gray-50); }
+
+    .data-table tbody td:last-child,
+    .data-table tbody td:nth-child(n+3) {
+      text-align: right;
+    }
+
+    .data-table .td-price {
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--gray-900);
+      font-size: 12px;
+    }
+
+    .data-table .td-address {
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--gray-700);
+      font-weight: 500;
+    }
+
+    .data-table .td-muted {
+      color: var(--gray-500);
+    }
+
+    /* ===================== STATS BAR ===================== */
+    .stats-bar {
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--gray-200);
+      margin-bottom: 10px;
+    }
+
+    .stats-bar-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+    }
+
+    .stats-bar-row:nth-child(odd) { background: var(--white); }
+    .stats-bar-row:nth-child(even) { background: var(--gray-50); }
+
+    .stats-bar-label {
+      font-size: 12px;
+      color: var(--gray-600);
+    }
+
+    .stats-bar-value {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--gray-900);
+    }
+
+    /* ===================== QUICK TAKE ===================== */
+    .quick-take {
+      background: var(--accent-light);
+      border-left: 3px solid var(--primary-color);
+      border-radius: 0 8px 8px 0;
+      padding: 10px 14px;
+      margin-top: auto;
+      margin-bottom: 6px;
+    }
+
+    .quick-take-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--accent-on-light);
+      margin-bottom: 3px;
+    }
+
+    .quick-take-text {
+      font-size: 11px;
+      line-height: 1.5;
+      color: var(--gray-700);
+    }
+
+    /* ===================== STAT BLOCKS (Analytics 2x2) ===================== */
+    .stat-blocks {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .stat-block {
+      border: 1px solid var(--gray-200);
+      border-radius: 10px;
+      padding: 14px 16px;
+      text-align: center;
+    }
+
+    .stat-block-value {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--gray-900);
+      line-height: 1.1;
+      margin-bottom: 2px;
+    }
+
+    .stat-block-label {
+      font-size: 10px;
+      color: var(--gray-500);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .stat-block-accent .stat-block-value {
+      color: var(--primary-color);
+    }
+
+    .stat-block-accent {
+      background: var(--accent-light);
+      border-color: transparent;
+    }
+
+    /* ===================== PROPERTY LIST (Analytics) ===================== */
+    .property-list {
+      flex: 1;
+      padding: 14px 0 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .property-card {
+      display: flex;
+      border: 1px solid var(--gray-200);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+    }
+
+    .property-card-photo {
+      width: 140px;
+      min-height: 110px;
+      background-color: var(--gray-100);
+      background-size: cover;
+      background-position: center;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .property-card-photo.no-image {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gray-400);
+      font-size: 28px;
+    }
+
+    .property-card-badge {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 2px 7px;
+      border-radius: 3px;
+      background: var(--primary-color);
+      color: var(--accent-text);
+    }
+
+    .property-card-info {
+      flex: 1;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .property-card-price {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: 2px;
+    }
+
+    .property-card-address {
+      font-size: 12px;
+      color: var(--gray-600);
+      margin-bottom: 8px;
+    }
+
+    .property-card-details {
+      display: flex;
+      gap: 14px;
+    }
+
+    .property-card-detail {
+      font-size: 11px;
+      color: var(--gray-500);
+    }
+
+    .property-card-detail strong {
+      color: var(--gray-700);
+      font-weight: 600;
+    }
+
+    /* ===================== AGENT FOOTER ===================== */
     .agent-footer {
-      padding: 16px 24px;
-      border-top: 1px solid var(--border-color);
-      background: var(--bg-subtle);
+      flex-shrink: 0;
+      padding: 12px var(--page-padding) 14px;
+      border-top: 1px solid var(--gray-200);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--gray-50);
+    }
+
+    .agent-info {
       display: flex;
       align-items: center;
       gap: 12px;
     }
 
-    .agent-footer .agent-photo {
-      width: 56px;
-      height: 56px;
+    .agent-photo {
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
+      object-fit: cover;
+      border: 2px solid var(--accent-light);
       flex-shrink: 0;
-      overflow: hidden;
     }
 
-    .agent-footer .agent-info {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .agent-footer .agent-info .name {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-
-    .agent-footer .agent-info .title {
-      font-size: 11px;
-      color: var(--text-secondary);
-    }
-
-    .agent-footer .contact-info {
-      text-align: right;
-      font-size: 10px;
-      color: var(--text-secondary);
-    }
-
-    .agent-footer .company-info {
-      padding-left: 12px;
-      border-left: 1px solid var(--border-color);
-    }
-
-    .agent-footer .company-info .company-name {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text-primary);
-    }
-
-    .agent-footer .company-info .company-logo {
-      max-height: 32px;
-      width: auto;
-      display: block;
-      margin-bottom: 2px;
-    }
-
-    .agent-footer .company-info .company-url {
-      font-size: 10px;
-      color: var(--text-secondary);
-    }
-
-    /* ============================================
-       POWERED BY FOOTER
-       ============================================ */
-    .powered-by {
-      padding: 6px;
-      text-align: center;
-      border-top: 1px solid var(--border-light);
-    }
-
-    .powered-by p {
-      font-size: 9px;
-      color: var(--text-muted);
-    }
-
-    /* ============================================
-       GALLERY LAYOUT (Layout A)
-       ============================================ */
-    .gallery-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-    }
-
-    .listing-card {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .listing-card .photo {
-      aspect-ratio: 3/2.4;
-      background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
-      border-radius: 4px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .listing-card .photo .badge {
-      position: absolute;
-      top: 5px;
-      left: 5px;
-      font-size: 7px;
-      font-weight: 600;
-      padding: 2px 5px;
-      border-radius: 2px;
-      text-transform: uppercase;
-      z-index: 1;
-    }
-
-    .listing-card .photo .badge.featured {
-      background: #f59e0b;
-      color: white;
-    }
-
-    .listing-card .photo .badge.time {
-      background: var(--accent-color);
-      color: white;
-    }
-
-    .listing-card .photo .price-overlay {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
-      padding: 8px;
-    }
-
-    .listing-card .photo .price-overlay .price {
-      font-size: 13px;
-      font-weight: 600;
-      font-family: Georgia, serif;
-      color: white;
-    }
-
-    .listing-card .details {
-      padding-top: 6px;
-    }
-
-    .listing-card .details .address {
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--text-primary);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      line-height: 1.2;
-    }
-
-    .listing-card .details .location {
-      font-size: 9px;
-      color: var(--text-secondary);
-    }
-
-    .listing-card .details .price-specs {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      margin-top: 2px;
-    }
-
-    .listing-card .details .price-specs .price {
-      font-size: 13px;
-      font-weight: 600;
-      font-family: Georgia, serif;
-      color: var(--primary-color);
-    }
-
-    .listing-card .details .price-specs .specs {
-      font-size: 9px;
-      color: var(--text-secondary);
-    }
-
-    /* ============================================
-       MARKET SNAPSHOT (Layout B)
-       ============================================ */
-    .snapshot-top {
-      display: flex;
-      gap: 10px;
-    }
-
-    .hero-metric {
-      width: 110px;
-      flex-shrink: 0;
-      background: linear-gradient(135deg, var(--primary-color) 0%, #1e3a5f 100%);
-      border-radius: 6px;
-      padding: 10px;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .hero-metric .value {
-      font-size: 22px;
-      font-weight: 700;
-      font-family: Georgia, serif;
-      color: white;
-      letter-spacing: -0.02em;
-    }
-
-    .hero-metric .label {
-      font-size: 9px;
-      color: var(--accent-on-dark);
-      margin-top: 1px;
-    }
-
-    .hero-metric .change {
-      font-size: 9px;
-      color: #5eead4;
-    }
-
-    .ai-insight {
-      flex: 1;
+    .agent-photo-placeholder {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
       background: var(--accent-light);
-      border: 1px solid #99f6e4;
-      border-radius: 6px;
-      padding: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary-color);
+      flex-shrink: 0;
     }
 
-    .ai-insight .insight-label {
-      font-size: 8px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--accent-on-light);
-      margin-bottom: 2px;
+    .agent-name {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: 1px;
     }
 
-    .ai-insight p {
+    .agent-title {
       font-size: 10px;
-      color: var(--text-primary);
-      line-height: 1.45;
+      color: var(--gray-500);
+      margin-bottom: 3px;
     }
 
-    .photo-grid-4 {
-      flex: 1;
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-    }
-
-    .photo-grid-4 .photo-item {
-      aspect-ratio: 3/4;
-      background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
-      border-radius: 4px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .photo-grid-4 .photo-item .overlay {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
-      padding: 10px;
-    }
-
-    .photo-grid-4 .photo-item .overlay .addr {
-      font-size: 10px;
-      font-weight: 500;
-      color: white;
-      line-height: 1.2;
-    }
-
-    .photo-grid-4 .photo-item .overlay .price {
-      font-size: 11px;
-      font-weight: 600;
-      font-family: Georgia, serif;
-      color: rgba(255,255,255,0.95);
-    }
-
-    .photo-grid-4 .photo-item .overlay .status {
-      font-size: 7px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: rgba(255,255,255,0.7);
-    }
-
-    .stats-bar {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
+    .agent-contact {
+      display: flex;
       gap: 6px;
     }
 
-    .stats-bar .stat {
-      background: var(--bg-subtle);
-      border: 1px solid var(--border-light);
-      border-radius: 4px;
-      padding: 6px;
-      text-align: center;
-    }
-
-    .stats-bar .stat .value {
-      font-size: 14px;
-      font-weight: 600;
-      font-family: Georgia, serif;
-      color: var(--primary-color);
-    }
-
-    .stats-bar .stat .label {
-      font-size: 8px;
-      color: var(--text-secondary);
-    }
-
-    .quick-take {
-      background: var(--accent-light);
-      border: 1px solid #99f6e4;
-      border-radius: 4px;
-      padding: 8px 10px;
-    }
-
-    .quick-take .qt-label {
-      font-size: 8px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+    .agent-contact-pill {
+      font-size: 9px;
       color: var(--accent-on-light);
-      margin-bottom: 2px;
-    }
-
-    .quick-take p {
-      font-size: 10px;
-      color: var(--text-primary);
-      line-height: 1.4;
-    }
-
-    /* ============================================
-       CLOSED / INVENTORY (Layout C)
-       ============================================ */
-    .ci-top {
-      display: flex;
-      gap: 10px;
-    }
-
-    .ci-hero {
-      background: linear-gradient(135deg, var(--primary-color) 0%, #1e3a5f 100%);
-      border-radius: 6px;
-      padding: 10px;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      aspect-ratio: 3/2.5;
-    }
-
-    .ci-hero .value {
-      font-size: 28px;
-      font-weight: 700;
-      font-family: Georgia, serif;
-      color: white;
-    }
-
-    .ci-hero .label {
-      font-size: 9px;
-      color: var(--accent-on-dark);
-    }
-
-    .ci-photo-grid {
-      flex: 1;
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 6px;
-    }
-
-    .ci-photo-grid .photo {
-      aspect-ratio: 3/2.5;
-      background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
-      border-radius: 3px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .ci-photo-grid .photo .status-badge {
-      position: absolute;
-      top: 4px;
-      left: 4px;
-      font-size: 6px;
-      font-weight: 600;
-      padding: 2px 4px;
-      border-radius: 2px;
-      text-transform: uppercase;
-    }
-
-    .ci-photo-grid .photo .status-badge.active { background: var(--status-active); color: white; }
-    .ci-photo-grid .photo .status-badge.pending { background: var(--status-pending); color: white; }
-    .ci-photo-grid .photo .status-badge.sold { background: var(--status-sold); color: white; }
-    .ci-photo-grid .photo .status-badge.closed { background: var(--status-sold); color: white; }
-
-    .data-table {
-      flex: 1;
-      overflow: hidden;
-      margin-top: 8px;
-    }
-
-    .data-table table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 9px;
-    }
-
-    .data-table th {
-      text-align: left;
-      padding: 6px 4px;
+      border: 1px solid var(--accent-light);
+      padding: 2px 7px;
+      border-radius: 12px;
       font-weight: 500;
-      color: var(--text-secondary);
-      border-bottom: 1px solid var(--border-color);
     }
 
-    .data-table th.center { text-align: center; }
-    .data-table th.right { text-align: right; }
-
-    .data-table td {
-      padding: 6px 4px;
-      border-bottom: 1px solid var(--border-light);
-      color: var(--text-primary);
+    .agent-footer-logo {
+      max-height: 28px;
+      max-width: 100px;
+      object-fit: contain;
+      opacity: 0.7;
     }
 
-    .data-table td.center { text-align: center; color: var(--text-secondary); }
-    .data-table td.right { text-align: right; }
-    .data-table td.price {
-      font-weight: 500;
-      color: var(--primary-color);
-    }
-
-    .inline-badge {
-      display: inline-block;
-      font-size: 7px;
-      font-weight: 500;
-      padding: 2px 5px;
-      border-radius: 2px;
-    }
-
-    .inline-badge.active { background: var(--status-active-bg); color: var(--status-active); }
-    .inline-badge.pending { background: var(--status-pending-bg); color: var(--status-pending); }
-    .inline-badge.sold { background: var(--status-sold-bg); color: var(--status-sold); }
-    .inline-badge.closed { background: var(--status-sold-bg); color: var(--status-sold); }
-
-    .stats-bar-sm {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 5px;
-    }
-
-    .stats-bar-sm .stat {
-      background: var(--bg-subtle);
-      border: 1px solid var(--border-light);
-      border-radius: 3px;
-      padding: 5px;
-      text-align: center;
-    }
-
-    .stats-bar-sm .stat .value {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--primary-color);
-    }
-
-    .stats-bar-sm .stat .label {
-      font-size: 7px;
-      color: var(--text-secondary);
-    }
-
-    /* ============================================
-       ANALYTICS (Layout D)
-       ============================================ */
-    .analytics-top {
-      display: flex;
-      gap: 8px;
-    }
-
-    .analytics-hero {
-      width: 90px;
+    /* ===================== PAGE FOOTER ===================== */
+    .page-footer {
       flex-shrink: 0;
-      background: linear-gradient(135deg, var(--primary-color) 0%, #1e3a5f 100%);
-      border-radius: 6px;
-      padding: 10px;
       text-align: center;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .analytics-hero .value {
-      font-size: 20px;
-      font-weight: 700;
-      font-family: Georgia, serif;
-      color: white;
-    }
-
-    .analytics-hero .label {
-      font-size: 8px;
-      color: var(--accent-on-dark);
-    }
-
-    .stat-cards-grid {
-      flex: 1;
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 5px;
-    }
-
-    .stat-cards-grid .stat-card {
-      background: var(--bg-subtle);
-      border: 1px solid var(--border-light);
-      border-radius: 4px;
-      padding: 6px 4px;
-      text-align: center;
-    }
-
-    .stat-cards-grid .stat-card .value {
-      font-size: 14px;
-      font-weight: 600;
-      font-family: Georgia, serif;
-      color: var(--primary-color);
-    }
-
-    .stat-cards-grid .stat-card .label {
-      font-size: 7px;
-      color: var(--text-secondary);
-      line-height: 1.2;
-      margin-top: 1px;
-    }
-
-    .listing-rows {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .listing-row {
-      display: flex;
-      align-items: stretch;
-      gap: 12px;
-      background: var(--bg-subtle);
-      border: 1px solid var(--border-light);
-      border-radius: 4px;
-      overflow: hidden;
-    }
-
-    .listing-row .thumb {
-      width: 120px;
-      aspect-ratio: 4/3;
-      background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
-      flex-shrink: 0;
-      position: relative;
-    }
-
-    .listing-row .thumb .status-badge {
-      position: absolute;
-      bottom: 4px;
-      left: 4px;
-      font-size: 7px;
-      font-weight: 600;
-      padding: 2px 5px;
-      border-radius: 2px;
-    }
-
-    .listing-row .thumb .status-badge.active { background: var(--status-active-bg); color: var(--status-active); }
-    .listing-row .thumb .status-badge.pending { background: var(--status-pending-bg); color: var(--status-pending); }
-
-    .listing-row .info {
-      flex: 1;
-      min-width: 0;
-      padding: 8px 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .listing-row .info .addr {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text-primary);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .listing-row .info .city {
+      padding: 5px var(--page-padding);
       font-size: 9px;
-      color: var(--text-secondary);
+      color: var(--gray-400);
+      border-top: 1px solid var(--gray-100);
     }
 
-    .listing-row .info .specs {
-      font-size: 9px;
-      color: var(--text-secondary);
-      margin-top: 2px;
-    }
-
-    .listing-row .price-block {
-      text-align: right;
-      padding-right: 12px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .listing-row .price-block .price {
-      font-size: 16px;
-      font-weight: 600;
-      font-family: Georgia, serif;
-      color: var(--primary-color);
-    }
-
-    /* ============================================
-       THEME OVERRIDES (injected by child template)
-       ============================================ */
+    /* ===================== THEME OVERRIDES ===================== */
     {% block theme_styles %}{% endblock %}
   </style>
 </head>
 <body>
   <div class="report-page">
-    {{ macros.report_header(header, stats, report_type) }}
+    {{ macros.report_header(header, report_type, agent) }}
 
-    <div class="content-zone{% if ai_narrative %} has-narrative{% endif %}">
+    <div class="page-content">
       {% block content %}
         {% if layout == "gallery" %}
           {{ macros.gallery_layout(header, listings, stats, report_type, agent, ai_narrative) }}
         {% elif layout == "market_narrative" %}
-          {{ macros.market_narrative_layout(header, listings, stats, ai_insights, agent, ai_narrative) }}
+          {{ macros.market_narrative_layout(header, listings, stats, report_type, agent, ai_insights, ai_narrative) }}
         {% elif layout == "closed_inventory" %}
           {{ macros.closed_inventory_layout(header, listings, stats, report_type, agent, ai_insights, ai_narrative) }}
         {% elif layout == "analytics" %}
-          {{ macros.analytics_layout(header, listings, stats, price_bands, agent, ai_insights, report_type, ai_narrative) }}
+          {{ macros.analytics_layout(header, listings, stats, price_bands, report_type, agent, ai_insights, ai_narrative) }}
         {% else %}
           {{ macros.gallery_layout(header, listings, stats, report_type, agent, ai_narrative) }}
         {% endif %}
@@ -817,29 +802,17 @@
     </div>
 
     {{ macros.agent_footer(agent) }}
-    {{ macros.powered_footer() }}
+    {{ macros.page_footer() }}
   </div>
 
-  {# Force font rendering before PDF capture #}
   <div style="position:absolute;left:-9999px;top:-9999px;opacity:0;pointer-events:none;" aria-hidden="true">
-    <span style="font-family:var(--font-display);font-weight:400;">.</span>
-    <span style="font-family:var(--font-display);font-weight:600;">.</span>
-    <span style="font-family:var(--font-display);font-weight:700;">.</span>
-    <span style="font-family:var(--font-display);font-weight:800;">.</span>
-    <span style="font-family:var(--font-body);font-weight:400;">.</span>
-    <span style="font-family:var(--font-body);font-weight:500;">.</span>
-    <span style="font-family:var(--font-body);font-weight:600;">.</span>
-    <span style="font-family:var(--font-body);font-weight:700;">.</span>
-  </div>
-  <div aria-hidden="true" style="position:absolute;left:-9999px;top:0;opacity:0;font-size:1px;line-height:1;pointer-events:none;">
-    <span style="font-family:'Inter',sans-serif">.</span>
-    <span style="font-family:'Playfair Display',serif">.</span>
-    <span style="font-family:'Montserrat',sans-serif">.</span>
-    <span style="font-family:'Libre Baskerville',serif">.</span>
-    <span style="font-family:'Cormorant Garamond',serif">.</span>
-    <span style="font-family:'DM Sans',sans-serif">.</span>
-    <span style="font-family:'Space Grotesk',sans-serif">.</span>
-    <span style="font-family:'Georgia',serif">.</span>
+    <span style="font-family:'DM Serif Display',serif;font-weight:400;">.</span>
+    <span style="font-family:'Inter',sans-serif;font-weight:400;">.</span>
+    <span style="font-family:'Inter',sans-serif;font-weight:500;">.</span>
+    <span style="font-family:'Inter',sans-serif;font-weight:600;">.</span>
+    <span style="font-family:'Inter',sans-serif;font-weight:700;">.</span>
+    <span style="font-family:'Georgia',serif;font-weight:400;">.</span>
+    <span style="font-family:'Georgia',serif;font-weight:700;">.</span>
   </div>
 </body>
 </html>
