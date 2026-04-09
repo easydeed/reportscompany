@@ -2079,20 +2079,27 @@ def schedule_email_html(
         <!-- Email Wrapper -->
         <table role="presentation" cellpadding="0" cellspacing="0" width="600" class="wrapper" style="max-width: 600px; width: 100%;">
           
-          <!-- ========== V0 HEADER: 2-column gradient banner ========== -->
+          <!-- ========== HEADER: 3-row gradient banner ========== -->
           <tr>
             <td>
               <!--[if mso]>
-              <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;">
+              <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;height:130px;">
                 <v:fill type="gradient" color="{primary_color}" color2="{accent_color}" angle="135"/>
-                <v:textbox inset="28px,24px,28px,24px" style="mso-fit-shape-to-text:true">
+                <v:textbox inset="24px,20px,24px,18px" style="mso-fit-shape-to-text:true">
               <![endif]-->
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, {primary_color} 0%, {primary_color} 60%, {accent_color} 100%); background-color: {primary_color}; border-radius: 8px 8px 0 0;">
+                <!-- ROW 1: Centered logo -->
                 <tr>
-                  <td style="padding: 24px 28px;">
+                  <td align="center" style="padding: 20px 24px 12px;">
+                    {f'<img src="{header_logo_url}" alt="{brand_name}" style="display: block; max-height: 45px; max-width: 180px; width: auto; height: auto; margin: 0 auto;" />' if header_logo_url else ''}
+                  </td>
+                </tr>
+                <!-- ROW 2: Title (65%) + Metric (35%) -->
+                <tr>
+                  <td style="padding: 0 24px;">
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                       <tr>
-                        <td style="vertical-align: middle;">
+                        <td width="65%" style="vertical-align: middle;">
                           <p style="margin: 0 0 4px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: bold; color: #ffffff;">
                             {report_label} &mdash; {area_display}
                           </p>
@@ -2100,18 +2107,21 @@ def schedule_email_html(
                             {date_range} &bull; Data via MLS
                           </p>
                         </td>
-                        <td style="vertical-align: middle; text-align: right; width: 140px;">
-                          {f'<img src="{header_logo_url}" alt="{brand_name}" style="display: block; max-height: 40px; width: auto; margin-left: auto; margin-bottom: 8px;" />' if header_logo_url else ''}
+                        <td width="35%" style="vertical-align: middle; text-align: right;">
                           <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: bold; color: #ffffff;">
                             {h1_value if has_hero_4 else m1_value}
                           </p>
-                          <p style="margin: 2px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.5px;">
+                          <p style="margin: 2px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 0.5px;">
                             {h1_label if has_hero_4 else m1_label}
                           </p>
                         </td>
                       </tr>
                     </table>
                   </td>
+                </tr>
+                <!-- ROW 3: Bottom spacer -->
+                <tr>
+                  <td style="height: 18px; font-size: 0; line-height: 0;">&nbsp;</td>
                 </tr>
               </table>
               <!--[if mso]>
