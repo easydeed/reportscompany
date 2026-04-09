@@ -48,6 +48,8 @@ V3: Professional styling refresh with enhanced Market Snapshot data.
 """
 from typing import Dict, Optional, TypedDict, Tuple, List
 
+from worker.property_builder import compute_color_roles
+
 
 class Brand(TypedDict, total=False):
     """Brand configuration for white-label emails."""
@@ -192,15 +194,17 @@ def _format_percent(value: Optional[float]) -> str:
 # Phase 1: Shared Component Helpers
 # ---------------------------------------------------------------------------
 
-def _build_ai_narrative(insight_text: str) -> str:
-    """Plain 16px narrative paragraph on white. Ref: V0 market-narrative.tsx"""
+def _build_ai_narrative(insight_text: str, accent_color: str = "#0d9488",
+                        accent_light: str = "#f0fdfa") -> str:
+    """Accent-bordered callout with MARKET INSIGHT label. Ref: V0 email designs."""
     if not insight_text:
         return ""
     return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
-                  <td>
-                    <p style="margin: 0; font-size: 16px; line-height: 1.8; color: #1c1917;">
+                  <td style="background-color: {accent_light}; border-left: 3px solid {accent_color}; border-radius: 0 6px 6px 0; padding: 16px 20px;">
+                    <p style="margin: 0 0 8px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 600; color: {accent_color}; text-transform: uppercase; letter-spacing: 0.5px;">Market Insight</p>
+                    <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; line-height: 1.6; color: #374151;">
                       {insight_text}
                     </p>
                   </td>
@@ -209,100 +213,82 @@ def _build_ai_narrative(insight_text: str) -> str:
 
 
 def _build_hero_stat(value: str, label: str, primary_color: str,
-                     trend: str = None, trend_positive: bool = True) -> str:
-    """56px Georgia serif hero stat, centered. Ref: V0 market-narrative.tsx"""
+                     trend: str = None, trend_positive: bool = True,
+                     sub_label: str = None) -> str:
+    """Centered hero stat on light bg card. Ref: V0 email designs."""
     trend_html = ""
     if trend:
-        color = "#059669" if trend_positive else "#dc2626"
-        arrow = "&#9650;" if trend_positive else "&#9660;"
+        color = "#16a34a" if trend_positive else "#dc2626"
+        bg = "rgba(34,197,94,0.12)" if trend_positive else "rgba(220,38,38,0.12)"
+        arrow = "&#8593;" if trend_positive else "&#8595;"
         trend_html = f'''
-                    <p style="margin: 8px 0 0; font-size: 13px; font-weight: 600; color: {color};">
-                      <span style="display: inline-block; margin-right: 2px;">{arrow}</span> {trend}
-                    </p>'''
+                    <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin-top: 12px;">
+                      <tr>
+                        <td style="background-color: {bg}; padding: 6px 14px; border-radius: 20px;">
+                          <span style="font-size: 13px; font-weight: 600; color: {color};">{arrow} {trend}</span>
+                        </td>
+                      </tr>
+                    </table>'''
+    sub_html = f'<p style="margin: 4px 0 0; font-size: 12px; color: #64748b;">{sub_label}</p>' if sub_label else ""
     return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
-                  <td align="center" style="padding: 40px 20px;">
-                    <p style="margin: 0 0 8px; font-family: Georgia, 'Times New Roman', serif; font-size: 56px; font-weight: 700; color: {primary_color}; line-height: 1; letter-spacing: -1px;">
+                  <td style="background-color: #f8fafc; border-radius: 8px; padding: 28px 20px; text-align: center;">
+                    <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 48px; font-weight: 700; color: {primary_color}; line-height: 1;">
                       {value}
                     </p>
-                    <p style="margin: 0; font-size: 11px; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: 2px;">
+                    <p style="margin: 8px 0 0; font-size: 12px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 1px;">
                       {label}
-                    </p>{trend_html}
+                    </p>
+                    {sub_html}{trend_html}
                   </td>
                 </tr>
               </table>'''
 
 
 def _build_gallery_count(count: int, label: str, primary_color: str) -> str:
-    """Branded pill badge + label + horizontal rule. Ref: V0 gallery-3x2.tsx"""
+    """Centered pill count badge. Ref: V0 email designs."""
     return f'''
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
                 <tr>
-                  <td>
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                      <tr>
-                        <td style="padding-right: 12px; vertical-align: middle;" width="28">
-                          <table role="presentation" cellpadding="0" cellspacing="0">
-                            <tr>
-                              <td align="center" style="width: 28px; height: 28px; background-color: {primary_color}; color: #ffffff; font-size: 12px; font-weight: 700; border-radius: 50%; line-height: 28px;">
-                                {count}
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                        <td style="vertical-align: middle; padding-right: 12px; white-space: nowrap;">
-                          <span style="font-size: 14px; font-weight: 600; color: #1c1917;">{label}</span>
-                        </td>
-                        <td style="vertical-align: middle; width: 100%;">
-                          <div style="height: 1px; background-color: #e7e5e4;"></div>
-                        </td>
-                      </tr>
-                    </table>
+                  <td align="center">
+                    <span style="display: inline-block; background: {primary_color}; color: #ffffff; font-size: 12px; font-weight: 600; padding: 8px 20px; border-radius: 20px;">{count} {label}</span>
                   </td>
                 </tr>
               </table>'''
 
 
-def _build_quick_take(text: str, accent_color: str) -> str:
-    """Accent-colored callout with $ icon. Ref: V0 market-narrative.tsx"""
+def _build_quick_take(text: str, accent_color: str, primary_color: str = "#18235c") -> str:
+    """Dark navy callout with accent label. Ref: V0 email designs."""
     if not text:
         return ""
     return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 28px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
-                  <td style="padding: 18px 20px; background-color: {accent_color}0F; border: 1px solid {accent_color}33; border-radius: 8px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                      <tr>
-                        <td width="28" style="vertical-align: top; padding-right: 12px;">
-                          <span style="font-size: 20px; color: {accent_color};">&#36;</span>
-                        </td>
-                        <td style="vertical-align: top;">
-                          <p style="margin: 0; font-size: 14px; font-weight: 500; line-height: 1.6; color: #1c1917;">
-                            {text}
-                          </p>
-                        </td>
-                      </tr>
-                    </table>
+                  <td style="background-color: {primary_color}; padding: 16px 20px; border-radius: 6px;">
+                    <p style="margin: 0 0 6px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; color: {accent_color}; text-transform: uppercase; letter-spacing: 1px;">Quick Take</p>
+                    <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; line-height: 1.5; color: #ffffff;">
+                      {text}
+                    </p>
                   </td>
                 </tr>
               </table>'''
 
 
-def _build_cta(pdf_url: str, primary_color: str, cta_text: str = "View Full Report") -> str:
-    """Tinted container with branded button + VML fallback. Ref: V0 market-narrative.tsx"""
+def _build_cta(pdf_url: str, accent_color: str, cta_text: str = "View Full Report") -> str:
+    """Accent-colored CTA button with VML fallback. Ref: V0 email designs."""
     return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 28px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
-                  <td align="center" style="padding: 24px; background-color: {primary_color}0A; border-radius: 8px;">
+                  <td align="center" style="padding: 8px 0;">
                     <!--[if mso]>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{pdf_url}" style="height:48px;v-text-anchor:middle;width:220px;" arcsize="8%" stroke="f" fillcolor="{primary_color}">
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{pdf_url}" style="height:48px;v-text-anchor:middle;width:240px;" arcsize="8%" stroke="f" fillcolor="{accent_color}">
                       <w:anchorlock/>
                       <center style="color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:14px;font-weight:600;">{cta_text}</center>
                     </v:roundrect>
                     <![endif]-->
                     <!--[if !mso]><!-->
-                    <a href="{pdf_url}" target="_blank" style="display: inline-block; background-color: {primary_color}; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; padding: 14px 36px; border-radius: 8px; letter-spacing: 0.3px;">
+                    <a href="{pdf_url}" target="_blank" style="display: inline-block; background-color: {accent_color}; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 6px;">
                       {cta_text}
                     </a>
                     <!--<![endif]-->
@@ -344,37 +330,23 @@ def _build_filter_blurb(filter_text: str, primary_color: str) -> str:
               </table>'''
 
 
-def _build_stacked_stats(stats: List[Tuple[str, str]]) -> str:
-    """Full-width rows: label left, big serif number right. Ref: V0 market-narrative.tsx"""
+def _build_stacked_stats(stats: List[Tuple[str, str]], primary_color: str = "#18235c") -> str:
+    """4-column stats row with Georgia serif values. Ref: V0 email designs."""
     if not stats:
         return ""
-    rows = ""
-    for i, (label, value) in enumerate(stats):
-        bg = "#ffffff" if i % 2 == 0 else "#fafaf9"
-        border = "border-bottom: 1px solid #f5f5f4;" if i < len(stats) - 1 else ""
-        rows += f'''
-                      <tr>
-                        <td style="padding: 16px 20px; background-color: {bg}; {border}">
-                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                            <tr>
-                              <td style="vertical-align: middle;">
-                                <span style="font-size: 14px; color: #57534e;">{label}</span>
-                              </td>
-                              <td align="right" style="vertical-align: middle;">
-                                <span style="font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: 700; color: #1c1917;">{value}</span>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>'''
+    cells = ""
+    for i, (label, value) in enumerate(stats[:4]):
+        bg = "#f8fafc" if i % 2 == 0 else "#f1f5f9"
+        border = "border-right: 1px solid #e2e8f0;" if i < min(len(stats), 4) - 1 else ""
+        cells += f'''
+                    <td width="25%" style="background-color: {bg}; padding: 16px 12px; text-align: center; {border}">
+                      <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 700; color: {primary_color};">{value}</p>
+                      <p style="margin: 4px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.3px;">{label}</p>
+                    </td>'''
     return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
-                  <td>
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 12px; overflow: hidden;">
-                      {rows}
-                    </table>
-                  </td>
+                  {cells}
                 </tr>
               </table>'''
 
@@ -492,33 +464,23 @@ def _listing_price_str(listing: Dict) -> str:
     return _format_price_clean(price)
 
 
-def _build_photo_card_2x2(listing: Dict, primary_color: str) -> str:
-    """Market Narrative 2x2 card: 160px photo, 18px serif price. Ref: V0 market-narrative.tsx"""
+def _build_photo_card_2x2(listing: Dict, accent_color: str) -> str:
+    """Market Narrative 2x2 card. Ref: V0 email-market-snapshot.html"""
     photo = listing.get("hero_photo_url") or ""
     addr = listing.get("street_address") or "Address N/A"
-    city = listing.get("city") or ""
-    beds = listing.get("bedrooms")
-    baths = listing.get("bathrooms")
     price_str = _listing_price_str(listing)
-    photo_html = f'<img src="{photo}" alt="{addr}" width="260" height="160" style="display: block; width: 100%; height: 160px; object-fit: cover;">' if photo else '<div style="width: 100%; height: 160px; background: #f5f5f4;"></div>'
-    badges = ""
-    if beds:
-        badges += f'<span style="display: inline-block; padding: 2px 8px; background-color: {primary_color}0D; border-radius: 4px; font-size: 10px; font-weight: 500; color: {primary_color}; margin-right: 4px;">{beds} Bed</span>'
-    if baths:
-        badges += f'<span style="display: inline-block; padding: 2px 8px; background-color: {primary_color}0D; border-radius: 4px; font-size: 10px; font-weight: 500; color: {primary_color};">{baths} Bath</span>'
-    return f'''<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+    photo_html = f'<img src="{photo}" alt="{addr}" width="260" height="160" style="display: block; max-width: 260px; max-height: 160px; width: 100%; height: auto; object-fit: cover; border: 1px solid #e5e7eb;">' if photo else '<div style="width: 100%; height: 160px; background: #f5f5f4; border: 1px solid #e5e7eb;"></div>'
+    return f'''<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff;">
                         <tr><td>{photo_html}</td></tr>
-                        <tr><td style="padding: 12px;">
-                          <p style="margin: 0 0 4px; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 700; color: {primary_color};">{price_str}</p>
-                          <p style="margin: 0 0 2px; font-size: 13px; font-weight: 600; color: #1c1917;">{addr}</p>
-                          <p style="margin: 0 0 8px; font-size: 11px; color: #78716c;">{city}</p>
-                          {f'<p style="margin: 0;">{badges}</p>' if badges else ''}
+                        <tr><td style="padding: 8px 0 0;">
+                          <p style="margin: 0; font-size: 12px; color: #333333;">{addr}</p>
+                          <p style="margin: 4px 0 0; font-family: Georgia, \'Times New Roman\', serif; font-size: 15px; font-weight: bold; color: {accent_color};">{price_str}</p>
                         </td></tr>
                       </table>'''
 
 
-def _build_gallery_card_large(listing: Dict, primary_color: str) -> str:
-    """Gallery 2x2 card: 180px photo, 20px serif price. Ref: V0 gallery-2x2.tsx"""
+def _build_gallery_card_large(listing: Dict, accent_color: str) -> str:
+    """Gallery 2x2 card: photo on top, info below. Ref: V0 email-reports.html"""
     photo = listing.get("hero_photo_url") or ""
     addr = listing.get("street_address") or "Address N/A"
     city = listing.get("city") or ""
@@ -528,41 +490,51 @@ def _build_gallery_card_large(listing: Dict, primary_color: str) -> str:
     sqft = listing.get("sqft")
     price_str = _listing_price_str(listing)
     location = f"{city}, {zip_code}" if zip_code else city
-    photo_html = f'<img src="{photo}" alt="{addr}" width="260" height="180" style="display: block; width: 100%; height: 180px; object-fit: cover;">' if photo else '<div style="width: 100%; height: 180px; background: #f5f5f4;"></div>'
-    details = []
+    photo_html = f'<img src="{photo}" alt="{addr}" width="260" style="display: block; width: 100%; height: auto; border-radius: 8px 8px 0 0;">' if photo else '<div style="width: 100%; height: 180px; background: #f5f5f4; border-radius: 8px 8px 0 0;"></div>'
+    specs_parts = []
     if beds:
-        details.append(f"{beds} Bed")
+        specs_parts.append(f"{beds} bd")
     if baths:
-        details.append(f"{baths} Bath")
+        specs_parts.append(f"{baths} ba")
     if sqft:
-        details.append(f"{sqft:,} SF")
-    details_str = " &bull; ".join(details)
-    return f'''<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+        specs_parts.append(f"{sqft:,} sf")
+    specs = " &bull; ".join(specs_parts)
+    return f'''<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
                         <tr><td>{photo_html}</td></tr>
-                        <tr><td style="padding: 16px;">
-                          <p style="margin: 0 0 4px; font-family: Georgia, 'Times New Roman', serif; font-size: 20px; font-weight: 700; color: {primary_color};">{price_str}</p>
-                          <p style="margin: 0 0 2px; font-size: 14px; font-weight: 600; color: #1c1917;">{addr}</p>
-                          <p style="margin: 0 0 8px; font-size: 12px; color: #78716c;">{location}</p>
-                          <p style="margin: 0; font-size: 12px; color: #57534e;">{details_str}</p>
+                        <tr><td style="padding: 14px;">
+                          <p style="margin: 0; font-size: 14px; font-weight: 700; color: #1f2937;">{addr}</p>
+                          {f'<p style="margin: 2px 0 0; font-size: 12px; color: #6b7280;">{location}</p>' if location else ''}
+                          <p style="margin: 6px 0 0; font-family: Georgia, \'Times New Roman\', serif; font-size: 20px; font-weight: bold; color: {accent_color};">{price_str}</p>
+                          {f'<p style="margin: 4px 0 0; font-size: 12px; color: #6b7280;">{specs}</p>' if specs else ''}
                         </td></tr>
                       </table>'''
 
 
-def _build_gallery_card_compact(listing: Dict, primary_color: str) -> str:
-    """Gallery 3x2 card: 110px photo, 15px serif price. Ref: V0 gallery-3x2.tsx"""
+def _build_gallery_card_compact(listing: Dict, accent_color: str) -> str:
+    """Gallery 3x2 card: photo on top, info below. Ref: V0 email-reports.html"""
     photo = listing.get("hero_photo_url") or ""
     addr = listing.get("street_address") or "Address N/A"
+    city = listing.get("city") or ""
     beds = listing.get("bedrooms")
     baths = listing.get("bathrooms")
+    sqft = listing.get("sqft")
     price_str = _listing_price_str(listing)
-    photo_html = f'<img src="{photo}" alt="{addr}" width="180" height="110" style="display: block; width: 100%; height: 110px; object-fit: cover;">' if photo else '<div style="width: 100%; height: 110px; background: #f5f5f4;"></div>'
-    specs = f'{beds}bd / {baths}ba' if beds and baths else ""
-    return f'''<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+    photo_html = f'<img src="{photo}" alt="{addr}" width="180" style="display: block; width: 100%; height: auto; border-radius: 8px 8px 0 0;">' if photo else '<div style="width: 100%; height: 110px; background: #f5f5f4; border-radius: 8px 8px 0 0;"></div>'
+    specs_parts = []
+    if beds:
+        specs_parts.append(f"{beds} bd")
+    if baths:
+        specs_parts.append(f"{baths} ba")
+    if sqft:
+        specs_parts.append(f"{sqft:,} sf")
+    specs = " &bull; ".join(specs_parts)
+    return f'''<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
                         <tr><td>{photo_html}</td></tr>
-                        <tr><td style="padding: 10px;">
-                          <p style="margin: 0 0 2px; font-family: Georgia, 'Times New Roman', serif; font-size: 15px; font-weight: 700; color: {primary_color};">{price_str}</p>
-                          <p style="margin: 0 0 2px; font-size: 11px; font-weight: 500; color: #1c1917;">{addr}</p>
-                          <p style="margin: 0; font-size: 10px; color: #78716c;">{specs}</p>
+                        <tr><td style="padding: 12px;">
+                          <p style="margin: 0; font-size: 13px; font-weight: 700; color: #1f2937;">{addr}</p>
+                          {f'<p style="margin: 2px 0 0; font-size: 11px; color: #6b7280;">{city}</p>' if city else ''}
+                          <p style="margin: 6px 0 0; font-family: Georgia, \'Times New Roman\', serif; font-size: 18px; font-weight: bold; color: {accent_color};">{price_str}</p>
+                          {f'<p style="margin: 4px 0 0; font-size: 11px; color: #6b7280;">{specs}</p>' if specs else ''}
                         </td></tr>
                       </table>'''
 
@@ -602,75 +574,66 @@ def _build_stacked_property_card(listing: Dict, primary_color: str, accent_color
 
 
 def _build_photo_card_with_badge(listing: Dict, primary_color: str, accent_color: str, badge_text: str = "Sold") -> str:
-    """Card with badge overlay (SOLD/NEW). Ref: V0 closed-sales-table.tsx"""
+    """Card with status badge below photo. Ref: V0 email-sales-inventory.html"""
     photo = listing.get("hero_photo_url") or ""
     addr = listing.get("street_address") or "Address N/A"
     beds = listing.get("bedrooms")
     baths = listing.get("bathrooms")
     price_str = _listing_price_str(listing)
-    photo_html = f'<img src="{photo}" alt="{addr}" width="260" height="130" style="display: block; width: 100%; height: 130px; object-fit: cover;">' if photo else '<div style="width: 100%; height: 130px; background: #f5f5f4;"></div>'
+    photo_html = f'<img src="{photo}" alt="{addr}" width="260" height="130" style="display: block; width: 100%; height: 130px; object-fit: cover; border-radius: 4px;">' if photo else '<div style="width: 100%; height: 130px; background: #f5f5f4; border-radius: 4px;"></div>'
     specs = f'{beds}bd / {baths}ba' if beds and baths else ""
-    badge_bg = primary_color if badge_text == "Sold" else accent_color
-    return f'''<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+    badge_lower = badge_text.lower()
+    badge_bg = "#dc2626" if badge_lower == "sold" else "#16a34a" if badge_lower == "active" else "#f59e0b" if badge_lower == "pending" else accent_color
+    return f'''<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff;">
                         <tr><td>{photo_html}</td></tr>
-                        <tr><td style="padding: 12px;">
-                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr>
-                            <td style="vertical-align: middle;">
-                              <p style="margin: 0 0 2px; font-family: Georgia, 'Times New Roman', serif; font-size: 16px; font-weight: 700; color: {primary_color};">{price_str}</p>
-                            </td>
-                            <td align="right" style="vertical-align: top;">
-                              <span style="display: inline-block; padding: 2px 8px; background-color: {badge_bg}; color: #ffffff; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 4px;">{badge_text}</span>
-                            </td>
-                          </tr></table>
-                          <p style="margin: 4px 0 2px; font-size: 12px; font-weight: 500; color: #1c1917;">{addr}</p>
-                          <p style="margin: 0; font-size: 10px; color: #78716c;">{specs}</p>
+                        <tr><td style="padding: 8px 0 0;">
+                          <span style="display: inline-block; padding: 3px 8px; background-color: {badge_bg}; color: #ffffff; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 3px;">{badge_text}</span>
+                          <p style="margin: 6px 0 0; font-size: 10px; color: #475569;">{addr}</p>
+                          <p style="margin: 4px 0 0; font-family: Georgia, \'Times New Roman\', serif; font-size: 13px; font-weight: bold; color: {accent_color};">{price_str}</p>
                         </td></tr>
                       </table>'''
 
 
-def _build_property_row(listing: Dict, primary_color: str, is_last: bool = False) -> str:
-    """Photo-left (160x120), details-right row. Ref: V0 large-list.tsx"""
+def _build_property_row(listing: Dict, accent_color: str, is_last: bool = False) -> str:
+    """Photo-left row with NEW badge. Ref: V0 email-price-bands.html Featured This Week"""
     photo = listing.get("hero_photo_url") or ""
     addr = listing.get("street_address") or "Address N/A"
-    city = listing.get("city") or ""
-    zip_code = listing.get("zip_code") or ""
     beds = listing.get("bedrooms")
     baths = listing.get("bathrooms")
     sqft = listing.get("sqft")
     price_str = _listing_price_str(listing)
-    location = f"{city}, {zip_code}" if zip_code else city
-    photo_html = f'<img src="{photo}" alt="{addr}" width="160" height="120" style="display: block; width: 160px; height: 120px; object-fit: cover;">' if photo else '<div style="width: 160px; height: 120px; background: #f5f5f4;"></div>'
-    details = []
+    photo_html = f'<img src="{photo}" alt="{addr}" width="120" height="90" style="display: block; width: 120px; height: 90px; object-fit: cover;">' if photo else '<div style="width: 120px; height: 90px; background: #f5f5f4;"></div>'
+    specs_parts = []
     if beds:
-        details.append(f"{beds} Bed")
+        specs_parts.append(f"{beds} bd")
     if baths:
-        details.append(f"{baths} Bath")
+        specs_parts.append(f"{baths} ba")
     if sqft:
-        details.append(f"{sqft:,} SF")
-    details_str = " &bull; ".join(details)
-    border = "" if is_last else "border-bottom: 1px solid #f5f5f4;"
+        specs_parts.append(f"{sqft:,} sf")
+    specs = " &bull; ".join(specs_parts)
+    status = listing.get("status") or ""
+    badge_html = ""
+    if status.lower() == "new" or status.lower() == "active":
+        badge_html = '<td width="60" align="right" style="vertical-align: middle;"><span style="display: inline-block; padding: 3px 8px; background-color: #dcfce7; color: #166534; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 3px;">NEW</span></td>'
     return f'''
-                      <tr>
-                        <td style="{border}">
-                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                            <tr>
-                              <td width="160" style="vertical-align: top;">
-                                {photo_html}
-                              </td>
-                              <td style="vertical-align: middle; padding: 16px;">
-                                <p style="margin: 0 0 4px; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 700; color: {primary_color};">{price_str}</p>
-                                <p style="margin: 0 0 2px; font-size: 14px; font-weight: 600; color: #1c1917;">{addr}</p>
-                                <p style="margin: 0 0 8px; font-size: 12px; color: #78716c;">{location}</p>
-                                <p style="margin: 0; font-size: 11px; color: #57534e;">{details_str}</p>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>'''
+                      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e5e7eb; margin-bottom: {0 if is_last else 12}px;">
+                        <tr>
+                          <td width="120" style="vertical-align: top;">
+                            {photo_html}
+                          </td>
+                          <td style="vertical-align: middle; padding: 12px;">
+                            <p style="margin: 0 0 2px; font-size: 13px; font-weight: 700; color: #1a2744;">{addr}</p>
+                            <p style="margin: 0 0 4px; font-size: 11px; color: #6b7280;">{specs}</p>
+                            <p style="margin: 0; font-family: Georgia, \'Times New Roman\', serif; font-size: 16px; font-weight: bold; color: {accent_color};">{price_str}</p>
+                          </td>
+                          {badge_html}
+                        </tr>
+                      </table>'''
 
 
-def _build_sales_table(listings: List[Dict], primary_color: str) -> str:
-    """Branded data table for Closed Sales / Inventory. Ref: V0 closed-sales-table.tsx"""
+def _build_sales_table(listings: List[Dict], primary_color: str,
+                       accent_color: str = "#0d9488") -> str:
+    """5-column data table with dark header. Ref: V0 email-sales-inventory.html."""
     if not listings:
         return ""
     rows = ""
@@ -678,25 +641,35 @@ def _build_sales_table(listings: List[Dict], primary_color: str) -> str:
         addr = listing.get("street_address") or "N/A"
         beds = listing.get("bedrooms") or ""
         baths = listing.get("bathrooms") or ""
+        sqft = listing.get("sqft")
+        sqft_str = f"{sqft:,}" if sqft else ""
         price = listing.get("close_price") or listing.get("list_price")
         dom = listing.get("days_on_market") or ""
         price_str = _format_price_clean(price) if price else "N/A"
         specs = f"{beds}/{baths}" if beds and baths else ""
-        bg = "#ffffff" if i % 2 == 0 else "#fafaf9"
+        bg = "#ffffff" if i % 2 == 0 else "#f9fafb"
+        status = listing.get("status") or ""
+        status_lower = status.lower() if status else ""
+        badge_color = "#dc2626" if status_lower == "sold" else "#16a34a" if status_lower == "active" else "#f59e0b" if status_lower == "pending" else ""
+        badge_html = f' <span style="display: inline-block; background: {badge_color}; color: #ffffff; font-size: 8px; font-weight: 700; padding: 2px 6px; border-radius: 3px; margin-left: 6px; text-transform: uppercase;">{status}</span>' if status and badge_color else ""
+        border = "border-bottom: 1px solid #f1f5f9;" if i < len(listings) - 1 else ""
         rows += f'''
-                        <tr style="background-color: {bg};">
-                          <td style="padding: 10px 12px; font-size: 13px; font-weight: 500; color: #1c1917;">{addr}</td>
-                          <td align="center" style="padding: 10px 8px; font-size: 13px; color: #57534e;">{specs}</td>
-                          <td align="right" style="padding: 10px 12px; font-family: Georgia, 'Times New Roman', serif; font-size: 13px; font-weight: 600; color: {primary_color};">{price_str}</td>
-                          <td align="center" style="padding: 10px 8px; font-size: 13px; color: #57534e;">{dom}</td>
+                        <tr>
+                          <td style="background: {bg}; padding: 12px 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; color: #334155; {border}">{addr}{badge_html}</td>
+                          <td style="background: {bg}; padding: 12px 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; color: #475569; text-align: center; {border}">{specs}</td>
+                          <td style="background: {bg}; padding: 12px 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; color: #475569; text-align: right; {border}">{sqft_str}</td>
+                          <td style="background: {bg}; padding: 12px 10px; font-family: Georgia, 'Times New Roman', serif; font-size: 13px; font-weight: 600; color: {accent_color}; text-align: right; {border}">{price_str}</td>
+                          <td style="background: {bg}; padding: 12px 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; color: #475569; text-align: center; {border}">{dom}</td>
                         </tr>'''
+    hdr_style = f"background: {primary_color}; padding: 12px {{pad}}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;"
     return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px; border: 1px solid #e7e5e4; border-radius: 12px; overflow: hidden;">
-                <tr style="background-color: {primary_color};">
-                  <td style="padding: 10px 12px; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">Address</td>
-                  <td align="center" style="padding: 10px 8px; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase;">Bd/Ba</td>
-                  <td align="right" style="padding: 10px 12px; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase;">Price</td>
-                  <td align="center" style="padding: 10px 8px; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase;">DOM</td>
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden;">
+                <tr>
+                  <td style="background: {primary_color}; padding: 12px 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">Address</td>
+                  <td style="background: {primary_color}; padding: 12px 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">Bd/Ba</td>
+                  <td style="background: {primary_color}; padding: 12px 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Sq Ft</td>
+                  <td style="background: {primary_color}; padding: 12px 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Price</td>
+                  <td style="background: {primary_color}; padding: 12px 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">DOM</td>
                 </tr>
                 {rows}
               </table>'''
@@ -713,25 +686,26 @@ def _build_market_narrative_body(
     pdf_url: str, primary_color: str, accent_color: str,
     filter_description: str = None,
     listings: List[Dict] = None,
+    accent_light: str = "#f0fdfa",
 ) -> str:
     """Market Snapshot / New Listings / Price Bands layout.
     Ref: V0 market-narrative.tsx"""
     body = _build_filter_blurb(filter_description, primary_color)
-    body += _build_ai_narrative(insight_text)
+    body += _build_ai_narrative(insight_text, accent_color, accent_light)
     body += _build_hero_stat(hero_value, hero_label, primary_color)
     if listings and len(listings) >= 2:
         show = listings[:4]
         body += _build_gallery_count(len(show), "Notable Sales", primary_color)
-        body += _build_2x2_photo_grid(show, primary_color)
-    body += _build_stacked_stats(stats)
-    body += _build_quick_take(quick_take, accent_color)
-    body += _build_cta(pdf_url, primary_color)
+        body += _build_2x2_photo_grid(show, accent_color)
+    body += _build_stacked_stats(stats, primary_color)
+    body += _build_quick_take(quick_take, accent_color, primary_color)
+    body += _build_cta(pdf_url, accent_color)
     return body
 
 
-def _build_2x2_photo_grid(listings: List[Dict], primary_color: str) -> str:
+def _build_2x2_photo_grid(listings: List[Dict], accent_color: str) -> str:
     """2x2 grid of photo cards for Market Narrative. Ref: V0 market-narrative.tsx"""
-    cards = [_build_photo_card_2x2(l, primary_color) for l in listings[:4]]
+    cards = [_build_photo_card_2x2(l, accent_color) for l in listings[:4]]
     while len(cards) < 4:
         cards.append("")
     rows = ""
@@ -753,12 +727,13 @@ def _build_gallery_2x2_body(
     insight_text: str, listings: List[Dict], quick_take: str,
     pdf_url: str, primary_color: str, accent_color: str,
     gallery_label: str = "Featured Listings", filter_description: str = None,
+    accent_light: str = "#f0fdfa",
 ) -> str:
     """Gallery 2x2 layout: large photo cards. Ref: V0 gallery-2x2.tsx"""
     body = _build_filter_blurb(filter_description, primary_color)
-    body += _build_ai_narrative(insight_text)
+    body += _build_ai_narrative(insight_text, accent_color, accent_light)
     body += _build_gallery_count(len(listings), gallery_label, primary_color)
-    cards = [_build_gallery_card_large(l, primary_color) for l in listings[:4]]
+    cards = [_build_gallery_card_large(l, accent_color) for l in listings[:4]]
     rows = ""
     for r in range(0, len(cards), 2):
         c1 = cards[r] if r < len(cards) else ""
@@ -772,8 +747,8 @@ def _build_gallery_2x2_body(
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
                 {rows}
               </table>'''
-    body += _build_quick_take(quick_take, accent_color)
-    body += _build_cta(pdf_url, primary_color, "View All Listings")
+    body += _build_quick_take(quick_take, accent_color, primary_color)
+    body += _build_cta(pdf_url, accent_color, "View All Listings")
     return body
 
 
@@ -781,12 +756,13 @@ def _build_gallery_3x2_body(
     insight_text: str, listings: List[Dict], quick_take: str,
     pdf_url: str, primary_color: str, accent_color: str,
     gallery_label: str = "New Listings", filter_description: str = None,
+    accent_light: str = "#f0fdfa",
 ) -> str:
     """Gallery 3x2 layout: compact photo cards. Ref: V0 gallery-3x2.tsx"""
     body = _build_filter_blurb(filter_description, primary_color)
-    body += _build_ai_narrative(insight_text)
+    body += _build_ai_narrative(insight_text, accent_color, accent_light)
     body += _build_gallery_count(len(listings), gallery_label, primary_color)
-    cards = [_build_gallery_card_compact(l, primary_color) for l in listings[:9]]
+    cards = [_build_gallery_card_compact(l, accent_color) for l in listings[:9]]
     rows = ""
     for r in range(0, len(cards), 3):
         cells = ""
@@ -800,8 +776,8 @@ def _build_gallery_3x2_body(
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
                 {rows}
               </table>'''
-    body += _build_quick_take(quick_take, accent_color)
-    body += _build_cta(pdf_url, primary_color, "View All Listings")
+    body += _build_quick_take(quick_take, accent_color, primary_color)
+    body += _build_cta(pdf_url, accent_color, "View All Listings")
     return body
 
 
@@ -809,15 +785,16 @@ def _build_single_stacked_body(
     insight_text: str, listings: List[Dict],
     pdf_url: str, primary_color: str, accent_color: str,
     filter_description: str = None,
+    accent_light: str = "#f0fdfa",
 ) -> str:
     """Single stacked full-width cards with branded dividers. Ref: V0 single-stacked.tsx"""
     body = _build_filter_blurb(filter_description, primary_color)
-    body += _build_ai_narrative(insight_text)
+    body += _build_ai_narrative(insight_text, accent_color, accent_light)
     for i, listing in enumerate(listings[:5]):
         body += _build_stacked_property_card(listing, primary_color, accent_color)
         if i < len(listings) - 1:
             body += _build_branded_divider(primary_color, accent_color)
-    body += _build_cta(pdf_url, primary_color, "Schedule a Showing")
+    body += _build_cta(pdf_url, accent_color, "Schedule a Showing")
     return body
 
 
@@ -825,20 +802,21 @@ def _build_large_list_body(
     insight_text: str, listings: List[Dict], quick_take: str,
     pdf_url: str, primary_color: str, accent_color: str,
     gallery_label: str = "New Listings", filter_description: str = None,
+    accent_light: str = "#f0fdfa",
 ) -> str:
     """Vertical list: photo-left, details-right. Ref: V0 large-list.tsx"""
     body = _build_filter_blurb(filter_description, primary_color)
-    body += _build_ai_narrative(insight_text)
+    body += _build_ai_narrative(insight_text, accent_color, accent_light)
     body += _build_gallery_count(len(listings), gallery_label, primary_color)
-    rows = ""
+    rows_html = ""
     for i, listing in enumerate(listings):
-        rows += _build_property_row(listing, primary_color, is_last=(i == len(listings) - 1))
+        rows_html += _build_property_row(listing, accent_color, is_last=(i == len(listings) - 1))
     body += f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px; border: 1px solid #e7e5e4; border-radius: 12px; overflow: hidden;">
-                {rows}
-              </table>'''
-    body += _build_quick_take(quick_take, accent_color)
-    body += _build_cta(pdf_url, primary_color)
+              <div style="margin-bottom: 32px;">
+                {rows_html}
+              </div>'''
+    body += _build_quick_take(quick_take, accent_color, primary_color)
+    body += _build_cta(pdf_url, accent_color)
     return body
 
 
@@ -847,10 +825,11 @@ def _build_closed_sales_body(
     listings: List[Dict], stats: List[Tuple[str, str]], quick_take: str,
     pdf_url: str, primary_color: str, accent_color: str,
     filter_description: str = None,
+    accent_light: str = "#f0fdfa",
 ) -> str:
     """Closed Sales / Inventory table layout. Ref: V0 closed-sales-table.tsx"""
     body = _build_filter_blurb(filter_description, primary_color)
-    body += _build_ai_narrative(insight_text)
+    body += _build_ai_narrative(insight_text, accent_color, accent_light)
     body += _build_hero_stat(hero_value, hero_label, primary_color)
     if listings and len(listings) >= 2:
         show = listings[:4]
@@ -870,10 +849,10 @@ def _build_closed_sales_body(
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
                 {rows}
               </table>'''
-    body += _build_sales_table(listings or [], primary_color)
-    body += _build_stacked_stats(stats)
-    body += _build_quick_take(quick_take, accent_color)
-    body += _build_cta(pdf_url, primary_color, "Get Your Home's Value")
+    body += _build_sales_table(listings or [], primary_color, accent_color)
+    body += _build_stacked_stats(stats, primary_color)
+    body += _build_quick_take(quick_take, accent_color, primary_color)
+    body += _build_cta(pdf_url, accent_color, "View All Closed Sales")
     return body
 
 
@@ -882,14 +861,97 @@ def _build_analytics_body(
     trend_stats: List[Tuple[str, str, str, bool]],
     quick_take: str, pdf_url: str, primary_color: str, accent_color: str,
     filter_description: str = None,
+    accent_light: str = "#f0fdfa",
+    supporting_metrics: List[Tuple[str, str]] = None,
 ) -> str:
-    """Analytics dashboard layout. Ref: V0 market-analytics.tsx"""
+    """Analytics / Price Bands layout with bar chart. Ref: V0 email-price-bands.html
+
+    trend_stats for price bands: each tuple is (band_label, listing_count_str, percentage_str, is_most_active).
+    supporting_metrics: optional list of (label, value) for the bottom row.
+    """
     body = _build_filter_blurb(filter_description, primary_color)
-    body += _build_ai_narrative(insight_text)
+    body += _build_ai_narrative(insight_text, accent_color, accent_light)
     body += _build_hero_stat(hero_value, hero_label, primary_color)
-    body += _build_trend_stats(trend_stats, primary_color)
-    body += _build_quick_take(quick_take, accent_color)
-    body += _build_cta(pdf_url, primary_color, "Get Your Free Home Valuation")
+
+    if trend_stats:
+        body += _build_section_label("Price Distribution", primary_color)
+
+        max_count = 0
+        for _, count_str, _, _ in trend_stats:
+            try:
+                max_count = max(max_count, int(count_str))
+            except (ValueError, TypeError):
+                pass
+        if max_count == 0:
+            max_count = 1
+
+        bar_rows = ""
+        for band_label, count_str, pct_str, is_highlight in trend_stats:
+            try:
+                count_val = int(count_str)
+            except (ValueError, TypeError):
+                count_val = 0
+            bar_pct = max(int((count_val / max_count) * 100), 2) if max_count else 2
+            empty_pct = 100 - bar_pct
+
+            if is_highlight:
+                bar_bg = accent_color
+                label_style = f"font-size: 13px; font-weight: 700; color: {primary_color};"
+                pct_style = f"font-family: Georgia, 'Times New Roman', serif; font-size: 15px; font-weight: bold; color: {accent_color};"
+            else:
+                bar_bg = primary_color
+                label_style = "font-size: 13px; font-weight: 600; color: #1f2937;"
+                pct_style = "font-family: Georgia, 'Times New Roman', serif; font-size: 15px; font-weight: bold; color: #1f2937;"
+
+            bar_rows += f'''
+                      <tr>
+                        <td style="padding: 8px 0;">
+                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                              <td width="110" style="vertical-align: middle; padding-right: 12px;">
+                                <p style="margin: 0; {label_style}">{band_label}</p>
+                                <p style="margin: 2px 0 0; font-size: 11px; color: #6b7280;">{count_str} listings</p>
+                              </td>
+                              <td style="vertical-align: middle;">
+                                <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-radius: 4px; overflow: hidden;">
+                                  <tr>
+                                    <td width="{bar_pct}%" style="height: 24px; background-color: {bar_bg};"></td>
+                                    <td width="{empty_pct}%" style="height: 24px; background-color: #e5e7eb;"></td>
+                                  </tr>
+                                </table>
+                              </td>
+                              <td width="50" align="right" style="vertical-align: middle; padding-left: 10px;">
+                                <span style="{pct_style}">{pct_str}</span>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>'''
+
+        body += f'''
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+                {bar_rows}
+              </table>'''
+
+    if supporting_metrics:
+        n = len(supporting_metrics)
+        pct = f"{100 // n}%" if n else "33%"
+        cells = ""
+        for sm_label, sm_value in supporting_metrics[:3]:
+            cells += f'''
+                    <td width="{pct}" style="padding: 16px 12px; text-align: center; background-color: #f8fafc;">
+                      <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 700; color: {primary_color};">{sm_value}</p>
+                      <p style="margin: 4px 0 0; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.3px;">{sm_label}</p>
+                    </td>'''
+        body += f'''
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+                <tr>
+                  {cells}
+                </tr>
+              </table>'''
+
+    body += _build_quick_take(quick_take, accent_color, primary_color)
+    body += _build_cta(pdf_url, accent_color, "View All Listings by Price")
     return body
 
 
@@ -912,7 +974,7 @@ def _select_gallery_layout(listing_count: int) -> str:
 LAYOUT_MAP = {
     "market_snapshot": "market_narrative",
     "new_listings": "market_narrative",
-    "price_bands": "market_narrative",
+    "price_bands": "analytics",
     "open_houses": "market_narrative",
     "closed": "closed_sales",
     "inventory": "closed_sales",
@@ -1643,7 +1705,13 @@ def schedule_email_html(
     contact_line1 = brand.get("contact_line1") or rep_name
     contact_line2 = brand.get("contact_line2") or rep_title
     website_url = brand.get("website_url")
-    
+    logo_url_footer = brand.get("logo_url")
+
+    color_roles = compute_color_roles(accent_color, dark_bg=primary_color)
+    accent_light = color_roles["theme_color_light"]
+    accent_on_dark = color_roles["theme_color_on_dark"]
+    accent_on_light = color_roles["theme_color_on_light"]
+
     # Get report config
     config = REPORT_CONFIG.get(report_type, {
         "label": report_type.replace("_", " ").title(),
@@ -1755,24 +1823,28 @@ def schedule_email_html(
                 insight_text=insight_text, listings=listings or [],
                 pdf_url=pdf_url, primary_color=primary_color, accent_color=accent_color,
                 filter_description=filter_description,
+                accent_light=accent_light,
             )
         elif gallery_layout == "gallery_2x2":
             body_html = _build_gallery_2x2_body(
                 insight_text=insight_text, listings=listings or [], quick_take=quick_take,
                 pdf_url=pdf_url, primary_color=primary_color, accent_color=accent_color,
                 gallery_label=gallery_label, filter_description=filter_description,
+                accent_light=accent_light,
             )
         elif gallery_layout == "gallery_3x2":
             body_html = _build_gallery_3x2_body(
                 insight_text=insight_text, listings=listings or [], quick_take=quick_take,
                 pdf_url=pdf_url, primary_color=primary_color, accent_color=accent_color,
                 gallery_label=gallery_label, filter_description=filter_description,
+                accent_light=accent_light,
             )
         else:
             body_html = _build_large_list_body(
                 insight_text=insight_text, listings=listings or [], quick_take=quick_take,
                 pdf_url=pdf_url, primary_color=primary_color, accent_color=accent_color,
                 gallery_label=gallery_label, filter_description=filter_description,
+                accent_light=accent_light,
             )
 
     elif layout == "closed_sales":
@@ -1788,6 +1860,41 @@ def schedule_email_html(
             listings=listings or [], stats=secondary, quick_take=quick_take,
             pdf_url=pdf_url, primary_color=primary_color, accent_color=accent_color,
             filter_description=filter_description,
+            accent_light=accent_light,
+        )
+
+    elif layout == "analytics":
+        hero_val = h1_value if has_hero_4 else m1_value
+        hero_lbl = h1_label if has_hero_4 else m1_label
+
+        band_stats = []
+        bands_data = _get_price_bands(metrics) if has_price_bands else None
+        if bands_data:
+            total_count = sum(b.get("count", 0) for b in bands_data) or 1
+            max_count = max((b.get("count", 0) for b in bands_data), default=1) or 1
+            most_active_name = max(bands_data, key=lambda b: b.get("count", 0)).get("name")
+            for b in bands_data:
+                cnt = b.get("count", 0)
+                pct = f"{cnt / total_count * 100:.0f}%" if total_count else "0%"
+                is_top = (b.get("name") == most_active_name)
+                band_stats.append((b.get("name", ""), str(cnt), pct, is_top))
+
+        avg_dom = metrics.get("avg_dom")
+        total_active = metrics.get("total_active", 0)
+        supporting = []
+        if bands_data:
+            most_active = max(bands_data, key=lambda b: b.get("count", 0))
+            supporting.append(("Most Active", most_active.get("name", "N/A")))
+        supporting.append(("Avg DOM", f"{avg_dom:.0f} days" if avg_dom else "N/A"))
+        supporting.append(("Total Analyzed", _format_number(total_active)))
+
+        body_html = _build_analytics_body(
+            insight_text=insight_text, hero_value=hero_val, hero_label=hero_lbl,
+            trend_stats=band_stats, quick_take=quick_take,
+            pdf_url=pdf_url, primary_color=primary_color, accent_color=accent_color,
+            filter_description=filter_description,
+            accent_light=accent_light,
+            supporting_metrics=supporting,
         )
 
     else:
@@ -1806,6 +1913,7 @@ def schedule_email_html(
             pdf_url=pdf_url, primary_color=primary_color, accent_color=accent_color,
             filter_description=filter_description,
             listings=listings,
+            accent_light=accent_light,
         )
     
     # ============================================================================
@@ -1815,90 +1923,81 @@ def schedule_email_html(
     # (old inline V4/V15 HTML builders removed — now handled by layout body builders)
     
     # V15: Build agent footer HTML - branded background, serif name, pill buttons
+    # V0 company branding column
+    company_html = ""
+    if logo_url_footer:
+        company_html = f'''
+                            <td style="text-align: right; vertical-align: top; width: 100px;">
+                              <img src="{logo_url_footer}" alt="{brand_name}" width="100" style="display: block; max-width: 100px; height: auto;">
+                            </td>'''
+    elif brand_name and brand_name != "Market Reports":
+        company_html = f'''
+                            <td style="text-align: right; vertical-align: top; width: 100px;">
+                              <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 14px; font-weight: 700; color: {primary_color};">{brand_name}</p>
+                              {f'<p style="margin: 2px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 11px; color: #64748b;">{city or ""}</p>' if city else ""}
+                            </td>'''
+
     if rep_photo_url and (contact_line1 or rep_name):
-        # Full footer with photo - V0 design
         agent_footer_html = f'''
-              <!-- V15: AGENT FOOTER (branded bg, serif, pill buttons) -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 4px;">
+              <!-- V0 AGENT FOOTER: photo | info+pills | company -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; border-radius: 0 0 0 0; margin-top: 4px;">
                 <tr>
-                  <td style="padding: 28px 0; border-top: 1px solid {primary_color}15;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: {primary_color}08; border-radius: 10px;">
+                  <td style="padding: 24px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                       <tr>
-                        <td style="padding: 24px;">
-                          <table role="presentation" cellpadding="0" cellspacing="0">
-                            <tr>
-                              <!-- Agent Photo -->
-                              <td style="vertical-align: top; padding-right: 20px;">
-                                <!--[if mso]>
-                                <v:oval xmlns:v="urn:schemas-microsoft-com:vml" style="width:80px;height:80px;" stroke="f">
-                                  <v:fill type="frame" src="{rep_photo_url}"/>
-                                </v:oval>
-                                <![endif]-->
-                                <!--[if !mso]><!-->
-                                <img src="{rep_photo_url}" alt="{contact_line1 or rep_name}" width="80" height="80" style="display: block; width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid {primary_color}33;">
-                                <!--<![endif]-->
-                              </td>
-                              <!-- Agent Info -->
-                              <td style="vertical-align: middle;">
-                                <p style="margin: 0 0 2px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 700; color: #1c1917;">
-                                  {contact_line1 or rep_name}
-                                </p>
-                                {f'<p style="margin: 0 0 12px 0; font-size: 12px; color: #78716c;">{contact_line2 or rep_title}</p>' if (contact_line2 or rep_title) else '<div style="margin-bottom: 12px;"></div>'}
-                                <table role="presentation" cellpadding="0" cellspacing="0">
-                                  <tr>
-                                    {f"""<td style="padding-right: 8px;">
-                                      <a href="tel:{rep_phone}" style="display: inline-block; padding: 6px 14px; border: 1px solid {primary_color}26; border-radius: 6px; color: {primary_color}; text-decoration: none; font-size: 12px; font-weight: 500;">
-                                        {rep_phone}
-                                      </a>
-                                    </td>""" if rep_phone else ""}
-                                    {f"""<td>
-                                      <a href="mailto:{rep_email}" style="display: inline-block; padding: 6px 14px; border: 1px solid {primary_color}26; border-radius: 6px; color: {primary_color}; text-decoration: none; font-size: 12px; font-weight: 500;">
-                                        {rep_email}
-                                      </a>
-                                    </td>""" if rep_email else ""}
-                                  </tr>
-                                </table>
-                              </td>
-                            </tr>
-                          </table>
+                        <td style="width: 70px; vertical-align: top;">
+                          <!--[if mso]>
+                          <v:oval xmlns:v="urn:schemas-microsoft-com:vml" style="width:70px;height:70px;" stroke="f">
+                            <v:fill type="frame" src="{rep_photo_url}"/>
+                          </v:oval>
+                          <![endif]-->
+                          <!--[if !mso]><!-->
+                          <img src="{rep_photo_url}" alt="{contact_line1 or rep_name}" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                          <!--<![endif]-->
                         </td>
+                        <td style="vertical-align: top; padding-left: 16px;">
+                          <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 16px; font-weight: bold; color: {primary_color};">
+                            {contact_line1 or rep_name}
+                          </p>
+                          {f'<p style="margin: 2px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 11px; color: #6b7280;">{contact_line2 or rep_title}</p>' if (contact_line2 or rep_title) else ''}
+                          <div style="margin-top: 8px;">
+                            {f'<a href="tel:{rep_phone}" style="display: inline-block; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 11px; color: {accent_color}; text-decoration: none; border: 1px solid {accent_color}; padding: 4px 10px; border-radius: 12px; margin-right: 6px;">{rep_phone}</a>' if rep_phone else ''}
+                            {f'<a href="mailto:{rep_email}" style="display: inline-block; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 11px; color: {accent_color}; text-decoration: none; border: 1px solid {accent_color}; padding: 4px 10px; border-radius: 12px;">Email</a>' if rep_email else ''}
+                          </div>
+                        </td>
+                        {company_html}
                       </tr>
                     </table>
                   </td>
                 </tr>
               </table>'''
     elif contact_line1 or website_url:
-        # Contact without photo
         agent_footer_html = f'''
-              <!-- Agent Footer -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; margin-top: 4px;">
                 <tr>
-                  <td align="center">
-                    {f'<p style="margin: 0 0 4px 0; font-size: 16px; font-weight: 600; color: #1a1a2e;">{contact_line1}</p>' if contact_line1 else ''}
-                    {f'<p style="margin: 0 0 8px 0; font-size: 14px; color: #6b7280;">{contact_line2}</p>' if contact_line2 else ''}
-                    {f'<a href="{website_url}" style="color: {primary_color}; text-decoration: none; font-weight: 500;">{website_url.replace("https://", "").replace("http://", "")}</a>' if website_url else ''}
+                  <td style="padding: 24px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td style="vertical-align: top;">
+                          {f'<p style="margin: 0 0 2px 0; font-family: Georgia, serif; font-size: 16px; font-weight: bold; color: {primary_color};">{contact_line1}</p>' if contact_line1 else ''}
+                          {f'<p style="margin: 0 0 6px 0; font-size: 12px; color: #64748b;">{contact_line2}</p>' if contact_line2 else ''}
+                          {f'<p style="margin: 0; font-size: 12px;"><a href="{website_url}" style="color: {accent_color}; text-decoration: none;">{website_url.replace("https://", "").replace("http://", "")}</a></p>' if website_url else ''}
+                        </td>
+                        {company_html}
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>'''
     else:
-        # Minimal footer
         agent_footer_html = f'''
-              <!-- Agent Footer -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; margin-top: 4px;">
                 <tr>
-                  <td align="center">
-                    <p style="margin: 0; font-size: 16px; font-weight: 600; color: #1a1a2e;">{brand_name}</p>
+                  <td style="padding: 24px;" align="center">
+                    <p style="margin: 0; font-family: Georgia, serif; font-size: 16px; font-weight: bold; color: {primary_color};">{brand_name}</p>
                   </td>
                 </tr>
               </table>'''
-    
-    # Powered by (only if not white-labeled)
-    powered_by = ""
-    if not brand.get("display_name"):
-        powered_by = '''
-                    <p style="margin: 10px 0 0 0; font-size: 11px; color: #d1d5db;">
-                      Powered by TrendyReports
-                    </p>'''
     
     # Build the complete HTML email
     html = f'''<!DOCTYPE html>
@@ -1964,42 +2063,37 @@ def schedule_email_html(
         <!-- Email Wrapper -->
         <table role="presentation" cellpadding="0" cellspacing="0" width="600" class="wrapper" style="max-width: 600px; width: 100%;">
           
-          <!-- ========== HEADER WITH GRADIENT ========== -->
+          <!-- ========== V0 HEADER: 2-column dark bar ========== -->
           <tr>
             <td>
               <!--[if mso]>
-              <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;height:180px;">
-                <v:fill type="gradient" color="{primary_color}" color2="{accent_color}" angle="135"/>
-                <v:textbox inset="0,0,0,0" style="mso-fit-shape-to-text:true">
+              <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;">
+                <v:fill type="solid" color="{primary_color}"/>
+                <v:textbox inset="24px,20px,24px,20px" style="mso-fit-shape-to-text:true">
               <![endif]-->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(135deg, {primary_color} 0%, {accent_color} 100%); border-radius: 12px 12px 0 0;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: {primary_color}; border-radius: 8px 8px 0 0;">
                 <tr>
-                  <td align="center" style="padding: 28px 40px 16px 40px;">
-                    {logo_html}
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center" style="padding: 0 40px 8px 40px;">
-                    <!-- V8: Show brand for Market Snapshot, base report type for gallery -->
-                    <span style="display: inline-block; background-color: rgba(255,255,255,0.2); color: #ffffff; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; padding: 6px 14px; border-radius: 20px;">
-                      {brand_name if has_hero_4 else ("New Listings" if report_type == "new_listings_gallery" else "Featured Listings" if report_type == "featured_listings" else report_label)}
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center" style="padding: 0 40px;">
-                    <!-- V8: "Preset Name – Area" format for all reports -->
-                    <h1 style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 28px; font-weight: 400; color: #ffffff; line-height: 1.3; letter-spacing: -0.5px;">
-                      {report_label} – {area_display}
-                    </h1>
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center" style="padding: 10px 40px 28px 40px;">
-                    <!-- V8: Period info for all reports -->
-                    <p style="margin: 0; font-size: 14px; color: rgba(255,255,255,0.9);">
-                      {"Period: " + date_range + " • Source: Live MLS Data" if has_hero_4 else (date_range + " • Live MLS Data")}
-                    </p>
+                  <td style="padding: 24px 28px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td style="vertical-align: middle;">
+                          <p style="margin: 0 0 4px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: bold; color: #ffffff;">
+                            {report_label} &mdash; {area_display}
+                          </p>
+                          <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; color: rgba(255,255,255,0.7);">
+                            {date_range} &bull; Data via MLS
+                          </p>
+                        </td>
+                        <td style="vertical-align: middle; text-align: right; width: 140px;">
+                          <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: bold; color: #ffffff;">
+                            {h1_value if has_hero_4 else m1_value}
+                          </p>
+                          <p style="margin: 2px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.5px;">
+                            {h1_label if has_hero_4 else m1_label}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>
@@ -2010,47 +2104,37 @@ def schedule_email_html(
             </td>
           </tr>
           
-          <!-- Accent Transition Strip -->
+          <!-- Accent Strip -->
           <tr>
-            <td style="height: 4px; background: linear-gradient(90deg, {primary_color} 0%, {accent_color} 100%); font-size: 0; line-height: 0;">&nbsp;</td>
+            <td style="height: 4px; background-color: {accent_color}; font-size: 0; line-height: 0;">&nbsp;</td>
           </tr>
           
-          <!-- ========== MAIN CONTENT (V16: Layout-based body) ========== -->
+          <!-- ========== MAIN CONTENT ========== -->
           <tr>
-            <td style="background-color: #ffffff; padding: 40px;" class="mobile-padding">
-              
-              {_build_section_label(section_label, primary_color) if section_label else ""}
+            <td style="background-color: #ffffff; padding: 24px 28px;" class="mobile-padding">
 
 {body_html}
 
-              <!-- Divider before agent footer -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td style="border-top: 1px solid {primary_color}20; padding-top: 32px;" class="dark-border"></td>
-                </tr>
-              </table>
-              
+            </td>
+          </tr>
+
+          <!-- ========== AGENT FOOTER ========== -->
+          <tr>
+            <td>
 {agent_footer_html}
-              
             </td>
           </tr>
           
-          <!-- ========== FOOTER ========== -->
+          <!-- ========== POWERED BY + UNSUBSCRIBE ========== -->
           <tr>
-            <td style="background-color: #fafaf9; padding: 24px 40px; border-radius: 0 0 12px 12px; border-top: 1px solid #e5e7eb;" class="dark-border mobile-padding">
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center">
-                    <p style="margin: 0 0 8px 0; font-size: 13px; color: #9ca3af;">
-                      {f'Powered by <a href="{website_url or "#"}" style="color: {primary_color}; text-decoration: none; font-weight: 500;">{brand_name}</a>' if brand.get("display_name") else f'Powered by <span style="color: {primary_color}; font-weight: 500;">TrendyReports</span>'}
-                    </p>
-                    <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-                      <a href="{unsubscribe_url}" style="color: #9ca3af; text-decoration: underline;">Unsubscribe</a>
-                      from these notifications
-                    </p>
-                  </td>
-                </tr>
-              </table>
+            <td style="background-color: #f8f9fa; padding: 16px 28px; border-radius: 0 0 8px 8px; text-align: center;">
+              <p style="margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; color: #9ca3af;">
+                Powered by <span style="font-weight: 600; color: #6b7280;">TrendyReports</span>
+              </p>
+              <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; color: #9ca3af;">
+                <a href="{unsubscribe_url}" style="color: #9ca3af; text-decoration: underline;">Unsubscribe</a>
+                &bull; <a href="#" style="color: #9ca3af; text-decoration: underline;">Update Preferences</a>
+              </p>
             </td>
           </tr>
           
