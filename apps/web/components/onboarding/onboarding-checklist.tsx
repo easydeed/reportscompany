@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useOnboarding } from "@/hooks/use-api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -26,10 +27,10 @@ export type { OnboardingStep, OnboardingStatus } from './affiliate-onboarding'
 import type { OnboardingStatus } from './affiliate-onboarding'
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  user: User,
-  palette: Palette,
+  "user": User,
+  "palette": Palette,
   "file-text": FileText,
-  calendar: Calendar,
+  "calendar": Calendar,
   "user-plus": UserPlus,
 }
 
@@ -49,41 +50,16 @@ export function OnboardingChecklist({
   onOpenWizard,
   initialStatus,
 }: OnboardingChecklistProps) {
-  const [status, setStatus] = useState<OnboardingStatus | null>(initialStatus ?? null)
-  // If we have initial status, no loading needed
-  const [loading, setLoading] = useState(!initialStatus)
+  const { data: fetchedStatus, isLoading: queryLoading } = useOnboarding()
+  const status = (initialStatus ?? fetchedStatus ?? null) as OnboardingStatus | null
+  const loading = !initialStatus && queryLoading
   const [dismissing, setDismissing] = useState(false)
 
   useEffect(() => {
-    // Skip fetch if we already have initial status
-    if (initialStatus) {
-      // Still call onComplete if needed
-      if (initialStatus.is_complete && onComplete) {
-        onComplete()
-      }
-      return
+    if (status?.is_complete && onComplete) {
+      onComplete()
     }
-    loadOnboardingStatus()
-  }, [initialStatus, onComplete])
-
-  async function loadOnboardingStatus() {
-    try {
-      const res = await fetch("/api/proxy/v1/onboarding", { cache: "no-store" })
-      if (res.ok) {
-        const data = await res.json()
-        setStatus(data)
-
-        // Call onComplete if fully completed
-        if (data.is_complete && onComplete) {
-          onComplete()
-        }
-      }
-    } catch (error) {
-      console.error("Failed to load onboarding status:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [status, onComplete])
 
   async function dismissOnboarding() {
     setDismissing(true)

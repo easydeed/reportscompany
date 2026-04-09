@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { useMe } from "@/hooks/use-api"
 import { useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
@@ -20,6 +21,7 @@ import {
   Phone,
   Globe,
   Briefcase,
+  RotateCcw,
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { ImageUpload } from "@/components/ui/image-upload"
@@ -58,9 +60,11 @@ function formatPhoneNumber(value: string): string {
 export default function ProfilePage() {
   const { data: meData, isLoading } = useMe()
   const queryClient = useQueryClient()
+  const router = useRouter()
   const profile = meData as UserProfile | undefined
   const [formInitialized, setFormInitialized] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [resetting, setResetting] = useState(false)
   const { toast } = useToast()
 
   const [formData, setFormData] = useState<ProfileFormData>({
@@ -142,6 +146,22 @@ export default function ProfilePage() {
     if (formData.first_name) return formData.first_name[0].toUpperCase()
     if (profile?.email) return profile.email[0].toUpperCase()
     return "U"
+  }
+
+  async function handleResetOnboarding() {
+    setResetting(true)
+    try {
+      const res = await fetch("/api/proxy/v1/onboarding/reset", { method: "POST" })
+      if (res.ok) {
+        router.push("/app")
+      } else {
+        toast({ title: "Failed to reset setup", variant: "destructive" })
+      }
+    } catch {
+      toast({ title: "Failed to reset setup", variant: "destructive" })
+    } finally {
+      setResetting(false)
+    }
   }
 
   if (isLoading) {
@@ -390,6 +410,20 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Re-run Setup */}
+          <div className="pt-4 border-t border-border">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground gap-2 text-xs"
+              onClick={handleResetOnboarding}
+              disabled={resetting}
+            >
+              {resetting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+              Re-run initial setup
+            </Button>
           </div>
         </div>
       </div>

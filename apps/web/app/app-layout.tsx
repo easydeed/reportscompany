@@ -43,6 +43,7 @@ import {
   Palette,
   CreditCard,
   Plus,
+  HelpCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -223,6 +224,16 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
                 </CollapsibleContent>
               </SidebarMenuItem>
             </Collapsible>
+
+            {/* Help Center */}
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={pathname?.startsWith("/app/help")}>
+                <Link href="/app/help">
+                  <HelpCircle className="w-4 h-4" />
+                  <span className="text-[13px]">Help Center</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
 
             {/* Admin Section */}
             {isAdmin && (

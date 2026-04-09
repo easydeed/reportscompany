@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
+import { useOnboarding } from "@/hooks/use-api"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -12,6 +13,8 @@ import {
   User,
   Palette,
   UserPlus,
+  FileText,
+  Calendar,
   ChevronRight,
   X,
   Loader2,
@@ -49,8 +52,10 @@ export type OnboardingStatus = {
 }
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  user: User,
-  palette: Palette,
+  "user": User,
+  "palette": Palette,
+  "file-text": FileText,
+  "calendar": Calendar,
   "user-plus": UserPlus,
 }
 
@@ -66,30 +71,10 @@ export function AffiliateOnboarding({
   sponsoredCount = 0,
   initialStatus,
 }: AffiliateOnboardingProps) {
-  const [status, setStatus] = useState<OnboardingStatus | null>(initialStatus ?? null)
-  // If we have initial status, no loading needed
-  const [loading, setLoading] = useState(!initialStatus)
+  const { data: fetchedStatus, isLoading: queryLoading } = useOnboarding()
+  const status = (initialStatus ?? fetchedStatus ?? null) as OnboardingStatus | null
+  const loading = !initialStatus && queryLoading
   const [dismissing, setDismissing] = useState(false)
-
-  useEffect(() => {
-    // Skip fetch if we already have initial status
-    if (initialStatus) return
-    loadOnboardingStatus()
-  }, [initialStatus])
-
-  async function loadOnboardingStatus() {
-    try {
-      const res = await fetch("/api/proxy/v1/onboarding", { cache: "no-store" })
-      if (res.ok) {
-        const data = await res.json()
-        setStatus(data)
-      }
-    } catch (error) {
-      console.error("Failed to load onboarding status:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   async function dismissOnboarding() {
     setDismissing(true)
@@ -317,24 +302,8 @@ export function AffiliateOnboarding({
  * Inline variant for showing in the header area
  */
 export function AffiliateOnboardingBanner({ className }: { className?: string }) {
-  const [status, setStatus] = useState<OnboardingStatus | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch("/api/proxy/v1/onboarding", { cache: "no-store" })
-        if (res.ok) {
-          setStatus(await res.json())
-        }
-      } catch (error) {
-        console.error("Failed to load onboarding:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
-  }, [])
+  const { data: fetchedStatus, isLoading: loading } = useOnboarding()
+  const status = (fetchedStatus ?? null) as OnboardingStatus | null
 
   if (loading || !status || status.is_dismissed || status.is_complete) {
     return null
