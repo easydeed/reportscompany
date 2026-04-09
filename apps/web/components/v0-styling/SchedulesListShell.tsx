@@ -57,12 +57,12 @@ export function SchedulesListShell(props: SchedulesListShellProps) {
   const pausedCount = list.filter((s) => !s?.active).length
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Scheduled Reports"
         description="Automated report generation and delivery"
         action={
-          <Button asChild>
+          <Button asChild size="sm">
             <Link href="/app/schedules/new">
               <Plus className="w-4 h-4 mr-2" />
               New Schedule
@@ -104,7 +104,7 @@ export function SchedulesListShell(props: SchedulesListShellProps) {
           }}
         />
       ) : (
-        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-[var(--shadow-card)]">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <h3 className="text-sm font-medium text-foreground">Your Schedules</h3>
             <span className="text-xs text-muted-foreground">

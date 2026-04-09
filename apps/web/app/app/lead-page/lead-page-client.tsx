@@ -7,6 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/page-header';
+import { MetricCard } from '@/components/metric-card';
+import { StatusBadge } from '@/components/status-badge';
 import {
   Copy, ExternalLink, QrCode, Download,
   Phone, Eye, Clock, FileText, TrendingUp,
@@ -165,21 +168,17 @@ export function LeadPageClient({ initialSettings, initialLeads }: LeadPageClient
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">My Leads</h1>
-          <p className="text-sm text-muted-foreground mt-1">Share your link to capture leads automatically</p>
-        </div>
-        <Button 
-          variant="outline" 
-          onClick={() => setShowSettings(!showSettings)}
-        >
-          <Settings className="w-4 h-4 mr-2" />
-          Settings
-        </Button>
-      </div>
+    <div className="space-y-5">
+      <PageHeader
+        title="My Leads"
+        description="Share your link to capture leads automatically"
+        action={
+          <Button size="sm" onClick={() => setShowSettings(!showSettings)}>
+            <Settings className="w-4 h-4 mr-1.5" />
+            Settings
+          </Button>
+        }
+      />
 
       {/* Settings Panel (Collapsible) */}
       {showSettings && (
@@ -273,11 +272,11 @@ export function LeadPageClient({ initialSettings, initialLeads }: LeadPageClient
           <div className="grid md:grid-cols-2 gap-6">
             {/* URL Section */}
             <div>
-              <Label className="text-sm font-medium text-gray-700 mb-2 block">
+              <Label className="text-sm font-medium text-foreground mb-2 block">
                 Your Unique URL
               </Label>
               <div className="flex items-center gap-2">
-                <div className="flex-1 bg-gray-100 px-4 py-3 rounded-lg font-mono text-sm truncate">
+                <div className="flex-1 bg-muted/60 px-4 py-3 rounded-lg font-mono text-sm truncate">
                   {settings.url}
                 </div>
                 <Button variant="outline" size="icon" onClick={copyUrl} title="Copy URL">
@@ -292,14 +291,14 @@ export function LeadPageClient({ initialSettings, initialLeads }: LeadPageClient
                   </a>
                 </Button>
               </div>
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-muted-foreground mt-2">
                 Share this link on business cards, social media, email signatures, yard signs, etc.
               </p>
             </div>
 
             {/* QR Code Section */}
             <div>
-              <Label className="text-sm font-medium text-gray-700 mb-2 block">
+              <Label className="text-sm font-medium text-foreground mb-2 block">
                 Your QR Code
               </Label>
               <div className="flex items-center gap-4">
@@ -311,8 +310,8 @@ export function LeadPageClient({ initialSettings, initialLeads }: LeadPageClient
                       className="w-24 h-24"
                     />
                   ) : (
-                    <div className="w-24 h-24 bg-gray-100 rounded flex items-center justify-center">
-                      <QrCode className="w-8 h-8 text-gray-400" />
+                    <div className="w-24 h-24 bg-muted/60 rounded flex items-center justify-center">
+                      <QrCode className="w-8 h-8 text-muted-foreground/60" />
                     </div>
                   )}
                 </div>
@@ -332,28 +331,11 @@ export function LeadPageClient({ initialSettings, initialLeads }: LeadPageClient
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-4 gap-4 mt-6 pt-6 border-t">
-            <StatBox 
-              label="Page Visits" 
-              value={settings.visits || 0} 
-              icon={<Eye className="w-4 h-4" />}
-            />
-            <StatBox 
-              label="Leads Captured" 
-              value={stats.totalLeads} 
-              icon={<FileText className="w-4 h-4" />}
-            />
-            <StatBox 
-              label="Hot Leads" 
-              value={stats.hotLeads}
-              icon={<Flame className="w-4 h-4" />}
-              highlight
-            />
-            <StatBox 
-              label="Contact Rate" 
-              value={`${stats.conversionRate}%`}
-              icon={<TrendingUp className="w-4 h-4" />}
-            />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6 pt-6 border-t border-border">
+            <MetricCard label="Page Visits" value={settings.visits || 0} icon={<Eye className="w-4 h-4" />} index={0} />
+            <MetricCard label="Leads Captured" value={stats.totalLeads} icon={<FileText className="w-4 h-4" />} index={1} />
+            <MetricCard label="Hot Leads" value={stats.hotLeads} icon={<Flame className="w-4 h-4" />} index={2} />
+            <MetricCard label="Contact Rate" value={`${stats.conversionRate}%`} icon={<TrendingUp className="w-4 h-4" />} index={3} />
           </div>
         </CardContent>
       </Card>
@@ -375,7 +357,6 @@ export function LeadPageClient({ initialSettings, initialLeads }: LeadPageClient
                 variant={filter === 'hot' ? 'default' : 'outline'} 
                 size="sm"
                 onClick={() => setFilter('hot')}
-                className={filter === 'hot' ? 'bg-orange-500 hover:bg-orange-600' : ''}
               >
                 <Flame className="w-3 h-3 mr-1" />
                 Hot ({stats.hotLeads})
@@ -384,7 +365,6 @@ export function LeadPageClient({ initialSettings, initialLeads }: LeadPageClient
                 variant={filter === 'contacted' ? 'default' : 'outline'} 
                 size="sm"
                 onClick={() => setFilter('contacted')}
-                className={filter === 'contacted' ? 'bg-green-500 hover:bg-green-600' : ''}
               >
                 <CheckCircle className="w-3 h-3 mr-1" />
                 Contacted ({stats.contactedLeads})
@@ -394,7 +374,7 @@ export function LeadPageClient({ initialSettings, initialLeads }: LeadPageClient
         </CardHeader>
         <CardContent>
           {filteredLeads.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-muted-foreground">
               <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>
                 {filter === 'all' 
@@ -417,46 +397,25 @@ export function LeadPageClient({ initialSettings, initialLeads }: LeadPageClient
 }
 
 
-function StatBox({ label, value, icon, highlight }: { 
-  label: string; 
-  value: string | number; 
-  icon: React.ReactNode;
-  highlight?: boolean;
-}) {
-  return (
-    <div className={`text-center p-4 rounded-xl ${highlight ? 'bg-orange-50' : 'bg-gray-50'}`}>
-      <div className={`flex justify-center mb-2 ${highlight ? 'text-orange-600' : 'text-gray-500'}`}>
-        {icon}
-      </div>
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
-      <p className="text-xs text-gray-500">{label}</p>
-    </div>
-  );
-}
-
-
 function LeadRow({ lead }: { lead: ConsumerLead }) {
   const isHot = lead.view_count > 1 || lead.agent_contact_clicked;
   
   return (
-    <div className={`p-4 rounded-xl border ${isHot ? 'border-orange-200 bg-orange-50' : 'bg-gray-50'}`}>
+    <div className={`p-4 rounded-xl border ${isHot ? 'border-amber-200 bg-amber-50' : 'border-border bg-muted'}`}>
       <div className="flex items-center justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <p className="font-medium text-gray-900 truncate">
+            <p className="font-medium text-foreground truncate">
               {lead.property_address}
             </p>
             {isHot && (
-              <Badge className="bg-orange-500 text-white">
-                <Flame className="w-3 h-3 mr-1" />
-                Hot
-              </Badge>
+              <StatusBadge status="new" label="Hot" />
             )}
           </div>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             {lead.property_city}, {lead.property_state} {lead.property_zip}
           </p>
-          <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
               <Phone className="w-3 h-3" />
               {lead.consumer_phone}
@@ -473,20 +432,14 @@ function LeadRow({ lead }: { lead: ConsumerLead }) {
         </div>
         <div className="flex items-center gap-2">
           {lead.agent_contact_clicked && (
-            <Badge className="bg-green-100 text-green-700">
-              <CheckCircle className="w-3 h-3 mr-1" />
-              Contacted
-            </Badge>
+            <StatusBadge status="contacted" />
           )}
           {lead.pdf_downloaded && (
-            <Badge variant="outline" className="border-indigo-300 text-indigo-700">
-              <FileText className="w-3 h-3 mr-1" />
-              PDF
-            </Badge>
+            <StatusBadge status="delivered" label="PDF" />
           )}
           <a 
             href={`tel:${lead.consumer_phone}`}
-            className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            className="p-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
           >
             <Phone className="w-4 h-4" />
           </a>

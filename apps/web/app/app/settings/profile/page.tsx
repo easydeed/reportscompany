@@ -176,14 +176,14 @@ export default function ProfilePage() {
   return (
     <div className="max-w-4xl mx-auto">
       {/* Page Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Profile</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">Profile</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Your personal information appears on reports and emails
           </p>
         </div>
-        <Button onClick={saveProfile} disabled={saving}>
+        <Button size="sm" onClick={saveProfile} disabled={saving}>
           {saving ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -202,7 +202,7 @@ export default function ProfilePage() {
         {/* Left Column - Avatar Card */}
         <div className="space-y-6">
           {/* Avatar Card */}
-          <div className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)] p-6 text-center">
+          <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] p-6 text-center">
             <div className="relative inline-block group mb-4">
               <Avatar className="w-28 h-28 border-4 border-background shadow-lg">
                 <AvatarImage src={formData.avatar_url || undefined} />
@@ -253,7 +253,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Email Status Card */}
-          <div className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)] p-5">
+          <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] p-5">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
                 <Mail className="w-5 h-5 text-indigo-600" />
@@ -285,7 +285,7 @@ export default function ProfilePage() {
         {/* Right Column - Form */}
         <div className="space-y-6">
           {/* Personal Information */}
-          <div className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)] overflow-hidden">
+          <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
             <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center">
                 <User className="w-4 h-4 text-indigo-600" />
@@ -324,7 +324,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Professional Information */}
-          <div className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)] overflow-hidden">
+          <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
             <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center">
                 <Briefcase className="w-4 h-4 text-amber-600" />
@@ -363,7 +363,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Contact Information */}
-          <div className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)] overflow-hidden">
+          <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
             <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
                 <Phone className="w-4 h-4 text-emerald-600" />

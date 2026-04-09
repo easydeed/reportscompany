@@ -5,7 +5,6 @@ import { useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
 import {
   Select,
   SelectContent,
@@ -35,6 +34,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Skeleton } from "@/components/ui/skeleton"
+import { PageHeader } from "@/components/page-header"
+import { MetricCard } from "@/components/metric-card"
+import { StatusBadge } from "@/components/status-badge"
+import { EmptyState } from "@/components/empty-state"
 import {
   Download,
   Search,
@@ -179,18 +183,6 @@ export default function LeadsPage() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "new":
-        return <Badge className="bg-blue-500/10 text-blue-700 hover:bg-blue-500/20">New</Badge>
-      case "contacted":
-        return <Badge className="bg-yellow-500/10 text-yellow-700 hover:bg-yellow-500/20">Contacted</Badge>
-      case "converted":
-        return <Badge className="bg-green-500/10 text-green-700 hover:bg-green-500/20">Converted</Badge>
-      default:
-        return <Badge variant="outline">{status}</Badge>
-    }
-  }
 
   const getSourceBadge = (source: string) => {
     return source === "qr_scan" 
@@ -211,90 +203,44 @@ export default function LeadsPage() {
 
   if (loading && leads.length === 0) {
     return (
-      <div className="space-y-6">
-        <h1 className="font-bold text-3xl">Leads</h1>
-        <p className="text-muted-foreground">Loading...</p>
+      <div className="space-y-5">
+        <PageHeader title="Leads" description="Lead capture from property reports" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-card border border-border rounded-xl p-4">
+              <Skeleton className="h-3 w-20 mb-3" />
+              <Skeleton className="h-7 w-12" />
+            </div>
+          ))}
+        </div>
+        <LeadsTableSkeleton />
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-bold text-3xl mb-2">Leads</h1>
-          <p className="text-muted-foreground">
-            {total} lead{total !== 1 ? "s" : ""} captured from property reports
-          </p>
-        </div>
-        <Button onClick={exportCSV} disabled={exporting} variant="outline">
-          {exporting ? (
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          ) : (
-            <Download className="w-4 h-4 mr-2" />
-          )}
-          Export CSV
-        </Button>
-      </div>
+    <div className="space-y-5">
+      <PageHeader
+        title="Leads"
+        description={`${total} lead${total !== 1 ? "s" : ""} captured from property reports`}
+        action={
+          <Button size="sm" onClick={exportCSV} disabled={exporting}>
+            {exporting ? (
+              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4 mr-1.5" />
+            )}
+            Export CSV
+          </Button>
+        }
+      />
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Users className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.total}</p>
-                <p className="text-sm text-muted-foreground">Total Leads</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.newThisWeek}</p>
-                <p className="text-sm text-muted-foreground">New This Week</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-yellow-500/10 flex items-center justify-center">
-                <PhoneCall className="w-5 h-5 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.contacted}</p>
-                <p className="text-sm text-muted-foreground">Contacted</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                <Trophy className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.converted}</p>
-                <p className="text-sm text-muted-foreground">Converted</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <MetricCard label="Total Leads" value={stats.total} icon={<Users className="w-4 h-4" />} index={0} />
+        <MetricCard label="New This Week" value={stats.newThisWeek} icon={<Sparkles className="w-4 h-4" />} index={1} />
+        <MetricCard label="Contacted" value={stats.contacted} icon={<PhoneCall className="w-4 h-4" />} index={2} />
+        <MetricCard label="Converted" value={stats.converted} icon={<Trophy className="w-4 h-4" />} index={3} />
       </div>
 
       {error && (
@@ -359,109 +305,121 @@ export default function LeadsPage() {
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Lead</TableHead>
-              <TableHead>Property</TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead className="w-[50px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredLeads.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="h-32 text-center">
-                  <div className="flex flex-col items-center gap-2">
-                    <p className="text-sm text-muted-foreground">
-                      {searchQuery || statusFilter !== "all" || propertyFilter !== "all"
-                        ? "No leads match your filters"
-                        : "No leads captured yet"}
-                    </p>
-                  </div>
-                </TableCell>
+      {filteredLeads.length === 0 && !searchQuery && statusFilter === "all" && propertyFilter === "all" ? (
+        <EmptyState
+          icon={<Users className="w-6 h-6" />}
+          title="No leads captured yet"
+          description="Leads will appear here once visitors interact with your property reports."
+        />
+      ) : (
+        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-[var(--shadow-card)]">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/40 hover:bg-muted/40 border-b border-border">
+                <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em] py-2.5">Lead</TableHead>
+                <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em] py-2.5">Property</TableHead>
+                <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em] py-2.5">Source</TableHead>
+                <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em] py-2.5">Status</TableHead>
+                <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em] py-2.5">Date</TableHead>
+                <TableHead className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em] py-2.5 w-[50px]"></TableHead>
               </TableRow>
-            ) : (
-              filteredLeads.map((lead) => (
-                <TableRow
-                  key={lead.id}
-                  className="cursor-pointer"
-                  onClick={() => setSelectedLead(lead)}
-                >
-                  <TableCell>
-                    <div>
-                      <p className="font-medium text-sm">{lead.name}</p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Mail className="w-3 h-3" />
-                        {lead.email}
-                      </div>
-                      {lead.phone && (
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Phone className="w-3 h-3" />
-                          {lead.phone}
-                        </div>
-                      )}
+            </TableHeader>
+            <TableBody>
+              {filteredLeads.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-32 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <Users className="w-8 h-8 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">No leads match your filters</p>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    {lead.property_address ? (
-                      <span className="text-sm">{lead.property_address}</span>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">N/A</span>
-                    )}
-                  </TableCell>
-                  <TableCell>{getSourceBadge(lead.source)}</TableCell>
-                  <TableCell>{getStatusBadge(lead.status)}</TableCell>
-                  <TableCell>
-                    <span className="text-sm">{new Date(lead.created_at).toLocaleDateString()}</span>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setSelectedLead(lead)}>
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => updateLeadStatus(lead.id, "new")}>
-                          <Clock className="w-4 h-4 mr-2" />
-                          Mark as New
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => updateLeadStatus(lead.id, "contacted")}>
-                          <Phone className="w-4 h-4 mr-2" />
-                          Mark as Contacted
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => updateLeadStatus(lead.id, "converted")}>
-                          <UserCheck className="w-4 h-4 mr-2" />
-                          Mark as Converted
-                        </DropdownMenuItem>
-                        {lead.property_report_id && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => router.push(`/app/property/${lead.property_report_id}`)}
-                            >
-                              <ExternalLink className="w-4 h-4 mr-2" />
-                              View Property Report
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ) : (
+                filteredLeads.map((lead) => (
+                  <TableRow
+                    key={lead.id}
+                    className="cursor-pointer hover:bg-muted/30 transition-colors"
+                    onClick={() => setSelectedLead(lead)}
+                  >
+                    <TableCell>
+                      <div>
+                        <p className="font-medium text-sm">{lead.name}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Mail className="w-3 h-3" />
+                          {lead.email}
+                        </div>
+                        {lead.phone && (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Phone className="w-3 h-3" />
+                            {lead.phone}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {lead.property_address ? (
+                        <span className="text-sm">{lead.property_address}</span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">N/A</span>
+                      )}
+                    </TableCell>
+                    <TableCell>{getSourceBadge(lead.source)}</TableCell>
+                    <TableCell><StatusBadge status={lead.status} /></TableCell>
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground">{new Date(lead.created_at).toLocaleDateString()}</span>
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setSelectedLead(lead)}>
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => updateLeadStatus(lead.id, "new")}>
+                            <Clock className="w-4 h-4 mr-2" />
+                            Mark as New
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => updateLeadStatus(lead.id, "contacted")}>
+                            <Phone className="w-4 h-4 mr-2" />
+                            Mark as Contacted
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => updateLeadStatus(lead.id, "converted")}>
+                            <UserCheck className="w-4 h-4 mr-2" />
+                            Mark as Converted
+                          </DropdownMenuItem>
+                          {lead.property_report_id && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => router.push(`/app/property/${lead.property_report_id}`)}
+                              >
+                                <ExternalLink className="w-4 h-4 mr-2" />
+                                View Property Report
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between px-4 py-2.5 border-t border-border bg-muted/20">
+            <p className="text-[11px] text-muted-foreground">
+              Showing {filteredLeads.length} lead{filteredLeads.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Lead Detail Modal */}
       <Dialog open={!!selectedLead} onOpenChange={() => setSelectedLead(null)}>
@@ -489,7 +447,7 @@ export default function LeadsPage() {
                       <p className="font-medium">{selectedLead.name}</p>
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         {getSourceBadge(selectedLead.source)}
-                        {getStatusBadge(selectedLead.status)}
+                        <StatusBadge status={selectedLead.status} />
                       </div>
                     </div>
                   </div>
@@ -616,3 +574,26 @@ export default function LeadsPage() {
   )
 }
 
+function LeadsTableSkeleton() {
+  return (
+    <div className="bg-card border border-border rounded-xl overflow-hidden shadow-[var(--shadow-card)]">
+      <div className="px-4 py-3 border-b border-border bg-muted/40">
+        <div className="grid grid-cols-6 gap-4">
+          {["Lead", "Property", "Source", "Status", "Date", ""].map((h) => (
+            <Skeleton key={h || "actions"} className="h-3 w-16" />
+          ))}
+        </div>
+      </div>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="px-4 py-3 border-b border-border/50 flex items-center gap-4">
+          <Skeleton className="h-4 w-28 flex-1" />
+          <Skeleton className="h-4 w-24 flex-1" />
+          <Skeleton className="h-5 w-16 rounded-full flex-1" />
+          <Skeleton className="h-5 w-16 rounded-full flex-1" />
+          <Skeleton className="h-4 w-20 flex-1" />
+          <Skeleton className="h-8 w-8 rounded flex-shrink-0" />
+        </div>
+      ))}
+    </div>
+  )
+}

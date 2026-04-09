@@ -199,7 +199,7 @@ export default function BillingPage() {
         </p>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         {/* Current Plan + Usage Row */}
         <div className="grid sm:grid-cols-2 gap-4">
           {/* Current Plan Card */}

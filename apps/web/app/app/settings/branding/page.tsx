@@ -268,12 +268,12 @@ export default function BrandingPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Branding</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">Branding</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Control how your reports and emails look across every touchpoint
           </p>
         </div>
-        <Button onClick={save} disabled={saving}>
+        <Button size="sm" onClick={save} disabled={saving}>
           {saving ? (
             <><Loader2 className="w-4 h-4 animate-spin mr-2" />Saving...</>
           ) : (
@@ -498,7 +498,7 @@ export default function BrandingPage() {
         {/* ─── Right: Live Preview + Actions ─── */}
         <div className="lg:sticky lg:top-6 lg:self-start space-y-4">
           {/* Preview Card */}
-          <div className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)] overflow-hidden">
+          <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -570,7 +570,7 @@ export default function BrandingPage() {
           </div>
 
           {/* Actions Card */}
-          <div className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)] overflow-hidden">
+          <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
             <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center gap-2">
               <Eye className="w-4 h-4 text-emerald-600" />
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Test Your Branding</h3>
@@ -642,7 +642,7 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <div className="bg-card border border-border rounded-2xl shadow-[var(--shadow-card)] overflow-hidden">
+    <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
       <div className="px-5 py-3.5 border-b border-border bg-muted/30 flex items-center gap-3">
         <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", iconBg)}>
           {icon}
