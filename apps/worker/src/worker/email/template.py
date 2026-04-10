@@ -1,7 +1,7 @@
 """HTML email template for scheduled report notifications.
 
 V15: Premium V0-inspired redesign matching React email previews.
-- BRANDED: Hero metric in tinted card with serif font (Georgia) and gold accent bar
+- BRANDED: Hero metric in tinted card with Outfit font and gold accent bar
 - BRANDED: Section labels with accent bar prefix (V0 SectionLabel component)
 - BRANDED: AI Insight paragraph with left border in brand color
 - BRANDED: Quick Take callout in accent-colored card with $ icon
@@ -14,7 +14,7 @@ V15: Premium V0-inspired redesign matching React email previews.
 - TABLE: Brand-colored header row with white text + summary stats
 - NEW: KPI card helpers with trend indicators for analytics layouts
 - NEW: Year-over-Year comparison table helper with brand header
-- TYPOGRAPHY: Georgia serif for hero metrics, key numbers (premium feel)
+- TYPOGRAPHY: Outfit for hero metrics, key numbers, prices (modern geometric feel)
 
 V10: Corporate/Professional redesign for Market Snapshot.
 - REMOVED: Emojis from Quick Take, preheaders, and CTAs
@@ -212,8 +212,8 @@ def _build_ai_narrative(insight_text: str, accent_color: str = "#0d9488",
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
                   <td style="background-color: {bg_tint}; border-left: 3px solid {border_tint}; border-radius: 0 6px 6px 0; padding: 16px 20px;">
-                    <p style="margin: 0 0 8px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; color: {accent_on_light}; text-transform: uppercase; letter-spacing: 0.5px;">Market Insight</p>
-                    <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; line-height: 1.6; color: #1f2937;">
+                    <p style="margin: 0 0 8px 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {accent_on_light}; text-transform: uppercase; letter-spacing: 0.5px;">Market Insight</p>
+                    <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #1f2937;">
                       {insight_text}
                     </p>
                   </td>
@@ -243,7 +243,7 @@ def _build_hero_stat(value: str, label: str, primary_color: str,
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
                   <td style="background-color: #f8fafc; border-radius: 8px; padding: 28px 20px; text-align: center;">
-                    <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 48px; font-weight: 700; color: {primary_color}; line-height: 1;">
+                    <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 48px; font-weight: 700; color: {primary_color}; line-height: 1;">
                       {value}
                     </p>
                     <p style="margin: 8px 0 0; font-size: 12px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 1px;">
@@ -275,8 +275,8 @@ def _build_quick_take(text: str, accent_color: str, primary_color: str = "#18235
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
                   <td style="background-color: {primary_color}; padding: 16px 20px; border-radius: 6px;">
-                    <p style="margin: 0 0 6px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; color: {accent_color}; text-transform: uppercase; letter-spacing: 1px;">Quick Take</p>
-                    <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; line-height: 1.5; color: #ffffff;">
+                    <p style="margin: 0 0 6px 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {accent_color}; text-transform: uppercase; letter-spacing: 1px;">Quick Take</p>
+                    <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #ffffff;">
                       {text}
                     </p>
                   </td>
@@ -297,7 +297,7 @@ def _build_cta(pdf_url: str, accent_color: str, cta_text: str = "View Full Repor
                     </v:roundrect>
                     <![endif]-->
                     <!--[if !mso]><!-->
-                    <a href="{pdf_url}" target="_blank" style="display: inline-block; background-color: {accent_color}; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 6px;">
+                    <a href="{pdf_url}" target="_blank" style="display: inline-block; background-color: {accent_color}; color: #ffffff; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 6px;">
                       {cta_text}
                     </a>
                     <!--<![endif]-->
@@ -341,7 +341,7 @@ def _build_filter_blurb(filter_text: str, primary_color: str) -> str:
 
 
 def _build_stacked_stats(stats: List[Tuple[str, str]], primary_color: str = "#18235c") -> str:
-    """4-column stats row with Georgia serif values. Ref: V0 email designs."""
+    """4-column stats row with Outfit values. Ref: V0 email designs."""
     if not stats:
         return ""
     cells = ""
@@ -350,8 +350,8 @@ def _build_stacked_stats(stats: List[Tuple[str, str]], primary_color: str = "#18
         border = "border-right: 1px solid #e2e8f0;" if i < min(len(stats), 4) - 1 else ""
         cells += f'''
                     <td width="25%" style="background-color: {bg}; padding: 16px 12px; text-align: center; {border}">
-                      <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 700; color: {primary_color};">{value}</p>
-                      <p style="margin: 4px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.3px;">{label}</p>
+                      <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 700; color: {primary_color};">{value}</p>
+                      <p style="margin: 4px 0 0 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.3px;">{label}</p>
                     </td>'''
     return f'''
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
@@ -382,7 +382,7 @@ def _build_trend_stats(stats: List[Tuple[str, str, str, bool]], primary_color: s
                                 <span style="font-size: 14px; color: #57534e;">{label}</span>
                               </td>
                               <td align="right" style="vertical-align: middle;">
-                                <span style="font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: 700; color: #1c1917;">{value}</span>
+                                <span style="font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 24px; font-weight: 700; color: #1c1917;">{value}</span>
                                 {trend_html}
                               </td>
                             </tr>
@@ -423,7 +423,7 @@ def _build_yoy_comparison(last_year: List[Tuple[str, str]], this_year: List[Tupl
         ly_rows += f'''
                             <tr>
                               <td style="padding: 8px 0;">
-                                <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 20px; font-weight: 700; color: #78716c;">{val}</p>
+                                <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 20px; font-weight: 700; color: #78716c;">{val}</p>
                                 <p style="margin: 2px 0 0; font-size: 11px; color: #a8a29e;">{label}</p>
                               </td>
                             </tr>'''
@@ -432,7 +432,7 @@ def _build_yoy_comparison(last_year: List[Tuple[str, str]], this_year: List[Tupl
         ty_rows += f'''
                             <tr>
                               <td style="padding: 8px 0;">
-                                <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 20px; font-weight: 700; color: {primary_color};">{val}</p>
+                                <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 20px; font-weight: 700; color: {primary_color};">{val}</p>
                                 <p style="margin: 2px 0 0; font-size: 11px; color: #78716c;">{label}</p>
                               </td>
                             </tr>'''
@@ -484,7 +484,7 @@ def _build_photo_card_2x2(listing: Dict, accent_color: str) -> str:
                         <tr><td>{photo_html}</td></tr>
                         <tr><td style="padding: 8px 0 0;">
                           <p style="margin: 0; font-size: 12px; color: #333333;">{addr}</p>
-                          <p style="margin: 4px 0 0; font-family: Georgia, \'Times New Roman\', serif; font-size: 15px; font-weight: bold; color: {accent_color};">{price_str}</p>
+                          <p style="margin: 4px 0 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: bold; color: {accent_color};">{price_str}</p>
                         </td></tr>
                       </table>'''
 
@@ -514,7 +514,7 @@ def _build_gallery_card_large(listing: Dict, accent_color: str) -> str:
                         <tr><td style="padding: 14px;">
                           <p style="margin: 0; font-size: 14px; font-weight: 700; color: #1f2937;">{addr}</p>
                           {f'<p style="margin: 2px 0 0; font-size: 12px; color: #6b7280;">{location}</p>' if location else ''}
-                          <p style="margin: 6px 0 0; font-family: Georgia, \'Times New Roman\', serif; font-size: 20px; font-weight: bold; color: {accent_color};">{price_str}</p>
+                          <p style="margin: 6px 0 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 20px; font-weight: bold; color: {accent_color};">{price_str}</p>
                           {f'<p style="margin: 4px 0 0; font-size: 12px; color: #6b7280;">{specs}</p>' if specs else ''}
                         </td></tr>
                       </table>'''
@@ -543,7 +543,7 @@ def _build_gallery_card_compact(listing: Dict, accent_color: str) -> str:
                         <tr><td style="padding: 12px;">
                           <p style="margin: 0; font-size: 13px; font-weight: 700; color: #1f2937;">{addr}</p>
                           {f'<p style="margin: 2px 0 0; font-size: 11px; color: #6b7280;">{city}</p>' if city else ''}
-                          <p style="margin: 6px 0 0; font-family: Georgia, \'Times New Roman\', serif; font-size: 18px; font-weight: bold; color: {accent_color};">{price_str}</p>
+                          <p style="margin: 6px 0 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: bold; color: {accent_color};">{price_str}</p>
                           {f'<p style="margin: 4px 0 0; font-size: 11px; color: #6b7280;">{specs}</p>' if specs else ''}
                         </td></tr>
                       </table>'''
@@ -576,7 +576,7 @@ def _build_stacked_property_card(listing: Dict, primary_color: str, accent_color
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 12px; overflow: hidden; background-color: #ffffff;">
                 <tr><td>{photo_html}</td></tr>
                 <tr><td style="padding: 20px;">
-                  <p style="margin: 0 0 4px; font-family: Georgia, 'Times New Roman', serif; font-size: 22px; font-weight: 700; color: {primary_color};">{price_str}</p>
+                  <p style="margin: 0 0 4px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 22px; font-weight: 700; color: {primary_color};">{price_str}</p>
                   <p style="margin: 0 0 2px; font-size: 15px; font-weight: 600; color: #1c1917;">{addr}</p>
                   <p style="margin: 0 0 16px; font-size: 12px; color: #78716c;">{location}</p>
                   <table role="presentation" cellpadding="0" cellspacing="0"><tr>{badges}</tr></table>
@@ -600,7 +600,7 @@ def _build_photo_card_with_badge(listing: Dict, primary_color: str, accent_color
                         <tr><td style="padding: 8px 0 0;">
                           <span style="display: inline-block; padding: 3px 8px; background-color: {badge_bg}; color: #ffffff; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 3px;">{badge_text}</span>
                           <p style="margin: 6px 0 0; font-size: 10px; color: #475569;">{addr}</p>
-                          <p style="margin: 4px 0 0; font-family: Georgia, \'Times New Roman\', serif; font-size: 13px; font-weight: bold; color: {accent_color};">{price_str}</p>
+                          <p style="margin: 4px 0 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; font-weight: bold; color: {accent_color};">{price_str}</p>
                         </td></tr>
                       </table>'''
 
@@ -635,7 +635,7 @@ def _build_property_row(listing: Dict, accent_color: str, is_last: bool = False)
                           <td style="vertical-align: middle; padding: 12px;">
                             <p style="margin: 0 0 2px; font-size: 13px; font-weight: 700; color: #1a2744;">{addr}</p>
                             <p style="margin: 0 0 4px; font-size: 11px; color: #6b7280;">{specs}</p>
-                            <p style="margin: 0; font-family: Georgia, \'Times New Roman\', serif; font-size: 16px; font-weight: bold; color: {accent_color};">{price_str}</p>
+                            <p style="margin: 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: bold; color: {accent_color};">{price_str}</p>
                           </td>
                           {badge_html}
                         </tr>
@@ -666,21 +666,21 @@ def _build_sales_table(listings: List[Dict], primary_color: str,
         border = "border-bottom: 1px solid #f1f5f9;" if i < len(listings) - 1 else ""
         rows += f'''
                         <tr>
-                          <td style="background: {bg}; padding: 12px 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; color: #334155; {border}">{addr}{badge_html}</td>
-                          <td style="background: {bg}; padding: 12px 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; color: #475569; text-align: center; {border}">{specs}</td>
-                          <td style="background: {bg}; padding: 12px 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; color: #475569; text-align: right; {border}">{sqft_str}</td>
-                          <td style="background: {bg}; padding: 12px 10px; font-family: Georgia, 'Times New Roman', serif; font-size: 13px; font-weight: 600; color: {accent_color}; text-align: right; {border}">{price_str}</td>
-                          <td style="background: {bg}; padding: 12px 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; color: #475569; text-align: center; {border}">{dom}</td>
+                          <td style="background: {bg}; padding: 12px 14px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; color: #334155; {border}">{addr}{badge_html}</td>
+                          <td style="background: {bg}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; color: #475569; text-align: center; {border}">{specs}</td>
+                          <td style="background: {bg}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; color: #475569; text-align: right; {border}">{sqft_str}</td>
+                          <td style="background: {bg}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 600; color: {accent_color}; text-align: right; {border}">{price_str}</td>
+                          <td style="background: {bg}; padding: 12px 14px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; color: #475569; text-align: center; {border}">{dom}</td>
                         </tr>'''
-    hdr_style = f"background: {primary_color}; padding: 12px {{pad}}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;"
+    hdr_style = f"background: {primary_color}; padding: 12px {{pad}}; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;"
     return f'''
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden;">
                 <tr>
-                  <td style="background: {primary_color}; padding: 12px 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">Address</td>
-                  <td style="background: {primary_color}; padding: 12px 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">Bd/Ba</td>
-                  <td style="background: {primary_color}; padding: 12px 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Sq Ft</td>
-                  <td style="background: {primary_color}; padding: 12px 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Price</td>
-                  <td style="background: {primary_color}; padding: 12px 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">DOM</td>
+                  <td style="background: {primary_color}; padding: 12px 14px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">Address</td>
+                  <td style="background: {primary_color}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">Bd/Ba</td>
+                  <td style="background: {primary_color}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Sq Ft</td>
+                  <td style="background: {primary_color}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Price</td>
+                  <td style="background: {primary_color}; padding: 12px 14px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">DOM</td>
                 </tr>
                 {rows}
               </table>'''
@@ -907,11 +907,11 @@ def _build_analytics_body(
             if is_highlight:
                 bar_bg = accent_color
                 label_style = f"font-size: 13px; font-weight: 700; color: {primary_color};"
-                pct_style = f"font-family: Georgia, 'Times New Roman', serif; font-size: 15px; font-weight: bold; color: {accent_color};"
+                pct_style = f"font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: bold; color: {accent_color};"
             else:
                 bar_bg = primary_color
                 label_style = "font-size: 13px; font-weight: 600; color: #1f2937;"
-                pct_style = "font-family: Georgia, 'Times New Roman', serif; font-size: 15px; font-weight: bold; color: #1f2937;"
+                pct_style = "font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: bold; color: #1f2937;"
 
             bar_rows += f'''
                       <tr>
@@ -950,7 +950,7 @@ def _build_analytics_body(
         for sm_label, sm_value in supporting_metrics[:3]:
             cells += f'''
                     <td width="{pct}" style="padding: 16px 12px; text-align: center; background-color: #f8fafc;">
-                      <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; font-weight: 700; color: {primary_color};">{sm_value}</p>
+                      <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 700; color: {primary_color};">{sm_value}</p>
                       <p style="margin: 4px 0 0; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.3px;">{sm_label}</p>
                     </td>'''
         body += f'''
@@ -1977,7 +1977,7 @@ def schedule_email_html(
     elif brand_name and brand_name != "Market Reports":
         company_html = f'''
                             <td style="text-align: right; vertical-align: top; width: 100px;">
-                              <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 14px; font-weight: 700; color: {primary_color};">{brand_name}</p>
+                              <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; color: {primary_color};">{brand_name}</p>
                               {f'<p style="margin: 2px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 11px; color: #64748b;">{city or ""}</p>' if city else ""}
                             </td>'''
 
@@ -2000,7 +2000,7 @@ def schedule_email_html(
                           <!--<![endif]-->
                         </td>
                         <td style="vertical-align: top; padding-left: 16px;">
-                          <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 16px; font-weight: bold; color: {primary_color};">
+                          <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: bold; color: {primary_color};">
                             {contact_line1 or rep_name}
                           </p>
                           {f'<p style="margin: 2px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 11px; color: #6b7280;">{contact_line2 or rep_title}</p>' if (contact_line2 or rep_title) else ''}
@@ -2023,7 +2023,7 @@ def schedule_email_html(
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                       <tr>
                         <td style="vertical-align: top;">
-                          {f'<p style="margin: 0 0 2px 0; font-family: Georgia, serif; font-size: 16px; font-weight: bold; color: {primary_color};">{contact_line1}</p>' if contact_line1 else ''}
+                          {f'<p style="margin: 0 0 2px 0; font-family: Outfit, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: bold; color: {primary_color};">{contact_line1}</p>' if contact_line1 else ''}
                           {f'<p style="margin: 0 0 6px 0; font-size: 12px; color: #64748b;">{contact_line2}</p>' if contact_line2 else ''}
                           {f'<p style="margin: 0; font-size: 12px;"><a href="{website_url}" style="color: {accent_color}; text-decoration: none;">{website_url.replace("https://", "").replace("http://", "")}</a></p>' if website_url else ''}
                         </td>
@@ -2038,7 +2038,7 @@ def schedule_email_html(
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; margin-top: 4px;">
                 <tr>
                   <td style="padding: 24px;" align="center">
-                    <p style="margin: 0; font-family: Georgia, serif; font-size: 16px; font-weight: bold; color: {primary_color};">{brand_name}</p>
+                    <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: bold; color: {primary_color};">{brand_name}</p>
                   </td>
                 </tr>
               </table>'''
@@ -2074,6 +2074,9 @@ def schedule_email_html(
   <![endif]-->
   
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
+  </style>
+  <style>
     /* Reset */
     body, table, td, p, a, li {{ -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }}
     table, td {{ mso-table-lspace: 0pt; mso-table-rspace: 0pt; }}
@@ -2099,7 +2102,7 @@ def schedule_email_html(
     }}
   </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f0efed; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+<body style="margin: 0; padding: 0; background-color: #f0efed; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
   
   <!-- Preheader Text (hidden preview text) -->
   <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">
@@ -2135,18 +2138,18 @@ def schedule_email_html(
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                       <tr>
                         <td width="65%" style="vertical-align: middle;">
-                          <p style="margin: 0 0 4px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: bold; color: #ffffff;">
+                          <p style="margin: 0 0 4px 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 24px; font-weight: bold; color: #ffffff;">
                             {report_label} &mdash; {area_display}
                           </p>
-                          <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; color: rgba(255,255,255,0.7);">
+                          <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 11px; color: rgba(255,255,255,0.7);">
                             {date_range} &bull; Data via MLS
                           </p>
                         </td>
                         <td width="35%" style="vertical-align: middle; text-align: right;">
-                          <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: bold; color: #ffffff;">
+                          <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 28px; font-weight: bold; color: #ffffff;">
                             {h1_value if has_hero_4 else m1_value}
                           </p>
-                          <p style="margin: 2px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 0.5px;">
+                          <p style="margin: 2px 0 0 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 0.5px;">
                             {h1_label if has_hero_4 else m1_label}
                           </p>
                         </td>
@@ -2185,10 +2188,10 @@ def schedule_email_html(
           <!-- ========== POWERED BY + UNSUBSCRIBE ========== -->
           <tr>
             <td style="background-color: #f8f9fa; padding: 16px 28px; border-radius: 0 0 8px 8px; text-align: center;">
-              <p style="margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; color: #9ca3af;">
+              <p style="margin: 0 0 4px 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #9ca3af;">
                 Powered by <span style="font-weight: 600; color: #6b7280;">TrendyReports</span>
               </p>
-              <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; color: #9ca3af;">
+              <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #9ca3af;">
                 <a href="{unsubscribe_url}" style="color: #9ca3af; text-decoration: underline;">Unsubscribe</a>
                 &bull; <a href="#" style="color: #9ca3af; text-decoration: underline;">Update Preferences</a>
               </p>
