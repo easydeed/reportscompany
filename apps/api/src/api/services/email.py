@@ -167,105 +167,156 @@ class EmailService:
 email_service = EmailService()
 
 
-# ============ Email Templates ============
+# ============ Shared Email Shell ============
 
-def get_welcome_email_html(user_name: str, login_url: str) -> str:
-    """Generate welcome email HTML."""
-    return f"""
-<!DOCTYPE html>
-<html>
+def _email_base(content_html: str) -> str:
+    """Wraps content in the standard TrendyReports transactional email shell."""
+    return f'''<!DOCTYPE html>
+<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Market Reports</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="color-scheme" content="light only">
+  <meta name="supported-color-schemes" content="light only">
+  <title>TrendyReports</title>
+  <style>
+    body, table, td, p, a {{ -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }}
+    table, td {{ mso-table-lspace: 0pt; mso-table-rspace: 0pt; }}
+    img {{ border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }}
+    body {{ margin: 0 !important; padding: 0 !important; width: 100% !important; }}
+    @media (prefers-color-scheme: dark) {{
+      .email-outer {{ background-color: #232323 !important; }}
+    }}
+    @media screen and (max-width: 600px) {{
+      .email-wrapper {{ width: 100% !important; }}
+      .content-pad {{ padding: 24px 20px !important; }}
+      .cta-btn {{ display: block !important; width: 100% !important; text-align: center !important; }}
+    }}
+  </style>
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="color: #7C3AED; margin: 0;">Market Reports</h1>
-    </div>
+<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6;" class="email-outer">
+    <tr>
+      <td align="center" style="padding: 32px 16px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" class="email-wrapper" style="max-width: 600px; width: 100%;">
 
-    <div style="background: linear-gradient(135deg, #7C3AED 0%, #a855f7 100%); color: white; padding: 30px; border-radius: 12px; margin-bottom: 30px;">
-        <h2 style="margin: 0 0 10px 0; font-size: 24px;">Welcome, {user_name}!</h2>
-        <p style="margin: 0; opacity: 0.9;">Your account is ready. Let's create your first market report.</p>
-    </div>
+          <!-- HEADER -->
+          <tr>
+            <td align="center" style="background-color: #18235c; padding: 28px 24px 20px; border-radius: 12px 12px 0 0;">
+              <img src="https://trendyreports.io/logo-white.png" width="160" alt="TrendyReports" style="display: block; max-height: 40px; width: auto; height: auto;">
+            </td>
+          </tr>
 
-    <div style="margin-bottom: 30px;">
-        <h3 style="color: #333; margin-bottom: 15px;">Getting Started</h3>
-        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 15px;">
-            <div style="display: flex; align-items: center; margin-bottom: 12px;">
-                <span style="background: #7C3AED; color: white; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-right: 12px; font-size: 12px;">1</span>
-                <span><strong>Complete your profile</strong> - Add your name and contact info</span>
-            </div>
-            <div style="display: flex; align-items: center; margin-bottom: 12px;">
-                <span style="background: #7C3AED; color: white; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-right: 12px; font-size: 12px;">2</span>
-                <span><strong>Set up branding</strong> - Upload your logo and colors</span>
-            </div>
-            <div style="display: flex; align-items: center;">
-                <span style="background: #7C3AED; color: white; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-right: 12px; font-size: 12px;">3</span>
-                <span><strong>Create a report</strong> - Generate your first market snapshot</span>
-            </div>
-        </div>
-    </div>
+          <!-- CONTENT -->
+          <tr>
+            <td style="background-color: #ffffff; padding: 32px;" class="content-pad">
+              {content_html}
+            </td>
+          </tr>
 
-    <div style="text-align: center; margin-bottom: 30px;">
-        <a href="{login_url}" style="display: inline-block; background: #7C3AED; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600;">Get Started</a>
-    </div>
+          <!-- FOOTER -->
+          <tr>
+            <td style="background-color: #ffffff; border-top: 1px solid #f3f4f6; padding: 20px 32px; border-radius: 0 0 12px 12px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 4px; font-size: 13px; font-weight: 600; color: #6b7280;">TrendyReports</p>
+                    <p style="margin: 0 0 12px; font-size: 12px; color: #9ca3af;">Branded Real Estate Reports</p>
+                    <p style="margin: 0; font-size: 11px; color: #9ca3af;">
+                      <a href="mailto:support@trendyreports.io" style="color: #6b7280; text-decoration: underline;">Contact Support</a>
+                      &nbsp;&bull;&nbsp; &copy; 2026 TrendyReports
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-    <div style="border-top: 1px solid #e5e5e5; padding-top: 20px; text-align: center; color: #666; font-size: 14px;">
-        <p>Questions? Reply to this email or contact support.</p>
-        <p style="margin-top: 10px;">
-            <a href="{login_url}" style="color: #7C3AED; text-decoration: none;">Market Reports</a>
-        </p>
-    </div>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
-</html>
+</html>'''
+
+
+def _cta_button(url: str, label: str) -> str:
+    """Navy CTA button with VML fallback for Outlook."""
+    return f'''<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 28px 0;">
+                <tr>
+                  <td align="center">
+                    <!--[if mso]>
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{url}" style="height:48px;v-text-anchor:middle;width:240px;" arcsize="17%" stroke="f" fillcolor="#18235c">
+                      <w:anchorlock/>
+                      <center style="color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:16px;font-weight:bold;">{label}</center>
+                    </v:roundrect>
+                    <![endif]-->
+                    <!--[if !mso]><!-->
+                    <a href="{url}" target="_blank" class="cta-btn" style="display: inline-block; background-color: #18235c; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; font-weight: bold; text-decoration: none; padding: 14px 32px; border-radius: 8px;">
+                      {label}
+                    </a>
+                    <!--<![endif]-->
+                  </td>
+                </tr>
+              </table>'''
+
+
+# ============ Email Verification ============
+
+def get_verification_email_html(user_name: str, verify_url: str) -> str:
+    """Generate email verification HTML."""
+    first_name = (user_name or "").split()[0] if user_name else "there"
+    content = f'''<p style="margin: 0 0 20px; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; color: #111827;">
+                Hi {first_name},
+              </p>
+              <p style="margin: 0 0 8px; font-size: 15px; line-height: 1.7; color: #374151;">
+                Thanks for signing up for TrendyReports. Verify your email to start creating branded market reports for your clients.
+              </p>
+              {_cta_button(verify_url, "Verify My Email")}
+              <p style="margin: 0 0 8px; font-size: 13px; line-height: 1.6; color: #6b7280;">
+                This link expires in 24 hours.
+              </p>
+              <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #6b7280;">
+                If you didn't create an account, you can safely ignore this email.
+              </p>'''
+    return _email_base(content)
+
+
+def get_verification_email_text(user_name: str, verify_url: str) -> str:
+    """Generate email verification plain text."""
+    first_name = (user_name or "").split()[0] if user_name else "there"
+    return f"""Hi {first_name},
+
+Thanks for signing up for TrendyReports. Verify your email to start creating branded market reports for your clients.
+
+Verify your email: {verify_url}
+
+This link expires in 24 hours.
+
+If you didn't create an account, you can safely ignore this email.
+
+- The TrendyReports Team
 """
 
 
-def get_welcome_email_text(user_name: str, login_url: str) -> str:
-    """Generate welcome email plain text."""
-    return f"""
-Welcome to Market Reports, {user_name}!
+def send_verification_email(email: str, user_name: str, verification_token: str) -> Dict[str, Any]:
+    """Send email verification email."""
+    verify_url = f"{email_service.app_base}/verify-email?token={verification_token}"
 
-Your account is ready. Let's create your first market report.
-
-Getting Started:
-1. Complete your profile - Add your name and contact info
-2. Set up branding - Upload your logo and colors
-3. Create a report - Generate your first market snapshot
-
-Get started: {login_url}
-
-Questions? Reply to this email or contact support.
-
-- The Market Reports Team
-"""
-
-
-def send_welcome_email(email: str, user_name: str) -> Dict[str, Any]:
-    """
-    Send welcome email to a new user.
-
-    Args:
-        email: User's email address
-        user_name: User's display name
-
-    Returns:
-        Result from email service
-    """
-    login_url = f"{email_service.app_base}/app"
-
-    html = get_welcome_email_html(user_name, login_url)
-    text = get_welcome_email_text(user_name, login_url)
+    html = get_verification_email_html(user_name, verify_url)
+    text = get_verification_email_text(user_name, verify_url)
 
     return email_service.send_email_sync(
         to=email,
-        subject="Welcome to Market Reports!",
+        subject="Verify your email \u2014 TrendyReports",
         html=html,
         text=text,
-        tags=[{"name": "category", "value": "welcome"}],
+        tags=[{"name": "category", "value": "verification"}],
     )
 
+
+# ============ Agent Invite ============
 
 def get_invite_email_html(
     inviter_name: str,
@@ -273,51 +324,25 @@ def get_invite_email_html(
     invite_url: str,
 ) -> str:
     """Generate invite email HTML for sponsored agents."""
-    return f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>You're Invited to Market Reports</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="color: #7C3AED; margin: 0;">Market Reports</h1>
-    </div>
-
-    <div style="background: linear-gradient(135deg, #7C3AED 0%, #a855f7 100%); color: white; padding: 30px; border-radius: 12px; margin-bottom: 30px;">
-        <h2 style="margin: 0 0 10px 0; font-size: 24px;">You've Been Invited!</h2>
-        <p style="margin: 0; opacity: 0.9;">{inviter_name} from {company_name} has invited you to Market Reports.</p>
-    </div>
-
-    <div style="margin-bottom: 30px;">
-        <p>You've been invited to join Market Reports, a platform for generating beautiful real estate market reports.</p>
-        <p>As a sponsored agent, you'll get:</p>
-        <ul style="padding-left: 20px;">
-            <li>75 free reports per month</li>
-            <li>Professional branded reports</li>
-            <li>Scheduled report delivery</li>
-            <li>Contact management</li>
-        </ul>
-    </div>
-
-    <div style="text-align: center; margin-bottom: 30px;">
-        <a href="{invite_url}" style="display: inline-block; background: #7C3AED; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600;">Accept Invitation</a>
-    </div>
-
-    <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 8px; margin-bottom: 30px;">
-        <p style="margin: 0; color: #856404; font-size: 14px;">
-            <strong>Note:</strong> This invitation link will expire in 7 days.
-        </p>
-    </div>
-
-    <div style="border-top: 1px solid #e5e5e5; padding-top: 20px; text-align: center; color: #666; font-size: 14px;">
-        <p>Questions? Contact {company_name} or reply to this email.</p>
-    </div>
-</body>
-</html>
-"""
+    content = f'''<p style="margin: 0 0 20px; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; color: #111827;">
+                Hi,
+              </p>
+              <p style="margin: 0 0 20px; font-size: 15px; line-height: 1.7; color: #374151;">
+                <strong>{inviter_name}</strong> from <strong>{company_name}</strong> invited you to join TrendyReports &mdash; a platform for creating branded real estate market reports and property analyses.
+              </p>
+              <p style="margin: 0 0 12px; font-size: 15px; line-height: 1.7; color: #374151;">
+                Your sponsored account includes:
+              </p>
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 0 0 8px;">
+                <tr><td style="padding: 6px 0; font-size: 15px; line-height: 1.7; color: #374151;">&#10003;&ensp; Branded market reports with your contact info</td></tr>
+                <tr><td style="padding: 6px 0; font-size: 15px; line-height: 1.7; color: #374151;">&#10003;&ensp; Automated report scheduling and delivery</td></tr>
+                <tr><td style="padding: 6px 0; font-size: 15px; line-height: 1.7; color: #374151;">&#10003;&ensp; Property CMA reports with comparables</td></tr>
+              </table>
+              {_cta_button(invite_url, "Accept Invitation")}
+              <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #6b7280;">
+                This invitation expires in 7 days.
+              </p>'''
+    return _email_base(content)
 
 
 def send_invite_email(
@@ -326,121 +351,54 @@ def send_invite_email(
     company_name: str,
     invite_token: str,
 ) -> Dict[str, Any]:
-    """
-    Send invitation email to a sponsored agent.
-
-    Args:
-        email: Recipient email address
-        inviter_name: Name of the person sending the invite
-        company_name: Company name of the inviter
-        invite_token: Token for accepting the invitation
-
-    Returns:
-        Result from email service
-    """
+    """Send invitation email to a sponsored agent."""
     invite_url = f"{email_service.app_base}/welcome?token={invite_token}"
 
     html = get_invite_email_html(inviter_name, company_name, invite_url)
 
     return email_service.send_email_sync(
         to=email,
-        subject=f"{inviter_name} invited you to Market Reports",
+        subject=f"{inviter_name} invited you to TrendyReports",
         html=html,
         tags=[{"name": "category", "value": "invite"}],
     )
 
 
-# ============ Password Reset Email ============
+# ============ Password Reset ============
 
 def get_password_reset_email_html(user_name: str, reset_url: str) -> str:
     """Generate password reset email HTML."""
-    return f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reset Your Password</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="color: #7C3AED; margin: 0;">TrendyReports</h1>
-    </div>
-
-    <div style="background: linear-gradient(135deg, #7C3AED 0%, #a855f7 100%); color: white; padding: 30px; border-radius: 12px; margin-bottom: 30px;">
-        <h2 style="margin: 0 0 10px 0; font-size: 24px;">Password Reset Request</h2>
-        <p style="margin: 0; opacity: 0.9;">Hi {user_name}, we received a request to reset your password.</p>
-    </div>
-
-    <div style="margin-bottom: 30px;">
-        <p>Click the button below to reset your password. This link will expire in <strong>1 hour</strong>.</p>
-    </div>
-
-    <div style="text-align: center; margin-bottom: 30px;">
-        <a href="{reset_url}" style="display: inline-block; background: #7C3AED; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600;">Reset Password</a>
-    </div>
-
-    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
-        <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;">
-            <strong>Didn't request this?</strong>
-        </p>
-        <p style="margin: 0; font-size: 14px; color: #666;">
-            If you didn't request a password reset, you can safely ignore this email. Your password won't be changed.
-        </p>
-    </div>
-
-    <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 8px; margin-bottom: 30px;">
-        <p style="margin: 0; color: #856404; font-size: 14px;">
-            <strong>Security tip:</strong> Never share this link with anyone. TrendyReports will never ask for your password via email.
-        </p>
-    </div>
-
-    <div style="border-top: 1px solid #e5e5e5; padding-top: 20px; text-align: center; color: #666; font-size: 14px;">
-        <p>If the button doesn't work, copy and paste this link into your browser:</p>
-        <p style="word-break: break-all; color: #7C3AED;">{reset_url}</p>
-        <p style="margin-top: 20px;">
-            <a href="{email_service.app_base}" style="color: #7C3AED; text-decoration: none;">TrendyReports</a>
-        </p>
-    </div>
-</body>
-</html>
-"""
+    first_name = (user_name or "").split()[0] if user_name else "there"
+    content = f'''<p style="margin: 0 0 20px; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; color: #111827;">
+                Hi {first_name},
+              </p>
+              <p style="margin: 0 0 8px; font-size: 15px; line-height: 1.7; color: #374151;">
+                We received a request to reset your password. Click below to choose a new one.
+              </p>
+              {_cta_button(reset_url, "Reset Password")}
+              <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #6b7280;">
+                This link expires in 1 hour. If you didn't request this, no action is needed &mdash; your password won't change.
+              </p>'''
+    return _email_base(content)
 
 
 def get_password_reset_email_text(user_name: str, reset_url: str) -> str:
     """Generate password reset email plain text."""
-    return f"""
-Password Reset Request
+    first_name = (user_name or "").split()[0] if user_name else "there"
+    return f"""Hi {first_name},
 
-Hi {user_name},
-
-We received a request to reset your password. Click the link below to reset it:
+We received a request to reset your password. Click the link below to choose a new one:
 
 {reset_url}
 
-This link will expire in 1 hour.
-
-Didn't request this?
-If you didn't request a password reset, you can safely ignore this email. Your password won't be changed.
-
-Security tip: Never share this link with anyone.
+This link expires in 1 hour. If you didn't request this, no action is needed — your password won't change.
 
 - The TrendyReports Team
 """
 
 
 def send_password_reset_email(email: str, user_name: str, reset_token: str) -> Dict[str, Any]:
-    """
-    Send password reset email.
-
-    Args:
-        email: User's email address
-        user_name: User's display name
-        reset_token: Password reset token
-
-    Returns:
-        Result from email service
-    """
+    """Send password reset email."""
     reset_url = f"{email_service.app_base}/reset-password?token={reset_token}"
 
     html = get_password_reset_email_html(user_name, reset_url)
@@ -448,120 +406,8 @@ def send_password_reset_email(email: str, user_name: str, reset_token: str) -> D
 
     return email_service.send_email_sync(
         to=email,
-        subject="Reset your TrendyReports password",
+        subject="Reset your password \u2014 TrendyReports",
         html=html,
         text=text,
         tags=[{"name": "category", "value": "password-reset"}],
-    )
-
-
-# ============ Email Verification ============
-
-def get_verification_email_html(user_name: str, verify_url: str) -> str:
-    """Generate email verification HTML (combines welcome + verify)."""
-    return f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to TrendyReports - Verify Your Email</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="color: #7C3AED; margin: 0;">TrendyReports</h1>
-    </div>
-
-    <div style="background: linear-gradient(135deg, #7C3AED 0%, #a855f7 100%); color: white; padding: 30px; border-radius: 12px; margin-bottom: 30px;">
-        <h2 style="margin: 0 0 10px 0; font-size: 24px;">Welcome, {user_name}! 🎉</h2>
-        <p style="margin: 0; opacity: 0.9;">Your account is ready. Just one quick step to get started.</p>
-    </div>
-
-    <div style="margin-bottom: 30px;">
-        <p>Please verify your email address to unlock all features:</p>
-        <ul style="padding-left: 20px; color: #666;">
-            <li>Schedule automated reports</li>
-            <li>Send reports to your contacts</li>
-            <li>Access premium features</li>
-        </ul>
-    </div>
-
-    <div style="text-align: center; margin-bottom: 30px;">
-        <a href="{verify_url}" style="display: inline-block; background: #7C3AED; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600;">Verify Email Address</a>
-    </div>
-
-    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
-        <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;">
-            <strong>What's next?</strong>
-        </p>
-        <ol style="margin: 0; padding-left: 20px; color: #666; font-size: 14px;">
-            <li>Verify your email (click the button above)</li>
-            <li>Set up your branding (logo, colors)</li>
-            <li>Create your first market report!</li>
-        </ol>
-    </div>
-
-    <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 8px; margin-bottom: 30px;">
-        <p style="margin: 0; color: #856404; font-size: 14px;">
-            This verification link expires in <strong>24 hours</strong>.
-        </p>
-    </div>
-
-    <div style="border-top: 1px solid #e5e5e5; padding-top: 20px; text-align: center; color: #666; font-size: 14px;">
-        <p>If the button doesn't work, copy and paste this link:</p>
-        <p style="word-break: break-all; color: #7C3AED;">{verify_url}</p>
-        <p style="margin-top: 20px;">
-            Questions? Reply to this email or visit <a href="{email_service.app_base}" style="color: #7C3AED; text-decoration: none;">TrendyReports</a>
-        </p>
-    </div>
-</body>
-</html>
-"""
-
-
-def get_verification_email_text(user_name: str, verify_url: str) -> str:
-    """Generate email verification plain text."""
-    return f"""
-Welcome to TrendyReports, {user_name}!
-
-Your account is ready. Please verify your email address to unlock all features.
-
-Click here to verify: {verify_url}
-
-What's next?
-1. Verify your email (click the link above)
-2. Set up your branding (logo, colors)
-3. Create your first market report!
-
-This verification link expires in 24 hours.
-
-Questions? Reply to this email.
-
-- The TrendyReports Team
-"""
-
-
-def send_verification_email(email: str, user_name: str, verification_token: str) -> Dict[str, Any]:
-    """
-    Send email verification email.
-
-    Args:
-        email: User's email address
-        user_name: User's display name
-        verification_token: Verification token
-
-    Returns:
-        Result from email service
-    """
-    verify_url = f"{email_service.app_base}/verify-email?token={verification_token}"
-
-    html = get_verification_email_html(user_name, verify_url)
-    text = get_verification_email_text(user_name, verify_url)
-
-    return email_service.send_email_sync(
-        to=email,
-        subject="Welcome to TrendyReports - Verify Your Email",
-        html=html,
-        text=text,
-        tags=[{"name": "category", "value": "verification"}],
     )

@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from ..settings import settings
 from ..auth import sign_jwt, check_password, hash_password, verify_jwt
 import hashlib
-from ..services.email import send_welcome_email, send_password_reset_email, send_verification_email
+from ..services.email import send_password_reset_email, send_verification_email
 
 logger = logging.getLogger(__name__)
 

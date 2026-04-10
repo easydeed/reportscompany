@@ -12,7 +12,7 @@ import logging
 from ..db import db_conn, set_rls
 from ..deps.admin import get_admin_user
 from ..services import get_monthly_usage, resolve_plan_for_account, evaluate_report_limit
-from ..services.email import send_invite_email, send_welcome_email
+from ..services.email import send_invite_email
 from ..services.property_stats import get_platform_stats, refresh_stats
 
 logger = logging.getLogger(__name__)
