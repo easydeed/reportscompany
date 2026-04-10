@@ -40,7 +40,7 @@ function StepVisual({ type }: { type: string }) {
     return (
       <div className="relative h-full w-full overflow-hidden rounded-xl bg-gradient-to-br from-[#EEF2FF] to-[#E0E7FF]">
         <div className="absolute inset-0">
-          <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600&h=400&fit=crop" alt="" className="w-full h-full object-cover" />
+          <img src="https://images.unsplash.com/photo-1569336415962-a4bd9f69cd83?w=600&h=400&fit=crop" alt="" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-white/[0.88]" />
         </div>
         <div className="relative z-10 h-full w-full p-4">
@@ -83,7 +83,7 @@ function StepVisual({ type }: { type: string }) {
     return (
       <div className="relative h-full w-full overflow-hidden rounded-xl bg-gradient-to-br from-[#EEF2FF] to-[#E0E7FF]">
         <div className="absolute inset-0">
-          <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&h=400&fit=crop" alt="" className="w-full h-full object-cover" />
+          <img src="https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&h=400&fit=crop" alt="" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-white/[0.88]" />
         </div>
         <div className="relative z-10 h-full w-full p-4">
@@ -124,7 +124,7 @@ function StepVisual({ type }: { type: string }) {
   return (
     <div className="relative h-full w-full overflow-hidden rounded-xl bg-gradient-to-br from-[#EEF2FF] to-[#E0E7FF]">
       <div className="absolute inset-0">
-        <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&h=400&fit=crop" alt="" className="w-full h-full object-cover" />
+        <img src="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?w=600&h=400&fit=crop" alt="" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-white/[0.88]" />
       </div>
       <div className="relative z-10 h-full w-full p-4">
