@@ -23,44 +23,44 @@ export function MarketingNav() {
       }`}
     >
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        <a href="/" className={`text-xl font-bold transition-colors duration-300 ${scrolled ? "text-[#6366F1]" : "text-white"}`}>
+        <a href="/" className="text-xl font-bold text-[#6366F1]">
           TrendyReports
         </a>
 
         <div className="hidden items-center gap-6 md:flex">
           <a
             href="#how-it-works"
-            className={`text-sm font-medium transition-colors ${scrolled ? "text-foreground/70 hover:text-foreground" : "text-white/80 hover:text-white"}`}
+            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
           >
             How It Works
           </a>
           <a
             href="#reports"
-            className={`text-sm font-medium transition-colors ${scrolled ? "text-foreground/70 hover:text-foreground" : "text-white/80 hover:text-white"}`}
+            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
           >
             Reports
           </a>
           <a
             href="#lead-capture"
-            className={`text-sm font-medium transition-colors ${scrolled ? "text-foreground/70 hover:text-foreground" : "text-white/80 hover:text-white"}`}
+            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
           >
             Lead Capture
           </a>
           <a
             href="#contacts"
-            className={`text-sm font-medium transition-colors ${scrolled ? "text-foreground/70 hover:text-foreground" : "text-white/80 hover:text-white"}`}
+            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
           >
             Contacts
           </a>
           <a
             href="#pricing"
-            className={`text-sm font-medium transition-colors ${scrolled ? "text-foreground/70 hover:text-foreground" : "text-white/80 hover:text-white"}`}
+            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
           >
             Pricing
           </a>
           <a
             href="/login"
-            className={`text-sm font-medium transition-colors ${scrolled ? "text-foreground/70 hover:text-foreground" : "text-white/80 hover:text-white"}`}
+            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
           >
             Log in
           </a>
@@ -74,7 +74,7 @@ export function MarketingNav() {
 
         <button
           type="button"
-          className={`inline-flex items-center justify-center rounded-lg p-2 md:hidden transition-colors ${scrolled ? "text-foreground" : "text-white"}`}
+          className="inline-flex items-center justify-center rounded-lg p-2 text-foreground md:hidden"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
         >
