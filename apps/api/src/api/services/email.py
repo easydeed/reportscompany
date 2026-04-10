@@ -195,15 +195,15 @@ def _email_base(content_html: str) -> str:
     }}
   </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6;" class="email-outer">
+<body style="margin: 0; padding: 0; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #F8FAFC;" class="email-outer">
     <tr>
       <td align="center" style="padding: 32px 16px;">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" class="email-wrapper" style="max-width: 600px; width: 100%;">
 
           <!-- HEADER -->
           <tr>
-            <td align="center" style="background-color: #18235c; padding: 28px 24px 20px; border-radius: 12px 12px 0 0;">
+            <td align="center" style="background: linear-gradient(135deg, #4F46E5 0%, #6366F1 50%, #818CF8 100%); background-color: #4F46E5; padding: 28px 24px 20px; border-radius: 12px 12px 0 0;">
               <img src="https://trendyreports.io/logo-white.png" width="160" alt="TrendyReports" style="display: block; max-height: 40px; width: auto; height: auto;">
             </td>
           </tr>
@@ -217,11 +217,11 @@ def _email_base(content_html: str) -> str:
 
           <!-- FOOTER -->
           <tr>
-            <td style="background-color: #ffffff; border-top: 1px solid #f3f4f6; padding: 20px 32px; border-radius: 0 0 12px 12px;">
+            <td style="background-color: #ffffff; border-top: 1px solid #EEF2FF; padding: 20px 32px; border-radius: 0 0 12px 12px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center">
-                    <p style="margin: 0 0 4px; font-size: 13px; font-weight: 600; color: #6b7280;">TrendyReports</p>
+                    <p style="margin: 0 0 4px; font-size: 13px; font-weight: 600; color: #6366F1;">TrendyReports</p>
                     <p style="margin: 0 0 12px; font-size: 12px; color: #9ca3af;">Branded Real Estate Reports</p>
                     <p style="margin: 0; font-size: 11px; color: #9ca3af;">
                       <a href="mailto:support@trendyreports.io" style="color: #6b7280; text-decoration: underline;">Contact Support</a>
@@ -242,18 +242,18 @@ def _email_base(content_html: str) -> str:
 
 
 def _cta_button(url: str, label: str) -> str:
-    """Navy CTA button with VML fallback for Outlook."""
+    """Indigo CTA button with VML fallback for Outlook."""
     return f'''<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 28px 0;">
                 <tr>
                   <td align="center">
                     <!--[if mso]>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{url}" style="height:48px;v-text-anchor:middle;width:240px;" arcsize="17%" stroke="f" fillcolor="#18235c">
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{url}" style="height:48px;v-text-anchor:middle;width:240px;" arcsize="17%" stroke="f" fillcolor="#4F46E5">
                       <w:anchorlock/>
                       <center style="color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:16px;font-weight:bold;">{label}</center>
                     </v:roundrect>
                     <![endif]-->
                     <!--[if !mso]><!-->
-                    <a href="{url}" target="_blank" class="cta-btn" style="display: inline-block; background-color: #18235c; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; font-weight: bold; text-decoration: none; padding: 14px 32px; border-radius: 8px;">
+                    <a href="{url}" target="_blank" class="cta-btn" style="display: inline-block; background-color: #4F46E5; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; font-weight: bold; text-decoration: none; padding: 14px 32px; border-radius: 8px;">
                       {label}
                     </a>
                     <!--<![endif]-->
