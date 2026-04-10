@@ -38,39 +38,42 @@ const steps = [
 function StepVisual({ type }: { type: string }) {
   if (type === "map") {
     return (
-      <div className="relative h-full w-full overflow-hidden rounded-xl bg-gradient-to-br from-[#EEF2FF] to-[#E0E7FF] p-4">
-        {/* Map grid */}
-        <div className="absolute inset-0 opacity-20">
-          {[...Array(6)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute h-px w-full bg-[#6366F1]"
-              style={{ top: `${(i + 1) * 16.67}%` }}
-            />
-          ))}
-          {[...Array(6)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute h-full w-px bg-[#6366F1]"
-              style={{ left: `${(i + 1) * 16.67}%` }}
-            />
-          ))}
+      <div className="relative h-full w-full overflow-hidden rounded-xl bg-gradient-to-br from-[#EEF2FF] to-[#E0E7FF]">
+        <div className="absolute inset-0">
+          <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600&h=400&fit=crop" alt="" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-white/[0.88]" />
         </div>
-        {/* Location pins */}
-        <div className="absolute left-1/4 top-1/3 flex h-8 w-8 items-center justify-center rounded-full bg-[#6366F1] shadow-lg">
-          <MapPin className="h-4 w-4 text-white" />
-        </div>
-        <div className="absolute right-1/3 top-1/2 flex h-6 w-6 items-center justify-center rounded-full bg-[#818CF8] shadow-md">
-          <MapPin className="h-3 w-3 text-white" />
-        </div>
-        <div className="absolute bottom-1/4 left-1/2 flex h-7 w-7 items-center justify-center rounded-full bg-[#4338CA] shadow-md">
-          <MapPin className="h-3.5 w-3.5 text-white" />
-        </div>
-        {/* Search bar */}
-        <div className="absolute bottom-4 left-4 right-4 flex items-center gap-2 rounded-lg bg-white px-3 py-2 shadow-md">
-          <MapPin className="h-4 w-4 text-[#6366F1]" />
-          <span className="text-sm text-muted-foreground">Irvine, CA 92618</span>
-          <Check className="ml-auto h-4 w-4 text-[#6366F1]" />
+        <div className="relative z-10 h-full w-full p-4">
+          <div className="absolute inset-0 opacity-20">
+            {[...Array(6)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute h-px w-full bg-[#6366F1]"
+                style={{ top: `${(i + 1) * 16.67}%` }}
+              />
+            ))}
+            {[...Array(6)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute h-full w-px bg-[#6366F1]"
+                style={{ left: `${(i + 1) * 16.67}%` }}
+              />
+            ))}
+          </div>
+          <div className="absolute left-1/4 top-1/3 flex h-8 w-8 items-center justify-center rounded-full bg-[#6366F1] shadow-lg">
+            <MapPin className="h-4 w-4 text-white" />
+          </div>
+          <div className="absolute right-1/3 top-1/2 flex h-6 w-6 items-center justify-center rounded-full bg-[#818CF8] shadow-md">
+            <MapPin className="h-3 w-3 text-white" />
+          </div>
+          <div className="absolute bottom-1/4 left-1/2 flex h-7 w-7 items-center justify-center rounded-full bg-[#4338CA] shadow-md">
+            <MapPin className="h-3.5 w-3.5 text-white" />
+          </div>
+          <div className="absolute bottom-4 left-4 right-4 flex items-center gap-2 rounded-lg bg-white px-3 py-2 shadow-md">
+            <MapPin className="h-4 w-4 text-[#6366F1]" />
+            <span className="text-sm text-muted-foreground">Irvine, CA 92618</span>
+            <Check className="ml-auto h-4 w-4 text-[#6366F1]" />
+          </div>
         </div>
       </div>
     );
@@ -78,38 +81,40 @@ function StepVisual({ type }: { type: string }) {
 
   if (type === "brand") {
     return (
-      <div className="relative h-full w-full overflow-hidden rounded-xl bg-gradient-to-br from-[#EEF2FF] to-[#E0E7FF] p-4">
-        {/* Color palette */}
-        <div className="absolute right-4 top-4 flex gap-2">
-          <div className="h-8 w-8 rounded-full bg-[#6366F1] shadow-md ring-2 ring-white" />
-          <div className="h-8 w-8 rounded-full bg-[#1E293B] shadow-md ring-2 ring-white" />
-          <div className="h-8 w-8 rounded-full bg-white shadow-md ring-2 ring-[#E2E8F0]" />
+      <div className="relative h-full w-full overflow-hidden rounded-xl bg-gradient-to-br from-[#EEF2FF] to-[#E0E7FF]">
+        <div className="absolute inset-0">
+          <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&h=400&fit=crop" alt="" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-white/[0.88]" />
         </div>
-        {/* Logo placeholder */}
-        <div className="absolute left-4 top-4 flex h-12 w-12 items-center justify-center rounded-xl bg-white shadow-md">
-          <span className="text-lg font-bold text-[#6366F1]">TR</span>
-        </div>
-        {/* Template preview cards */}
-        <div className="absolute bottom-4 left-4 right-4 flex gap-2">
-          <div className="flex-1 rounded-lg bg-white p-2 shadow-md ring-2 ring-[#6366F1]">
-            <div className="h-2 w-8 rounded bg-[#6366F1]" />
-            <div className="mt-2 h-1.5 w-full rounded bg-[#E2E8F0]" />
-            <div className="mt-1 h-1.5 w-3/4 rounded bg-[#E2E8F0]" />
+        <div className="relative z-10 h-full w-full p-4">
+          <div className="absolute right-4 top-4 flex gap-2">
+            <div className="h-8 w-8 rounded-full bg-[#6366F1] shadow-md ring-2 ring-white" />
+            <div className="h-8 w-8 rounded-full bg-[#1E293B] shadow-md ring-2 ring-white" />
+            <div className="h-8 w-8 rounded-full bg-white shadow-md ring-2 ring-[#E2E8F0]" />
           </div>
-          <div className="flex-1 rounded-lg bg-white p-2 opacity-60 shadow-md">
-            <div className="h-2 w-8 rounded bg-[#1E293B]" />
-            <div className="mt-2 h-1.5 w-full rounded bg-[#E2E8F0]" />
-            <div className="mt-1 h-1.5 w-3/4 rounded bg-[#E2E8F0]" />
+          <div className="absolute left-4 top-4 flex h-12 w-12 items-center justify-center rounded-xl bg-white shadow-md">
+            <span className="text-lg font-bold text-[#6366F1]">TR</span>
           </div>
-          <div className="flex-1 rounded-lg bg-white p-2 opacity-60 shadow-md">
-            <div className="h-2 w-8 rounded bg-[#4338CA]" />
-            <div className="mt-2 h-1.5 w-full rounded bg-[#E2E8F0]" />
-            <div className="mt-1 h-1.5 w-3/4 rounded bg-[#E2E8F0]" />
+          <div className="absolute bottom-4 left-4 right-4 flex gap-2">
+            <div className="flex-1 rounded-lg bg-white p-2 shadow-md ring-2 ring-[#6366F1]">
+              <div className="h-2 w-8 rounded bg-[#6366F1]" />
+              <div className="mt-2 h-1.5 w-full rounded bg-[#E2E8F0]" />
+              <div className="mt-1 h-1.5 w-3/4 rounded bg-[#E2E8F0]" />
+            </div>
+            <div className="flex-1 rounded-lg bg-white p-2 opacity-60 shadow-md">
+              <div className="h-2 w-8 rounded bg-[#1E293B]" />
+              <div className="mt-2 h-1.5 w-full rounded bg-[#E2E8F0]" />
+              <div className="mt-1 h-1.5 w-3/4 rounded bg-[#E2E8F0]" />
+            </div>
+            <div className="flex-1 rounded-lg bg-white p-2 opacity-60 shadow-md">
+              <div className="h-2 w-8 rounded bg-[#4338CA]" />
+              <div className="mt-2 h-1.5 w-full rounded bg-[#E2E8F0]" />
+              <div className="mt-1 h-1.5 w-3/4 rounded bg-[#E2E8F0]" />
+            </div>
           </div>
-        </div>
-        {/* Brush icon */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-          <Palette className="h-10 w-10 text-[#6366F1] opacity-20" />
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+            <Palette className="h-10 w-10 text-[#6366F1] opacity-20" />
+          </div>
         </div>
       </div>
     );
@@ -117,51 +122,54 @@ function StepVisual({ type }: { type: string }) {
 
   // Schedule visual
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-xl bg-gradient-to-br from-[#EEF2FF] to-[#E0E7FF] p-4">
-      {/* Calendar header */}
-      <div className="absolute left-4 right-4 top-4 rounded-lg bg-white p-3 shadow-md">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-foreground">March 2026</span>
-          <div className="flex gap-1">
-            <div className="h-2 w-2 rounded-full bg-[#6366F1]" />
-            <div className="h-2 w-2 rounded-full bg-[#E2E8F0]" />
-          </div>
-        </div>
-        <div className="mt-2 grid grid-cols-7 gap-1 text-center text-[10px] text-muted-foreground">
-          {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
-            <span key={i}>{d}</span>
-          ))}
-        </div>
-        <div className="mt-1 grid grid-cols-7 gap-1 text-center text-xs">
-          {[...Array(7)].map((_, i) => (
-            <div
-              key={i}
-              className={`flex h-5 w-5 items-center justify-center rounded-full ${
-                i === 1 || i === 4
-                  ? "bg-[#6366F1] text-white"
-                  : "text-muted-foreground"
-              }`}
-            >
-              {i + 1}
+    <div className="relative h-full w-full overflow-hidden rounded-xl bg-gradient-to-br from-[#EEF2FF] to-[#E0E7FF]">
+      <div className="absolute inset-0">
+        <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&h=400&fit=crop" alt="" className="w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-white/[0.88]" />
+      </div>
+      <div className="relative z-10 h-full w-full p-4">
+        <div className="absolute left-4 right-4 top-4 rounded-lg bg-white p-3 shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-foreground">March 2026</span>
+            <div className="flex gap-1">
+              <div className="h-2 w-2 rounded-full bg-[#6366F1]" />
+              <div className="h-2 w-2 rounded-full bg-[#E2E8F0]" />
             </div>
-          ))}
-        </div>
-      </div>
-      {/* Delivery notification */}
-      <div className="absolute bottom-4 left-4 right-4 rounded-lg bg-white p-3 shadow-md">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#DCFCE7]">
-            <Check className="h-4 w-4 text-[#16A34A]" />
           </div>
-          <div>
-            <p className="text-xs font-medium text-foreground">Report sent</p>
-            <p className="text-[10px] text-muted-foreground">47 contacts received</p>
+          <div className="mt-2 grid grid-cols-7 gap-1 text-center text-[10px] text-muted-foreground">
+            {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+              <span key={i}>{d}</span>
+            ))}
+          </div>
+          <div className="mt-1 grid grid-cols-7 gap-1 text-center text-xs">
+            {[...Array(7)].map((_, i) => (
+              <div
+                key={i}
+                className={`flex h-5 w-5 items-center justify-center rounded-full ${
+                  i === 1 || i === 4
+                    ? "bg-[#6366F1] text-white"
+                    : "text-muted-foreground"
+                }`}
+              >
+                {i + 1}
+              </div>
+            ))}
           </div>
         </div>
-      </div>
-      {/* Recurring icon */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-        <Send className="h-10 w-10 text-[#6366F1] opacity-20" />
+        <div className="absolute bottom-4 left-4 right-4 rounded-lg bg-white p-3 shadow-md">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#DCFCE7]">
+              <Check className="h-4 w-4 text-[#16A34A]" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-foreground">Report sent</p>
+              <p className="text-[10px] text-muted-foreground">47 contacts received</p>
+            </div>
+          </div>
+        </div>
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+          <Send className="h-10 w-10 text-[#6366F1] opacity-20" />
+        </div>
       </div>
     </div>
   );
