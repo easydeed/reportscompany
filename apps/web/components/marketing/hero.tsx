@@ -82,7 +82,7 @@ function ReportMockup() {
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden bg-background px-6 pb-20 pt-16 md:pb-28 md:pt-24">
+    <section className="relative -mt-[72px] overflow-hidden px-6 pb-20 pt-[calc(4rem+72px)] md:pb-28 md:pt-[calc(6rem+72px)]">
       <div
         className="absolute inset-0 grayscale"
         style={{
