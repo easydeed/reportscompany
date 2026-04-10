@@ -61,6 +61,8 @@ import { AccountSwitcher } from "@/components/account-switcher"
 import { Logo } from "@/components/logo"
 import { Separator } from "@/components/ui/separator"
 import { usePlanUsage, useMe } from "@/hooks/use-api"
+import { Toaster } from "@/components/ui/toaster"
+import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 
 // Routes where sidebar should be hidden (builder modes)
 const BUILDER_ROUTES = [
@@ -388,9 +390,13 @@ export default function AppLayoutClient({
   // Builder mode: Full-width layout without sidebar
   if (inBuilderMode) {
     return (
-      <div className="min-h-screen w-full bg-background text-foreground">
-        {children}
-      </div>
+      <>
+        <div className="min-h-screen w-full bg-background text-foreground">
+          {children}
+        </div>
+        <Toaster />
+        <SonnerToaster position="top-right" />
+      </>
     )
   }
   
@@ -408,6 +414,8 @@ export default function AppLayoutClient({
           </div>
         </Suspense>
       </SidebarProvider>
+      <Toaster />
+      <SonnerToaster position="top-right" />
     </QueryProvider>
   )
 }
