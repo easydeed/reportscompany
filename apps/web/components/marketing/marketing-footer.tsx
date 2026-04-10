@@ -5,7 +5,7 @@ export function MarketingFooter() {
         <div className="grid gap-12 md:grid-cols-4">
           {/* Brand */}
           <div className="md:col-span-1">
-            <img src="/logo-white.svg" alt="TrendyReports" className="h-7 w-auto" />
+            <img src="/white.png" alt="TrendyReports" className="h-7 w-auto" />
             <p className="mt-3 text-sm leading-relaxed">
               Turn MLS data into beautiful market reports.
             </p>

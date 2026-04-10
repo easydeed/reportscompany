@@ -58,7 +58,7 @@ import {
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { AccountSwitcher } from "@/components/account-switcher"
-import { Logo } from "@/components/logo"
+
 import { Separator } from "@/components/ui/separator"
 import { usePlanUsage, useMe } from "@/hooks/use-api"
 import { Toaster } from "@/components/ui/toaster"
@@ -136,7 +136,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
     <Sidebar>
       <SidebarHeader>
         <Link href="/app" prefetch={false} className="flex items-center px-3 py-4">
-          <Logo variant="white" className="h-7" />
+          <img src="/indigo.png" alt="TrendyReports" className="h-7 w-auto" />
         </Link>
       </SidebarHeader>
 

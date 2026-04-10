@@ -28,7 +28,7 @@ export function Logo({ className, variant = "full", showText = true }: LogoProps
     )
   }
 
-  const src = variant === "white" ? "/logo-white.svg" : "/logo.svg"
+  const src = variant === "white" ? "/white.png" : "/indigo.png"
 
   return (
     <div className={cn("flex items-center", className)}>
