@@ -75,8 +75,8 @@ function LoginForm() {
       <div className="flex flex-1 flex-col justify-center px-6 py-12 lg:px-16 xl:px-24">
         <div className="mx-auto w-full max-w-md">
           {/* Logo */}
-          <Link href="/" className="text-2xl font-bold text-[#6366F1]">
-            TrendyReports
+          <Link href="/">
+            <img src="/logo.svg" alt="TrendyReports" className="h-8 w-auto" />
           </Link>
 
           <h1 className="mt-10 text-3xl font-bold tracking-tight text-foreground">

@@ -121,7 +121,13 @@ export function LeadCapture() {
                 <p className="text-xs text-white/60">Austin, TX 78703</p>
               </div>
 
-              <div className="h-28 bg-gradient-to-br from-[#E0E7FF] to-[#C7D2FE]" />
+              <div className="h-28 overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=256&h=112&fit=crop"
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+              </div>
 
               <div className="px-4 py-4">
                 <div className="rounded-lg bg-[#6366F1] px-4 py-2.5 text-center text-sm font-semibold text-white">

@@ -68,21 +68,33 @@ function StatGrid() {
   );
 }
 
+const PHOTOS = [
+  "https://images.unsplash.com/photo-1564013799919-ab600027ffc6",
+  "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9",
+  "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
+  "https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde",
+  "https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83",
+  "https://images.unsplash.com/photo-1512917774080-9991f1c4c750",
+];
+
 function ListingsGrid() {
+  const listings = [
+    { addr: "742 Oak Ave", price: "$525,000" },
+    { addr: "118 Pine St", price: "$389,000" },
+    { addr: "903 Elm Dr", price: "$612,000" },
+    { addr: "221 Maple Ln", price: "$445,000" },
+  ];
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-2">
-        {[
-          { addr: "742 Oak Ave", price: "$525,000" },
-          { addr: "118 Pine St", price: "$389,000" },
-          { addr: "903 Elm Dr", price: "$612,000" },
-          { addr: "221 Maple Ln", price: "$445,000" },
-        ].map((p) => (
+        {listings.map((p, i) => (
           <div
             key={p.addr}
             className="overflow-hidden rounded-lg border border-border"
           >
-            <div className="h-20 bg-gradient-to-br from-[#E0E7FF] to-[#C7D2FE]" />
+            <div className="h-20 overflow-hidden">
+              <img src={`${PHOTOS[i]}?w=280&h=80&fit=crop`} alt="" className="w-full h-full object-cover" />
+            </div>
             <div className="p-2.5">
               <p className="text-xs font-semibold text-foreground">
                 {p.price}
@@ -97,29 +109,20 @@ function ListingsGrid() {
 }
 
 function FeaturedListings() {
+  const listings = [
+    { addr: "1205 Lakeview Blvd", price: "$875,000", beds: 4, baths: 3, sqft: "3,200" },
+    { addr: "437 Sunset Dr", price: "$650,000", beds: 3, baths: 2, sqft: "2,100" },
+  ];
   return (
     <div className="space-y-3">
-      {[
-        {
-          addr: "1205 Lakeview Blvd",
-          price: "$875,000",
-          beds: 4,
-          baths: 3,
-          sqft: "3,200",
-        },
-        {
-          addr: "437 Sunset Dr",
-          price: "$650,000",
-          beds: 3,
-          baths: 2,
-          sqft: "2,100",
-        },
-      ].map((p) => (
+      {listings.map((p, i) => (
         <div
           key={p.addr}
           className="overflow-hidden rounded-lg border border-border"
         >
-            <div className="h-24 bg-gradient-to-br from-[#E0E7FF] to-[#C7D2FE]" />
+          <div className="h-24 overflow-hidden">
+            <img src={`${PHOTOS[i + 4]}?w=280&h=96&fit=crop`} alt="" className="w-full h-full object-cover" />
+          </div>
           <div className="p-3">
             <p className="text-sm font-bold text-foreground">{p.price}</p>
             <p className="text-xs text-muted-foreground">{p.addr}</p>

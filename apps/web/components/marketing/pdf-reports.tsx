@@ -8,6 +8,15 @@ const fadeUp = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
 };
 
+const PHOTOS = [
+  "https://images.unsplash.com/photo-1564013799919-ab600027ffc6",
+  "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9",
+  "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
+  "https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde",
+  "https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83",
+  "https://images.unsplash.com/photo-1512917774080-9991f1c4c750",
+];
+
 const badges = [
   "Professional headers",
   "Property photo galleries",
@@ -31,9 +40,11 @@ function PdfStatPage() {
         ))}
       </div>
       <div className="grid grid-cols-2 gap-3">
-        {[1, 2, 3, 4].map((i) => (
+        {[0, 1, 2, 3].map((i) => (
           <div key={i} className="overflow-hidden rounded-md border border-border">
-            <div className="h-14 bg-gradient-to-br from-[#E0E7FF] to-[#C7D2FE]" />
+            <div className="h-14 overflow-hidden">
+              <img src={`${PHOTOS[i]}?w=140&h=56&fit=crop`} alt="" className="w-full h-full object-cover" />
+            </div>
             <div className="p-1.5">
               <div className="h-1.5 w-3/4 rounded bg-muted" />
               <div className="mt-1 h-1.5 w-1/2 rounded bg-muted" />
@@ -46,18 +57,21 @@ function PdfStatPage() {
 }
 
 function PdfListingsGallery() {
+  const listings = [
+    { addr: "742 Oak Ave", price: "$525K" },
+    { addr: "118 Pine St", price: "$389K" },
+    { addr: "903 Elm Dr", price: "$612K" },
+    { addr: "221 Maple Ln", price: "$445K" },
+    { addr: "56 River Rd", price: "$510K" },
+    { addr: "889 Hill St", price: "$475K" },
+  ];
   return (
     <div className="grid grid-cols-3 gap-3">
-      {[
-        { addr: "742 Oak Ave", price: "$525K" },
-        { addr: "118 Pine St", price: "$389K" },
-        { addr: "903 Elm Dr", price: "$612K" },
-        { addr: "221 Maple Ln", price: "$445K" },
-        { addr: "56 River Rd", price: "$510K" },
-        { addr: "889 Hill St", price: "$475K" },
-      ].map((p) => (
+      {listings.map((p, i) => (
         <div key={p.addr} className="overflow-hidden rounded-md border border-border">
-          <div className="h-16 bg-gradient-to-br from-[#E0E7FF] to-[#C7D2FE]" />
+          <div className="h-16 overflow-hidden">
+            <img src={`${PHOTOS[i]}?w=100&h=64&fit=crop`} alt="" className="w-full h-full object-cover" />
+          </div>
           <div className="p-2">
             <p className="text-[10px] font-semibold text-foreground">{p.price}</p>
             <p className="text-[9px] text-muted-foreground">{p.addr}</p>
@@ -69,16 +83,19 @@ function PdfListingsGallery() {
 }
 
 function PdfFeatured() {
+  const listings = [
+    { addr: "1205 Lakeview Blvd", price: "$875K", info: "4 bd / 3 ba" },
+    { addr: "437 Sunset Dr", price: "$650K", info: "3 bd / 2 ba" },
+    { addr: "802 Crescent Way", price: "$720K", info: "4 bd / 2 ba" },
+    { addr: "156 Hilltop Ln", price: "$540K", info: "3 bd / 2 ba" },
+  ];
   return (
     <div className="grid grid-cols-2 gap-3">
-      {[
-        { addr: "1205 Lakeview Blvd", price: "$875K", info: "4 bd / 3 ba" },
-        { addr: "437 Sunset Dr", price: "$650K", info: "3 bd / 2 ba" },
-        { addr: "802 Crescent Way", price: "$720K", info: "4 bd / 2 ba" },
-        { addr: "156 Hilltop Ln", price: "$540K", info: "3 bd / 2 ba" },
-      ].map((p) => (
+      {listings.map((p, i) => (
         <div key={p.addr} className="overflow-hidden rounded-md border border-border">
-          <div className="h-20 bg-gradient-to-br from-[#E0E7FF] to-[#C7D2FE]" />
+          <div className="h-20 overflow-hidden">
+            <img src={`${PHOTOS[i]}?w=200&h=80&fit=crop`} alt="" className="w-full h-full object-cover" />
+          </div>
           <div className="p-2.5">
             <p className="text-xs font-bold text-foreground">{p.price}</p>
             <p className="text-[9px] text-muted-foreground">{p.addr}</p>

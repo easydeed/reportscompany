@@ -136,7 +136,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
     <Sidebar>
       <SidebarHeader>
         <Link href="/app" prefetch={false} className="flex items-center px-3 py-4">
-          <Logo className="h-7 brightness-0 invert" />
+          <Logo variant="white" className="h-7" />
         </Link>
       </SidebarHeader>
 

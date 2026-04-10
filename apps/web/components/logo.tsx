@@ -5,13 +5,12 @@ import Image from "next/image"
 
 interface LogoProps {
   className?: string
-  variant?: "full" | "icon"
+  variant?: "full" | "icon" | "white"
   showText?: boolean
 }
 
 export function Logo({ className, variant = "full", showText = true }: LogoProps) {
   if (variant === "icon") {
-    // Icon-only version - just the lightning bolt "T"
     return (
       <div className={cn("flex items-center justify-center", className)}>
         <svg
@@ -29,11 +28,12 @@ export function Logo({ className, variant = "full", showText = true }: LogoProps
     )
   }
 
-  // Full logo with text
+  const src = variant === "white" ? "/logo-white.svg" : "/logo.svg"
+
   return (
     <div className={cn("flex items-center", className)}>
       <Image
-        src="/logo.svg"
+        src={src}
         alt="TrendyReports"
         width={160}
         height={48}

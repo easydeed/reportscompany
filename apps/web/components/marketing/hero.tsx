@@ -91,7 +91,7 @@ export function Hero() {
           backgroundPosition: 'center',
         }}
       />
-      <div className="absolute inset-0 bg-white/[0.92]" />
+      <div className="absolute inset-0 bg-white/[0.80]" />
 
       <motion.div
         className="relative z-10 mx-auto max-w-4xl text-center"

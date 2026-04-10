@@ -95,17 +95,12 @@ export function PropertyReports() {
               </div>
 
               {/* Hero photo area */}
-              <div className="relative h-48 bg-gradient-to-br from-[#E0E7FF] to-[#C7D2FE]">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white/80">
-                      <MapPin className="h-6 w-6 text-[#6366F1]" />
-                    </div>
-                    <p className="mt-2 text-sm font-medium text-[#334155]">
-                      Property Photo
-                    </p>
-                  </div>
-                </div>
+              <div className="h-48 overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&h=400&fit=crop"
+                  alt="Property"
+                  className="w-full h-full object-cover"
+                />
               </div>
 
               {/* Property details */}

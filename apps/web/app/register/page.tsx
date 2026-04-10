@@ -71,8 +71,8 @@ export default function RegisterPage() {
       {/* Left — Branded visual panel */}
       <div className="hidden flex-1 flex-col justify-between bg-[#1E293B] p-12 lg:flex xl:p-16">
         <div>
-          <Link href="/" className="text-2xl font-bold text-white">
-            TrendyReports
+          <Link href="/">
+            <img src="/logo-white.svg" alt="TrendyReports" className="h-8 w-auto" />
           </Link>
           <h2 className="mt-12 text-balance text-4xl font-bold leading-tight text-white">
             Start creating beautiful
@@ -140,11 +140,8 @@ export default function RegisterPage() {
       <div className="flex flex-1 flex-col justify-center px-6 py-12 lg:px-16 xl:px-24">
         <div className="mx-auto w-full max-w-md">
           {/* Mobile logo */}
-          <Link
-            href="/"
-            className="text-2xl font-bold text-[#6366F1] lg:hidden"
-          >
-            TrendyReports
+          <Link href="/" className="lg:hidden">
+            <img src="/logo.svg" alt="TrendyReports" className="h-8 w-auto" />
           </Link>
 
           <h1 className="mt-10 text-3xl font-bold tracking-tight text-foreground lg:mt-0">

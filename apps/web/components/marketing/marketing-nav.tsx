@@ -23,8 +23,8 @@ export function MarketingNav() {
       }`}
     >
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        <a href="/" className="text-xl font-bold text-[#6366F1]">
-          TrendyReports
+        <a href="/">
+          <img src="/logo.svg" alt="TrendyReports" className="h-8 w-auto" />
         </a>
 
         <div className="hidden items-center gap-6 md:flex">
