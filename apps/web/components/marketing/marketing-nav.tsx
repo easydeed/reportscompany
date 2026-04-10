@@ -16,47 +16,51 @@ export function MarketingNav() {
 
   return (
     <header
-      className={`sticky top-0 z-50 bg-background/80 backdrop-blur-md transition-shadow duration-300 ${scrolled ? "shadow-sm" : ""}`}
+      className={`sticky top-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? "bg-background/80 backdrop-blur-md shadow-sm"
+          : "bg-transparent"
+      }`}
     >
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        <a href="/" className="text-xl font-bold text-[#6366F1]">
+        <a href="/" className={`text-xl font-bold transition-colors duration-300 ${scrolled ? "text-[#6366F1]" : "text-white"}`}>
           TrendyReports
         </a>
 
         <div className="hidden items-center gap-6 md:flex">
           <a
             href="#how-it-works"
-            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
+            className={`text-sm font-medium transition-colors ${scrolled ? "text-foreground/70 hover:text-foreground" : "text-white/80 hover:text-white"}`}
           >
             How It Works
           </a>
           <a
             href="#reports"
-            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
+            className={`text-sm font-medium transition-colors ${scrolled ? "text-foreground/70 hover:text-foreground" : "text-white/80 hover:text-white"}`}
           >
             Reports
           </a>
           <a
             href="#lead-capture"
-            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
+            className={`text-sm font-medium transition-colors ${scrolled ? "text-foreground/70 hover:text-foreground" : "text-white/80 hover:text-white"}`}
           >
             Lead Capture
           </a>
           <a
             href="#contacts"
-            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
+            className={`text-sm font-medium transition-colors ${scrolled ? "text-foreground/70 hover:text-foreground" : "text-white/80 hover:text-white"}`}
           >
             Contacts
           </a>
           <a
             href="#pricing"
-            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
+            className={`text-sm font-medium transition-colors ${scrolled ? "text-foreground/70 hover:text-foreground" : "text-white/80 hover:text-white"}`}
           >
             Pricing
           </a>
           <a
             href="/login"
-            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
+            className={`text-sm font-medium transition-colors ${scrolled ? "text-foreground/70 hover:text-foreground" : "text-white/80 hover:text-white"}`}
           >
             Log in
           </a>
@@ -70,7 +74,7 @@ export function MarketingNav() {
 
         <button
           type="button"
-          className="inline-flex items-center justify-center rounded-lg p-2 text-foreground md:hidden"
+          className={`inline-flex items-center justify-center rounded-lg p-2 md:hidden transition-colors ${scrolled ? "text-foreground" : "text-white"}`}
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
         >
