@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, X, Users, Mail, AlertCircle, Check } from "lucide-react"
+import { Search, X, Users, Mail, AlertCircle, Check, AtSign } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import type { ScheduleBuilderState, Recipient } from "../types"
@@ -13,8 +13,12 @@ interface RecipientsSectionProps {
   stepNumber?: number
 }
 
+const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
+
 export function RecipientsSection({ recipients, onChange, hasRecipients, stepNumber = 6 }: RecipientsSectionProps) {
   const [searchQuery, setSearchQuery] = useState("")
+  const [emailInput, setEmailInput] = useState("")
+  const [emailError, setEmailError] = useState("")
   const [contacts, setContacts] = useState<any[]>([])
   const [groups, setGroups] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -93,8 +97,29 @@ export function RecipientsSection({ recipients, onChange, hasRecipients, stepNum
     })
   }
 
+  const isEmailAlreadyAdded = (email: string) =>
+    recipients.some(r => r.type === "manual_email" && r.email === email) ||
+    recipients.some(r => r.type === "contact" && r.email === email)
+
+  const addManualEmail = () => {
+    const trimmed = emailInput.trim().toLowerCase()
+    if (!trimmed) return
+    if (!isValidEmail(trimmed)) {
+      setEmailError("Enter a valid email address")
+      return
+    }
+    if (isEmailAlreadyAdded(trimmed)) {
+      setEmailError("Already added")
+      return
+    }
+    setEmailError("")
+    onChange({ recipients: [...recipients, { type: "manual_email", email: trimmed }] })
+    setEmailInput("")
+  }
+
   const contactCount = recipients.filter(r => r.type === "contact").length
   const groupCount = recipients.filter(r => r.type === "group").length
+  const manualCount = recipients.filter(r => r.type === "manual_email").length
 
   return (
     <section className={cn(
@@ -119,12 +144,17 @@ export function RecipientsSection({ recipients, onChange, hasRecipients, stepNum
             {recipients.map((r, i) => (
               <span 
                 key={i}
-                className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded text-sm"
+                className={cn(
+                  "inline-flex items-center gap-1 px-2 py-1 rounded text-sm",
+                  r.type === "manual_email"
+                    ? "bg-indigo-50 text-indigo-600"
+                    : "bg-primary/10 text-primary"
+                )}
               >
-                {r.type === "group" ? <Users className="w-3 h-3" /> : <Mail className="w-3 h-3" />}
+                {r.type === "group" ? <Users className="w-3 h-3" /> : r.type === "manual_email" ? <AtSign className="w-3 h-3" /> : <Mail className="w-3 h-3" />}
                 {r.type === "manual_email" ? r.email : r.name}
                 {r.type === "group" && ` (${r.memberCount})`}
-                <button onClick={() => removeRecipient(r)} className="text-primary/60 hover:text-primary">
+                <button onClick={() => removeRecipient(r)} className="opacity-60 hover:opacity-100">
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -132,14 +162,44 @@ export function RecipientsSection({ recipients, onChange, hasRecipients, stepNum
           </div>
         )}
 
-        <div className="relative mb-3">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search contacts..."
-            className="pl-9"
-          />
+        <div className="mb-3 space-y-2">
+          <div className="relative">
+            <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              value={emailInput}
+              onChange={(e) => { setEmailInput(e.target.value); setEmailError("") }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === ",") {
+                  e.preventDefault()
+                  addManualEmail()
+                }
+              }}
+              placeholder="Type an email address and press Enter"
+              className="pl-9 pr-16"
+              type="email"
+            />
+            {emailInput.trim() && (
+              <button
+                onClick={addManualEmail}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-medium text-primary hover:text-primary/80 px-2 py-1"
+              >
+                Add
+              </button>
+            )}
+          </div>
+          {emailError && (
+            <p className="text-xs text-red-500">{emailError}</p>
+          )}
+
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search contacts..."
+              className="pl-9"
+            />
+          </div>
         </div>
 
         {isLoading ? (

@@ -39,6 +39,7 @@ import {
   Pencil,
   Search,
   Upload,
+  Download,
   FolderPlus,
   Building2,
   UserCheck,
@@ -745,6 +746,14 @@ export default function PeoplePage() {
                         }
                       }}
                     />
+                    <a
+                      href="/sample-contacts.csv"
+                      download
+                      className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Download sample CSV template
+                    </a>
                   </div>
                   {importSummary && (
                     <div className="space-y-2 rounded-xl border p-4 bg-muted/20">
