@@ -253,7 +253,7 @@ export function CmaFunnel({
   };
 
   return (
-    <div className="min-h-[300px]">
+    <div>
       <AnimatePresence mode="wait">
         {/* ========== STEP 1: ADDRESS SEARCH ========== */}
         {step === 'address' && (
