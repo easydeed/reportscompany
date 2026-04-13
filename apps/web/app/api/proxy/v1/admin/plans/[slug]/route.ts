@@ -1,0 +1,32 @@
+import { NextRequest, NextResponse } from "next/server"
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://reportscompany.onrender.com"
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  const token = request.cookies.get("mr_token")?.value
+  if (!token) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const { slug } = await params
+
+  try {
+    const body = await request.json()
+    const response = await fetch(`${API_BASE}/v1/admin/plans/${slug}`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    })
+    const data = await response.json()
+    return NextResponse.json(data, { status: response.status })
+  } catch (error) {
+    console.error("[Admin Plans Update Proxy] Error:", error)
+    return NextResponse.json({ error: "Failed to update plan" }, { status: 500 })
+  }
+}

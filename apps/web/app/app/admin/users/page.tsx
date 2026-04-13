@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Users, ArrowLeft, CheckCircle, XCircle, Mail } from "lucide-react"
+import { Users, ArrowLeft, CheckCircle, XCircle, Mail, GraduationCap } from "lucide-react"
 import { ResendInviteButton } from "./resend-invite-button"
 
 interface User {
@@ -39,6 +39,21 @@ interface User {
   account_name: string
   account_type: string
   role: string
+  onboarding_completed_at: string | null
+  onboarding_step: string | null
+  onboarding_steps_done: number
+}
+
+const TOTAL_ONBOARDING_STEPS = 4
+
+function getOnboardingStatus(user: User): { label: string; variant: "default" | "secondary" | "outline"; className: string; steps: string } {
+  if (user.onboarding_completed_at) {
+    return { label: "Complete", variant: "default", className: "bg-green-100 text-green-700 hover:bg-green-100", steps: `${TOTAL_ONBOARDING_STEPS}/${TOTAL_ONBOARDING_STEPS}` }
+  }
+  if (user.onboarding_steps_done > 0) {
+    return { label: "In Progress", variant: "default", className: "bg-yellow-100 text-yellow-700 hover:bg-yellow-100", steps: `${user.onboarding_steps_done}/${TOTAL_ONBOARDING_STEPS}` }
+  }
+  return { label: "Not Started", variant: "secondary", className: "", steps: `0/${TOTAL_ONBOARDING_STEPS}` }
 }
 
 export default function AdminUsersPage() {
@@ -53,6 +68,7 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [isActive, setIsActive] = useState(searchParams.get('is_active') || 'all')
   const [role, setRole] = useState(searchParams.get('role') || 'all')
+  const [onboarding, setOnboarding] = useState(searchParams.get('onboarding') || 'all')
 
   useEffect(() => {
     async function fetchUsers() {
@@ -62,10 +78,12 @@ export default function AdminUsersPage() {
         const s = searchParams.get('search')
         const ia = searchParams.get('is_active')
         const r = searchParams.get('role')
+        const ob = searchParams.get('onboarding')
 
         if (s) params.set('search', s)
         if (ia && ia !== 'all') params.set('is_active', ia)
         if (r && r !== 'all') params.set('role', r)
+        if (ob && ob !== 'all') params.set('onboarding', ob)
 
         const res = await fetch(`/api/proxy/v1/admin/users?${params.toString()}`, {
           credentials: 'include',
@@ -91,11 +109,13 @@ export default function AdminUsersPage() {
     if (search) params.set('search', search)
     if (isActive !== 'all') params.set('is_active', isActive)
     if (role !== 'all') params.set('role', role)
+    if (onboarding !== 'all') params.set('onboarding', onboarding)
     router.push(`/app/admin/users?${params.toString()}`)
   }
 
   const activeCount = users.filter(u => u.is_active).length
   const verifiedCount = users.filter(u => u.email_verified).length
+  const onboardedCount = users.filter(u => u.onboarding_completed_at).length
 
   if (loading) {
     return (
@@ -140,7 +160,7 @@ export default function AdminUsersPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -177,6 +197,15 @@ export default function AdminUsersPage() {
             <div className="text-2xl font-bold">{verifiedCount}</div>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Onboarded</CardTitle>
+            <GraduationCap className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{onboardedCount}</div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
@@ -210,8 +239,19 @@ export default function AdminUsersPage() {
                 <SelectItem value="ADMIN">Admin</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={onboarding} onValueChange={setOnboarding}>
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder="Onboarding" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Onboarding</SelectItem>
+                <SelectItem value="complete">Complete</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="not_started">Not Started</SelectItem>
+              </SelectContent>
+            </Select>
             <Button type="submit" variant="secondary">Filter</Button>
-            {(searchParams.get('search') || searchParams.get('is_active') || searchParams.get('role')) && (
+            {(searchParams.get('search') || searchParams.get('is_active') || searchParams.get('role') || searchParams.get('onboarding')) && (
               <Link href="/app/admin/users">
                 <Button variant="ghost" type="button">Clear</Button>
               </Link>
@@ -241,6 +281,7 @@ export default function AdminUsersPage() {
                   <TableHead>Account</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Onboarding</TableHead>
                   <TableHead>Verified</TableHead>
                   <TableHead>Last Login</TableHead>
                   <TableHead>Joined</TableHead>
@@ -289,6 +330,19 @@ export default function AdminUsersPage() {
                           Inactive
                         </Badge>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      {(() => {
+                        const status = getOnboardingStatus(user)
+                        return (
+                          <div className="flex flex-col gap-0.5">
+                            <Badge variant={status.variant} className={status.className}>
+                              {status.label}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">{status.steps} steps</span>
+                          </div>
+                        )
+                      })()}
                     </TableCell>
                     <TableCell>
                       {user.email_verified ? (

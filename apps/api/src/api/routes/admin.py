@@ -205,6 +205,7 @@ def get_admin_timeseries(
 def list_admin_schedules(
     search: Optional[str] = None,
     active: Optional[bool] = None,
+    account_id: Optional[str] = None,
     limit: int = Query(100, ge=1, le=500),
     _admin: dict = Depends(get_admin_user)
 ):
@@ -214,6 +215,7 @@ def list_admin_schedules(
     Args:
         search: Search by schedule name or account name
         active: Filter by active status
+        account_id: Filter by account UUID
         limit: Maximum number of results
     
     Returns:
@@ -244,6 +246,10 @@ def list_admin_schedules(
         WHERE 1=1
     """
     params = []
+
+    if account_id:
+        query += " AND s.account_id = %s::uuid"
+        params.append(account_id)
     
     if search:
         query += " AND (s.name ILIKE %s OR a.name ILIKE %s)"
@@ -293,6 +299,7 @@ def list_admin_schedules(
 def list_admin_reports(
     status: Optional[str] = None,
     report_type: Optional[str] = None,
+    account_id: Optional[str] = None,
     limit: int = Query(200, ge=1, le=1000),
     _admin: dict = Depends(get_admin_user)
 ):
@@ -302,6 +309,7 @@ def list_admin_reports(
     Args:
         status: Filter by status (pending, processing, completed, failed)
         report_type: Filter by report type
+        account_id: Filter by account UUID
         limit: Maximum number of results
     
     Returns:
@@ -326,6 +334,10 @@ def list_admin_reports(
         WHERE 1=1
     """
     params = []
+
+    if account_id:
+        query += " AND r.account_id = %s::uuid"
+        params.append(account_id)
     
     if status:
         query += " AND r.status = %s"
@@ -1343,6 +1355,7 @@ def list_users(
     search: Optional[str] = None,
     is_active: Optional[bool] = None,
     role: Optional[str] = None,
+    onboarding: Optional[str] = None,
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
     _admin: dict = Depends(get_admin_user)
@@ -1354,11 +1367,12 @@ def list_users(
         search: Search by email, first name, or last name
         is_active: Filter by active status
         role: Filter by role
+        onboarding: Filter by onboarding status (complete, in_progress, not_started)
         limit: Maximum results
         offset: Pagination offset
 
     Returns:
-        Array of users with account info
+        Array of users with account info and onboarding progress
     """
     query = """
         SELECT
@@ -1373,7 +1387,12 @@ def list_users(
             a.name as account_name,
             a.account_type,
             au.role,
-            u.is_platform_admin
+            u.is_platform_admin,
+            u.onboarding_completed_at,
+            u.onboarding_step,
+            (SELECT COUNT(*) FROM onboarding_progress op
+             WHERE op.user_id = u.id AND op.completed_at IS NOT NULL) as onboarding_steps_done,
+            u.last_login_at
         FROM users u
         LEFT JOIN accounts a ON a.id = u.account_id
         LEFT JOIN account_users au ON au.user_id = u.id AND au.account_id = a.id
@@ -1393,6 +1412,15 @@ def list_users(
     if role:
         query += " AND au.role = %s"
         params.append(role)
+
+    if onboarding == "complete":
+        query += " AND u.onboarding_completed_at IS NOT NULL"
+    elif onboarding == "in_progress":
+        query += """ AND u.onboarding_completed_at IS NULL
+            AND EXISTS (SELECT 1 FROM onboarding_progress op WHERE op.user_id = u.id AND op.completed_at IS NOT NULL)"""
+    elif onboarding == "not_started":
+        query += """ AND u.onboarding_completed_at IS NULL
+            AND NOT EXISTS (SELECT 1 FROM onboarding_progress op WHERE op.user_id = u.id AND op.completed_at IS NOT NULL)"""
 
     query += " ORDER BY u.created_at DESC LIMIT %s OFFSET %s"
     params.extend([limit, offset])
@@ -1415,8 +1443,12 @@ def list_users(
                 "account_id": row[7],
                 "account_name": row[8],
                 "account_type": row[9],
-                "role": row[10],  # Tenant role from account_users
+                "role": row[10],
                 "is_platform_admin": bool(row[11]) if row[11] is not None else False,
+                "onboarding_completed_at": row[12].isoformat() if row[12] else None,
+                "onboarding_step": row[13],
+                "onboarding_steps_done": row[14] or 0,
+                "last_login_at": row[15].isoformat() if row[15] else None,
             })
 
         # Get total
@@ -2413,6 +2445,7 @@ def get_revenue_stats(_admin: dict = Depends(get_admin_user)):
 def list_admin_property_reports(
     status: Optional[str] = None,
     account: Optional[str] = None,
+    account_id: Optional[str] = None,
     from_date: Optional[str] = None,
     to_date: Optional[str] = None,
     limit: int = Query(100, ge=1, le=500),
@@ -2424,6 +2457,7 @@ def list_admin_property_reports(
     Args:
         status: Filter by status (draft, processing, complete, failed)
         account: Filter by account name (partial match)
+        account_id: Filter by account UUID
         from_date: Filter by created date (YYYY-MM-DD)
         to_date: Filter by created date (YYYY-MM-DD)
         limit: Maximum number of results
@@ -2452,6 +2486,10 @@ def list_admin_property_reports(
         WHERE 1=1
     """
     params = []
+
+    if account_id:
+        query += " AND pr.account_id = %s::uuid"
+        params.append(account_id)
     
     if status:
         query += " AND pr.status = %s"
@@ -2716,6 +2754,7 @@ def get_property_report_stats(_admin: dict = Depends(get_admin_user)):
 def list_admin_leads(
     status: Optional[str] = None,
     account: Optional[str] = None,
+    account_id: Optional[str] = None,
     from_date: Optional[str] = None,
     to_date: Optional[str] = None,
     limit: int = Query(100, ge=1, le=500),
@@ -2747,6 +2786,10 @@ def list_admin_leads(
         WHERE 1=1
     """
     params = []
+
+    if account_id:
+        query += " AND l.account_id = %s::uuid"
+        params.append(account_id)
     
     if status:
         query += " AND l.status = %s"
@@ -3480,3 +3523,113 @@ def refresh_property_stats(
     result = refresh_stats(account_id)
     logger.info(f"Property stats refreshed by admin {_admin.get('email')}: {result}")
     return result
+
+
+# ==================== Lead Pages ====================
+
+@router.get("/lead-pages")
+def list_admin_lead_pages(
+    account_id: Optional[str] = None,
+    status: Optional[str] = None,
+    limit: int = Query(200, ge=1, le=500),
+    _admin: dict = Depends(get_admin_user),
+):
+    """List all CMA lead pages (users with agent_code set) across accounts."""
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+
+        query = """
+            SELECT
+                u.id::text                          AS user_id,
+                u.agent_code,
+                COALESCE(u.first_name || ' ' || u.last_name, u.email) AS agent_name,
+                u.email,
+                u.account_id::text,
+                a.name                              AS account_name,
+                COALESCE(u.landing_page_enabled, true) AS enabled,
+                u.landing_page_headline,
+                u.landing_page_theme_color,
+                COALESCE(u.landing_page_visits, 0)  AS visits,
+                u.created_at,
+                (SELECT COUNT(*) FROM leads l
+                 WHERE l.account_id = u.account_id
+                   AND l.source IN ('cma_page', 'qr_scan', 'direct_link')
+                )                                   AS total_leads,
+                (SELECT MAX(l.created_at) FROM leads l
+                 WHERE l.account_id = u.account_id
+                   AND l.source IN ('cma_page', 'qr_scan', 'direct_link')
+                )                                   AS last_lead_at,
+                (SELECT COUNT(*) FROM leads l
+                 WHERE l.account_id = u.account_id
+                   AND l.source IN ('cma_page', 'qr_scan', 'direct_link')
+                   AND l.created_at >= date_trunc('month', CURRENT_DATE)
+                )                                   AS leads_this_month
+            FROM users u
+            JOIN accounts a ON a.id = u.account_id
+            WHERE u.agent_code IS NOT NULL
+        """
+        params: list = []
+
+        if account_id:
+            query += " AND u.account_id = %s::uuid"
+            params.append(account_id)
+
+        if status == "active":
+            query += " AND COALESCE(u.landing_page_enabled, true) = true"
+        elif status == "inactive":
+            query += " AND u.landing_page_enabled = false"
+
+        query += " ORDER BY u.created_at DESC LIMIT %s"
+        params.append(limit)
+
+        cur.execute(query, params)
+        columns = [desc[0] for desc in cur.description]
+        rows = cur.fetchall()
+
+        pages = []
+        total_leads_all = 0
+        leads_month_all = 0
+        active_count = 0
+        for row in rows:
+            item = dict(zip(columns, row))
+            for k in ("created_at", "last_lead_at"):
+                if item.get(k):
+                    item[k] = item[k].isoformat()
+            total_leads_all += item.get("total_leads", 0)
+            leads_month_all += item.get("leads_this_month", 0)
+            if item.get("enabled"):
+                active_count += 1
+            pages.append(item)
+
+        return {
+            "lead_pages": pages,
+            "count": len(pages),
+            "stats": {
+                "active_pages": active_count,
+                "total_leads": total_leads_all,
+                "leads_this_month": leads_month_all,
+            },
+        }
+
+
+@router.patch("/lead-pages/{user_id}")
+def toggle_lead_page(
+    user_id: str,
+    enabled: bool = Query(..., description="Enable or disable the lead page"),
+    _admin: dict = Depends(get_admin_user),
+):
+    """Toggle a CMA lead page active/inactive."""
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+
+        cur.execute(
+            "UPDATE users SET landing_page_enabled = %s WHERE id = %s::uuid AND agent_code IS NOT NULL RETURNING id",
+            (enabled, user_id),
+        )
+        updated = cur.fetchone()
+        if not updated:
+            raise HTTPException(status_code=404, detail="Lead page not found")
+        conn.commit()
+
+        logger.info(f"Admin {_admin.get('email')} set lead page enabled={enabled} for user {user_id}")
+        return {"success": True, "enabled": enabled}

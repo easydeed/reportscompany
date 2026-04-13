@@ -45,6 +45,7 @@ import {
   Plus,
   HelpCircle,
   Mail,
+  BarChart3,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -132,8 +133,12 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
     { name: "Market Reports", href: "/app/admin/reports", icon: FileText },
     { name: "Schedules", href: "/app/admin/schedules", icon: Calendar },
     { name: "Emails", href: "/app/admin/emails", icon: Mail },
+    { name: "Lead Pages", href: "/app/admin/lead-pages", icon: Link2 },
     { name: "Leads", href: "/app/admin/leads", icon: UserCheck },
     { name: "SMS", href: "/app/admin/sms", icon: MessageSquare },
+    { name: "Plans", href: "/app/admin/plans", icon: Shield },
+    { name: "Analytics", href: "/app/admin/analytics", icon: BarChart3 },
+    { name: "Security", href: "/app/admin/security", icon: Lock },
     { name: "Billing", href: "/app/admin/billing", icon: CreditCard },
   ]
 

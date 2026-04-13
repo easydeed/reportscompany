@@ -350,6 +350,118 @@ export default function AdminAccountDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Sponsor / Affiliate Info */}
+      {account.account.sponsor_account_id && (
+        <Card className="mb-6 border-indigo-200 bg-indigo-50/30">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <Building className="h-5 w-5 text-indigo-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Sponsored by</p>
+                <Link
+                  href={`/app/admin/affiliates/${account.account.sponsor_account_id}`}
+                  className="font-semibold text-indigo-600 hover:underline inline-flex items-center gap-1"
+                >
+                  {account.account.sponsor_name || "Sponsor"}
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {account.account.account_type === "INDUSTRY_AFFILIATE" && (
+        <Card className="mb-6 border-indigo-200 bg-indigo-50/30">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <Users className="h-5 w-5 text-indigo-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">This is an affiliate account</p>
+                <Link
+                  href={`/app/admin/affiliates/${accountId}`}
+                  className="font-semibold text-indigo-600 hover:underline inline-flex items-center gap-1"
+                >
+                  View Sponsored Agents
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Quick Links */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Quick Links</CardTitle>
+          <CardDescription>Jump to this account&apos;s data across admin pages</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Link href={`/app/admin/reports?account_id=${accountId}`}>
+              <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors group">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-md bg-indigo-100 flex items-center justify-center">
+                    <FileText className="h-4 w-4 text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Market Reports</p>
+                    <p className="text-xs text-muted-foreground">{counts.reports} report{counts.reports !== 1 ? "s" : ""}</p>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+              </div>
+            </Link>
+
+            <Link href={`/app/admin/schedules?account_id=${accountId}`}>
+              <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors group">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-md bg-green-100 flex items-center justify-center">
+                    <Calendar className="h-4 w-4 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Schedules</p>
+                    <p className="text-xs text-muted-foreground">{counts.schedules} schedule{counts.schedules !== 1 ? "s" : ""}</p>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+              </div>
+            </Link>
+
+            <Link href={`/app/admin/leads?account_id=${accountId}`}>
+              <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors group">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-md bg-yellow-100 flex items-center justify-center">
+                    <UserCheck className="h-4 w-4 text-yellow-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Leads</p>
+                    <p className="text-xs text-muted-foreground">{counts.leads} lead{counts.leads !== 1 ? "s" : ""}</p>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+              </div>
+            </Link>
+
+            <Link href={`/app/admin/property-reports?account_id=${accountId}`}>
+              <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors group">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-md bg-purple-100 flex items-center justify-center">
+                    <Home className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Property Reports</p>
+                    <p className="text-xs text-muted-foreground">{counts.property_reports} report{counts.property_reports !== 1 ? "s" : ""}</p>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+              </div>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Edit Settings */}
       <Card>
         <CardHeader>
@@ -440,7 +552,15 @@ export default function AdminAccountDetailPage() {
             {account.account.sponsor_account_id && (
               <div className="col-span-2">
                 <dt className="text-muted-foreground">Sponsor Account</dt>
-                <dd className="font-mono text-xs">{account.account.sponsor_account_id}</dd>
+                <dd>
+                  <Link
+                    href={`/app/admin/accounts/${account.account.sponsor_account_id}`}
+                    className="text-indigo-600 hover:underline inline-flex items-center gap-1 text-sm"
+                  >
+                    {account.account.sponsor_name || account.account.sponsor_account_id}
+                    <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </dd>
               </div>
             )}
           </dl>

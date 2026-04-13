@@ -125,16 +125,20 @@ export default async function CmaLandingPage({ params, searchParams }: PageProps
       </div>
 
       {/* Content section with subtle background texture */}
-      <div className="relative overflow-hidden">
+      <div className="relative">
         <div
-          className="absolute inset-0 grayscale"
-          style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1600&q=80')",
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
-        />
-        <div className="absolute inset-0 bg-white/[0.92]" />
+          className="absolute inset-0 overflow-hidden"
+        >
+          <div
+            className="absolute inset-0 grayscale"
+            style={{
+              backgroundImage: "url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1600&q=80')",
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          />
+          <div className="absolute inset-0 bg-white/[0.92]" />
+        </div>
 
         <div className="relative z-10">
           <div className="max-w-md mx-auto px-4 -mt-8 relative z-20 pb-10">
