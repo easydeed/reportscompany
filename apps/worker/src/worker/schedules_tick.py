@@ -375,6 +375,37 @@ def process_due_schedules():
                     filters = row[15]  # NEW: Smart Preset filters (JSONB → dict or None)
                     
                     try:
+                        # Pre-check: skip if account is at monthly report limit
+                        cur.execute("""
+                            SELECT COUNT(*) FROM report_generations
+                            WHERE account_id = %s::uuid
+                              AND generated_at >= date_trunc('month', CURRENT_DATE)
+                              AND status IN ('completed', 'processing', 'queued')
+                        """, (account_id,))
+                        usage_count = cur.fetchone()[0]
+
+                        cur.execute("SELECT plan_slug FROM accounts WHERE id = %s::uuid", (account_id,))
+                        p_row = cur.fetchone()
+                        p_slug = p_row[0] if p_row else "free"
+
+                        REPORT_LIMITS = {"free": 5, "sponsored_free": 10, "pro": 300, "team": 1000, "affiliate": 5000}
+                        r_limit = REPORT_LIMITS.get(p_slug, 5)
+
+                        if usage_count >= r_limit:
+                            logger.info(f"Skipping schedule {schedule_id} — account {account_id} at limit ({usage_count}/{r_limit})")
+                            # Still advance next_run_at so we don't re-check every tick
+                            next_run_at = compute_next_run(
+                                cadence, weekly_dow, monthly_dom,
+                                send_hour, send_minute, timezone
+                            )
+                            cur.execute("""
+                                UPDATE schedules
+                                SET next_run_at = %s, processing_locked_at = NULL
+                                WHERE id = %s::uuid
+                            """, (next_run_at, schedule_id))
+                            conn.commit()
+                            continue
+
                         # Compute next run time (PASS S2: timezone-aware)
                         next_run_at = compute_next_run(
                             cadence, weekly_dow, monthly_dom,

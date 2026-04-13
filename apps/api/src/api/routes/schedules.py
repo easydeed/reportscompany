@@ -314,6 +314,37 @@ def create_schedule(
         with db_conn() as (conn, cur):
             set_rls(conn, account_id)
             
+            # Enforce per-plan schedule limit
+            cur.execute("""
+                SELECT COUNT(*) FROM schedules
+                WHERE account_id = %s::uuid AND active = TRUE
+            """, (account_id,))
+            active_count = cur.fetchone()[0]
+
+            cur.execute("SELECT plan_slug FROM accounts WHERE id = %s::uuid", (account_id,))
+            plan_row = cur.fetchone()
+            plan_slug = plan_row[0] if plan_row else "free"
+
+            SCHEDULE_LIMITS = {
+                "free": 2,
+                "sponsored_free": 2,
+                "pro": 20,
+                "team": 50,
+                "affiliate": 200,
+            }
+            schedule_limit = SCHEDULE_LIMITS.get(plan_slug, 2)
+
+            if active_count >= schedule_limit:
+                raise HTTPException(
+                    status_code=429,
+                    detail={
+                        "error": "schedule_limit_reached",
+                        "message": f"Schedule limit reached ({active_count}/{schedule_limit}). Upgrade to create more.",
+                        "used": active_count,
+                        "limit": schedule_limit,
+                    }
+                )
+            
             # Encode recipients to JSON strings (with ownership validation)
             encoded_recipients = encode_recipients(payload.recipients, cur=cur, account_id=account_id)
             
