@@ -20,8 +20,25 @@ function decodeJwtPayload(token: string): Record<string, any> | null {
   }
 }
 
+const ADMIN_REMAP: Record<string, string> = {
+  "/admin/login": "/app/admin",
+  "/admin/blocked-ips": "/app/admin/security",
+  "/admin/settings": "/app/admin/system",
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
+
+  // Redirect standalone /admin → embedded /app/admin
+  if (pathname.startsWith("/admin") && !pathname.startsWith("/api")) {
+    const mapped = ADMIN_REMAP[pathname]
+    if (mapped) {
+      return NextResponse.redirect(new URL(mapped, req.url))
+    }
+    const newPath = pathname.replace(/^\/admin/, "/app/admin")
+    return NextResponse.redirect(new URL(newPath, req.url))
+  }
+
   const token = req.cookies.get("mr_token")?.value
 
   // Protect all /app/*
@@ -72,5 +89,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/app/:path*"],
+  matcher: ["/app/:path*", "/admin/:path*", "/admin"],
 }

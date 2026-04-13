@@ -1,3 +1,7 @@
+// DEPRECATED: This standalone admin panel is superseded by /app/admin
+// Safe to delete after verifying all pages migrated (see ADMIN-MIGRATE tickets)
+// Target deletion: 1 week after launch
+
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
