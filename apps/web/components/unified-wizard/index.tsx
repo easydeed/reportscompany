@@ -16,13 +16,10 @@ import {
   type WizardState,
   type DeliveryMode,
   INITIAL_STATE,
-  STORY_TO_REPORT_TYPE,
-  STORY_DEFAULT_LOOKBACK,
+  REPORT_TYPES,
   AUDIENCE_FILTER_PRESETS,
-  getPreviewReportType,
   getAudienceLabel,
   getAreaDisplay,
-  STORIES,
 } from "./types"
 
 const THEME_ID_MAP: Record<number, string> = {
@@ -31,10 +28,13 @@ const THEME_ID_MAP: Record<number, string> = {
 
 const REPORT_TYPE_LABELS: Record<string, string> = {
   new_listings_gallery: "New Listings Gallery",
-  closed: "Recently Sold",
+  closed: "Closed Sales",
   market_snapshot: "Market Snapshot",
   inventory: "Active Inventory",
   featured_listings: "Featured Listings",
+  open_houses: "Open Houses",
+  price_bands: "Price Bands",
+  new_listings: "New Listings Analytics",
 }
 
 type GenerationState = "idle" | "creating" | "polling" | "complete" | "error"
@@ -71,8 +71,8 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
   const [generationError, setGenerationError] = useState<string | null>(null)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Audience step only shows for "just_listed" story
-  const needsAudience = state.story === "just_listed"
+  const selectedReport = REPORT_TYPES.find(r => r.id === state.reportType)
+  const needsAudience = selectedReport?.hasAudienceStep ?? false
   const effectiveSteps = needsAudience ? [0, 1, 2, 3] : [0, 2, 3]
   const currentStepIndex = effectiveSteps.indexOf(step)
   const isLastStep = currentStepIndex === effectiveSteps.length - 1
@@ -118,12 +118,12 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
     loadBranding()
   }, [])
 
-  // When story changes, set default lookback
   useEffect(() => {
-    if (state.story && !state.lookbackDays) {
-      setState((prev) => ({ ...prev, lookbackDays: STORY_DEFAULT_LOOKBACK[state.story!] }))
+    if (state.reportType && !state.lookbackDays) {
+      const rt = REPORT_TYPES.find(r => r.id === state.reportType)
+      if (rt) setState((prev) => ({ ...prev, lookbackDays: rt.defaultLookback }))
     }
-  }, [state.story, state.lookbackDays])
+  }, [state.reportType, state.lookbackDays])
 
   const update = useCallback((patch: Partial<WizardState>) => {
     setState((prev) => ({ ...prev, ...patch }))
@@ -131,7 +131,7 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
 
   const canContinue = useMemo(() => {
     switch (step) {
-      case 0: return !!state.story
+      case 0: return !!state.reportType
       case 1: return true // audience always has "all" default
       case 2: return (state.areaType === "city" ? !!state.city : state.zipCodes.length > 0) && !!state.lookbackDays
       case 3: return state.deliveryMode === "send_now"
@@ -197,10 +197,10 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
   }
 
   async function handleSubmit() {
-    if (!state.story) return
+    if (!state.reportType) return
     setIsSubmitting(true)
 
-    const reportType = STORY_TO_REPORT_TYPE[state.story]
+    const reportType = state.reportType
     const filters = state.audience && state.audience !== "all"
       ? AUDIENCE_FILTER_PRESETS[state.audience] || null
       : null
@@ -275,11 +275,10 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
     }
   }
 
-  // Preview config
-  const previewReportType = getPreviewReportType(state.story)
+  const previewReportType = (state.reportType || "market_snapshot") as import("@/components/shared/email-preview").PreviewReportType
   const audienceLabel = getAudienceLabel(state.audience)
   const areaName = getAreaDisplay(state)
-  const storyLabel = state.story ? STORIES.find((s) => s.id === state.story)?.title : null
+  const reportLabel = state.reportType ? (REPORT_TYPE_LABELS[state.reportType] || null) : null
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -448,7 +447,7 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
             ) : (
               <>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 min-h-[480px]">
-                  {step === 0 && <StepStory selected={state.story} onSelect={(s) => update({ story: s, audience: "all" })} />}
+                  {step === 0 && <StepStory selected={state.reportType} onSelect={(rt) => update({ reportType: rt, audience: "all" })} />}
                   {step === 1 && <StepAudience selected={state.audience} onSelect={(a) => update({ audience: a })} />}
                   {step === 2 && <StepWhereWhen state={state} onChange={update} />}
                   {step === 3 && <StepDeliver state={state} onChange={update} defaultMode={defaultMode} />}
@@ -505,12 +504,12 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
 
               {/* Summary pills */}
               <div className="px-4 py-2 border-b border-gray-100 flex flex-wrap gap-1.5">
-                {storyLabel && <Pill>{storyLabel}</Pill>}
+                {reportLabel && <Pill>{reportLabel}</Pill>}
                 {audienceLabel && <Pill>{audienceLabel}</Pill>}
                 {state.city && <Pill>{state.city}</Pill>}
                 {state.zipCodes.length > 0 && <Pill>{state.zipCodes.length} ZIPs</Pill>}
                 {state.lookbackDays && <Pill>{state.lookbackDays}d</Pill>}
-                {!storyLabel && <span className="text-[10px] text-gray-400 py-0.5">Select a story to preview</span>}
+                {!reportLabel && <span className="text-[10px] text-gray-400 py-0.5">Select a report type to preview</span>}
               </div>
 
               <div className="p-4 bg-stone-100/50 max-h-[calc(100vh-220px)] overflow-y-auto">
@@ -595,9 +594,10 @@ function ReportPreview({
   logoUrl: string | null
 }) {
   const label = REPORT_TYPE_LABELS[reportType] || "Market Report"
-  const isGallery = reportType === "new_listings_gallery" || reportType === "featured_listings"
+  const isGallery = reportType === "new_listings_gallery" || reportType === "featured_listings" || reportType === "open_houses"
   const isClosed = reportType === "closed" || reportType === "inventory"
   const isSnapshot = reportType === "market_snapshot"
+  const isAnalytics = reportType === "price_bands" || reportType === "new_listings"
   const contactParts = [agentPhone, agentEmail].filter(Boolean)
   const outfitFont = "'Outfit', sans-serif"
 
@@ -623,10 +623,10 @@ function ReportPreview({
           </div>
           <div className="flex items-baseline gap-1.5 mt-1">
             <span className="text-[14px] font-bold text-white" style={{ fontFamily: outfitFont }}>
-              {isClosed ? "42" : isSnapshot ? "$825K" : isGallery ? "12" : "38"}
+              {isClosed ? "42" : isSnapshot ? "$825K" : isGallery ? "12" : isAnalytics ? "6" : "38"}
             </span>
             <span className="text-[5.5px] text-white/80">
-              {isClosed ? "Homes Sold" : isSnapshot ? "Median Price" : isGallery ? "New Listings" : "Listings"}
+              {isClosed ? "Homes Sold" : isSnapshot ? "Median Price" : isGallery ? "New Listings" : isAnalytics ? "Price Bands" : "Listings"}
             </span>
           </div>
         </div>

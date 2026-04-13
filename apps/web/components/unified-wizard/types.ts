@@ -1,10 +1,3 @@
-export type StoryType =
-  | "just_listed"
-  | "just_sold"
-  | "market_update"
-  | "whats_available"
-  | "showcase"
-
 export type AudienceFilter = "all" | "first_time" | "luxury" | "families" | "condo" | "investors"
 
 export type DeliveryMode = "send_now" | "schedule"
@@ -16,18 +9,16 @@ export type Recipient =
   | { type: "manual_email"; email: string }
 
 export interface WizardState {
-  story: StoryType | null
+  reportType: string | null
   audience: AudienceFilter
   areaType: "city" | "zip"
   city: string | null
   zipCodes: string[]
   lookbackDays: 7 | 14 | 30 | 60 | 90 | null
   deliveryMode: DeliveryMode
-  // Send now
   downloadPdf: boolean
   sendViaEmail: boolean
   recipientEmails: string[]
-  // Schedule
   scheduleName: string
   cadence: Cadence
   dayOfWeek: number
@@ -39,7 +30,7 @@ export interface WizardState {
 }
 
 export const INITIAL_STATE: WizardState = {
-  story: null,
+  reportType: null,
   audience: "all",
   areaType: "city",
   city: null,
@@ -59,69 +50,90 @@ export const INITIAL_STATE: WizardState = {
   recipients: [],
 }
 
-// ─── Story → report_type mapping ───
+// ─── Report Types ───
 
-export const STORY_TO_REPORT_TYPE: Record<StoryType, string> = {
-  just_listed: "new_listings_gallery",
-  just_sold: "closed",
-  market_update: "market_snapshot",
-  whats_available: "inventory",
-  showcase: "featured_listings",
-}
-
-// ─── Story → default lookback ───
-
-export const STORY_DEFAULT_LOOKBACK: Record<StoryType, 7 | 14 | 30 | 60 | 90> = {
-  just_listed: 14,
-  just_sold: 30,
-  market_update: 30,
-  whats_available: 30,
-  showcase: 90,
-}
-
-// ─── Story cards metadata ───
-
-export const STORIES: {
-  id: StoryType
+export interface ReportTypeConfig {
+  id: string
   title: string
   description: string
-  bestFor: string
   icon: string
-}[] = [
+  category: "gallery" | "data" | "analytics"
+  defaultLookback: 7 | 14 | 30 | 60 | 90
+  hasAudienceStep: boolean
+}
+
+export const REPORT_TYPES: ReportTypeConfig[] = [
   {
-    id: "just_listed",
-    title: "What Just Listed",
-    description: "Photo gallery of newest homes on the market",
-    bestFor: "Buyer drips, prospecting",
-    icon: "home",
+    id: "new_listings_gallery",
+    title: "New Listings Gallery",
+    description: "Photo gallery of the newest homes hitting the market. Great for buyer prospecting and social media.",
+    icon: "image",
+    category: "gallery",
+    defaultLookback: 14,
+    hasAudienceStep: true,
   },
   {
-    id: "just_sold",
-    title: "What Just Sold",
-    description: "Recent sales with prices, DOM & a data table",
-    bestFor: "Seller prospecting, CMAs",
-    icon: "badge-dollar-sign",
-  },
-  {
-    id: "market_update",
-    title: "Market Update",
-    description: "Median prices, inventory levels, trends — the full picture",
-    bestFor: "Monthly sphere updates",
-    icon: "trending-up",
-  },
-  {
-    id: "whats_available",
-    title: "What's Available",
-    description: "Active listings, supply levels, inventory months",
-    bestFor: "Buyer coaching, investors",
-    icon: "building-2",
-  },
-  {
-    id: "showcase",
-    title: "Showcase My Listings",
-    description: "Your top 4 most impressive active listings",
-    bestFor: "Listing agents, luxury",
+    id: "featured_listings",
+    title: "Featured Listings",
+    description: "Showcase your top active listings with large premium photo cards. Ideal for listing agents and social posts.",
     icon: "award",
+    category: "gallery",
+    defaultLookback: 90,
+    hasAudienceStep: false,
+  },
+  {
+    id: "open_houses",
+    title: "Open Houses",
+    description: "This weekend\u2019s open houses with times, photos, and details. Send to your buyer list before the weekend.",
+    icon: "calendar-clock",
+    category: "gallery",
+    defaultLookback: 7,
+    hasAudienceStep: false,
+  },
+  {
+    id: "closed",
+    title: "Closed Sales",
+    description: "Recently sold homes with prices, days on market, and a detailed sales data table. Perfect for seller prospecting.",
+    icon: "badge-dollar-sign",
+    category: "data",
+    defaultLookback: 30,
+    hasAudienceStep: true,
+  },
+  {
+    id: "inventory",
+    title: "Active Inventory",
+    description: "What\u2019s currently on the market \u2014 active listings, supply levels, pricing trends, and months of inventory.",
+    icon: "building-2",
+    category: "data",
+    defaultLookback: 30,
+    hasAudienceStep: true,
+  },
+  {
+    id: "market_snapshot",
+    title: "Market Snapshot",
+    description: "The full picture \u2014 median prices, inventory, days on market, list-to-sale ratio, and AI-powered market analysis.",
+    icon: "trending-up",
+    category: "analytics",
+    defaultLookback: 30,
+    hasAudienceStep: false,
+  },
+  {
+    id: "price_bands",
+    title: "Price Bands",
+    description: "Market activity broken down by price segment \u2014 see where buyers and sellers are most active in your city.",
+    icon: "bar-chart-3",
+    category: "analytics",
+    defaultLookback: 30,
+    hasAudienceStep: false,
+  },
+  {
+    id: "new_listings",
+    title: "New Listings Analytics",
+    description: "New inventory trends with detailed property rows, pricing analysis, and Low/Median/High comparisons.",
+    icon: "list-ordered",
+    category: "analytics",
+    defaultLookback: 30,
+    hasAudienceStep: true,
   },
 ]
 
@@ -132,15 +144,14 @@ export const AUDIENCES: {
   label: string
   description: string
 }[] = [
-  { id: "all", label: "All Listings", description: "Show all homes — no price or size filters" },
+  { id: "all", label: "All Listings", description: "Show all homes \u2014 no price or size filters" },
   { id: "first_time", label: "First-Time Buyers", description: "Affordable single-family homes under 70% of local median price (2+ bed, 2+ bath)" },
   { id: "luxury", label: "Luxury Homes", description: "Premium single-family homes priced above 150% of local median" },
   { id: "families", label: "Family Homes", description: "Spacious family homes with 3+ bedrooms and 2+ bathrooms" },
   { id: "condo", label: "Condo Watch", description: "All condominiums and townhomes in the area" },
-  { id: "investors", label: "Investor Deals", description: "Budget-friendly homes under 50% of local median — ideal for investors" },
+  { id: "investors", label: "Investor Deals", description: "Budget-friendly homes under 50% of local median \u2014 ideal for investors" },
 ]
 
-// Audience → API filters
 export const AUDIENCE_FILTER_PRESETS: Record<string, {
   minbeds?: number
   minbaths?: number
@@ -155,19 +166,7 @@ export const AUDIENCE_FILTER_PRESETS: Record<string, {
   investors: { price_strategy: { mode: "maxprice_pct_of_median_list", value: 0.50 }, preset_display_name: "Investor Deals" },
 }
 
-// ─── Preview mapping ───
-
-export function getPreviewReportType(story: StoryType | null) {
-  if (!story) return "market_snapshot" as const
-  const map: Record<StoryType, string> = {
-    just_listed: "new_listings_gallery",
-    just_sold: "closed",
-    market_update: "market_snapshot",
-    whats_available: "inventory",
-    showcase: "featured_listings",
-  }
-  return map[story] as "market_snapshot" | "new_listings_gallery" | "closed" | "inventory" | "featured_listings"
-}
+// ─── Helpers ───
 
 export function getAudienceLabel(audience: AudienceFilter): string | null {
   if (audience === "all") return null

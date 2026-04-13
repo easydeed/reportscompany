@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { CmaFunnel } from './cma-funnel';
 import { getApiBase } from '@/lib/get-api-base';
+import { Phone, Mail, Globe, Shield } from 'lucide-react';
 
 interface PageProps {
   params: Promise<{ code: string }>;
@@ -105,8 +106,7 @@ export default async function CmaLandingPage({ params, searchParams }: PageProps
           }}
         />
 
-        <div className="relative z-10 pt-6 pb-10 px-4 text-center max-w-md mx-auto">
-          {/* Logo */}
+        <div className="relative z-10 pt-6 pb-20 px-4 text-center max-w-md mx-auto">
           {agent.logo_url && (
             <img
               src={agent.logo_url}
@@ -122,12 +122,6 @@ export default async function CmaLandingPage({ params, searchParams }: PageProps
             {agent.subheadline}
           </p>
         </div>
-
-        {/* Accent stripe — matches email banner divider */}
-        <div
-          className="h-1 w-full relative z-10"
-          style={{ background: `linear-gradient(90deg, ${tc} 0%, ${ac} 100%)` }}
-        />
       </div>
 
       {/* Content section with subtle background texture */}
@@ -143,67 +137,109 @@ export default async function CmaLandingPage({ params, searchParams }: PageProps
         <div className="absolute inset-0 bg-white/[0.92]" />
 
         <div className="relative z-10">
-          {/* Main content card — overlapping hero */}
-          <div className="max-w-md mx-auto px-4 -mt-6 relative z-20 pb-10">
-            {/* Agent Card */}
-            <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-4">
-              <div className="p-5 flex items-center gap-4">
-                {agent.photo_url ? (
-                  <img
-                    src={agent.photo_url}
-                    alt={agent.name}
-                    className="w-16 h-16 rounded-full object-cover shadow-md border-2 border-white flex-shrink-0"
-                  />
-                ) : (
-                  <div
-                    className="w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-bold shadow-md flex-shrink-0"
-                    style={{ backgroundColor: tc }}
-                  >
-                    {agent.name.charAt(0)}
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <h2 className="text-lg font-semibold text-slate-900 truncate">{agent.name}</h2>
+          <div className="max-w-md mx-auto px-4 -mt-12 relative z-20 pb-10">
+            {/* Agent Card — V0 variant 3: centered photo floating over hero */}
+            <div className="relative mx-auto w-full" style={{ '--theme-color': tc } as React.CSSProperties}>
+              <div className="rounded-2xl bg-white px-6 pb-5 pt-14 shadow-xl">
+                {/* Photo / Initials — pulled up into the hero gradient */}
+                <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2">
+                  {agent.photo_url ? (
+                    <div
+                      className="h-24 w-24 overflow-hidden rounded-full border-[3px] border-white"
+                      style={{ boxShadow: '0 4px 14px rgba(0,0,0,0.15)' }}
+                    >
+                      <img
+                        src={agent.photo_url}
+                        alt={agent.name}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      className="flex h-24 w-24 items-center justify-center rounded-full border-[3px] border-white text-2xl font-bold text-white"
+                      style={{
+                        backgroundColor: tc,
+                        boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+                      }}
+                    >
+                      {agent.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+
+                {/* Name & Title */}
+                <div className="mt-6 text-center">
+                  <h2 className="text-[22px] font-bold text-gray-800">{agent.name}</h2>
                   {agent.job_title && (
-                    <p className="text-sm font-medium truncate" style={{ color: tc }}>{agent.job_title}</p>
+                    <p className="mt-1 text-sm font-medium" style={{ color: tc }}>{agent.job_title}</p>
                   )}
                   {agent.company_name && (
-                    <p className="text-slate-600 text-sm truncate">{agent.company_name}</p>
+                    <div className="mt-2 flex items-center justify-center gap-2">
+                      {agent.logo_url && (
+                        <img src={agent.logo_url} alt={agent.company_name} className="h-4 w-auto object-contain" />
+                      )}
+                      <span className="text-[13px] text-gray-500">{agent.company_name}</span>
+                    </div>
                   )}
                   {agent.license_number && (
-                    <p className="text-slate-400 text-xs">DRE# {agent.license_number}</p>
+                    <p className="mt-1 text-[11px] text-gray-400">DRE# {agent.license_number}</p>
                   )}
+                </div>
+
+                {/* Contact Pills */}
+                {(agent.phone || agent.email || agent.website_url) && (
+                  <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                    {agent.phone && (
+                      <a
+                        href={`tel:${agent.phone.replace(/\D/g, '')}`}
+                        className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-gray-200 px-4 py-2 text-sm text-gray-700 transition-all hover:border-[color:var(--theme-color)] hover:bg-gray-50"
+                      >
+                        <Phone className="h-3.5 w-3.5" style={{ color: tc }} />
+                        <span>{agent.phone}</span>
+                      </a>
+                    )}
+                    {agent.email && (
+                      <a
+                        href={`mailto:${agent.email}`}
+                        className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-gray-200 px-4 py-2 text-sm text-gray-700 transition-all hover:border-[color:var(--theme-color)] hover:bg-gray-50"
+                      >
+                        <Mail className="h-3.5 w-3.5" style={{ color: tc }} />
+                        <span>Email</span>
+                      </a>
+                    )}
+                    {agent.website_url && (
+                      <a
+                        href={agent.website_url.startsWith('http') ? agent.website_url : `https://${agent.website_url}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-gray-200 px-4 py-2 text-sm text-gray-700 transition-all hover:border-[color:var(--theme-color)] hover:bg-gray-50"
+                      >
+                        <Globe className="h-3.5 w-3.5" style={{ color: tc }} />
+                        <span>Website</span>
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {/* Trust Indicators */}
+                <div className="mt-5 border-t border-gray-100 pt-4">
+                  <div className="flex items-center justify-center gap-4 text-[11px] text-gray-400">
+                    <div className="flex items-center gap-1.5">
+                      <Shield className="h-3.5 w-3.5" />
+                      <span>Licensed Agent</span>
+                    </div>
+                    {agent.logo_url && agent.company_name && (
+                      <div className="flex items-center gap-1.5">
+                        <img src={agent.logo_url} alt="" className="h-3 w-auto opacity-60" />
+                        <span>Verified</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-
-              {/* Contact info */}
-              {(agent.phone || agent.email) && (
-                <div className="px-5 pb-4 flex flex-wrap gap-3">
-                  {agent.phone && (
-                    <a
-                      href={`tel:${agent.phone}`}
-                      className="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 transition-colors"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
-                      </svg>
-                      {agent.phone}
-                    </a>
-                  )}
-                  {agent.email && (
-                    <a
-                      href={`mailto:${agent.email}`}
-                      className="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 transition-colors"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                      </svg>
-                      {agent.email}
-                    </a>
-                  )}
-                </div>
-              )}
             </div>
+
+            <div className="h-4" />
 
             {/* Funnel Card */}
             <div className="bg-white rounded-2xl shadow-xl p-6">
