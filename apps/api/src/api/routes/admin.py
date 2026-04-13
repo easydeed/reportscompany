@@ -1391,8 +1391,7 @@ def list_users(
             u.onboarding_completed_at,
             u.onboarding_step,
             (SELECT COUNT(*) FROM onboarding_progress op
-             WHERE op.user_id = u.id AND op.completed_at IS NOT NULL) as onboarding_steps_done,
-            u.last_login_at
+             WHERE op.user_id = u.id AND op.completed_at IS NOT NULL) as onboarding_steps_done
         FROM users u
         LEFT JOIN accounts a ON a.id = u.account_id
         LEFT JOIN account_users au ON au.user_id = u.id AND au.account_id = a.id
@@ -1448,7 +1447,6 @@ def list_users(
                 "onboarding_completed_at": row[12].isoformat() if row[12] else None,
                 "onboarding_step": row[13],
                 "onboarding_steps_done": row[14] or 0,
-                "last_login_at": row[15].isoformat() if row[15] else None,
             })
 
         # Get total
@@ -3045,7 +3043,7 @@ def get_sms_logs(
                 sl.from_phone,
                 sl.message,
                 sl.status,
-                sl.error,
+                sl.error_message,
                 sl.created_at
             FROM sms_logs sl
             JOIN accounts a ON sl.account_id = a.id
