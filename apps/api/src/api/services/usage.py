@@ -92,6 +92,9 @@ def resolve_plan_for_account(cur, account_id: str) -> Dict[str, Any]:
     """
     Resolve the effective plan for an account, including any overrides.
     
+    Also handles deferred downgrades: if plan_downgrade_at is in the past,
+    the downgrade is executed inline and the current (downgraded) plan is returned.
+    
     Args:
         cur: Database cursor
         account_id: Account UUID
@@ -106,7 +109,7 @@ def resolve_plan_for_account(cur, account_id: str) -> Dict[str, Any]:
             "has_override": bool
         }
     """
-    # Get account info
+    # Get account info including deferred downgrade columns
     cur.execute("""
         SELECT 
             a.plan_slug,
@@ -115,7 +118,9 @@ def resolve_plan_for_account(cur, account_id: str) -> Dict[str, Any]:
             p.plan_name,
             p.monthly_report_limit as plan_limit,
             p.allow_overage,
-            p.overage_price_cents
+            p.overage_price_cents,
+            a.plan_downgrade_at,
+            a.plan_downgrade_to
         FROM accounts a
         LEFT JOIN plans p ON a.plan_slug = p.plan_slug
         WHERE a.id = %s
@@ -126,7 +131,32 @@ def resolve_plan_for_account(cur, account_id: str) -> Dict[str, Any]:
         raise ValueError(f"Account {account_id} not found")
     
     (plan_slug, limit_override, account_type, 
-     plan_name, plan_limit, allow_overage, overage_price_cents) = row
+     plan_name, plan_limit, allow_overage, overage_price_cents,
+     downgrade_at, downgrade_to) = row
+
+    # Execute deferred downgrade if the paid period has ended
+    if downgrade_at and downgrade_to:
+        now = datetime.utcnow()
+        downgrade_dt = downgrade_at.replace(tzinfo=None) if downgrade_at.tzinfo else downgrade_at
+        if now >= downgrade_dt:
+            logger.info(f"Executing deferred downgrade for account {account_id}: {plan_slug} -> {downgrade_to}")
+            cur.execute("""
+                UPDATE accounts
+                SET plan_slug = %s,
+                    plan_downgrade_at = NULL,
+                    plan_downgrade_to = NULL,
+                    billing_status = 'canceled'
+                WHERE id = %s
+            """, (downgrade_to, account_id))
+            plan_slug = downgrade_to
+            # Re-fetch the new plan's limits
+            cur.execute("""
+                SELECT plan_name, monthly_report_limit, allow_overage, overage_price_cents
+                FROM plans WHERE plan_slug = %s
+            """, (plan_slug,))
+            new_plan = cur.fetchone()
+            if new_plan:
+                plan_name, plan_limit, allow_overage, overage_price_cents = new_plan
     
     # If no plan assigned, default to free
     if not plan_slug:

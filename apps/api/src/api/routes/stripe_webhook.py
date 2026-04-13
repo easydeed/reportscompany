@@ -12,6 +12,7 @@ cursor-wire-caching fixes:
 
 from fastapi import APIRouter, Request, HTTPException
 import logging
+import time as _time
 from ..settings import settings
 from ..db import db_conn
 from ..config.billing import (
@@ -140,28 +141,51 @@ async def stripe_webhook(req: Request):
             return {"received": True}
 
         try:
-            # FIX (cursor-wire-caching): use pooled db_conn() instead of raw psycopg.connect()
+            period_end = subscription.get("current_period_end")  # Unix timestamp
+            has_remaining_time = period_end and period_end > _time.time()
+
             with db_conn() as (conn, cur):
-                cur.execute("""
-                    UPDATE accounts
-                    SET plan_slug = 'free'
-                    WHERE id = %s::uuid
-                """, (account_id,))
+                if has_remaining_time:
+                    # Paid time remains — schedule a future downgrade instead
+                    # of yanking access mid-cycle.
+                    cur.execute("""
+                        UPDATE accounts
+                        SET plan_downgrade_at = to_timestamp(%s),
+                            plan_downgrade_to = 'free',
+                            billing_status = 'cancel_at_period_end'
+                        WHERE id = %s::uuid
+                    """, (period_end, account_id))
 
-                if cur.rowcount > 0:
-                    logger.info(f"Downgraded account {account_id} to 'free' (subscription canceled)")
+                    if cur.rowcount > 0:
+                        logger.info(
+                            f"Deferred downgrade for account {account_id} "
+                            f"until {period_end} (paid period still active)"
+                        )
+                    else:
+                        logger.warning(f"Account {account_id} not found for deferred downgrade")
                 else:
-                    logger.warning(f"Account {account_id} not found for subscription cancellation")
+                    # Period already ended — downgrade immediately
+                    cur.execute("""
+                        UPDATE accounts
+                        SET plan_slug = 'free',
+                            plan_downgrade_at = NULL,
+                            plan_downgrade_to = NULL
+                        WHERE id = %s::uuid
+                    """, (account_id,))
 
-                # Clear subscription billing state
-                update_account_billing_state(cur, account_id=account_id, subscription=None)
+                    if cur.rowcount > 0:
+                        logger.info(f"Downgraded account {account_id} to 'free' (subscription canceled, period ended)")
+                    else:
+                        logger.warning(f"Account {account_id} not found for subscription cancellation")
 
-            # FIX (cursor-wire-caching): invalidate plan catalog cache after downgrade
+                    # Clear subscription billing state only on immediate downgrade
+                    update_account_billing_state(cur, account_id=account_id, subscription=None)
+
             invalidate_plan_cache()
             logger.info("Plan catalog cache invalidated after subscription cancellation")
 
         except Exception as e:
-            logger.error(f"Failed to downgrade account {account_id}: {e}")
+            logger.error(f"Failed to handle subscription deletion for account {account_id}: {e}")
 
     # Handle price/product changes — invalidate catalog so next call re-fetches Stripe data
     elif event_type in (
