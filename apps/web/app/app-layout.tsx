@@ -89,8 +89,8 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
     if (!planUsage?.plan) return null
     return {
       plan_name: planUsage.plan.plan_name || "Free",
-      reports_used: planUsage.info?.reports_this_period || 0,
-      reports_limit: planUsage.plan.monthly_reports_limit || 10,
+      reports_used: planUsage.usage?.report_count || 0,
+      reports_limit: planUsage.plan.monthly_report_limit || 10,
     }
   }, [planUsage])
 
@@ -294,7 +294,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
             </div>
             <div className="h-1 bg-sidebar-border rounded-full overflow-hidden">
               <div 
-                className="h-full bg-indigo-400 rounded-full transition-all duration-500"
+                className={`h-full rounded-full transition-all duration-500 ${usagePercent > 80 ? 'bg-amber-400' : 'bg-indigo-400'}`}
                 style={{ width: `${usagePercent}%` }}
               />
             </div>

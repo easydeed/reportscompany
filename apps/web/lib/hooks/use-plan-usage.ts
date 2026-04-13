@@ -6,18 +6,21 @@ export type PlanUsage = {
   plan: {
     plan_name: string
     plan_slug: string
-    monthly_reports_limit: number
+    monthly_report_limit: number
+    allow_overage: boolean
+    overage_price_cents: number
+    has_override: boolean
   }
-  info: {
-    reports_this_period: number
-    active_schedules: number
+  usage: {
+    report_count: number
+    schedule_run_count: number
+    period_start: string
+    period_end: string
   }
-  limits: {
-    reports_used: number
-    reports_limit: number
-    schedules_used: number
-    schedules_limit: number
-  }
+  decision: string
+  account: Record<string, unknown>
+  info: Record<string, unknown>
+  stripe_billing: Record<string, unknown> | null
 }
 
 async function fetchPlanUsage(): Promise<PlanUsage> {
