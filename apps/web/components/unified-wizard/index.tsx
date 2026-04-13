@@ -29,11 +29,6 @@ const THEME_ID_MAP: Record<number, string> = {
   1: "teal", 2: "bold", 3: "classic", 4: "elegant", 5: "modern",
 }
 
-const THEME_HEADER_BG: Record<string, string> = {
-  teal: "#18235c", bold: "#1B365D", classic: "#1e3a5f",
-  elegant: "#1a1a1a", modern: "#0f172a",
-}
-
 const REPORT_TYPE_LABELS: Record<string, string> = {
   new_listings_gallery: "New Listings Gallery",
   closed: "Recently Sold",
@@ -582,136 +577,261 @@ function ReportPreview({
   lookbackDays: number
   logoUrl: string | null
 }) {
-  const darkBg = THEME_HEADER_BG[themeId] || THEME_HEADER_BG.teal
   const label = REPORT_TYPE_LABELS[reportType] || "Market Report"
   const isGallery = reportType === "new_listings_gallery" || reportType === "featured_listings"
+  const isClosed = reportType === "closed" || reportType === "inventory"
   const isSnapshot = reportType === "market_snapshot"
   const contactParts = [agentPhone, agentEmail].filter(Boolean)
+  const outfitFont = "'Outfit', sans-serif"
+
+  const samplePrices = ["$525,000", "$389,000", "$612,000", "$445,000", "$510,000", "$475,000"]
+  const sampleAddrs = ["742 Oak Ave", "118 Pine St", "903 Elm Dr", "221 Maple Ln", "56 River Rd", "889 Hill St"]
 
   return (
     <div
       className="aspect-[8.5/11] rounded-lg overflow-hidden shadow-md border border-gray-200 bg-white flex flex-col"
       style={{ fontSize: "10px" }}
     >
-      {/* Header bar — mirrors PDF template header-bar */}
+      {/* 2-column header */}
       <div
-        className="px-3 py-2.5 text-white flex items-center justify-between"
-        style={{ background: `linear-gradient(135deg, ${darkBg} 0%, ${darkBg}dd 60%, ${accentColor} 100%)` }}
+        className="px-2.5 py-2 text-white flex items-center justify-between gap-2"
+        style={{ background: `linear-gradient(115deg, ${primaryColor} 0%, ${primaryColor} 30%, ${accentColor} 100%)` }}
       >
-        <div className="flex items-center gap-1.5">
-          <div className="w-5 h-5 rounded bg-white/90 flex items-center justify-center overflow-hidden flex-shrink-0">
-            {logoUrl ? (
-              <img src={logoUrl} alt="" className="w-full h-full object-contain" />
-            ) : (
-              <span className="text-[6px] font-bold" style={{ color: darkBg }}>
-                {(displayName || "MR").slice(0, 2).toUpperCase()}
-              </span>
-            )}
+        <div className="flex-[0_0_65%] min-w-0">
+          <div className="text-[10px] font-bold text-white truncate" style={{ fontFamily: outfitFont }}>
+            {label} — {areaName}
           </div>
-          <div>
-            <div className="text-[7px] font-semibold text-white/90 truncate max-w-[100px]">
-              {displayName || "Your Brokerage"}
-            </div>
-            <div className="text-[5px] text-white/60">{label}</div>
+          <div className="text-[5.5px] text-white/70 mt-0.5 truncate">
+            March 2026 &bull; Data via MLS &bull; TrendyReports
+          </div>
+          <div className="flex items-baseline gap-1.5 mt-1">
+            <span className="text-[14px] font-bold text-white" style={{ fontFamily: outfitFont }}>
+              {isClosed ? "42" : isSnapshot ? "$825K" : isGallery ? "12" : "38"}
+            </span>
+            <span className="text-[5.5px] text-white/80">
+              {isClosed ? "Homes Sold" : isSnapshot ? "Median Price" : isGallery ? "New Listings" : "Listings"}
+            </span>
           </div>
         </div>
-        {agentTitle && (
-          <div className="text-[5px] bg-white/15 px-1.5 py-0.5 rounded-full text-white/80 truncate max-w-[80px]">
-            {agentTitle}
-          </div>
-        )}
-      </div>
-
-      {/* Title section */}
-      <div className="px-3 pt-2 pb-1.5">
-        <div className="text-[11px] font-bold" style={{ color: primaryColor }}>{label} — {areaName}</div>
-        <div className="text-[6px] text-gray-400 mt-0.5">Last {lookbackDays} days &bull; Live MLS Data</div>
-        <div className="h-[2px] rounded mt-1.5 w-12" style={{ backgroundColor: accentColor }} />
+        <div className="flex-[0_0_35%] flex justify-end">
+          {logoUrl ? (
+            <img src={logoUrl} alt="" className="max-h-[20px] w-auto object-contain" />
+          ) : (
+            <div className="w-7 h-7 rounded bg-white/20 flex items-center justify-center text-[7px] font-bold text-white">
+              {(displayName || "MR").slice(0, 2).toUpperCase()}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Content area */}
-      <div className="px-3 py-1.5 space-y-2 flex-1 min-h-0">
-        {/* Hero stat */}
-        {!isGallery && (
-          <div className="text-center py-1">
-            <div className="text-[6px] text-gray-400 uppercase tracking-wider mb-0.5">
-              {isSnapshot ? "Median Sale Price" : "Avg. Sale Price"}
+      <div className="px-2.5 py-1.5 flex-1 min-h-0 flex flex-col gap-1.5">
+        {/* Hero stat row for closed/inventory */}
+        {isClosed && (
+          <div className="flex gap-1.5">
+            <div className="flex-1 flex flex-col items-center justify-center rounded py-1" style={{ backgroundColor: `${accentColor}0F` }}>
+              <div className="text-[14px] font-bold" style={{ color: primaryColor, fontFamily: outfitFont }}>$825K</div>
+              <div className="text-[5px] text-gray-400 uppercase">Median Price</div>
             </div>
-            <div className="text-[18px] font-bold font-serif" style={{ color: primaryColor }}>$825,000</div>
+            <div className="flex-1 grid grid-cols-2 gap-1">
+              {[
+                { v: "24", l: "Avg DOM" },
+                { v: "97%", l: "Sale/List" },
+                { v: "$412", l: "$/SqFt" },
+                { v: "2.1", l: "Mo Supply" },
+              ].map(s => (
+                <div key={s.l} className="rounded bg-gray-50 px-1 py-0.5 text-center">
+                  <div className="text-[7px] font-bold" style={{ color: primaryColor, fontFamily: outfitFont }}>{s.v}</div>
+                  <div className="text-[4.5px] text-gray-400">{s.l}</div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
+        {/* Count badge for gallery types */}
         {isGallery && (
-          <div className="flex items-center justify-center gap-1 py-0.5">
-            <div
-              className="w-4 h-4 rounded-full flex items-center justify-center text-[6px] font-bold text-white"
-              style={{ backgroundColor: accentColor }}
-            >
-              12
+          <div className="flex items-center gap-1.5 py-0.5">
+            <div className="rounded px-1.5 py-0.5 text-[6px] font-bold text-white" style={{ backgroundColor: accentColor }}>
+              12 listings
             </div>
-            <span className="text-[7px] text-gray-500 uppercase tracking-wider">Listings</span>
+            <div className="text-[5px] text-gray-400">Last {lookbackDays} days &bull; All property types</div>
           </div>
         )}
 
-        {/* Photo grid */}
-        <div className={cn("grid gap-1", isGallery ? "grid-cols-3" : "grid-cols-2")}>
-          {SAMPLE_PHOTOS.slice(0, isGallery ? 6 : 4).map((url, i) => (
-            <div key={i} className="aspect-[4/3] rounded overflow-hidden bg-gray-100">
-              <img src={url} alt="" className="w-full h-full object-cover" />
+        {/* Snapshot hero stat */}
+        {isSnapshot && (
+          <div className="flex gap-1.5">
+            <div className="w-[45px] flex flex-col items-center justify-center rounded py-1" style={{ backgroundColor: `${accentColor}0F` }}>
+              <div className="text-[14px] font-bold" style={{ color: primaryColor, fontFamily: outfitFont }}>$825K</div>
+              <div className="text-[4.5px] text-gray-400 uppercase">Median</div>
             </div>
-          ))}
-        </div>
+            <div className="flex-1 rounded px-2 py-1" style={{ backgroundColor: `${accentColor}0A`, borderLeft: `2px solid ${accentColor}66` }}>
+              <div className="text-[5px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: accentColor }}>Market Insight</div>
+              <div className="text-[6px] text-gray-500 leading-[1.4]">
+                Irvine&apos;s median sale price rose 3.2% month-over-month to $825K, with inventory tightening as days on market fell to 24.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* AI Narrative for non-snapshot types */}
+        {!isSnapshot && (
+          <div className="rounded px-2 py-1" style={{ backgroundColor: `${accentColor}0A`, borderLeft: `2px solid ${accentColor}66` }}>
+            <div className="text-[5px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: accentColor }}>Market Insight</div>
+            <div className="text-[6px] text-gray-500 leading-[1.4]">
+              {isClosed
+                ? "42 homes closed in the last 30 days with a median sale price of $825K, reflecting steady demand across all price tiers."
+                : isGallery
+                  ? "12 new listings hit the market this week, with the majority priced between $400K–$650K in established neighborhoods."
+                  : "Active inventory remains tight with 38 listings and an average of 12 days on market, signaling continued seller advantage."}
+            </div>
+          </div>
+        )}
+
+        {/* Photo grid — gallery 3×2 */}
+        {isGallery && (
+          <div className="grid grid-cols-3 gap-1 flex-1 min-h-0">
+            {SAMPLE_PHOTOS.slice(0, 6).map((url, i) => (
+              <div key={i} className="flex flex-col rounded overflow-hidden bg-gray-50">
+                <div className="aspect-[3/2.4] overflow-hidden">
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                </div>
+                <div className="px-1 py-0.5">
+                  <div className="text-[7px] font-bold" style={{ fontFamily: outfitFont }}>{samplePrices[i]}</div>
+                  <div className="text-[5px] text-gray-400 truncate">{sampleAddrs[i]}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Photo grid — closed/inventory 2×2 + data table */}
+        {isClosed && (
+          <>
+            <div className="grid grid-cols-2 gap-1">
+              {SAMPLE_PHOTOS.slice(0, 4).map((url, i) => (
+                <div key={i} className="aspect-[4/3] rounded overflow-hidden bg-gray-100 relative">
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent px-1 py-0.5">
+                    <div className="text-[7px] font-bold text-white" style={{ fontFamily: outfitFont }}>{samplePrices[i]}</div>
+                    <div className="text-[4.5px] text-white/80 truncate">{sampleAddrs[i]}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="rounded border border-gray-100 overflow-hidden text-[5.5px]">
+              <div className="grid grid-cols-4 bg-gray-50 font-semibold text-gray-500 px-1 py-0.5">
+                <span>Address</span><span>Price</span><span>DOM</span><span>$/Sq</span>
+              </div>
+              {sampleAddrs.slice(0, 3).map((addr, i) => (
+                <div key={addr} className="grid grid-cols-4 px-1 py-0.5 text-gray-600 border-t border-gray-50">
+                  <span className="truncate">{addr}</span>
+                  <span style={{ fontFamily: outfitFont }}>{samplePrices[i]}</span>
+                  <span>{[18, 24, 7][i]}d</span>
+                  <span>${[412, 389, 455][i]}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Photo grid — snapshot 4-col with overlays */}
+        {isSnapshot && (
+          <div className="grid grid-cols-4 gap-1 flex-1 min-h-0">
+            {SAMPLE_PHOTOS.slice(0, 4).map((url, i) => (
+              <div key={i} className="aspect-[3/4] rounded overflow-hidden bg-gray-100 relative">
+                <img src={url} alt="" className="w-full h-full object-cover" />
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent px-1 py-0.5">
+                  <div className="text-[7px] font-bold text-white" style={{ fontFamily: outfitFont }}>{samplePrices[i]}</div>
+                  <div className="text-[4px] text-white/80 truncate">{sampleAddrs[i]}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Analytics layout — stat cards + listing rows */}
+        {!isGallery && !isClosed && !isSnapshot && (
+          <>
+            <div className="flex gap-1">
+              {[
+                { v: "38", l: "Active" },
+                { v: "12", l: "Avg DOM" },
+                { v: "$412", l: "$/SqFt" },
+                { v: "97%", l: "Sale/List" },
+              ].map(s => (
+                <div key={s.l} className="flex-1 rounded bg-gray-50 px-1 py-1 text-center">
+                  <div className="text-[8px] font-bold" style={{ color: primaryColor, fontFamily: outfitFont }}>{s.v}</div>
+                  <div className="text-[4.5px] text-gray-400">{s.l}</div>
+                </div>
+              ))}
+            </div>
+            {SAMPLE_PHOTOS.slice(0, 3).map((url, i) => (
+              <div key={i} className="flex gap-1.5 items-center">
+                <div className="w-[40px] aspect-[4/3] rounded overflow-hidden bg-gray-100 flex-shrink-0">
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[6.5px] font-semibold text-gray-800 truncate">{sampleAddrs[i]}</div>
+                  <div className="text-[5px] text-gray-400">3 bd &bull; 2 ba &bull; 1,850 sqft</div>
+                </div>
+                <div className="text-[8px] font-bold flex-shrink-0" style={{ color: primaryColor, fontFamily: outfitFont }}>
+                  {samplePrices[i]}
+                </div>
+              </div>
+            ))}
+          </>
+        )}
 
         {/* Stats bar */}
-        <div className="flex justify-between bg-gray-50 rounded px-2 py-1.5">
-          {[
-            { label: "Active", val: "67" },
-            { label: "Pending", val: "12" },
-            { label: "Sold", val: "38" },
-            { label: "Avg DOM", val: "12" },
-          ].map((s) => (
-            <div key={s.label} className="text-center">
-              <div className="text-[8px] font-bold" style={{ color: primaryColor }}>{s.val}</div>
-              <div className="text-[5px] text-gray-400">{s.label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* AI insight */}
-        {isSnapshot && (
-          <div className="rounded px-2 py-1.5" style={{ backgroundColor: `${accentColor}08`, borderLeft: `3px solid ${accentColor}` }}>
-            <div className="h-1.5 bg-gray-100 rounded w-full mb-0.5" />
-            <div className="h-1.5 bg-gray-100 rounded w-3/4" />
+        {!isClosed && (
+          <div className="flex justify-between bg-gray-50 rounded px-2 py-1">
+            {[
+              { label: "Active", val: "67" },
+              { label: "Pending", val: "12" },
+              { label: "Sold", val: "38" },
+              { label: "Avg DOM", val: "12" },
+            ].map((s) => (
+              <div key={s.label} className="text-center">
+                <div className="text-[7px] font-bold" style={{ color: primaryColor, fontFamily: outfitFont }}>{s.val}</div>
+                <div className="text-[4.5px] text-gray-400">{s.label}</div>
+              </div>
+            ))}
           </div>
         )}
       </div>
 
-      {/* Agent footer — mirrors PDF agent-footer */}
-      <div className="px-3 py-2 bg-gray-50 border-t border-gray-100 mt-auto">
+      {/* Agent footer */}
+      <div className="px-2.5 py-1.5 bg-gray-50 border-t border-gray-100 mt-auto">
         <div className="flex items-center gap-1.5">
           <div
-            className="w-5 h-5 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center bg-gray-200"
-            style={{ border: `1.5px solid ${primaryColor}33` }}
+            className="w-6 h-6 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center bg-gray-200"
           >
             {agentPhotoUrl ? (
               <img src={agentPhotoUrl} alt="" className="w-full h-full object-cover" />
             ) : (
-              <span className="text-[5px] font-semibold text-gray-400">{agentName?.charAt(0) || "?"}</span>
+              <span className="text-[6px] font-semibold text-gray-400">{agentName?.charAt(0) || "?"}</span>
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-[7px] font-semibold text-gray-800 truncate">{agentName}</div>
+            <div className="text-[7px] font-semibold text-gray-800 truncate" style={{ fontFamily: outfitFont }}>{agentName}</div>
             {agentTitle && <div className="text-[5px] text-gray-400">{agentTitle}</div>}
             {contactParts.length > 0 && (
-              <div className="text-[5px] truncate" style={{ color: accentColor }}>
+              <div className="text-[5px] text-gray-400 truncate">
                 {contactParts.join(" \u2022 ")}
               </div>
             )}
           </div>
           {logoUrl && (
-            <img src={logoUrl} alt="" className="h-3 w-auto object-contain opacity-50 flex-shrink-0" />
+            <img src={logoUrl} alt="" className="max-h-[14px] w-auto object-contain opacity-60 flex-shrink-0" />
           )}
         </div>
+      </div>
+
+      {/* Powered by */}
+      <div className="text-center py-0.5 text-[4.5px] text-gray-300">
+        Powered by TrendyReports
       </div>
     </div>
   )
