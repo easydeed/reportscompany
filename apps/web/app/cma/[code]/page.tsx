@@ -106,7 +106,7 @@ export default async function CmaLandingPage({ params, searchParams }: PageProps
           }}
         />
 
-        <div className="relative z-10 pt-6 pb-20 px-4 text-center max-w-md mx-auto">
+        <div className="relative z-10 pt-6 pb-16 px-4 text-center max-w-md mx-auto">
           {agent.logo_url && (
             <img
               src={agent.logo_url}
@@ -137,109 +137,105 @@ export default async function CmaLandingPage({ params, searchParams }: PageProps
         <div className="absolute inset-0 bg-white/[0.92]" />
 
         <div className="relative z-10">
-          <div className="max-w-md mx-auto px-4 -mt-12 relative z-20 pb-10">
-            {/* Agent Card — V0 variant 3: centered photo floating over hero */}
-            <div className="relative mx-auto w-full" style={{ '--theme-color': tc } as React.CSSProperties}>
-              <div className="rounded-2xl bg-white px-6 pb-5 pt-14 shadow-xl">
-                {/* Photo / Initials — pulled up into the hero gradient */}
-                <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2">
-                  {agent.photo_url ? (
-                    <div
-                      className="h-24 w-24 overflow-hidden rounded-full border-[3px] border-white"
-                      style={{ boxShadow: '0 4px 14px rgba(0,0,0,0.15)' }}
-                    >
-                      <img
-                        src={agent.photo_url}
-                        alt={agent.name}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div
-                      className="flex h-24 w-24 items-center justify-center rounded-full border-[3px] border-white text-2xl font-bold text-white"
-                      style={{
-                        backgroundColor: tc,
-                        boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
-                      }}
-                    >
-                      {agent.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                    </div>
-                  )}
-                </div>
-
-                {/* Name & Title */}
-                <div className="mt-6 text-center">
-                  <h2 className="text-[22px] font-bold text-gray-800">{agent.name}</h2>
-                  {agent.job_title && (
-                    <p className="mt-1 text-sm font-medium" style={{ color: tc }}>{agent.job_title}</p>
-                  )}
-                  {agent.company_name && (
-                    <div className="mt-2 flex items-center justify-center gap-2">
-                      {agent.logo_url && (
-                        <img src={agent.logo_url} alt={agent.company_name} className="h-4 w-auto object-contain" />
-                      )}
-                      <span className="text-[13px] text-gray-500">{agent.company_name}</span>
-                    </div>
-                  )}
-                  {agent.license_number && (
-                    <p className="mt-1 text-[11px] text-gray-400">DRE# {agent.license_number}</p>
-                  )}
-                </div>
-
-                {/* Contact Pills */}
-                {(agent.phone || agent.email || agent.website_url) && (
-                  <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-                    {agent.phone && (
-                      <a
-                        href={`tel:${agent.phone.replace(/\D/g, '')}`}
-                        className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-gray-200 px-4 py-2 text-sm text-gray-700 transition-all hover:border-[color:var(--theme-color)] hover:bg-gray-50"
-                      >
-                        <Phone className="h-3.5 w-3.5" style={{ color: tc }} />
-                        <span>{agent.phone}</span>
-                      </a>
-                    )}
-                    {agent.email && (
-                      <a
-                        href={`mailto:${agent.email}`}
-                        className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-gray-200 px-4 py-2 text-sm text-gray-700 transition-all hover:border-[color:var(--theme-color)] hover:bg-gray-50"
-                      >
-                        <Mail className="h-3.5 w-3.5" style={{ color: tc }} />
-                        <span>Email</span>
-                      </a>
-                    )}
-                    {agent.website_url && (
-                      <a
-                        href={agent.website_url.startsWith('http') ? agent.website_url : `https://${agent.website_url}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-gray-200 px-4 py-2 text-sm text-gray-700 transition-all hover:border-[color:var(--theme-color)] hover:bg-gray-50"
-                      >
-                        <Globe className="h-3.5 w-3.5" style={{ color: tc }} />
-                        <span>Website</span>
-                      </a>
-                    )}
+          <div className="max-w-md mx-auto px-4 -mt-8 relative z-20 pb-10">
+            {/* Agent Card — centered layout with photo inside */}
+            <div className="rounded-2xl bg-white px-6 pb-5 pt-6 shadow-xl mb-4" style={{ '--theme-color': tc } as React.CSSProperties}>
+              {/* Photo / Initials */}
+              <div className="flex justify-center mb-4">
+                {agent.photo_url ? (
+                  <div
+                    className="h-24 w-24 overflow-hidden rounded-full border-[3px] border-white"
+                    style={{ boxShadow: '0 4px 14px rgba(0,0,0,0.15)' }}
+                  >
+                    <img
+                      src={agent.photo_url}
+                      alt={agent.name}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className="flex h-24 w-24 items-center justify-center rounded-full border-[3px] border-white text-2xl font-bold text-white"
+                    style={{
+                      backgroundColor: tc,
+                      boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+                    }}
+                  >
+                    {agent.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                   </div>
                 )}
+              </div>
 
-                {/* Trust Indicators */}
-                <div className="mt-5 border-t border-gray-100 pt-4">
-                  <div className="flex items-center justify-center gap-4 text-[11px] text-gray-400">
-                    <div className="flex items-center gap-1.5">
-                      <Shield className="h-3.5 w-3.5" />
-                      <span>Licensed Agent</span>
-                    </div>
-                    {agent.logo_url && agent.company_name && (
-                      <div className="flex items-center gap-1.5">
-                        <img src={agent.logo_url} alt="" className="h-3 w-auto opacity-60" />
-                        <span>Verified</span>
-                      </div>
+              {/* Name & Title */}
+              <div className="text-center">
+                <h2 className="text-[22px] font-bold text-gray-800">{agent.name}</h2>
+                {agent.job_title && (
+                  <p className="mt-1 text-sm font-medium" style={{ color: tc }}>{agent.job_title}</p>
+                )}
+                {agent.company_name && (
+                  <div className="mt-2 flex items-center justify-center gap-2">
+                    {agent.logo_url && (
+                      <img src={agent.logo_url} alt={agent.company_name} className="h-4 w-auto object-contain" />
                     )}
+                    <span className="text-[13px] text-gray-500">{agent.company_name}</span>
                   </div>
+                )}
+                {agent.license_number && (
+                  <p className="mt-1 text-[11px] text-gray-400">DRE# {agent.license_number}</p>
+                )}
+              </div>
+
+              {/* Contact Pills */}
+              {(agent.phone || agent.email || agent.website_url) && (
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                  {agent.phone && (
+                    <a
+                      href={`tel:${agent.phone.replace(/\D/g, '')}`}
+                      className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-gray-200 px-4 py-2 text-sm text-gray-700 transition-all hover:border-[color:var(--theme-color)] hover:bg-gray-50"
+                    >
+                      <Phone className="h-3.5 w-3.5" style={{ color: tc }} />
+                      <span>{agent.phone}</span>
+                    </a>
+                  )}
+                  {agent.email && (
+                    <a
+                      href={`mailto:${agent.email}`}
+                      className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-gray-200 px-4 py-2 text-sm text-gray-700 transition-all hover:border-[color:var(--theme-color)] hover:bg-gray-50"
+                    >
+                      <Mail className="h-3.5 w-3.5" style={{ color: tc }} />
+                      <span>Email</span>
+                    </a>
+                  )}
+                  {agent.website_url && (
+                    <a
+                      href={agent.website_url.startsWith('http') ? agent.website_url : `https://${agent.website_url}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-gray-200 px-4 py-2 text-sm text-gray-700 transition-all hover:border-[color:var(--theme-color)] hover:bg-gray-50"
+                    >
+                      <Globe className="h-3.5 w-3.5" style={{ color: tc }} />
+                      <span>Website</span>
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {/* Trust Indicators */}
+              <div className="mt-5 border-t border-gray-100 pt-4">
+                <div className="flex items-center justify-center gap-4 text-[11px] text-gray-400">
+                  <div className="flex items-center gap-1.5">
+                    <Shield className="h-3.5 w-3.5" />
+                    <span>Licensed Agent</span>
+                  </div>
+                  {agent.logo_url && agent.company_name && (
+                    <div className="flex items-center gap-1.5">
+                      <img src={agent.logo_url} alt="" className="h-3 w-auto opacity-60" />
+                      <span>Verified</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
-
-            <div className="h-4" />
 
             {/* Funnel Card */}
             <div className="bg-white rounded-2xl shadow-xl p-6">
