@@ -34,7 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       if (decoded) {
         // Check expiry
         if (typeof decoded.exp !== 'number' || decoded.exp * 1000 >= Date.now()) {
-          isAdmin = decoded.role === "ADMIN"
+          isAdmin = decoded.is_platform_admin === true
           isAffiliate = decoded.account_type === "INDUSTRY_AFFILIATE"
           accountType = decoded.account_type || "REGULAR"
         }

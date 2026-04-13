@@ -68,8 +68,7 @@ export async function middleware(req: NextRequest) {
 
     // Admin route protection
     if (pathname.startsWith("/app/admin")) {
-      const role = (decoded.role || "USER").toUpperCase()
-      if (role !== "ADMIN") {
+      if (!decoded.is_platform_admin) {
         if (CLOAK) {
           const url = req.nextUrl.clone()
           url.pathname = "/404"

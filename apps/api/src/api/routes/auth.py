@@ -97,19 +97,21 @@ def login(body: LoginIn, response: Response):
             account_id = account_row[0] if account_row else default_account_id
             account_type = account_row[1] if account_row else "REGULAR"
             
-            # Fetch user role for JWT (avoids extra API call on frontend)
+            # Fetch user role + platform admin flag for JWT
             cur.execute("""
-                SELECT role FROM users WHERE id = %s::uuid
+                SELECT role, is_platform_admin FROM users WHERE id = %s::uuid
             """, (user_id,))
             role_row = cur.fetchone()
             user_role = (role_row[0] or "USER").upper() if role_row else "USER"
+            is_platform_admin = bool(role_row[1]) if role_row else False
 
     token = sign_jwt({
         "sub": user_id,
         "user_id": user_id,
         "account_id": account_id,
-        "role": user_role,           # Added: enables frontend to check admin locally
-        "account_type": account_type, # Added: enables affiliate redirect locally
+        "role": user_role,
+        "account_type": account_type,
+        "is_platform_admin": is_platform_admin,
         "scopes": ["reports:read", "reports:write"]
     }, settings.JWT_SECRET, ttl_seconds=3600)
     
@@ -294,8 +296,9 @@ def register(body: RegisterIn, response: Response, background_tasks: BackgroundT
                     "sub": user_id,
                     "user_id": user_id,
                     "account_id": account_id,
-                    "role": "USER",           # New users start as USER
-                    "account_type": "REGULAR", # New accounts are REGULAR
+                    "role": "USER",
+                    "account_type": "REGULAR",
+                    "is_platform_admin": False,
                     "scopes": ["reports:read", "reports:write"]
                 },
                 settings.JWT_SECRET,
@@ -434,9 +437,9 @@ def accept_invite(body: AcceptInviteRequest, response: Response):
                 WHERE token = %s
             """, (token,))
             
-            # Fetch role and account_type for JWT
+            # Fetch role, account_type, and platform admin flag for JWT
             cur.execute("""
-                SELECT u.role, a.account_type
+                SELECT u.role, a.account_type, u.is_platform_admin
                 FROM users u
                 JOIN accounts a ON u.account_id = a.id
                 WHERE u.id = %s::uuid
@@ -444,6 +447,7 @@ def accept_invite(body: AcceptInviteRequest, response: Response):
             extra_row = cur.fetchone()
             user_role = (extra_row[0] or "USER").upper() if extra_row else "USER"
             account_type = extra_row[1] if extra_row else "REGULAR"
+            is_platform_admin = bool(extra_row[2]) if extra_row else False
             
             conn.commit()
             
@@ -455,6 +459,7 @@ def accept_invite(body: AcceptInviteRequest, response: Response):
                     "account_id": account_id,
                     "role": user_role,
                     "account_type": account_type,
+                    "is_platform_admin": is_platform_admin,
                     "scopes": ["reports:read", "reports:write"]
                 },
                 settings.JWT_SECRET,
@@ -645,9 +650,9 @@ def reset_password(body: ResetPasswordRequest, response: Response):
                 WHERE id = %s::uuid
             """, (token_id,))
             
-            # Fetch role and account_type for JWT
+            # Fetch role, account_type, and platform admin flag for JWT
             cur.execute("""
-                SELECT u.role, a.account_type
+                SELECT u.role, a.account_type, u.is_platform_admin
                 FROM users u
                 JOIN accounts a ON u.account_id = a.id
                 WHERE u.id = %s::uuid
@@ -655,6 +660,7 @@ def reset_password(body: ResetPasswordRequest, response: Response):
             extra_row = cur.fetchone()
             user_role = (extra_row[0] or "USER").upper() if extra_row else "USER"
             account_type = extra_row[1] if extra_row else "REGULAR"
+            is_platform_admin = bool(extra_row[2]) if extra_row else False
             
             conn.commit()
             
@@ -666,6 +672,7 @@ def reset_password(body: ResetPasswordRequest, response: Response):
                     "account_id": account_id,
                     "role": user_role,
                     "account_type": account_type,
+                    "is_platform_admin": is_platform_admin,
                     "scopes": ["reports:read", "reports:write"]
                 },
                 settings.JWT_SECRET,
