@@ -132,7 +132,7 @@ export default function AdminPage() {
     async function fetchAdminData() {
       try {
         const [metricsRes, reportsRes, schedulesRes, emailsRes] = await Promise.all([
-          fetch('/api/proxy/v1/admin/metrics/overview', { credentials: 'include' }),
+          fetch('/api/proxy/v1/admin/metrics', { credentials: 'include' }),
           fetch('/api/proxy/v1/admin/reports?limit=10', { credentials: 'include' }),
           fetch('/api/proxy/v1/admin/schedules?limit=10', { credentials: 'include' }),
           fetch('/api/proxy/v1/admin/emails?limit=10', { credentials: 'include' }),

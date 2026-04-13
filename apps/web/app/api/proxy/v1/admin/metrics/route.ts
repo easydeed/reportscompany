@@ -48,9 +48,25 @@ export async function GET(request: Request) {
   const endpoint = metricsPath.replace(/^\//, '') // Remove leading slash
   
   if (!endpoint) {
-    return NextResponse.json({ error: "Endpoint required" }, { status: 400 })
+    const cookieStore = await cookies()
+    const token = cookieStore.get("mr_token")?.value
+    if (!token) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+    }
+    const qs = url.searchParams.toString()
+    const baseUrl = `${API_BASE}/v1/admin/metrics${qs ? `?${qs}` : ""}`
+    try {
+      const response = await fetch(baseUrl, {
+        headers: { Cookie: `mr_token=${token}` },
+      })
+      const data = await response.json()
+      return NextResponse.json(data, { status: response.status })
+    } catch (error) {
+      console.error("Admin metrics proxy error (base):", error)
+      return NextResponse.json({ error: "Failed to fetch metrics" }, { status: 500 })
+    }
   }
-  
+
   return handleAdminMetricsRequest(request, endpoint)
 }
 
