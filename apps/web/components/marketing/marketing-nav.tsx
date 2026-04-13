@@ -24,7 +24,7 @@ export function MarketingNav() {
     >
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         <a href="/">
-          <img src="/indigo.png" alt="TrendyReports" className="h-8 w-auto" />
+          <img src="/indigo.png" alt="TrendyReports" className="h-7 w-auto" />
         </a>
 
         <div className="hidden items-center gap-6 md:flex">

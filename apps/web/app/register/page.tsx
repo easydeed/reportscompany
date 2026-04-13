@@ -72,7 +72,7 @@ export default function RegisterPage() {
       <div className="hidden flex-1 flex-col justify-between bg-[#1E293B] p-12 lg:flex xl:p-16">
         <div>
           <Link href="/">
-            <img src="/white.png" alt="TrendyReports" className="h-8 w-auto" />
+            <img src="/white.png" alt="TrendyReports" className="h-7 w-auto" />
           </Link>
           <h2 className="mt-12 text-balance text-4xl font-bold leading-tight text-white">
             Start creating beautiful
@@ -141,7 +141,7 @@ export default function RegisterPage() {
         <div className="mx-auto w-full max-w-md">
           {/* Mobile logo */}
           <Link href="/" className="lg:hidden">
-            <img src="/indigo.png" alt="TrendyReports" className="h-8 w-auto" />
+            <img src="/indigo.png" alt="TrendyReports" className="h-7 w-auto" />
           </Link>
 
           <h1 className="mt-10 text-3xl font-bold tracking-tight text-foreground lg:mt-0">

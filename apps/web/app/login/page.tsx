@@ -76,7 +76,7 @@ function LoginForm() {
         <div className="mx-auto w-full max-w-md">
           {/* Logo */}
           <Link href="/">
-            <img src="/indigo.png" alt="TrendyReports" className="h-8 w-auto" />
+            <img src="/indigo.png" alt="TrendyReports" className="h-7 w-auto" />
           </Link>
 
           <h1 className="mt-10 text-3xl font-bold tracking-tight text-foreground">
