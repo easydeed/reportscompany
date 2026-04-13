@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { usePlanUsage } from "@/hooks/use-api"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -14,9 +14,10 @@ import {
   Sparkles,
   Receipt,
   TrendingUp,
+  Users,
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { cn } from "@/lib/utils"
 
 type PlanUsageData = {
@@ -51,20 +52,35 @@ const plans = [
     name: "Free",
     slug: "free",
     price: 0,
+    limit: 5,
     features: ["5 reports / month", "6 report types", "PDF export", "Email support"],
   },
   {
-    name: "Solo Agent",
-    slug: "solo",
+    name: "Pro",
+    slug: "pro",
     price: 29,
+    limit: 300,
     popular: true,
     features: [
-      "Unlimited reports",
+      "300 reports / month",
       "All report types",
       "Custom branding",
       "Scheduled reports",
       "Email delivery",
       "Priority support",
+    ],
+  },
+  {
+    name: "Team",
+    slug: "team",
+    price: 99,
+    limit: 1000,
+    icon: Users,
+    features: [
+      "1,000 reports / month",
+      "Everything in Pro",
+      "Team member access",
+      "Dedicated support",
     ],
   },
 ]
@@ -75,6 +91,18 @@ export default function BillingPage() {
   const [billingLoading, setBillingLoading] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const checkoutStatus = searchParams.get("checkout")
+    if (checkoutStatus === "success") {
+      toast({ title: "Subscription activated", description: "Your plan has been upgraded successfully." })
+      router.replace("/app/settings/billing")
+    } else if (checkoutStatus === "cancelled") {
+      toast({ title: "Checkout cancelled", description: "No changes were made to your plan.", variant: "destructive" })
+      router.replace("/app/settings/billing")
+    }
+  }, [searchParams, toast, router])
 
   async function checkout(planSlug: string) {
     setBillingLoading(true)
@@ -82,7 +110,7 @@ export default function BillingPage() {
       const res = await fetch("/api/proxy/v1/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: planSlug }),
+        body: JSON.stringify({ plan_slug: planSlug }),
       })
       const data = await res.json()
       if (res.ok && data.url) {
@@ -108,7 +136,7 @@ export default function BillingPage() {
   async function openBillingPortal() {
     setBillingLoading(true)
     try {
-      const res = await fetch("/api/proxy/v1/billing/portal", { method: "POST" })
+      const res = await fetch("/api/proxy/v1/billing/portal", { method: "GET" })
       const data = await res.json()
       if (res.ok && data.url) {
         router.push(data.url)
@@ -281,9 +309,10 @@ export default function BillingPage() {
             <h3 className="text-[13px] font-semibold text-foreground uppercase tracking-wide">Available Plans</h3>
           </div>
           <div className="p-5">
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-3 gap-4">
               {plans.map((plan) => {
                 const isCurrent = currentPlanSlug === plan.slug
+                const isDowngrade = plan.price < (billingData?.stripe_billing?.amount ?? 0) / 100
                 return (
                   <div
                     key={plan.slug}
@@ -309,7 +338,7 @@ export default function BillingPage() {
                     </div>
 
                     <ul className="space-y-1.5 mb-4">
-                      {plan.features.slice(0, 4).map((feature, i) => (
+                      {plan.features.map((feature, i) => (
                         <li key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Check className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
                           {feature}
@@ -319,7 +348,7 @@ export default function BillingPage() {
 
                     <Button
                       onClick={() => checkout(plan.slug)}
-                      disabled={billingLoading || isCurrent}
+                      disabled={billingLoading || isCurrent || plan.price === 0}
                       variant={isCurrent ? "secondary" : plan.popular ? "default" : "outline"}
                       size="sm"
                       className="w-full"
@@ -332,10 +361,10 @@ export default function BillingPage() {
                       ) : plan.price > 0 ? (
                         <>
                           <Zap className="w-4 h-4 mr-1.5" />
-                          Upgrade
+                          {isDowngrade ? "Change Plan" : "Upgrade"}
                         </>
                       ) : (
-                        "Downgrade"
+                        "Free Plan"
                       )}
                     </Button>
                   </div>
