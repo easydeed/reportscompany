@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Loader2, ChevronLeft, ChevronRight, Sparkles, Check, FileDown, Globe, CheckCircle2, AlertCircle } from "lucide-react"
+import { Loader2, ChevronLeft, ChevronRight, Sparkles, Check, FileDown, Globe, CheckCircle2, AlertCircle, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { SharedEmailPreview } from "@/components/shared/email-preview"
@@ -324,13 +324,30 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
               })}
             </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => router.push(defaultMode === "schedule" ? "/app/schedules" : "/app/reports")}
-            >
-              Cancel
-            </Button>
+            {generationState === "complete" ? (
+              <Button
+                size="sm"
+                onClick={() => {
+                  setState({ ...INITIAL_STATE })
+                  setStep(0)
+                  setGenerationState("idle")
+                  setGeneratedReportId(null)
+                  setPdfUrl(null)
+                  setGenerationError(null)
+                }}
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                {defaultMode === "schedule" ? "New Schedule" : "New Report"}
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push(defaultMode === "schedule" ? "/app/schedules" : "/app/reports")}
+              >
+                Cancel
+              </Button>
+            )}
           </div>
         </div>
       </header>
