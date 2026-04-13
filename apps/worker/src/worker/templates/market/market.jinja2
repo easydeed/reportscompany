@@ -1,7 +1,7 @@
 {% extends '_base/base.jinja2' %}
 
 {% block fonts %}
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:wght@400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 {% endblock %}
 
 {% block theme_styles %}
@@ -13,7 +13,7 @@
   --accent-light: {{ accent_light | default('#a6e4de', true) }};
   --accent-text: #ffffff;
   --header-bg: {{ primary_color | default('#18235c', true) }};
-  --font-display: 'DM Serif Display', Georgia, serif;
+  --font-display: 'Outfit', 'Inter', sans-serif;
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
 }
 {% endblock %}

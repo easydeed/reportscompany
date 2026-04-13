@@ -113,8 +113,7 @@ def create_report(
                 (account_id,),
             )
             acct_row = cur.fetchone()
-            if acct_row and acct_row[0]:
-                theme_id = str(acct_row[0])
+            theme_id = str(acct_row[0]) if acct_row and acct_row[0] else "1"
         if not accent_color:
             cur.execute(
                 "SELECT secondary_color FROM accounts WHERE id = %s::uuid",

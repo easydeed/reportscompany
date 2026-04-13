@@ -270,15 +270,28 @@ def enqueue_report(
         "schedule_id": schedule_id  # Link back to schedule for audit
     }
     
+    # Resolve theme and accent from account defaults
+    with psycopg.connect(DATABASE_URL) as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT COALESCE(default_theme_id, 1), secondary_color
+                FROM accounts
+                WHERE id = %s::uuid
+            """, (account_id,))
+            acct = cur.fetchone()
+            theme_id = acct[0] if acct else 1
+            accent_color = acct[1] if acct else None
+
     # Create report_generation record first (worker expects run_id)
     with psycopg.connect(DATABASE_URL) as conn:
         with conn.cursor() as cur:
             cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
             cur.execute("""
-                INSERT INTO report_generations (account_id, report_type, input_params, status)
-                VALUES (%s::uuid, %s, %s::jsonb, 'queued')
+                INSERT INTO report_generations
+                  (account_id, report_type, input_params, status, theme_id, accent_color)
+                VALUES (%s::uuid, %s, %s::jsonb, 'queued', %s, %s)
                 RETURNING id::text
-            """, (account_id, report_type, safe_json_dumps(params)))
+            """, (account_id, report_type, safe_json_dumps(params), theme_id, accent_color))
             run_id = cur.fetchone()[0]
         conn.commit()
     
