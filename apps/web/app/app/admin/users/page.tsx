@@ -249,7 +249,11 @@ export default function AdminUsersPage() {
               </TableHeader>
               <TableBody>
                 {users.map((user) => (
-                  <TableRow key={user.user_id}>
+                  <TableRow
+                    key={user.user_id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => router.push(`/app/admin/users/${user.user_id}`)}
+                  >
                     <TableCell>
                       <div>
                         <div className="font-medium">{user.email}</div>

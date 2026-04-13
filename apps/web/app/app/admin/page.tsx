@@ -88,6 +88,13 @@ const statusColors: Record<string, string> = {
   success: "bg-green-100 text-green-800",
 }
 
+interface HealthStatus {
+  api: boolean
+  database: boolean
+  redis: boolean
+  worker: boolean
+}
+
 export default function AdminPage() {
   const [data, setData] = useState<AdminData>({
     metrics: {},
@@ -96,6 +103,30 @@ export default function AdminPage() {
     emailLogs: [],
   })
   const [loading, setLoading] = useState(true)
+  const [health, setHealth] = useState<HealthStatus | null>(null)
+  const [healthError, setHealthError] = useState(false)
+
+  useEffect(() => {
+    async function fetchHealth() {
+      try {
+        const res = await fetch('/api/proxy/v1/admin/system/health', { credentials: 'include' })
+        if (res.ok) {
+          const d = await res.json()
+          setHealth({
+            api: true,
+            database: d.database ?? d.db ?? true,
+            redis: d.redis ?? true,
+            worker: d.worker ?? d.celery ?? true,
+          })
+        } else {
+          setHealthError(true)
+        }
+      } catch {
+        setHealthError(true)
+      }
+    }
+    fetchHealth()
+  }, [])
 
   useEffect(() => {
     async function fetchAdminData() {
@@ -139,6 +170,30 @@ export default function AdminPage() {
         <h1 className="text-3xl font-display font-bold text-foreground">Admin Console</h1>
         <p className="text-muted-foreground mt-2">System overview and management</p>
       </div>
+
+      {/* System Health */}
+      <Card className="border-muted">
+        <CardContent className="py-3 px-5">
+          <div className="flex items-center gap-6 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-muted-foreground">System Health</span>
+            </div>
+            {healthError ? (
+              <span className="text-sm text-yellow-600">Unable to check system health</span>
+            ) : health ? (
+              <>
+                <HealthDot label="API" healthy={health.api} />
+                <HealthDot label="Database" healthy={health.database} />
+                <HealthDot label="Redis" healthy={health.redis} />
+                <HealthDot label="Worker" healthy={health.worker} />
+              </>
+            ) : (
+              <span className="text-sm text-muted-foreground">Checking...</span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Key Metrics - Row 1 */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -511,6 +566,17 @@ function AdminSkeleton() {
           ))}
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+function HealthDot({ label, healthy }: { label: string; healthy: boolean }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className={`w-2 h-2 rounded-full ${healthy ? "bg-green-500" : "bg-red-500"}`} />
+      <span className={`text-sm ${healthy ? "text-green-700" : "text-red-600 font-medium"}`}>
+        {label}
+      </span>
     </div>
   )
 }

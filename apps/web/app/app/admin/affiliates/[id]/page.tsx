@@ -35,6 +35,7 @@ import { InviteAgentForm } from "./invite-agent-form"
 import { AffiliateActions } from "./affiliate-actions"
 import { BulkImportForm } from "./bulk-import-form"
 import { AgentHeadshotUpload } from "./agent-headshot-upload"
+import { EditBrandingModal } from "./edit-branding-modal"
 
 interface Agent {
   account_id: string
@@ -282,9 +283,20 @@ export default function AffiliateDetailPage() {
 
         {/* Branding */}
         <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-lg">Branding</CardTitle>
-            <CardDescription>White-label configuration</CardDescription>
+          <CardHeader className="flex flex-row items-start justify-between space-y-0">
+            <div>
+              <CardTitle className="text-lg">Branding</CardTitle>
+              <CardDescription>White-label configuration</CardDescription>
+            </div>
+            <EditBrandingModal
+              affiliateId={affiliate.account_id}
+              branding={affiliate.branding}
+              onSaved={(updated) =>
+                setAffiliate((prev) =>
+                  prev ? { ...prev, branding: { ...prev.branding, ...updated } } : prev
+                )
+              }
+            />
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">

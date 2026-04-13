@@ -83,11 +83,13 @@ export default function AdminPropertyReportsPage() {
       try {
         const params = new URLSearchParams()
         const status = searchParams.get('status')
+        const accountId = searchParams.get('account_id')
         const account = searchParams.get('account')
         const from = searchParams.get('from')
         const to = searchParams.get('to')
 
         if (status && status !== 'all') params.set('status', status)
+        if (accountId) params.set('account_id', accountId)
         if (account) params.set('account', account)
         if (from) params.set('from_date', from)
         if (to) params.set('to_date', to)

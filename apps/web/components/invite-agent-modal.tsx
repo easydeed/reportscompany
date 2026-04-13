@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { UserPlus, Copy, Check } from 'lucide-react';
+import { UserPlus, Copy, Check, ChevronDown } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -24,18 +24,25 @@ interface InviteResponse {
   invite_url: string;
 }
 
+const INITIAL_FORM = {
+  name: '',
+  email: '',
+  default_city: '',
+  phone: '',
+  job_title: '',
+  company_name: '',
+  license_number: '',
+};
+
 export function InviteAgentModal() {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showExtras, setShowExtras] = useState(false);
   const { toast } = useToast();
 
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    default_city: '',
-  });
+  const [formData, setFormData] = useState(INITIAL_FORM);
 
   const [errors, setErrors] = useState({
     name: '',
@@ -63,6 +70,10 @@ export function InviteAgentModal() {
     return isValid;
   }
 
+  function setField(field: string, value: string) {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
@@ -76,13 +87,15 @@ export function InviteAgentModal() {
     try {
       const response = await fetch('/api/proxy/v1/affiliate/invite-agent', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
           default_city: formData.default_city || undefined,
+          phone: formData.phone || undefined,
+          job_title: formData.job_title || undefined,
+          company_name: formData.company_name || undefined,
+          license_number: formData.license_number || undefined,
         }),
       });
 
@@ -90,24 +103,21 @@ export function InviteAgentModal() {
 
       if (!response.ok) {
         if (response.status === 400 && data.detail?.includes('email already exists')) {
-          setErrors({ ...errors, email: 'A user with this email already exists' });
+          setErrors((prev) => ({ ...prev, email: 'A user with this email already exists' }));
           return;
         }
         throw new Error(data.detail || data.error || 'Failed to send invitation');
       }
 
       const result: InviteResponse = data;
-
-      // Show success and invite URL
       setInviteUrl(result.invite_url);
-      
+
       toast({
         title: 'Invitation Sent!',
         description: `Successfully invited ${formData.email}`,
       });
 
-      // Reset form
-      setFormData({ name: '', email: '', default_city: '' });
+      setFormData(INITIAL_FORM);
     } catch (error) {
       console.error('Failed to invite agent:', error);
       toast({
@@ -142,12 +152,12 @@ export function InviteAgentModal() {
 
   function handleClose() {
     setOpen(false);
-    // Reset form and invite URL after a short delay (so the dialog close animation completes)
     setTimeout(() => {
-      setFormData({ name: '', email: '', default_city: '' });
+      setFormData(INITIAL_FORM);
       setErrors({ name: '', email: '' });
       setInviteUrl(null);
       setCopied(false);
+      setShowExtras(false);
     }, 200);
   }
 
@@ -169,7 +179,7 @@ export function InviteAgentModal() {
         <DialogHeader>
           <DialogTitle>Invite Sponsored Agent</DialogTitle>
           <DialogDescription>
-            Create a new sponsored account for an agent. They'll receive an invitation email
+            Create a new sponsored account for an agent. They&apos;ll receive an invitation email
             to set up their account.
           </DialogDescription>
         </DialogHeader>
@@ -218,7 +228,7 @@ export function InviteAgentModal() {
                   id="name"
                   placeholder="John Doe Realty"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => setField('name', e.target.value)}
                   disabled={isSubmitting}
                 />
                 {errors.name && (
@@ -235,7 +245,7 @@ export function InviteAgentModal() {
                   type="email"
                   placeholder="agent@example.com"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) => setField('email', e.target.value)}
                   disabled={isSubmitting}
                 />
                 {errors.email && (
@@ -249,12 +259,72 @@ export function InviteAgentModal() {
                   id="city"
                   placeholder="La Verne"
                   value={formData.default_city}
-                  onChange={(e) => setFormData({ ...formData, default_city: e.target.value })}
+                  onChange={(e) => setField('default_city', e.target.value)}
                   disabled={isSubmitting}
                 />
                 <p className="text-xs text-muted-foreground">
-                  The agent's primary market area
+                  The agent&apos;s primary market area
                 </p>
+              </div>
+
+              {/* Collapsible additional profile fields */}
+              <div className="border rounded-lg">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => setShowExtras(!showExtras)}
+                >
+                  <span>Add profile details (optional)</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${showExtras ? 'rotate-180' : ''}`} />
+                </button>
+                {showExtras && (
+                  <div className="space-y-3 px-3 pb-3 pt-1 border-t">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="phone" className="text-xs">Phone</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="(949) 555-0123"
+                        value={formData.phone}
+                        onChange={(e) => setField('phone', e.target.value)}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="job_title" className="text-xs">Job Title</Label>
+                      <Input
+                        id="job_title"
+                        placeholder="Luxury Home Specialist"
+                        value={formData.job_title}
+                        onChange={(e) => setField('job_title', e.target.value)}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="company_name" className="text-xs">Company</Label>
+                      <Input
+                        id="company_name"
+                        placeholder="Compass"
+                        value={formData.company_name}
+                        onChange={(e) => setField('company_name', e.target.value)}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="license_number" className="text-xs">License #</Label>
+                      <Input
+                        id="license_number"
+                        placeholder="DRE# 02145678"
+                        value={formData.license_number}
+                        onChange={(e) => setField('license_number', e.target.value)}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Pre-filling these saves the agent from entering them later.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 

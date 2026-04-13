@@ -411,3 +411,61 @@ def send_password_reset_email(email: str, user_name: str, reset_token: str) -> D
         text=text,
         tags=[{"name": "category", "value": "password-reset"}],
     )
+
+
+# ============ Plan Limit Notifications ============
+
+def send_limit_warning_email(email: str, first_name: str, count: int, limit: int) -> Dict[str, Any]:
+    """Send 80% usage warning email."""
+    billing_url = f"{email_service.app_base}/app/settings/billing"
+    name = first_name or "there"
+    content = f'''<p style="margin: 0 0 20px; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; color: #111827;">
+                Hi {name},
+              </p>
+              <p style="margin: 0 0 8px; font-size: 15px; line-height: 1.7; color: #374151;">
+                You&rsquo;ve used <strong>{count}</strong> of your <strong>{limit}</strong> monthly reports.
+                Upgrade your plan to continue generating reports without interruption.
+              </p>
+              <div style="background-color: #FFFBEB; border-left: 3px solid #F59E0B; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 20px 0;">
+                <p style="margin: 0; font-size: 14px; color: #92400E;">
+                  <strong>{int(count / limit * 100)}%</strong> of your monthly limit used &mdash; {limit - count} reports remaining.
+                </p>
+              </div>
+              {_cta_button(billing_url, "Upgrade Plan")}
+              <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #6b7280;">
+                Your limit resets at the start of next month.
+              </p>'''
+    return email_service.send_email_sync(
+        to=email,
+        subject=f"You\u2019ve used 80% of your monthly reports",
+        html=_email_base(content),
+        tags=[{"name": "category", "value": "limit-warning"}],
+    )
+
+
+def send_limit_reached_email(email: str, first_name: str, limit: int) -> Dict[str, Any]:
+    """Send 100% limit-reached email."""
+    billing_url = f"{email_service.app_base}/app/settings/billing"
+    name = first_name or "there"
+    content = f'''<p style="margin: 0 0 20px; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; color: #111827;">
+                Hi {name},
+              </p>
+              <p style="margin: 0 0 8px; font-size: 15px; line-height: 1.7; color: #374151;">
+                You&rsquo;ve reached your <strong>{limit}</strong> report limit for this month.
+                Upgrade your plan to generate more reports.
+              </p>
+              <div style="background-color: #FEF2F2; border-left: 3px solid #EF4444; padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 20px 0;">
+                <p style="margin: 0; font-size: 14px; color: #991B1B;">
+                  Monthly limit reached &mdash; report generation is paused until next month or until you upgrade.
+                </p>
+              </div>
+              {_cta_button(billing_url, "Upgrade Plan")}
+              <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #6b7280;">
+                Your limit resets at the start of next month.
+              </p>'''
+    return email_service.send_email_sync(
+        to=email,
+        subject="Monthly report limit reached",
+        html=_email_base(content),
+        tags=[{"name": "category", "value": "limit-reached"}],
+    )

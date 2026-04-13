@@ -134,13 +134,13 @@ def check_auto_completions(cur, user_id: str, account_id: str, account_type: str
     """
     auto_completed = []
 
-    # Check profile completion
+    # Check profile completion — auto-mark when key fields are pre-filled (e.g. from affiliate invite)
     cur.execute("""
-        SELECT first_name, last_name, company_name
+        SELECT first_name, last_name, phone, job_title
         FROM users WHERE id = %s::uuid
     """, (user_id,))
     user = cur.fetchone()
-    if user and user[0] and user[1]:  # Has first and last name
+    if user and user[0] and user[1]:  # Has first and last name at minimum
         auto_completed.append("profile_complete")
 
     # Check branding setup

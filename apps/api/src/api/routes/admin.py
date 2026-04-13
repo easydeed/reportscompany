@@ -362,6 +362,50 @@ def list_admin_reports(
         return {"reports": reports, "count": len(reports)}
 
 
+@router.post("/reports/{report_id}/retry")
+def retry_market_report(
+    report_id: str,
+    _admin: dict = Depends(get_admin_user)
+):
+    """Re-queue a failed market report for generation."""
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+
+        cur.execute("""
+            SELECT status, account_id::text, report_type,
+                   COALESCE(input_params, '{}'::jsonb) as input_params
+            FROM report_generations
+            WHERE id = %s::uuid
+        """, (report_id,))
+
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Report not found")
+
+        if row[0] != "failed":
+            raise HTTPException(
+                status_code=400,
+                detail=f"Can only retry failed reports (current status: {row[0]})"
+            )
+
+        cur.execute("""
+            UPDATE report_generations
+            SET status = 'queued', error = NULL, updated_at = NOW()
+            WHERE id = %s::uuid
+        """, (report_id,))
+        conn.commit()
+
+    try:
+        from ..worker_client import enqueue_generate_report
+        params = row[3] if isinstance(row[3], dict) else {}
+        enqueue_generate_report(report_id, row[1], row[2], params)
+        logger.info(f"Admin {_admin.get('email')} retried market report {report_id}")
+    except Exception as e:
+        logger.error(f"Failed to queue market report retry: {e}")
+
+    return {"ok": True, "report_id": report_id, "status": "queued"}
+
+
 # ==================== Emails ====================
 
 @router.get("/emails")
@@ -754,6 +798,89 @@ def get_affiliate_detail(
         affiliate["reports_this_month"] = cur.fetchone()[0] or 0
 
         return affiliate
+
+
+class UpdateAffiliateBrandingRequest(BaseModel):
+    """Request body for updating affiliate branding from admin."""
+    brand_display_name: Optional[str] = None
+    logo_url: Optional[str] = None
+    footer_logo_url: Optional[str] = None
+    email_logo_url: Optional[str] = None
+    email_footer_logo_url: Optional[str] = None
+    primary_color: Optional[str] = None
+    accent_color: Optional[str] = None
+    website_url: Optional[str] = None
+    rep_photo_url: Optional[str] = None
+    contact_line1: Optional[str] = None
+    contact_line2: Optional[str] = None
+
+
+@router.patch("/affiliates/{affiliate_id}/branding")
+def update_affiliate_branding(
+    affiliate_id: str,
+    body: UpdateAffiliateBrandingRequest,
+    _admin: dict = Depends(get_admin_user),
+):
+    """Update branding for an affiliate account (admin action)."""
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+
+        cur.execute("""
+            SELECT id FROM accounts
+            WHERE id = %s::uuid AND account_type = 'INDUSTRY_AFFILIATE'
+        """, (affiliate_id,))
+        if not cur.fetchone():
+            raise HTTPException(status_code=404, detail="Affiliate not found")
+
+        fields = body.model_dump(exclude_unset=True)
+        if not fields:
+            raise HTTPException(status_code=400, detail="No fields to update")
+
+        cur.execute("""
+            INSERT INTO affiliate_branding (account_id, brand_display_name)
+            VALUES (%s::uuid, %s)
+            ON CONFLICT (account_id) DO NOTHING
+        """, (affiliate_id, ""))
+
+        set_clauses = []
+        values = []
+        for col, val in fields.items():
+            set_clauses.append(f"{col} = %s")
+            values.append(val)
+        set_clauses.append("updated_at = NOW()")
+        values.append(affiliate_id)
+
+        cur.execute(f"""
+            UPDATE affiliate_branding
+            SET {', '.join(set_clauses)}
+            WHERE account_id = %s::uuid
+            RETURNING brand_display_name, logo_url, footer_logo_url,
+                      email_logo_url, email_footer_logo_url,
+                      primary_color, accent_color, website_url,
+                      rep_photo_url, contact_line1, contact_line2
+        """, values)
+
+        row = cur.fetchone()
+        conn.commit()
+
+        logger.info(f"Admin {_admin.get('email')} updated branding for affiliate {affiliate_id}")
+
+        return {
+            "ok": True,
+            "branding": {
+                "brand_display_name": row[0],
+                "logo_url": row[1],
+                "footer_logo_url": row[2],
+                "email_logo_url": row[3],
+                "email_footer_logo_url": row[4],
+                "primary_color": row[5],
+                "accent_color": row[6],
+                "website_url": row[7],
+                "rep_photo_url": row[8],
+                "contact_line1": row[9],
+                "contact_line2": row[10],
+            },
+        }
 
 
 class CreateAffiliateRequest(BaseModel):

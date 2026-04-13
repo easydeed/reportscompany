@@ -44,6 +44,7 @@ import {
   CreditCard,
   Plus,
   HelpCircle,
+  Mail,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -128,8 +129,12 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
     { name: "Accounts", href: "/app/admin/accounts", icon: Building },
     { name: "Users", href: "/app/admin/users", icon: Users },
     { name: "Property Reports", href: "/app/admin/property-reports", icon: Home },
+    { name: "Market Reports", href: "/app/admin/reports", icon: FileText },
+    { name: "Schedules", href: "/app/admin/schedules", icon: Calendar },
+    { name: "Emails", href: "/app/admin/emails", icon: Mail },
     { name: "Leads", href: "/app/admin/leads", icon: UserCheck },
     { name: "SMS", href: "/app/admin/sms", icon: MessageSquare },
+    { name: "Billing", href: "/app/admin/billing", icon: CreditCard },
   ]
 
   return (

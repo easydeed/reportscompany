@@ -44,17 +44,18 @@ export async function PATCH(
   }
 
   const { userId } = await params;
-  const { searchParams } = new URL(request.url);
-  const queryString = searchParams.toString();
 
   try {
+    const body = await request.json().catch(() => null);
     const response = await fetch(
-      `${API_BASE}/v1/admin/users/${userId}${queryString ? `?${queryString}` : ''}`,
+      `${API_BASE}/v1/admin/users/${userId}`,
       {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
+        ...(body ? { body: JSON.stringify(body) } : {}),
       }
     );
 

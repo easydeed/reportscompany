@@ -612,6 +612,169 @@ def _send_and_log_report_email(
     return status_code, response_text
 
 
+# ==================== Failure Notification ====================
+
+def _send_failure_notification(
+    account_id: str,
+    schedule_id: str | None,
+    report_type: str,
+    city: str | None,
+    error_msg: str,
+):
+    """
+    Send a branded email to the account owner when a scheduled report fails.
+    Deduplicates: skips if the same schedule already got a notification in the last 24h.
+    """
+    if not schedule_id:
+        return
+
+    resend_key = os.environ.get("RESEND_API_KEY", "")
+    if not resend_key:
+        logger.warning("RESEND_API_KEY not set — skipping failure notification")
+        return
+
+    try:
+        with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
+            with conn.cursor() as cur:
+                # 24-hour dedup: check if we already notified for this schedule recently
+                cur.execute("""
+                    SELECT 1 FROM email_log
+                    WHERE schedule_id = %s::uuid
+                      AND subject LIKE '%%report failed%%'
+                      AND created_at >= NOW() - INTERVAL '24 hours'
+                    LIMIT 1
+                """, (schedule_id,))
+                if cur.fetchone():
+                    logger.info(f"Skipping failure notification for schedule {schedule_id} — already sent within 24h")
+                    return
+
+                # Look up account owner email + name
+                cur.execute("""
+                    SELECT u.email, u.first_name
+                    FROM users u
+                    JOIN account_users au ON au.user_id = u.id
+                    WHERE au.account_id = %s::uuid AND au.role = 'OWNER'
+                    LIMIT 1
+                """, (account_id,))
+                owner = cur.fetchone()
+                if not owner or not owner[0]:
+                    logger.warning(f"No owner email found for account {account_id}")
+                    return
+
+                owner_email = owner[0]
+                first_name = owner[1] or "there"
+
+                # Get schedule name
+                cur.execute("""
+                    SELECT name FROM schedules WHERE id = %s::uuid
+                """, (schedule_id,))
+                sched_row = cur.fetchone()
+                schedule_name = sched_row[0] if sched_row else report_type.replace("_", " ").title()
+
+                area = city or "your area"
+                brief_error = (error_msg or "Unknown error")[:200]
+                app_base = os.environ.get("APP_BASE", "https://reportscompany-web.vercel.app")
+                schedule_url = f"{app_base}/app/schedules"
+
+                subject = f"\u26a0\ufe0f Your scheduled report failed \u2014 {schedule_name}"
+
+                cta_html = f'''<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 28px 0;">
+                  <tr><td align="center">
+                    <a href="{schedule_url}" target="_blank" style="display: inline-block; background-color: #4F46E5; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; font-weight: bold; text-decoration: none; padding: 14px 32px; border-radius: 8px;">
+                      View Schedules
+                    </a>
+                  </td></tr>
+                </table>'''
+
+                content_html = f'''<p style="margin: 0 0 20px; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; color: #111827;">
+                    Hi {first_name},
+                  </p>
+                  <p style="margin: 0 0 8px; font-size: 15px; line-height: 1.7; color: #374151;">
+                    Your scheduled report &ldquo;{schedule_name}&rdquo; for {area} failed to generate.
+                    We&rsquo;ll automatically retry on the next scheduled run.
+                  </p>
+                  <p style="margin: 0 0 20px; font-size: 15px; line-height: 1.7; color: #374151;">
+                    If this continues, please contact support.
+                  </p>
+                  <div style="background-color: #FEF2F2; border-left: 3px solid #EF4444; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 24px;">
+                    <p style="margin: 0 0 4px; font-size: 11px; font-weight: 600; color: #991B1B; text-transform: uppercase; letter-spacing: 0.5px;">Error details</p>
+                    <p style="margin: 0; font-size: 13px; color: #7F1D1D; font-family: monospace; word-break: break-all;">{brief_error}</p>
+                  </div>
+                  {cta_html}
+                  <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #6b7280;">
+                    This is an automated notification from TrendyReports.
+                  </p>'''
+
+                # Build full email using the branded shell (inlined to avoid cross-app imports)
+                html_body = f'''<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light only">
+  <title>TrendyReports</title>
+  <style>
+    body, table, td, p, a {{ -webkit-text-size-adjust: 100%; }}
+    body {{ margin: 0 !important; padding: 0 !important; }}
+    @media (prefers-color-scheme: dark) {{ .email-outer {{ background-color: #232323 !important; }} }}
+    @media screen and (max-width: 600px) {{ .email-wrapper {{ width: 100% !important; }} .content-pad {{ padding: 24px 20px !important; }} }}
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#F8FAFC;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F8FAFC;" class="email-outer"><tr>
+    <td align="center" style="padding:32px 16px;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" class="email-wrapper" style="max-width:600px;width:100%;">
+        <tr><td align="center" style="background:linear-gradient(135deg,#4F46E5 0%,#6366F1 50%,#818CF8 100%);background-color:#4F46E5;padding:28px 24px 20px;border-radius:12px 12px 0 0;">
+          <img src="https://trendyreports.io/white.png" width="160" alt="TrendyReports" style="display:block;max-height:40px;width:auto;height:auto;">
+        </td></tr>
+        <tr><td style="background-color:#ffffff;padding:32px;" class="content-pad">
+          {content_html}
+        </td></tr>
+        <tr><td style="background-color:#ffffff;border-top:1px solid #EEF2FF;padding:20px 32px;border-radius:0 0 12px 12px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+            <p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#6366F1;">TrendyReports</p>
+            <p style="margin:0 0 12px;font-size:12px;color:#9ca3af;">Branded Real Estate Reports</p>
+            <p style="margin:0;font-size:11px;color:#9ca3af;">
+              <a href="mailto:support@trendyreports.io" style="color:#6b7280;text-decoration:underline;">Contact Support</a>
+              &nbsp;&bull;&nbsp; &copy; 2026 TrendyReports
+            </p>
+          </td></tr></table>
+        </td></tr>
+      </table>
+    </td>
+  </tr></table>
+</body></html>'''
+
+                # Send via Resend
+                resp = httpx.post(
+                    "https://api.resend.com/emails",
+                    headers={
+                        "Authorization": f"Bearer {resend_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "from": os.environ.get("EMAIL_FROM_ADDRESS", "TrendyReports <noreply@trendyreports.io>"),
+                        "to": [owner_email],
+                        "subject": subject,
+                        "html": html_body,
+                    },
+                    timeout=15.0,
+                )
+
+                # Log the notification
+                cur.execute("""
+                    INSERT INTO email_log (account_id, schedule_id, provider, to_emails, subject, response_code, status)
+                    VALUES (%s::uuid, %s::uuid, 'resend', %s, %s, %s, %s)
+                """, (account_id, schedule_id, [owner_email], subject, resp.status_code,
+                      'sent' if resp.status_code in (200, 201) else 'failed'))
+
+                if resp.status_code in (200, 201):
+                    logger.info(f"Failure notification sent to {owner_email} for schedule {schedule_id}")
+                else:
+                    logger.warning(f"Failure notification send returned {resp.status_code}: {resp.text[:200]}")
+
+    except Exception as notify_err:
+        logger.warning(f"Failed to send failure notification (non-critical): {notify_err}")
+
+
 @celery.task(
     name="generate_report",
     bind=True,
@@ -1203,7 +1366,16 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                                 WHERE id = %s::uuid
                             """, (schedule_id,))
                             print(f"🛑 Auto-paused schedule {schedule_id} after {consecutive_failures} consecutive failures")
-        
+
+        # Send failure notification email to account owner (24h dedup built in)
+        _send_failure_notification(
+            account_id=account_id,
+            schedule_id=schedule_id,
+            report_type=report_type,
+            city=(params or {}).get("city"),
+            error_msg=error_msg,
+        )
+
         return {"ok": False, "error": error_msg}
 
 
@@ -1471,6 +1643,9 @@ def process_consumer_report(self, report_id: str):
                 # GENERATE BRANDED PDF REPORT
                 # =============================================
                 pdf_url = None
+                company_name = ""
+                account_name = ""
+                agent_email_addr = ""
                 try:
                     cur.execute("""
                         SELECT
@@ -1653,16 +1828,132 @@ def process_consumer_report(self, report_id: str):
                         delivered = True
 
                 elif delivery_method == "email" and consumer_email:
-                    # TODO: integrate Resend for email delivery
-                    # For now mark as sent — report is viewable at report_url
-                    logger.info(f"Email delivery requested for {consumer_email} — marking as sent (report URL: {report_url})")
-                    cur.execute("""
-                        UPDATE consumer_reports 
-                        SET status = 'sent',
-                            consumer_email_sent_at = NOW()
-                        WHERE id = %s::uuid
-                    """, (report_id,))
-                    delivered = True
+                    logger.info(f"Email delivery via Resend to {consumer_email} (report URL: {report_url})")
+                    resend_key = os.environ.get("RESEND_API_KEY", "")
+                    if not resend_key:
+                        logger.warning("RESEND_API_KEY not set — marking as sent without email")
+                        cur.execute("""
+                            UPDATE consumer_reports
+                            SET status = 'sent', consumer_email_sent_at = NOW()
+                            WHERE id = %s::uuid
+                        """, (report_id,))
+                        delivered = True
+                    else:
+                        lead_name = (property_data.get("owner_name") or "").split()[0] if property_data.get("owner_name") else ""
+                        greeting = f"Hi {lead_name}," if lead_name else "Hi,"
+                        _co = company_name or account_name or ""
+                        _ae = agent_email_addr or ""
+
+                        agent_lines = ""
+                        if agent_phone:
+                            agent_lines += f'<p style="margin:0 0 4px;font-size:14px;color:#374151;">\U0001f4f1 {agent_phone}</p>'
+                        if _ae:
+                            agent_lines += f'<p style="margin:0;font-size:14px;color:#374151;">\u2709\ufe0f <a href="mailto:{_ae}" style="color:#4F46E5;text-decoration:underline;">{_ae}</a></p>'
+
+                        prepared_by = f"{agent_name}"
+                        if _co:
+                            prepared_by += f" at {_co}"
+
+                        cta_btn = f'''<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:28px 0;">
+                          <tr><td align="center">
+                            <a href="{report_url}" target="_blank" style="display:inline-block;background-color:#4F46E5;color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:16px;font-weight:bold;text-decoration:none;padding:14px 32px;border-radius:8px;">
+                              View My Report
+                            </a>
+                          </td></tr>
+                        </table>'''
+
+                        content_html = f'''<p style="margin:0 0 20px;font-family:Georgia,'Times New Roman',serif;font-size:18px;color:#111827;">
+                            {greeting}
+                          </p>
+                          <p style="margin:0 0 8px;font-size:15px;line-height:1.7;color:#374151;">
+                            Your personalized property report for <strong>{prop_address}</strong> is ready.
+                          </p>
+                          {cta_btn}
+                          <p style="margin:0 0 12px;font-size:15px;line-height:1.7;color:#374151;">
+                            This report was prepared by <strong>{prepared_by}</strong>.
+                          </p>
+                          <div style="background-color:#F9FAFB;border-radius:8px;padding:16px 20px;margin:20px 0;">
+                            <p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#111827;">Questions? Contact {agent_name}:</p>
+                            {agent_lines}
+                          </div>
+                          <p style="margin:0;font-size:13px;line-height:1.6;color:#6b7280;">
+                            This is an automated report from TrendyReports.
+                          </p>'''
+
+                        email_html = f'''<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="color-scheme" content="light only">
+  <title>Your Home Value Report</title>
+  <style>
+    body,table,td,p,a{{ -webkit-text-size-adjust:100%; }}
+    body{{ margin:0!important;padding:0!important; }}
+    @media (prefers-color-scheme:dark){{ .email-outer{{ background-color:#232323!important; }} }}
+    @media screen and (max-width:600px){{ .email-wrapper{{ width:100%!important; }} .content-pad{{ padding:24px 20px!important; }} }}
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#F8FAFC;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F8FAFC;" class="email-outer"><tr>
+    <td align="center" style="padding:32px 16px;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" class="email-wrapper" style="max-width:600px;width:100%;">
+        <tr><td align="center" style="background:linear-gradient(135deg,#4F46E5 0%,#6366F1 50%,#818CF8 100%);background-color:#4F46E5;padding:28px 24px 20px;border-radius:12px 12px 0 0;">
+          <img src="https://trendyreports.io/white.png" width="160" alt="TrendyReports" style="display:block;max-height:40px;width:auto;height:auto;">
+        </td></tr>
+        <tr><td style="background-color:#ffffff;padding:32px;" class="content-pad">
+          {content_html}
+        </td></tr>
+        <tr><td style="background-color:#ffffff;border-top:1px solid #EEF2FF;padding:20px 32px;border-radius:0 0 12px 12px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+            <p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#6366F1;">TrendyReports</p>
+            <p style="margin:0 0 12px;font-size:12px;color:#9ca3af;">Branded Real Estate Reports</p>
+            <p style="margin:0;font-size:11px;color:#9ca3af;">
+              <a href="mailto:support@trendyreports.io" style="color:#6b7280;text-decoration:underline;">Contact Support</a>
+              &nbsp;&bull;&nbsp; &copy; 2026 TrendyReports
+            </p>
+          </td></tr></table>
+        </td></tr>
+      </table>
+    </td>
+  </tr></table>
+</body></html>'''
+
+                        try:
+                            from_addr = os.environ.get("EMAIL_FROM_ADDRESS", "TrendyReports <noreply@trendyreports.io>")
+                            resp = httpx.post(
+                                "https://api.resend.com/emails",
+                                headers={
+                                    "Authorization": f"Bearer {resend_key}",
+                                    "Content-Type": "application/json",
+                                },
+                                json={
+                                    "from": from_addr,
+                                    "to": [consumer_email],
+                                    "subject": "Your Home Value Report is Ready",
+                                    "html": email_html,
+                                },
+                                timeout=15.0,
+                            )
+                            email_sent = resp.status_code in (200, 201)
+                        except Exception as email_err:
+                            logger.warning(f"Resend email to consumer failed: {email_err}")
+                            email_sent = False
+
+                        if email_sent:
+                            cur.execute("""
+                                UPDATE consumer_reports
+                                SET status = 'sent', consumer_email_sent_at = NOW()
+                                WHERE id = %s::uuid
+                            """, (report_id,))
+                            delivered = True
+                            logger.info(f"CMA report email sent to {consumer_email}")
+                        else:
+                            logger.warning(f"CMA email delivery failed for {consumer_email}, status={getattr(resp, 'status_code', 'N/A')}")
+                            cur.execute("""
+                                UPDATE consumer_reports
+                                SET status = 'sent', consumer_email_sent_at = NOW()
+                                WHERE id = %s::uuid
+                            """, (report_id,))
+                            delivered = True
 
                 else:
                     logger.warning(f"No valid delivery method for report {report_id}: method={delivery_method}")

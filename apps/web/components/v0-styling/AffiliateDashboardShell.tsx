@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building2, TrendingUp, Users2 } from 'lucide-react';
 import { InviteAgentModal } from '@/components/invite-agent-modal';
+import { BulkInviteModal } from '@/components/affiliate/bulk-invite-modal';
 import { PageHeader } from '@/components/page-header';
 import { MetricCard } from '@/components/metric-card';
 
@@ -51,7 +52,12 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
         <PageHeader
           title="Affiliate Dashboard"
           description="Manage your sponsored agents and track their activity"
-          action={<InviteAgentModal />}
+          action={
+            <div className="flex items-center gap-2">
+              <BulkInviteModal />
+              <InviteAgentModal />
+            </div>
+          }
         />
 
         {planSummary && (

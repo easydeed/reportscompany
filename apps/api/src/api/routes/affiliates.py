@@ -5,10 +5,15 @@ Phase 29C: Industry affiliate dashboard and management
 Performance: Duplicate routes removed, queries optimized
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks, UploadFile, File
 from pydantic import BaseModel, EmailStr
+import csv
+import io
+import re
 import secrets
+import time
 import logging
+from typing import Any
 from ..db import db_conn
 from ..services.affiliates import (
     get_affiliate_overview,
@@ -26,6 +31,76 @@ from .reports import require_account_id
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/affiliate", tags=["affiliate"])
+
+EMAIL_RE = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+
+
+def _create_sponsored_agent(
+    cur: Any,
+    affiliate_account_id: str,
+    email: str,
+    name: str,
+    default_city: str | None = None,
+    phone: str | None = None,
+    job_title: str | None = None,
+    company_name: str | None = None,
+    license_number: str | None = None,
+) -> dict:
+    """
+    Shared helper: create a sponsored REGULAR account + user + invite token.
+    Returns dict with account_id, user_id, token, invite_url.
+    Caller is responsible for commit and email sending.
+    """
+    slug = name.lower().replace(' ', '-').replace('.', '').replace(',', '')[:50]
+    cur.execute("SELECT id FROM accounts WHERE slug = %s", (slug,))
+    if cur.fetchone():
+        slug = f"{slug}-{int(time.time())}"[:50]
+
+    cur.execute("""
+        INSERT INTO accounts (name, slug, account_type, plan_slug, sponsor_account_id)
+        VALUES (%s, %s, 'REGULAR', 'sponsored_free', %s::uuid)
+        RETURNING id::text
+    """, (name, slug, affiliate_account_id))
+    new_account_id = cur.fetchone()[0]
+
+    if default_city:
+        cur.execute(
+            "UPDATE accounts SET default_city = %s WHERE id = %s::uuid",
+            (default_city, new_account_id),
+        )
+
+    parts = name.strip().split(None, 1)
+    first_name = parts[0] if parts else name.strip()
+    last_name = parts[1] if len(parts) > 1 else ""
+
+    cur.execute("""
+        INSERT INTO users (account_id, email, is_active, email_verified, role,
+                           first_name, last_name,
+                           phone, job_title, company_name, license_number)
+        VALUES (%s::uuid, %s, true, false, 'member',
+                %s, %s, %s, %s, %s, %s)
+        RETURNING id::text
+    """, (new_account_id, email, first_name, last_name,
+          phone, job_title, company_name, license_number))
+    new_user_id = cur.fetchone()[0]
+
+    cur.execute("""
+        INSERT INTO account_users (account_id, user_id, role)
+        VALUES (%s::uuid, %s::uuid, 'OWNER')
+    """, (new_account_id, new_user_id))
+
+    token = secrets.token_urlsafe(32)
+    cur.execute("""
+        INSERT INTO signup_tokens (token, user_id, account_id)
+        VALUES (%s, %s::uuid, %s::uuid)
+    """, (token, new_user_id, new_account_id))
+
+    return {
+        "account_id": new_account_id,
+        "user_id": new_user_id,
+        "token": token,
+        "invite_url": f"https://reportscompany-web.vercel.app/welcome?token={token}",
+    }
 
 
 @router.get("/overview")
@@ -81,6 +156,10 @@ class InviteAgentRequest(BaseModel):
     name: str
     email: EmailStr
     default_city: str | None = None
+    phone: str | None = None
+    job_title: str | None = None
+    company_name: str | None = None
+    license_number: str | None = None
 
 
 @router.post("/invite-agent")
@@ -96,112 +175,154 @@ def invite_agent(
     Phase 29C: Creates new REGULAR account with sponsored_free plan.
     """
     with db_conn() as (conn, cur):
-        # Verify this is an affiliate account
         if not verify_affiliate_account(cur, account_id):
             raise HTTPException(
                 status_code=403,
                 detail="Only industry affiliates can invite agents"
             )
-        
-        # Check if email already exists
+
         cur.execute("SELECT id FROM users WHERE email = %s", (body.email,))
         if cur.fetchone():
             raise HTTPException(
                 status_code=400,
                 detail="A user with this email already exists"
             )
-        
-        # Create new account
-        slug = body.name.lower().replace(' ', '-').replace('.', '').replace(',', '')[:50]
-        
-        # Ensure slug is unique
-        cur.execute("SELECT id FROM accounts WHERE slug = %s", (slug,))
-        if cur.fetchone():
-            # Add timestamp to make unique
-            import time
-            slug = f"{slug}-{int(time.time())}"[:50]
-        
-        cur.execute("""
-            INSERT INTO accounts (name, slug, account_type, plan_slug, sponsor_account_id)
-            VALUES (%s, %s, 'REGULAR', 'sponsored_free', %s::uuid)
-            RETURNING id::text
-        """, (
-            body.name,
-            slug,
-            account_id
-        ))
-        new_account_id = cur.fetchone()[0]
-        
-        # Create new user
-        cur.execute("""
-            INSERT INTO users (account_id, email, is_active, email_verified, role)
-            VALUES (%s::uuid, %s, true, false, 'member')
-            RETURNING id::text
-        """, (new_account_id, body.email))
-        new_user_id = cur.fetchone()[0]
-        
-        # Create account_users entry (OWNER)
-        cur.execute("""
-            INSERT INTO account_users (account_id, user_id, role)
-            VALUES (%s::uuid, %s::uuid, 'OWNER')
-        """, (new_account_id, new_user_id))
-        
-        # Generate invite token
-        token = secrets.token_urlsafe(32)
-        
-        # FIX (L3): Removed CREATE TABLE IF NOT EXISTS from request handler.
-        # Table should be created via migration. See Phase 6 notes.
-        cur.execute("""
-            INSERT INTO signup_tokens (token, user_id, account_id)
-            VALUES (%s, %s::uuid, %s::uuid)
-        """, (token, new_user_id, new_account_id))
-        
-        # Get inviter info (affiliate account name)
-        cur.execute("""
-            SELECT a.name FROM accounts a WHERE a.id = %s::uuid
-        """, (account_id,))
-        affiliate_row = cur.fetchone()
-        company_name = affiliate_row[0] if affiliate_row else "Your Sponsor"
 
-        # Get inviter user name (the user making the request)
-        user_id_from_token = getattr(request.state, 'user_id', None)
-        inviter_name = company_name  # Default to company name
+        result = _create_sponsored_agent(
+            cur, account_id, body.email, body.name,
+            default_city=body.default_city,
+            phone=body.phone,
+            job_title=body.job_title,
+            company_name=body.company_name,
+            license_number=body.license_number,
+        )
 
-        if user_id_from_token:
-            cur.execute("""
-                SELECT COALESCE(first_name || ' ' || last_name, email)
-                FROM users WHERE id = %s::uuid
-            """, (user_id_from_token,))
-            inviter_row = cur.fetchone()
-            if inviter_row and inviter_row[0]:
-                inviter_name = inviter_row[0].strip()
-                if not inviter_name or inviter_name == ' ':
-                    inviter_name = company_name
-
+        inviter_name, company_name = _get_inviter_info(cur, account_id, request)
         conn.commit()
 
-        # Send invitation email in background
         try:
             background_tasks.add_task(
                 send_invite_email,
-                body.email,
-                inviter_name,
-                company_name,
-                token
+                body.email, inviter_name, company_name, result["token"]
             )
             logger.info(f"Invite email queued for {body.email} from {company_name}")
         except Exception as e:
-            # Don't fail the invite if email fails
             logger.error(f"Failed to queue invite email for {body.email}: {e}")
 
         return {
             "ok": True,
-            "account_id": new_account_id,
-            "user_id": new_user_id,
-            "token": token,
-            "invite_url": f"https://reportscompany-web.vercel.app/welcome?token={token}",
-            "email_sent": True
+            **result,
+            "email_sent": True,
         }
+
+
+def _get_inviter_info(cur: Any, account_id: str, request: Request) -> tuple[str, str]:
+    """Return (inviter_name, company_name) for invite emails."""
+    cur.execute("SELECT name FROM accounts WHERE id = %s::uuid", (account_id,))
+    row = cur.fetchone()
+    company_name = row[0] if row else "Your Sponsor"
+    inviter_name = company_name
+
+    user_id_from_token = getattr(request.state, 'user_id', None)
+    if user_id_from_token:
+        cur.execute("""
+            SELECT COALESCE(first_name || ' ' || last_name, email)
+            FROM users WHERE id = %s::uuid
+        """, (user_id_from_token,))
+        inviter_row = cur.fetchone()
+        if inviter_row and inviter_row[0] and inviter_row[0].strip():
+            inviter_name = inviter_row[0].strip()
+
+    return inviter_name, company_name
+
+
+@router.post("/bulk-invite")
+async def bulk_invite_agents(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    account_id: str = Depends(require_account_id),
+):
+    """
+    Bulk invite agents from a CSV upload.
+
+    CSV columns: name (required), email (required),
+    city, phone, job_title, company_name, license_number (all optional).
+    """
+    with db_conn() as (conn, cur):
+        if not verify_affiliate_account(cur, account_id):
+            raise HTTPException(
+                status_code=403,
+                detail="Only industry affiliates can invite agents",
+            )
+
+        inviter_name, company_name = _get_inviter_info(cur, account_id, request)
+
+        content = await file.read()
+        try:
+            text = content.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            text = content.decode("latin-1")
+
+        reader = csv.DictReader(io.StringIO(text))
+        errors: list[dict] = []
+        invited = 0
+        total_rows = 0
+        email_tasks: list[tuple[str, str]] = []
+
+        for idx, row in enumerate(reader, start=2):
+            total_rows += 1
+            row = {k.strip().lower(): (v.strip() if v else "") for k, v in row.items()}
+
+            email = row.get("email", "")
+            name = row.get("name", "")
+
+            if not email:
+                errors.append({"row": idx, "email": "", "reason": "email is required"})
+                continue
+            if not EMAIL_RE.match(email):
+                errors.append({"row": idx, "email": email, "reason": "invalid email format"})
+                continue
+            if not name:
+                errors.append({"row": idx, "email": email, "reason": "name is required"})
+                continue
+
+            cur.execute("SELECT id FROM users WHERE email = %s", (email,))
+            if cur.fetchone():
+                errors.append({"row": idx, "email": email, "reason": "email already registered"})
+                continue
+
+            try:
+                result = _create_sponsored_agent(
+                    cur, account_id, email, name,
+                    default_city=row.get("city") or None,
+                    phone=row.get("phone") or None,
+                    job_title=row.get("job_title") or None,
+                    company_name=row.get("company_name") or None,
+                    license_number=row.get("license_number") or None,
+                )
+                email_tasks.append((email, result["token"]))
+                invited += 1
+            except Exception as e:
+                logger.error(f"Failed to create agent for {email}: {e}")
+                errors.append({"row": idx, "email": email, "reason": str(e)})
+
+        conn.commit()
+
+    for email_addr, token in email_tasks:
+        try:
+            background_tasks.add_task(
+                send_invite_email, email_addr, inviter_name, company_name, token,
+            )
+        except Exception as e:
+            logger.error(f"Failed to queue invite email for {email_addr}: {e}")
+
+    return {
+        "total_rows": total_rows,
+        "invited": invited,
+        "skipped": len(errors),
+        "errors": errors,
+    }
 
 
 # ============================================================================

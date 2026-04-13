@@ -25,6 +25,10 @@ import {
   Loader2,
   AlertTriangle,
   CheckCircle,
+  ChevronRight,
+  Home,
+  UserCheck,
+  ExternalLink,
 } from "lucide-react"
 
 interface AccountDetail {
@@ -36,6 +40,7 @@ interface AccountDetail {
     plan_slug: string
     monthly_report_limit_override: number | null
     sponsor_account_id: string | null
+    sponsor_name: string | null
     created_at: string
   }
   plan: {
@@ -58,6 +63,14 @@ interface AccountDetail {
   }
 }
 
+interface AccountCounts {
+  reports: number
+  schedules: number
+  leads: number
+  property_reports: number
+  sponsored_agents?: number
+}
+
 export default function AdminAccountDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -68,6 +81,7 @@ export default function AdminAccountDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [account, setAccount] = useState<AccountDetail | null>(null)
+  const [counts, setCounts] = useState<AccountCounts>({ reports: 0, schedules: 0, leads: 0, property_reports: 0 })
 
   // Form state
   const [planSlug, setPlanSlug] = useState("")
@@ -76,6 +90,7 @@ export default function AdminAccountDetailPage() {
 
   useEffect(() => {
     fetchAccount()
+    fetchCounts()
   }, [accountId])
 
   async function fetchAccount() {
@@ -93,6 +108,40 @@ export default function AdminAccountDetailPage() {
       setError(err instanceof Error ? err.message : "Failed to load account")
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function fetchCounts() {
+    try {
+      const [reportsRes, schedulesRes, leadsRes, prRes] = await Promise.all([
+        fetch(`/api/proxy/v1/admin/reports?account_id=${accountId}&limit=1`, { credentials: "include" }),
+        fetch(`/api/proxy/v1/admin/schedules?account_id=${accountId}&limit=1`, { credentials: "include" }),
+        fetch(`/api/proxy/v1/admin/leads?account_id=${accountId}&limit=1`, { credentials: "include" }),
+        fetch(`/api/proxy/v1/admin/property-reports?account_id=${accountId}&limit=1`, { credentials: "include" }),
+      ])
+
+      const c: AccountCounts = { reports: 0, schedules: 0, leads: 0, property_reports: 0 }
+
+      if (reportsRes.ok) {
+        const d = await reportsRes.json()
+        c.reports = d?.count ?? d?.reports?.length ?? 0
+      }
+      if (schedulesRes.ok) {
+        const d = await schedulesRes.json()
+        c.schedules = d?.count ?? d?.schedules?.length ?? 0
+      }
+      if (leadsRes.ok) {
+        const d = await leadsRes.json()
+        c.leads = d?.count ?? d?.leads?.length ?? 0
+      }
+      if (prRes.ok) {
+        const d = await prRes.json()
+        c.property_reports = d?.count ?? d?.reports?.length ?? 0
+      }
+
+      setCounts(c)
+    } catch {
+      // Counts are non-critical; fail silently
     }
   }
 
