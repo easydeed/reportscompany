@@ -252,7 +252,7 @@ export default function AdminUserDetailPage() {
   const initials = getInitials(user.first_name, user.last_name, user.email)
   const isSponsored = user.account_type === "SPONSORED" || !!user.sponsor_account_id
   const isAffiliate = user.account_type === "INDUSTRY_AFFILIATE"
-  const accountLabel = isAffiliate ? "Affiliate" : isSponsored ? "Sponsored" : "Regular"
+  const accountLabel = isAffiliate ? "Affiliate" : isSponsored ? "Trial" : "Regular"
 
   const reports = user.reports || []
   const schedules = user.schedules || []

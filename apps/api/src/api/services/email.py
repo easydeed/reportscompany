@@ -324,7 +324,7 @@ def get_invite_email_html(
                 <strong>{inviter_name}</strong> from <strong>{company_name}</strong> invited you to join TrendyReports &mdash; a platform for creating branded real estate market reports and property analyses.
               </p>
               <p style="margin: 0 0 12px; font-size: 15px; line-height: 1.7; color: #374151;">
-                Your sponsored account includes:
+                Your trial account includes:
               </p>
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 0 0 8px;">
                 <tr><td style="padding: 6px 0; font-size: 15px; line-height: 1.7; color: #374151;">&#10003;&ensp; Branded market reports with your contact info</td></tr>

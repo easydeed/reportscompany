@@ -181,7 +181,7 @@ export default function AccountsPage() {
                 <SelectItem value="pro">Pro</SelectItem>
                 <SelectItem value="team">Team</SelectItem>
                 <SelectItem value="affiliate">Affiliate</SelectItem>
-                <SelectItem value="sponsored_free">Sponsored Free</SelectItem>
+                <SelectItem value="sponsored_free">Trial</SelectItem>
               </SelectContent>
             </Select>
             <Button

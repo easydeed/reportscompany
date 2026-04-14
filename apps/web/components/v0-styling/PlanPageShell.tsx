@@ -82,13 +82,13 @@ export function PlanPageShell(props: PlanPageShellProps) {
                   </CardTitle>
                   {isSponsored && (
                     <Badge className="bg-primary/10 text-primary border-primary/20 font-medium">
-                      Sponsored
+                      Trial
                     </Badge>
                   )}
                 </div>
                 <CardDescription className="text-slate-600">
                   {isSponsored 
-                    ? 'Sponsored by your industry affiliate partner'
+                    ? 'Trial plan provided by your affiliate partner'
                     : `${formatDate(usage.period_start)} – ${formatDate(usage.period_end)}`
                   }
                 </CardDescription>

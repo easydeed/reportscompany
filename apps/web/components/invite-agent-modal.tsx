@@ -177,9 +177,9 @@ export function InviteAgentModal() {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Invite Sponsored Agent</DialogTitle>
+          <DialogTitle>Invite Agent</DialogTitle>
           <DialogDescription>
-            Create a new sponsored account for an agent. They&apos;ll receive an invitation email
+            Create a new trial account for an agent. They&apos;ll receive an invitation email
             to set up their account.
           </DialogDescription>
         </DialogHeader>

@@ -314,7 +314,7 @@ export default function AccountDetailPage() {
                   <SelectItem value="pro">Pro (300 reports/month)</SelectItem>
                   <SelectItem value="team">Team (1,000 reports/month)</SelectItem>
                   <SelectItem value="affiliate">Affiliate (5,000 reports/month)</SelectItem>
-                  <SelectItem value="sponsored_free">Sponsored Free (10 reports/month)</SelectItem>
+                  <SelectItem value="sponsored_free">Trial (10 reports/month)</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-slate-400">Current: {account.plan.plan_name}</p>

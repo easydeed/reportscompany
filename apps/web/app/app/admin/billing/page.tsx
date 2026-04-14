@@ -75,7 +75,7 @@ const PLAN_LABELS: Record<string, string> = {
   pro: "Pro ($29/mo)",
   team: "Team ($99/mo)",
   affiliate: "Affiliate",
-  sponsored_free: "Sponsored Free",
+  sponsored_free: "Trial",
 }
 
 function formatCurrency(cents: number): string {
@@ -264,7 +264,7 @@ export default function AdminBillingPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalFree}</div>
-            <p className="text-xs text-muted-foreground">Free &amp; sponsored accounts</p>
+            <p className="text-xs text-muted-foreground">Free &amp; trial accounts</p>
           </CardContent>
         </Card>
 
@@ -365,7 +365,7 @@ export default function AdminBillingPage() {
                 <SelectItem value="pro">Pro</SelectItem>
                 <SelectItem value="team">Team</SelectItem>
                 <SelectItem value="affiliate">Affiliate</SelectItem>
-                <SelectItem value="sponsored_free">Sponsored Free</SelectItem>
+                <SelectItem value="sponsored_free">Trial</SelectItem>
               </SelectContent>
             </Select>
             <Button type="submit" variant="secondary">

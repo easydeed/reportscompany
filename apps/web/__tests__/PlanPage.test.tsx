@@ -45,7 +45,7 @@ const MockPlanPage = ({ mockData }: { mockData: any }) => {
         {usage.report_count}/{plan.monthly_report_limit}
       </div>
       {usageRatio >= 0.8 && <div data-testid="warning">Approaching limit</div>}
-      {account.plan_slug === 'sponsored_free' && <div data-testid="sponsored-badge">Sponsored</div>}
+      {account.plan_slug === 'sponsored_free' && <div data-testid="sponsored-badge">Trial</div>}
       <div data-testid="stripe-actions-wrapper">
         {account.plan_slug !== 'sponsored_free' && <button>Stripe Action</button>}
       </div>
@@ -93,7 +93,7 @@ describe('Plan Page', () => {
     it('should show sponsored badge for sponsored_free plan', async () => {
       const mockData = {
         account: { account_type: 'REGULAR', plan_slug: 'sponsored_free' },
-        plan: { plan_slug: 'sponsored_free', plan_name: 'Sponsored Free', monthly_report_limit: 75 },
+        plan: { plan_slug: 'sponsored_free', plan_name: 'Trial', monthly_report_limit: 75 },
         usage: { report_count: 20, schedule_run_count: 5 },
       };
 
@@ -103,13 +103,13 @@ describe('Plan Page', () => {
         expect(screen.getByTestId('sponsored-badge')).toBeInTheDocument();
       });
 
-      expect(screen.getByText('Sponsored')).toBeInTheDocument();
+      expect(screen.getByText('Trial')).toBeInTheDocument();
     });
 
     it('should NOT show Stripe buttons for sponsored accounts', async () => {
       const mockData = {
         account: { account_type: 'REGULAR', plan_slug: 'sponsored_free' },
-        plan: { plan_slug: 'sponsored_free', plan_name: 'Sponsored Free', monthly_report_limit: 75 },
+        plan: { plan_slug: 'sponsored_free', plan_name: 'Trial', monthly_report_limit: 75 },
         usage: { report_count: 20, schedule_run_count: 5 },
       };
 

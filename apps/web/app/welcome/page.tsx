@@ -182,7 +182,7 @@ function WelcomeContent() {
           </div>
           <CardTitle>Welcome to TrendyReports</CardTitle>
           <CardDescription>
-            Set your password to activate your sponsored account
+            Set your password to activate your trial account
           </CardDescription>
         </CardHeader>
         <CardContent>

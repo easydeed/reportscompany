@@ -173,9 +173,14 @@ def resolve_plan_for_account(cur, account_id: str) -> Dict[str, Any]:
     effective_limit = limit_override if limit_override is not None else (plan_limit or 100)
     has_override = limit_override is not None
     
+    PLAN_DISPLAY_NAMES = {
+        "sponsored_free": "Trial",
+    }
+    display_name = PLAN_DISPLAY_NAMES.get(plan_slug, plan_name) or 'Free'
+
     return {
         "plan_slug": plan_slug or 'free',
-        "plan_name": plan_name or 'Free',
+        "plan_name": display_name,
         "monthly_report_limit": effective_limit,
         "allow_overage": allow_overage or False,
         "overage_price_cents": overage_price_cents or 0,
