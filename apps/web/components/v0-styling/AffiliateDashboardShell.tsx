@@ -69,17 +69,18 @@ function ResendButton({ email }: { email: string }) {
   async function resend() {
     setSending(true);
     try {
-      const res = await fetch('/api/proxy/v1/affiliate/invite-agent', {
+      const res = await fetch('/api/proxy/v1/affiliate/resend-invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ name: '', email }),
+        body: JSON.stringify({ email }),
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         toast({ title: 'Invite resent', description: `A new invitation was sent to ${email}` });
       } else {
-        const data = await res.json().catch(() => ({}));
-        toast({ title: 'Failed to resend', description: data.detail || 'Could not resend invite', variant: 'destructive' });
+        const detail = typeof data.detail === 'string' ? data.detail : data.detail?.message || 'Could not resend invite';
+        toast({ title: 'Failed to resend', description: detail, variant: 'destructive' });
       }
     } catch {
       toast({ title: 'Error', description: 'Failed to resend invitation', variant: 'destructive' });

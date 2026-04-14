@@ -216,6 +216,75 @@ def invite_agent(
         }
 
 
+class ResendInviteRequest(BaseModel):
+    email: EmailStr
+
+
+@router.post("/resend-invite")
+def resend_invite(
+    body: ResendInviteRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    account_id: str = Depends(require_account_id),
+):
+    """Resend invitation email to a pending sponsored agent (no user recreation)."""
+    email = body.email.strip().lower()
+
+    with db_conn() as (conn, cur):
+        if not verify_affiliate_account(cur, account_id):
+            raise HTTPException(status_code=403, detail="Not an affiliate account")
+
+        # Find the user and verify sponsorship in one query
+        cur.execute("""
+            SELECT u.id::text, u.email_verified, u.password_hash IS NOT NULL AS has_password,
+                   a.id::text AS agent_account_id
+            FROM users u
+            JOIN account_users au ON au.user_id = u.id AND au.role = 'OWNER'
+            JOIN accounts a ON a.id = au.account_id
+            WHERE u.email = %s
+              AND a.sponsor_account_id = %s::uuid
+        """, (email, account_id))
+        row = cur.fetchone()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="Agent not found or not sponsored by your account")
+
+        user_id, email_verified, has_password, agent_account_id = row
+
+        if email_verified and has_password:
+            raise HTTPException(status_code=400, detail="This agent has already accepted their invitation")
+
+        # Invalidate old tokens, generate a new one
+        cur.execute("""
+            UPDATE signup_tokens SET used_at = NOW()
+            WHERE user_id = %s::uuid AND used_at IS NULL
+        """, (user_id,))
+
+        token = secrets.token_urlsafe(32)
+        cur.execute("""
+            INSERT INTO signup_tokens (token, user_id, account_id, expires_at)
+            VALUES (%s, %s::uuid, %s::uuid, NOW() + INTERVAL '7 days')
+        """, (token, user_id, agent_account_id))
+
+        conn.commit()
+
+    inviter_name, company_name = _get_inviter_info_simple(cur, account_id, request)
+
+    try:
+        background_tasks.add_task(send_invite_email, email, inviter_name, company_name, token)
+        logger.info(f"Resend invite email queued for {email}")
+    except Exception as e:
+        logger.error(f"Failed to queue resend invite for {email}: {e}")
+
+    return {"ok": True, "email_queued": True}
+
+
+def _get_inviter_info_simple(cur, account_id: str, request: Request) -> tuple[str, str]:
+    """Standalone helper that opens its own cursor for use after conn is closed."""
+    with db_conn() as (conn2, cur2):
+        return _get_inviter_info(cur2, account_id, request)
+
+
 def _get_inviter_info(cur: Any, account_id: str, request: Request) -> tuple[str, str]:
     """Return (inviter_name, company_name) for invite emails."""
     cur.execute("SELECT name FROM accounts WHERE id = %s::uuid", (account_id,))
