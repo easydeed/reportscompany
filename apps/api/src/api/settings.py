@@ -18,8 +18,9 @@ class Settings(BaseSettings):
     APP_BASE: str = "https://www.trendyreports.io"
     STRIPE_WEBHOOK_SECRET: str = ""
 
-    # Email Configuration (Resend)
-    RESEND_API_KEY: str = ""
+    # Email Configuration (SendGrid)
+    SENDGRID_API_KEY: str = ""
+    RESEND_API_KEY: str = ""  # Deprecated — kept for backwards compat, unused
     EMAIL_FROM_ADDRESS: str = "TrendyReports <noreply@trendyreports.io>"
     EMAIL_REPLY_TO: str = "support@trendyreports.io"
 

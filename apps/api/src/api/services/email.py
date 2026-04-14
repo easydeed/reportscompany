@@ -1,11 +1,11 @@
 """
-Email Service using Resend
+Email Service using SendGrid
 
 Provides email sending functionality for:
-- Welcome emails
+- Email verification
+- Agent invitations
 - Password reset
-- Report delivery
-- Scheduled report notifications
+- Plan limit notifications
 """
 
 import logging
@@ -15,22 +15,69 @@ from ..settings import settings
 
 logger = logging.getLogger(__name__)
 
-RESEND_API_URL = "https://api.resend.com/emails"
+SENDGRID_API_URL = "https://api.sendgrid.com/v3/mail/send"
+
+
+def _parse_from_address(from_addr: str) -> Dict[str, str]:
+    """Parse 'Name <email>' format into SendGrid from object."""
+    if "<" in from_addr:
+        name = from_addr.split("<")[0].strip()
+        email = from_addr.split("<")[-1].rstrip(">").strip()
+        return {"email": email, "name": name} if name else {"email": email}
+    return {"email": from_addr}
 
 
 class EmailService:
-    """Email service using Resend API."""
+    """Email service using SendGrid API."""
 
     def __init__(self):
-        self.api_key = settings.RESEND_API_KEY
         self.from_address = settings.EMAIL_FROM_ADDRESS
         self.reply_to = settings.EMAIL_REPLY_TO
         self.app_base = settings.APP_BASE
 
     @property
+    def api_key(self) -> str:
+        return settings.SENDGRID_API_KEY
+
+    @property
     def is_configured(self) -> bool:
-        """Check if email service is properly configured."""
         return bool(self.api_key)
+
+    def _build_payload(
+        self,
+        to: str | List[str],
+        subject: str,
+        html: str,
+        text: Optional[str] = None,
+        reply_to: Optional[str] = None,
+        tags: Optional[List[Dict[str, str]]] = None,
+    ) -> Dict[str, Any]:
+        recipients = [to] if isinstance(to, str) else to
+
+        payload: Dict[str, Any] = {
+            "personalizations": [{"to": [{"email": r} for r in recipients]}],
+            "from": _parse_from_address(self.from_address),
+            "subject": subject,
+            "content": [{"type": "text/html", "value": html}],
+        }
+
+        if text:
+            payload["content"].insert(0, {"type": "text/plain", "value": text})
+
+        effective_reply_to = reply_to or self.reply_to
+        if effective_reply_to:
+            payload["reply_to"] = {"email": effective_reply_to}
+
+        if tags:
+            payload["categories"] = [t.get("value", t.get("name", "")) for t in tags if t]
+
+        return payload
+
+    def _headers(self) -> Dict[str, str]:
+        return {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
 
     async def send_email(
         self,
@@ -41,67 +88,33 @@ class EmailService:
         reply_to: Optional[str] = None,
         tags: Optional[List[Dict[str, str]]] = None,
     ) -> Dict[str, Any]:
-        """
-        Send an email using Resend.
-
-        Args:
-            to: Recipient email(s)
-            subject: Email subject
-            html: HTML content
-            text: Plain text content (optional)
-            reply_to: Reply-to address (optional, uses default if not provided)
-            tags: Optional tags for tracking
-
-        Returns:
-            Response from Resend API
-        """
+        """Send an email via SendGrid (async)."""
         if not self.is_configured:
             recipients_str = to if isinstance(to, str) else ", ".join(to)
-            logger.error("RESEND_API_KEY not set — email NOT sent to: %s, subject: %s", recipients_str, subject)
-            return {"ok": False, "error": "Email service not configured — RESEND_API_KEY missing"}
+            logger.error("SENDGRID_API_KEY not set — email NOT sent to: %s, subject: %s", recipients_str, subject)
+            return {"ok": False, "error": "Email service not configured — SENDGRID_API_KEY missing"}
 
-        # Normalize to list
-        recipients = [to] if isinstance(to, str) else to
-
-        payload = {
-            "from": self.from_address,
-            "to": recipients,
-            "subject": subject,
-            "html": html,
-        }
-
-        if text:
-            payload["text"] = text
-
-        if reply_to or self.reply_to:
-            payload["reply_to"] = reply_to or self.reply_to
-
-        if tags:
-            payload["tags"] = tags
+        payload = self._build_payload(to, subject, html, text, reply_to, tags)
 
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    RESEND_API_URL,
-                    headers={
-                        "Authorization": f"Bearer {self.api_key}",
-                        "Content-Type": "application/json",
-                    },
+                    SENDGRID_API_URL,
+                    headers=self._headers(),
                     json=payload,
                     timeout=30.0,
                 )
 
-                if response.status_code == 200:
-                    data = response.json()
-                    logger.info(f"Email sent successfully: {data.get('id')}")
-                    return {"ok": True, "id": data.get("id")}
+                if response.status_code in (200, 201, 202):
+                    logger.info(f"Email sent via SendGrid to {to}: {subject}")
+                    return {"ok": True}
                 else:
                     error = response.text
-                    logger.error(f"Failed to send email: {response.status_code} - {error}")
+                    logger.error(f"SendGrid error {response.status_code}: {error}")
                     return {"ok": False, "error": error, "status": response.status_code}
 
         except Exception as e:
-            logger.error(f"Exception sending email: {e}")
+            logger.error(f"Exception sending email via SendGrid: {e}")
             return {"ok": False, "error": str(e)}
 
     def send_email_sync(
@@ -113,55 +126,33 @@ class EmailService:
         reply_to: Optional[str] = None,
         tags: Optional[List[Dict[str, str]]] = None,
     ) -> Dict[str, Any]:
-        """
-        Synchronous version of send_email.
-        """
+        """Send an email via SendGrid (synchronous)."""
         if not self.is_configured:
             recipients_str = to if isinstance(to, str) else ", ".join(to)
-            logger.error("RESEND_API_KEY not set — email NOT sent to: %s, subject: %s", recipients_str, subject)
-            return {"ok": False, "error": "Email service not configured — RESEND_API_KEY missing"}
+            logger.error("SENDGRID_API_KEY not set — email NOT sent to: %s, subject: %s", recipients_str, subject)
+            return {"ok": False, "error": "Email service not configured — SENDGRID_API_KEY missing"}
 
-        recipients = [to] if isinstance(to, str) else to
-
-        payload = {
-            "from": self.from_address,
-            "to": recipients,
-            "subject": subject,
-            "html": html,
-        }
-
-        if text:
-            payload["text"] = text
-
-        if reply_to or self.reply_to:
-            payload["reply_to"] = reply_to or self.reply_to
-
-        if tags:
-            payload["tags"] = tags
+        payload = self._build_payload(to, subject, html, text, reply_to, tags)
 
         try:
             with httpx.Client() as client:
                 response = client.post(
-                    RESEND_API_URL,
-                    headers={
-                        "Authorization": f"Bearer {self.api_key}",
-                        "Content-Type": "application/json",
-                    },
+                    SENDGRID_API_URL,
+                    headers=self._headers(),
                     json=payload,
                     timeout=30.0,
                 )
 
-                if response.status_code == 200:
-                    data = response.json()
-                    logger.info(f"Email sent successfully: {data.get('id')}")
-                    return {"ok": True, "id": data.get("id")}
+                if response.status_code in (200, 201, 202):
+                    logger.info(f"Email sent via SendGrid to {to}: {subject}")
+                    return {"ok": True}
                 else:
                     error = response.text
-                    logger.error(f"Failed to send email: {response.status_code} - {error}")
+                    logger.error(f"SendGrid error {response.status_code}: {error}")
                     return {"ok": False, "error": error, "status": response.status_code}
 
         except Exception as e:
-            logger.error(f"Exception sending email: {e}")
+            logger.error(f"Exception sending email via SendGrid: {e}")
             return {"ok": False, "error": str(e)}
 
 
