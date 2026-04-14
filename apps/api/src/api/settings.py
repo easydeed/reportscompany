@@ -15,13 +15,13 @@ class Settings(BaseSettings):
     STARTER_PRICE_ID: str = ""
     PRO_PRICE_ID: str = ""
     ENTERPRISE_PRICE_ID: str = ""
-    APP_BASE: str = "http://localhost:3000"
+    APP_BASE: str = "https://www.trendyreports.io"
     STRIPE_WEBHOOK_SECRET: str = ""
 
     # Email Configuration (Resend)
     RESEND_API_KEY: str = ""
-    EMAIL_FROM_ADDRESS: str = "Market Reports <noreply@marketreports.com>"
-    EMAIL_REPLY_TO: str = "support@marketreports.com"
+    EMAIL_FROM_ADDRESS: str = "TrendyReports <noreply@trendyreports.io>"
+    EMAIL_REPLY_TO: str = "support@trendyreports.io"
 
     class Config:
         env_file = ".env"

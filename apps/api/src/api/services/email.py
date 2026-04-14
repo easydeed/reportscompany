@@ -56,8 +56,9 @@ class EmailService:
             Response from Resend API
         """
         if not self.is_configured:
-            logger.warning("Email service not configured. Skipping email send.")
-            return {"ok": False, "error": "Email service not configured"}
+            recipients_str = to if isinstance(to, str) else ", ".join(to)
+            logger.error("RESEND_API_KEY not set — email NOT sent to: %s, subject: %s", recipients_str, subject)
+            return {"ok": False, "error": "Email service not configured — RESEND_API_KEY missing"}
 
         # Normalize to list
         recipients = [to] if isinstance(to, str) else to
@@ -116,8 +117,9 @@ class EmailService:
         Synchronous version of send_email.
         """
         if not self.is_configured:
-            logger.warning("Email service not configured. Skipping email send.")
-            return {"ok": False, "error": "Email service not configured"}
+            recipients_str = to if isinstance(to, str) else ", ".join(to)
+            logger.error("RESEND_API_KEY not set — email NOT sent to: %s, subject: %s", recipients_str, subject)
+            return {"ok": False, "error": "Email service not configured — RESEND_API_KEY missing"}
 
         recipients = [to] if isinstance(to, str) else to
 

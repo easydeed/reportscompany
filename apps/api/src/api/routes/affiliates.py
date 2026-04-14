@@ -212,7 +212,7 @@ def invite_agent(
         return {
             "ok": True,
             **result,
-            "email_sent": True,
+            "email_queued": True,
         }
 
 
