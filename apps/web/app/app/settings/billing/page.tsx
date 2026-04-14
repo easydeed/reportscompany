@@ -118,7 +118,9 @@ export default function BillingPage() {
       } else {
         toast({
           title: "Error",
-          description: data.detail || "Failed to start checkout",
+          description: typeof data.detail === "string"
+            ? data.detail
+            : data.detail?.message || "Failed to start checkout",
           variant: "destructive",
         })
       }
@@ -143,7 +145,9 @@ export default function BillingPage() {
       } else {
         toast({
           title: "Error",
-          description: data.detail || "Failed to open billing portal",
+          description: typeof data.detail === "string"
+            ? data.detail
+            : data.detail?.message || "Failed to open billing portal",
           variant: "destructive",
         })
       }
@@ -188,6 +192,8 @@ export default function BillingPage() {
 
   const currentPlanSlug = billingData?.account.plan_slug || "free"
   const isUnlimited = billingData?.plan.monthly_report_limit === 0 || billingData?.plan.monthly_report_limit === null
+  const accountType = billingData?.account.account_type || "REGULAR"
+  const showStripeActions = accountType === "REGULAR" && currentPlanSlug !== "free"
 
   return (
     <div className="max-w-3xl">
@@ -303,79 +309,92 @@ export default function BillingPage() {
           </div>
         </div>
 
-        {/* Available Plans Card */}
-        <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
-          <div className="px-5 py-3 border-b border-border bg-muted/30">
-            <h3 className="text-[13px] font-semibold text-foreground uppercase tracking-wide">Available Plans</h3>
-          </div>
-          <div className="p-5">
-            <div className="grid sm:grid-cols-3 gap-4">
-              {plans.map((plan) => {
-                const isCurrent = currentPlanSlug === plan.slug
-                const isDowngrade = plan.price < (billingData?.stripe_billing?.amount ?? 0) / 100
-                return (
-                  <div
-                    key={plan.slug}
-                    className={cn(
-                      "border rounded-xl p-4 relative transition-all",
-                      plan.popular && !isCurrent && "border-indigo-300 ring-1 ring-indigo-100",
-                      isCurrent && "bg-muted/30 border-border"
-                    )}
-                  >
-                    {plan.popular && !isCurrent && (
-                      <Badge className="absolute -top-2 right-3 bg-indigo-600 text-white border-0 text-[10px]">
-                        <Sparkles className="w-3 h-3 mr-0.5" />
-                        Popular
-                      </Badge>
-                    )}
-
-                    <div className="mb-3">
-                      <h4 className="font-semibold text-foreground">{plan.name}</h4>
-                      <div className="mt-0.5">
-                        <span className="text-2xl font-bold text-foreground">${plan.price}</span>
-                        <span className="text-sm text-muted-foreground">/mo</span>
-                      </div>
-                    </div>
-
-                    <ul className="space-y-1.5 mb-4">
-                      {plan.features.map((feature, i) => (
-                        <li key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Check className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-
-                    <Button
-                      onClick={() => checkout(plan.slug)}
-                      disabled={billingLoading || isCurrent || plan.price === 0}
-                      variant={isCurrent ? "secondary" : plan.popular ? "default" : "outline"}
-                      size="sm"
-                      className="w-full"
-                    >
-                      {isCurrent ? (
-                        <>
-                          <Check className="w-4 h-4 mr-1.5" />
-                          Current Plan
-                        </>
-                      ) : plan.price > 0 ? (
-                        <>
-                          <Zap className="w-4 h-4 mr-1.5" />
-                          {isDowngrade ? "Change Plan" : "Upgrade"}
-                        </>
-                      ) : (
-                        "Free Plan"
+        {/* Available Plans Card — only for regular accounts */}
+        {accountType === "REGULAR" && (
+          <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
+            <div className="px-5 py-3 border-b border-border bg-muted/30">
+              <h3 className="text-[13px] font-semibold text-foreground uppercase tracking-wide">Available Plans</h3>
+            </div>
+            <div className="p-5">
+              <div className="grid sm:grid-cols-3 gap-4">
+                {plans.map((plan) => {
+                  const isCurrent = currentPlanSlug === plan.slug
+                  const isDowngrade = plan.price < (billingData?.stripe_billing?.amount ?? 0) / 100
+                  return (
+                    <div
+                      key={plan.slug}
+                      className={cn(
+                        "border rounded-xl p-4 relative transition-all",
+                        plan.popular && !isCurrent && "border-indigo-300 ring-1 ring-indigo-100",
+                        isCurrent && "bg-muted/30 border-border"
                       )}
-                    </Button>
-                  </div>
-                )
-              })}
+                    >
+                      {plan.popular && !isCurrent && (
+                        <Badge className="absolute -top-2 right-3 bg-indigo-600 text-white border-0 text-[10px]">
+                          <Sparkles className="w-3 h-3 mr-0.5" />
+                          Popular
+                        </Badge>
+                      )}
+
+                      <div className="mb-3">
+                        <h4 className="font-semibold text-foreground">{plan.name}</h4>
+                        <div className="mt-0.5">
+                          <span className="text-2xl font-bold text-foreground">${plan.price}</span>
+                          <span className="text-sm text-muted-foreground">/mo</span>
+                        </div>
+                      </div>
+
+                      <ul className="space-y-1.5 mb-4">
+                        {plan.features.map((feature, i) => (
+                          <li key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Check className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+
+                      <Button
+                        onClick={() => checkout(plan.slug)}
+                        disabled={billingLoading || isCurrent || plan.price === 0}
+                        variant={isCurrent ? "secondary" : plan.popular ? "default" : "outline"}
+                        size="sm"
+                        className="w-full"
+                      >
+                        {isCurrent ? (
+                          <>
+                            <Check className="w-4 h-4 mr-1.5" />
+                            Current Plan
+                          </>
+                        ) : plan.price > 0 ? (
+                          <>
+                            <Zap className="w-4 h-4 mr-1.5" />
+                            {isDowngrade ? "Change Plan" : "Upgrade"}
+                          </>
+                        ) : (
+                          "Free Plan"
+                        )}
+                      </Button>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Payment & Invoices Row */}
-        {billingData?.stripe_billing && (
+        {accountType === "INDUSTRY_AFFILIATE" && (
+          <div className="bg-muted/30 border border-border rounded-xl p-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              Your affiliate plan is managed by TrendyReports. Contact support to make changes.
+            </p>
+            <a href="mailto:support@trendyreports.io" className="text-sm text-primary hover:underline mt-2 inline-block">
+              support@trendyreports.io
+            </a>
+          </div>
+        )}
+
+        {/* Payment & Invoices Row — only for paying Stripe customers */}
+        {showStripeActions && billingData?.stripe_billing && (
           <div className="grid sm:grid-cols-2 gap-4">
             {/* Payment Method */}
             <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">

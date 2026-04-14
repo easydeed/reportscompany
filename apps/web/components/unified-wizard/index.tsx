@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Loader2, ChevronLeft, ChevronRight, Sparkles, Check, FileDown, Globe, CheckCircle2, AlertCircle, Plus } from "lucide-react"
+import { Loader2, ChevronLeft, ChevronRight, Sparkles, Check, FileDown, Globe, CheckCircle2, AlertCircle, Plus, ArrowUpCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { SharedEmailPreview } from "@/components/shared/email-preview"
@@ -37,7 +37,7 @@ const REPORT_TYPE_LABELS: Record<string, string> = {
   new_listings: "New Listings Analytics",
 }
 
-type GenerationState = "idle" | "creating" | "polling" | "complete" | "error"
+type GenerationState = "idle" | "creating" | "polling" | "complete" | "error" | "limit_reached"
 
 interface UnifiedWizardProps {
   defaultMode?: DeliveryMode
@@ -230,7 +230,19 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
             }),
           }),
         })
-        if (!res.ok) throw new Error("Failed to create report")
+        if (!res.ok) {
+          if (res.status === 429) {
+            const errData = await res.json().catch(() => ({}))
+            setGenerationError(
+              errData.detail || errData.message || "You've reached your monthly report limit."
+            )
+            setGenerationState("limit_reached")
+            setIsSubmitting(false)
+            return
+          }
+          const errData = await res.json().catch(() => ({}))
+          throw new Error(errData.detail || errData.message || "Failed to create report")
+        }
         const data = await res.json()
         const reportId = data.report_id || data.id
         setGeneratedReportId(reportId)
@@ -262,7 +274,19 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
             filters,
           }),
         })
-        if (!res.ok) throw new Error("Failed to create schedule")
+        if (!res.ok) {
+          if (res.status === 429) {
+            const errData = await res.json().catch(() => ({}))
+            setGenerationError(
+              errData.detail || errData.message || "You've reached your monthly report limit."
+            )
+            setGenerationState("limit_reached")
+            setIsSubmitting(false)
+            return
+          }
+          const errData = await res.json().catch(() => ({}))
+          throw new Error(errData.detail || errData.message || "Failed to create schedule")
+        }
         router.push("/app/schedules")
       }
     } catch (err) {
@@ -416,6 +440,35 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
                           className="gap-2"
                         >
                           View Report Details
+                        </Button>
+                      </div>
+                    </>
+                  )}
+
+                  {generationState === "limit_reached" && (
+                    <>
+                      <div className="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center mx-auto">
+                        <ArrowUpCircle className="w-8 h-8 text-amber-500" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-semibold text-gray-900">Report limit reached</h2>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {generationError || "You've used all your reports for this billing period."}
+                        </p>
+                        <p className="text-sm text-gray-500 mt-2">
+                          Upgrade your plan to generate more reports, or wait until your limit resets next month.
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-2 pt-2">
+                        <Button onClick={() => router.push("/app/settings/billing")} className="gap-2">
+                          <ArrowUpCircle className="w-4 h-4" /> Upgrade Plan
+                        </Button>
+                        <Button variant="outline" onClick={() => {
+                          setGenerationState("idle")
+                          setGenerationError(null)
+                          setIsSubmitting(false)
+                        }}>
+                          Go Back
                         </Button>
                       </div>
                     </>
