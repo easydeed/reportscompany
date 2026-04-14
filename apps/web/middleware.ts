@@ -81,6 +81,11 @@ export async function middleware(req: NextRequest) {
       }
     }
 
+    // Company admin route protection
+    if (pathname.startsWith("/app/company") && decoded.account_type !== "TITLE_COMPANY") {
+      return NextResponse.redirect(new URL("/app", req.url))
+    }
+
     return NextResponse.next()
   }
 

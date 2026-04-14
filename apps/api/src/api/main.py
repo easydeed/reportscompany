@@ -34,6 +34,7 @@ from .routes.property import router as property_router
 from .routes.mobile_reports import router as mobile_reports_router
 from .routes.admin_metrics import router as admin_metrics_router
 from .routes.lead_pages import router as lead_pages_router
+from .routes.company import router as company_router
 
 app = FastAPI(
     title="Market Reports API",
@@ -116,6 +117,7 @@ app.include_router(property_router)
 app.include_router(mobile_reports_router)
 app.include_router(admin_metrics_router)
 app.include_router(lead_pages_router)
+app.include_router(company_router, prefix="/v1/company", tags=["company"])
 
 # ── Pool shutdown ────────────────────────────────────────────────────────────
 # Phase 1.4: Close connection pool cleanly when the Uvicorn worker shuts down.

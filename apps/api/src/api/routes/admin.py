@@ -869,6 +869,12 @@ def update_affiliate_branding(
             ON CONFLICT (account_id) DO NOTHING
         """, (affiliate_id, ""))
 
+        # If this affiliate belongs to a company, mark branding as overridden
+        cur.execute("SELECT parent_account_id FROM accounts WHERE id = %s::uuid", (affiliate_id,))
+        p_row = cur.fetchone()
+        if p_row and p_row[0]:
+            fields["branding_override"] = True
+
         set_clauses = []
         values = []
         for col, val in fields.items():
@@ -917,6 +923,7 @@ class CreateAffiliateRequest(BaseModel):
     admin_first_name: Optional[str] = None
     admin_last_name: Optional[str] = None
     plan_slug: str = "affiliate"
+    company_id: Optional[str] = None  # Link rep to a Title Company
     # Branding (optional)
     logo_url: Optional[str] = None
     primary_color: Optional[str] = None
@@ -949,6 +956,15 @@ def create_affiliate(
             if cur.fetchone():
                 raise HTTPException(status_code=400, detail="Email already exists")
 
+        # Validate company_id if provided
+        if body.company_id:
+            cur.execute(
+                "SELECT id FROM accounts WHERE id = %s::uuid AND account_type = 'TITLE_COMPANY'",
+                (body.company_id,),
+            )
+            if not cur.fetchone():
+                raise HTTPException(status_code=400, detail="Invalid company_id: not a Title Company")
+
         slug = body.company_name.lower().replace(' ', '-').replace('.', '').replace(',', '')[:50]
         cur.execute("SELECT id FROM accounts WHERE slug = %s", (slug,))
         if cur.fetchone():
@@ -956,27 +972,59 @@ def create_affiliate(
             slug = f"{slug}-{int(time.time())}"[:50]
 
         cur.execute("""
-            INSERT INTO accounts (name, slug, account_type, plan_slug, is_active)
-            VALUES (%s, %s, 'INDUSTRY_AFFILIATE', %s, true)
+            INSERT INTO accounts (name, slug, account_type, plan_slug, is_active, parent_account_id)
+            VALUES (%s, %s, 'INDUSTRY_AFFILIATE', %s, true, %s)
             RETURNING id::text
-        """, (body.company_name, slug, body.plan_slug))
+        """, (body.company_name, slug, body.plan_slug,
+              body.company_id if body.company_id else None))
         account_id = cur.fetchone()[0]
 
-        # Always create branding record (use company name as default display name)
-        cur.execute("""
-            INSERT INTO affiliate_branding (
-                account_id, brand_display_name, logo_url, primary_color, accent_color, website_url
-            ) VALUES (%s::uuid, %s, %s, %s, %s, %s)
-        """, (
-            account_id, body.company_name, body.logo_url,
-            body.primary_color or '#7C3AED', body.accent_color, body.website_url
-        ))
+        # Branding: copy from parent company if linked, otherwise use provided values
+        if body.company_id:
+            cur.execute("""
+                INSERT INTO affiliate_branding (
+                    account_id, brand_display_name, logo_url, email_logo_url,
+                    footer_logo_url, email_footer_logo_url,
+                    primary_color, accent_color, rep_photo_url,
+                    contact_line1, contact_line2, website_url,
+                    branding_override
+                )
+                SELECT
+                    %s::uuid, COALESCE(%s, brand_display_name), logo_url, email_logo_url,
+                    footer_logo_url, email_footer_logo_url,
+                    primary_color, accent_color, NULL,
+                    contact_line1, contact_line2, website_url,
+                    FALSE
+                FROM affiliate_branding
+                WHERE account_id = %s::uuid
+            """, (account_id, body.company_name, body.company_id))
+            # Fallback: if company has no branding row yet, create a basic one
+            if cur.rowcount == 0:
+                cur.execute("""
+                    INSERT INTO affiliate_branding (
+                        account_id, brand_display_name, logo_url,
+                        primary_color, accent_color, website_url
+                    ) VALUES (%s::uuid, %s, %s, %s, %s, %s)
+                """, (
+                    account_id, body.company_name, body.logo_url,
+                    body.primary_color or '#7C3AED', body.accent_color, body.website_url,
+                ))
+        else:
+            cur.execute("""
+                INSERT INTO affiliate_branding (
+                    account_id, brand_display_name, logo_url, primary_color, accent_color, website_url
+                ) VALUES (%s::uuid, %s, %s, %s, %s, %s)
+            """, (
+                account_id, body.company_name, body.logo_url,
+                body.primary_color or '#7C3AED', body.accent_color, body.website_url,
+            ))
 
         result: Dict[str, Any] = {
             "ok": True,
             "account_id": account_id,
             "name": body.company_name,
             "slug": slug,
+            "company_id": body.company_id,
             "admin_invited": False,
             "status": "created_no_admin",
         }
@@ -1008,6 +1056,7 @@ def create_affiliate(
                 background_tasks.add_task(
                     send_invite_email, email,
                     "TrendyReports Admin", body.company_name, token,
+                    body.admin_first_name,
                 )
                 logger.info(f"Affiliate welcome email queued for {email}")
             except Exception as e:
@@ -1025,6 +1074,511 @@ def create_affiliate(
             conn.commit()
 
         return result
+
+
+# ==================== Companies (Title Companies) ====================
+
+class CreateCompanyRequest(BaseModel):
+    """Request body for creating a new Title Company."""
+    company_name: str
+    admin_email: Optional[EmailStr] = None
+    admin_first_name: Optional[str] = None
+    admin_last_name: Optional[str] = None
+    logo_url: Optional[str] = None
+    primary_color: Optional[str] = None
+    accent_color: Optional[str] = None
+    website_url: Optional[str] = None
+
+
+@router.post("/companies")
+def create_company(
+    body: CreateCompanyRequest,
+    background_tasks: BackgroundTasks,
+    _admin: dict = Depends(get_admin_user),
+):
+    """
+    Create a new Title Company (TITLE_COMPANY) account.
+
+    Optionally invites a company admin if admin_email is provided.
+    """
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+
+        if body.admin_email:
+            cur.execute(
+                "SELECT id FROM users WHERE LOWER(email) = %s",
+                (body.admin_email.strip().lower(),),
+            )
+            if cur.fetchone():
+                raise HTTPException(status_code=400, detail="Email already exists")
+
+        slug = body.company_name.lower().replace(" ", "-").replace(".", "").replace(",", "").replace("'", "")[:40]
+        cur.execute("SELECT id FROM accounts WHERE slug = %s", (slug,))
+        if cur.fetchone():
+            import time
+            slug = f"{slug}-{int(time.time())}"[:50]
+
+        cur.execute("""
+            INSERT INTO accounts (name, slug, account_type, plan_slug, is_active)
+            VALUES (%s, %s, 'TITLE_COMPANY', 'affiliate', true)
+            RETURNING id::text
+        """, (body.company_name.strip(), slug))
+        company_id = cur.fetchone()[0]
+
+        cur.execute("""
+            INSERT INTO affiliate_branding (
+                account_id, brand_display_name, logo_url,
+                primary_color, accent_color, website_url,
+                branding_override
+            ) VALUES (%s::uuid, %s, %s, %s, %s, %s, TRUE)
+        """, (
+            company_id, body.company_name.strip(), body.logo_url,
+            body.primary_color or "#4F46E5", body.accent_color, body.website_url,
+        ))
+
+        result: Dict[str, Any] = {
+            "ok": True,
+            "account_id": company_id,
+            "name": body.company_name.strip(),
+            "slug": slug,
+            "account_type": "TITLE_COMPANY",
+            "admin_invited": False,
+            "status": "created_no_admin",
+        }
+
+        if body.admin_email:
+            email = body.admin_email.strip().lower()
+
+            cur.execute("""
+                INSERT INTO users (account_id, email, first_name, last_name,
+                                   is_active, email_verified, role)
+                VALUES (%s::uuid, %s, %s, %s, true, false, 'member')
+                RETURNING id::text
+            """, (company_id, email, body.admin_first_name, body.admin_last_name))
+            user_id = cur.fetchone()[0]
+
+            cur.execute("""
+                INSERT INTO account_users (account_id, user_id, role)
+                VALUES (%s::uuid, %s::uuid, 'OWNER')
+            """, (company_id, user_id))
+
+            token = secrets.token_urlsafe(32)
+            cur.execute("""
+                INSERT INTO signup_tokens (token, user_id, account_id, expires_at)
+                VALUES (%s, %s::uuid, %s::uuid, NOW() + INTERVAL '7 days')
+            """, (token, user_id, company_id))
+
+            conn.commit()
+
+            try:
+                background_tasks.add_task(
+                    send_invite_email, email,
+                    "TrendyReports Admin", body.company_name.strip(), token,
+                    body.admin_first_name,
+                )
+                logger.info(f"Company admin invite queued for {email}")
+            except Exception as e:
+                logger.error(f"Failed to queue company admin invite: {e}")
+
+            from ..settings import settings
+            result.update({
+                "user_id": user_id,
+                "admin_email": email,
+                "admin_invited": True,
+                "status": "admin_invited",
+                "invite_url": f"{settings.APP_BASE}/welcome?token={token}",
+            })
+        else:
+            conn.commit()
+
+        return result
+
+
+@router.get("/companies")
+def list_companies(
+    search: Optional[str] = None,
+    status: Optional[str] = None,
+    limit: int = Query(100, ge=1, le=500),
+    _admin: dict = Depends(get_admin_user),
+):
+    """List all Title Company accounts with rep/agent/report counts."""
+    query = """
+        SELECT
+            a.id::text,
+            a.name,
+            a.slug,
+            a.is_active,
+            a.created_at,
+            ab.logo_url,
+            ab.primary_color,
+            ab.brand_display_name,
+            a.plan_slug,
+            (SELECT COUNT(*) FROM accounts r
+             WHERE r.parent_account_id = a.id
+               AND r.account_type = 'INDUSTRY_AFFILIATE') AS rep_count,
+            (SELECT COUNT(*) FROM accounts ag
+             WHERE ag.sponsor_account_id IN (
+                 SELECT r2.id FROM accounts r2
+                 WHERE r2.parent_account_id = a.id
+                   AND r2.account_type = 'INDUSTRY_AFFILIATE'
+             )) AS agent_count,
+            (SELECT COUNT(*) FROM report_generations rg
+             WHERE rg.generated_at >= NOW() - INTERVAL '30 days'
+               AND rg.account_id IN (
+                 SELECT r3.id FROM accounts r3
+                 WHERE r3.parent_account_id = a.id
+                   AND r3.account_type = 'INDUSTRY_AFFILIATE'
+                 UNION
+                 SELECT ag2.id FROM accounts ag2
+                 WHERE ag2.sponsor_account_id IN (
+                     SELECT r4.id FROM accounts r4
+                     WHERE r4.parent_account_id = a.id
+                       AND r4.account_type = 'INDUSTRY_AFFILIATE'
+                 )
+               )) AS reports_30d,
+            (SELECT COUNT(*) > 0 FROM account_users au
+             WHERE au.account_id = a.id AND au.role = 'OWNER') AS has_admin
+        FROM accounts a
+        LEFT JOIN affiliate_branding ab ON ab.account_id = a.id
+        WHERE a.account_type = 'TITLE_COMPANY'
+    """
+    params: list = []
+
+    if search:
+        query += " AND (a.name ILIKE %s OR a.slug ILIKE %s)"
+        search_param = f"%{search}%"
+        params.extend([search_param, search_param])
+
+    if status == "active":
+        query += " AND a.is_active = true"
+    elif status == "inactive":
+        query += " AND a.is_active = false"
+    elif status == "no_admin":
+        query += """ AND NOT EXISTS (
+            SELECT 1 FROM account_users au2
+            WHERE au2.account_id = a.id AND au2.role = 'OWNER'
+        )"""
+
+    query += " ORDER BY a.created_at DESC LIMIT %s"
+    params.append(limit)
+
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        cur.execute(query, params)
+
+        companies = []
+        for row in cur.fetchall():
+            companies.append({
+                "account_id": row[0],
+                "name": row[1],
+                "slug": row[2],
+                "is_active": row[3],
+                "created_at": row[4].isoformat() if row[4] else None,
+                "logo_url": row[5],
+                "primary_color": row[6],
+                "brand_display_name": row[7],
+                "plan_slug": row[8],
+                "rep_count": row[9] or 0,
+                "agent_count": row[10] or 0,
+                "reports_30d": row[11] or 0,
+                "has_admin": bool(row[12]),
+            })
+
+        return {"companies": companies, "count": len(companies)}
+
+
+@router.get("/companies/{company_id}")
+def get_company_detail(
+    company_id: str,
+    _admin: dict = Depends(get_admin_user),
+):
+    """Get detailed info for a Title Company: info, branding, admin, reps, agents, metrics."""
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+
+        cur.execute("""
+            SELECT a.id::text, a.name, a.slug, a.is_active, a.created_at,
+                   a.plan_slug,
+                   ab.brand_display_name, ab.logo_url, ab.email_logo_url,
+                   ab.footer_logo_url, ab.email_footer_logo_url,
+                   ab.primary_color, ab.accent_color, ab.website_url
+            FROM accounts a
+            LEFT JOIN affiliate_branding ab ON ab.account_id = a.id
+            WHERE a.id = %s::uuid AND a.account_type = 'TITLE_COMPANY'
+        """, (company_id,))
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Company not found")
+
+        company = {
+            "account_id": row[0], "name": row[1], "slug": row[2],
+            "is_active": row[3],
+            "created_at": row[4].isoformat() if row[4] else None,
+            "plan_slug": row[5],
+            "branding": {
+                "brand_display_name": row[6], "logo_url": row[7],
+                "email_logo_url": row[8], "footer_logo_url": row[9],
+                "email_footer_logo_url": row[10],
+                "primary_color": row[11], "accent_color": row[12],
+                "website_url": row[13],
+            },
+        }
+
+        # Admin user
+        cur.execute("""
+            SELECT u.id::text, u.email, u.first_name, u.last_name,
+                   u.is_active, u.email_verified,
+                   u.password_hash IS NOT NULL AS has_password,
+                   (SELECT MAX(st.created_at) FROM signup_tokens st WHERE st.user_id = u.id) AS last_invite_sent
+            FROM users u
+            JOIN account_users au ON au.user_id = u.id
+            WHERE au.account_id = %s::uuid AND au.role = 'OWNER'
+            LIMIT 1
+        """, (company_id,))
+        admin_row = cur.fetchone()
+        if admin_row:
+            if not admin_row[5] or not admin_row[6]:
+                admin_status = "pending"
+            elif not admin_row[4]:
+                admin_status = "deactivated"
+            else:
+                admin_status = "active"
+            company["admin"] = {
+                "user_id": admin_row[0], "email": admin_row[1],
+                "first_name": admin_row[2], "last_name": admin_row[3],
+                "status": admin_status,
+                "last_invite_sent": admin_row[7].isoformat() if admin_row[7] else None,
+            }
+        else:
+            company["admin"] = None
+
+        # Reps
+        cur.execute("""
+            SELECT r.id::text, r.name, r.is_active, r.created_at,
+                   u.email, u.first_name, u.last_name,
+                   u.email_verified, u.password_hash IS NOT NULL AS has_password,
+                   (SELECT COUNT(*) FROM accounts ag WHERE ag.sponsor_account_id = r.id) AS agent_count,
+                   (SELECT COUNT(*) FROM report_generations rg
+                    WHERE rg.account_id IN (SELECT ag2.id FROM accounts ag2 WHERE ag2.sponsor_account_id = r.id)
+                      AND rg.generated_at >= NOW() - INTERVAL '30 days') AS reports_30d
+            FROM accounts r
+            LEFT JOIN account_users au2 ON au2.account_id = r.id AND au2.role = 'OWNER'
+            LEFT JOIN users u ON u.id = au2.user_id
+            WHERE r.parent_account_id = %s::uuid AND r.account_type = 'INDUSTRY_AFFILIATE'
+            ORDER BY r.created_at DESC
+        """, (company_id,))
+        reps = []
+        for rr in cur.fetchall():
+            if rr[7] is not None and not rr[7]:
+                rep_status = "pending"
+            elif rr[7] is not None and rr[7] and not rr[8]:
+                rep_status = "pending"
+            elif rr[2]:
+                rep_status = "active"
+            else:
+                rep_status = "deactivated"
+            reps.append({
+                "account_id": rr[0], "name": rr[1], "is_active": rr[2],
+                "created_at": rr[3].isoformat() if rr[3] else None,
+                "email": rr[4], "first_name": rr[5], "last_name": rr[6],
+                "status": rep_status,
+                "agent_count": rr[9] or 0,
+                "reports_30d": rr[10] or 0,
+            })
+        company["reps"] = reps
+
+        # Agents across all reps
+        rep_ids_list = [r["account_id"] for r in reps]
+        agents = []
+        if rep_ids_list:
+            placeholders = ",".join(["%s::uuid"] * len(rep_ids_list))
+            cur.execute(f"""
+                SELECT ag.id::text, ag.name, ag.is_active, ag.created_at,
+                       ag.plan_slug, ag.sponsor_account_id::text,
+                       u.email, u.first_name, u.last_name,
+                       (SELECT COUNT(*) FROM report_generations rg
+                        WHERE rg.account_id = ag.id
+                          AND rg.generated_at >= NOW() - INTERVAL '30 days') AS reports_30d,
+                       sponsor_acct.name AS rep_name
+                FROM accounts ag
+                LEFT JOIN account_users au3 ON au3.account_id = ag.id AND au3.role = 'OWNER'
+                LEFT JOIN users u ON u.id = au3.user_id
+                LEFT JOIN accounts sponsor_acct ON sponsor_acct.id = ag.sponsor_account_id
+                WHERE ag.sponsor_account_id IN ({placeholders})
+                ORDER BY ag.created_at DESC
+            """, rep_ids_list)
+            for ar in cur.fetchall():
+                agents.append({
+                    "account_id": ar[0], "name": ar[1], "is_active": ar[2],
+                    "created_at": ar[3].isoformat() if ar[3] else None,
+                    "plan_slug": ar[4], "sponsor_account_id": ar[5],
+                    "email": ar[6], "first_name": ar[7], "last_name": ar[8],
+                    "reports_30d": ar[9] or 0, "rep_name": ar[10],
+                })
+        company["agents"] = agents
+
+        # Metrics
+        all_ids = rep_ids_list + [a["account_id"] for a in agents]
+        total_reports_30d = 0
+        total_reports_prev_30d = 0
+        if all_ids:
+            ph = ",".join(["%s::uuid"] * len(all_ids))
+            cur.execute(f"""
+                SELECT COUNT(*) FROM report_generations
+                WHERE account_id IN ({ph})
+                  AND generated_at >= NOW() - INTERVAL '30 days'
+            """, all_ids)
+            total_reports_30d = cur.fetchone()[0] or 0
+            cur.execute(f"""
+                SELECT COUNT(*) FROM report_generations
+                WHERE account_id IN ({ph})
+                  AND generated_at >= NOW() - INTERVAL '60 days'
+                  AND generated_at < NOW() - INTERVAL '30 days'
+            """, all_ids)
+            total_reports_prev_30d = cur.fetchone()[0] or 0
+
+        if total_reports_prev_30d > 0:
+            trend_pct = round(((total_reports_30d - total_reports_prev_30d) / total_reports_prev_30d) * 100, 1)
+        else:
+            trend_pct = 100.0 if total_reports_30d > 0 else 0.0
+
+        company["metrics"] = {
+            "total_reps": len(reps),
+            "total_agents": len(agents),
+            "reports_30d": total_reports_30d,
+            "reports_prev_30d": total_reports_prev_30d,
+            "trend_pct": trend_pct,
+        }
+
+        return company
+
+
+@router.patch("/companies/{company_id}")
+def update_company(
+    company_id: str,
+    is_active: Optional[bool] = None,
+    plan_slug: Optional[str] = None,
+    _admin: dict = Depends(get_admin_user),
+):
+    """Update a Title Company's status or plan."""
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+
+        updates = []
+        params: list = []
+        if is_active is not None:
+            updates.append("is_active = %s")
+            params.append(is_active)
+        if plan_slug is not None:
+            updates.append("plan_slug = %s")
+            params.append(plan_slug)
+
+        if not updates:
+            raise HTTPException(status_code=400, detail="No updates provided")
+
+        params.append(company_id)
+        cur.execute(f"""
+            UPDATE accounts
+            SET {', '.join(updates)}, updated_at = NOW()
+            WHERE id = %s::uuid AND account_type = 'TITLE_COMPANY'
+            RETURNING id::text, name, is_active, plan_slug
+        """, params)
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Company not found")
+        conn.commit()
+
+        return {"ok": True, "account_id": row[0], "name": row[1],
+                "is_active": row[2], "plan_slug": row[3]}
+
+
+class InviteCompanyAdminRequest(BaseModel):
+    email: EmailStr
+    first_name: str
+    last_name: str
+
+
+@router.post("/companies/{company_id}/invite-admin")
+def invite_company_admin(
+    company_id: str,
+    body: InviteCompanyAdminRequest,
+    background_tasks: BackgroundTasks,
+    _admin: dict = Depends(get_admin_user),
+):
+    """Create or resend an admin invite for a Title Company."""
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+
+        cur.execute("""
+            SELECT id, name FROM accounts
+            WHERE id = %s::uuid AND account_type = 'TITLE_COMPANY'
+        """, (company_id,))
+        comp_row = cur.fetchone()
+        if not comp_row:
+            raise HTTPException(status_code=404, detail="Company not found")
+        company_name = comp_row[1]
+
+        cur.execute("""
+            SELECT u.id::text, u.email_verified, u.password_hash IS NOT NULL AS has_password
+            FROM users u
+            JOIN account_users au ON au.user_id = u.id
+            WHERE au.account_id = %s::uuid AND au.role = 'OWNER'
+            LIMIT 1
+        """, (company_id,))
+        existing = cur.fetchone()
+
+        if existing:
+            user_id = existing[0]
+            if existing[1] and existing[2]:
+                raise HTTPException(status_code=400, detail="Admin has already accepted their invitation")
+
+            cur.execute("UPDATE signup_tokens SET used = true WHERE user_id = %s::uuid AND used = false", (user_id,))
+            token = secrets.token_urlsafe(32)
+            cur.execute("""
+                INSERT INTO signup_tokens (token, user_id, account_id, expires_at)
+                VALUES (%s, %s::uuid, %s::uuid, NOW() + INTERVAL '7 days')
+            """, (token, user_id, company_id))
+            conn.commit()
+            background_tasks.add_task(
+                send_invite_email, body.email.strip().lower(),
+                "TrendyReports Admin", company_name, token, body.first_name,
+            )
+            return {"ok": True, "action": "resent", "user_id": user_id}
+
+        email = body.email.strip().lower()
+        cur.execute("SELECT id FROM users WHERE LOWER(email) = %s", (email,))
+        if cur.fetchone():
+            raise HTTPException(status_code=400, detail="A user with this email already exists")
+
+        cur.execute("""
+            INSERT INTO users (account_id, email, first_name, last_name, is_active, email_verified, role)
+            VALUES (%s::uuid, %s, %s, %s, true, false, 'member')
+            RETURNING id::text
+        """, (company_id, email, body.first_name.strip(), body.last_name.strip()))
+        user_id = cur.fetchone()[0]
+
+        cur.execute("""
+            INSERT INTO account_users (account_id, user_id, role)
+            VALUES (%s::uuid, %s::uuid, 'OWNER')
+        """, (company_id, user_id))
+
+        token = secrets.token_urlsafe(32)
+        cur.execute("""
+            INSERT INTO signup_tokens (token, user_id, account_id, expires_at)
+            VALUES (%s, %s::uuid, %s::uuid, NOW() + INTERVAL '7 days')
+        """, (token, user_id, company_id))
+        conn.commit()
+
+        background_tasks.add_task(
+            send_invite_email, email,
+            "TrendyReports Admin", company_name, token, body.first_name,
+        )
+
+        from ..settings import settings
+        return {
+            "ok": True, "action": "created", "user_id": user_id,
+            "invite_url": f"{settings.APP_BASE}/welcome?token={token}",
+        }
 
 
 class InviteAdminRequest(BaseModel):

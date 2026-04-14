@@ -381,64 +381,106 @@ def _deliver_webhooks(account_id: str, event: str, payload: dict):
                   VALUES (%s,%s,%s,%s::jsonb,%s,%s,%s)
                 """, (account_id, hook_id, event, payload_json, status_code, elapsed, error))
 
+def _fetch_affiliate_branding(cur, account_id: str) -> dict | None:
+    """Fetch a single affiliate_branding row as a dict, or None."""
+    cur.execute("""
+        SELECT brand_display_name, logo_url, email_logo_url,
+               primary_color, accent_color, rep_photo_url,
+               contact_line1, contact_line2, website_url,
+               footer_logo_url, email_footer_logo_url,
+               COALESCE(branding_override, false) AS branding_override
+        FROM affiliate_branding
+        WHERE account_id = %s::uuid
+    """, (account_id,))
+    row = cur.fetchone()
+    if not row:
+        return None
+    return {
+        "display_name": row[0], "logo_url": row[1],
+        "email_logo_url": row[2], "primary_color": row[3],
+        "accent_color": row[4], "rep_photo_url": row[5],
+        "contact_line1": row[6], "contact_line2": row[7],
+        "website_url": row[8],
+        "footer_logo_url": row[9], "email_footer_logo_url": row[10],
+        "branding_override": row[11],
+    }
+
+
 def _resolve_email_brand(cur, account_id: str):
-    """Resolve white-label brand and account_type for email sending."""
+    """
+    Resolve white-label brand and account_type for email sending.
+
+    Hierarchy:
+      Company (TITLE_COMPANY) → owns branding master (logos, colors, website)
+      Rep (INDUSTRY_AFFILIATE with parent_account_id) → inherits company
+            branding unless branding_override=true; always provides own
+            rep_photo, contact_line1, contact_line2
+      Agent (REGULAR with sponsor_account_id) → uses sponsor rep's resolved
+            branding (which may itself come from the company)
+      Standalone INDUSTRY_AFFILIATE → uses own branding
+      Regular non-sponsored → uses own account/user info
+    """
     brand = None
     acc_type = "REGULAR"
     try:
         cur.execute("""
-            SELECT account_type, sponsor_account_id::text
+            SELECT account_type, sponsor_account_id::text, parent_account_id::text
             FROM accounts
             WHERE id = %s::uuid
         """, (account_id,))
         acc_row = cur.fetchone()
 
         if acc_row:
-            acc_type, sponsor_id = acc_row
+            acc_type, sponsor_id, parent_id = acc_row
 
             if acc_type == 'REGULAR' and sponsor_id:
+                # Agent sponsored by a rep — resolve the rep's branding first
+                rep_brand = _fetch_affiliate_branding(cur, sponsor_id)
+
+                # Check if the rep belongs to a company
                 cur.execute("""
-                    SELECT
-                        brand_display_name, logo_url, email_logo_url,
-                        primary_color, accent_color, rep_photo_url,
-                        contact_line1, contact_line2, website_url,
-                        footer_logo_url, email_footer_logo_url
-                    FROM affiliate_branding
-                    WHERE account_id = %s::uuid
+                    SELECT parent_account_id::text FROM accounts WHERE id = %s::uuid
                 """, (sponsor_id,))
-                brand_row = cur.fetchone()
-                if brand_row:
-                    brand = {
-                        "display_name": brand_row[0], "logo_url": brand_row[1],
-                        "email_logo_url": brand_row[2], "primary_color": brand_row[3],
-                        "accent_color": brand_row[4], "rep_photo_url": brand_row[5],
-                        "contact_line1": brand_row[6], "contact_line2": brand_row[7],
-                        "website_url": brand_row[8],
-                        "footer_logo_url": brand_row[9],
-                        "email_footer_logo_url": brand_row[10],
-                    }
-            elif acc_type == 'INDUSTRY_AFFILIATE':
-                cur.execute("""
-                    SELECT
-                        brand_display_name, logo_url, email_logo_url,
-                        primary_color, accent_color, rep_photo_url,
-                        contact_line1, contact_line2, website_url,
-                        footer_logo_url, email_footer_logo_url
-                    FROM affiliate_branding
-                    WHERE account_id = %s::uuid
-                """, (account_id,))
-                brand_row = cur.fetchone()
-                if brand_row:
-                    brand = {
-                        "display_name": brand_row[0], "logo_url": brand_row[1],
-                        "email_logo_url": brand_row[2], "primary_color": brand_row[3],
-                        "accent_color": brand_row[4], "rep_photo_url": brand_row[5],
-                        "contact_line1": brand_row[6], "contact_line2": brand_row[7],
-                        "website_url": brand_row[8],
-                        "footer_logo_url": brand_row[9],
-                        "email_footer_logo_url": brand_row[10],
-                    }
+                rep_row = cur.fetchone()
+                rep_parent_id = rep_row[0] if rep_row else None
+
+                if rep_parent_id and rep_brand and not rep_brand.get("branding_override"):
+                    # Rep hasn't overridden → merge company logos/colors + rep contact
+                    company_brand = _fetch_affiliate_branding(cur, rep_parent_id)
+                    if company_brand:
+                        brand = {
+                            **company_brand,
+                            "rep_photo_url": rep_brand.get("rep_photo_url") or company_brand.get("rep_photo_url"),
+                            "contact_line1": rep_brand.get("contact_line1") or company_brand.get("contact_line1"),
+                            "contact_line2": rep_brand.get("contact_line2") or company_brand.get("contact_line2"),
+                        }
+                        brand.pop("branding_override", None)
+                    else:
+                        brand = {k: v for k, v in rep_brand.items() if k != "branding_override"}
+                elif rep_brand:
+                    brand = {k: v for k, v in rep_brand.items() if k != "branding_override"}
+
+            elif acc_type in ('INDUSTRY_AFFILIATE', 'TITLE_COMPANY'):
+                own_brand = _fetch_affiliate_branding(cur, account_id)
+
+                if acc_type == 'INDUSTRY_AFFILIATE' and parent_id and own_brand and not own_brand.get("branding_override"):
+                    # Rep hasn't overridden → merge company logos/colors + rep contact
+                    company_brand = _fetch_affiliate_branding(cur, parent_id)
+                    if company_brand:
+                        brand = {
+                            **company_brand,
+                            "rep_photo_url": own_brand.get("rep_photo_url") or company_brand.get("rep_photo_url"),
+                            "contact_line1": own_brand.get("contact_line1") or company_brand.get("contact_line1"),
+                            "contact_line2": own_brand.get("contact_line2") or company_brand.get("contact_line2"),
+                        }
+                        brand.pop("branding_override", None)
+                    else:
+                        brand = {k: v for k, v in own_brand.items() if k != "branding_override"}
+                elif own_brand:
+                    brand = {k: v for k, v in own_brand.items() if k != "branding_override"}
+
             else:
+                # Regular non-sponsored account — build brand from account + user
                 cur.execute("""
                     SELECT
                         COALESCE(u.photo_url, u.avatar_url),
@@ -1077,23 +1119,21 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
             print(f"🔍 REPORT RUN {run_id}: step=generate_pdf (server-side, theme={theme_id})")
             from .market_builder import MarketReportBuilder
 
-            # Load branding for the account (agent info, logo, colors)
+            # Load agent info + hierarchy-resolved branding
             branding_ctx = {}
             with psycopg.connect(DATABASE_URL, autocommit=False) as conn:
                 with conn.cursor() as cur:
                     cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
                     cur.execute("""
-                        SELECT
-                            u.first_name, u.last_name, u.job_title, u.phone,
-                            u.email, COALESCE(u.photo_url, u.avatar_url),
-                            u.company_name, a.logo_url, a.name,
-                            a.primary_color, a.secondary_color
+                        SELECT u.first_name, u.last_name, u.job_title, u.phone,
+                               u.email, COALESCE(u.photo_url, u.avatar_url),
+                               u.company_name, a.name
                         FROM accounts a
                         LEFT JOIN users u ON u.account_id = a.id
-                        WHERE a.id = %s::uuid
-                        LIMIT 1
+                        WHERE a.id = %s::uuid LIMIT 1
                     """, (account_id,))
                     brow = cur.fetchone()
+                    brand, _ = _resolve_email_brand(cur, account_id)
                     if brow:
                         agent_name = f"{brow[0] or ''} {brow[1] or ''}".strip()
                         branding_ctx = {
@@ -1101,11 +1141,11 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                             "agent_title": brow[2] or "",
                             "agent_phone": brow[3] or "",
                             "agent_email": brow[4] or "",
-                            "agent_photo_url": brow[5],
-                            "company_name": brow[6] or brow[8] or "",
-                            "logo_url": brow[7],
-                            "primary_color": brow[9],
-                            "accent_color": brow[10],
+                            "agent_photo_url": brow[5] or (brand or {}).get("rep_photo_url"),
+                            "company_name": (brand or {}).get("display_name") or brow[6] or brow[7] or "",
+                            "logo_url": (brand or {}).get("logo_url"),
+                            "primary_color": (brand or {}).get("primary_color"),
+                            "accent_color": (brand or {}).get("accent_color"),
                         }
                 conn.commit()
 

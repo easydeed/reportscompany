@@ -14,6 +14,8 @@ from ..services.email import (
     send_affiliate_welcome_email,
     send_sponsored_agent_welcome_email,
     send_regular_agent_welcome_email,
+    send_company_admin_welcome_email,
+    send_rep_welcome_email,
 )
 
 logger = logging.getLogger(__name__)
@@ -84,26 +86,28 @@ def login(body: LoginIn, response: Response):
                 VALUES (%s, TRUE, NULL)
             """, (email,))
             
-            # Prioritize INDUSTRY_AFFILIATE account if user belongs to one
-            # This ensures affiliates land in their affiliate dashboard by default
             cur.execute("""
-                SELECT a.id::text, a.account_type
+                SELECT a.id::text, a.account_type,
+                       a.sponsor_account_id IS NOT NULL AS is_sponsored,
+                       a.parent_account_id::text
                 FROM account_users au
                 JOIN accounts a ON a.id = au.account_id
                 WHERE au.user_id = %s::uuid
                 ORDER BY 
                     CASE 
                         WHEN a.account_type = 'INDUSTRY_AFFILIATE' THEN 1
-                        WHEN a.id = %s::uuid THEN 2
-                        ELSE 3
+                        WHEN a.account_type = 'TITLE_COMPANY' THEN 2
+                        WHEN a.id = %s::uuid THEN 3
+                        ELSE 4
                     END
                 LIMIT 1
             """, (user_id, default_account_id))
             account_row = cur.fetchone()
             account_id = account_row[0] if account_row else default_account_id
             account_type = account_row[1] if account_row else "REGULAR"
+            is_sponsored = bool(account_row[2]) if account_row else False
+            parent_account_id = account_row[3] if account_row else None
             
-            # Fetch user role + platform admin flag for JWT
             cur.execute("""
                 SELECT role, is_platform_admin FROM users WHERE id = %s::uuid
             """, (user_id,))
@@ -118,6 +122,10 @@ def login(body: LoginIn, response: Response):
         "role": user_role,
         "account_type": account_type,
         "is_platform_admin": is_platform_admin,
+        "is_company_admin": account_type == "TITLE_COMPANY",
+        "is_affiliate": account_type == "INDUSTRY_AFFILIATE",
+        "is_sponsored": is_sponsored,
+        "parent_account_id": parent_account_id,
         "scopes": ["reports:read", "reports:write"]
     }, settings.JWT_SECRET, ttl_seconds=3600)
     
@@ -305,6 +313,10 @@ def register(body: RegisterIn, response: Response, background_tasks: BackgroundT
                     "role": "USER",
                     "account_type": "REGULAR",
                     "is_platform_admin": False,
+                    "is_company_admin": False,
+                    "is_affiliate": False,
+                    "is_sponsored": False,
+                    "parent_account_id": None,
                     "scopes": ["reports:read", "reports:write"]
                 },
                 settings.JWT_SECRET,
@@ -443,9 +455,10 @@ def accept_invite(body: AcceptInviteRequest, response: Response, background_task
                 WHERE token = %s
             """, (token,))
             
-            # Fetch role, account_type, and platform admin flag for JWT
             cur.execute("""
-                SELECT u.role, a.account_type, u.is_platform_admin
+                SELECT u.role, a.account_type, u.is_platform_admin,
+                       a.sponsor_account_id IS NOT NULL AS is_sponsored,
+                       a.parent_account_id::text
                 FROM users u
                 JOIN accounts a ON u.account_id = a.id
                 WHERE u.id = %s::uuid
@@ -454,6 +467,8 @@ def accept_invite(body: AcceptInviteRequest, response: Response, background_task
             user_role = (extra_row[0] or "USER").upper() if extra_row else "USER"
             account_type = extra_row[1] if extra_row else "REGULAR"
             is_platform_admin = bool(extra_row[2]) if extra_row else False
+            is_sponsored = bool(extra_row[3]) if extra_row else False
+            parent_account_id = extra_row[4] if extra_row else None
             
             conn.commit()
             
@@ -466,6 +481,10 @@ def accept_invite(body: AcceptInviteRequest, response: Response, background_task
                     "role": user_role,
                     "account_type": account_type,
                     "is_platform_admin": is_platform_admin,
+                    "is_company_admin": account_type == "TITLE_COMPANY",
+                    "is_affiliate": account_type == "INDUSTRY_AFFILIATE",
+                    "is_sponsored": is_sponsored,
+                    "parent_account_id": parent_account_id,
                     "scopes": ["reports:read", "reports:write"]
                 },
                 settings.JWT_SECRET,
@@ -486,20 +505,35 @@ def accept_invite(body: AcceptInviteRequest, response: Response, background_task
             try:
                 cur.execute("""
                     SELECT a.account_type, a.sponsor_account_id,
+                           a.parent_account_id,
+                           a.name AS own_account_name,
                            COALESCE(ab.brand_display_name, sa.name) AS sponsor_name,
+                           COALESCE(pab.brand_display_name, pa.name) AS parent_name,
                            u.first_name
                     FROM accounts a
                     JOIN account_users au ON au.account_id = a.id
                     LEFT JOIN accounts sa ON sa.id = a.sponsor_account_id
                     LEFT JOIN affiliate_branding ab ON ab.account_id = a.sponsor_account_id
+                    LEFT JOIN accounts pa ON pa.id = a.parent_account_id
+                    LEFT JOIN affiliate_branding pab ON pab.account_id = a.parent_account_id
                     LEFT JOIN users u ON u.id = au.user_id
                     WHERE au.user_id = %s::uuid
                     LIMIT 1
                 """, (user_id,))
                 acct_row = cur.fetchone()
                 if acct_row:
-                    acct_type, sponsor_id, sponsor_name, first_name = acct_row
-                    if acct_type == "INDUSTRY_AFFILIATE":
+                    acct_type, sponsor_id, parent_id, own_name, sponsor_name, parent_name, first_name = acct_row
+                    if acct_type == "TITLE_COMPANY":
+                        background_tasks.add_task(
+                            send_company_admin_welcome_email,
+                            email, first_name, own_name or "your company",
+                        )
+                    elif acct_type == "INDUSTRY_AFFILIATE" and parent_id:
+                        background_tasks.add_task(
+                            send_rep_welcome_email,
+                            email, first_name, parent_name or "your company",
+                        )
+                    elif acct_type == "INDUSTRY_AFFILIATE":
                         background_tasks.add_task(
                             send_affiliate_welcome_email, email, first_name
                         )
@@ -689,9 +723,10 @@ def reset_password(body: ResetPasswordRequest, response: Response):
                 WHERE id = %s::uuid
             """, (token_id,))
             
-            # Fetch role, account_type, and platform admin flag for JWT
             cur.execute("""
-                SELECT u.role, a.account_type, u.is_platform_admin
+                SELECT u.role, a.account_type, u.is_platform_admin,
+                       a.sponsor_account_id IS NOT NULL AS is_sponsored,
+                       a.parent_account_id::text
                 FROM users u
                 JOIN accounts a ON u.account_id = a.id
                 WHERE u.id = %s::uuid
@@ -700,6 +735,8 @@ def reset_password(body: ResetPasswordRequest, response: Response):
             user_role = (extra_row[0] or "USER").upper() if extra_row else "USER"
             account_type = extra_row[1] if extra_row else "REGULAR"
             is_platform_admin = bool(extra_row[2]) if extra_row else False
+            is_sponsored = bool(extra_row[3]) if extra_row else False
+            parent_account_id = extra_row[4] if extra_row else None
             
             conn.commit()
             
@@ -712,6 +749,10 @@ def reset_password(body: ResetPasswordRequest, response: Response):
                     "role": user_role,
                     "account_type": account_type,
                     "is_platform_admin": is_platform_admin,
+                    "is_company_admin": account_type == "TITLE_COMPANY",
+                    "is_affiliate": account_type == "INDUSTRY_AFFILIATE",
+                    "is_sponsored": is_sponsored,
+                    "parent_account_id": parent_account_id,
                     "scopes": ["reports:read", "reports:write"]
                 },
                 settings.JWT_SECRET,

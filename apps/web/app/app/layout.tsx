@@ -22,7 +22,9 @@ function decodeJwtPayload(token: string): Record<string, any> | null {
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   let isAdmin = false
+  let isCompanyAdmin = false
   let isAffiliate = false
+  let isSponsored = false
   let accountType = ""
   
   try {
@@ -32,10 +34,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (token) {
       const decoded = decodeJwtPayload(token)
       if (decoded) {
-        // Check expiry
         if (typeof decoded.exp !== 'number' || decoded.exp * 1000 >= Date.now()) {
           isAdmin = decoded.is_platform_admin === true
-          isAffiliate = decoded.account_type === "INDUSTRY_AFFILIATE"
+          isCompanyAdmin = decoded.is_company_admin === true || decoded.account_type === 'TITLE_COMPANY'
+          isAffiliate = decoded.is_affiliate === true || decoded.account_type === 'INDUSTRY_AFFILIATE'
+          isSponsored = decoded.is_sponsored === true
           accountType = decoded.account_type || "REGULAR"
         }
       }
@@ -44,5 +47,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     console.error("Failed to access cookies in layout:", error)
   }
 
-  return <AppLayoutClient isAdmin={isAdmin} isAffiliate={isAffiliate} accountType={accountType}>{children}</AppLayoutClient>
+  return (
+    <AppLayoutClient
+      isAdmin={isAdmin}
+      isCompanyAdmin={isCompanyAdmin}
+      isAffiliate={isAffiliate}
+      isSponsored={isSponsored}
+      accountType={accountType}
+    >
+      {children}
+    </AppLayoutClient>
+  )
 }

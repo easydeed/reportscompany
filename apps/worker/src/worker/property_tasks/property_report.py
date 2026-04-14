@@ -108,6 +108,72 @@ def upload_to_r2(local_path: str, s3_key: str, content_type: str = "application/
     return presigned_url
 
 
+def _fetch_ab(cur, account_id: str) -> dict | None:
+    """Fetch a single affiliate_branding row as a dict."""
+    cur.execute("""
+        SELECT brand_display_name, logo_url, primary_color, accent_color,
+               rep_photo_url, contact_line1, contact_line2, website_url,
+               COALESCE(branding_override, false) AS branding_override
+        FROM affiliate_branding WHERE account_id = %s::uuid
+    """, (account_id,))
+    r = cur.fetchone()
+    if not r:
+        return None
+    return {
+        "display_name": r[0], "logo_url": r[1], "primary_color": r[2],
+        "accent_color": r[3], "rep_photo_url": r[4], "contact_line1": r[5],
+        "contact_line2": r[6], "website_url": r[7], "branding_override": r[8],
+    }
+
+
+def _resolve_property_brand(cur, data: dict) -> dict | None:
+    """
+    Resolve branding for a property report following Company→Rep→Agent.
+
+    Returns a branding dict or None.
+    """
+    acc_type = data.get("account_type")
+    sponsor_id = data.get("sponsor_account_id")
+    parent_id = data.get("parent_account_id")
+
+    # Determine the branding source account
+    if acc_type == "REGULAR" and sponsor_id:
+        branding_acct_id = sponsor_id
+    elif acc_type in ("INDUSTRY_AFFILIATE", "TITLE_COMPANY"):
+        branding_acct_id = data.get("account_id")
+    else:
+        return None
+
+    rep_brand = _fetch_ab(cur, branding_acct_id)
+    if not rep_brand:
+        return None
+
+    # If the branding source is a rep under a company, walk up
+    if acc_type == "REGULAR" and sponsor_id:
+        cur.execute("SELECT parent_account_id::text FROM accounts WHERE id = %s::uuid", (sponsor_id,))
+        sp_row = cur.fetchone()
+        rep_parent = sp_row[0] if sp_row else None
+    elif acc_type == "INDUSTRY_AFFILIATE":
+        rep_parent = parent_id
+    else:
+        rep_parent = None
+
+    if rep_parent and not rep_brand.get("branding_override"):
+        company_brand = _fetch_ab(cur, rep_parent)
+        if company_brand:
+            merged = {
+                **company_brand,
+                "rep_photo_url": rep_brand.get("rep_photo_url") or company_brand.get("rep_photo_url"),
+                "contact_line1": rep_brand.get("contact_line1") or company_brand.get("contact_line1"),
+                "contact_line2": rep_brand.get("contact_line2") or company_brand.get("contact_line2"),
+            }
+            merged.pop("branding_override", None)
+            return merged
+
+    brand = {k: v for k, v in rep_brand.items() if k != "branding_override"}
+    return brand
+
+
 def fetch_report_with_joins(report_id: str) -> dict:
     """
     Fetch property report from database with user and branding joins.
@@ -156,30 +222,11 @@ def fetch_report_with_joins(report_id: str) -> dict:
                     a.name as account_name,
                     a.account_type,
                     a.sponsor_account_id::text,
-                    
-                    -- Branding info (from account's own branding or sponsor's)
-                    ab.brand_display_name,
-                    ab.logo_url as brand_logo_url,
-                    ab.primary_color as brand_primary_color,
-                    ab.accent_color as brand_accent_color,
-                    ab.rep_photo_url as brand_rep_photo_url,
-                    ab.contact_line1 as brand_contact_line1,
-                    ab.contact_line2 as brand_contact_line2,
-                    ab.website_url as brand_website_url
+                    a.parent_account_id::text
                     
                 FROM property_reports pr
                 LEFT JOIN users u ON pr.user_id = u.id
                 LEFT JOIN accounts a ON pr.account_id = a.id
-                LEFT JOIN LATERAL (
-                    -- Get branding from sponsor if regular user, or own branding if affiliate
-                    SELECT *
-                    FROM affiliate_branding
-                    WHERE account_id = COALESCE(
-                        CASE WHEN a.account_type = 'REGULAR' THEN a.sponsor_account_id ELSE NULL END,
-                        CASE WHEN a.account_type = 'INDUSTRY_AFFILIATE' THEN a.id ELSE NULL END
-                    )
-                    LIMIT 1
-                ) ab ON true
                 WHERE pr.id = %s::uuid
             """, (report_id,))
             
@@ -187,7 +234,6 @@ def fetch_report_with_joins(report_id: str) -> dict:
             if not row:
                 raise ValueError(f"Property report not found: {report_id}")
             
-            # Map to dictionary
             columns = [
                 'id', 'account_id', 'user_id', 'report_type', 'theme',
                 'accent_color', 'language', 'property_address', 'property_city',
@@ -197,16 +243,15 @@ def fetch_report_with_joins(report_id: str) -> dict:
                 'agent_name', 'agent_email', 'agent_phone', 'agent_photo_url',
                 'agent_company', 'agent_license',
                 'account_name', 'account_type', 'sponsor_account_id',
-                'brand_display_name', 'brand_logo_url', 'brand_primary_color',
-                'brand_accent_color', 'brand_rep_photo_url', 'brand_contact_line1',
-                'brand_contact_line2', 'brand_website_url'
+                'parent_account_id',
             ]
             
             data = dict(zip(columns, row))
+
+            # Resolve branding through the hierarchy
+            brand = _resolve_property_brand(cur, data)
             
-            # Structure the result
             result = {
-                # Report fields
                 'id': data['id'],
                 'account_id': data['account_id'],
                 'user_id': data['user_id'],
@@ -225,33 +270,23 @@ def fetch_report_with_joins(report_id: str) -> dict:
                 'property_type': data['property_type'],
                 'sitex_data': data['sitex_data'],
                 'comparables': data['comparables'],
-                'selected_pages': data['selected_pages'],  # Custom page selection
+                'selected_pages': data['selected_pages'],
                 'short_code': data['short_code'],
                 'qr_code_url': data['qr_code_url'],
                 
-                # Agent info
                 'agent': {
                     'name': data['agent_name'] or data['account_name'] or 'Agent',
                     'email': data['agent_email'] or '',
                     'phone': data['agent_phone'] or '',
-                    'photo_url': data['agent_photo_url'] or data['brand_rep_photo_url'],
+                    'photo_url': data['agent_photo_url'] or (brand or {}).get('rep_photo_url'),
                     'title': 'Real Estate Professional',
                     'license_number': data['agent_license'],
                     'company': data['agent_company'] or '',
-                    'company_name': data['brand_display_name'] or data['account_name'],
-                    'logo_url': data['brand_logo_url'],
+                    'company_name': (brand or {}).get('display_name') or data['account_name'],
+                    'logo_url': (brand or {}).get('logo_url'),
                 },
                 
-                # Branding
-                'branding': {
-                    'display_name': data['brand_display_name'],
-                    'logo_url': data['brand_logo_url'],
-                    'primary_color': data['brand_primary_color'],
-                    'accent_color': data['brand_accent_color'],
-                    'contact_line1': data['brand_contact_line1'],
-                    'contact_line2': data['brand_contact_line2'],
-                    'website_url': data['brand_website_url'],
-                } if data['brand_display_name'] else None
+                'branding': brand,
             }
             
             return result

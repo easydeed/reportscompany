@@ -574,6 +574,13 @@ def save_branding(
                 }
             )
         
+        # Check if this rep belongs to a company (set override flag if so)
+        cur.execute("""
+            SELECT parent_account_id FROM accounts WHERE id = %s::uuid
+        """, (account_id,))
+        parent_row = cur.fetchone()
+        has_parent = bool(parent_row and parent_row[0])
+
         # Upsert branding (with all logo fields)
         cur.execute("""
             INSERT INTO affiliate_branding (
@@ -589,9 +596,10 @@ def save_branding(
                 contact_line1,
                 contact_line2,
                 website_url,
+                branding_override,
                 updated_at
             ) VALUES (
-                %s::uuid, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW()
+                %s::uuid, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW()
             )
             ON CONFLICT (account_id)
             DO UPDATE SET
@@ -606,6 +614,8 @@ def save_branding(
                 contact_line1 = EXCLUDED.contact_line1,
                 contact_line2 = EXCLUDED.contact_line2,
                 website_url = EXCLUDED.website_url,
+                branding_override = CASE WHEN %s THEN TRUE
+                                         ELSE affiliate_branding.branding_override END,
                 updated_at = NOW()
             RETURNING
                 brand_display_name,
@@ -631,7 +641,9 @@ def save_branding(
             body.rep_photo_url,
             body.contact_line1,
             body.contact_line2,
-            body.website_url
+            body.website_url,
+            has_parent,
+            has_parent,
         ))
         
         row = cur.fetchone()

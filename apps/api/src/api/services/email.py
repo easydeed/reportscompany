@@ -316,10 +316,12 @@ def get_invite_email_html(
     inviter_name: str,
     company_name: str,
     invite_url: str,
+    invitee_first_name: str | None = None,
 ) -> str:
     """Generate invite email HTML for sponsored agents."""
+    greeting = f"Hi {invitee_first_name}," if invitee_first_name else "Hi,"
     content = f'''<p style="margin: 0 0 20px; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; color: #111827;">
-                Hi,
+                {greeting}
               </p>
               <p style="margin: 0 0 20px; font-size: 15px; line-height: 1.7; color: #374151;">
                 <strong>{inviter_name}</strong> from <strong>{company_name}</strong> invited you to join TrendyReports &mdash; a platform for creating branded real estate market reports and property analyses.
@@ -344,11 +346,12 @@ def send_invite_email(
     inviter_name: str,
     company_name: str,
     invite_token: str,
+    invitee_first_name: str | None = None,
 ) -> Dict[str, Any]:
     """Send invitation email to a sponsored agent."""
     invite_url = f"{email_service.app_base}/welcome?token={invite_token}"
 
-    html = get_invite_email_html(inviter_name, company_name, invite_url)
+    html = get_invite_email_html(inviter_name, company_name, invite_url, invitee_first_name)
 
     return email_service.send_email_sync(
         to=email,
@@ -593,4 +596,68 @@ def send_regular_agent_welcome_email(to_email: str, first_name: str) -> Dict[str
         subject="Welcome to TrendyReports \u2014 Your first report is 30 seconds away",
         html=_email_base(content),
         tags=[{"name": "category", "value": "welcome-regular"}],
+    )
+
+
+def send_company_admin_welcome_email(to_email: str, first_name: str, company_name: str) -> Dict[str, Any]:
+    """Welcome email for Title Company admins after invite acceptance."""
+    name = first_name or "there"
+    company = company_name or "your company"
+    content = f'''<p style="margin:0 0 6px;font-family:Georgia,'Times New Roman',serif;font-size:20px;color:#111827;">
+        Welcome, {name}!
+      </p>
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#374151;">
+        Your company account for <strong>{company}</strong> is live. As the company admin you can manage title reps, control branding across your organization, and monitor report activity.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        {_step_row(1, "Set Up Your Company Branding",
+                   "Upload your company logo and pick brand colors. These cascade to all reps and agents, so every report generated under your organization carries your identity.",
+                   "/app/company/branding", "Set Up Branding")}
+        {_step_row(2, "Invite Your Title Reps",
+                   "Each rep manages their own book of agents. Add reps and they\u2019ll get their own dashboard to recruit and manage agents.",
+                   "/app/company/reps", "Invite Reps")}
+        {_step_row(3, "Monitor Your Team",
+                   "See all reps, all agents, and all reports from one dashboard. Track top performers and report volume across your entire organization.",
+                   "/app/company", "View Dashboard", last=True)}
+      </table>
+      <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;line-height:1.6;">
+        Questions? Reply to this email or reach us at <a href="mailto:support@trendyreports.io" style="color:#6366F1;text-decoration:underline;">support@trendyreports.io</a>.
+      </p>'''
+    return email_service.send_email_sync(
+        to=to_email,
+        subject=f"Welcome to TrendyReports \u2014 Let\u2019s set up {company}",
+        html=_email_base(content),
+        tags=[{"name": "category", "value": "welcome-company-admin"}],
+    )
+
+
+def send_rep_welcome_email(to_email: str, first_name: str, company_name: str) -> Dict[str, Any]:
+    """Welcome email for Title Reps after invite acceptance."""
+    name = first_name or "there"
+    company = company_name or "your company"
+    content = f'''<p style="margin:0 0 6px;font-family:Georgia,'Times New Roman',serif;font-size:20px;color:#111827;">
+        Welcome aboard, {name}!
+      </p>
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#374151;">
+        You&rsquo;ve been added as a title rep for <strong>{company}</strong>. Your company branding is already set up &mdash; here&rsquo;s how to get your agents generating branded reports in minutes.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        {_step_row(1, "Complete Your Profile",
+                   "Add your photo, phone number, and license info. This appears on every report your agents generate, alongside {company}\u2019s branding.",
+                   "/app/settings/profile", "Complete Profile")}
+        {_step_row(2, "Invite Your Agents",
+                   "Add agents one at a time or bulk-import a CSV. Each agent gets a trial account and can start generating reports immediately.",
+                   "/app/affiliate", "Invite Agents")}
+        {_step_row(3, "Watch Your Network Grow",
+                   "Your agents will generate branded reports carrying <strong>{company}</strong>\u2019s branding and your contact info. Track their activity from your affiliate dashboard.",
+                   "/app/affiliate", "View Dashboard", last=True)}
+      </table>
+      <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;line-height:1.6;">
+        Questions? Reply to this email or reach us at <a href="mailto:support@trendyreports.io" style="color:#6366F1;text-decoration:underline;">support@trendyreports.io</a>.
+      </p>'''
+    return email_service.send_email_sync(
+        to=to_email,
+        subject=f"Welcome to TrendyReports \u2014 Start inviting your agents",
+        html=_email_base(content),
+        tags=[{"name": "category", "value": "welcome-rep"}],
     )
