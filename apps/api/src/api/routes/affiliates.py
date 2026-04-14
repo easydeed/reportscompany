@@ -174,6 +174,8 @@ def invite_agent(
     
     Phase 29C: Creates new REGULAR account with sponsored_free plan.
     """
+    email = body.email.strip().lower()
+
     with db_conn() as (conn, cur):
         if not verify_affiliate_account(cur, account_id):
             raise HTTPException(
@@ -181,7 +183,7 @@ def invite_agent(
                 detail="Only industry affiliates can invite agents"
             )
 
-        cur.execute("SELECT id FROM users WHERE email = %s", (body.email,))
+        cur.execute("SELECT id FROM users WHERE LOWER(email) = %s", (email,))
         if cur.fetchone():
             raise HTTPException(
                 status_code=400,
@@ -189,7 +191,7 @@ def invite_agent(
             )
 
         result = _create_sponsored_agent(
-            cur, account_id, body.email, body.name,
+            cur, account_id, email, body.name,
             default_city=body.default_city,
             phone=body.phone,
             job_title=body.job_title,
@@ -203,11 +205,11 @@ def invite_agent(
         try:
             background_tasks.add_task(
                 send_invite_email,
-                body.email, inviter_name, company_name, result["token"]
+                email, inviter_name, company_name, result["token"]
             )
-            logger.info(f"Invite email queued for {body.email} from {company_name}")
+            logger.info(f"Invite email queued for {email} from {company_name}")
         except Exception as e:
-            logger.error(f"Failed to queue invite email for {body.email}: {e}")
+            logger.error(f"Failed to queue invite email for {email}: {e}")
 
         return {
             "ok": True,
@@ -241,7 +243,7 @@ def resend_invite(
             FROM users u
             JOIN account_users au ON au.user_id = u.id AND au.role = 'OWNER'
             JOIN accounts a ON a.id = au.account_id
-            WHERE u.email = %s
+            WHERE LOWER(u.email) = %s
               AND a.sponsor_account_id = %s::uuid
         """, (email, account_id))
         row = cur.fetchone()
@@ -343,7 +345,7 @@ async def bulk_invite_agents(
             total_rows += 1
             row = {k.strip().lower(): (v.strip() if v else "") for k, v in row.items()}
 
-            email = row.get("email", "")
+            email = row.get("email", "").strip().lower()
             name = row.get("name", "")
 
             if not email:
@@ -356,7 +358,7 @@ async def bulk_invite_agents(
                 errors.append({"row": idx, "email": email, "reason": "name is required"})
                 continue
 
-            cur.execute("SELECT id FROM users WHERE email = %s", (email,))
+            cur.execute("SELECT id FROM users WHERE LOWER(email) = %s", (email,))
             if cur.fetchone():
                 errors.append({"row": idx, "email": email, "reason": "email already registered"})
                 continue
