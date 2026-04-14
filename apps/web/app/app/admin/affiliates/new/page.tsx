@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ImageUpload } from "@/components/ui/image-upload"
-import { ArrowLeft, Building2, Loader2, CheckCircle, Copy } from "lucide-react"
+import { ArrowLeft, Building2, Loader2, CheckCircle, Copy, UserPlus } from "lucide-react"
 
 export default function NewAffiliatePage() {
   const router = useRouter()
@@ -17,14 +17,16 @@ export default function NewAffiliatePage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<{
     name: string
-    email: string
-    inviteUrl: string
+    email: string | null
+    inviteUrl: string | null
     accountId: string
+    adminInvited: boolean
   } | null>(null)
   const [copied, setCopied] = useState(false)
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [primaryColor, setPrimaryColor] = useState("#4F46E5")
   const [accentColor, setAccentColor] = useState("#F26B2B")
+  const [inviteAdmin, setInviteAdmin] = useState(false)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -33,15 +35,18 @@ export default function NewAffiliatePage() {
 
     const formData = new FormData(e.currentTarget)
 
-    const body = {
+    const body: Record<string, unknown> = {
       company_name: formData.get("company_name") as string,
-      admin_email: formData.get("admin_email") as string,
-      admin_first_name: formData.get("admin_first_name") as string || undefined,
-      admin_last_name: formData.get("admin_last_name") as string || undefined,
       logo_url: logoUrl || undefined,
       primary_color: primaryColor || undefined,
       accent_color: accentColor || undefined,
       website_url: formData.get("website_url") as string || undefined,
+    }
+
+    if (inviteAdmin) {
+      body.admin_email = formData.get("admin_email") as string
+      body.admin_first_name = formData.get("admin_first_name") as string || undefined
+      body.admin_last_name = formData.get("admin_last_name") as string || undefined
     }
 
     try {
@@ -54,17 +59,18 @@ export default function NewAffiliatePage() {
       const data = await res.json()
 
       if (!res.ok) {
-        throw new Error(data.detail || "Failed to create affiliate")
+        throw new Error(typeof data.detail === "string" ? data.detail : "Failed to create affiliate")
       }
 
       setSuccess({
-        name: body.company_name,
-        email: body.admin_email,
-        inviteUrl: data.invite_url,
+        name: body.company_name as string,
+        email: data.admin_email || null,
+        inviteUrl: data.invite_url || null,
         accountId: data.account_id,
+        adminInvited: data.admin_invited ?? false,
       })
-    } catch (err: any) {
-      setError(err.message || "Failed to create affiliate")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to create affiliate")
     } finally {
       setLoading(false)
     }
@@ -100,27 +106,31 @@ export default function NewAffiliatePage() {
               </div>
               <h2 className="text-xl font-semibold mb-2">{success.name} has been created!</h2>
               <p className="text-muted-foreground">
-                An invitation email has been sent to {success.email}
+                {success.adminInvited
+                  ? `An invitation email has been sent to ${success.email}`
+                  : "You can configure branding and invite an admin from the detail page."}
               </p>
             </div>
 
             <div className="space-y-4">
-              <div>
-                <Label className="text-muted-foreground">Invite URL</Label>
-                <div className="flex items-center gap-2 mt-1">
-                  <Input value={success.inviteUrl} readOnly className="text-sm" />
-                  <Button variant="outline" size="icon" onClick={copyToClipboard}>
-                    {copied ? (
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
+              {success.inviteUrl && (
+                <div>
+                  <Label className="text-muted-foreground">Invite URL</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Input value={success.inviteUrl} readOnly className="text-sm" />
+                    <Button variant="outline" size="icon" onClick={copyToClipboard}>
+                      {copied ? (
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Share this link if the email doesn&apos;t arrive
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Share this link if the email doesn&apos;t arrive
-                </p>
-              </div>
+              )}
 
               <div className="flex gap-3 pt-4">
                 <Link href={`/app/admin/affiliates/${success.accountId}`}>
@@ -187,47 +197,6 @@ export default function NewAffiliatePage() {
           </CardContent>
         </Card>
 
-        {/* Admin User */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Admin Contact</CardTitle>
-            <CardDescription>The person who will manage this affiliate account</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="admin_email">Email Address *</Label>
-              <Input
-                id="admin_email"
-                name="admin_email"
-                type="email"
-                placeholder="admin@example.com"
-                required
-                disabled={loading}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="admin_first_name">First Name</Label>
-                <Input
-                  id="admin_first_name"
-                  name="admin_first_name"
-                  placeholder="John"
-                  disabled={loading}
-                />
-              </div>
-              <div>
-                <Label htmlFor="admin_last_name">Last Name</Label>
-                <Input
-                  id="admin_last_name"
-                  name="admin_last_name"
-                  placeholder="Doe"
-                  disabled={loading}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Branding */}
         <Card>
           <CardHeader>
@@ -286,6 +255,70 @@ export default function NewAffiliatePage() {
               </div>
             </div>
           </CardContent>
+        </Card>
+
+        {/* Admin User — Collapsible */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <UserPlus className="h-5 w-5" />
+                  Admin Contact
+                </CardTitle>
+                <CardDescription className="mt-1.5">
+                  {inviteAdmin
+                    ? "The person who will manage this affiliate account"
+                    : "You can invite an admin later from the affiliate detail page"}
+                </CardDescription>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <span className="text-sm text-muted-foreground">Invite now</span>
+                <input
+                  type="checkbox"
+                  checked={inviteAdmin}
+                  onChange={(e) => setInviteAdmin(e.target.checked)}
+                  disabled={loading}
+                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+              </label>
+            </div>
+          </CardHeader>
+          {inviteAdmin && (
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="admin_email">Email Address *</Label>
+                <Input
+                  id="admin_email"
+                  name="admin_email"
+                  type="email"
+                  placeholder="admin@example.com"
+                  required={inviteAdmin}
+                  disabled={loading}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="admin_first_name">First Name</Label>
+                  <Input
+                    id="admin_first_name"
+                    name="admin_first_name"
+                    placeholder="John"
+                    disabled={loading}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="admin_last_name">Last Name</Label>
+                  <Input
+                    id="admin_last_name"
+                    name="admin_last_name"
+                    placeholder="Doe"
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          )}
         </Card>
 
         {error && (

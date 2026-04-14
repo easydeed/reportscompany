@@ -30,6 +30,7 @@ interface Affiliate {
   brand_display_name: string | null
   agent_count: number
   reports_this_month: number
+  has_admin: boolean
 }
 
 export default function AdminAffiliatesPage() {
@@ -254,9 +255,16 @@ export default function AdminAffiliatesPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={affiliate.is_active ? "default" : "secondary"}>
-                        {affiliate.is_active ? "Active" : "Inactive"}
-                      </Badge>
+                      <div className="flex items-center gap-1.5">
+                        <Badge variant={affiliate.is_active ? "default" : "secondary"}>
+                          {affiliate.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                        {!affiliate.has_admin && (
+                          <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">
+                            No Admin
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {affiliate.created_at

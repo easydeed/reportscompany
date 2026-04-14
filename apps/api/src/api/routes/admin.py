@@ -637,7 +637,8 @@ def list_affiliates(
             (SELECT COUNT(*) FROM report_generations rg
              JOIN accounts sa ON rg.account_id = sa.id
              WHERE sa.sponsor_account_id = a.id
-             AND rg.generated_at >= date_trunc('month', CURRENT_DATE)) as reports_this_month
+             AND rg.generated_at >= date_trunc('month', CURRENT_DATE)) as reports_this_month,
+            (SELECT COUNT(*) > 0 FROM account_users au WHERE au.account_id = a.id AND au.role = 'OWNER') as has_admin
         FROM accounts a
         LEFT JOIN affiliate_branding ab ON ab.account_id = a.id
         WHERE a.account_type = 'INDUSTRY_AFFILIATE'
@@ -671,6 +672,7 @@ def list_affiliates(
                 "brand_display_name": row[8],
                 "agent_count": row[9] or 0,
                 "reports_this_month": row[10] or 0,
+                "has_admin": bool(row[11]) if len(row) > 11 else True,
             })
 
         return {"affiliates": affiliates, "count": len(affiliates)}
@@ -737,9 +739,12 @@ def get_affiliate_detail(
             }
         }
 
-        # Get admin user for this affiliate
+        # Get admin user for this affiliate (with invite status fields)
         cur.execute("""
-            SELECT u.id::text, u.email, u.first_name, u.last_name, u.is_active, u.created_at
+            SELECT u.id::text, u.email, u.first_name, u.last_name,
+                   u.is_active, u.created_at, u.email_verified,
+                   u.password_hash IS NOT NULL AS has_password,
+                   (SELECT MAX(st.created_at) FROM signup_tokens st WHERE st.user_id = u.id) AS last_invite_sent
             FROM users u
             JOIN account_users au ON au.user_id = u.id
             WHERE au.account_id = %s::uuid AND au.role = 'OWNER'
@@ -748,6 +753,14 @@ def get_affiliate_detail(
 
         admin_row = cur.fetchone()
         if admin_row:
+            email_verified = admin_row[6]
+            has_password = admin_row[7]
+            if not email_verified or not has_password:
+                status = "pending"
+            elif not admin_row[4]:
+                status = "deactivated"
+            else:
+                status = "active"
             affiliate["admin_user"] = {
                 "user_id": admin_row[0],
                 "email": admin_row[1],
@@ -755,6 +768,8 @@ def get_affiliate_detail(
                 "last_name": admin_row[3],
                 "is_active": admin_row[4],
                 "created_at": admin_row[5].isoformat() if admin_row[5] else None,
+                "status": status,
+                "last_invite_sent": admin_row[8].isoformat() if admin_row[8] else None,
             }
 
         # Get sponsored agents
@@ -898,7 +913,7 @@ def update_affiliate_branding(
 class CreateAffiliateRequest(BaseModel):
     """Request body for creating a new affiliate."""
     company_name: str
-    admin_email: EmailStr
+    admin_email: Optional[EmailStr] = None
     admin_first_name: Optional[str] = None
     admin_last_name: Optional[str] = None
     plan_slug: str = "affiliate"
@@ -927,24 +942,19 @@ def create_affiliate(
     Returns the new affiliate details.
     """
     with db_conn() as (conn, cur):
-        # Set admin role for RLS bypass
         set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
 
-        # Check if email already exists
-        cur.execute("SELECT id FROM users WHERE email = %s", (body.admin_email,))
-        if cur.fetchone():
-            raise HTTPException(status_code=400, detail="Email already exists")
+        if body.admin_email:
+            cur.execute("SELECT id FROM users WHERE LOWER(email) = %s", (body.admin_email.strip().lower(),))
+            if cur.fetchone():
+                raise HTTPException(status_code=400, detail="Email already exists")
 
-        # Generate slug
         slug = body.company_name.lower().replace(' ', '-').replace('.', '').replace(',', '')[:50]
-
-        # Ensure slug is unique
         cur.execute("SELECT id FROM accounts WHERE slug = %s", (slug,))
         if cur.fetchone():
             import time
             slug = f"{slug}-{int(time.time())}"[:50]
 
-        # Create account
         cur.execute("""
             INSERT INTO accounts (name, slug, account_type, plan_slug, is_active)
             VALUES (%s, %s, 'INDUSTRY_AFFILIATE', %s, true)
@@ -952,78 +962,170 @@ def create_affiliate(
         """, (body.company_name, slug, body.plan_slug))
         account_id = cur.fetchone()[0]
 
-        # Generate temporary password and hash it
-        temp_password = secrets.token_urlsafe(12)
+        # Always create branding record (use company name as default display name)
+        cur.execute("""
+            INSERT INTO affiliate_branding (
+                account_id, brand_display_name, logo_url, primary_color, accent_color, website_url
+            ) VALUES (%s::uuid, %s, %s, %s, %s, %s)
+        """, (
+            account_id, body.company_name, body.logo_url,
+            body.primary_color or '#7C3AED', body.accent_color, body.website_url
+        ))
 
-        # Create admin user (no password - will use invite flow)
+        result: Dict[str, Any] = {
+            "ok": True,
+            "account_id": account_id,
+            "name": body.company_name,
+            "slug": slug,
+            "admin_invited": False,
+            "status": "created_no_admin",
+        }
+
+        if body.admin_email:
+            email = body.admin_email.strip().lower()
+
+            cur.execute("""
+                INSERT INTO users (account_id, email, first_name, last_name, is_active, email_verified, role)
+                VALUES (%s::uuid, %s, %s, %s, true, false, 'member')
+                RETURNING id::text
+            """, (account_id, email, body.admin_first_name, body.admin_last_name))
+            user_id = cur.fetchone()[0]
+
+            cur.execute("""
+                INSERT INTO account_users (account_id, user_id, role)
+                VALUES (%s::uuid, %s::uuid, 'OWNER')
+            """, (account_id, user_id))
+
+            token = secrets.token_urlsafe(32)
+            cur.execute("""
+                INSERT INTO signup_tokens (token, user_id, account_id)
+                VALUES (%s, %s::uuid, %s::uuid)
+            """, (token, user_id, account_id))
+
+            conn.commit()
+
+            try:
+                background_tasks.add_task(
+                    send_invite_email, email,
+                    "TrendyReports Admin", body.company_name, token,
+                )
+                logger.info(f"Affiliate welcome email queued for {email}")
+            except Exception as e:
+                logger.error(f"Failed to queue affiliate welcome email: {e}")
+
+            from ..settings import settings
+            result.update({
+                "user_id": user_id,
+                "admin_email": email,
+                "admin_invited": True,
+                "status": "admin_invited",
+                "invite_url": f"{settings.APP_BASE}/welcome?token={token}",
+            })
+        else:
+            conn.commit()
+
+        return result
+
+
+class InviteAdminRequest(BaseModel):
+    email: EmailStr
+    first_name: str
+    last_name: str
+
+
+@router.post("/affiliates/{affiliate_id}/invite-admin")
+def invite_affiliate_admin(
+    affiliate_id: str,
+    body: InviteAdminRequest,
+    background_tasks: BackgroundTasks,
+    _admin: dict = Depends(get_admin_user),
+):
+    """Create an admin user for an existing affiliate that has no admin, or resend invite."""
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+
+        cur.execute("""
+            SELECT id, name FROM accounts
+            WHERE id = %s::uuid AND account_type = 'INDUSTRY_AFFILIATE'
+        """, (affiliate_id,))
+        aff_row = cur.fetchone()
+        if not aff_row:
+            raise HTTPException(status_code=404, detail="Affiliate not found")
+        company_name = aff_row[1]
+
+        # Check if an OWNER already exists
+        cur.execute("""
+            SELECT u.id::text, u.email_verified, u.password_hash IS NOT NULL AS has_password
+            FROM users u
+            JOIN account_users au ON au.user_id = u.id
+            WHERE au.account_id = %s::uuid AND au.role = 'OWNER'
+            LIMIT 1
+        """, (affiliate_id,))
+        existing = cur.fetchone()
+
+        if existing:
+            user_id = existing[0]
+            email_verified = existing[1]
+            has_password = existing[2]
+            if email_verified and has_password:
+                raise HTTPException(status_code=400, detail="Admin has already accepted their invitation")
+
+            # Invalidate old tokens and resend
+            cur.execute("""
+                UPDATE signup_tokens SET used = true
+                WHERE user_id = %s::uuid AND used = false
+            """, (user_id,))
+
+            token = secrets.token_urlsafe(32)
+            cur.execute("""
+                INSERT INTO signup_tokens (token, user_id, account_id, expires_at)
+                VALUES (%s, %s::uuid, %s::uuid, NOW() + INTERVAL '7 days')
+            """, (token, user_id, affiliate_id))
+            conn.commit()
+
+            background_tasks.add_task(
+                send_invite_email,
+                body.email.strip().lower(),
+                "TrendyReports Admin",
+                company_name,
+                token,
+            )
+            return {"ok": True, "action": "resent", "user_id": user_id}
+
+        # No admin exists — create one
+        email = body.email.strip().lower()
+        cur.execute("SELECT id FROM users WHERE email = %s", (email,))
+        if cur.fetchone():
+            raise HTTPException(status_code=400, detail="A user with this email already exists")
+
         cur.execute("""
             INSERT INTO users (account_id, email, first_name, last_name, is_active, email_verified, role)
             VALUES (%s::uuid, %s, %s, %s, true, false, 'member')
             RETURNING id::text
-        """, (account_id, body.admin_email, body.admin_first_name, body.admin_last_name))
+        """, (affiliate_id, email, body.first_name.strip(), body.last_name.strip()))
         user_id = cur.fetchone()[0]
 
-        # Create account_users entry (OWNER)
         cur.execute("""
             INSERT INTO account_users (account_id, user_id, role)
             VALUES (%s::uuid, %s::uuid, 'OWNER')
-        """, (account_id, user_id))
+        """, (affiliate_id, user_id))
 
-        # Create branding record if any branding provided
-        if body.logo_url or body.primary_color:
-            cur.execute("""
-                INSERT INTO affiliate_branding (
-                    account_id, brand_display_name, logo_url, primary_color, accent_color, website_url
-                ) VALUES (%s::uuid, %s, %s, %s, %s, %s)
-            """, (
-                account_id, body.company_name, body.logo_url,
-                body.primary_color or '#7C3AED', body.accent_color, body.website_url
-            ))
-
-        # Generate invite token for password setup
         token = secrets.token_urlsafe(32)
-
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS signup_tokens (
-                id SERIAL PRIMARY KEY,
-                token TEXT UNIQUE NOT NULL,
-                user_id UUID NOT NULL REFERENCES users(id),
-                account_id UUID NOT NULL REFERENCES accounts(id),
-                used BOOLEAN DEFAULT FALSE,
-                created_at TIMESTAMP DEFAULT NOW(),
-                expires_at TIMESTAMP DEFAULT NOW() + INTERVAL '7 days'
-            )
-        """)
-
-        cur.execute("""
-            INSERT INTO signup_tokens (token, user_id, account_id)
-            VALUES (%s, %s::uuid, %s::uuid)
-        """, (token, user_id, account_id))
-
+            INSERT INTO signup_tokens (token, user_id, account_id, expires_at)
+            VALUES (%s, %s::uuid, %s::uuid, NOW() + INTERVAL '7 days')
+        """, (token, user_id, affiliate_id))
         conn.commit()
 
-        # Send welcome/invite email
-        try:
-            background_tasks.add_task(
-                send_invite_email,
-                body.admin_email,
-                "TrendyReports Admin",
-                body.company_name,
-                token
-            )
-            logger.info(f"Affiliate welcome email queued for {body.admin_email}")
-        except Exception as e:
-            logger.error(f"Failed to queue affiliate welcome email: {e}")
-
-        return {
-            "ok": True,
-            "account_id": account_id,
-            "user_id": user_id,
-            "name": body.company_name,
-            "slug": slug,
-            "admin_email": body.admin_email,
-            "invite_url": f"https://reportscompany-web.vercel.app/welcome?token={token}",
-        }
+        background_tasks.add_task(
+            send_invite_email,
+            email,
+            "TrendyReports Admin",
+            company_name,
+            token,
+        )
+        logger.info(f"Admin {_admin.get('email')} invited affiliate admin {email} for {company_name}")
+        return {"ok": True, "action": "created", "user_id": user_id}
 
 
 class InviteAgentAdminRequest(BaseModel):
