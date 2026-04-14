@@ -26,6 +26,7 @@ from ..services.branding import (
     Brand
 )
 from ..services.email import send_invite_email
+from ..settings import settings
 from .reports import require_account_id
 
 logger = logging.getLogger(__name__)
@@ -99,7 +100,7 @@ def _create_sponsored_agent(
         "account_id": new_account_id,
         "user_id": new_user_id,
         "token": token,
-        "invite_url": f"https://reportscompany-web.vercel.app/welcome?token={token}",
+        "invite_url": f"{settings.APP_BASE}/welcome?token={token}",
     }
 
 
@@ -203,9 +204,11 @@ def invite_agent(
         conn.commit()
 
         try:
+            invitee_first = body.name.split()[0] if body.name else ""
             background_tasks.add_task(
                 send_invite_email,
-                email, inviter_name, company_name, result["token"]
+                email, inviter_name, company_name, result["token"],
+                invitee_first_name=invitee_first
             )
             logger.info(f"Invite email queued for {email} from {company_name}")
         except Exception as e:

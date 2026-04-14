@@ -83,6 +83,71 @@ AFFILIATE_ONBOARDING_STEPS = [
     },
 ]
 
+COMPANY_ONBOARDING_STEPS = [
+    {
+        "key": "profile_complete",
+        "title": "Complete your profile",
+        "description": "Add your name, phone, and photo",
+        "href": "/app/settings/profile",
+        "icon": "user",
+        "required": True,
+    },
+    {
+        "key": "branding_setup",
+        "title": "Set up company branding",
+        "description": "Upload your logo and set brand colors \u2014 these cascade to all reps and agents",
+        "href": "/app/company/branding",
+        "icon": "palette",
+        "required": True,
+    },
+    {
+        "key": "first_rep_invited",
+        "title": "Invite your first title rep",
+        "description": "Add a rep who will manage their own book of agents",
+        "href": "/app/company/reps",
+        "icon": "user-plus",
+        "required": True,
+    },
+]
+
+COMPANY_REP_ONBOARDING_STEPS = [
+    {
+        "key": "profile_complete",
+        "title": "Complete your profile",
+        "description": "Add your photo, phone, and license number",
+        "href": "/app/settings/profile",
+        "icon": "user",
+        "required": True,
+    },
+    {
+        "key": "first_agent_invited",
+        "title": "Invite your first agent",
+        "description": "Add agents to your book — they'll use your company's branding",
+        "href": "/app/affiliate",
+        "icon": "user-plus",
+        "required": True,
+    },
+]
+
+SPONSORED_ONBOARDING_STEPS = [
+    {
+        "key": "profile_complete",
+        "title": "Complete your profile",
+        "description": "Add your photo, phone, and license number",
+        "href": "/app/settings/profile",
+        "icon": "user",
+        "required": True,
+    },
+    {
+        "key": "first_report",
+        "title": "Generate your first report",
+        "description": "Create a branded market report in 30 seconds",
+        "href": "/app/reports/new",
+        "icon": "file-text",
+        "required": True,
+    },
+]
+
 
 # ============ Models ============
 
@@ -120,10 +185,14 @@ class SkipStepRequest(BaseModel):
 
 # ============ Helper Functions ============
 
-def get_steps_for_user(account_type: str) -> List[dict]:
-    """Return appropriate onboarding steps based on account type."""
+def get_steps_for_user(account_type: str, is_sponsored: bool = False, has_parent: bool = False) -> List[dict]:
+    """Return appropriate onboarding steps based on account tier."""
+    if account_type == "TITLE_COMPANY":
+        return COMPANY_ONBOARDING_STEPS
     if account_type == "INDUSTRY_AFFILIATE":
-        return AFFILIATE_ONBOARDING_STEPS
+        return COMPANY_REP_ONBOARDING_STEPS if has_parent else AFFILIATE_ONBOARDING_STEPS
+    if is_sponsored:
+        return SPONSORED_ONBOARDING_STEPS
     return ONBOARDING_STEPS
 
 
@@ -134,23 +203,30 @@ def check_auto_completions(cur, user_id: str, account_id: str, account_type: str
     """
     auto_completed = []
 
-    # Check profile completion — auto-mark when key fields are pre-filled (e.g. from affiliate invite)
+    # Check profile completion
     cur.execute("""
         SELECT first_name, last_name, phone, job_title
         FROM users WHERE id = %s::uuid
     """, (user_id,))
     user = cur.fetchone()
-    if user and user[0] and user[1]:  # Has first and last name at minimum
+    if user and user[0] and user[1]:
         auto_completed.append("profile_complete")
 
-    # Check branding setup
-    cur.execute("""
-        SELECT logo_url, primary_color
-        FROM accounts WHERE id = %s::uuid
-    """, (account_id,))
-    account = cur.fetchone()
-    if account and account[0]:  # Has logo
-        auto_completed.append("branding_setup")
+    # Check branding setup (company: check affiliate_branding; regular: check accounts)
+    if account_type == "TITLE_COMPANY":
+        cur.execute("""
+            SELECT logo_url FROM affiliate_branding WHERE account_id = %s::uuid
+        """, (account_id,))
+        ab = cur.fetchone()
+        if ab and ab[0]:
+            auto_completed.append("branding_setup")
+    else:
+        cur.execute("""
+            SELECT logo_url, primary_color FROM accounts WHERE id = %s::uuid
+        """, (account_id,))
+        account = cur.fetchone()
+        if account and account[0]:
+            auto_completed.append("branding_setup")
 
     # Check first report
     cur.execute("""
@@ -180,6 +256,16 @@ def check_auto_completions(cur, user_id: str, account_id: str, account_type: str
         if sponsored_count > 0:
             auto_completed.append("first_agent_invited")
 
+    # For companies, check if they've invited a rep
+    if account_type == "TITLE_COMPANY":
+        cur.execute("""
+            SELECT COUNT(*) FROM accounts
+            WHERE parent_account_id = %s::uuid AND account_type = 'INDUSTRY_AFFILIATE'
+        """, (account_id,))
+        rep_count = cur.fetchone()[0]
+        if rep_count > 0:
+            auto_completed.append("first_rep_invited")
+
     return auto_completed
 
 
@@ -201,10 +287,12 @@ def get_onboarding_status(request: Request):
     user_id = user_info["id"]
 
     with db_conn() as (conn, cur):
-        # Get user's onboarding state and account type
+        # Get user's onboarding state and account type + sponsor/parent status
         cur.execute("""
             SELECT u.onboarding_completed_at, u.onboarding_step, u.onboarding_data,
-                   a.account_type
+                   a.account_type,
+                   a.sponsor_account_id IS NOT NULL AS is_sponsored,
+                   a.parent_account_id IS NOT NULL AS has_parent
             FROM users u
             JOIN accounts a ON a.id = %s::uuid
             WHERE u.id = %s::uuid
@@ -214,13 +302,13 @@ def get_onboarding_status(request: Request):
         if not row:
             raise HTTPException(status_code=404, detail="User not found")
 
-        onboarding_completed_at, current_step, onboarding_data, account_type = row
+        onboarding_completed_at, current_step, onboarding_data, account_type, is_sponsored, has_parent = row
         onboarding_data = onboarding_data or {}
 
         is_dismissed = onboarding_data.get("dismissed", False)
 
         # Get steps for this user type
-        step_definitions = get_steps_for_user(account_type)
+        step_definitions = get_steps_for_user(account_type, is_sponsored=bool(is_sponsored), has_parent=bool(has_parent))
 
         # Get existing progress records
         cur.execute("""
@@ -305,7 +393,10 @@ def complete_onboarding_step(body: CompleteStepRequest, request: Request):
     user_id = user_info["id"]
 
     # Validate step key
-    all_steps = [s["key"] for s in ONBOARDING_STEPS + AFFILIATE_ONBOARDING_STEPS]
+    all_steps = [s["key"] for s in
+                 ONBOARDING_STEPS + AFFILIATE_ONBOARDING_STEPS +
+                 COMPANY_ONBOARDING_STEPS + COMPANY_REP_ONBOARDING_STEPS +
+                 SPONSORED_ONBOARDING_STEPS]
     if body.step_key not in all_steps:
         raise HTTPException(status_code=400, detail=f"Invalid step key: {body.step_key}")
 
@@ -347,7 +438,10 @@ def skip_onboarding_step(body: SkipStepRequest, request: Request):
     user_id = user_info["id"]
 
     # Validate step key
-    all_steps = {s["key"]: s for s in ONBOARDING_STEPS + AFFILIATE_ONBOARDING_STEPS}
+    all_steps = {s["key"]: s for s in
+                 ONBOARDING_STEPS + AFFILIATE_ONBOARDING_STEPS +
+                 COMPANY_ONBOARDING_STEPS + COMPANY_REP_ONBOARDING_STEPS +
+                 SPONSORED_ONBOARDING_STEPS}
     if body.step_key not in all_steps:
         raise HTTPException(status_code=400, detail=f"Invalid step key: {body.step_key}")
 

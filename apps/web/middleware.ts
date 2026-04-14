@@ -86,6 +86,18 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL("/app", req.url))
     }
 
+    // Affiliate routes require INDUSTRY_AFFILIATE account type
+    if (pathname.startsWith("/app/affiliate") && decoded.account_type !== "INDUSTRY_AFFILIATE") {
+      return NextResponse.redirect(new URL("/app", req.url))
+    }
+
+    // Sponsored agents cannot access branding or billing
+    if (decoded.is_sponsored === true) {
+      if (pathname === "/app/settings/branding" || pathname === "/app/settings/billing") {
+        return NextResponse.redirect(new URL("/app", req.url))
+      }
+    }
+
     return NextResponse.next()
   }
 

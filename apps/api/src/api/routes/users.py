@@ -276,19 +276,39 @@ def change_password(body: PasswordChangeRequest, request: Request, response: Res
 
         conn.commit()
 
-        # Issue new JWT token (this invalidates other sessions since they have old tokens)
+        # Fetch tier flags for a complete JWT (same claims as login)
+        cur.execute("""
+            SELECT u.role, u.is_platform_admin,
+                   a.account_type, a.sponsor_account_id, a.parent_account_id
+            FROM users u
+            JOIN account_users au ON au.user_id = u.id
+            JOIN accounts a ON a.id = au.account_id
+            WHERE u.id = %s::uuid LIMIT 1
+        """, (user_id,))
+        tier_row = cur.fetchone()
+
+        user_role = (tier_row[0] or "USER").upper() if tier_row else "USER"
+        is_platform_admin = bool(tier_row[1]) if tier_row else False
+        acct_type = tier_row[2] if tier_row else "REGULAR"
+
         token = sign_jwt(
             {
                 "sub": user_id,
                 "user_id": user_id,
                 "account_id": account_id,
-                "scopes": ["reports:read", "reports:write"]
+                "role": user_role,
+                "account_type": acct_type,
+                "is_platform_admin": is_platform_admin,
+                "is_company_admin": acct_type == "TITLE_COMPANY",
+                "is_affiliate": acct_type == "INDUSTRY_AFFILIATE",
+                "is_sponsored": bool(tier_row[3]) if tier_row else False,
+                "parent_account_id": str(tier_row[4]) if tier_row and tier_row[4] else None,
+                "scopes": ["reports:read", "reports:write"],
             },
             settings.JWT_SECRET,
             ttl_seconds=3600
         )
 
-        # Set new cookie
         response.set_cookie(
             key="mr_token",
             value=token,
@@ -379,19 +399,39 @@ def change_email(body: EmailChangeRequest, request: Request, response: Response)
         updated_row = cur.fetchone()
         conn.commit()
 
-        # Issue new JWT token with updated info
+        # Fetch tier flags for a complete JWT (same claims as login)
+        cur.execute("""
+            SELECT u.role, u.is_platform_admin,
+                   a.account_type, a.sponsor_account_id, a.parent_account_id
+            FROM users u
+            JOIN account_users au ON au.user_id = u.id
+            JOIN accounts a ON a.id = au.account_id
+            WHERE u.id = %s::uuid LIMIT 1
+        """, (user_id,))
+        tier_row = cur.fetchone()
+
+        user_role = (tier_row[0] or "USER").upper() if tier_row else "USER"
+        is_platform_admin = bool(tier_row[1]) if tier_row else False
+        acct_type = tier_row[2] if tier_row else "REGULAR"
+
         token = sign_jwt(
             {
                 "sub": user_id,
                 "user_id": user_id,
                 "account_id": account_id,
-                "scopes": ["reports:read", "reports:write"]
+                "role": user_role,
+                "account_type": acct_type,
+                "is_platform_admin": is_platform_admin,
+                "is_company_admin": acct_type == "TITLE_COMPANY",
+                "is_affiliate": acct_type == "INDUSTRY_AFFILIATE",
+                "is_sponsored": bool(tier_row[3]) if tier_row else False,
+                "parent_account_id": str(tier_row[4]) if tier_row and tier_row[4] else None,
+                "scopes": ["reports:read", "reports:write"],
             },
             settings.JWT_SECRET,
             ttl_seconds=3600
         )
 
-        # Set new cookie
         response.set_cookie(
             key="mr_token",
             value=token,

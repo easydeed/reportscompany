@@ -21,6 +21,9 @@ class AccountOut(BaseModel):
     id: str
     name: str
     slug: str
+    account_type: Optional[str] = None
+    parent_account_id: Optional[str] = None
+    parent_company_name: Optional[str] = None
     # Logo fields
     logo_url: Optional[str] = None
     footer_logo_url: Optional[str] = None
@@ -99,16 +102,19 @@ def get_account(request: Request, account_id: str = Depends(require_account_id))
     with db_conn() as (conn, cur):
         set_rls(cur, account_id)
         
-        # Get account data
+        # Get account data with optional parent company name
         cur.execute("""
-            SELECT id::text, name, slug, 
-                   logo_url, footer_logo_url, email_logo_url, email_footer_logo_url,
-                   primary_color, secondary_color,
-                   subscription_status, monthly_report_limit, api_rate_limit,
-                   plan_slug, billing_status, stripe_customer_id,
-                   default_theme_id
-            FROM accounts
-            WHERE id = %s
+            SELECT a.id::text, a.name, a.slug, 
+                   a.logo_url, a.footer_logo_url, a.email_logo_url, a.email_footer_logo_url,
+                   a.primary_color, a.secondary_color,
+                   a.subscription_status, a.monthly_report_limit, a.api_rate_limit,
+                   a.plan_slug, a.billing_status, a.stripe_customer_id,
+                   a.default_theme_id,
+                   a.account_type, a.parent_account_id::text,
+                   pa.name AS parent_company_name
+            FROM accounts a
+            LEFT JOIN accounts pa ON pa.id = a.parent_account_id
+            WHERE a.id = %s
         """, (account_id,))
         acc_row = cur.fetchone()
         if not acc_row:
@@ -150,6 +156,9 @@ def get_account(request: Request, account_id: str = Depends(require_account_id))
             primary_color=acc_row[7],
             secondary_color=acc_row[8],
             default_theme_id=acc_row[15],
+            account_type=acc_row[16],
+            parent_account_id=acc_row[17],
+            parent_company_name=acc_row[18],
             rep_photo_url=rep_photo_url,
             contact_line1=contact_line1,
             contact_line2=contact_line2,
@@ -208,13 +217,17 @@ def patch_branding(payload: BrandingPatch, request: Request, account_id: str = D
 
         # Get updated account data
         cur.execute("""
-            SELECT id::text, name, slug, 
-                   logo_url, footer_logo_url, email_logo_url, email_footer_logo_url,
-                   primary_color, secondary_color,
-                   subscription_status, monthly_report_limit, api_rate_limit,
-                   plan_slug, billing_status, stripe_customer_id,
-                   default_theme_id
-            FROM accounts WHERE id = %s
+            SELECT a.id::text, a.name, a.slug, 
+                   a.logo_url, a.footer_logo_url, a.email_logo_url, a.email_footer_logo_url,
+                   a.primary_color, a.secondary_color,
+                   a.subscription_status, a.monthly_report_limit, a.api_rate_limit,
+                   a.plan_slug, a.billing_status, a.stripe_customer_id,
+                   a.default_theme_id,
+                   a.account_type, a.parent_account_id::text,
+                   pa.name AS parent_company_name
+            FROM accounts a
+            LEFT JOIN accounts pa ON pa.id = a.parent_account_id
+            WHERE a.id = %s
         """, (account_id,))
         acc_row = cur.fetchone()
         
@@ -254,6 +267,9 @@ def patch_branding(payload: BrandingPatch, request: Request, account_id: str = D
             primary_color=acc_row[7],
             secondary_color=acc_row[8],
             default_theme_id=acc_row[15],
+            account_type=acc_row[16],
+            parent_account_id=acc_row[17],
+            parent_company_name=acc_row[18],
             rep_photo_url=rep_photo_url,
             contact_line1=contact_line1,
             contact_line2=contact_line2,

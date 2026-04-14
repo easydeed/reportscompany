@@ -142,18 +142,16 @@ export default function CompanyBrandingPage() {
     setSaving(true)
     try {
       const [brandingRes, profileRes] = await Promise.all([
-        fetch("/api/proxy/v1/account/branding", {
+        fetch("/api/proxy/v1/company/branding", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            display_name: branding.display_name || undefined,
-            tagline: branding.tagline || undefined,
+            brand_display_name: branding.display_name || undefined,
             primary_color: branding.primary_color,
-            secondary_color: branding.accent_color,
-            default_theme_id: branding.default_theme_id,
+            accent_color: branding.accent_color,
             logo_url: branding.header_logo_url,
-            footer_logo_url: branding.footer_logo_url,
             email_logo_url: branding.header_logo_url,
+            footer_logo_url: branding.footer_logo_url,
             email_footer_logo_url: branding.footer_logo_url,
           }),
         }),

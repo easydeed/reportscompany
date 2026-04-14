@@ -554,6 +554,7 @@ def accept_invite(body: AcceptInviteRequest, response: Response, background_task
                 "ok": True,
                 "access_token": access_token,
                 "token_type": "bearer",
+                "account_type": account_type,
                 "user": {
                     "id": user_id,
                     "email": email,

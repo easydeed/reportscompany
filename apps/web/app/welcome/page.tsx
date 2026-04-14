@@ -95,6 +95,8 @@ function WelcomeContent() {
         throw new Error(data.detail?.message || data.message || 'Failed to activate account');
       }
 
+      const data = await response.json().catch(() => ({}));
+
       // Success! Show success message
       setSuccess(true);
       
@@ -103,9 +105,13 @@ function WelcomeContent() {
         description: 'Redirecting to dashboard...',
       });
 
-      // Redirect to login or dashboard after a short delay
+      // Redirect based on account tier
+      const acctType = data.account_type;
+      const dest = acctType === 'TITLE_COMPANY' ? '/app/company'
+                 : acctType === 'INDUSTRY_AFFILIATE' ? '/app/affiliate'
+                 : '/app';
       setTimeout(() => {
-        router.push('/app');
+        router.push(dest);
       }, 2000);
 
     } catch (error) {

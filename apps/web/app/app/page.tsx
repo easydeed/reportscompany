@@ -32,10 +32,13 @@ export default async function DashboardPage() {
   const cookieStore = await cookies()
   const token = cookieStore.get('mr_token')?.value
 
-  // Affiliate redirect — decode JWT without try-catch wrapping redirect()
+  // Tier-based redirect — decode JWT without try-catch wrapping redirect()
   // (Next.js redirect() works by throwing, so it must NOT be inside a catch)
   if (token) {
     const decoded = decodeJwtPayload(token)
+    if (decoded?.account_type === 'TITLE_COMPANY' || decoded?.is_company_admin) {
+      redirect('/app/company')
+    }
     if (decoded?.account_type === 'INDUSTRY_AFFILIATE') {
       redirect('/app/affiliate')
     }
