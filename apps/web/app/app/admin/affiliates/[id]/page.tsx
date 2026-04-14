@@ -7,6 +7,16 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Table,
   TableBody,
@@ -30,7 +40,10 @@ import {
   FileUp,
   User,
   AlertTriangle,
+  Send,
+  Loader2,
 } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
 import { InviteAgentForm } from "./invite-agent-form"
 import { AffiliateActions } from "./affiliate-actions"
 import { BulkImportForm } from "./bulk-import-form"
@@ -77,10 +90,39 @@ interface AffiliateDetail {
     last_name: string | null
     is_active: boolean
     created_at: string
+    status: 'pending' | 'active' | 'deactivated'
+    last_invite_sent: string | null
   }
   agents: Agent[]
   agent_count: number
   reports_this_month: number
+}
+
+function formatRelativeTime(dateString: string | null): string {
+  if (!dateString) return 'Never'
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60_000)
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `${diffHours}h ago`
+  const diffDays = Math.floor(diffHours / 24)
+  if (diffDays < 7) return `${diffDays}d ago`
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function AdminStatusBadge({ status }: { status: string }) {
+  switch (status) {
+    case 'active':
+      return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[11px]"><CheckCircle className="h-3 w-3 mr-1" />Active</Badge>
+    case 'deactivated':
+      return <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-200 text-[11px]"><XCircle className="h-3 w-3 mr-1" />Deactivated</Badge>
+    case 'pending':
+    default:
+      return <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-200 text-[11px]">Pending</Badge>
+  }
 }
 
 export default function AffiliateDetailPage() {
@@ -89,26 +131,91 @@ export default function AffiliateDetailPage() {
   const [affiliate, setAffiliate] = useState<AffiliateDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const { toast } = useToast()
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const res = await fetch(`/api/proxy/v1/admin/affiliates/${id}`, {
-          credentials: 'include',
-        })
-        if (!res.ok) {
-          setError(true)
-          return
-        }
-        setAffiliate(await res.json())
-      } catch {
+  // Invite admin modal
+  const [inviteAdminOpen, setInviteAdminOpen] = useState(false)
+  const [inviteForm, setInviteForm] = useState({ email: '', first_name: '', last_name: '' })
+  const [inviteSubmitting, setInviteSubmitting] = useState(false)
+
+  // Resend invite loading
+  const [resending, setResending] = useState(false)
+
+  async function fetchData() {
+    try {
+      const res = await fetch(`/api/proxy/v1/admin/affiliates/${id}`, {
+        credentials: 'include',
+      })
+      if (!res.ok) {
         setError(true)
-      } finally {
-        setLoading(false)
+        return
       }
+      setAffiliate(await res.json())
+    } catch {
+      setError(true)
+    } finally {
+      setLoading(false)
     }
-    fetchData()
-  }, [id])
+  }
+
+  useEffect(() => { fetchData() }, [id])
+
+  async function handleInviteAdmin(e: React.FormEvent) {
+    e.preventDefault()
+    if (!inviteForm.email || !inviteForm.first_name || !inviteForm.last_name) return
+    setInviteSubmitting(true)
+    try {
+      const res = await fetch(`/api/proxy/v1/admin/affiliates/${id}/invite-admin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(inviteForm),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast({ title: 'Admin invited', description: `Invitation sent to ${inviteForm.email}` })
+        setInviteAdminOpen(false)
+        setInviteForm({ email: '', first_name: '', last_name: '' })
+        fetchData()
+      } else {
+        const detail = typeof data.detail === 'string' ? data.detail : data.detail?.message || 'Failed to invite admin'
+        toast({ title: 'Error', description: detail, variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Network error — please try again', variant: 'destructive' })
+    } finally {
+      setInviteSubmitting(false)
+    }
+  }
+
+  async function handleResendAdminInvite() {
+    if (!affiliate?.admin_user) return
+    setResending(true)
+    try {
+      const res = await fetch(`/api/proxy/v1/admin/affiliates/${id}/invite-admin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          email: affiliate.admin_user.email,
+          first_name: affiliate.admin_user.first_name || '',
+          last_name: affiliate.admin_user.last_name || '',
+        }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast({ title: 'Invitation resent', description: `New invitation sent to ${affiliate.admin_user.email}` })
+        fetchData()
+      } else {
+        const detail = typeof data.detail === 'string' ? data.detail : data.detail?.message || 'Failed to resend invitation'
+        toast({ title: 'Error', description: detail, variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Network error — please try again', variant: 'destructive' })
+    } finally {
+      setResending(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -244,41 +351,55 @@ export default function AffiliateDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* Admin User */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Admin Contact</CardTitle>
-            <CardDescription>Primary account administrator</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <Card className="bg-card border border-border rounded-xl shadow-sm">
+          <div className="px-5 py-3 border-b border-border bg-muted/30">
+            <h3 className="text-sm font-semibold">Company Admin</h3>
+          </div>
+          <div className="p-5">
             {affiliate.admin_user ? (
               <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span>{affiliate.admin_user.email}</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-sm font-semibold text-primary">
+                        {(affiliate.admin_user.first_name?.[0] || affiliate.admin_user.email[0])?.toUpperCase()}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">
+                        {affiliate.admin_user.first_name || affiliate.admin_user.last_name
+                          ? `${affiliate.admin_user.first_name || ''} ${affiliate.admin_user.last_name || ''}`.trim()
+                          : affiliate.admin_user.email}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{affiliate.admin_user.email}</p>
+                    </div>
+                  </div>
+                  <AdminStatusBadge status={affiliate.admin_user.status} />
                 </div>
-                {(affiliate.admin_user.first_name || affiliate.admin_user.last_name) && (
-                  <div className="text-sm text-muted-foreground">
-                    {affiliate.admin_user.first_name} {affiliate.admin_user.last_name}
+                {affiliate.admin_user.status === 'pending' && (
+                  <div className="flex items-center justify-between pt-2 border-t border-border">
+                    <p className="text-xs text-muted-foreground">
+                      {affiliate.admin_user.last_invite_sent
+                        ? `Last sent: ${formatRelativeTime(affiliate.admin_user.last_invite_sent)}`
+                        : 'No invitation sent yet'}
+                    </p>
+                    <Button variant="outline" size="sm" onClick={handleResendAdminInvite} disabled={resending}>
+                      {resending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Send className="h-3.5 w-3.5 mr-1" />}
+                      Resend Invite
+                    </Button>
                   </div>
                 )}
-                <div className="flex items-center gap-2">
-                  {affiliate.admin_user.is_active ? (
-                    <Badge variant="outline" className="text-green-600">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Active
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-red-600">
-                      <XCircle className="h-3 w-3 mr-1" />
-                      Inactive
-                    </Badge>
-                  )}
-                </div>
               </div>
             ) : (
-              <p className="text-muted-foreground">No admin user found</p>
+              <div className="text-center py-4">
+                <p className="text-sm text-muted-foreground mb-3">No admin has been invited yet.</p>
+                <Button size="sm" onClick={() => setInviteAdminOpen(true)}>
+                  <UserPlus className="h-4 w-4 mr-1" />
+                  Invite Company Admin
+                </Button>
+              </div>
             )}
-          </CardContent>
+          </div>
         </Card>
 
         {/* Branding */}
@@ -461,6 +582,64 @@ export default function AffiliateDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Invite Admin Dialog */}
+      <Dialog open={inviteAdminOpen} onOpenChange={setInviteAdminOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Invite Company Admin</DialogTitle>
+            <DialogDescription>
+              Create an admin user for {affiliate.name}. They&apos;ll receive an invitation email to set up their account.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleInviteAdmin}>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="admin_first_name">First Name</Label>
+                  <Input
+                    id="admin_first_name"
+                    required
+                    value={inviteForm.first_name}
+                    onChange={(e) => setInviteForm(prev => ({ ...prev, first_name: e.target.value }))}
+                    disabled={inviteSubmitting}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="admin_last_name">Last Name</Label>
+                  <Input
+                    id="admin_last_name"
+                    required
+                    value={inviteForm.last_name}
+                    onChange={(e) => setInviteForm(prev => ({ ...prev, last_name: e.target.value }))}
+                    disabled={inviteSubmitting}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="admin_email">Email Address</Label>
+                <Input
+                  id="admin_email"
+                  type="email"
+                  required
+                  value={inviteForm.email}
+                  onChange={(e) => setInviteForm(prev => ({ ...prev, email: e.target.value }))}
+                  disabled={inviteSubmitting}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setInviteAdminOpen(false)} disabled={inviteSubmitting}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={inviteSubmitting}>
+                {inviteSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                Send Invitation
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

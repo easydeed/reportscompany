@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Building2, TrendingUp, Users2, Loader2,
-  MoreHorizontal, Eye, UserX, UserCheck, Trash2, Send,
+  MoreHorizontal, UserX, UserCheck, Trash2, Send,
 } from 'lucide-react';
 import { InviteAgentModal } from '@/components/invite-agent-modal';
 import { BulkInviteModal } from '@/components/affiliate/bulk-invite-modal';
@@ -343,20 +343,13 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
                                 </>
                               )}
                               {account.status === 'active' && (
-                                <>
-                                  <DropdownMenuItem onClick={() => window.open(`/app/admin/accounts/${account.account_id}`, '_blank')}>
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    View Details
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    className="text-destructive focus:text-destructive"
-                                    onClick={() => setConfirmModal({ open: true, agent: account, action: 'deactivate' })}
-                                  >
-                                    <UserX className="h-4 w-4 mr-2" />
-                                    Deactivate
-                                  </DropdownMenuItem>
-                                </>
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => setConfirmModal({ open: true, agent: account, action: 'deactivate' })}
+                                >
+                                  <UserX className="h-4 w-4 mr-2" />
+                                  Deactivate
+                                </DropdownMenuItem>
                               )}
                               {account.status === 'deactivated' && (
                                 <>

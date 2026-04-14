@@ -101,7 +101,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
 
   const mainNavigation = isAffiliate
     ? [
-        { name: "Dashboard", href: "/app/affiliate", icon: LayoutDashboard },
+        { name: "Affiliate Dashboard", href: "/app/affiliate", icon: Building2 },
         { name: "Market Reports", href: "/app/reports", icon: FileText },
         { name: "Property Reports", href: "/app/property", icon: Home },
         { name: "Schedules", href: "/app/schedules", icon: Calendar },
