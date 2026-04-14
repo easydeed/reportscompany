@@ -353,7 +353,7 @@ def accept_invite(body: AcceptInviteRequest, response: Response):
         with conn.cursor() as cur:
             # 1. Validate token from signup_tokens
             cur.execute("""
-                SELECT user_id::text, account_id::text, expires_at, used_at
+                SELECT user_id::text, account_id::text, expires_at, used
                 FROM signup_tokens
                 WHERE token = %s
             """, (token,))
@@ -369,10 +369,10 @@ def accept_invite(body: AcceptInviteRequest, response: Response):
                     }
                 )
             
-            user_id, account_id, expires_at, used_at = token_row
+            user_id, account_id, expires_at, used = token_row
             
             # Check if token already used
-            if used_at is not None:
+            if used:
                 raise HTTPException(
                     status_code=400,
                     detail={
@@ -433,7 +433,7 @@ def accept_invite(body: AcceptInviteRequest, response: Response):
             # 4. Mark token as used
             cur.execute("""
                 UPDATE signup_tokens
-                SET used_at = NOW()
+                SET used = TRUE
                 WHERE token = %s
             """, (token,))
             

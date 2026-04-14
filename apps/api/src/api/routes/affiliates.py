@@ -258,8 +258,8 @@ def resend_invite(
 
         # Invalidate old tokens, generate a new one
         cur.execute("""
-            UPDATE signup_tokens SET used_at = NOW()
-            WHERE user_id = %s::uuid AND used_at IS NULL
+            UPDATE signup_tokens SET used = TRUE
+            WHERE user_id = %s::uuid AND used = FALSE
         """, (user_id,))
 
         token = secrets.token_urlsafe(32)
