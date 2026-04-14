@@ -85,6 +85,16 @@ export const queryKeys = {
     accounts: ["affiliate", "accounts"] as const,
     detail: (id: string) => ["affiliate", "detail", id] as const,
   },
+
+  // Company (Title Company Admin)
+  company: {
+    overview: ["company", "overview"] as const,
+    reps: (filters?: Record<string, string>) =>
+      ["company", "reps", filters ?? {}] as const,
+    agents: (filters?: Record<string, string>) =>
+      ["company", "agents", filters ?? {}] as const,
+    branding: ["company", "branding"] as const,
+  },
 } as const
 
 // ============================================================================
@@ -230,6 +240,49 @@ export function useAffiliateOverview() {
     queryKey: queryKeys.affiliate.overview,
     queryFn: () => apiFetchRQ("/v1/affiliate/overview"),
     retry: false, // Don't retry 403 (not affiliate)
+  })
+}
+
+/** Company overview (title company admin dashboard) */
+export function useCompanyOverview() {
+  return useQuery({
+    queryKey: queryKeys.company.overview,
+    queryFn: () => apiFetchRQ("/v1/company/overview"),
+    retry: false,
+  })
+}
+
+/** Company reps list */
+export function useCompanyReps(filters?: Record<string, string>) {
+  const params = filters
+    ? "?" + new URLSearchParams(filters).toString()
+    : ""
+  return useQuery({
+    queryKey: queryKeys.company.reps(filters),
+    queryFn: () => apiFetchRQ(`/v1/company/reps${params}`),
+    retry: false,
+  })
+}
+
+/** Company agents list (all agents across reps) */
+export function useCompanyAgents(filters?: Record<string, string>) {
+  const params = filters
+    ? "?" + new URLSearchParams(filters).toString()
+    : ""
+  return useQuery({
+    queryKey: queryKeys.company.agents(filters),
+    queryFn: () => apiFetchRQ(`/v1/company/agents${params}`),
+    retry: false,
+  })
+}
+
+/** Company branding */
+export function useCompanyBranding() {
+  return useQuery({
+    queryKey: queryKeys.company.branding,
+    queryFn: () => apiFetchRQ("/v1/company/branding"),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
   })
 }
 

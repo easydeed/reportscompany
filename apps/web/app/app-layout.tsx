@@ -67,6 +67,15 @@ import { usePlanUsage, useMe } from "@/hooks/use-api"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 
+type NavItem = { name: string; href: string; icon: React.ComponentType<{ className?: string }> }
+
+interface TierProps {
+  isAdmin: boolean
+  isCompanyAdmin: boolean
+  isAffiliate: boolean
+  isSponsored: boolean
+}
+
 // Routes where sidebar should be hidden (builder modes)
 const BUILDER_ROUTES = [
   "/app/property/new",
@@ -81,7 +90,118 @@ function isBuilderRoute(pathname: string | null): boolean {
   return false
 }
 
-function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffiliate: boolean }) {
+function getNavigation({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }: TierProps) {
+  // TIER 1 — Platform Admin: sees admin tools + own profile
+  if (isAdmin) {
+    return {
+      main: [
+        { name: "Admin Dashboard", href: "/app/admin", icon: LayoutDashboard },
+      ] as NavItem[],
+      admin: [
+        { name: "Companies", href: "/app/admin/companies", icon: Building },
+        { name: "Title Reps", href: "/app/admin/affiliates", icon: Building2 },
+        { name: "Accounts", href: "/app/admin/accounts", icon: Home },
+        { name: "Users", href: "/app/admin/users", icon: Users },
+        { name: "Market Reports", href: "/app/admin/reports", icon: FileText },
+        { name: "Schedules", href: "/app/admin/schedules", icon: Calendar },
+        { name: "Property Reports", href: "/app/admin/property-reports", icon: Home },
+        { name: "Emails", href: "/app/admin/emails", icon: Mail },
+        { name: "SMS", href: "/app/admin/sms", icon: MessageSquare },
+        { name: "Lead Pages", href: "/app/admin/lead-pages", icon: Link2 },
+        { name: "Leads", href: "/app/admin/leads", icon: UserCheck },
+        { name: "Analytics", href: "/app/admin/analytics", icon: BarChart3 },
+        { name: "Plans", href: "/app/admin/plans", icon: CreditCard },
+        { name: "Security", href: "/app/admin/security", icon: Shield },
+        { name: "System", href: "/app/admin/system", icon: Server },
+        { name: "Billing", href: "/app/admin/billing", icon: CreditCard },
+      ] as NavItem[],
+      settings: [
+        { name: "Profile", href: "/app/settings/profile", icon: User },
+        { name: "Security", href: "/app/settings/security", icon: Lock },
+      ] as NavItem[],
+    }
+  }
+
+  // TIER 2 — Company Admin: company overview, reps, agents, branding
+  if (isCompanyAdmin) {
+    return {
+      main: [
+        { name: "Company Dashboard", href: "/app/company", icon: Building },
+        { name: "Title Reps", href: "/app/company/reps", icon: Users },
+        { name: "All Agents", href: "/app/company/agents", icon: UserCheck },
+      ] as NavItem[],
+      settings: [
+        { name: "Profile", href: "/app/settings/profile", icon: User },
+        { name: "Security", href: "/app/settings/security", icon: Lock },
+        { name: "Company Branding", href: "/app/company/branding", icon: Palette },
+        { name: "Billing", href: "/app/settings/billing", icon: CreditCard },
+      ] as NavItem[],
+    }
+  }
+
+  // TIER 3 — Title Rep (Affiliate): agents + tools, no billing
+  if (isAffiliate) {
+    return {
+      main: [
+        { name: "My Agents", href: "/app/affiliate", icon: Users },
+        { name: "Market Reports", href: "/app/reports", icon: FileText },
+        { name: "Property Reports", href: "/app/property", icon: Home },
+        { name: "Schedules", href: "/app/schedules", icon: Calendar },
+      ] as NavItem[],
+      engage: [
+        { name: "Lead Pages", href: "/app/lead-page", icon: Link2 },
+        { name: "Contacts", href: "/app/people", icon: Users },
+      ] as NavItem[],
+      settings: [
+        { name: "Profile", href: "/app/settings/profile", icon: User },
+        { name: "Security", href: "/app/settings/security", icon: Lock },
+        { name: "Branding", href: "/app/settings/branding", icon: Palette },
+      ] as NavItem[],
+    }
+  }
+
+  // TIER 4 — Sponsored Agent: tools but no branding/billing (managed by company)
+  if (isSponsored) {
+    return {
+      main: [
+        { name: "Dashboard", href: "/app", icon: LayoutDashboard },
+        { name: "Market Reports", href: "/app/reports", icon: FileText },
+        { name: "Property Reports", href: "/app/property", icon: Home },
+        { name: "Schedules", href: "/app/schedules", icon: Calendar },
+      ] as NavItem[],
+      engage: [
+        { name: "Lead Pages", href: "/app/lead-page", icon: Link2 },
+        { name: "Contacts", href: "/app/people", icon: Users },
+      ] as NavItem[],
+      settings: [
+        { name: "Profile", href: "/app/settings/profile", icon: User },
+        { name: "Security", href: "/app/settings/security", icon: Lock },
+      ] as NavItem[],
+    }
+  }
+
+  // TIER 5 — Regular Agent: full self-service
+  return {
+    main: [
+      { name: "Dashboard", href: "/app", icon: LayoutDashboard },
+      { name: "Market Reports", href: "/app/reports", icon: FileText },
+      { name: "Property Reports", href: "/app/property", icon: Home },
+      { name: "Schedules", href: "/app/schedules", icon: Calendar },
+    ] as NavItem[],
+    engage: [
+      { name: "Lead Pages", href: "/app/lead-page", icon: Link2 },
+      { name: "Contacts", href: "/app/people", icon: Users },
+    ] as NavItem[],
+    settings: [
+      { name: "Profile", href: "/app/settings/profile", icon: User },
+      { name: "Security", href: "/app/settings/security", icon: Lock },
+      { name: "Branding", href: "/app/settings/branding", icon: Palette },
+      { name: "Billing", href: "/app/settings/billing", icon: CreditCard },
+    ] as NavItem[],
+  }
+}
+
+function DashboardSidebar({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }: TierProps) {
   const pathname = usePathname()
   const { data: planUsage } = usePlanUsage()
 
@@ -94,83 +214,45 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
     }
   }, [planUsage])
 
+  const nav = useMemo(() => getNavigation({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }), [isAdmin, isCompanyAdmin, isAffiliate, isSponsored])
+
   const isInAdminSection = pathname?.startsWith("/app/admin")
   const isInSettingsSection = pathname?.startsWith("/app/settings")
   
   const usagePercent = planInfo ? Math.min((planInfo.reports_used / planInfo.reports_limit) * 100, 100) : 0
 
-  const mainNavigation = isAffiliate
-    ? [
-        { name: "Affiliate Dashboard", href: "/app/affiliate", icon: Building2 },
-        { name: "Market Reports", href: "/app/reports", icon: FileText },
-        { name: "Property Reports", href: "/app/property", icon: Home },
-        { name: "Schedules", href: "/app/schedules", icon: Calendar },
-      ]
-    : [
-        { name: "Dashboard", href: "/app", icon: LayoutDashboard },
-        { name: "Market Reports", href: "/app/reports", icon: FileText },
-        { name: "Property Reports", href: "/app/property", icon: Home },
-        { name: "Schedules", href: "/app/schedules", icon: Calendar },
-      ]
-  
-  const engageNavigation = [
-    { name: "Lead Pages", href: "/app/lead-page", icon: Link2 },
-    { name: "Contacts", href: "/app/people", icon: Users },
-  ]
-
-  const settingsNavigation = [
-    { name: "Profile", href: "/app/settings/profile", icon: User },
-    { name: "Security", href: "/app/settings/security", icon: Lock },
-    { name: "Branding", href: "/app/settings/branding", icon: Palette },
-    { name: "Billing", href: "/app/settings/billing", icon: CreditCard },
-  ]
-  
-  const adminNavigation = [
-    { name: "Overview", href: "/app/admin", icon: LayoutDashboard },
-    { name: "Title Companies", href: "/app/admin/affiliates", icon: Building2 },
-    { name: "Accounts", href: "/app/admin/accounts", icon: Building },
-    { name: "Users", href: "/app/admin/users", icon: Users },
-    { name: "Property Reports", href: "/app/admin/property-reports", icon: Home },
-    { name: "Market Reports", href: "/app/admin/reports", icon: FileText },
-    { name: "Schedules", href: "/app/admin/schedules", icon: Calendar },
-    { name: "Emails", href: "/app/admin/emails", icon: Mail },
-    { name: "Lead Pages", href: "/app/admin/lead-pages", icon: Link2 },
-    { name: "Leads", href: "/app/admin/leads", icon: UserCheck },
-    { name: "SMS", href: "/app/admin/sms", icon: MessageSquare },
-    { name: "Plans", href: "/app/admin/plans", icon: Shield },
-    { name: "Analytics", href: "/app/admin/analytics", icon: BarChart3 },
-    { name: "Security", href: "/app/admin/security", icon: Lock },
-    { name: "System", href: "/app/admin/system", icon: Server },
-    { name: "Billing", href: "/app/admin/billing", icon: CreditCard },
-  ]
+  const homeHref = isAdmin ? "/app/admin" : isCompanyAdmin ? "/app/company" : isAffiliate ? "/app/affiliate" : "/app"
+  const exactHomeHrefs = ["/app", "/app/affiliate", "/app/admin", "/app/company"]
 
   return (
     <Sidebar>
       <SidebarHeader>
-        <Link href="/app" prefetch={false} className="flex items-center px-3 py-4">
+        <Link href={homeHref} prefetch={false} className="flex items-center px-3 py-4">
           <img src="/indigo.png" alt="TrendyReports" className="h-7 w-auto" />
         </Link>
       </SidebarHeader>
 
       <SidebarContent>
-        {/* Quick Action */}
-        <div className="px-3 mb-2">
-          <Button size="sm" className="w-full bg-indigo-500 hover:bg-indigo-400 text-white shadow-sm" asChild>
-            <Link href="/app/reports/new" prefetch={false}>
-              <Plus className="w-3.5 h-3.5 mr-1.5" />
-              New Report
-            </Link>
-          </Button>
-        </div>
+        {/* Quick Action — hide for admin / company admin users */}
+        {!isAdmin && !isCompanyAdmin && (
+          <div className="px-3 mb-2">
+            <Button size="sm" className="w-full bg-indigo-500 hover:bg-indigo-400 text-white shadow-sm" asChild>
+              <Link href="/app/reports/new" prefetch={false}>
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                New Report
+              </Link>
+            </Button>
+          </div>
+        )}
 
         {/* Main Navigation */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.08em] font-semibold text-sidebar-muted px-3">
-            Reports
+            {isAdmin ? "Platform" : "Reports"}
           </SidebarGroupLabel>
           <SidebarMenu>
-            {mainNavigation.map((item) => {
-              const isActive = pathname === item.href || (item.href !== "/app" && item.href !== "/app/affiliate" && pathname?.startsWith(item.href))
+            {nav.main.map((item) => {
+              const isActive = pathname === item.href || (!exactHomeHrefs.includes(item.href) && pathname?.startsWith(item.href))
               return (
                 <SidebarMenuItem key={item.name}>
                   <SidebarMenuButton asChild isActive={isActive}>
@@ -185,27 +267,65 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
           </SidebarMenu>
         </SidebarGroup>
 
-        {/* Engage */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.08em] font-semibold text-sidebar-muted px-3">
-            Engage
-          </SidebarGroupLabel>
-          <SidebarMenu>
-            {engageNavigation.map((item) => {
-              const isActive = pathname === item.href || pathname?.startsWith(item.href)
-              return (
-                <SidebarMenuItem key={item.name}>
-                  <SidebarMenuButton asChild isActive={isActive}>
-                    <Link href={item.href}>
-                      <item.icon className="w-4 h-4" />
-                      <span className="text-[13px]">{item.name}</span>
-                    </Link>
-                  </SidebarMenuButton>
+        {/* Admin Section (Tier 1 only) */}
+        {'admin' in nav && (nav as any).admin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.08em] font-semibold text-sidebar-muted px-3">
+              Manage
+            </SidebarGroupLabel>
+            <SidebarMenu>
+              <Collapsible defaultOpen={isInAdminSection} className="group/collapsible-admin">
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton isActive={isInAdminSection}>
+                      <Shield className="w-4 h-4" />
+                      <span className="text-[13px]">Admin</span>
+                      <ChevronRight className="ml-auto h-3.5 w-3.5 transition-transform group-data-[state=open]/collapsible-admin:rotate-90" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      {(nav as any).admin.map((item: NavItem) => (
+                        <SidebarMenuSubItem key={item.name}>
+                          <SidebarMenuSubButton asChild isActive={pathname === item.href}>
+                            <Link href={item.href} prefetch={false}>
+                              <item.icon className="w-3.5 h-3.5" />
+                              <span className="text-[13px]">{item.name}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
                 </SidebarMenuItem>
-              )
-            })}
-          </SidebarMenu>
-        </SidebarGroup>
+              </Collapsible>
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
+
+        {/* Engage Section (non-admin tiers) */}
+        {'engage' in nav && (nav as any).engage && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.08em] font-semibold text-sidebar-muted px-3">
+              Engage
+            </SidebarGroupLabel>
+            <SidebarMenu>
+              {(nav as any).engage.map((item: NavItem) => {
+                const isActive = pathname === item.href || pathname?.startsWith(item.href)
+                return (
+                  <SidebarMenuItem key={item.name}>
+                    <SidebarMenuButton asChild isActive={isActive}>
+                      <Link href={item.href}>
+                        <item.icon className="w-4 h-4" />
+                        <span className="text-[13px]">{item.name}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
 
         {/* Settings */}
         <SidebarGroup>
@@ -224,7 +344,7 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <SidebarMenuSub>
-                    {settingsNavigation.map((item) => (
+                    {nav.settings.map((item) => (
                       <SidebarMenuSubItem key={item.name}>
                         <SidebarMenuSubButton asChild isActive={pathname === item.href}>
                           <Link href={item.href} prefetch={false}>
@@ -238,35 +358,6 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
                 </CollapsibleContent>
               </SidebarMenuItem>
             </Collapsible>
-
-            {/* Admin Section */}
-            {isAdmin && (
-              <Collapsible defaultOpen={isInAdminSection} className="group/collapsible-admin">
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton isActive={isInAdminSection}>
-                      <Shield className="w-4 h-4" />
-                      <span className="text-[13px]">Admin</span>
-                      <ChevronRight className="ml-auto h-3.5 w-3.5 transition-transform group-data-[state=open]/collapsible-admin:rotate-90" />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub>
-                      {adminNavigation.map((item) => (
-                        <SidebarMenuSubItem key={item.name}>
-                          <SidebarMenuSubButton asChild isActive={pathname === item.href}>
-                            <Link href={item.href} prefetch={false}>
-                              <item.icon className="w-3.5 h-3.5" />
-                              <span className="text-[13px]">{item.name}</span>
-                            </Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      ))}
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                </SidebarMenuItem>
-              </Collapsible>
-            )}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
@@ -282,30 +373,32 @@ function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffili
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <div className="px-3 py-3">
-          <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/50 p-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-sidebar-muted">
-                {planInfo?.plan_name || "Free"} Plan
-              </span>
-              <span className="text-[11px] text-sidebar-foreground/70">
-                {planInfo?.reports_used || 0}/{planInfo?.reports_limit || 10}
-              </span>
-            </div>
-            <div className="h-1 bg-sidebar-border rounded-full overflow-hidden">
-              <div 
-                className={`h-full rounded-full transition-all duration-500 ${usagePercent > 80 ? 'bg-amber-400' : 'bg-indigo-400'}`}
-                style={{ width: `${usagePercent}%` }}
-              />
+        {!isAdmin && !isCompanyAdmin && (
+          <div className="px-3 py-3">
+            <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/50 p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-sidebar-muted">
+                  {planInfo?.plan_name || "Free"} Plan
+                </span>
+                <span className="text-[11px] text-sidebar-foreground/70">
+                  {planInfo?.reports_used || 0}/{planInfo?.reports_limit || 10}
+                </span>
+              </div>
+              <div className="h-1 bg-sidebar-border rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all duration-500 ${usagePercent > 80 ? 'bg-amber-400' : 'bg-indigo-400'}`}
+                  style={{ width: `${usagePercent}%` }}
+                />
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </SidebarFooter>
     </Sidebar>
   )
 }
 
-function DashboardTopbar({ accountType, isAdmin, isAffiliate }: { accountType?: string; isAdmin: boolean; isAffiliate: boolean }) {
+function DashboardTopbar({ accountType, isAdmin, isCompanyAdmin, isAffiliate, isSponsored }: { accountType?: string } & TierProps) {
   const { data: user } = useMe()
 
   async function handleLogout() {
@@ -330,13 +423,30 @@ function DashboardTopbar({ accountType, isAdmin, isAffiliate }: { accountType?: 
       <div className="flex-1" />
 
       {/* Account Type Badge */}
-      {accountType === "INDUSTRY_AFFILIATE" && (
+      {isAdmin && (
+        <span className="rounded-full bg-red-50 text-red-700 text-[11px] font-semibold px-2.5 py-0.5 border border-red-200 flex items-center gap-1.5 uppercase tracking-wide">
+          <Shield className="h-3 w-3" />
+          Admin
+        </span>
+      )}
+      {!isAdmin && isCompanyAdmin && (
+        <span className="rounded-full bg-purple-50 text-purple-700 text-[11px] font-semibold px-2.5 py-0.5 border border-purple-200 flex items-center gap-1.5 uppercase tracking-wide">
+          <Building2 className="h-3 w-3" />
+          Company Admin
+        </span>
+      )}
+      {!isAdmin && !isCompanyAdmin && accountType === "INDUSTRY_AFFILIATE" && (
         <span className="rounded-full bg-amber-50 text-amber-700 text-[11px] font-semibold px-2.5 py-0.5 border border-amber-200 flex items-center gap-1.5 uppercase tracking-wide">
           <Building2 className="h-3 w-3" />
           Title Rep
         </span>
       )}
-      {accountType === "REGULAR" && (
+      {!isAdmin && accountType === "REGULAR" && isSponsored && (
+        <span className="rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-semibold px-2.5 py-0.5 border border-emerald-200 uppercase tracking-wide">
+          Sponsored Agent
+        </span>
+      )}
+      {!isAdmin && accountType === "REGULAR" && !isSponsored && (
         <span className="rounded-full bg-indigo-50 text-indigo-600 text-[11px] font-semibold px-2.5 py-0.5 uppercase tracking-wide">
           Agent
         </span>
@@ -365,16 +475,20 @@ function DashboardTopbar({ accountType, isAdmin, isAffiliate }: { accountType?: 
               <User className="w-3.5 h-3.5 mr-2" />Profile
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/app/settings/branding" prefetch={false}>
-              <Palette className="w-3.5 h-3.5 mr-2" />Branding
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/app/settings/billing" prefetch={false}>
-              <CreditCard className="w-3.5 h-3.5 mr-2" />Billing
-            </Link>
-          </DropdownMenuItem>
+          {!isSponsored && !isAdmin && (
+            <DropdownMenuItem asChild>
+              <Link href={isCompanyAdmin ? "/app/company/branding" : "/app/settings/branding"} prefetch={false}>
+                <Palette className="w-3.5 h-3.5 mr-2" />Branding
+              </Link>
+            </DropdownMenuItem>
+          )}
+          {!isSponsored && !isAffiliate && !isAdmin && (
+            <DropdownMenuItem asChild>
+              <Link href="/app/settings/billing" prefetch={false}>
+                <CreditCard className="w-3.5 h-3.5 mr-2" />Billing
+              </Link>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-600">
             Log out
@@ -388,12 +502,16 @@ function DashboardTopbar({ accountType, isAdmin, isAffiliate }: { accountType?: 
 export default function AppLayoutClient({
   children,
   isAdmin,
+  isCompanyAdmin = false,
   isAffiliate = false,
+  isSponsored = false,
   accountType,
 }: {
   children: React.ReactNode
   isAdmin: boolean
+  isCompanyAdmin?: boolean
   isAffiliate?: boolean
+  isSponsored?: boolean
   accountType?: string
 }) {
   const pathname = usePathname()
@@ -418,9 +536,9 @@ export default function AppLayoutClient({
       <SidebarProvider>
         <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
           <div className="flex min-h-screen w-full bg-background text-foreground">
-            <DashboardSidebar isAdmin={isAdmin} isAffiliate={isAffiliate} />
+            <DashboardSidebar isAdmin={isAdmin} isCompanyAdmin={isCompanyAdmin} isAffiliate={isAffiliate} isSponsored={isSponsored} />
             <SidebarInset className="flex flex-col">
-              <DashboardTopbar accountType={accountType} isAdmin={isAdmin} isAffiliate={isAffiliate} />
+              <DashboardTopbar accountType={accountType} isAdmin={isAdmin} isCompanyAdmin={isCompanyAdmin} isAffiliate={isAffiliate} isSponsored={isSponsored} />
               <main className="flex-1 px-6 py-5 bg-background">{children}</main>
             </SidebarInset>
           </div>
