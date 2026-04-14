@@ -37,7 +37,7 @@ async def upload_branding_file(
     Upload a branding asset (logo or headshot).
     
     - **asset_type**: "logo" or "headshot"
-    - **file**: Image file (PNG, JPEG, WebP, GIF; max 5MB; 100-2000px)
+    - **file**: Image file (PNG, JPEG, WebP, GIF, SVG; max 5MB)
     
     Returns the public URL of the uploaded file.
     

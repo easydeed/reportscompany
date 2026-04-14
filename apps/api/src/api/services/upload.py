@@ -24,7 +24,7 @@ R2_ENDPOINT = f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com" if R2_ACCOUNT_
 
 # Constraints
 MAX_FILE_SIZE_MB = 5
-ALLOWED_TYPES = {"image/png", "image/jpeg", "image/webp", "image/gif"}
+ALLOWED_TYPES = {"image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"}
 MAX_DIMENSIONS = (2000, 2000)
 MIN_DIMENSIONS = (100, 100)
 
@@ -53,13 +53,11 @@ async def validate_image(file: UploadFile) -> bytes:
     if file.content_type not in ALLOWED_TYPES:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid file type '{file.content_type}'. Allowed: PNG, JPEG, WebP, GIF"
+            detail=f"Invalid file type '{file.content_type}'. Allowed: PNG, JPEG, WebP, GIF, SVG"
         )
     
-    # Read file
     contents = await file.read()
     
-    # Check file size
     size_mb = len(contents) / (1024 * 1024)
     if size_mb > MAX_FILE_SIZE_MB:
         raise HTTPException(
@@ -67,26 +65,27 @@ async def validate_image(file: UploadFile) -> bytes:
             detail=f"File too large ({size_mb:.1f}MB). Maximum: {MAX_FILE_SIZE_MB}MB"
         )
     
-    # Check dimensions using PIL
-    try:
-        image = Image.open(io.BytesIO(contents))
-        width, height = image.size
-        
-        if width < MIN_DIMENSIONS[0] or height < MIN_DIMENSIONS[1]:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Image too small ({width}x{height}px). Minimum: {MIN_DIMENSIONS[0]}x{MIN_DIMENSIONS[1]}px"
-            )
-        
-        if width > MAX_DIMENSIONS[0] or height > MAX_DIMENSIONS[1]:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Image too large ({width}x{height}px). Maximum: {MAX_DIMENSIONS[0]}x{MAX_DIMENSIONS[1]}px"
-            )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Invalid image file: {str(e)}")
+    # SVGs are vector — skip raster dimension validation
+    if file.content_type != "image/svg+xml":
+        try:
+            image = Image.open(io.BytesIO(contents))
+            width, height = image.size
+            
+            if width < MIN_DIMENSIONS[0] or height < MIN_DIMENSIONS[1]:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Image too small ({width}x{height}px). Minimum: {MIN_DIMENSIONS[0]}x{MIN_DIMENSIONS[1]}px"
+                )
+            
+            if width > MAX_DIMENSIONS[0] or height > MAX_DIMENSIONS[1]:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Image too large ({width}x{height}px). Maximum: {MAX_DIMENSIONS[0]}x{MAX_DIMENSIONS[1]}px"
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Invalid image file: {str(e)}")
     
     return contents
 
@@ -106,7 +105,7 @@ async def upload_branding_asset(
     # Generate unique filename
     original_filename = file.filename or "image"
     ext = original_filename.split(".")[-1].lower() if "." in original_filename else "png"
-    if ext not in ("png", "jpg", "jpeg", "webp", "gif"):
+    if ext not in ("png", "jpg", "jpeg", "webp", "gif", "svg"):
         ext = "png"
     
     timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
@@ -133,6 +132,7 @@ async def upload_branding_asset(
         "jpeg": "image/jpeg",
         "webp": "image/webp",
         "gif": "image/gif",
+        "svg": "image/svg+xml",
     }
     content_type = content_type_map.get(ext, "image/png")
     
