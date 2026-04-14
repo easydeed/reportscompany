@@ -32,7 +32,8 @@ def get_sponsored_accounts(cur, affiliate_account_id: str) -> List[Dict[str, Any
                 WHEN usr.is_active = false THEN 'deactivated'
                 ELSE 'active'
             END AS status,
-            usr.email
+            usr.email,
+            (SELECT MAX(st.created_at) FROM signup_tokens st WHERE st.user_id = usr.id) AS last_invite_sent
         FROM accounts a
         LEFT JOIN (
             SELECT 
@@ -90,6 +91,7 @@ def get_sponsored_accounts(cur, affiliate_account_id: str) -> List[Dict[str, Any
             "last_report_at": row[6].isoformat() if row[6] else None,
             "status": row[7] or "pending",
             "email": row[8],
+            "last_invite_sent": row[9].isoformat() if row[9] else None,
             "groups": groups_by_account.get(row[0], []),
         }
         for row in rows

@@ -2,12 +2,22 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Building2, TrendingUp, Users2, RotateCcw, Loader2 } from 'lucide-react';
+import {
+  Building2, TrendingUp, Users2, RotateCcw, Loader2,
+  MoreHorizontal, Eye, UserX, UserCheck, Trash2, Send,
+} from 'lucide-react';
 import { InviteAgentModal } from '@/components/invite-agent-modal';
 import { BulkInviteModal } from '@/components/affiliate/bulk-invite-modal';
 import { PageHeader } from '@/components/page-header';
 import { MetricCard } from '@/components/metric-card';
 import { useToast } from '@/components/ui/use-toast';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export type SponsoredAccount = {
   account_id: string;
@@ -18,6 +28,7 @@ export type SponsoredAccount = {
   created_at: string;
   status?: 'pending' | 'active' | 'deactivated';
   email?: string;
+  last_invite_sent?: string | null;
 };
 
 export type Overview = {
@@ -33,6 +44,7 @@ export type AffiliateDashboardShellProps = {
     limit: number;
   };
   sponsoredAccounts: SponsoredAccount[];
+  onRefresh?: () => void;
 };
 
 function formatDate(dateString: string | null): string {
@@ -50,6 +62,22 @@ function formatDate(dateString: string | null): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+function formatRelativeTime(dateString: string | null): string {
+  if (!dateString) return 'Never';
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60_000);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 function StatusBadge({ status }: { status: string }) {
   switch (status) {
     case 'active':
@@ -62,43 +90,97 @@ function StatusBadge({ status }: { status: string }) {
   }
 }
 
-function ResendButton({ email }: { email: string }) {
-  const [sending, setSending] = useState(false);
+export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
+  const { overview, planSummary, sponsoredAccounts, onRefresh } = props;
   const { toast } = useToast();
 
-  async function resend() {
-    setSending(true);
+  const [resendModal, setResendModal] = useState<{ open: boolean; agent: SponsoredAccount | null }>({ open: false, agent: null });
+  const [resending, setResending] = useState(false);
+
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    agent: SponsoredAccount | null;
+    action: 'deactivate' | 'reactivate' | 'unsponsor' | null;
+  }>({ open: false, agent: null, action: null });
+  const [actionLoading, setActionLoading] = useState(false);
+
+  async function handleResendInvite(agent: SponsoredAccount) {
+    setResending(true);
     try {
       const res = await fetch('/api/proxy/v1/affiliate/resend-invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: agent.email }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        toast({ title: 'Invite resent', description: `A new invitation was sent to ${email}` });
+        toast({ title: 'Invitation sent', description: `New invitation sent to ${agent.email}` });
+        setResendModal({ open: false, agent: null });
+        onRefresh?.();
       } else {
-        const detail = typeof data.detail === 'string' ? data.detail : data.detail?.message || 'Could not resend invite';
-        toast({ title: 'Failed to resend', description: detail, variant: 'destructive' });
+        const detail = typeof data.detail === 'string' ? data.detail : data.detail?.message || 'Failed to resend invitation';
+        toast({ title: 'Error', description: detail, variant: 'destructive' });
       }
     } catch {
-      toast({ title: 'Error', description: 'Failed to resend invitation', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Network error — please try again', variant: 'destructive' });
     } finally {
-      setSending(false);
+      setResending(false);
     }
   }
 
-  return (
-    <Button variant="ghost" size="sm" onClick={resend} disabled={sending} className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground">
-      {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3 mr-1" />}
-      Resend
-    </Button>
-  );
-}
+  async function handleAccountAction() {
+    if (!confirmModal.agent || !confirmModal.action) return;
+    setActionLoading(true);
+    const { agent, action } = confirmModal;
+    const endpoint = `/api/proxy/v1/affiliate/accounts/${agent.account_id}/${action}`;
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const labels: Record<string, string> = {
+          deactivate: 'Account deactivated',
+          reactivate: 'Account reactivated',
+          unsponsor: 'Sponsorship removed',
+        };
+        toast({ title: labels[action] || 'Done', description: `${agent.name} updated successfully` });
+        setConfirmModal({ open: false, agent: null, action: null });
+        onRefresh?.();
+      } else {
+        const detail = typeof data.detail === 'string' ? data.detail : data.detail?.message || 'Action failed';
+        toast({ title: 'Error', description: detail, variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Network error — please try again', variant: 'destructive' });
+    } finally {
+      setActionLoading(false);
+    }
+  }
 
-export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
-  const { overview, planSummary, sponsoredAccounts } = props;
+  const actionLabels: Record<string, { title: string; description: string; confirm: string; variant: 'default' | 'destructive' }> = {
+    deactivate: {
+      title: 'Deactivate Account',
+      description: 'This will suspend the agent\'s account. They will lose access until reactivated.',
+      confirm: 'Deactivate',
+      variant: 'destructive',
+    },
+    reactivate: {
+      title: 'Reactivate Account',
+      description: 'This will restore the agent\'s account access.',
+      confirm: 'Reactivate',
+      variant: 'default',
+    },
+    unsponsor: {
+      title: 'Remove Sponsorship',
+      description: 'This will remove your sponsorship and downgrade the agent to the free plan. This cannot be undone.',
+      confirm: 'Remove',
+      variant: 'destructive',
+    },
+  };
 
   return (
     <div className="space-y-5">
@@ -182,10 +264,16 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
                         Status
                       </th>
                       <th className="text-left py-2.5 px-6 text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em]">
+                        Last Invited
+                      </th>
+                      <th className="text-left py-2.5 px-6 text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em]">
                         Last Activity
                       </th>
                       <th className="text-left py-2.5 px-6 text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em]">
                         Created
+                      </th>
+                      <th className="text-right py-2.5 px-6 text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em]">
+                        Actions
                       </th>
                     </tr>
                   </thead>
@@ -197,7 +285,12 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
                             <div className="rounded-lg bg-primary/10 p-2">
                               <Building2 className="h-4 w-4 text-primary" />
                             </div>
-                            <span className="font-medium text-foreground">{account.name}</span>
+                            <div>
+                              <span className="font-medium text-foreground">{account.name}</span>
+                              {account.email && (
+                                <p className="text-xs text-muted-foreground">{account.email}</p>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td className="py-4 px-6">
@@ -211,18 +304,78 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
                           </span>
                         </td>
                         <td className="py-4 px-6">
-                          <div className="flex items-center gap-2">
-                            <StatusBadge status={account.status || 'pending'} />
-                            {account.status === 'pending' && account.email && (
-                              <ResendButton email={account.email} />
-                            )}
-                          </div>
+                          <StatusBadge status={account.status || 'pending'} />
+                        </td>
+                        <td className="py-4 px-6 text-sm text-muted-foreground">
+                          {account.status === 'pending' && account.last_invite_sent
+                            ? formatRelativeTime(account.last_invite_sent)
+                            : '—'
+                          }
                         </td>
                         <td className="py-4 px-6 text-sm text-muted-foreground">
                           {formatDate(account.last_report_at)}
                         </td>
                         <td className="py-4 px-6 text-sm text-muted-foreground">
                           {formatDate(account.created_at)}
+                        </td>
+                        <td className="py-4 px-6 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {account.status === 'pending' && (
+                                <>
+                                  <DropdownMenuItem onClick={() => setResendModal({ open: true, agent: account })}>
+                                    <Send className="h-4 w-4 mr-2" />
+                                    Resend Invite
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={() => setConfirmModal({ open: true, agent: account, action: 'deactivate' })}
+                                  >
+                                    <UserX className="h-4 w-4 mr-2" />
+                                    Cancel Invitation
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              {account.status === 'active' && (
+                                <>
+                                  <DropdownMenuItem onClick={() => window.open(`/app/admin/accounts/${account.account_id}`, '_blank')}>
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    View Details
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={() => setConfirmModal({ open: true, agent: account, action: 'deactivate' })}
+                                  >
+                                    <UserX className="h-4 w-4 mr-2" />
+                                    Deactivate
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              {account.status === 'deactivated' && (
+                                <>
+                                  <DropdownMenuItem onClick={() => setConfirmModal({ open: true, agent: account, action: 'reactivate' })}>
+                                    <UserCheck className="h-4 w-4 mr-2" />
+                                    Reactivate
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={() => setConfirmModal({ open: true, agent: account, action: 'unsponsor' })}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Remove
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     ))}
@@ -232,6 +385,88 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
             )}
           </CardContent>
         </Card>
+
+        {/* Resend Invitation Modal */}
+        <Dialog open={resendModal.open} onOpenChange={(o) => { if (!o) setResendModal({ open: false, agent: null }); }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Resend Invitation</DialogTitle>
+              <DialogDescription>
+                Send a new invitation email to this agent.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 py-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="text-sm font-semibold text-primary">
+                    {resendModal.agent?.name?.[0]?.toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{resendModal.agent?.name}</p>
+                  <p className="text-sm text-muted-foreground">{resendModal.agent?.email}</p>
+                </div>
+              </div>
+
+              {resendModal.agent?.last_invite_sent && (
+                <p className="text-xs text-muted-foreground">
+                  Last sent: {new Date(resendModal.agent.last_invite_sent).toLocaleDateString()} at {new Date(resendModal.agent.last_invite_sent).toLocaleTimeString()}
+                </p>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setResendModal({ open: false, agent: null })} disabled={resending}>
+                Cancel
+              </Button>
+              <Button onClick={() => resendModal.agent && handleResendInvite(resendModal.agent)} disabled={resending}>
+                {resending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                Send Invitation
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Confirm Action Modal (deactivate / reactivate / unsponsor) */}
+        <Dialog open={confirmModal.open} onOpenChange={(o) => { if (!o) setConfirmModal({ open: false, agent: null, action: null }); }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{confirmModal.action ? actionLabels[confirmModal.action]?.title : ''}</DialogTitle>
+              <DialogDescription>
+                {confirmModal.action ? actionLabels[confirmModal.action]?.description : ''}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex items-center gap-3 py-4">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-sm font-semibold text-primary">
+                  {confirmModal.agent?.name?.charAt(0)}
+                </span>
+              </div>
+              <div>
+                <p className="text-sm font-medium">{confirmModal.agent?.name}</p>
+                {confirmModal.agent?.email && (
+                  <p className="text-sm text-muted-foreground">{confirmModal.agent.email}</p>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmModal({ open: false, agent: null, action: null })} disabled={actionLoading}>
+                Cancel
+              </Button>
+              <Button
+                variant={confirmModal.action ? actionLabels[confirmModal.action]?.variant : 'default'}
+                onClick={handleAccountAction}
+                disabled={actionLoading}
+              >
+                {actionLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                {confirmModal.action ? actionLabels[confirmModal.action]?.confirm : ''}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
     </div>
   );
 }

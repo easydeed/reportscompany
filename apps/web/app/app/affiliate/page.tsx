@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useAffiliateOverview, usePlanUsage, useOnboarding } from '@/hooks/use-api'
 
 export default function AffiliateDashboardPage() {
-  const { data: affiliateData, isLoading: affLoading, error: affError } = useAffiliateOverview()
+  const { data: affiliateData, isLoading: affLoading, error: affError, refetch } = useAffiliateOverview()
   const { data: planUsage } = usePlanUsage()
   const { data: onboardingData } = useOnboarding()
 
@@ -55,6 +55,7 @@ export default function AffiliateDashboardPage() {
       limit: planUsage.account?.monthly_report_limit_override ?? planUsage.plan?.monthly_report_limit,
     } : undefined,
     sponsoredAccounts: affiliateData.sponsored_accounts,
+    onRefresh: () => refetch(),
   }
 
   return (
