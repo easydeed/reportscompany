@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  Building2, TrendingUp, Users2, RotateCcw, Loader2,
+  Building2, TrendingUp, Users2, Loader2,
   MoreHorizontal, Eye, UserX, UserCheck, Trash2, Send,
 } from 'lucide-react';
 import { InviteAgentModal } from '@/components/invite-agent-modal';
@@ -441,7 +441,7 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
             <div className="flex items-center gap-3 py-4">
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <span className="text-sm font-semibold text-primary">
-                  {confirmModal.agent?.name?.charAt(0)}
+                  {confirmModal.agent?.name?.[0]?.toUpperCase()}
                 </span>
               </div>
               <div>
