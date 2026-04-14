@@ -1,9 +1,13 @@
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, TrendingUp, Users2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Building2, TrendingUp, Users2, RotateCcw, Loader2 } from 'lucide-react';
 import { InviteAgentModal } from '@/components/invite-agent-modal';
 import { BulkInviteModal } from '@/components/affiliate/bulk-invite-modal';
 import { PageHeader } from '@/components/page-header';
 import { MetricCard } from '@/components/metric-card';
+import { useToast } from '@/components/ui/use-toast';
 
 export type SponsoredAccount = {
   account_id: string;
@@ -12,6 +16,8 @@ export type SponsoredAccount = {
   reports_this_month: number;
   last_report_at: string | null;
   created_at: string;
+  status?: 'pending' | 'active' | 'deactivated';
+  email?: string;
 };
 
 export type Overview = {
@@ -42,6 +48,52 @@ function formatDate(dateString: string | null): string {
   if (diffDays < 7) return `${diffDays} days ago`;
   
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function StatusBadge({ status }: { status: string }) {
+  switch (status) {
+    case 'active':
+      return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[11px]">Active</Badge>;
+    case 'deactivated':
+      return <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-200 text-[11px]">Deactivated</Badge>;
+    case 'pending':
+    default:
+      return <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-200 text-[11px]">Pending</Badge>;
+  }
+}
+
+function ResendButton({ email }: { email: string }) {
+  const [sending, setSending] = useState(false);
+  const { toast } = useToast();
+
+  async function resend() {
+    setSending(true);
+    try {
+      const res = await fetch('/api/proxy/v1/affiliate/invite-agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name: '', email }),
+      });
+      if (res.ok) {
+        toast({ title: 'Invite resent', description: `A new invitation was sent to ${email}` });
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast({ title: 'Failed to resend', description: data.detail || 'Could not resend invite', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to resend invitation', variant: 'destructive' });
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <Button variant="ghost" size="sm" onClick={resend} disabled={sending} className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground">
+      {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3 mr-1" />}
+      Resend
+    </Button>
+  );
 }
 
 export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
@@ -126,6 +178,9 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
                         Reports
                       </th>
                       <th className="text-left py-2.5 px-6 text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em]">
+                        Status
+                      </th>
+                      <th className="text-left py-2.5 px-6 text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em]">
                         Last Activity
                       </th>
                       <th className="text-left py-2.5 px-6 text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em]">
@@ -153,6 +208,14 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
                           <span className="font-semibold text-foreground">
                             {account.reports_this_month}
                           </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-2">
+                            <StatusBadge status={account.status || 'pending'} />
+                            {account.status === 'pending' && account.email && (
+                              <ResendButton email={account.email} />
+                            )}
+                          </div>
                         </td>
                         <td className="py-4 px-6 text-sm text-muted-foreground">
                           {formatDate(account.last_report_at)}

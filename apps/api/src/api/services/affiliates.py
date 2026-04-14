@@ -17,7 +17,7 @@ def get_sponsored_accounts(cur, affiliate_account_id: str) -> List[Dict[str, Any
     Get all sponsored accounts with usage metrics and group memberships.
     Uses exactly 2 queries regardless of account count (was 1 + N).
     """
-    # Query 1: All sponsored accounts with report stats
+    # Query 1: All sponsored accounts with report stats and invite status
     cur.execute("""
         SELECT
             a.id::text AS account_id,
@@ -25,8 +25,14 @@ def get_sponsored_accounts(cur, affiliate_account_id: str) -> List[Dict[str, Any
             a.plan_slug,
             a.account_type,
             a.created_at,
-            COALESCE(u.report_count, 0) AS reports_this_month,
-            u.last_report_at
+            COALESCE(rg.report_count, 0) AS reports_this_month,
+            rg.last_report_at,
+            CASE
+                WHEN usr.email_verified = false OR usr.password_hash IS NULL THEN 'pending'
+                WHEN usr.is_active = false THEN 'deactivated'
+                ELSE 'active'
+            END AS status,
+            usr.email
         FROM accounts a
         LEFT JOIN (
             SELECT 
@@ -37,9 +43,11 @@ def get_sponsored_accounts(cur, affiliate_account_id: str) -> List[Dict[str, Any
             WHERE generated_at >= DATE_TRUNC('month', NOW())
               AND status IN ('completed', 'processing')
             GROUP BY account_id
-        ) u ON u.account_id = a.id
+        ) rg ON rg.account_id = a.id
+        LEFT JOIN account_users au ON au.account_id = a.id AND au.role = 'OWNER'
+        LEFT JOIN users usr ON usr.id = au.user_id
         WHERE a.sponsor_account_id = %s::uuid
-        ORDER BY u.report_count DESC NULLS LAST, a.created_at DESC
+        ORDER BY rg.report_count DESC NULLS LAST, a.created_at DESC
     """, (affiliate_account_id,))
 
     rows = cur.fetchall()
@@ -80,6 +88,8 @@ def get_sponsored_accounts(cur, affiliate_account_id: str) -> List[Dict[str, Any
             "created_at": row[4].isoformat() if row[4] else None,
             "reports_this_month": row[5],
             "last_report_at": row[6].isoformat() if row[6] else None,
+            "status": row[7] or "pending",
+            "email": row[8],
             "groups": groups_by_account.get(row[0], []),
         }
         for row in rows
