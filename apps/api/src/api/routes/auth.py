@@ -8,7 +8,13 @@ from datetime import datetime, timedelta
 from ..settings import settings
 from ..auth import sign_jwt, check_password, hash_password, verify_jwt
 import hashlib
-from ..services.email import send_password_reset_email, send_verification_email
+from ..services.email import (
+    send_password_reset_email,
+    send_verification_email,
+    send_affiliate_welcome_email,
+    send_sponsored_agent_welcome_email,
+    send_regular_agent_welcome_email,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -326,7 +332,7 @@ def register(body: RegisterIn, response: Response, background_tasks: BackgroundT
 
 
 @router.post("/auth/accept-invite", response_model=AcceptInviteResponse)
-def accept_invite(body: AcceptInviteRequest, response: Response):
+def accept_invite(body: AcceptInviteRequest, response: Response, background_tasks: BackgroundTasks):
     """
     Accept an invitation and activate a sponsored agent account.
     
@@ -476,7 +482,40 @@ def accept_invite(body: AcceptInviteRequest, response: Response):
                 max_age=7 * 24 * 60 * 60  # 7 days
             )
             
-            # 7. Return response
+            # 7. Send welcome onboarding email (non-fatal)
+            try:
+                cur.execute("""
+                    SELECT a.account_type, a.sponsor_account_id,
+                           COALESCE(ab.brand_display_name, sa.name) AS sponsor_name,
+                           u.first_name
+                    FROM accounts a
+                    JOIN account_users au ON au.account_id = a.id
+                    LEFT JOIN accounts sa ON sa.id = a.sponsor_account_id
+                    LEFT JOIN affiliate_branding ab ON ab.account_id = a.sponsor_account_id
+                    LEFT JOIN users u ON u.id = au.user_id
+                    WHERE au.user_id = %s::uuid
+                    LIMIT 1
+                """, (user_id,))
+                acct_row = cur.fetchone()
+                if acct_row:
+                    acct_type, sponsor_id, sponsor_name, first_name = acct_row
+                    if acct_type == "INDUSTRY_AFFILIATE":
+                        background_tasks.add_task(
+                            send_affiliate_welcome_email, email, first_name
+                        )
+                    elif sponsor_id:
+                        background_tasks.add_task(
+                            send_sponsored_agent_welcome_email,
+                            email, first_name, sponsor_name or "your sponsor",
+                        )
+                    else:
+                        background_tasks.add_task(
+                            send_regular_agent_welcome_email, email, first_name
+                        )
+            except Exception as e:
+                logger.error(f"Failed to queue welcome email for {email}: {e}")
+
+            # 8. Return response
             return {
                 "ok": True,
                 "access_token": access_token,
@@ -709,7 +748,7 @@ class ResendVerificationRequest(BaseModel):
 
 
 @router.post("/auth/verify-email")
-def verify_email(body: VerifyEmailRequest):
+def verify_email(body: VerifyEmailRequest, background_tasks: BackgroundTasks):
     """
     Verify user's email address using the token from the verification email.
     """
@@ -767,7 +806,25 @@ def verify_email(body: VerifyEmailRequest):
             conn.commit()
             
             logger.info(f"Email verified for user {user_id}")
-            
+
+            # Send welcome onboarding email for self-registered users (non-fatal)
+            try:
+                cur.execute("""
+                    SELECT u.first_name, a.sponsor_account_id
+                    FROM users u
+                    JOIN account_users au ON au.user_id = u.id
+                    JOIN accounts a ON a.id = au.account_id
+                    WHERE u.id = %s::uuid
+                    LIMIT 1
+                """, (user_id,))
+                vrow = cur.fetchone()
+                if vrow and not vrow[1]:
+                    background_tasks.add_task(
+                        send_regular_agent_welcome_email, email, vrow[0]
+                    )
+            except Exception as e:
+                logger.error(f"Failed to queue welcome email after verification for {user_id}: {e}")
+
             return {
                 "ok": True,
                 "message": "Email verified successfully!"

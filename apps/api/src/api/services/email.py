@@ -6,6 +6,7 @@ Provides email sending functionality for:
 - Agent invitations
 - Password reset
 - Plan limit notifications
+- Welcome onboarding emails
 """
 
 import logging
@@ -461,4 +462,135 @@ def send_limit_reached_email(email: str, first_name: str, limit: int) -> Dict[st
         subject="Monthly report limit reached",
         html=_email_base(content),
         tags=[{"name": "category", "value": "limit-reached"}],
+    )
+
+
+# ============ Welcome / Onboarding Emails ============
+
+def _step_row(number: int, heading: str, description: str, cta_url: str, cta_label: str, last: bool = False) -> str:
+    """Renders a single numbered onboarding step with CTA button."""
+    base = email_service.app_base
+    border = "" if last else "border-bottom: 1px solid #e5e7eb;"
+    return f'''<tr>
+      <td style="padding: 20px 0; {border}">
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+          <td valign="top" style="width:28px; padding-right:12px;">
+            <div style="width:28px;height:28px;border-radius:50%;background-color:#4F46E5;color:#ffffff;text-align:center;line-height:28px;font-weight:700;font-size:14px;">{number}</div>
+          </td>
+          <td>
+            <p style="margin:0 0 6px;font-size:16px;font-weight:700;color:#0f172a;">{heading}</p>
+            <p style="margin:0 0 14px;font-size:14px;color:#64748b;line-height:1.6;">{description}</p>
+            <a href="{base}{cta_url}" target="_blank" style="display:inline-block;background-color:#4F46E5;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:12px 24px;border-radius:8px;line-height:1;">{cta_label}</a>
+          </td>
+        </tr></table>
+      </td>
+    </tr>'''
+
+
+def send_affiliate_welcome_email(to_email: str, first_name: str) -> Dict[str, Any]:
+    """Welcome email for affiliate partners after invite acceptance."""
+    name = first_name or "there"
+    content = f'''<p style="margin:0 0 6px;font-family:Georgia,'Times New Roman',serif;font-size:20px;color:#111827;">
+        Welcome aboard, {name}!
+      </p>
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#374151;">
+        Your affiliate account is live. Here&rsquo;s how to get your agents generating branded reports in minutes.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        {_step_row(1, "Set Up Your Branding",
+                   "Upload your company logo, pick brand colors, and add your contact details. Every report your agents generate will carry your branding.",
+                   "/app/settings/branding", "Configure Branding")}
+        {_step_row(2, "Invite Your Agents",
+                   "Add agents one-by-one or bulk-import a CSV. Each agent gets a trial account and an invite email with a setup link.",
+                   "/app/affiliate", "Go to Agent Dashboard")}
+        {_step_row(3, "Monitor Performance",
+                   "Track how many reports each agent generates, manage their accounts, and watch your brand reach grow from the affiliate dashboard.",
+                   "/app/affiliate", "View Dashboard", last=True)}
+      </table>
+      <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;line-height:1.6;">
+        Questions? Reply to this email or reach us at <a href="mailto:support@trendyreports.io" style="color:#6366F1;text-decoration:underline;">support@trendyreports.io</a>.
+      </p>'''
+    return email_service.send_email_sync(
+        to=to_email,
+        subject="Welcome to TrendyReports \u2014 Let\u2019s get your agents set up",
+        html=_email_base(content),
+        tags=[{"name": "category", "value": "welcome-affiliate"}],
+    )
+
+
+def send_sponsored_agent_welcome_email(to_email: str, first_name: str, affiliate_company_name: str) -> Dict[str, Any]:
+    """Welcome email for sponsored (trial) agents after invite acceptance."""
+    name = first_name or "there"
+    company = affiliate_company_name or "your sponsor"
+    report_types = (
+        "Market Snapshot &bull; New Listings Gallery &bull; Luxury Market "
+        "&bull; Investor Insights &bull; Neighborhood Deep-Dive "
+        "&bull; First-Time Buyer &bull; Condo &amp; Townhome &bull; Relocation Guide"
+    )
+    content = f'''<p style="margin:0 0 6px;font-family:Georgia,'Times New Roman',serif;font-size:20px;color:#111827;">
+        Welcome, {name}!
+      </p>
+      <p style="margin:0 0 8px;font-size:15px;line-height:1.7;color:#374151;">
+        Your trial account has been set up by <strong>{company}</strong>. You&rsquo;re ready to start creating branded real estate reports.
+      </p>
+      <div style="background-color:#EEF2FF;border-radius:8px;padding:14px 16px;margin:0 0 24px;">
+        <p style="margin:0;font-size:13px;color:#4338CA;line-height:1.5;">
+          <strong>Available report types:</strong> {report_types}
+        </p>
+      </div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        {_step_row(1, "Complete Your Profile",
+                   "Add your headshot, phone number, and license info so every report includes your contact details.",
+                   "/app/settings/profile", "Edit Profile")}
+        {_step_row(2, "Generate Your First Report",
+                   "Pick a city or ZIP code, choose a report type, and get a branded PDF in under 30 seconds.",
+                   "/app/reports/new", "Create a Report")}
+        {_step_row(3, "Set Up Automated Schedules",
+                   "Schedule weekly or monthly reports to be generated and emailed to your contacts automatically.",
+                   "/app/schedules/new", "Create a Schedule", last=True)}
+      </table>
+      <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;line-height:1.6;">
+        Questions? Reply to this email or reach us at <a href="mailto:support@trendyreports.io" style="color:#6366F1;text-decoration:underline;">support@trendyreports.io</a>.
+      </p>'''
+    return email_service.send_email_sync(
+        to=to_email,
+        subject="Welcome to TrendyReports \u2014 Generate your first report",
+        html=_email_base(content),
+        tags=[{"name": "category", "value": "welcome-sponsored-agent"}],
+    )
+
+
+def send_regular_agent_welcome_email(to_email: str, first_name: str) -> Dict[str, Any]:
+    """Welcome email for self-registered agents after email verification."""
+    name = first_name or "there"
+    content = f'''<p style="margin:0 0 6px;font-family:Georgia,'Times New Roman',serif;font-size:20px;color:#111827;">
+        Welcome to TrendyReports, {name}!
+      </p>
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#374151;">
+        Your account is verified and ready to go. Here&rsquo;s how to get your first branded report in under 30 seconds.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        {_step_row(1, "Set Up Your Branding",
+                   "Upload your headshot and logo, choose colors, and add your license info. This appears on every report you generate.",
+                   "/app/settings/branding", "Configure Branding")}
+        {_step_row(2, "Generate Your First Report",
+                   "Pick a city or ZIP code, choose from 8 report types, and get a beautiful branded PDF instantly.",
+                   "/app/reports/new", "Create a Report")}
+        {_step_row(3, "Add Contacts &amp; Automate",
+                   "Import your contact list and set up automated schedules to deliver fresh market reports weekly or monthly.",
+                   "/app/people", "Manage Contacts", last=True)}
+      </table>
+      <div style="background-color:#F0FDF4;border-radius:8px;padding:14px 16px;margin:24px 0 0;">
+        <p style="margin:0;font-size:13px;color:#166534;line-height:1.5;">
+          <strong>Your Free plan</strong> includes 5 reports per month. Need more? <a href="{email_service.app_base}/app/settings/billing" style="color:#166534;font-weight:600;text-decoration:underline;">Upgrade anytime</a>.
+        </p>
+      </div>
+      <p style="margin:16px 0 0;font-size:13px;color:#9ca3af;line-height:1.6;">
+        Questions? Reply to this email or reach us at <a href="mailto:support@trendyreports.io" style="color:#6366F1;text-decoration:underline;">support@trendyreports.io</a>.
+      </p>'''
+    return email_service.send_email_sync(
+        to=to_email,
+        subject="Welcome to TrendyReports \u2014 Your first report is 30 seconds away",
+        html=_email_base(content),
+        tags=[{"name": "category", "value": "welcome-regular"}],
     )
