@@ -723,7 +723,7 @@ def _send_failure_notification(
     <td align="center" style="padding:32px 16px;">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" class="email-wrapper" style="max-width:600px;width:100%;">
         <tr><td align="center" style="background:linear-gradient(135deg,#4F46E5 0%,#6366F1 50%,#818CF8 100%);background-color:#4F46E5;padding:28px 24px 20px;border-radius:12px 12px 0 0;">
-          <img src="https://trendyreports.io/white.png" width="160" alt="TrendyReports" style="display:block;max-height:40px;width:auto;height:auto;">
+          <img src="https://www.trendyreports.io/white.png" width="160" alt="TrendyReports" style="display:block;max-height:40px;width:auto;height:auto;">
         </td></tr>
         <tr><td style="background-color:#ffffff;padding:32px;" class="content-pad">
           {content_html}
@@ -1897,7 +1897,7 @@ def process_consumer_report(self, report_id: str):
     <td align="center" style="padding:32px 16px;">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" class="email-wrapper" style="max-width:600px;width:100%;">
         <tr><td align="center" style="background:linear-gradient(135deg,#4F46E5 0%,#6366F1 50%,#818CF8 100%);background-color:#4F46E5;padding:28px 24px 20px;border-radius:12px 12px 0 0;">
-          <img src="https://trendyreports.io/white.png" width="160" alt="TrendyReports" style="display:block;max-height:40px;width:auto;height:auto;">
+          <img src="https://www.trendyreports.io/white.png" width="160" alt="TrendyReports" style="display:block;max-height:40px;width:auto;height:auto;">
         </td></tr>
         <tr><td style="background-color:#ffffff;padding:32px;" class="content-pad">
           {content_html}

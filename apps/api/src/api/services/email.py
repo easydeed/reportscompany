@@ -197,7 +197,7 @@ def _email_base(content_html: str) -> str:
           <!-- HEADER -->
           <tr>
             <td align="center" style="background: linear-gradient(135deg, #4F46E5 0%, #6366F1 50%, #818CF8 100%); background-color: #4F46E5; padding: 28px 24px 20px; border-radius: 12px 12px 0 0;">
-              <img src="https://trendyreports.io/white.png" width="160" alt="TrendyReports" style="display: block; max-height: 40px; width: auto; height: auto;">
+              <img src="https://www.trendyreports.io/white.png" width="160" alt="TrendyReports" style="display: block; max-height: 40px; width: auto; height: auto;">
             </td>
           </tr>
 
