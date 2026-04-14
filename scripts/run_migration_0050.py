@@ -72,8 +72,15 @@ def run_migration():
         for row in rows:
             print(f"  Found: id={row[0]}, name={row[1]}, type={row[2]}, plan={row[3]}")
 
-        print("[INFO] Running migration 0050_pct_to_title_company.sql...")
-        cur.execute(migration_sql)
+        print("[INFO] Running update...")
+        cur.execute("""
+            UPDATE accounts
+            SET account_type = 'TITLE_COMPANY',
+                updated_at   = NOW()
+            WHERE account_type = 'INDUSTRY_AFFILIATE'
+              AND (name ILIKE '%%pacific coast%%' OR slug ILIKE '%%pacific-coast%%')
+            RETURNING id::text, name, account_type, plan_slug
+        """)
 
         result = cur.fetchone()
         if result:

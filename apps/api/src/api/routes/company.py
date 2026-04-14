@@ -69,18 +69,30 @@ def get_overview(company: dict = Depends(get_company_admin)):
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
-        # Company name
-        cur.execute(
-            "SELECT name FROM accounts WHERE id = %s::uuid",
-            (company_id,),
-        )
-        company_name = (cur.fetchone() or ("Unknown",))[0]
+        # ── Company info + plan limit ──
+        cur.execute("""
+            SELECT a.name,
+                   a.plan_slug,
+                   COALESCE(a.monthly_report_limit_override,
+                            p.monthly_report_limit, 5000) AS report_limit
+            FROM accounts a
+            LEFT JOIN plans p ON p.plan_slug = a.plan_slug
+            WHERE a.id = %s::uuid
+        """, (company_id,))
+        info_row = cur.fetchone()
+        company_name = info_row[0] if info_row else "Unknown"
+        plan_slug = info_row[1] if info_row else "affiliate"
+        report_limit = info_row[2] if info_row else 5000
 
-        # Rep list with agent counts and monthly reports
+        # ── Rep list with agent counts, monthly reports, user info for status ──
         cur.execute("""
             SELECT
                 a.id::text            AS rep_id,
                 a.name                AS rep_name,
+                u.email,
+                u.is_active,
+                u.email_verified,
+                u.password_hash IS NOT NULL AS has_password,
                 a.created_at::text    AS created_at,
                 (SELECT COUNT(*) FROM accounts sa
                  WHERE sa.sponsor_account_id = a.id)              AS agent_count,
@@ -95,37 +107,172 @@ def get_overview(company: dict = Depends(get_company_admin)):
                      SELECT id FROM accounts WHERE sponsor_account_id = a.id
                  ))                                                AS last_activity
             FROM accounts a
+            LEFT JOIN account_users au ON au.account_id = a.id AND au.role = 'OWNER'
+            LEFT JOIN users u ON u.id = au.user_id
             WHERE a.parent_account_id = %s::uuid
               AND a.account_type = 'INDUSTRY_AFFILIATE'
             ORDER BY a.name
         """, (company_id,))
         cols = [d.name for d in cur.description]
-        reps = [dict(zip(cols, row)) for row in cur.fetchall()]
+        raw_reps = [dict(zip(cols, row)) for row in cur.fetchall()]
+
+        reps = []
+        for r in raw_reps:
+            if r.get("is_active") is False:
+                status = "deactivated"
+            elif r.get("email_verified") and r.get("has_password"):
+                status = "active"
+            else:
+                status = "pending"
+            reps.append({
+                "id": r["rep_id"],
+                "name": r["rep_name"],
+                "email": r.get("email") or "",
+                "office": "",
+                "agent_count": r["agent_count"],
+                "reports_this_month": r["reports_this_month"],
+                "last_active": r["last_activity"],
+                "status": status,
+            })
 
         total_reps = len(reps)
         total_agents = sum(r["agent_count"] for r in reps)
-        total_reports = sum(r["reports_this_month"] for r in reps)
 
-        # Branding summary
+        # ── Reports this month (all reps + their agents) ──
         cur.execute("""
-            SELECT brand_display_name, logo_url, primary_color
-            FROM affiliate_branding
-            WHERE account_id = %s::uuid
+            SELECT COUNT(*) FROM report_generations rg
+            WHERE rg.generated_at >= date_trunc('month', NOW())
+            AND rg.status IN ('completed', 'processing')
+            AND (
+                rg.account_id IN (
+                    SELECT id FROM accounts WHERE parent_account_id = %s::uuid
+                )
+                OR rg.account_id IN (
+                    SELECT sa.id FROM accounts sa
+                    WHERE sa.sponsor_account_id IN (
+                        SELECT id FROM accounts WHERE parent_account_id = %s::uuid
+                    )
+                )
+            )
+        """, (company_id, company_id))
+        total_reports = cur.fetchone()[0]
+
+        # ── Reps added this month ──
+        cur.execute("""
+            SELECT COUNT(*) FROM accounts
+            WHERE parent_account_id = %s::uuid
+              AND account_type = 'INDUSTRY_AFFILIATE'
+              AND created_at >= date_trunc('month', NOW())
         """, (company_id,))
-        branding_row = cur.fetchone()
-        branding_summary = {
-            "brand_display_name": branding_row[0] if branding_row else None,
-            "logo_url": branding_row[1] if branding_row else None,
-            "primary_color": branding_row[2] if branding_row else None,
-        } if branding_row else None
+        reps_change = cur.fetchone()[0]
+
+        # ── Agents added this month ──
+        cur.execute("""
+            SELECT COUNT(*) FROM accounts sa
+            WHERE sa.sponsor_account_id IN (
+                SELECT id FROM accounts WHERE parent_account_id = %s::uuid
+            )
+            AND sa.created_at >= date_trunc('month', NOW())
+        """, (company_id,))
+        agents_change = cur.fetchone()[0]
+
+        # ── Active agents (30d) — at least 1 report ──
+        cur.execute("""
+            SELECT COUNT(DISTINCT rg.account_id) FROM report_generations rg
+            WHERE rg.generated_at >= NOW() - INTERVAL '30 days'
+              AND rg.status IN ('completed', 'processing')
+              AND rg.account_id IN (
+                  SELECT sa.id FROM accounts sa
+                  WHERE sa.sponsor_account_id IN (
+                      SELECT id FROM accounts WHERE parent_account_id = %s::uuid
+                  )
+              )
+        """, (company_id,))
+        active_agents_30d = cur.fetchone()[0]
+        engagement_pct = round(active_agents_30d / total_agents * 100) if total_agents > 0 else 0
+
+        # ── Reports change vs last month ──
+        cur.execute("""
+            SELECT COUNT(*) FROM report_generations rg
+            WHERE rg.generated_at >= date_trunc('month', NOW() - INTERVAL '1 month')
+              AND rg.generated_at < date_trunc('month', NOW())
+              AND rg.status IN ('completed', 'processing')
+              AND (
+                  rg.account_id IN (
+                      SELECT id FROM accounts WHERE parent_account_id = %s::uuid
+                  )
+                  OR rg.account_id IN (
+                      SELECT sa.id FROM accounts sa
+                      WHERE sa.sponsor_account_id IN (
+                          SELECT id FROM accounts WHERE parent_account_id = %s::uuid
+                      )
+                  )
+              )
+        """, (company_id, company_id))
+        last_month_reports = cur.fetchone()[0]
+        reports_change_pct = round(((total_reports - last_month_reports) / max(last_month_reports, 1)) * 100)
+
+        # ── Company initials ──
+        initials = "".join(w[0].upper() for w in company_name.split()[:2]) if company_name else "CO"
+
+        # ── Activity feed (recent reports across company) ──
+        cur.execute("""
+            SELECT
+                u.first_name || ' ' || COALESCE(u.last_name, '') AS agent_name,
+                rg.report_type,
+                rg.city,
+                rg.generated_at,
+                rg.id::text AS rg_id
+            FROM report_generations rg
+            JOIN account_users au ON au.account_id = rg.account_id AND au.role = 'OWNER'
+            JOIN users u ON u.id = au.user_id
+            WHERE (
+                rg.account_id IN (
+                    SELECT id FROM accounts WHERE parent_account_id = %s::uuid
+                )
+                OR rg.account_id IN (
+                    SELECT sa.id FROM accounts sa
+                    WHERE sa.sponsor_account_id IN (
+                        SELECT id FROM accounts WHERE parent_account_id = %s::uuid
+                    )
+                )
+            )
+            ORDER BY rg.generated_at DESC
+            LIMIT 10
+        """, (company_id, company_id))
+        activity_rows = cur.fetchall()
+        activity = []
+        for row in activity_rows:
+            name = (row[0] or "").strip()
+            rtype = (row[1] or "report").replace("_", " ")
+            city = row[2] or "unknown"
+            activity.append({
+                "id": row[4],
+                "description": f"{name} generated {rtype} for {city}",
+                "timestamp": row[3].isoformat() if row[3] else None,
+            })
 
     return {
-        "company_name": company_name,
-        "branding_summary": branding_summary,
-        "total_reps": total_reps,
-        "total_agents": total_agents,
-        "total_reports_this_month": total_reports,
+        "company": {
+            "name": company_name,
+            "plan": plan_slug.replace("_", " ").title() if plan_slug else "Affiliate",
+            "usage": total_reports,
+            "limit": report_limit,
+            "initials": initials,
+        },
+        "metrics": {
+            "total_reps": total_reps,
+            "total_agents": total_agents,
+            "reports_this_month": total_reports,
+            "active_agents_30d": active_agents_30d,
+            "total_agent_seats": total_agents,
+            "reps_change": reps_change,
+            "agents_change": agents_change,
+            "reports_change_pct": reports_change_pct,
+            "engagement_pct": engagement_pct,
+        },
         "reps": reps,
+        "activity": activity,
     }
 
 

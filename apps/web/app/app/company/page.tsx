@@ -193,7 +193,10 @@ export default function CompanyDashboard() {
   }
 
   const overview = data as CompanyOverview
-  const { company, metrics, reps, activity } = overview
+  const company = overview?.company || { name: "", plan: "", usage: 0, limit: 1, initials: "CO" }
+  const metrics = overview?.metrics || { total_reps: 0, total_agents: 0, reports_this_month: 0, active_agents_30d: 0, total_agent_seats: 0, reps_change: 0, agents_change: 0, reports_change_pct: 0, engagement_pct: 0 }
+  const reps = overview?.reps || []
+  const activity = overview?.activity || []
   const usagePercent = company.limit > 0 ? (company.usage / company.limit) * 100 : 0
 
   const metricCards = [
