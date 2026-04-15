@@ -18,7 +18,7 @@ sentry-sdk = "^2.13.0"
 psycopg = {version = "^3.2.1", extras = ["binary"]}
 jinja2 = "^3.1.2"
 twilio = "^9.0.0"
-attrs = ">=23.1,<25"
+attrs = ">=23.1,<24"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.6.9"
