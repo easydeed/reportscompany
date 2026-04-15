@@ -850,6 +850,100 @@ def reactivate_sponsored_account(
         }
 
 
+# ── Aggregate endpoints (rep views ALL agents' data) ─────────────────────────
+
+@router.get("/all-reports")
+def get_all_agent_reports(
+    limit: int = 50,
+    offset: int = 0,
+    account_id: str = Depends(require_account_id),
+):
+    """Return reports from ALL sponsored agents plus the rep's own."""
+    with db_conn() as (conn, cur):
+        cur.execute("""
+            SELECT id FROM accounts WHERE sponsor_account_id = %s::uuid
+        """, (account_id,))
+        agent_ids = [row[0] for row in cur.fetchall()]
+        all_ids = agent_ids + [account_id]
+
+        cur.execute("""
+            SELECT COUNT(*) FROM report_generations WHERE account_id = ANY(%s)
+        """, (all_ids,))
+        total = cur.fetchone()[0]
+
+        cur.execute("""
+            SELECT rg.id::text, rg.report_type, rg.status, rg.generated_at,
+                   COALESCE(rg.input_params->>'city', rg.cities[1], 'Unknown') AS city,
+                   rg.pdf_url,
+                   u.first_name || ' ' || COALESCE(u.last_name, '') AS user_name,
+                   a.id::text AS agent_account_id,
+                   CASE WHEN rg.account_id = %s::uuid THEN 'You' ELSE 'Agent' END AS source
+            FROM report_generations rg
+            JOIN accounts a ON a.id = rg.account_id
+            LEFT JOIN account_users au ON au.account_id = a.id AND au.role = 'OWNER'
+            LEFT JOIN users u ON u.id = au.user_id
+            WHERE rg.account_id = ANY(%s)
+            ORDER BY rg.generated_at DESC
+            LIMIT %s OFFSET %s
+        """, (account_id, all_ids, limit, offset))
+        reports = [
+            {
+                "id": r[0], "report_type": r[1], "status": r[2],
+                "generated_at": r[3].isoformat() if r[3] else None,
+                "city": r[4], "pdf_url": r[5],
+                "user_name": (r[6] or "").strip(),
+                "agent_account_id": r[7], "source": r[8],
+            }
+            for r in cur.fetchall()
+        ]
+
+        return {"reports": reports, "total": total}
+
+
+@router.get("/all-schedules")
+def get_all_agent_schedules(account_id: str = Depends(require_account_id)):
+    """Return schedules from ALL sponsored agents plus the rep's own."""
+    with db_conn() as (conn, cur):
+        cur.execute("""
+            SELECT id FROM accounts WHERE sponsor_account_id = %s::uuid
+        """, (account_id,))
+        agent_ids = [row[0] for row in cur.fetchall()]
+        all_ids = agent_ids + [account_id]
+
+        cur.execute("""
+            SELECT s.id::text, s.name, s.report_type,
+                   COALESCE(s.city, 'Unknown') AS area,
+                   s.cadence, s.send_hour, s.send_minute, s.timezone,
+                   s.active, s.last_run_at, s.next_run_at,
+                   u.first_name || ' ' || COALESCE(u.last_name, '') AS user_name,
+                   a.id::text AS agent_account_id,
+                   (SELECT COUNT(*) FROM schedule_runs sr WHERE sr.schedule_id = s.id) AS total_runs,
+                   CASE WHEN s.account_id = %s::uuid THEN 'You' ELSE 'Agent' END AS source
+            FROM schedules s
+            JOIN accounts a ON a.id = s.account_id
+            LEFT JOIN account_users au ON au.account_id = a.id AND au.role = 'OWNER'
+            LEFT JOIN users u ON u.id = au.user_id
+            WHERE s.account_id = ANY(%s)
+            ORDER BY s.created_at DESC
+        """, (account_id, all_ids))
+        schedules = [
+            {
+                "id": r[0], "name": r[1], "report_type": r[2],
+                "area": r[3], "cadence": r[4],
+                "send_hour": r[5], "send_minute": r[6], "timezone": r[7],
+                "active": r[8],
+                "last_run_at": r[9].isoformat() if r[9] else None,
+                "next_run_at": r[10].isoformat() if r[10] else None,
+                "user_name": (r[11] or "").strip(),
+                "agent_account_id": r[12], "total_runs": r[13],
+                "source": r[14],
+            }
+            for r in cur.fetchall()
+        ]
+
+        return {"schedules": schedules, "total": len(schedules)}
+
+
 # ── Agent visibility endpoints (rep views agent data) ────────────────────────
 
 @router.get("/agents/{agent_account_id}/reports")
