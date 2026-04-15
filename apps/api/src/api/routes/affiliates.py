@@ -92,6 +92,7 @@ def get_overview(request: Request, account_id: str = Depends(require_account_id)
                 "parent_company_name": acc_row[5],
             },
             "overview": overview,
+            "metrics": overview.get("metrics", {}),
             "sponsored_accounts": sponsored,
         }
 

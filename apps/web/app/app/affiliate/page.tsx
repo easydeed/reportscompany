@@ -5,11 +5,10 @@ import { Building2 } from 'lucide-react'
 import { AffiliateDashboardShell, type AffiliateDashboardShellProps } from '@/components/v0-styling/AffiliateDashboardShell'
 import { AffiliateOnboarding } from '@/components/onboarding/affiliate-onboarding'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useAffiliateOverview, usePlanUsage, useOnboarding } from '@/hooks/use-api'
+import { useAffiliateOverview, useOnboarding } from '@/hooks/use-api'
 
 export default function AffiliateDashboardPage() {
   const { data: affiliateData, isLoading: affLoading, error: affError, refetch } = useAffiliateOverview()
-  const { data: planUsage } = usePlanUsage()
   const { data: onboardingData } = useOnboarding()
 
   const loading = affLoading
@@ -51,11 +50,13 @@ export default function AffiliateDashboardPage() {
 
   const shellProps: AffiliateDashboardShellProps = {
     overview: affiliateData.overview,
-    planSummary: planUsage ? {
-      plan_name: planUsage.plan?.plan_name,
-      report_count: planUsage.usage?.market_reports_used ?? 0,
-      limit: planUsage.plan?.market_reports_limit ?? 3,
-    } : undefined,
+    metrics: affiliateData.metrics || {
+      total_agents: 0,
+      total_agent_reports: 0,
+      active_agents: 0,
+      active_agents_total: 0,
+      agents_at_limit: 0,
+    },
     sponsoredAccounts: affiliateData.sponsored_accounts,
     onRefresh: () => refetch(),
     isCompanyRep,

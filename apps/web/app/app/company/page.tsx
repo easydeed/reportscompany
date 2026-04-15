@@ -223,7 +223,7 @@ export default function CompanyDashboard() {
       property_reports: { used: 0, limit: 1 },
     },
   }
-  const metrics = overview?.metrics || { total_reps: 0, total_agents: 0, reports_this_month: 0, active_agents_30d: 0, total_agent_seats: 0, reps_change: 0, agents_change: 0, reports_change_pct: 0, engagement_pct: 0 }
+  const metrics = overview?.metrics || { total_reps: 0, total_agents: 0, reports_this_month: 0, active_agents_30d: 0, total_agent_seats: 0, reps_change: 0, agents_change: 0, reports_change_pct: 0, engagement_pct: 0, agents_at_limit: 0 }
   const reps = overview?.reps || []
   const activity = overview?.activity || []
 
@@ -339,6 +339,15 @@ export default function CompanyDashboard() {
           </div>
         ))}
       </div>
+
+      {/* Agents at limit alert */}
+      {metrics.agents_at_limit > 0 && (
+        <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3 dark:bg-amber-950/30 dark:border-amber-800">
+          <p className="text-sm text-amber-800 dark:text-amber-300">
+            {metrics.agents_at_limit} agent{metrics.agents_at_limit > 1 ? 's' : ''} across your reps have hit their report limit this month
+          </p>
+        </div>
+      )}
 
       {/* Title Reps Table */}
       <div className="mt-8">

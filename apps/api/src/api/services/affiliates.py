@@ -100,8 +100,8 @@ def get_sponsored_accounts(cur, affiliate_account_id: str) -> List[Dict[str, Any
 
 def get_affiliate_overview(cur, affiliate_account_id: str) -> Dict[str, Any]:
     """
-    Lightweight aggregate metrics. Does NOT call get_sponsored_accounts().
-    Single query, O(1) regardless of account count.
+    Aggregate metrics for the affiliate dashboard and sidebar.
+    Returns agent counts, report totals, active-agent ratio, and at-limit count.
     """
     cur.execute("""
         SELECT
@@ -117,11 +117,47 @@ def get_affiliate_overview(cur, affiliate_account_id: str) -> Dict[str, Any]:
         ) u ON u.account_id = a.id
         WHERE a.sponsor_account_id = %s::uuid
     """, (affiliate_account_id,))
-
     row = cur.fetchone()
+    total_agents = row[0] if row else 0
+    total_agent_reports = row[1] if row else 0
+
+    # Active agents (at least 1 report in last 30 days)
+    cur.execute("""
+        SELECT COUNT(DISTINCT rg.account_id) FROM report_generations rg
+        WHERE rg.account_id IN (
+            SELECT id FROM accounts WHERE sponsor_account_id = %s::uuid
+        )
+        AND rg.generated_at >= NOW() - INTERVAL '30 days'
+        AND rg.status IN ('completed', 'processing')
+    """, (affiliate_account_id,))
+    active_agents = cur.fetchone()[0]
+
+    # Agents at their market-report limit this month
+    cur.execute("""
+        SELECT COUNT(*) FROM (
+            SELECT a.id
+            FROM accounts a
+            LEFT JOIN plans p ON p.plan_slug = a.plan_slug
+            LEFT JOIN report_generations rg ON rg.account_id = a.id
+                AND rg.generated_at >= date_trunc('month', NOW())
+                AND rg.status IN ('completed', 'processing')
+            WHERE a.sponsor_account_id = %s::uuid
+            GROUP BY a.id, a.market_reports_limit_override, p.market_reports_limit
+            HAVING COUNT(rg.id) >= COALESCE(a.market_reports_limit_override, p.market_reports_limit, 3)
+        ) at_limit
+    """, (affiliate_account_id,))
+    agents_at_limit = cur.fetchone()[0]
+
     return {
-        "sponsored_count": row[0] if row else 0,
-        "total_reports_this_month": row[1] if row else 0,
+        "sponsored_count": total_agents,
+        "total_reports_this_month": total_agent_reports,
+        "metrics": {
+            "total_agents": total_agents,
+            "total_agent_reports": total_agent_reports,
+            "active_agents": active_agents,
+            "active_agents_total": total_agents,
+            "agents_at_limit": agents_at_limit,
+        },
     }
 
 

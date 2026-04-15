@@ -204,6 +204,24 @@ def get_overview(company: dict = Depends(get_company_admin)):
         active_agents_30d = cur.fetchone()[0]
         engagement_pct = round(active_agents_30d / total_agents * 100) if total_agents > 0 else 0
 
+        # ── Agents at their market-report limit this month ──
+        cur.execute("""
+            SELECT COUNT(*) FROM (
+                SELECT a.id
+                FROM accounts a
+                LEFT JOIN plans p ON p.plan_slug = a.plan_slug
+                LEFT JOIN report_generations rg ON rg.account_id = a.id
+                    AND rg.generated_at >= date_trunc('month', NOW())
+                    AND rg.status IN ('completed', 'processing')
+                WHERE a.sponsor_account_id IN (
+                    SELECT id FROM accounts WHERE parent_account_id = %s::uuid
+                )
+                GROUP BY a.id, a.market_reports_limit_override, p.market_reports_limit
+                HAVING COUNT(rg.id) >= COALESCE(a.market_reports_limit_override, p.market_reports_limit, 3)
+            ) at_limit
+        """, (company_id,))
+        agents_at_limit = cur.fetchone()[0]
+
         # ── Reports change vs last month ──
         cur.execute("""
             SELECT COUNT(*) FROM report_generations rg
@@ -301,6 +319,7 @@ def get_overview(company: dict = Depends(get_company_admin)):
             "agents_change": agents_change,
             "reports_change_pct": reports_change_pct,
             "engagement_pct": engagement_pct,
+            "agents_at_limit": agents_at_limit,
         },
         "reps": reps,
         "activity": activity,

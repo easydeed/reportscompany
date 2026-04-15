@@ -63,7 +63,7 @@ import { usePathname } from "next/navigation"
 import { AccountSwitcher } from "@/components/account-switcher"
 
 import { Separator } from "@/components/ui/separator"
-import { usePlanUsage, useMe } from "@/hooks/use-api"
+import { usePlanUsage, useMe, useAffiliateOverview } from "@/hooks/use-api"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 
@@ -226,6 +226,10 @@ function UsageBar({ label, used, limit }: { label: string; used: number; limit: 
 function DashboardSidebar({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }: TierProps) {
   const pathname = usePathname()
   const { data: planUsage } = usePlanUsage()
+  const { data: affiliateData } = useAffiliateOverview({ enabled: isAffiliate })
+  const affiliateMetrics = (affiliateData as any)?.metrics as
+    | { total_agents: number; total_agent_reports: number; active_agents: number; active_agents_total: number; agents_at_limit: number }
+    | undefined
 
   const nav = useMemo(() => getNavigation({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }), [isAdmin, isCompanyAdmin, isAffiliate, isSponsored])
 
@@ -384,7 +388,37 @@ function DashboardSidebar({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }:
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        {!isAdmin && !isCompanyAdmin && planUsage && (
+
+        {/* Affiliate sidebar: agent-focused metrics */}
+        {isAffiliate && affiliateMetrics && (
+          <div className="px-3 py-3">
+            <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/50 p-3 space-y-1.5">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+                My Agents
+              </div>
+              <div className="flex justify-between text-[11px]">
+                <span className="text-sidebar-foreground/60">Agents</span>
+                <span className="font-medium text-sidebar-foreground/80">{affiliateMetrics.total_agents}</span>
+              </div>
+              <div className="flex justify-between text-[11px]">
+                <span className="text-sidebar-foreground/60">Reports (this month)</span>
+                <span className="font-medium text-sidebar-foreground/80">{affiliateMetrics.total_agent_reports}</span>
+              </div>
+              <div className="flex justify-between text-[11px]">
+                <span className="text-sidebar-foreground/60">Active (30d)</span>
+                <span className="font-medium text-sidebar-foreground/80">{affiliateMetrics.active_agents}/{affiliateMetrics.active_agents_total}</span>
+              </div>
+              {affiliateMetrics.agents_at_limit > 0 && (
+                <div className="text-[11px] text-amber-600 font-medium mt-1">
+                  {affiliateMetrics.agents_at_limit} agent{affiliateMetrics.agents_at_limit > 1 ? 's' : ''} at limit
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Agent / sponsored agent sidebar: per-product usage bars */}
+        {!isAdmin && !isCompanyAdmin && !isAffiliate && planUsage && (
           <div className="px-3 py-3">
             <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/50 p-3 space-y-2">
               <div className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">

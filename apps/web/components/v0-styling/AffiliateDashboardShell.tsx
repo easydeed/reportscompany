@@ -9,7 +9,6 @@ import {
 import { InviteAgentModal } from '@/components/invite-agent-modal';
 import { BulkInviteModal } from '@/components/affiliate/bulk-invite-modal';
 import { PageHeader } from '@/components/page-header';
-import { MetricCard } from '@/components/metric-card';
 import { useToast } from '@/components/ui/use-toast';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -36,43 +35,22 @@ export type Overview = {
   total_reports_this_month: number;
 };
 
+export type AgentMetrics = {
+  total_agents: number;
+  total_agent_reports: number;
+  active_agents: number;
+  active_agents_total: number;
+  agents_at_limit: number;
+};
+
 export type AffiliateDashboardShellProps = {
   overview: Overview;
-  planSummary?: {
-    plan_name: string;
-    report_count: number;
-    limit: number;
-    market_reports_used?: number;
-    market_reports_limit?: number;
-    schedules_used?: number;
-    schedules_limit?: number;
-    property_reports_used?: number;
-    property_reports_limit?: number;
-  };
+  metrics?: AgentMetrics;
   sponsoredAccounts: SponsoredAccount[];
   onRefresh?: () => void;
   isCompanyRep?: boolean;
   companyName?: string;
 };
-
-function UsageBar({ label, used, limit }: { label: string; used: number; limit: number }) {
-  const isUnlimited = limit >= 99999
-  const pct = isUnlimited ? 0 : Math.min((used / Math.max(limit, 1)) * 100, 100)
-  const color = pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-indigo-500'
-  return (
-    <div className="space-y-0.5">
-      <div className="flex justify-between text-[11px]">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="font-medium">{isUnlimited ? '∞' : `${used}/${limit}`}</span>
-      </div>
-      {!isUnlimited && (
-        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-          <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${pct}%` }} />
-        </div>
-      )}
-    </div>
-  )
-}
 
 function formatDate(dateString: string | null): string {
   if (!dateString) return '—';
@@ -118,7 +96,14 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
-  const { overview, planSummary, sponsoredAccounts, onRefresh, isCompanyRep = false, companyName = '' } = props;
+  const { overview, metrics: rawMetrics, sponsoredAccounts, onRefresh, isCompanyRep = false, companyName = '' } = props;
+  const metrics: AgentMetrics = rawMetrics || {
+    total_agents: overview.sponsored_count,
+    total_agent_reports: overview.total_reports_this_month,
+    active_agents: 0,
+    active_agents_total: overview.sponsored_count,
+    agents_at_limit: 0,
+  };
   const { toast } = useToast();
 
   const [resendModal, setResendModal] = useState<{ open: boolean; agent: SponsoredAccount | null }>({ open: false, agent: null });
@@ -226,53 +211,44 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
           }
         />
 
-        {planSummary && (
-          <Card className="border-indigo-200/60 bg-gradient-to-br from-indigo-50/50 to-white shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
+        <Card className="border-indigo-200/60 bg-gradient-to-br from-indigo-50/50 to-white shadow-sm">
+          <div className="p-5 space-y-3">
+            <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-base font-semibold text-foreground">
-                  {isCompanyRep ? 'Your Rep Account' : 'Your Affiliate Plan'}
-                </CardTitle>
-                <div className="mt-3">
-                  <div className="text-2xl font-display font-bold text-indigo-600">
-                    {isCompanyRep ? `Included by ${companyName || 'Company'}` : planSummary.plan_name}
-                  </div>
-                  {(planSummary.market_reports_limit != null) ? (
-                    <div className="mt-2 space-y-1.5">
-                      <UsageBar
-                        label="Market Reports"
-                        used={planSummary.market_reports_used ?? 0}
-                        limit={planSummary.market_reports_limit}
-                      />
-                      <UsageBar
-                        label="Schedules"
-                        used={planSummary.schedules_used ?? 0}
-                        limit={planSummary.schedules_limit ?? 1}
-                      />
-                      <UsageBar
-                        label="Property Reports"
-                        used={planSummary.property_reports_used ?? 0}
-                        limit={planSummary.property_reports_limit ?? 1}
-                      />
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {planSummary.report_count} of {planSummary.limit} reports used this month
-                    </p>
-                  )}
-                </div>
+                <p className="text-sm font-semibold">{companyName || 'My Agents'}</p>
+                <p className="text-xs text-muted-foreground">
+                  {isCompanyRep ? 'Title Rep Dashboard' : 'Affiliate Dashboard'}
+                </p>
               </div>
               <div className="rounded-xl bg-indigo-100 p-2.5">
                 <TrendingUp className="h-5 w-5 text-indigo-600" />
               </div>
-            </CardHeader>
-          </Card>
-        )}
+            </div>
 
-        <div className="grid gap-3 md:grid-cols-2">
-          <MetricCard label={isCompanyRep ? "Agents" : "Trial Agents"} value={overview.sponsored_count} icon={<Users2 className="w-4 h-4" />} index={0} />
-          <MetricCard label="Reports This Month" value={overview.total_reports_this_month} icon={<TrendingUp className="w-4 h-4" />} index={1} />
-        </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="text-center p-2 bg-muted/30 rounded-lg">
+                <p className="text-xl font-bold">{metrics.total_agents}</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Agents</p>
+              </div>
+              <div className="text-center p-2 bg-muted/30 rounded-lg">
+                <p className="text-xl font-bold">{metrics.total_agent_reports}</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Reports</p>
+              </div>
+              <div className="text-center p-2 bg-muted/30 rounded-lg">
+                <p className="text-xl font-bold">{metrics.active_agents}/{metrics.active_agents_total}</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Active (30d)</p>
+              </div>
+            </div>
+
+            {metrics.agents_at_limit > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center dark:bg-amber-950/30 dark:border-amber-800">
+                <p className="text-sm text-amber-800 dark:text-amber-300 font-medium">
+                  {metrics.agents_at_limit} agent{metrics.agents_at_limit > 1 ? 's' : ''} at their report limit
+                </p>
+              </div>
+            )}
+          </div>
+        </Card>
 
         <Card className="border-border bg-card shadow-sm">
           <CardHeader className="border-b border-border">
