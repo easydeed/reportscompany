@@ -37,6 +37,20 @@ _PLAN_DISPLAY_NAMES = {
 }
 
 
+# ─── HELPERS ──────────────────────────────────────────────────────────────────
+
+def _first_not_none(*values, default):
+    """Return the first value that is not None, or default.
+
+    Uses explicit None checks so that 0 (freeze-account override) is honoured
+    instead of being skipped by a falsy `or` chain.
+    """
+    for v in values:
+        if v is not None:
+            return v
+    return default
+
+
 # ─── CORE: RESOLVE PLAN ───────────────────────────────────────────────────────
 
 def resolve_plan_for_account(cur, account_id: str) -> Dict[str, Any]:
@@ -112,10 +126,11 @@ def resolve_plan_for_account(cur, account_id: str) -> Dict[str, Any]:
         plan_slug = "free"
 
     # ── Effective limits ──────────────────────────────────────────────────────
+    # Use explicit None checks so that override = 0 (freeze account) is honoured.
     # Per-product override → legacy single override → plan default → hard floor
-    market_limit    = mkt_override  or limit_override or mkt_plan_limit  or 3
-    schedules_limit = sched_override or sched_plan_limit or 1
-    property_limit  = prop_override  or prop_plan_limit  or 1
+    market_limit    = _first_not_none(mkt_override, limit_override, mkt_plan_limit, default=3)
+    schedules_limit = _first_not_none(sched_override, sched_plan_limit, default=1)
+    property_limit  = _first_not_none(prop_override, prop_plan_limit, default=1)
 
     # Legacy single limit (backward compat for evaluate_report_limit)
     effective_limit = limit_override if limit_override is not None else (plan_limit or 100)
@@ -181,26 +196,38 @@ def get_usage_counts(cur, account_id: str) -> Dict[str, Any]:
 
 # ─── SINGLE-PRODUCT EVALUATOR ─────────────────────────────────────────────────
 
-def evaluate_product_limit(used: int, limit: int) -> Dict[str, Any]:
-    """Evaluate a single product's limit status."""
+def evaluate_product_limit(used: int, limit: int, strict: bool = False) -> Dict[str, Any]:
+    """Evaluate a single product's limit status.
+
+    strict=False (default): 10 % grace zone — can_proceed while ratio < 1.1.
+                            Use for monthly-count resources (market / property reports).
+    strict=True:            No grace zone — can_proceed only while used < limit.
+                            Use for active-count resources (schedules) where allowing
+                            one extra would create a real extra resource.
+    """
     if limit >= 99999:
         return {"used": used, "limit": limit, "status": "ok", "can_proceed": True}
 
     ratio = used / max(limit, 1)
+
     if ratio < 0.8:
         status = "ok"
     elif ratio < 1.0:
         status = "warning"
-    elif ratio < 1.1:
-        status = "at_limit"
     else:
-        status = "exceeded"
+        # at_limit only applies in non-strict mode and only in the 1.0–1.1 band
+        status = "at_limit" if (ratio < 1.1 and not strict) else "exceeded"
+
+    if strict:
+        can_proceed = used < limit
+    else:
+        can_proceed = ratio < 1.1
 
     return {
         "used":        used,
         "limit":       limit,
         "status":      status,
-        "can_proceed": status != "exceeded",
+        "can_proceed": can_proceed,
     }
 
 
@@ -222,11 +249,11 @@ def get_full_plan_usage(cur, account_id: str) -> Dict[str, Any]:
         "usage": usage,
         "limits": {
             "market_reports": evaluate_product_limit(
-                usage["market_reports_used"],   plan["market_reports_limit"]),
+                usage["market_reports_used"],   plan["market_reports_limit"],  strict=False),
             "schedules": evaluate_product_limit(
-                usage["schedules_active"],      plan["schedules_limit"]),
+                usage["schedules_active"],      plan["schedules_limit"],       strict=True),
             "property_reports": evaluate_product_limit(
-                usage["property_reports_used"], plan["property_reports_limit"]),
+                usage["property_reports_used"], plan["property_reports_limit"], strict=False),
         },
     }
 

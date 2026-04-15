@@ -15,6 +15,18 @@ logger = logging.getLogger(__name__)
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/market_reports")
 
 
+def _first_not_none(*values, default):
+    """Return the first value that is not None, or default.
+
+    Explicit None check so that override = 0 (freeze account) is honoured
+    instead of being skipped by a falsy `or` chain.
+    """
+    for v in values:
+        if v is not None:
+            return v
+    return default
+
+
 def check_usage_limit(account_id: str, product: str = "market_reports") -> Dict[str, Any]:
     """
     Check if an account can generate a report of the given product type.
@@ -40,7 +52,7 @@ def check_usage_limit(account_id: str, product: str = "market_reports") -> Dict[
                     a.monthly_report_limit_override,
                     p.plan_slug
                 FROM accounts a
-                JOIN plans p ON p.plan_slug = a.plan_slug
+                LEFT JOIN plans p ON p.plan_slug = a.plan_slug
                 WHERE a.id = %s::uuid
             """, (account_id,))
             row = cur.fetchone()
@@ -53,10 +65,11 @@ def check_usage_limit(account_id: str, product: str = "market_reports") -> Dict[
              mkt_override, sched_override, prop_override,
              legacy_override, plan_slug) = row
 
-            # Resolve effective limit for the requested product
-            # Priority: per-product override > legacy single override > plan default > hard floor
+            # Resolve effective limit for the requested product.
+            # Use _first_not_none so that override = 0 (freeze account) is honoured.
+            # Priority: per-product override → legacy single override → plan default → hard floor
             if product == "market_reports":
-                effective_limit = mkt_override or legacy_override or mkt_plan_limit or 3
+                effective_limit = _first_not_none(mkt_override, legacy_override, mkt_plan_limit, default=3)
                 cur.execute("""
                     SELECT COUNT(*) FROM report_generations
                     WHERE account_id = %s::uuid
@@ -65,7 +78,7 @@ def check_usage_limit(account_id: str, product: str = "market_reports") -> Dict[
                 """, (account_id,))
 
             elif product == "property_reports":
-                effective_limit = prop_override or prop_plan_limit or 1
+                effective_limit = _first_not_none(prop_override, prop_plan_limit, default=1)
                 cur.execute("""
                     SELECT COUNT(*) FROM property_reports
                     WHERE account_id = %s::uuid

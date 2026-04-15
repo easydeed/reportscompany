@@ -53,8 +53,8 @@ export default function AffiliateDashboardPage() {
     overview: affiliateData.overview,
     planSummary: planUsage ? {
       plan_name: planUsage.plan?.plan_name,
-      report_count: planUsage.usage?.report_count,
-      limit: planUsage.account?.monthly_report_limit_override ?? planUsage.plan?.monthly_report_limit,
+      report_count: planUsage.usage?.market_reports_used ?? 0,
+      limit: planUsage.plan?.market_reports_limit ?? 3,
     } : undefined,
     sponsoredAccounts: affiliateData.sponsored_accounts,
     onRefresh: () => refetch(),
