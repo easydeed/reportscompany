@@ -45,6 +45,8 @@ export type AffiliateDashboardShellProps = {
   };
   sponsoredAccounts: SponsoredAccount[];
   onRefresh?: () => void;
+  isCompanyRep?: boolean;
+  companyName?: string;
 };
 
 function formatDate(dateString: string | null): string {
@@ -91,7 +93,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
-  const { overview, planSummary, sponsoredAccounts, onRefresh } = props;
+  const { overview, planSummary, sponsoredAccounts, onRefresh, isCompanyRep = false, companyName = '' } = props;
   const { toast } = useToast();
 
   const [resendModal, setResendModal] = useState<{ open: boolean; agent: SponsoredAccount | null }>({ open: false, agent: null });
@@ -175,9 +177,11 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
       variant: 'default',
     },
     unsponsor: {
-      title: 'Remove Sponsorship',
-      description: 'This will remove your sponsorship and downgrade the agent to the free plan. This cannot be undone.',
-      confirm: 'Remove',
+      title: isCompanyRep ? 'Remove from Book' : 'Remove Sponsorship',
+      description: isCompanyRep
+        ? 'This will remove the agent from your book and downgrade them to the free plan. This cannot be undone.'
+        : 'This will remove your sponsorship and downgrade the agent to the free plan. This cannot be undone.',
+      confirm: isCompanyRep ? 'Remove from Book' : 'Remove',
       variant: 'destructive',
     },
   };
@@ -185,12 +189,14 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
   return (
     <div className="space-y-5">
         <PageHeader
-          title="Affiliate Dashboard"
-          description="Manage your sponsored agents and track their activity"
+          title={isCompanyRep ? "My Agents" : "Affiliate Dashboard"}
+          description={isCompanyRep
+            ? `${companyName}${companyName ? ' • ' : ''}Manage your agents and track their activity`
+            : "Manage your sponsored agents and track their activity"}
           action={
             <div className="flex items-center gap-2">
               <BulkInviteModal />
-              <InviteAgentModal />
+              <InviteAgentModal isCompanyRep={isCompanyRep} />
             </div>
           }
         />
@@ -200,11 +206,11 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
             <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
               <div>
                 <CardTitle className="text-base font-semibold text-foreground">
-                  Your Affiliate Plan
+                  {isCompanyRep ? 'Your Rep Account' : 'Your Affiliate Plan'}
                 </CardTitle>
                 <div className="mt-3">
                   <div className="text-2xl font-display font-bold text-indigo-600">
-                    {planSummary.plan_name}
+                    {isCompanyRep ? `Included by ${companyName || 'Company'}` : planSummary.plan_name}
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
                     {planSummary.report_count} of {planSummary.limit} reports used this month
@@ -219,17 +225,17 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
         )}
 
         <div className="grid gap-3 md:grid-cols-2">
-          <MetricCard label="Sponsored Accounts" value={overview.sponsored_count} icon={<Users2 className="w-4 h-4" />} index={0} />
+          <MetricCard label={isCompanyRep ? "Agents" : "Sponsored Accounts"} value={overview.sponsored_count} icon={<Users2 className="w-4 h-4" />} index={0} />
           <MetricCard label="Reports This Month" value={overview.total_reports_this_month} icon={<TrendingUp className="w-4 h-4" />} index={1} />
         </div>
 
         <Card className="border-border bg-card shadow-sm">
           <CardHeader className="border-b border-border">
             <CardTitle className="text-lg font-semibold text-foreground">
-              Sponsored Accounts
+              {isCompanyRep ? 'My Agents' : 'Sponsored Accounts'}
             </CardTitle>
             <CardDescription className="text-muted-foreground">
-              View and manage your sponsored agent accounts
+              {isCompanyRep ? 'View and manage the agents in your book' : 'View and manage your sponsored agent accounts'}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
@@ -239,12 +245,14 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
                   <Users2 className="h-8 w-8 text-muted-foreground/60" />
                 </div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">
-                  No Sponsored Accounts Yet
+                  {isCompanyRep ? 'No Agents Yet' : 'No Sponsored Accounts Yet'}
                 </h3>
-                <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
-                  Start by inviting your first agent to begin tracking their activity
+                <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                  {isCompanyRep
+                    ? <>Use the <strong>Invite Agent</strong> button above to add your first agent.</>
+                    : <>Use the <strong>Invite Agent</strong> button above to start tracking agent activity.</>
+                  }
                 </p>
-                <InviteAgentModal />
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -252,7 +260,7 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
                   <thead>
                     <tr className="border-b border-border bg-muted/40">
                       <th className="text-left py-2.5 px-6 text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em]">
-                        Account Name
+                        Agent
                       </th>
                       <th className="text-left py-2.5 px-6 text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.05em]">
                         Plan
@@ -363,7 +371,7 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
                                     onClick={() => setConfirmModal({ open: true, agent: account, action: 'unsponsor' })}
                                   >
                                     <Trash2 className="h-4 w-4 mr-2" />
-                                    Remove
+                                    {isCompanyRep ? 'Remove from Book' : 'Remove'}
                                   </DropdownMenuItem>
                                 </>
                               )}

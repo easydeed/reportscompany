@@ -23,10 +23,9 @@ export default function AffiliateDashboardPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
         <Building2 className="h-16 w-16 text-muted-foreground mb-4" />
-        <h1 className="text-2xl font-bold mb-2">Not an Affiliate Account</h1>
+        <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
         <p className="text-muted-foreground max-w-md mb-6">
-          This account is not an industry affiliate. Affiliate features are only available
-          to accounts with Industry Affiliate status.
+          This account does not have rep or affiliate access.
         </p>
         <Button asChild>
           <a href="/app">Back to Dashboard</a>
@@ -38,14 +37,17 @@ export default function AffiliateDashboardPage() {
   if (affError || !affiliateData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-        <h1 className="text-2xl font-bold mb-2">Error Loading Affiliate Data</h1>
-        <p className="text-muted-foreground max-w-md mb-6">Failed to load affiliate data</p>
+        <h1 className="text-2xl font-bold mb-2">Error Loading Dashboard</h1>
+        <p className="text-muted-foreground max-w-md mb-6">Failed to load dashboard data</p>
         <Button asChild>
           <a href="/app">Back to Dashboard</a>
         </Button>
       </div>
     )
   }
+
+  const isCompanyRep = !!affiliateData.account?.parent_account_id
+  const companyName = affiliateData.account?.parent_company_name || ''
 
   const shellProps: AffiliateDashboardShellProps = {
     overview: affiliateData.overview,
@@ -56,6 +58,8 @@ export default function AffiliateDashboardPage() {
     } : undefined,
     sponsoredAccounts: affiliateData.sponsored_accounts,
     onRefresh: () => refetch(),
+    isCompanyRep,
+    companyName,
   }
 
   return (
@@ -63,6 +67,7 @@ export default function AffiliateDashboardPage() {
       <AffiliateOnboarding
         sponsoredCount={affiliateData.overview.sponsored_count}
         initialStatus={onboardingData}
+        isCompanyRep={isCompanyRep}
       />
       <AffiliateDashboardShell {...shellProps} />
     </div>

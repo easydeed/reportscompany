@@ -130,11 +130,14 @@ def get_overview(request: Request, account_id: str = Depends(require_account_id)
         # Get sponsored accounts list (batch groups — 2 queries total)
         sponsored = get_sponsored_accounts(cur, account_id)
         
-        # Get account info
+        # Get account info (include parent company context for tier-aware UI)
         cur.execute("""
-            SELECT id::text, name, account_type, plan_slug
-            FROM accounts
-            WHERE id = %s::uuid
+            SELECT a.id::text, a.name, a.account_type, a.plan_slug,
+                   a.parent_account_id::text,
+                   pa.name AS parent_company_name
+            FROM accounts a
+            LEFT JOIN accounts pa ON pa.id = a.parent_account_id
+            WHERE a.id = %s::uuid
         """, (account_id,))
         
         acc_row = cur.fetchone()
@@ -145,6 +148,8 @@ def get_overview(request: Request, account_id: str = Depends(require_account_id)
                 "name": acc_row[1],
                 "account_type": acc_row[2],
                 "plan_slug": acc_row[3],
+                "parent_account_id": acc_row[4],
+                "parent_company_name": acc_row[5],
             },
             "overview": overview,
             "sponsored_accounts": sponsored,

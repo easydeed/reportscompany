@@ -64,12 +64,14 @@ interface AffiliateOnboardingProps {
   sponsoredCount?: number
   /** Server-fetched onboarding status to avoid client-side loading flash */
   initialStatus?: OnboardingStatus | null
+  isCompanyRep?: boolean
 }
 
 export function AffiliateOnboarding({
   className,
   sponsoredCount = 0,
   initialStatus,
+  isCompanyRep = false,
 }: AffiliateOnboardingProps) {
   const { data: fetchedStatus, isLoading: queryLoading } = useOnboarding()
   const status = (initialStatus ?? fetchedStatus ?? null) as OnboardingStatus | null
@@ -124,7 +126,9 @@ export function AffiliateOnboarding({
             Setup complete!
           </p>
           <p className="text-xs text-green-600 dark:text-green-400">
-            You&apos;re ready to manage your sponsored agents and track their activity.
+            {isCompanyRep
+              ? "You're ready to manage your agents and track their activity."
+              : "You're ready to manage your sponsored agents and track their activity."}
           </p>
         </div>
       </div>
@@ -143,9 +147,9 @@ export function AffiliateOnboarding({
               <Building2 className="w-4.5 h-4.5 text-white" />
             </div>
             <div>
-              <CardTitle className="text-base font-bold">Welcome to your Affiliate Dashboard</CardTitle>
+              <CardTitle className="text-base font-bold">{isCompanyRep ? 'Welcome to your Rep Dashboard' : 'Welcome to your Affiliate Dashboard'}</CardTitle>
               <CardDescription className="text-xs mt-0.5">
-                Let&apos;s set up your account to start sponsoring agents
+                {isCompanyRep ? "Let's get you set up and start adding agents" : "Let's set up your account to start sponsoring agents"}
               </CardDescription>
             </div>
           </div>
@@ -290,7 +294,7 @@ export function AffiliateOnboarding({
               <Users className="w-3.5 h-3.5 text-primary" />
             </div>
             <span className="text-xs text-muted-foreground">
-              You have <strong className="text-foreground font-semibold">{sponsoredCount}</strong> sponsored agent{sponsoredCount !== 1 ? 's' : ''}
+              You have <strong className="text-foreground font-semibold">{sponsoredCount}</strong> {isCompanyRep ? 'agent' : 'sponsored agent'}{sponsoredCount !== 1 ? 's' : ''}
             </span>
           </div>
         )}

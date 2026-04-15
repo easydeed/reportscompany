@@ -34,7 +34,7 @@ const INITIAL_FORM = {
   license_number: '',
 };
 
-export function InviteAgentModal() {
+export function InviteAgentModal({ isCompanyRep = false }: { isCompanyRep?: boolean } = {}) {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
@@ -179,8 +179,9 @@ export function InviteAgentModal() {
         <DialogHeader>
           <DialogTitle>Invite Agent</DialogTitle>
           <DialogDescription>
-            Create a new trial account for an agent. They&apos;ll receive an invitation email
-            to set up their account.
+            {isCompanyRep
+              ? "Add an agent to your book. They'll receive an invitation email and their reports will carry your company's branding."
+              : "Create a new trial account for an agent. They'll receive an invitation email to set up their account."}
           </DialogDescription>
         </DialogHeader>
 
@@ -222,7 +223,7 @@ export function InviteAgentModal() {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="name">
-                  Agent/Company Name <span className="text-destructive">*</span>
+                  Agent Name <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="name"
