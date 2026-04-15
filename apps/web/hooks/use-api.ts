@@ -235,11 +235,12 @@ export function useLeadPageLeads() {
 }
 
 /** Affiliate overview */
-export function useAffiliateOverview() {
+export function useAffiliateOverview(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.affiliate.overview,
     queryFn: () => apiFetchRQ("/v1/affiliate/overview"),
     retry: false, // Don't retry 403 (not affiliate)
+    enabled: options?.enabled !== false,
   })
 }
 

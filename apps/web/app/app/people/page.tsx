@@ -50,7 +50,7 @@ import {
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useContacts, useContactGroups, useAffiliateOverview, useInvalidate } from "@/hooks/use-api"
+import { useContacts, useContactGroups, useAffiliateOverview, useAccount, useInvalidate } from "@/hooks/use-api"
 import { cn } from "@/lib/utils"
 import { PageHeader } from "@/components/page-header"
 
@@ -97,16 +97,20 @@ type ContactGroup = {
 
 export default function PeoplePage() {
   // React Query hooks for data fetching
+  const { data: accountData } = useAccount()
   const { data: contactsData, isLoading: contactsLoading } = useContacts()
   const { data: groupsData, isLoading: groupsLoading } = useContactGroups()
-  const { data: affiliateData, isError: affiliateError } = useAffiliateOverview()
   const invalidate = useInvalidate()
+
+  // Only call affiliate overview for actual affiliates — avoids 403 noise for trial agents
+  const isAffiliateAccount = (accountData as any)?.account_type === 'INDUSTRY_AFFILIATE'
+  const { data: affiliateData } = useAffiliateOverview({ enabled: isAffiliateAccount })
 
   // Derive state from React Query data
   const contacts: Contact[] = contactsData?.contacts || []
   const groups: ContactGroup[] = groupsData?.groups || []
   const sponsoredAccounts: SponsoredAccount[] = affiliateData?.sponsored_accounts || []
-  const isAffiliate = !affiliateError && !!affiliateData
+  const isAffiliate = isAffiliateAccount && !!affiliateData
   const loading = contactsLoading
 
   const [dialogOpen, setDialogOpen] = useState(false)

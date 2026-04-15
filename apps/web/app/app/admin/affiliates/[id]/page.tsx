@@ -468,7 +468,7 @@ export default function AffiliateDetailPage() {
             Invite New Agent
           </CardTitle>
           <CardDescription>
-            Add a new agent to be sponsored by {affiliate.name}
+            Add a new trial agent under {affiliate.name}
           </CardDescription>
         </CardHeader>
         <CardContent>

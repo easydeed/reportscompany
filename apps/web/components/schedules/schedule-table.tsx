@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal, Eye, Edit, Trash2, Calendar } from "lucide-react"
-import { type Schedule, reportTypeLabels, dowToWeekday, formatTime } from "./types"
+import { type Schedule, reportTypeLabels, dowToWeekday, formatTime12h } from "./types"
 
 export interface ScheduleTableProps {
   schedules: Schedule[]
@@ -118,7 +118,7 @@ export function ScheduleTable({ schedules, onToggleActive, onView, onEdit, onDel
                 <td className="px-4 py-3 text-sm">
                   <span className="text-foreground font-medium">{formatNextRun(schedule.next_run_at)}</span>
                   <span className="text-muted-foreground ml-1">
-                    at {formatTime(schedule.send_hour, schedule.send_minute)}
+                    at {formatTime12h(schedule.send_hour, schedule.send_minute)}
                   </span>
                 </td>
                 <td className="px-4 py-3">

@@ -97,9 +97,17 @@ export function parseTime(time: string): { hour: number; minute: number } {
   return { hour: hour || 9, minute: minute || 0 }
 }
 
-// Helper: Format hour/minute to time string (HH:MM)
+// Helper: Format hour/minute to 24-hour time string (HH:MM) — used for internal state
 export function formatTime(hour: number, minute: number): string {
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`
+}
+
+// Helper: Format hour/minute to 12-hour time string (h:MM AM/PM) — used for display
+export function formatTime12h(hour: number, minute: number): string {
+  const period = hour >= 12 ? "PM" : "AM"
+  const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+  const displayMinute = String(minute).padStart(2, "0")
+  return `${displayHour}:${displayMinute} ${period}`
 }
 
 // Helper: Convert wizard state to API payload

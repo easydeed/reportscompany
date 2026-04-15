@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { ArrowLeft, Play, Edit, Trash2, Mail, MapPin, Hash, Calendar, Clock, AlertCircle } from "lucide-react"
-import { type Schedule, type ScheduleRun, reportTypeLabels, dowToWeekday, formatTime } from "./types"
+import { type Schedule, type ScheduleRun, reportTypeLabels, dowToWeekday, formatTime12h } from "./types"
 
 export interface ScheduleDetailProps {
   schedule: Schedule
@@ -58,7 +58,7 @@ export function ScheduleDetail({
   }
 
   const formatCadence = () => {
-    const time = formatTime(schedule.send_hour, schedule.send_minute)
+    const time = formatTime12h(schedule.send_hour, schedule.send_minute)
     
     if (schedule.cadence === "weekly" && schedule.weekly_dow !== null && schedule.weekly_dow !== undefined) {
       const weekday = dowToWeekday(schedule.weekly_dow)
