@@ -258,16 +258,16 @@ def proxy_report_photos_inplace(result_json: Dict, account_id: str, run_id: str)
         return result_json
     
     print(f"📷 proxy_report_photos_inplace called: account={account_id[:8]}..., run={run_id[:8]}...")
-    
-    listings: List[Dict] = result_json.get("listings") or []
+
+    # Handle both data shapes: gallery reports use "listings", snapshot reports use "listings_sample"
+    listings_key = "listings" if "listings" in result_json else "listings_sample" if "listings_sample" in result_json else None
+    listings: List[Dict] = (result_json.get(listings_key) if listings_key else None) or []
     if not isinstance(listings, list) or not listings:
         print(f"📷 No listings found in result_json (keys: {list(result_json.keys())[:5]})")
         return result_json
 
-    # Log first listing to verify structure
-    if listings:
-        first = listings[0]
-        print(f"📷 Found {len(listings)} listings. First listing hero_photo_url: {str(first.get('hero_photo_url', ''))[:60]}...")
+    first = listings[0]
+    print(f"📷 Found {len(listings)} listings via '{listings_key}'. First hero_photo_url: {str(first.get('hero_photo_url', ''))[:60]}...")
 
     # Check R2 config once upfront (logs missing vars if not configured)
     if not _r2_configured():
@@ -286,6 +286,7 @@ def proxy_report_photos_inplace(result_json: Dict, account_id: str, run_id: str)
             success_count += 1
         listing["hero_photo_url"] = new_url
 
-    print(f"📷 Photo proxy complete: {success_count}/{len(listings)} uploaded to R2")
+    result_json[listings_key] = listings
+    print(f"📷 Photo proxy complete: {success_count}/{len(listings)} uploaded to R2 (key='{listings_key}')")
     return result_json
 
