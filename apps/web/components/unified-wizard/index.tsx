@@ -69,6 +69,7 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
   const [generatedReportId, setGeneratedReportId] = useState<string | null>(null)
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
   const [generationError, setGenerationError] = useState<string | null>(null)
+  const [limitInfo, setLimitInfo] = useState<{ product: string; used: number; limit: number } | null>(null)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const selectedReport = REPORT_TYPES.find(r => r.id === state.reportType)
@@ -233,9 +234,18 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
         if (!res.ok) {
           if (res.status === 429) {
             const errData = await res.json().catch(() => ({}))
-            setGenerationError(
-              errData.detail || errData.message || "You've reached your monthly report limit."
-            )
+            const productLabels: Record<string, string> = {
+              market_reports: "Market Report",
+              schedules: "Schedule",
+              property_reports: "Property Report",
+            }
+            const productLabel = errData.product ? (productLabels[errData.product] || "Report") : "Market Report"
+            const used = errData.used ?? null
+            const limit = errData.limit ?? null
+            const detail = used !== null && limit !== null
+              ? `You've used ${used} of ${limit} ${productLabel.toLowerCase()}s this month.`
+              : errData.detail || errData.message || `You've reached your ${productLabel.toLowerCase()} limit.`
+            setGenerationError(`${productLabel} limit reached — ${detail}`)
             setGenerationState("limit_reached")
             setIsSubmitting(false)
             return
@@ -277,9 +287,18 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
         if (!res.ok) {
           if (res.status === 429) {
             const errData = await res.json().catch(() => ({}))
-            setGenerationError(
-              errData.detail || errData.message || "You've reached your monthly report limit."
-            )
+            const productLabels: Record<string, string> = {
+              market_reports: "Market Report",
+              schedules: "Schedule",
+              property_reports: "Property Report",
+            }
+            const productLabel = errData.product ? (productLabels[errData.product] || "Report") : "Schedule"
+            const used = errData.used ?? null
+            const limit = errData.limit ?? null
+            const detail = used !== null && limit !== null
+              ? `You've used ${used} of ${limit} ${productLabel.toLowerCase()}s.`
+              : errData.detail || errData.message || `You've reached your ${productLabel.toLowerCase()} limit.`
+            setGenerationError(`${productLabel} limit reached — ${detail}`)
             setGenerationState("limit_reached")
             setIsSubmitting(false)
             return
@@ -451,12 +470,14 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
                         <ArrowUpCircle className="w-8 h-8 text-amber-500" />
                       </div>
                       <div>
-                        <h2 className="text-lg font-semibold text-gray-900">Report limit reached</h2>
+                        <h2 className="text-lg font-semibold text-gray-900">
+                          {generationError?.split(" — ")[0] || "Limit Reached"}
+                        </h2>
                         <p className="text-sm text-gray-600 mt-1">
-                          {generationError || "You've used all your reports for this billing period."}
+                          {generationError?.split(" — ")[1] || generationError || "You've used all your reports for this billing period."}
                         </p>
                         <p className="text-sm text-gray-500 mt-2">
-                          Upgrade your plan to generate more reports, or wait until your limit resets next month.
+                          Upgrade your plan to continue, or wait until your limit resets next month.
                         </p>
                       </div>
                       <div className="flex flex-col gap-2 pt-2">

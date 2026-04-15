@@ -1,8 +1,10 @@
 """
 Usage Tracking & Plan Limit Enforcement
 
-Phase 29B: Calculate monthly usage and enforce plan limits
-Performance fix: Correlated subquery replaced with JOIN (M1)
+Per-product limit model:
+  - market_reports   → report_generations table
+  - schedules        → schedules table (active count)
+  - property_reports → property_reports table
 """
 
 from datetime import datetime, date
@@ -21,47 +23,239 @@ class LimitDecision(str, Enum):
     BLOCK = "BLOCK"
 
 
+# ─── DISPLAY NAMES ────────────────────────────────────────────────────────────
+
+_PLAN_DISPLAY_NAMES = {
+    "free": "Free",
+    "sponsored_free": "Trial",
+    "trial": "Trial",
+    "starter": "Starter",
+    "solo": "Starter",
+    "pro": "Pro",
+    "team": "Pro",
+    "affiliate": "Affiliate",
+}
+
+
+# ─── CORE: RESOLVE PLAN ───────────────────────────────────────────────────────
+
+def resolve_plan_for_account(cur, account_id: str) -> Dict[str, Any]:
+    """
+    Resolve effective limits for all three product types.
+
+    Handles deferred downgrades inline.  Returns both the new per-product
+    limit keys AND the legacy ``monthly_report_limit`` key for backward
+    compatibility.
+    """
+    cur.execute("""
+        SELECT
+            a.plan_slug,
+            a.monthly_report_limit_override,
+            a.account_type,
+            p.plan_name,
+            p.monthly_report_limit          AS plan_limit,
+            p.allow_overage,
+            p.overage_price_cents,
+            a.plan_downgrade_at,
+            a.plan_downgrade_to,
+            p.market_reports_limit,
+            p.schedules_limit,
+            p.property_reports_per_month,
+            a.market_reports_limit_override,
+            a.schedules_limit_override,
+            a.property_reports_limit_override
+        FROM accounts a
+        LEFT JOIN plans p ON a.plan_slug = p.plan_slug
+        WHERE a.id = %s::uuid
+    """, (account_id,))
+
+    row = cur.fetchone()
+    if not row:
+        raise ValueError(f"Account {account_id} not found")
+
+    (plan_slug, limit_override, account_type,
+     plan_name, plan_limit, allow_overage, overage_price_cents,
+     downgrade_at, downgrade_to,
+     mkt_plan_limit, sched_plan_limit, prop_plan_limit,
+     mkt_override, sched_override, prop_override) = row
+
+    # ── Deferred downgrade ────────────────────────────────────────────────────
+    if downgrade_at and downgrade_to:
+        now = datetime.utcnow()
+        downgrade_dt = downgrade_at.replace(tzinfo=None) if downgrade_at.tzinfo else downgrade_at
+        if now >= downgrade_dt:
+            logger.info(
+                f"Executing deferred downgrade for account {account_id}: "
+                f"{plan_slug} -> {downgrade_to}"
+            )
+            cur.execute("""
+                UPDATE accounts
+                SET plan_slug         = %s,
+                    plan_downgrade_at  = NULL,
+                    plan_downgrade_to  = NULL,
+                    billing_status     = 'canceled'
+                WHERE id = %s
+            """, (downgrade_to, account_id))
+            plan_slug = downgrade_to
+            cur.execute("""
+                SELECT plan_name, monthly_report_limit, allow_overage, overage_price_cents,
+                       market_reports_limit, schedules_limit, property_reports_per_month
+                FROM plans WHERE plan_slug = %s
+            """, (plan_slug,))
+            new_plan = cur.fetchone()
+            if new_plan:
+                plan_name, plan_limit, allow_overage, overage_price_cents = new_plan[:4]
+                mkt_plan_limit, sched_plan_limit, prop_plan_limit = new_plan[4:]
+
+    # ── Default if no plan assigned ───────────────────────────────────────────
+    if not plan_slug:
+        plan_slug = "free"
+
+    # ── Effective limits ──────────────────────────────────────────────────────
+    # Per-product override → legacy single override → plan default → hard floor
+    market_limit    = mkt_override  or limit_override or mkt_plan_limit  or 3
+    schedules_limit = sched_override or sched_plan_limit or 1
+    property_limit  = prop_override  or prop_plan_limit  or 1
+
+    # Legacy single limit (backward compat for evaluate_report_limit)
+    effective_limit = limit_override if limit_override is not None else (plan_limit or 100)
+    has_override    = limit_override is not None
+
+    display_name = _PLAN_DISPLAY_NAMES.get(plan_slug, plan_name) or "Free"
+
+    return {
+        # ── legacy keys ──────────────────────────────────────────────────────
+        "plan_slug":             plan_slug or "free",
+        "plan_name":             display_name,
+        "monthly_report_limit":  effective_limit,
+        "allow_overage":         allow_overage or False,
+        "overage_price_cents":   overage_price_cents or 0,
+        "has_override":          has_override,
+        "account_type":          account_type or "REGULAR",
+        # ── per-product limits ───────────────────────────────────────────────
+        "market_reports_limit":  market_limit,
+        "schedules_limit":       schedules_limit,
+        "property_reports_limit": property_limit,
+    }
+
+
+# ─── USAGE COUNTS ─────────────────────────────────────────────────────────────
+
+def get_usage_counts(cur, account_id: str) -> Dict[str, Any]:
+    """Count usage for all three product types."""
+    # Market reports this month
+    cur.execute("""
+        SELECT COUNT(*) FROM report_generations
+        WHERE account_id = %s::uuid
+          AND generated_at >= date_trunc('month', NOW())
+          AND status IN ('completed', 'processing')
+    """, (account_id,))
+    market_used = cur.fetchone()[0]
+
+    # Active schedules
+    cur.execute("""
+        SELECT COUNT(*) FROM schedules
+        WHERE account_id = %s::uuid AND active = TRUE
+    """, (account_id,))
+    schedules_active = cur.fetchone()[0]
+
+    # Property reports this month
+    property_used = 0
+    try:
+        cur.execute("""
+            SELECT COUNT(*) FROM property_reports
+            WHERE account_id = %s::uuid
+              AND created_at >= date_trunc('month', NOW())
+              AND status IN ('complete', 'generating')
+        """, (account_id,))
+        property_used = cur.fetchone()[0]
+    except Exception as e:
+        logger.warning(f"property_reports count failed (table may not exist): {e}")
+
+    return {
+        "market_reports_used":  market_used,
+        "schedules_active":     schedules_active,
+        "property_reports_used": property_used,
+    }
+
+
+# ─── SINGLE-PRODUCT EVALUATOR ─────────────────────────────────────────────────
+
+def evaluate_product_limit(used: int, limit: int) -> Dict[str, Any]:
+    """Evaluate a single product's limit status."""
+    if limit >= 99999:
+        return {"used": used, "limit": limit, "status": "ok", "can_proceed": True}
+
+    ratio = used / max(limit, 1)
+    if ratio < 0.8:
+        status = "ok"
+    elif ratio < 1.0:
+        status = "warning"
+    elif ratio < 1.1:
+        status = "at_limit"
+    else:
+        status = "exceeded"
+
+    return {
+        "used":        used,
+        "limit":       limit,
+        "status":      status,
+        "can_proceed": status != "exceeded",
+    }
+
+
+# ─── FULL PLAN USAGE ──────────────────────────────────────────────────────────
+
+def get_full_plan_usage(cur, account_id: str) -> Dict[str, Any]:
+    """Complete three-product plan usage response for the frontend."""
+    plan  = resolve_plan_for_account(cur, account_id)
+    usage = get_usage_counts(cur, account_id)
+
+    return {
+        "plan": {
+            "plan_slug":              plan["plan_slug"],
+            "plan_name":              plan["plan_name"],
+            "market_reports_limit":   plan["market_reports_limit"],
+            "schedules_limit":        plan["schedules_limit"],
+            "property_reports_limit": plan["property_reports_limit"],
+        },
+        "usage": usage,
+        "limits": {
+            "market_reports": evaluate_product_limit(
+                usage["market_reports_used"],   plan["market_reports_limit"]),
+            "schedules": evaluate_product_limit(
+                usage["schedules_active"],      plan["schedules_limit"]),
+            "property_reports": evaluate_product_limit(
+                usage["property_reports_used"], plan["property_reports_limit"]),
+        },
+    }
+
+
+# ─── LEGACY: get_monthly_usage ────────────────────────────────────────────────
+
 def get_monthly_usage(cur, account_id: str, now: datetime | None = None) -> Dict[str, Any]:
     """
     Get usage statistics for the current calendar month.
-    
-    Args:
-        cur: Database cursor
-        account_id: Account UUID
-        now: Override current time (for testing)
-    
-    Returns:
-        {
-            "report_count": int,
-            "schedule_run_count": int,
-            "period_start": str (ISO date),
-            "period_end": str (ISO date)
-        }
+    Kept for backward compatibility — new code should call get_usage_counts().
     """
     if now is None:
         now = datetime.utcnow()
-    
-    # Current calendar month boundaries
-    year = now.year
+
+    year  = now.year
     month = now.month
     period_start = date(year, month, 1)
-    _, last_day = calendar.monthrange(year, month)
-    period_end = date(year, month, last_day)
-    
-    # Count report_generations for this month
+    _, last_day  = calendar.monthrange(year, month)
+    period_end   = date(year, month, last_day)
+
     cur.execute("""
-        SELECT COUNT(*) as report_count
-        FROM report_generations
+        SELECT COUNT(*) FROM report_generations
         WHERE account_id = %s
           AND generated_at >= %s::date
           AND generated_at < (%s::date + INTERVAL '1 day')
           AND status IN ('completed', 'processing')
     """, (account_id, period_start, period_end))
-    
-    report_row = cur.fetchone()
-    report_count = report_row[0] if report_row else 0
-    
-    # FIX (M1): Count schedule_runs using JOIN instead of correlated subquery
+    report_count = (cur.fetchone() or [0])[0]
+
     schedule_run_count = 0
     try:
         cur.execute("""
@@ -73,220 +267,97 @@ def get_monthly_usage(cur, account_id: str, now: datetime | None = None) -> Dict
               AND sr.created_at < (%s::date + INTERVAL '1 day')
               AND sr.status IN ('completed', 'processing')
         """, (account_id, period_start, period_end))
-        
-        schedule_row = cur.fetchone()
-        schedule_run_count = schedule_row[0] if schedule_row else 0
+        schedule_run_count = (cur.fetchone() or [0])[0]
     except Exception as e:
-        # schedule_runs table might not exist yet
         logger.warning(f"schedule_runs query failed (table may not exist): {e}")
-    
+
     return {
-        "report_count": report_count,
+        "report_count":       report_count,
         "schedule_run_count": schedule_run_count,
-        "period_start": period_start.isoformat(),
-        "period_end": period_end.isoformat(),
+        "period_start":       period_start.isoformat(),
+        "period_end":         period_end.isoformat(),
     }
 
 
-def resolve_plan_for_account(cur, account_id: str) -> Dict[str, Any]:
+# ─── LEGACY: evaluate_report_limit ────────────────────────────────────────────
+
+def evaluate_report_limit(
+    cur, account_id: str, now: datetime | None = None
+) -> Tuple[LimitDecision, Dict[str, Any]]:
     """
-    Resolve the effective plan for an account, including any overrides.
-    
-    Also handles deferred downgrades: if plan_downgrade_at is in the past,
-    the downgrade is executed inline and the current (downgraded) plan is returned.
-    
-    Args:
-        cur: Database cursor
-        account_id: Account UUID
-    
-    Returns:
-        {
-            "plan_slug": str,
-            "plan_name": str,
-            "monthly_report_limit": int,
-            "allow_overage": bool,
-            "overage_price_cents": int,
-            "has_override": bool
-        }
-    """
-    # Get account info including deferred downgrade columns
-    cur.execute("""
-        SELECT 
-            a.plan_slug,
-            a.monthly_report_limit_override,
-            a.account_type,
-            p.plan_name,
-            p.monthly_report_limit as plan_limit,
-            p.allow_overage,
-            p.overage_price_cents,
-            a.plan_downgrade_at,
-            a.plan_downgrade_to
-        FROM accounts a
-        LEFT JOIN plans p ON a.plan_slug = p.plan_slug
-        WHERE a.id = %s
-    """, (account_id,))
-    
-    row = cur.fetchone()
-    if not row:
-        raise ValueError(f"Account {account_id} not found")
-    
-    (plan_slug, limit_override, account_type, 
-     plan_name, plan_limit, allow_overage, overage_price_cents,
-     downgrade_at, downgrade_to) = row
-
-    # Execute deferred downgrade if the paid period has ended
-    if downgrade_at and downgrade_to:
-        now = datetime.utcnow()
-        downgrade_dt = downgrade_at.replace(tzinfo=None) if downgrade_at.tzinfo else downgrade_at
-        if now >= downgrade_dt:
-            logger.info(f"Executing deferred downgrade for account {account_id}: {plan_slug} -> {downgrade_to}")
-            cur.execute("""
-                UPDATE accounts
-                SET plan_slug = %s,
-                    plan_downgrade_at = NULL,
-                    plan_downgrade_to = NULL,
-                    billing_status = 'canceled'
-                WHERE id = %s
-            """, (downgrade_to, account_id))
-            plan_slug = downgrade_to
-            # Re-fetch the new plan's limits
-            cur.execute("""
-                SELECT plan_name, monthly_report_limit, allow_overage, overage_price_cents
-                FROM plans WHERE plan_slug = %s
-            """, (plan_slug,))
-            new_plan = cur.fetchone()
-            if new_plan:
-                plan_name, plan_limit, allow_overage, overage_price_cents = new_plan
-    
-    # If no plan assigned, default to free
-    if not plan_slug:
-        plan_slug = 'free'
-        cur.execute("""
-            SELECT name, monthly_report_limit, allow_overage, overage_price_cents
-            FROM plans WHERE slug = 'free'
-        """)
-        free_row = cur.fetchone()
-        if free_row:
-            plan_name, plan_limit, allow_overage, overage_price_cents = free_row
-    
-    # Apply override if present
-    effective_limit = limit_override if limit_override is not None else (plan_limit or 100)
-    has_override = limit_override is not None
-    
-    PLAN_DISPLAY_NAMES = {
-        "sponsored_free": "Trial",
-    }
-    display_name = PLAN_DISPLAY_NAMES.get(plan_slug, plan_name) or 'Free'
-
-    return {
-        "plan_slug": plan_slug or 'free',
-        "plan_name": display_name,
-        "monthly_report_limit": effective_limit,
-        "allow_overage": allow_overage or False,
-        "overage_price_cents": overage_price_cents or 0,
-        "has_override": has_override,
-        "account_type": account_type or 'REGULAR',
-    }
-
-
-def evaluate_report_limit(cur, account_id: str, now: datetime | None = None) -> Tuple[LimitDecision, Dict[str, Any]]:
-    """
-    Central function to evaluate whether an account can generate another report.
-    
-    Logic:
-    - Unlimited (limit <= 0): ALLOW
-    - Under 80%: ALLOW
-    - 80-110%: ALLOW_WITH_WARNING
-    - Over 110% and no overage allowed: BLOCK
-    - Over 110% with overage allowed: ALLOW_WITH_WARNING (will bill)
-    
-    Args:
-        cur: Database cursor
-        account_id: Account UUID
-        now: Override current time (for testing)
-    
-    Returns:
-        (decision, info_dict)
-        
-        info_dict contains:
-        {
-            "usage": {...},
-            "plan": {...},
-            "ratio": float,
-            "message": str,
-            "can_proceed": bool
-        }
+    Evaluate whether an account can generate another market report.
+    Kept for backward compatibility — routes should migrate to get_full_plan_usage().
     """
     usage = get_monthly_usage(cur, account_id, now)
-    plan = resolve_plan_for_account(cur, account_id)
-    
+    plan  = resolve_plan_for_account(cur, account_id)
+
     limit = plan["monthly_report_limit"]
     count = usage["report_count"]
-    
-    # Handle unlimited plans (limit <= 0 or very high)
+
     if limit <= 0 or limit >= 10000:
         return LimitDecision.ALLOW, {
-            "usage": usage,
-            "plan": plan,
+            "usage": usage, "plan": plan,
             "ratio": 0.0,
             "message": "Unlimited plan - no restrictions",
             "can_proceed": True,
         }
-    
-    # Calculate usage ratio
+
     ratio = count / limit if limit > 0 else 0.0
-    
-    # Decision logic
+
     if ratio < 0.8:
-        # Under 80%: green light
-        decision = LimitDecision.ALLOW
-        message = f"Usage: {count}/{limit} reports ({int(ratio * 100)}%)"
-        can_proceed = True
-        
+        decision     = LimitDecision.ALLOW
+        message      = f"Usage: {count}/{limit} reports ({int(ratio * 100)}%)"
+        can_proceed  = True
     elif ratio < 1.1:
-        # 80-110%: warn but allow
-        decision = LimitDecision.ALLOW_WITH_WARNING
+        decision    = LimitDecision.ALLOW_WITH_WARNING
+        can_proceed = True
         if ratio >= 1.0:
             if plan["allow_overage"]:
-                overage_count = count - limit
-                message = f"⚠️ Over limit by {overage_count} reports. Overage billing applies (${plan['overage_price_cents'] / 100:.2f}/report)."
+                overage = count - limit
+                message = (
+                    f"\u26a0\ufe0f Over limit by {overage} reports. "
+                    f"Overage billing applies (${plan['overage_price_cents'] / 100:.2f}/report)."
+                )
             else:
-                message = f"⚠️ At {int(ratio * 100)}% of monthly limit ({count}/{limit}). Consider upgrading your plan."
+                message = (
+                    f"\u26a0\ufe0f At {int(ratio * 100)}% of monthly limit "
+                    f"({count}/{limit}). Consider upgrading your plan."
+                )
         else:
-            message = f"⚠️ Approaching limit: {count}/{limit} reports ({int(ratio * 100)}%)"
-        can_proceed = True
-        
+            message = f"\u26a0\ufe0f Approaching limit: {count}/{limit} reports ({int(ratio * 100)}%)"
     else:
-        # Over 110%
         if plan["allow_overage"]:
-            # Allow with billing
-            decision = LimitDecision.ALLOW_WITH_WARNING
-            overage_count = count - limit
-            message = f"⚠️ Significantly over limit ({count}/{limit}). Overage charges: ${overage_count * plan['overage_price_cents'] / 100:.2f}"
+            decision    = LimitDecision.ALLOW_WITH_WARNING
             can_proceed = True
+            overage     = count - limit
+            message     = (
+                f"\u26a0\ufe0f Significantly over limit ({count}/{limit}). "
+                f"Overage charges: ${overage * plan['overage_price_cents'] / 100:.2f}"
+            )
         else:
-            # Block
-            decision = LimitDecision.BLOCK
-            message = f"🚫 Monthly report limit reached ({count}/{limit}). Upgrade your plan to generate more reports."
+            decision    = LimitDecision.BLOCK
             can_proceed = False
-    
+            message     = (
+                f"\U0001f6ab Monthly report limit reached ({count}/{limit}). "
+                f"Upgrade your plan to generate more reports."
+            )
+
     return decision, {
-        "usage": usage,
-        "plan": plan,
-        "ratio": ratio,
-        "message": message,
-        "can_proceed": can_proceed,
+        "usage":        usage,
+        "plan":         plan,
+        "ratio":        ratio,
+        "message":      message,
+        "can_proceed":  can_proceed,
         "overage_count": max(0, count - limit) if limit > 0 else 0,
     }
 
 
+# ─── LOGGING HELPER ───────────────────────────────────────────────────────────
+
 def log_limit_decision(account_id: str, decision: LimitDecision, info: Dict[str, Any]):
-    """
-    Log usage limit decision for monitoring and debugging.
-    """
-    plan = info.get("plan", {})
+    """Log usage limit decision for monitoring and debugging."""
+    plan  = info.get("plan", {})
     usage = info.get("usage", {})
-    
     logger.info(
         f"[usage] account={account_id} "
         f"plan={plan.get('plan_slug', 'unknown')} "

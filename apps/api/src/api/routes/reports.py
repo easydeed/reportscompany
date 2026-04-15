@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 import json
 import logging
 from ..db import db_conn, set_rls, fetchone_dict, fetchall_dicts
-from ..services import evaluate_report_limit, log_limit_decision, LimitDecision
+from ..services import evaluate_report_limit, log_limit_decision, LimitDecision, get_full_plan_usage
 from ..services.email import send_limit_warning_email, send_limit_reached_email
 from ..cache import get_redis
 from ..crmls_cities import VALID_CITY_NAMES
@@ -14,21 +14,29 @@ _logger = logging.getLogger(__name__)
 
 def _check_and_notify_limit(account_id: str, info: dict):
     """
-    After a report is enqueued, check usage % and send one-time
+    After a report is enqueued, check market-report usage % and send one-time
     notifications at 80% and 100% thresholds.
     Uses Redis keys with 30-day TTL for billing-cycle dedup.
     """
     try:
-        plan = info.get("plan", {})
+        from datetime import datetime
+        plan  = info.get("plan", {})
         usage = info.get("usage", {})
-        limit = plan.get("monthly_report_limit", 0)
-        count = usage.get("report_count", 0) + 1  # +1 for the report just enqueued
+        # Support both old keys (report_count) and new keys (market_reports_used)
+        limit = plan.get("market_reports_limit") or plan.get("monthly_report_limit", 0)
+        count = (
+            usage.get("market_reports_used") or usage.get("report_count", 0)
+        ) + 1  # +1 for the report just enqueued
 
         if limit <= 0 or limit >= 10000:
             return
 
         ratio = count / limit
-        month_key = usage.get("period_start", "")[:7]  # "YYYY-MM"
+        # Use period_start from legacy usage, or compute from current month
+        month_key = (
+            usage.get("period_start", "") or
+            datetime.utcnow().strftime("%Y-%m-01")
+        )[:7]  # "YYYY-MM"
         if not month_key:
             return
 
@@ -144,27 +152,33 @@ def create_report(
     with db_conn() as (conn, cur):
         set_rls(cur, account_id)
         
-        # ===== PHASE 29B: CHECK USAGE LIMITS =====
-        decision, info = evaluate_report_limit(cur, account_id)
-        log_limit_decision(account_id, decision, info)
-        limit_info = info
-        
-        # Block if limit reached and no overage allowed
-        if decision == LimitDecision.BLOCK:
+        # ===== PRICING-002: CHECK MARKET REPORT LIMIT =====
+        plan_usage     = get_full_plan_usage(cur, account_id)
+        market_status  = plan_usage["limits"]["market_reports"]
+        limit_info     = plan_usage
+
+        if not market_status["can_proceed"]:
             raise HTTPException(
                 status_code=429,
                 detail={
-                    "error": "limit_reached",
-                    "message": info["message"],
-                    "usage": info["usage"],
-                    "plan": info["plan"],
+                    "error":   "market_report_limit_reached",
+                    "message": (
+                        f"Market report limit reached "
+                        f"({market_status['used']}/{market_status['limit']}). "
+                        f"Upgrade for more."
+                    ),
+                    "product": "market_reports",
+                    "used":    market_status["used"],
+                    "limit":   market_status["limit"],
                 }
             )
-        
-        # Add warning header if approaching/over limit
-        if decision == LimitDecision.ALLOW_WITH_WARNING:
-            response.headers["X-TrendyReports-Usage-Warning"] = info["message"]
-        # ===== END PHASE 29B =====
+
+        if market_status["status"] in ("warning", "at_limit"):
+            response.headers["X-TrendyReports-Usage-Warning"] = (
+                f"Approaching market report limit: "
+                f"{market_status['used']}/{market_status['limit']}"
+            )
+        # ===== END PRICING-002 =====
         
         # Resolve theme defaults from account if not provided
         theme_id = payload.theme_id

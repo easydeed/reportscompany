@@ -39,6 +39,9 @@ interface AccountDetail {
     account_type: string
     plan_slug: string
     monthly_report_limit_override: number | null
+    market_reports_limit_override: number | null
+    schedules_limit_override: number | null
+    property_reports_limit_override: number | null
     sponsor_account_id: string | null
     sponsor_name: string | null
     created_at: string
@@ -47,6 +50,9 @@ interface AccountDetail {
     plan_name: string
     plan_slug: string
     monthly_report_limit: number
+    market_reports_limit: number
+    schedules_limit: number
+    property_reports_limit: number
     allow_overage: boolean
     overage_price_cents: number
   }
@@ -86,6 +92,9 @@ export default function AdminAccountDetailPage() {
   // Form state
   const [planSlug, setPlanSlug] = useState("")
   const [limitOverride, setLimitOverride] = useState("")
+  const [marketReportsOverride, setMarketReportsOverride] = useState("")
+  const [schedulesOverride, setSchedulesOverride] = useState("")
+  const [propertyReportsOverride, setPropertyReportsOverride] = useState("")
   const [isActive, setIsActive] = useState(true)
 
   useEffect(() => {
@@ -104,6 +113,9 @@ export default function AdminAccountDetailPage() {
       setAccount(data)
       setPlanSlug(data.account.plan_slug)
       setLimitOverride(data.account.monthly_report_limit_override?.toString() || "")
+      setMarketReportsOverride(data.account.market_reports_limit_override?.toString() || "")
+      setSchedulesOverride(data.account.schedules_limit_override?.toString() || "")
+      setPropertyReportsOverride(data.account.property_reports_limit_override?.toString() || "")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load account")
     } finally {
@@ -161,6 +173,21 @@ export default function AdminAccountDetailPage() {
       const oldLimit = account?.account.monthly_report_limit_override || 0
       if (newLimit !== oldLimit) {
         updates.monthly_report_limit_override = newLimit
+      }
+
+      const newMR = marketReportsOverride ? parseInt(marketReportsOverride, 10) : 0
+      if (newMR !== (account?.account.market_reports_limit_override || 0)) {
+        updates.market_reports_limit_override = newMR
+      }
+
+      const newSch = schedulesOverride ? parseInt(schedulesOverride, 10) : 0
+      if (newSch !== (account?.account.schedules_limit_override || 0)) {
+        updates.schedules_limit_override = newSch
+      }
+
+      const newPR = propertyReportsOverride ? parseInt(propertyReportsOverride, 10) : 0
+      if (newPR !== (account?.account.property_reports_limit_override || 0)) {
+        updates.property_reports_limit_override = newPR
       }
 
       if (Object.keys(updates).length === 0) {
@@ -477,11 +504,12 @@ export default function AdminAccountDetailPage() {
                   <SelectValue placeholder="Select plan" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="free">Free (5 reports/month)</SelectItem>
-                  <SelectItem value="pro">Pro (300 reports/month)</SelectItem>
-                  <SelectItem value="team">Team (1,000 reports/month)</SelectItem>
-                  <SelectItem value="affiliate">Affiliate (5,000 reports/month)</SelectItem>
-                  <SelectItem value="sponsored_free">Trial (10 reports/month)</SelectItem>
+                  <SelectItem value="free">Free</SelectItem>
+                  <SelectItem value="starter">Starter</SelectItem>
+                  <SelectItem value="pro">Pro</SelectItem>
+                  <SelectItem value="team">Team</SelectItem>
+                  <SelectItem value="affiliate">Affiliate</SelectItem>
+                  <SelectItem value="sponsored_free">Trial (Sponsored)</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
@@ -490,18 +518,42 @@ export default function AdminAccountDetailPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="limit">Monthly Report Limit Override</Label>
+              <Label htmlFor="market-reports-limit">Market Reports Limit Override</Label>
               <Input
-                id="limit"
+                id="market-reports-limit"
                 type="number"
                 min="0"
-                placeholder={`Plan default: ${account.plan.monthly_report_limit}`}
-                value={limitOverride}
-                onChange={(e) => setLimitOverride(e.target.value)}
+                placeholder={`Plan default: ${account.plan.market_reports_limit ?? account.plan.monthly_report_limit}`}
+                value={marketReportsOverride}
+                onChange={(e) => setMarketReportsOverride(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">
-                Leave empty to use plan default. Set 0 to remove override.
-              </p>
+              <p className="text-xs text-muted-foreground">Leave empty to use plan default.</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="schedules-limit">Schedules Limit Override</Label>
+              <Input
+                id="schedules-limit"
+                type="number"
+                min="0"
+                placeholder={`Plan default: ${account.plan.schedules_limit ?? "—"}`}
+                value={schedulesOverride}
+                onChange={(e) => setSchedulesOverride(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">Leave empty to use plan default.</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="property-reports-limit">Property Reports Limit Override</Label>
+              <Input
+                id="property-reports-limit"
+                type="number"
+                min="0"
+                placeholder={`Plan default: ${account.plan.property_reports_limit ?? "—"}`}
+                value={propertyReportsOverride}
+                onChange={(e) => setPropertyReportsOverride(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">Leave empty to use plan default.</p>
             </div>
           </div>
 

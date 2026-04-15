@@ -201,25 +201,34 @@ function getNavigation({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }: Ti
   }
 }
 
+function UsageBar({ label, used, limit }: { label: string; used: number; limit: number }) {
+  const isUnlimited = limit >= 99999
+  const pct = isUnlimited ? 0 : Math.min((used / Math.max(limit, 1)) * 100, 100)
+  const color = pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-indigo-400'
+
+  return (
+    <div className="space-y-0.5">
+      <div className="flex justify-between text-[11px]">
+        <span className="text-sidebar-foreground/60">{label}</span>
+        <span className="font-medium text-sidebar-foreground/80">{isUnlimited ? '∞' : `${used}/${limit}`}</span>
+      </div>
+      {!isUnlimited && (
+        <div className="h-1 bg-sidebar-border rounded-full overflow-hidden">
+          <div className={`h-full ${color} rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
+        </div>
+      )}
+    </div>
+  )
+}
+
 function DashboardSidebar({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }: TierProps) {
   const pathname = usePathname()
   const { data: planUsage } = usePlanUsage()
-
-  const planInfo = useMemo(() => {
-    if (!planUsage?.plan) return null
-    return {
-      plan_name: planUsage.plan.plan_name || "Free",
-      reports_used: planUsage.usage?.report_count || 0,
-      reports_limit: planUsage.plan.monthly_report_limit || 10,
-    }
-  }, [planUsage])
 
   const nav = useMemo(() => getNavigation({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }), [isAdmin, isCompanyAdmin, isAffiliate, isSponsored])
 
   const isInAdminSection = pathname?.startsWith("/app/admin")
   const isInSettingsSection = pathname?.startsWith("/app/settings")
-  
-  const usagePercent = planInfo ? Math.min((planInfo.reports_used / planInfo.reports_limit) * 100, 100) : 0
 
   const homeHref = isAdmin ? "/app/admin" : isCompanyAdmin ? "/app/company" : isAffiliate ? "/app/affiliate" : "/app"
   const exactHomeHrefs = ["/app", "/app/affiliate", "/app/admin", "/app/company"]
@@ -373,23 +382,27 @@ function DashboardSidebar({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }:
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        {!isAdmin && !isCompanyAdmin && (
+        {!isAdmin && !isCompanyAdmin && planUsage && (
           <div className="px-3 py-3">
-            <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/50 p-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-sidebar-muted">
-                  {planInfo?.plan_name || "Free"} Plan
-                </span>
-                <span className="text-[11px] text-sidebar-foreground/70">
-                  {planInfo?.reports_used || 0}/{planInfo?.reports_limit || 10}
-                </span>
+            <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/50 p-3 space-y-2">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+                {planUsage.plan.plan_name} Plan
               </div>
-              <div className="h-1 bg-sidebar-border rounded-full overflow-hidden">
-                <div 
-                  className={`h-full rounded-full transition-all duration-500 ${usagePercent > 80 ? 'bg-amber-400' : 'bg-indigo-400'}`}
-                  style={{ width: `${usagePercent}%` }}
-                />
-              </div>
+              <UsageBar
+                label="Market Reports"
+                used={planUsage.usage.market_reports_used}
+                limit={planUsage.plan.market_reports_limit}
+              />
+              <UsageBar
+                label="Schedules"
+                used={planUsage.usage.schedules_active}
+                limit={planUsage.plan.schedules_limit}
+              />
+              <UsageBar
+                label="Property Reports"
+                used={planUsage.usage.property_reports_used}
+                limit={planUsage.plan.property_reports_limit}
+              />
             </div>
           </div>
         )}

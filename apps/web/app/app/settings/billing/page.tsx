@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { usePlanUsage } from "@/hooks/use-api"
+import type { PlanUsage } from "@/lib/types/plan"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -9,32 +10,21 @@ import {
   Loader2,
   Check,
   Zap,
-  FileText,
   ExternalLink,
   Sparkles,
   Receipt,
-  TrendingUp,
-  Users,
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter, useSearchParams } from "next/navigation"
 import { cn } from "@/lib/utils"
 
-type PlanUsageData = {
+type BillingData = PlanUsage & {
   account: {
     id: string
     name: string
     account_type: string
     plan_slug: string
     billing_status?: string | null
-  }
-  plan: {
-    plan_name: string
-    plan_slug: string
-    monthly_report_limit: number
-  }
-  usage: {
-    report_count: number
   }
   stripe_billing?: {
     stripe_price_id: string
@@ -47,47 +37,73 @@ type PlanUsageData = {
   } | null
 }
 
+function UsageBar({ label, used, limit }: { label: string; used: number; limit: number }) {
+  const isUnlimited = limit >= 99999
+  const pct = isUnlimited ? 0 : Math.min((used / Math.max(limit, 1)) * 100, 100)
+  const color = pct >= 100 ? "bg-red-500" : pct >= 80 ? "bg-amber-500" : "bg-indigo-500"
+
+  return (
+    <div className="space-y-1">
+      <div className="flex justify-between text-[12px]">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-medium">{isUnlimited ? "∞" : `${used} / ${limit}`}</span>
+      </div>
+      {!isUnlimited && (
+        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+          <div
+            className={cn("h-full rounded-full transition-all", color)}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
 const plans = [
   {
     name: "Free",
     slug: "free",
     price: 0,
-    limit: 5,
-    features: ["5 reports / month", "6 report types", "PDF export", "Email support"],
+    features: [
+      "3 Market Reports / month",
+      "1 Automated Schedule",
+      "1 Property Report / month",
+      "CMA Lead Page",
+    ],
+  },
+  {
+    name: "Starter",
+    slug: "starter",
+    price: 29,
+    popular: true,
+    features: [
+      "25 Market Reports / month",
+      "3 Automated Schedules",
+      "5 Property Reports / month",
+      "CMA Lead Page",
+      "AI Market Insights",
+      "CSV Contact Import",
+    ],
   },
   {
     name: "Pro",
     slug: "pro",
-    price: 29,
-    limit: 300,
-    popular: true,
+    price: 59,
     features: [
-      "300 reports / month",
-      "All report types",
-      "Custom branding",
-      "Scheduled reports",
-      "Email delivery",
-      "Priority support",
-    ],
-  },
-  {
-    name: "Team",
-    slug: "team",
-    price: 99,
-    limit: 1000,
-    icon: Users,
-    features: [
-      "1,000 reports / month",
-      "Everything in Pro",
-      "Team member access",
-      "Dedicated support",
+      "Unlimited Market Reports",
+      "Unlimited Schedules",
+      "25 Property Reports / month",
+      "CMA Lead Page",
+      "AI Market Insights",
+      "Priority Generation",
     ],
   },
 ]
 
 export default function BillingPage() {
   const { data: planData, isLoading } = usePlanUsage()
-  const billingData = (planData as PlanUsageData) ?? null
+  const billingData = (planData as unknown as BillingData) ?? null
   const [billingLoading, setBillingLoading] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
@@ -172,13 +188,6 @@ export default function BillingPage() {
     })
   }
 
-  function getUsagePercentage(): number {
-    if (!billingData) return 0
-    const limit = billingData.plan.monthly_report_limit
-    if (limit === 0 || limit === null) return 0 // Unlimited
-    return Math.min(100, (billingData.usage.report_count / limit) * 100)
-  }
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -190,9 +199,8 @@ export default function BillingPage() {
     )
   }
 
-  const currentPlanSlug = billingData?.account.plan_slug || "free"
-  const isUnlimited = billingData?.plan.monthly_report_limit === 0 || billingData?.plan.monthly_report_limit === null
-  const accountType = billingData?.account.account_type || "REGULAR"
+  const currentPlanSlug = billingData?.account?.plan_slug || "free"
+  const accountType = billingData?.account?.account_type || "REGULAR"
   const showStripeActions = accountType === "REGULAR" && currentPlanSlug !== "free"
 
   return (
@@ -218,7 +226,7 @@ export default function BillingPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h4 className="text-xl font-bold text-foreground">
-                      {billingData?.plan.plan_name || currentPlanSlug}
+                      {billingData?.plan?.plan_name || currentPlanSlug}
                     </h4>
                     {currentPlanSlug !== "free" && (
                       <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">Active</Badge>
@@ -234,10 +242,7 @@ export default function BillingPage() {
 
               {/* Plan features */}
               <div className="space-y-1.5 mb-4">
-                {(currentPlanSlug === "free"
-                  ? ["5 reports / month", "6 report types", "PDF export"]
-                  : ["Unlimited reports", "Custom branding", "Scheduled reports"]
-                ).map((feature, i) => (
+                {(plans.find(p => p.slug === currentPlanSlug)?.features || plans[0].features).map((feature, i) => (
                   <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Check className="w-3.5 h-3.5 text-emerald-500" />
                     {feature}
@@ -264,45 +269,31 @@ export default function BillingPage() {
           {/* Usage Card */}
           <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
             <div className="px-5 py-3 border-b border-border bg-muted/30">
-              <h3 className="text-[13px] font-semibold text-foreground uppercase tracking-wide">This Month</h3>
+              <h3 className="text-[13px] font-semibold text-foreground uppercase tracking-wide">Current Usage</h3>
             </div>
-            <div className="p-5">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-indigo-600" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-foreground">
-                    {billingData?.usage.report_count || 0}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {isUnlimited ? "reports generated" : `of ${billingData?.plan.monthly_report_limit} reports`}
-                  </p>
-                </div>
-              </div>
-
-              {!isUnlimited && (
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-[11px] text-muted-foreground">
-                    <span>Usage</span>
-                    <span>{Math.round(getUsagePercentage())}%</span>
-                  </div>
-                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={cn(
-                        "h-full rounded-full transition-all",
-                        getUsagePercentage() > 80 ? "bg-amber-500" : "bg-indigo-500"
-                      )}
-                      style={{ width: `${getUsagePercentage()}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {isUnlimited && (
-                <div className="flex items-center gap-2 text-xs text-emerald-600">
-                  <Sparkles className="w-4 h-4" />
-                  Unlimited reports included
+            <div className="p-5 space-y-3">
+              {billingData?.limits ? (
+                <>
+                  <UsageBar
+                    label="Market Reports"
+                    used={billingData.limits.market_reports.used}
+                    limit={billingData.limits.market_reports.limit}
+                  />
+                  <UsageBar
+                    label="Active Schedules"
+                    used={billingData.limits.schedules.used}
+                    limit={billingData.limits.schedules.limit}
+                  />
+                  <UsageBar
+                    label="Property Reports"
+                    used={billingData.limits.property_reports.used}
+                    limit={billingData.limits.property_reports.limit}
+                  />
+                </>
+              ) : (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Sparkles className="w-4 h-4 text-emerald-500" />
+                  Usage data loading…
                 </div>
               )}
             </div>

@@ -22,6 +22,7 @@ from zoneinfo import ZoneInfo
 import psycopg
 import ssl
 from celery import Celery
+from .limit_checker import check_usage_limit
 
 # Create a separate Celery instance for ticker (no result backend needed)
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -375,25 +376,15 @@ def process_due_schedules():
                     filters = row[15]  # NEW: Smart Preset filters (JSONB → dict or None)
                     
                     try:
-                        # Pre-check: skip if account is at monthly report limit
-                        cur.execute("""
-                            SELECT COUNT(*) FROM report_generations
-                            WHERE account_id = %s::uuid
-                              AND generated_at >= date_trunc('month', CURRENT_DATE)
-                              AND status IN ('completed', 'processing', 'queued')
-                        """, (account_id,))
-                        usage_count = cur.fetchone()[0]
-
-                        cur.execute("SELECT plan_slug FROM accounts WHERE id = %s::uuid", (account_id,))
-                        p_row = cur.fetchone()
-                        p_slug = p_row[0] if p_row else "free"
-
-                        REPORT_LIMITS = {"free": 5, "sponsored_free": 10, "pro": 300, "team": 1000, "affiliate": 5000}
-                        r_limit = REPORT_LIMITS.get(p_slug, 5)
-
-                        if usage_count >= r_limit:
-                            logger.info(f"Skipping schedule {schedule_id} — account {account_id} at limit ({usage_count}/{r_limit})")
-                            # Still advance next_run_at so we don't re-check every tick
+                        # Pre-check: skip if account is at market report limit (DB-backed, per-plan)
+                        limit_result = check_usage_limit(account_id, product="market_reports")
+                        if not limit_result["can_proceed"]:
+                            logger.info(
+                                f"Skipping schedule {schedule_id} — account {account_id} "
+                                f"at market report limit "
+                                f"({limit_result.get('used', '?')}/{limit_result.get('limit', '?')})"
+                            )
+                            # Advance next_run_at so we don't re-check every tick
                             next_run_at = compute_next_run(
                                 cadence, weekly_dow, monthly_dom,
                                 send_hour, send_minute, timezone

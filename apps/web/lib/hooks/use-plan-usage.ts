@@ -1,27 +1,9 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
+import type { PlanUsage } from '@/lib/types/plan'
 
-export type PlanUsage = {
-  plan: {
-    plan_name: string
-    plan_slug: string
-    monthly_report_limit: number
-    allow_overage: boolean
-    overage_price_cents: number
-    has_override: boolean
-  }
-  usage: {
-    report_count: number
-    schedule_run_count: number
-    period_start: string
-    period_end: string
-  }
-  decision: string
-  account: Record<string, unknown>
-  info: Record<string, unknown>
-  stripe_billing: Record<string, unknown> | null
-}
+export type { PlanUsage }
 
 async function fetchPlanUsage(): Promise<PlanUsage> {
   const res = await fetch('/api/proxy/v1/account/plan-usage', {

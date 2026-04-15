@@ -42,12 +42,37 @@ export type AffiliateDashboardShellProps = {
     plan_name: string;
     report_count: number;
     limit: number;
+    market_reports_used?: number;
+    market_reports_limit?: number;
+    schedules_used?: number;
+    schedules_limit?: number;
+    property_reports_used?: number;
+    property_reports_limit?: number;
   };
   sponsoredAccounts: SponsoredAccount[];
   onRefresh?: () => void;
   isCompanyRep?: boolean;
   companyName?: string;
 };
+
+function UsageBar({ label, used, limit }: { label: string; used: number; limit: number }) {
+  const isUnlimited = limit >= 99999
+  const pct = isUnlimited ? 0 : Math.min((used / Math.max(limit, 1)) * 100, 100)
+  const color = pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-indigo-500'
+  return (
+    <div className="space-y-0.5">
+      <div className="flex justify-between text-[11px]">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-medium">{isUnlimited ? '∞' : `${used}/${limit}`}</span>
+      </div>
+      {!isUnlimited && (
+        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+          <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${pct}%` }} />
+        </div>
+      )}
+    </div>
+  )
+}
 
 function formatDate(dateString: string | null): string {
   if (!dateString) return '—';
@@ -212,9 +237,29 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
                   <div className="text-2xl font-display font-bold text-indigo-600">
                     {isCompanyRep ? `Included by ${companyName || 'Company'}` : planSummary.plan_name}
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {planSummary.report_count} of {planSummary.limit} reports used this month
-                  </p>
+                  {(planSummary.market_reports_limit != null) ? (
+                    <div className="mt-2 space-y-1.5">
+                      <UsageBar
+                        label="Market Reports"
+                        used={planSummary.market_reports_used ?? 0}
+                        limit={planSummary.market_reports_limit}
+                      />
+                      <UsageBar
+                        label="Schedules"
+                        used={planSummary.schedules_used ?? 0}
+                        limit={planSummary.schedules_limit ?? 1}
+                      />
+                      <UsageBar
+                        label="Property Reports"
+                        used={planSummary.property_reports_used ?? 0}
+                        limit={planSummary.property_reports_limit ?? 1}
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {planSummary.report_count} of {planSummary.limit} reports used this month
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="rounded-xl bg-indigo-100 p-2.5">

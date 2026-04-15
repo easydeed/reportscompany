@@ -42,6 +42,9 @@ interface Plan {
   plan_slug: string
   plan_name: string
   monthly_report_limit: number
+  market_reports_limit: number
+  schedules_limit: number
+  property_reports_limit: number
   allow_overage: boolean
   overage_price_cents: number
   stripe_price_id: string | null
@@ -56,6 +59,9 @@ interface PlanFormData {
   plan_slug: string
   plan_name: string
   monthly_report_limit: number
+  market_reports_limit: number
+  schedules_limit: number
+  property_reports_limit: number
   allow_overage: boolean
   overage_price_cents: number
   stripe_price_id: string
@@ -67,6 +73,9 @@ const EMPTY_FORM: PlanFormData = {
   plan_slug: "",
   plan_name: "",
   monthly_report_limit: 10,
+  market_reports_limit: 10,
+  schedules_limit: 1,
+  property_reports_limit: 1,
   allow_overage: false,
   overage_price_cents: 0,
   stripe_price_id: "",
@@ -116,6 +125,9 @@ export default function AdminPlansPage() {
       plan_slug: plan.plan_slug,
       plan_name: plan.plan_name,
       monthly_report_limit: plan.monthly_report_limit,
+      market_reports_limit: plan.market_reports_limit ?? plan.monthly_report_limit,
+      schedules_limit: plan.schedules_limit ?? 1,
+      property_reports_limit: plan.property_reports_limit ?? 1,
       allow_overage: plan.allow_overage,
       overage_price_cents: plan.overage_price_cents,
       stripe_price_id: plan.stripe_price_id || "",
@@ -140,6 +152,9 @@ export default function AdminPlansPage() {
         body: JSON.stringify({
           plan_name: form.plan_name,
           monthly_report_limit: form.monthly_report_limit,
+          market_reports_limit: form.market_reports_limit,
+          schedules_limit: form.schedules_limit,
+          property_reports_limit: form.property_reports_limit,
           allow_overage: form.allow_overage,
           overage_price_cents: form.overage_price_cents,
           stripe_price_id: form.stripe_price_id || null,
@@ -183,6 +198,9 @@ export default function AdminPlansPage() {
           plan_slug: form.plan_slug,
           plan_name: form.plan_name,
           monthly_report_limit: form.monthly_report_limit,
+          market_reports_limit: form.market_reports_limit,
+          schedules_limit: form.schedules_limit,
+          property_reports_limit: form.property_reports_limit,
           allow_overage: form.allow_overage,
           overage_price_cents: form.overage_price_cents,
           stripe_price_id: form.stripe_price_id || null,
@@ -328,7 +346,9 @@ export default function AdminPlansPage() {
                 <TableRow>
                   <TableHead className="text-[11px] uppercase tracking-wider">Plan Name</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wider">Slug</TableHead>
-                  <TableHead className="text-[11px] uppercase tracking-wider text-right">Report Limit</TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-wider text-right">Mkt Reports</TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-wider text-right">Schedules</TableHead>
+                  <TableHead className="text-[11px] uppercase tracking-wider text-right">Prop Reports</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wider">Overage</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wider">Stripe Price ID</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wider">Status</TableHead>
@@ -351,7 +371,13 @@ export default function AdminPlansPage() {
                       <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">{plan.plan_slug}</code>
                     </TableCell>
                     <TableCell className="text-right font-medium text-sm">
-                      {plan.monthly_report_limit.toLocaleString()}
+                      {(plan.market_reports_limit ?? plan.monthly_report_limit).toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-sm">
+                      {(plan.schedules_limit ?? "—").toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-sm">
+                      {(plan.property_reports_limit ?? "—").toLocaleString()}
                     </TableCell>
                     <TableCell>
                       {plan.allow_overage ? (
@@ -485,9 +511,42 @@ function PlanForm({
         />
       </div>
 
+      <div className="grid grid-cols-3 gap-3">
+        <div className="space-y-2">
+          <Label htmlFor="market_reports_limit">Mkt Reports</Label>
+          <Input
+            id="market_reports_limit"
+            type="number"
+            min="0"
+            value={form.market_reports_limit}
+            onChange={(e) => setForm((f) => ({ ...f, market_reports_limit: parseInt(e.target.value) || 0 }))}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="schedules_limit">Schedules</Label>
+          <Input
+            id="schedules_limit"
+            type="number"
+            min="0"
+            value={form.schedules_limit}
+            onChange={(e) => setForm((f) => ({ ...f, schedules_limit: parseInt(e.target.value) || 0 }))}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="property_reports_limit">Prop Reports</Label>
+          <Input
+            id="property_reports_limit"
+            type="number"
+            min="0"
+            value={form.property_reports_limit}
+            onChange={(e) => setForm((f) => ({ ...f, property_reports_limit: parseInt(e.target.value) || 0 }))}
+          />
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="monthly_report_limit">Monthly Report Limit</Label>
+          <Label htmlFor="monthly_report_limit">Legacy Report Limit</Label>
           <Input
             id="monthly_report_limit"
             type="number"
@@ -495,6 +554,7 @@ function PlanForm({
             value={form.monthly_report_limit}
             onChange={(e) => setForm((f) => ({ ...f, monthly_report_limit: parseInt(e.target.value) || 0 }))}
           />
+          <p className="text-xs text-muted-foreground">Fallback for old API responses</p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="overage_price_cents">Overage Price (cents)</Label>

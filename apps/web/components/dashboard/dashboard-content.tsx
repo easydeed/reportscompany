@@ -102,35 +102,67 @@ export function DashboardContent() {
         }
       />
 
-      {/* Usage Warning Banners — only show after data loads */}
-      {!loading && planUsage?.decision === 'ALLOW_WITH_WARNING' && (
-        <Alert className="border-amber-200 bg-amber-50">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <AlertTitle className="text-amber-800">Approaching Limit</AlertTitle>
-          <AlertDescription className="flex items-center justify-between text-amber-700">
-            <span>
-              You're approaching your monthly report limit for the <strong>{planUsage.plan?.plan_name}</strong> plan. {planUsage.info?.message}
-            </span>
-            <Button asChild variant="outline" size="sm" className="ml-4 border-amber-600 text-amber-700 hover:bg-amber-100">
-              <Link href="/app/settings/billing" prefetch={false}>View Plan</Link>
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {!loading && planUsage?.decision === 'BLOCK' && (
-        <Alert className="border-red-200 bg-red-50">
-          <AlertCircle className="h-4 w-4 text-red-600" />
-          <AlertTitle className="text-red-800">Monthly Limit Reached</AlertTitle>
-          <AlertDescription className="flex items-center justify-between text-red-700">
-            <span>
-              You've reached your monthly report limit. New reports are blocked until the period resets.
-            </span>
-            <Button asChild variant="outline" size="sm" className="ml-4 border-red-600 text-red-700 hover:bg-red-100">
-              <Link href="/app/settings/billing" prefetch={false}>Upgrade Plan</Link>
-            </Button>
-          </AlertDescription>
-        </Alert>
+      {/* Per-product limit alerts — only show after data loads */}
+      {!loading && planUsage?.limits && (
+        <>
+          {planUsage.limits.market_reports?.status === 'at_limit' || planUsage.limits.market_reports?.status === 'exceeded' ? (
+            <Alert className="border-red-200 bg-red-50">
+              <AlertCircle className="h-4 w-4 text-red-600" />
+              <AlertTitle className="text-red-800">Market Report Limit Reached</AlertTitle>
+              <AlertDescription className="flex items-center justify-between text-red-700">
+                <span>
+                  You've used all {planUsage.limits.market_reports.limit} market reports this month.
+                </span>
+                <Button asChild variant="outline" size="sm" className="ml-4 border-red-600 text-red-700 hover:bg-red-100">
+                  <Link href="/app/settings/billing" prefetch={false}>Upgrade</Link>
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : planUsage.limits.market_reports?.status === 'warning' ? (
+            <Alert className="border-amber-200 bg-amber-50">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertTitle className="text-amber-800">Approaching Market Report Limit</AlertTitle>
+              <AlertDescription className="flex items-center justify-between text-amber-700">
+                <span>
+                  You've used {planUsage.limits.market_reports.used} of {planUsage.limits.market_reports.limit} market reports this month.
+                </span>
+                <Button asChild variant="outline" size="sm" className="ml-4 border-amber-600 text-amber-700 hover:bg-amber-100">
+                  <Link href="/app/settings/billing" prefetch={false}>View Plan</Link>
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          {planUsage.limits.schedules?.status === 'at_limit' || planUsage.limits.schedules?.status === 'exceeded' ? (
+            <Alert className="border-red-200 bg-red-50">
+              <AlertCircle className="h-4 w-4 text-red-600" />
+              <AlertTitle className="text-red-800">Schedule Limit Reached</AlertTitle>
+              <AlertDescription className="flex items-center justify-between text-red-700">
+                <span>
+                  You've used all {planUsage.limits.schedules.limit} active schedules on your plan.
+                </span>
+                <Button asChild variant="outline" size="sm" className="ml-4 border-red-600 text-red-700 hover:bg-red-100">
+                  <Link href="/app/settings/billing" prefetch={false}>Upgrade</Link>
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          {planUsage.limits.property_reports?.status === 'at_limit' || planUsage.limits.property_reports?.status === 'exceeded' ? (
+            <Alert className="border-red-200 bg-red-50">
+              <AlertCircle className="h-4 w-4 text-red-600" />
+              <AlertTitle className="text-red-800">Property Report Limit Reached</AlertTitle>
+              <AlertDescription className="flex items-center justify-between text-red-700">
+                <span>
+                  You've used all {planUsage.limits.property_reports.limit} property reports this month.
+                </span>
+                <Button asChild variant="outline" size="sm" className="ml-4 border-red-600 text-red-700 hover:bg-red-100">
+                  <Link href="/app/settings/billing" prefetch={false}>Upgrade</Link>
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : null}
+        </>
       )}
 
       {/* Metric Cards — show skeletons while loading */}

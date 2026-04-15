@@ -427,7 +427,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         title: "Report generation limits",
         type: "faq",
         question: "How many reports can I generate per month?",
-        answer: "Starter plan: 10 reports/month. Pro plan: 50 reports/month. Team plan: Unlimited. Your current usage is shown in the sidebar and on Settings > Billing. Scheduled reports count toward your monthly limit.",
+        answer: "Each plan tracks three products separately: Market Reports, Automated Schedules, and Property Reports. Free plan: 3 market reports, 1 schedule, 1 property report per month. Starter plan: 25 market reports, 3 schedules, 5 property reports. Pro plan: Unlimited market reports, unlimited schedules, 25 property reports. Your current usage for each product is shown in the sidebar and on Settings > Billing.",
       },
       {
         id: "billing-faq-payment-methods",

@@ -847,32 +847,33 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
             conn.commit()
         print(f"✅ REPORT RUN {run_id}: persist_status complete")
         
-        # ===== PHASE 29B: CHECK USAGE LIMITS FOR SCHEDULED REPORTS =====
+        # ===== PRICING-003: CHECK MARKET REPORT LIMIT FOR SCHEDULED REPORTS =====
         if schedule_id:
-            with psycopg.connect(DATABASE_URL, autocommit=False) as conn:
-                with conn.cursor() as cur:
-                    decision, info = check_usage_limit(cur, account_id)
-                    log_limit_decision_worker(account_id, decision, info)
-                    
-                    # Block scheduled reports if limit reached (non-overage plans)
-                    if decision == "BLOCK":
-                        print(f"🚫 Skipping scheduled report due to limit: {info.get('message', '')}")
-                        
-                        # Mark report as skipped
+            limit_result = check_usage_limit(account_id, product="market_reports")
+            log_limit_decision_worker(account_id, limit_result)
+
+            if not limit_result["can_proceed"]:
+                msg = (
+                    f"Market report limit reached "
+                    f"({limit_result['used']}/{limit_result['limit']})"
+                )
+                print(f"🚫 Skipping scheduled report: {msg}")
+
+                with psycopg.connect(DATABASE_URL, autocommit=False) as conn:
+                    with conn.cursor() as cur:
                         cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
                         cur.execute("""
                             UPDATE report_generations
-                            SET status='skipped_limit', 
+                            SET status='skipped_limit',
                                 error_message=%s,
                                 processing_time_ms=%s
                             WHERE id=%s
                         """, (
-                            info.get('message', 'Monthly report limit reached'),
-                            int((time.perf_counter()-started)*1000),
+                            msg,
+                            int((time.perf_counter() - started) * 1000),
                             run_id
                         ))
-                        
-                        # Update schedule_runs if it exists
+
                         try:
                             cur.execute("""
                                 UPDATE schedule_runs
@@ -880,13 +881,12 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                                 WHERE report_run_id=%s
                             """, (run_id,))
                         except Exception:
-                            pass  # Table might not exist yet
-                        
-                        conn.commit()
-                        
-                        # Return early - don't generate report
-                        return {"ok": False, "reason": "limit_reached", "run_id": run_id}
-        # ===== END PHASE 29B =====
+                            pass  # schedule_runs may not exist yet
+
+                    conn.commit()
+
+                return {"ok": False, "reason": "limit_reached", "run_id": run_id}
+        # ===== END PRICING-003 =====
 
         # 2) Compute results (cache by report_type + params hash)
         print(f"🔍 REPORT RUN {run_id}: step=data_fetch")

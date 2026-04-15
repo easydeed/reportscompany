@@ -329,7 +329,7 @@ pytest tests/test_market_templates.py -v
 | `templates/market/_base/base.jinja2` | Page shell, CSS, layout dispatch, font loading | ~700 |
 | `templates/market/_base/macros.jinja2` | All 4 layout macros + shared components | ~350 |
 | `templates/market/market.jinja2` | Brand color injection, extends base | ~16 |
-| `market_builder.py` | Python builder class, context assembly | ~190 |
+| `market_builder.py` | Python builder class (`MarketReportBuilder`), context assembly | ~271 |
 | `template_filters.py` | Jinja2 filters (currency, number, truncate) | ~48 |
 | `scripts/gen_market_reports.py` | Local HTML/PDF generation for QA | ~280 |
 | `tests/test_market_templates.py` | Template test suite (57 tests) | ~320 |

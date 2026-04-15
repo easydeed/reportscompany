@@ -6,6 +6,7 @@ import json
 import traceback
 from ..db import db_conn, set_rls, fetchone_dict, fetchall_dicts
 from ..crmls_cities import VALID_CITY_NAMES
+from ..services import get_full_plan_usage
 
 
 # ====== Filter Schema ======
@@ -315,33 +316,21 @@ def create_schedule(
             set_rls(conn, account_id)
             
             # Enforce per-plan schedule limit
-            cur.execute("""
-                SELECT COUNT(*) FROM schedules
-                WHERE account_id = %s::uuid AND active = TRUE
-            """, (account_id,))
-            active_count = cur.fetchone()[0]
-
-            cur.execute("SELECT plan_slug FROM accounts WHERE id = %s::uuid", (account_id,))
-            plan_row = cur.fetchone()
-            plan_slug = plan_row[0] if plan_row else "free"
-
-            SCHEDULE_LIMITS = {
-                "free": 2,
-                "sponsored_free": 2,
-                "pro": 20,
-                "team": 50,
-                "affiliate": 200,
-            }
-            schedule_limit = SCHEDULE_LIMITS.get(plan_slug, 2)
-
-            if active_count >= schedule_limit:
+            plan_usage = get_full_plan_usage(cur, account_id)
+            schedule_status = plan_usage["limits"]["schedules"]
+            if not schedule_status["can_proceed"]:
                 raise HTTPException(
                     status_code=429,
                     detail={
                         "error": "schedule_limit_reached",
-                        "message": f"Schedule limit reached ({active_count}/{schedule_limit}). Upgrade to create more.",
-                        "used": active_count,
-                        "limit": schedule_limit,
+                        "message": (
+                            f"Schedule limit reached "
+                            f"({schedule_status['used']}/{schedule_status['limit']}). "
+                            f"Upgrade for more."
+                        ),
+                        "product": "schedules",
+                        "used": schedule_status["used"],
+                        "limit": schedule_status["limit"],
                     }
                 )
             

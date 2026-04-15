@@ -62,8 +62,11 @@ interface CompanyOverview {
   company: {
     name: string
     plan: string
-    usage: number
-    limit: number
+    usage: {
+      market_reports: { used: number; limit: number }
+      schedules: { used: number; limit: number }
+      property_reports: { used: number; limit: number }
+    }
     initials: string
   }
   metrics: {
@@ -105,6 +108,25 @@ function getStatusBadge(status: TitleRep["status"]) {
         </Badge>
       )
   }
+}
+
+function UsageBar({ label, used, limit }: { label: string; used: number; limit: number }) {
+  const isUnlimited = limit >= 99999
+  const pct = isUnlimited ? 0 : Math.min((used / Math.max(limit, 1)) * 100, 100)
+  const color = pct >= 100 ? "bg-red-500" : pct >= 80 ? "bg-amber-500" : "bg-[#6366F1]"
+  return (
+    <div className="space-y-0.5">
+      <div className="flex justify-between text-[11px]">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-medium">{isUnlimited ? "∞" : `${used}/${limit}`}</span>
+      </div>
+      {!isUnlimited && (
+        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+          <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${pct}%` }} />
+        </div>
+      )}
+    </div>
+  )
 }
 
 function formatRelativeTime(dateStr: string | null) {
@@ -193,11 +215,17 @@ export default function CompanyDashboard() {
   }
 
   const overview = data as CompanyOverview
-  const company = overview?.company || { name: "", plan: "", usage: 0, limit: 1, initials: "CO" }
+  const company = overview?.company || {
+    name: "", plan: "", initials: "CO",
+    usage: {
+      market_reports: { used: 0, limit: 1 },
+      schedules: { used: 0, limit: 1 },
+      property_reports: { used: 0, limit: 1 },
+    },
+  }
   const metrics = overview?.metrics || { total_reps: 0, total_agents: 0, reports_this_month: 0, active_agents_30d: 0, total_agent_seats: 0, reps_change: 0, agents_change: 0, reports_change_pct: 0, engagement_pct: 0 }
   const reps = overview?.reps || []
   const activity = overview?.activity || []
-  const usagePercent = company.limit > 0 ? (company.usage / company.limit) * 100 : 0
 
   const metricCards = [
     {
@@ -253,9 +281,6 @@ export default function CompanyDashboard() {
               <Badge className="bg-[#EEF2FF] text-[#4338CA] hover:bg-[#EEF2FF]">
                 {company.plan} Plan
               </Badge>
-              <span className="text-sm text-muted-foreground">
-                {company.usage.toLocaleString()} / {company.limit.toLocaleString()} reports
-              </span>
             </div>
           </div>
         </div>
@@ -267,14 +292,23 @@ export default function CompanyDashboard() {
         </Button>
       </div>
 
-      {/* Usage Bar */}
-      <div className="mt-4">
-        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-          <div
-            className="h-full rounded-full bg-[#6366F1] transition-all"
-            style={{ width: `${Math.min(usagePercent, 100)}%` }}
-          />
-        </div>
+      {/* Product Usage Bars */}
+      <div className="mt-4 max-w-sm space-y-2">
+        <UsageBar
+          label="Market Reports"
+          used={company.usage.market_reports.used}
+          limit={company.usage.market_reports.limit}
+        />
+        <UsageBar
+          label="Schedules"
+          used={company.usage.schedules.used}
+          limit={company.usage.schedules.limit}
+        />
+        <UsageBar
+          label="Property Reports"
+          used={company.usage.property_reports.used}
+          limit={company.usage.property_reports.limit}
+        />
       </div>
 
       {/* Metrics Row */}

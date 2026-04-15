@@ -36,6 +36,7 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     return miles
 
 from ..db import db_conn, fetchall_dicts, fetchone_dict, set_rls
+from ..services import get_full_plan_usage
 from ..services.sitex import (
     PropertyData,
     SiteXError,
@@ -398,42 +399,6 @@ async def generate_qr_code_for_report(
         color=accent_color,
         report_id=report_id
     )
-
-
-def check_property_report_limits(cur, account_id: str) -> tuple[bool, str]:
-    """
-    Check if account can create a new property report.
-    Returns (allowed: bool, message: str)
-    """
-    # Get account's plan and limits
-    cur.execute("""
-        SELECT 
-            a.plan_slug,
-            p.property_reports_per_month,
-            (
-                SELECT COUNT(*) FROM property_reports pr
-                WHERE pr.account_id = a.id
-                AND pr.created_at >= date_trunc('month', CURRENT_DATE)
-            ) as reports_this_month
-        FROM accounts a
-        LEFT JOIN plans p ON a.plan_slug = p.plan_slug
-        WHERE a.id = %s::uuid
-    """, (account_id,))
-    
-    row = cur.fetchone()
-    if not row:
-        return False, "Account not found"
-    
-    plan_slug, limit, count = row
-    
-    # If no limit set, allow unlimited
-    if limit is None:
-        return True, "OK"
-    
-    if count >= limit:
-        return False, f"Property report limit reached ({count}/{limit} this month)"
-    
-    return True, f"OK ({count + 1}/{limit})"
 
 
 # =============================================================================
@@ -1000,9 +965,23 @@ async def create_property_report(payload: PropertyReportCreate, request: Request
         set_rls((conn, cur), account_id)
         
         # 1. Check plan limits
-        allowed, message = check_property_report_limits(cur, account_id)
-        if not allowed:
-            raise HTTPException(status_code=429, detail=message)
+        plan_usage = get_full_plan_usage(cur, account_id)
+        property_status = plan_usage["limits"]["property_reports"]
+        if not property_status["can_proceed"]:
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "error": "property_report_limit_reached",
+                    "message": (
+                        f"Property report limit reached "
+                        f"({property_status['used']}/{property_status['limit']}). "
+                        f"Upgrade for more."
+                    ),
+                    "product": "property_reports",
+                    "used": property_status["used"],
+                    "limit": property_status["limit"],
+                }
+            )
         
         # 2. Determine address input (new vs legacy format)
         # New format: property_address, property_city, property_state, property_zip

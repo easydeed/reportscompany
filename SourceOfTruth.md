@@ -1,9 +1,13 @@
 # TrendyReports — Single Source of Truth
 
+> **DEPRECATED:** This file is V14 (Jan 2026) and is no longer maintained.
+> The canonical architecture document is [`docs/architecture/SOURCE_OF_TRUTH.md`](./docs/architecture/SOURCE_OF_TRUTH.md) (V16, Apr 2026).
+> Do not update this file — update the canonical version instead.
+
 _Project Status & Architecture for Investors and Development Teams_
 
 **Last Updated:** January 9, 2026
-**Version:** V14 (Sender-Aware AI Insights)
+**Version:** V14 (Sender-Aware AI Insights) — **DEPRECATED**
 
 ---
 

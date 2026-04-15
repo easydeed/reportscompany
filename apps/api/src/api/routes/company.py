@@ -13,6 +13,7 @@ import logging
 from ..db import db_conn, fetchall_dicts, fetchone_dict
 from ..deps.company import get_company_admin
 from ..services.email import send_role_invite_email
+from ..services.usage import get_full_plan_usage
 from ..services.invite_service import (
     copy_branding_to_child,
     create_invited_user,
@@ -75,20 +76,19 @@ def get_overview(company: dict = Depends(get_company_admin)):
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
-        # ── Company info + plan limit ──
+        # ── Company info + per-product plan limits ──
         cur.execute("""
-            SELECT a.name,
-                   a.plan_slug,
-                   COALESCE(a.monthly_report_limit_override,
-                            p.monthly_report_limit, 5000) AS report_limit
+            SELECT a.name, a.plan_slug
             FROM accounts a
-            LEFT JOIN plans p ON p.plan_slug = a.plan_slug
             WHERE a.id = %s::uuid
         """, (company_id,))
         info_row = cur.fetchone()
         company_name = info_row[0] if info_row else "Unknown"
         plan_slug = info_row[1] if info_row else "affiliate"
-        report_limit = info_row[2] if info_row else 5000
+
+        full_plan = get_full_plan_usage(cur, company_id)
+        plan_limits = full_plan["plan"]
+        plan_name = plan_limits["plan_name"]
 
         # ── Rep list (LATERAL to avoid duplicate-owner rows) ──
         cur.execute("""
@@ -274,9 +274,21 @@ def get_overview(company: dict = Depends(get_company_admin)):
     return {
         "company": {
             "name": company_name,
-            "plan": plan_slug.replace("_", " ").title() if plan_slug else "Affiliate",
-            "usage": total_reports,
-            "limit": report_limit,
+            "plan": plan_name,
+            "usage": {
+                "market_reports": {
+                    "used": total_reports,
+                    "limit": plan_limits["market_reports_limit"],
+                },
+                "schedules": {
+                    "used": full_plan["usage"]["schedules_active"],
+                    "limit": plan_limits["schedules_limit"],
+                },
+                "property_reports": {
+                    "used": full_plan["usage"]["property_reports_used"],
+                    "limit": plan_limits["property_reports_limit"],
+                },
+            },
             "initials": initials,
         },
         "metrics": {

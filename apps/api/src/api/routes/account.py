@@ -11,7 +11,8 @@ from ..services.accounts import (
 from ..services.usage import (
     get_monthly_usage,
     resolve_plan_for_account,
-    evaluate_report_limit
+    evaluate_report_limit,
+    get_full_plan_usage,
 )
 from ..services.plans import get_plan_catalog
 
@@ -359,76 +360,63 @@ def switch_account(
     }
 
 
-# Phase 29E: Plan & Usage endpoint for current user
+# Phase 29E → PRICING-002: Per-product plan & usage endpoint
 
 @router.get("/account/plan-usage")
 def get_current_account_plan_usage(request: Request, account_id: str = Depends(require_account_id)):
     """
-    Get plan and usage information for the current account.
-    
-    Phase 29E: User-facing version of admin endpoint.
-    Shows plan details, current usage, and limit status.
+    Get per-product plan limits and current usage for the current account.
+
+    Returns three separate product limits (market_reports, schedules,
+    property_reports) plus Stripe billing info for the billing UI.
     """
     with db_conn() as (conn, cur):
         set_rls(cur, account_id)
-        
-        # Get account info
+
+        # Account meta (for billing UI)
         cur.execute("""
-            SELECT 
-                id::text,
-                name,
-                account_type,
-                plan_slug,
+            SELECT
+                id::text, name, account_type, plan_slug,
                 monthly_report_limit_override,
-                sponsor_account_id::text,
-                billing_status
-            FROM accounts
-            WHERE id = %s::uuid
+                sponsor_account_id::text, billing_status
+            FROM accounts WHERE id = %s::uuid
         """, (account_id,))
-        
         acc_row = cur.fetchone()
         if not acc_row:
             raise HTTPException(status_code=404, detail="Account not found")
-        
+
         account_info = {
-            "id": acc_row[0],
-            "name": acc_row[1],
-            "account_type": acc_row[2],
-            "plan_slug": acc_row[3],
+            "id":                           acc_row[0],
+            "name":                         acc_row[1],
+            "account_type":                 acc_row[2],
+            "plan_slug":                    acc_row[3],
             "monthly_report_limit_override": acc_row[4],
-            "sponsor_account_id": acc_row[5],
-            "billing_status": acc_row[6],  # PASS 2: Expose billing_status
+            "sponsor_account_id":           acc_row[5],
+            "billing_status":               acc_row[6],
         }
-        
-        # FIX (H1): evaluate_report_limit already calls resolve_plan + get_monthly_usage
-        # internally. We read plan and usage from its returned info dict
-        # instead of calling them separately (was 6-8 queries, now 3-4).
-        decision, info = evaluate_report_limit(cur, account_id)
-        plan = info["plan"]
-        usage = info["usage"]
-        
-        # Get Stripe billing info from plan catalog
-        catalog = get_plan_catalog(cur)
+
+        # Three-product usage (single call)
+        full_usage = get_full_plan_usage(cur, account_id)
+
+        # Stripe billing info from plan catalog
+        catalog    = get_plan_catalog(cur)
         plan_entry = catalog.get(account_info["plan_slug"])
-        
         stripe_billing = None
         if plan_entry and plan_entry.stripe_billing:
-            # Convert Pydantic model to dict for API response
             stripe_billing = {
                 "stripe_price_id": plan_entry.stripe_price_id,
-                "amount": plan_entry.stripe_billing.amount,              # cents
-                "currency": plan_entry.stripe_billing.currency,          # 'usd'
-                "interval": plan_entry.stripe_billing.interval,          # 'month'
-                "interval_count": plan_entry.stripe_billing.interval_count,  # 1
-                "nickname": plan_entry.stripe_billing.nickname,          # 'Pro – $29/mo'
+                "amount":          plan_entry.stripe_billing.amount,
+                "currency":        plan_entry.stripe_billing.currency,
+                "interval":        plan_entry.stripe_billing.interval,
+                "interval_count":  plan_entry.stripe_billing.interval_count,
+                "nickname":        plan_entry.stripe_billing.nickname,
             }
-        
+
         return {
-            "account": account_info,
-            "plan": plan,
-            "usage": usage,
-            "decision": decision.value,
-            "info": info,
-            "stripe_billing": stripe_billing,  # can be null for free plans
+            "account":        account_info,
+            "plan":           full_usage["plan"],
+            "usage":          full_usage["usage"],
+            "limits":         full_usage["limits"],
+            "stripe_billing": stripe_billing,
         }
 
