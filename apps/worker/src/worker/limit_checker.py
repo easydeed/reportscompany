@@ -71,10 +71,13 @@ def check_usage_limit(account_id: str, product: str = "market_reports") -> Dict[
             if product == "market_reports":
                 effective_limit = _first_not_none(mkt_override, legacy_override, mkt_plan_limit, default=3)
                 cur.execute("""
-                    SELECT COUNT(*) FROM report_generations
-                    WHERE account_id = %s::uuid
-                      AND generated_at >= date_trunc('month', NOW())
-                      AND status IN ('completed', 'processing')
+                    SELECT COUNT(*) FROM report_generations rg
+                    WHERE rg.account_id = %s::uuid
+                      AND rg.generated_at >= date_trunc('month', NOW())
+                      AND rg.status IN ('completed', 'processing')
+                      AND NOT EXISTS (
+                          SELECT 1 FROM schedule_runs sr WHERE sr.report_run_id = rg.id
+                      )
                 """, (account_id,))
 
             elif product == "property_reports":

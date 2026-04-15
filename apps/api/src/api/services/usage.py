@@ -158,12 +158,15 @@ def resolve_plan_for_account(cur, account_id: str) -> Dict[str, Any]:
 
 def get_usage_counts(cur, account_id: str) -> Dict[str, Any]:
     """Count usage for all three product types."""
-    # Market reports this month
+    # Market reports this month — manual only (scheduled runs are governed by the schedules limit)
     cur.execute("""
-        SELECT COUNT(*) FROM report_generations
-        WHERE account_id = %s::uuid
-          AND generated_at >= date_trunc('month', NOW())
-          AND status IN ('completed', 'processing')
+        SELECT COUNT(*) FROM report_generations rg
+        WHERE rg.account_id = %s::uuid
+          AND rg.generated_at >= date_trunc('month', NOW())
+          AND rg.status IN ('completed', 'processing')
+          AND NOT EXISTS (
+              SELECT 1 FROM schedule_runs sr WHERE sr.report_run_id = rg.id
+          )
     """, (account_id,))
     market_used = cur.fetchone()[0]
 

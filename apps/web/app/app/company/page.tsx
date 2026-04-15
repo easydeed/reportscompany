@@ -79,6 +79,7 @@ interface CompanyOverview {
     agents_change: number
     reports_change_pct: number
     engagement_pct: number
+    agents_at_limit: number
   }
   reps: TitleRep[]
   activity: ActivityEvent[]
