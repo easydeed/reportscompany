@@ -13,7 +13,16 @@ export async function GET(request: NextRequest) {
       headers: { 'Authorization': `Bearer ${token}` },
       cache: 'no-store',
     });
-    const data = await response.json();
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return NextResponse.json(
+        { error: 'Backend returned non-JSON response', detail: text.slice(0, 500) },
+        { status: response.status }
+      );
+    }
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     console.error('[API Proxy] Failed to fetch company overview:', error);

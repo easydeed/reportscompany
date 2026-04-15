@@ -154,7 +154,18 @@ export default function RepsListPage() {
   })
   const [resending, setResending] = useState(false)
 
-  const reps: TitleRep[] = data?.reps ?? []
+  const reps: TitleRep[] = (data?.reps ?? []).map((r: any) => ({
+    id: r.id || r.rep_id,
+    name: r.name || r.rep_name || "",
+    email: r.email || "",
+    office: r.office || "",
+    agent_count: r.agent_count || 0,
+    reports_this_month: r.reports_this_month || 0,
+    total_reports: r.total_reports || 0,
+    last_active: r.last_active || r.last_activity || null,
+    joined_date: r.joined_date || r.created_at || null,
+    status: r.status || "pending",
+  }))
 
   const offices = useMemo(() => {
     const set = new Set(reps.map((r) => r.office).filter(Boolean))
@@ -195,7 +206,10 @@ export default function RepsListPage() {
       const res = await fetch("/api/proxy/v1/company/invite-rep", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(inviteForm),
+        body: JSON.stringify({
+          ...inviteForm,
+          name: `${inviteForm.first_name} ${inviteForm.last_name}`.trim(),
+        }),
       })
       const result = await res.json()
       if (res.ok) {
@@ -221,7 +235,7 @@ export default function RepsListPage() {
   async function handleResendInvite(rep: TitleRep) {
     setResending(true)
     try {
-      const res = await fetch("/api/proxy/v1/company/resend-invite", {
+      const res = await fetch("/api/proxy/v1/company/resend-rep-invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: rep.email }),
@@ -453,7 +467,7 @@ export default function RepsListPage() {
                       {rep.reports_this_month}
                     </td>
                     <td className="px-4 py-3 text-center text-sm text-muted-foreground tabular-nums">
-                      {rep.total_reports.toLocaleString()}
+                      {(rep.total_reports || 0).toLocaleString()}
                     </td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">
                       {formatDate(rep.joined_date)}

@@ -150,7 +150,7 @@ export default function CompanyDashboard() {
   async function handleResendInvite(rep: TitleRep) {
     setResending(true)
     try {
-      const res = await fetch("/api/proxy/v1/company/resend-invite", {
+      const res = await fetch("/api/proxy/v1/company/resend-rep-invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: rep.email }),
@@ -162,7 +162,7 @@ export default function CompanyDashboard() {
       } else {
         toast({
           title: "Error",
-          description: typeof result.detail === "string" ? result.detail : "Failed to resend invitation",
+          description: typeof result.detail === "string" ? result.detail : result.detail?.message || result.error || "Failed to resend invitation",
           variant: "destructive",
         })
       }

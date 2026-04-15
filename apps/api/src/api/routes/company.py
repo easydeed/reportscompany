@@ -84,7 +84,7 @@ def get_overview(company: dict = Depends(get_company_admin)):
         plan_slug = info_row[1] if info_row else "affiliate"
         report_limit = info_row[2] if info_row else 5000
 
-        # ── Rep list with agent counts, monthly reports, user info for status ──
+        # ── Rep list (LATERAL to avoid duplicate-owner rows) ──
         cur.execute("""
             SELECT
                 a.id::text            AS rep_id,
@@ -93,22 +93,29 @@ def get_overview(company: dict = Depends(get_company_admin)):
                 u.is_active,
                 u.email_verified,
                 u.password_hash IS NOT NULL AS has_password,
-                a.created_at::text    AS created_at,
+                a.created_at          AS created_at,
                 (SELECT COUNT(*) FROM accounts sa
-                 WHERE sa.sponsor_account_id = a.id)              AS agent_count,
+                 WHERE sa.sponsor_account_id = a.id)                    AS agent_count,
                 (SELECT COUNT(*) FROM report_generations rg
                  WHERE rg.account_id IN (
                      SELECT id FROM accounts WHERE sponsor_account_id = a.id
                  )
-                 AND rg.generated_at >= date_trunc('month', NOW()))  AS reports_this_month,
-                (SELECT MAX(rg2.generated_at)::text
+                 AND rg.generated_at >= date_trunc('month', NOW())
+                 AND rg.status IN ('completed', 'processing'))          AS reports_this_month,
+                (SELECT MAX(rg2.generated_at)
                  FROM report_generations rg2
                  WHERE rg2.account_id IN (
                      SELECT id FROM accounts WHERE sponsor_account_id = a.id
-                 ))                                                AS last_activity
+                 )
+                 AND rg2.status IN ('completed', 'processing'))         AS last_activity
             FROM accounts a
-            LEFT JOIN account_users au ON au.account_id = a.id AND au.role = 'OWNER'
-            LEFT JOIN users u ON u.id = au.user_id
+            LEFT JOIN LATERAL (
+                SELECT u2.id, u2.email, u2.is_active, u2.email_verified, u2.password_hash
+                FROM account_users au
+                JOIN users u2 ON u2.id = au.user_id
+                WHERE au.account_id = a.id AND au.role = 'OWNER'
+                LIMIT 1
+            ) u ON true
             WHERE a.parent_account_id = %s::uuid
               AND a.account_type = 'INDUSTRY_AFFILIATE'
             ORDER BY a.name
@@ -131,7 +138,7 @@ def get_overview(company: dict = Depends(get_company_admin)):
                 "office": "",
                 "agent_count": r["agent_count"],
                 "reports_this_month": r["reports_this_month"],
-                "last_active": r["last_activity"],
+                "last_active": r["last_activity"].isoformat() if r.get("last_activity") else None,
                 "status": status,
             })
 
@@ -176,7 +183,7 @@ def get_overview(company: dict = Depends(get_company_admin)):
         """, (company_id,))
         agents_change = cur.fetchone()[0]
 
-        # ── Active agents (30d) — at least 1 report ──
+        # ── Active agents (30d) — at least 1 completed report ──
         cur.execute("""
             SELECT COUNT(DISTINCT rg.account_id) FROM report_generations rg
             WHERE rg.generated_at >= NOW() - INTERVAL '30 days'
@@ -215,7 +222,7 @@ def get_overview(company: dict = Depends(get_company_admin)):
         # ── Company initials ──
         initials = "".join(w[0].upper() for w in company_name.split()[:2]) if company_name else "CO"
 
-        # ── Activity feed (recent reports across company) ──
+        # ── Activity feed (recent reports across company, LATERAL for owner) ──
         cur.execute("""
             SELECT
                 u.first_name || ' ' || COALESCE(u.last_name, '') AS agent_name,
@@ -224,9 +231,15 @@ def get_overview(company: dict = Depends(get_company_admin)):
                 rg.generated_at,
                 rg.id::text AS rg_id
             FROM report_generations rg
-            JOIN account_users au ON au.account_id = rg.account_id AND au.role = 'OWNER'
-            JOIN users u ON u.id = au.user_id
-            WHERE (
+            LEFT JOIN LATERAL (
+                SELECT u2.first_name, u2.last_name
+                FROM account_users au
+                JOIN users u2 ON u2.id = au.user_id
+                WHERE au.account_id = rg.account_id AND au.role = 'OWNER'
+                LIMIT 1
+            ) u ON true
+            WHERE rg.status IN ('completed', 'processing')
+              AND (
                 rg.account_id IN (
                     SELECT id FROM accounts WHERE parent_account_id = %s::uuid
                 )
@@ -291,22 +304,34 @@ def list_reps(company: dict = Depends(get_company_admin)):
                 u.email_verified,
                 u.password_hash IS NOT NULL AS has_password,
                 u.is_active,
-                a.created_at::text     AS created_at,
+                a.created_at           AS created_at,
                 (SELECT COUNT(*) FROM accounts sa
-                 WHERE sa.sponsor_account_id = a.id)               AS agent_count,
+                 WHERE sa.sponsor_account_id = a.id)                    AS agent_count,
                 (SELECT COUNT(*) FROM report_generations rg
                  WHERE rg.account_id IN (
                      SELECT id FROM accounts WHERE sponsor_account_id = a.id
                  )
-                 AND rg.generated_at >= date_trunc('month', NOW())) AS reports_this_month,
-                (SELECT MAX(rg2.generated_at)::text
+                 AND rg.generated_at >= date_trunc('month', NOW())
+                 AND rg.status IN ('completed', 'processing'))          AS reports_this_month,
+                (SELECT COUNT(*) FROM report_generations rg3
+                 WHERE rg3.account_id IN (
+                     SELECT id FROM accounts WHERE sponsor_account_id = a.id
+                 )
+                 AND rg3.status IN ('completed', 'processing'))         AS total_reports,
+                (SELECT MAX(rg2.generated_at)
                  FROM report_generations rg2
                  WHERE rg2.account_id IN (
                      SELECT id FROM accounts WHERE sponsor_account_id = a.id
-                 ))                                                 AS last_activity
+                 )
+                 AND rg2.status IN ('completed', 'processing'))         AS last_activity
             FROM accounts a
-            JOIN account_users au ON au.account_id = a.id AND au.role = 'OWNER'
-            JOIN users u ON u.id = au.user_id
+            LEFT JOIN LATERAL (
+                SELECT u2.id, u2.email, u2.is_active, u2.email_verified, u2.password_hash
+                FROM account_users au
+                JOIN users u2 ON u2.id = au.user_id
+                WHERE au.account_id = a.id AND au.role = 'OWNER'
+                LIMIT 1
+            ) u ON true
             WHERE a.parent_account_id = %s::uuid
               AND a.account_type = 'INDUSTRY_AFFILIATE'
             ORDER BY a.name
@@ -316,22 +341,24 @@ def list_reps(company: dict = Depends(get_company_admin)):
 
     reps = []
     for r in rows:
-        if not r["is_active"]:
+        if r.get("is_active") is False:
             status = "deactivated"
-        elif r["email_verified"] and r["has_password"]:
+        elif r.get("email_verified") and r.get("has_password"):
             status = "active"
         else:
             status = "pending"
 
         reps.append({
-            "rep_id": r["rep_id"],
-            "rep_name": r["rep_name"],
-            "email": r["email"],
+            "id": r["rep_id"],
+            "name": r["rep_name"],
+            "email": r.get("email") or "",
             "status": status,
+            "office": "",
             "agent_count": r["agent_count"],
             "reports_this_month": r["reports_this_month"],
-            "last_activity": r["last_activity"],
-            "created_at": r["created_at"],
+            "total_reports": r["total_reports"],
+            "last_active": r["last_activity"].isoformat() if r.get("last_activity") else None,
+            "joined_date": r["created_at"].isoformat() if r.get("created_at") else None,
         })
 
     return {"reps": reps}
@@ -357,14 +384,22 @@ def list_agents(company: dict = Depends(get_company_admin)):
                 agent_acct.created_at::text AS created_at,
                 (SELECT COUNT(*) FROM report_generations rg
                  WHERE rg.account_id = agent_acct.id
-                   AND rg.generated_at >= date_trunc('month', NOW())) AS reports_this_month,
+                   AND rg.generated_at >= date_trunc('month', NOW())
+                   AND rg.status IN ('completed', 'processing'))     AS reports_this_month,
                 (SELECT MAX(rg2.generated_at)::text
                  FROM report_generations rg2
-                 WHERE rg2.account_id = agent_acct.id)               AS last_activity
+                 WHERE rg2.account_id = agent_acct.id
+                   AND rg2.status IN ('completed', 'processing'))    AS last_activity
             FROM accounts agent_acct
             JOIN accounts rep_acct ON rep_acct.id = agent_acct.sponsor_account_id
-            JOIN account_users au  ON au.account_id = agent_acct.id AND au.role = 'OWNER'
-            JOIN users u           ON u.id = au.user_id
+            LEFT JOIN LATERAL (
+                SELECT u2.id, u2.first_name, u2.last_name, u2.email,
+                       u2.is_active, u2.email_verified, u2.password_hash
+                FROM account_users au
+                JOIN users u2 ON u2.id = au.user_id
+                WHERE au.account_id = agent_acct.id AND au.role = 'OWNER'
+                LIMIT 1
+            ) u ON true
             WHERE rep_acct.parent_account_id = %s::uuid
               AND rep_acct.account_type = 'INDUSTRY_AFFILIATE'
             ORDER BY rep_acct.name, u.email
@@ -374,17 +409,17 @@ def list_agents(company: dict = Depends(get_company_admin)):
 
     agents = []
     for r in rows:
-        if not r["is_active"]:
+        if r.get("is_active") is False:
             status = "deactivated"
-        elif r["email_verified"] and r["has_password"]:
+        elif r.get("email_verified") and r.get("has_password"):
             status = "active"
         else:
             status = "pending"
 
         agents.append({
             "agent_id": r["agent_id"],
-            "agent_name": r["agent_name"],
-            "email": r["email"],
+            "agent_name": r.get("agent_name") or r.get("email") or "",
+            "email": r.get("email") or "",
             "rep_name": r["rep_name"],
             "status": status,
             "plan": r["plan_slug"],
@@ -409,7 +444,6 @@ def invite_rep(
     email = body.email.strip().lower()
 
     with db_conn() as (conn, cur):
-        # Duplicate check
         cur.execute(
             "SELECT id FROM users WHERE LOWER(email) = %s", (email,)
         )
@@ -419,19 +453,17 @@ def invite_rep(
                 detail="A user with this email already exists.",
             )
 
-        # Create INDUSTRY_AFFILIATE account under this company
         slug_base = body.name.lower().replace(" ", "-").replace(".", "").replace(",", "").replace("'", "")[:40]
         import time as _time
         slug = f"{slug_base}-{int(_time.time())}"[:50]
 
         cur.execute("""
             INSERT INTO accounts (name, slug, account_type, plan_slug, parent_account_id)
-            VALUES (%s, %s, 'INDUSTRY_AFFILIATE', 'free', %s::uuid)
+            VALUES (%s, %s, 'INDUSTRY_AFFILIATE', 'sponsored_free', %s::uuid)
             RETURNING id::text
         """, (body.name.strip(), slug, company_id))
         rep_account_id = cur.fetchone()[0]
 
-        # Create user
         cur.execute("""
             INSERT INTO users (
                 account_id, email, is_active, email_verified, role,
@@ -448,13 +480,11 @@ def invite_rep(
         ))
         user_id = cur.fetchone()[0]
 
-        # Link user → account as OWNER
         cur.execute("""
             INSERT INTO account_users (account_id, user_id, role)
             VALUES (%s::uuid, %s::uuid, 'OWNER')
         """, (rep_account_id, user_id))
 
-        # Signup token
         token = secrets.token_urlsafe(32)
         cur.execute("""
             INSERT INTO signup_tokens (token, user_id, account_id, expires_at)
@@ -480,9 +510,16 @@ def invite_rep(
             WHERE account_id = %s::uuid
         """, (rep_account_id, company_id))
 
+        # Fallback: if company had no branding row, create a minimal one for the rep
+        cur.execute("SELECT 1 FROM affiliate_branding WHERE account_id = %s::uuid", (rep_account_id,))
+        if not cur.fetchone():
+            cur.execute("""
+                INSERT INTO affiliate_branding (account_id, branding_override)
+                VALUES (%s::uuid, false)
+            """, (rep_account_id,))
+
         conn.commit()
 
-    # Send invite email
     inviter_name, company_name = _get_inviter_info(company_id, request)
     try:
         background_tasks.add_task(
@@ -540,7 +577,6 @@ def resend_rep_invite(
                 detail="This rep has already accepted their invitation.",
             )
 
-        # Invalidate old tokens
         cur.execute("""
             UPDATE signup_tokens SET used = TRUE
             WHERE user_id = %s::uuid AND used = FALSE
@@ -652,9 +688,9 @@ def update_branding(
         ))
         saved = cur.fetchone()
 
-        # Cascade logos, colors, display name, website to child reps
-        # that haven't overridden. Rep photo + contact info stay untouched.
+        reps_updated = 0
         if saved:
+            # Cascade to child reps that haven't overridden
             cur.execute("""
                 UPDATE affiliate_branding ab SET
                     brand_display_name    = %s,
@@ -677,8 +713,25 @@ def update_branding(
                 company_id,
             ))
             reps_updated = cur.rowcount or 0
-        else:
-            reps_updated = 0
+
+            # Insert branding for reps that don't have a row yet
+            cur.execute("""
+                INSERT INTO affiliate_branding (
+                    account_id, brand_display_name, logo_url, email_logo_url,
+                    footer_logo_url, email_footer_logo_url,
+                    primary_color, accent_color, website_url, branding_override
+                )
+                SELECT a.id, %s, %s, %s, %s, %s, %s, %s, %s, false
+                FROM accounts a
+                WHERE a.parent_account_id = %s::uuid
+                  AND a.account_type = 'INDUSTRY_AFFILIATE'
+                  AND NOT EXISTS (SELECT 1 FROM affiliate_branding ab WHERE ab.account_id = a.id)
+            """, (
+                saved[0], saved[1], saved[2], saved[3], saved[4],
+                saved[5], saved[6], saved[10],
+                company_id,
+            ))
+            reps_updated += cur.rowcount or 0
 
         conn.commit()
 
@@ -718,7 +771,6 @@ def get_metrics(company: dict = Depends(get_company_admin)):
                 "top_agent": None,
             }
 
-        # All agent account IDs under company's reps
         cur.execute("""
             SELECT id::text FROM accounts
             WHERE sponsor_account_id = ANY(%s::uuid[])
@@ -731,6 +783,7 @@ def get_metrics(company: dict = Depends(get_company_admin)):
             SELECT COUNT(*) FROM report_generations
             WHERE account_id = ANY(%s::uuid[])
               AND generated_at >= NOW() - INTERVAL '30 days'
+              AND status IN ('completed', 'processing')
         """, (all_ids,))
         total_30d = cur.fetchone()[0] or 0
 
@@ -740,6 +793,7 @@ def get_metrics(company: dict = Depends(get_company_admin)):
             WHERE account_id = ANY(%s::uuid[])
               AND generated_at >= NOW() - INTERVAL '60 days'
               AND generated_at <  NOW() - INTERVAL '30 days'
+              AND status IN ('completed', 'processing')
         """, (all_ids,))
         prev_30d = cur.fetchone()[0] or 0
 
@@ -747,7 +801,7 @@ def get_metrics(company: dict = Depends(get_company_admin)):
         if prev_30d > 0:
             trend = round(((total_30d - prev_30d) / prev_30d) * 100, 1)
 
-        # Top-performing rep (most agent reports this month)
+        # Top-performing rep
         if rep_ids:
             cur.execute("""
                 SELECT a.name,
@@ -757,6 +811,7 @@ def get_metrics(company: dict = Depends(get_company_admin)):
                 LEFT JOIN report_generations rg
                     ON rg.account_id = sa.id
                    AND rg.generated_at >= date_trunc('month', NOW())
+                   AND rg.status IN ('completed', 'processing')
                 WHERE a.id = ANY(%s::uuid[])
                 GROUP BY a.id, a.name
                 ORDER BY cnt DESC
@@ -767,17 +822,23 @@ def get_metrics(company: dict = Depends(get_company_admin)):
         else:
             top_rep = None
 
-        # Top-performing agent
+        # Top-performing agent (LATERAL for owner)
         if agent_ids:
             cur.execute("""
                 SELECT COALESCE(u.first_name || ' ' || u.last_name, u.email) AS name,
                        COUNT(rg.id) AS cnt
                 FROM accounts a
-                JOIN account_users au ON au.account_id = a.id AND au.role = 'OWNER'
-                JOIN users u ON u.id = au.user_id
+                LEFT JOIN LATERAL (
+                    SELECT u2.id, u2.first_name, u2.last_name, u2.email
+                    FROM account_users au
+                    JOIN users u2 ON u2.id = au.user_id
+                    WHERE au.account_id = a.id AND au.role = 'OWNER'
+                    LIMIT 1
+                ) u ON true
                 LEFT JOIN report_generations rg
                     ON rg.account_id = a.id
                    AND rg.generated_at >= date_trunc('month', NOW())
+                   AND rg.status IN ('completed', 'processing')
                 WHERE a.id = ANY(%s::uuid[])
                 GROUP BY u.id, u.first_name, u.last_name, u.email
                 ORDER BY cnt DESC
