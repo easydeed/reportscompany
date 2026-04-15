@@ -20,7 +20,7 @@ TOKEN_EXPIRY_DAYS = 7
 PLAN_FOR_ROLE = {
     "company_admin": "affiliate",
     "affiliate_admin": "affiliate",
-    "title_rep": "sponsored_free",
+    "title_rep": "affiliate",
     "sponsored_agent": "sponsored_free",
 }
 
