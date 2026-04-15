@@ -360,7 +360,7 @@ console.log('PDF:', data.pdf_url);`
       </section>
 
       {/* Pricing */}
-      <section className="relative py-32 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <section id="pricing" className="relative py-32 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Grayscale data/tech background */}
         <div className="absolute inset-0 z-0">
           <img
@@ -384,172 +384,127 @@ console.log('PDF:', data.pdf_url);`
                 <span className="text-sm font-medium text-indigo-700">Transparent pricing, no surprises</span>
               </div>
               <h2 className="font-pricing font-bold text-5xl sm:text-6xl mb-6 text-slate-900">Pick your plan</h2>
-              <p className="text-xl text-slate-600 max-w-2xl mx-auto">Start free. Scale as you grow. Cancel anytime.</p>
+              <p className="text-xl text-slate-600 max-w-2xl mx-auto">Start free. Upgrade when you&apos;re ready.</p>
             </motion.div>
           </div>
 
-          <div className="grid md:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {/* Free */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.2 }}
-              className="bg-white rounded-2xl border-2 border-slate-200 p-8 hover:border-indigo-300 hover:shadow-xl transition-all"
+              className="bg-white rounded-2xl border-2 border-slate-200 p-8 hover:border-indigo-300 hover:shadow-xl transition-all flex flex-col"
             >
               <div className="mb-6">
-                <h3 className="font-pricing font-bold text-xl mb-2 text-slate-900">Starter</h3>
-                <p className="text-sm text-slate-600">Perfect for solo agents</p>
+                <h3 className="font-pricing font-bold text-xl mb-1 text-slate-900">Free</h3>
+                <p className="text-sm text-slate-500">No credit card required</p>
               </div>
               <div className="mb-6">
-                <span className="font-pricing font-bold text-5xl text-slate-900">$99</span>
-                <span className="text-slate-600">/mo</span>
+                <span className="font-pricing font-bold text-5xl text-slate-900">$0</span>
+                <span className="text-slate-500 text-sm ml-1">/month</span>
               </div>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-start gap-2 text-sm text-slate-700">
-                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
-                  <span>50 reports per month</span>
-                </li>
-                <li className="flex items-start gap-2 text-sm text-slate-700">
-                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
-                  <span>3 scheduled reports</span>
-                </li>
-                <li className="flex items-start gap-2 text-sm text-slate-700">
-                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
-                  <span>Your logo & branding</span>
-                </li>
-                <li className="flex items-start gap-2 text-sm text-slate-700">
-                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
-                  <span>Email delivery</span>
-                </li>
+              <ul className="space-y-3 mb-8 flex-1">
+                {[
+                  "3 Market Reports / month",
+                  "1 Automated Schedule",
+                  "1 Property Report / month",
+                  "CMA Lead Page",
+                ].map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm text-slate-700">
+                    <Check className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                    <span>{f}</span>
+                  </li>
+                ))}
               </ul>
-              <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white font-pricing">
-                Start Free Trial
-              </Button>
+              <a
+                href="/register"
+                className="w-full flex items-center justify-center rounded-full border-2 border-slate-900 bg-transparent px-6 py-3 text-sm font-semibold text-slate-900 hover:bg-slate-50 transition-colors"
+              >
+                Start Free
+              </a>
             </motion.div>
 
+            {/* Starter — highlighted */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.2, delay: 0.05 }}
-              className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl border-2 border-indigo-500 p-8 relative overflow-hidden shadow-2xl shadow-indigo-500/25 transform md:scale-105"
+              className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl border-2 border-indigo-500 p-8 relative overflow-hidden shadow-2xl shadow-indigo-500/25 md:scale-105 flex flex-col"
             >
-              <div className="absolute top-4 right-4 bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                POPULAR
+              <div className="absolute top-4 right-4 bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full">
+                Most Popular
               </div>
               <div className="mb-6">
-                <h3 className="font-pricing font-bold text-xl mb-2 text-white">Professional</h3>
-                <p className="text-sm text-indigo-100">For growing teams</p>
+                <h3 className="font-pricing font-bold text-xl mb-1 text-white">Starter</h3>
+                <p className="text-sm text-indigo-200">per month</p>
               </div>
               <div className="mb-6">
-                <span className="font-pricing font-bold text-5xl text-white">$299</span>
-                <span className="text-indigo-100">/mo</span>
+                <span className="font-pricing font-bold text-5xl text-white">$29</span>
+                <span className="text-indigo-200 text-sm ml-1">/month</span>
               </div>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-start gap-2 text-sm text-white">
-                  <Check className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
-                  <span>200 reports per month</span>
-                </li>
-                <li className="flex items-start gap-2 text-sm text-white">
-                  <Check className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
-                  <span>Unlimited schedules</span>
-                </li>
-                <li className="flex items-start gap-2 text-sm text-white">
-                  <Check className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
-                  <span>Priority support</span>
-                </li>
-                <li className="flex items-start gap-2 text-sm text-white">
-                  <Check className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
-                  <span>API access</span>
-                </li>
-                <li className="flex items-start gap-2 text-sm text-white">
-                  <Check className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
-                  <span>Webhook integrations</span>
-                </li>
+              <ul className="space-y-3 mb-8 flex-1">
+                {[
+                  "25 Market Reports / month",
+                  "3 Automated Schedules",
+                  "5 Property Reports / month",
+                  "CMA Lead Page",
+                  "AI Market Insights",
+                  "CSV Contact Import",
+                ].map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm text-white">
+                    <Check className="w-4 h-4 text-indigo-200 shrink-0 mt-0.5" />
+                    <span>{f}</span>
+                  </li>
+                ))}
               </ul>
-              <Button className="w-full bg-white hover:bg-indigo-50 text-indigo-700 font-pricing font-bold">
-                Start Free Trial
-              </Button>
+              <a
+                href="/register"
+                className="w-full flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 transition-colors"
+              >
+                Start Free, Upgrade Later
+              </a>
             </motion.div>
 
+            {/* Pro */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.2, delay: 0.1 }}
-              className="bg-white rounded-2xl border-2 border-slate-200 p-8 hover:border-indigo-300 hover:shadow-xl transition-all"
+              className="bg-white rounded-2xl border-2 border-slate-200 p-8 hover:border-indigo-300 hover:shadow-xl transition-all flex flex-col"
             >
               <div className="mb-6">
-                <h3 className="font-pricing font-bold text-xl mb-2 text-slate-900">Enterprise</h3>
-                <p className="text-sm text-slate-600">For large brokerages</p>
+                <h3 className="font-pricing font-bold text-xl mb-1 text-slate-900">Pro</h3>
+                <p className="text-sm text-slate-500">per month</p>
               </div>
               <div className="mb-6">
-                <span className="font-pricing font-bold text-5xl text-slate-900">$999</span>
-                <span className="text-slate-600">/mo</span>
+                <span className="font-pricing font-bold text-5xl text-slate-900">$59</span>
+                <span className="text-slate-500 text-sm ml-1">/month</span>
               </div>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-start gap-2 text-sm text-slate-700">
-                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
-                  <span>Unlimited reports</span>
-                </li>
-                <li className="flex items-start gap-2 text-sm text-slate-700">
-                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
-                  <span>Team management</span>
-                </li>
-                <li className="flex items-start gap-2 text-sm text-slate-700">
-                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
-                  <span>Advanced analytics</span>
-                </li>
-                <li className="flex items-start gap-2 text-sm text-slate-700">
-                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
-                  <span>Dedicated support</span>
-                </li>
-                <li className="flex items-start gap-2 text-sm text-slate-700">
-                  <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
-                  <span>Custom integrations</span>
-                </li>
+              <ul className="space-y-3 mb-8 flex-1">
+                {[
+                  "Unlimited Market Reports",
+                  "Unlimited Schedules",
+                  "25 Property Reports / month",
+                  "CMA Lead Page",
+                  "AI Market Insights",
+                  "Priority Generation",
+                ].map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm text-slate-700">
+                    <Check className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                    <span>{f}</span>
+                  </li>
+                ))}
               </ul>
-              <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white font-pricing">
-                Start Free Trial
-              </Button>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.2, delay: 0.15 }}
-              className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border-2 border-slate-700 p-8 relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl" />
-              <div className="mb-6 relative">
-                <h3 className="font-pricing font-bold text-xl mb-2 text-white">Title Partner</h3>
-                <p className="text-sm text-slate-400">Co-branded solution</p>
-              </div>
-              <div className="mb-6 relative">
-                <span className="font-pricing font-bold text-4xl text-white">Custom</span>
-              </div>
-              <ul className="space-y-3 mb-8 relative">
-                <li className="flex items-start gap-2 text-sm text-slate-300">
-                  <Check className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
-                  <span>Co-branded PDFs</span>
-                </li>
-                <li className="flex items-start gap-2 text-sm text-slate-300">
-                  <Check className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
-                  <span>Credits & ledger</span>
-                </li>
-                <li className="flex items-start gap-2 text-sm text-slate-300">
-                  <Check className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
-                  <span>Admin console</span>
-                </li>
-                <li className="flex items-start gap-2 text-sm text-slate-300">
-                  <Check className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
-                  <span>White-label option</span>
-                </li>
-              </ul>
-              <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white font-pricing font-bold">
-                Contact Sales
-              </Button>
+              <a
+                href="/register"
+                className="w-full flex items-center justify-center rounded-full border-2 border-slate-900 bg-transparent px-6 py-3 text-sm font-semibold text-slate-900 hover:bg-slate-50 transition-colors"
+              >
+                Start Free, Upgrade Later
+              </a>
             </motion.div>
           </div>
 
@@ -561,7 +516,7 @@ console.log('PDF:', data.pdf_url);`
             className="mt-12 text-center"
           >
             <p className="text-sm text-slate-600">
-              All plans include 14-day free trial • No credit card required • Cancel anytime
+              All plans include branded PDFs, email delivery, and your CMA lead page. Upgrade or downgrade anytime.
             </p>
           </motion.div>
         </div>

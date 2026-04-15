@@ -10,42 +10,46 @@ const fadeUp = {
 
 const plans = [
   {
-    name: "Starter",
+    name: "Free",
     price: "$0",
-    description: "See what TrendyReports can do",
+    priceSub: "No credit card required",
     features: [
-      "50 reports/month",
-      "Core report types",
-      "Email & PDF delivery",
-      "Your logo and brand colors",
+      "3 Market Reports / month",
+      "1 Automated Schedule",
+      "1 Property Report / month",
+      "CMA Lead Page",
     ],
-    cta: "Start free trial",
+    cta: "Start Free",
     featured: false,
   },
   {
-    name: "Pro",
+    name: "Starter",
     price: "$29",
-    description: "Your marketing on autopilot",
+    priceSub: "per month",
     features: [
-      "300 reports/month",
-      "All 8 report types",
-      "Automated scheduling",
-      "Full white-label — no one knows we exist",
+      "25 Market Reports / month",
+      "3 Automated Schedules",
+      "5 Property Reports / month",
+      "CMA Lead Page",
+      "AI Market Insights",
+      "CSV Contact Import",
     ],
-    cta: "Start free trial",
+    cta: "Start Free, Upgrade Later",
     featured: true,
   },
   {
-    name: "Team",
-    price: "$99",
-    description: "For title companies, lenders & brokerages",
+    name: "Pro",
+    price: "$59",
+    priceSub: "per month",
     features: [
-      "Unlimited reports",
-      "Sponsor unlimited agents",
-      "Admin dashboard",
-      "Dedicated support",
+      "Unlimited Market Reports",
+      "Unlimited Schedules",
+      "25 Property Reports / month",
+      "CMA Lead Page",
+      "AI Market Insights",
+      "Priority Generation",
     ],
-    cta: "Start free trial",
+    cta: "Start Free, Upgrade Later",
     featured: false,
   },
 ];
@@ -65,7 +69,7 @@ export function Pricing() {
             Simple, transparent pricing
           </h2>
           <p className="mt-4 text-muted-foreground">
-            Choose the plan that fits your business
+            Start free. Upgrade when you're ready.
           </p>
         </motion.div>
 
@@ -74,15 +78,15 @@ export function Pricing() {
             <motion.div
               key={plan.name}
               variants={fadeUp}
-              className={`relative rounded-2xl border p-8 ${
+              className={`relative rounded-2xl border p-8 flex flex-col ${
                 plan.featured
-                  ? "border-transparent ring-2 ring-[#6366F1] bg-card"
+                  ? "border-transparent ring-2 ring-[#6366F1] bg-card shadow-lg shadow-indigo-100"
                   : "border-[#F1F5F9] bg-card"
               }`}
             >
               {plan.featured && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#6366F1] px-3 py-1 text-xs font-semibold text-white">
-                  Most popular
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#6366F1] px-3 py-1 text-xs font-semibold text-white whitespace-nowrap">
+                  Most Popular
                 </span>
               )}
 
@@ -91,16 +95,16 @@ export function Pricing() {
                 <span className="text-4xl font-bold text-foreground">
                   {plan.price}
                 </span>
-                <span className="text-muted-foreground">/month</span>
+                {plan.price !== "$0" && (
+                  <span className="text-muted-foreground">/month</span>
+                )}
               </div>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {plan.description}
-              </p>
+              <p className="mt-1 text-sm text-muted-foreground">{plan.priceSub}</p>
 
-              <ul className="mt-6 space-y-3">
+              <ul className="mt-6 space-y-3 flex-1">
                 {plan.features.map((f) => (
-                  <li key={f} className="flex items-center gap-3 text-sm text-foreground">
-                    <Check className="h-4 w-4 shrink-0 text-[#6366F1]" />
+                  <li key={f} className="flex items-start gap-3 text-sm text-foreground">
+                    <Check className="h-4 w-4 shrink-0 text-[#6366F1] mt-0.5" />
                     {f}
                   </li>
                 ))}
@@ -124,7 +128,7 @@ export function Pricing() {
           variants={fadeUp}
           className="mt-10 text-center text-sm text-muted-foreground/70"
         >
-          {"All plans include 14-day free trial \u00B7 No credit card required"}
+          All plans include branded PDFs, email delivery, and your CMA lead page. Upgrade or downgrade anytime.
         </motion.p>
       </motion.div>
     </section>
