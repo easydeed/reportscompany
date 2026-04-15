@@ -220,7 +220,7 @@ def get_overview(company: dict = Depends(get_company_admin)):
             SELECT
                 u.first_name || ' ' || COALESCE(u.last_name, '') AS agent_name,
                 rg.report_type,
-                rg.city,
+                COALESCE(rg.input_params->>'city', rg.cities[1], 'unknown') AS city,
                 rg.generated_at,
                 rg.id::text AS rg_id
             FROM report_generations rg
