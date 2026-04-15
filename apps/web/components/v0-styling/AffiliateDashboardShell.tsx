@@ -1,10 +1,14 @@
+'use client'
+
 import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Building2, TrendingUp, Users2, Loader2,
-  MoreHorizontal, UserX, UserCheck, Trash2, Send,
+  MoreHorizontal, UserX, UserCheck, Trash2, Send, Eye,
 } from 'lucide-react';
 import { InviteAgentModal } from '@/components/invite-agent-modal';
 import { BulkInviteModal } from '@/components/affiliate/bulk-invite-modal';
@@ -97,6 +101,7 @@ function StatusBadge({ status }: { status: string }) {
 
 export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
   const { overview, metrics: rawMetrics, sponsoredAccounts, onRefresh, isCompanyRep = false, companyName = '' } = props;
+  const router = useRouter();
   const metrics: AgentMetrics = rawMetrics || {
     total_agents: overview.sponsored_count,
     total_agent_reports: overview.total_reports_this_month,
@@ -315,7 +320,16 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
                               <Building2 className="h-4 w-4 text-primary" />
                             </div>
                             <div>
-                              <span className="font-medium text-foreground">{account.name}</span>
+                              {account.status === 'active' ? (
+                                <Link
+                                  href={`/app/affiliate/agents/${account.account_id}`}
+                                  className="font-medium text-foreground hover:text-primary hover:underline transition-colors"
+                                >
+                                  {account.name}
+                                </Link>
+                              ) : (
+                                <span className="font-medium text-foreground">{account.name}</span>
+                              )}
                               {account.email && (
                                 <p className="text-xs text-muted-foreground">{account.email}</p>
                               )}
@@ -372,13 +386,22 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
                                 </>
                               )}
                               {account.status === 'active' && (
-                                <DropdownMenuItem
-                                  className="text-destructive focus:text-destructive"
-                                  onClick={() => setConfirmModal({ open: true, agent: account, action: 'deactivate' })}
-                                >
-                                  <UserX className="h-4 w-4 mr-2" />
-                                  Deactivate
-                                </DropdownMenuItem>
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() => router.push(`/app/affiliate/agents/${account.account_id}`)}
+                                  >
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    View Reports &amp; Schedules
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={() => setConfirmModal({ open: true, agent: account, action: 'deactivate' })}
+                                  >
+                                    <UserX className="h-4 w-4 mr-2" />
+                                    Deactivate
+                                  </DropdownMenuItem>
+                                </>
                               )}
                               {account.status === 'deactivated' && (
                                 <>

@@ -848,3 +848,104 @@ def reactivate_sponsored_account(
             "name": row[1],
             "is_active": row[2],
         }
+
+
+# ── Agent visibility endpoints (rep views agent data) ────────────────────────
+
+@router.get("/agents/{agent_account_id}/reports")
+def get_agent_reports(agent_account_id: str, account_id: str = Depends(require_account_id)):
+    """Return report history for a specific sponsored agent."""
+    with db_conn() as (conn, cur):
+        if not verify_affiliate_account(cur, account_id):
+            raise HTTPException(403, detail="Not an affiliate account")
+
+        cur.execute("""
+            SELECT 1 FROM accounts
+            WHERE id = %s::uuid AND sponsor_account_id = %s::uuid
+        """, (agent_account_id, account_id))
+        if not cur.fetchone():
+            raise HTTPException(403, detail="This agent is not in your book")
+
+        cur.execute("""
+            SELECT rg.id::text, rg.report_type, rg.status, rg.generated_at,
+                   COALESCE(rg.input_params->>'city', rg.cities[1], 'Unknown') AS city,
+                   rg.pdf_url,
+                   CASE WHEN sr.id IS NOT NULL THEN true ELSE false END AS is_scheduled
+            FROM report_generations rg
+            LEFT JOIN schedule_runs sr ON sr.report_run_id = rg.id
+            WHERE rg.account_id = %s::uuid
+            ORDER BY rg.generated_at DESC
+            LIMIT 50
+        """, (agent_account_id,))
+        reports = [
+            {
+                "id": r[0], "report_type": r[1], "status": r[2],
+                "generated_at": r[3].isoformat() if r[3] else None,
+                "city": r[4], "pdf_url": r[5], "is_scheduled": r[6],
+            }
+            for r in cur.fetchall()
+        ]
+
+        return {"reports": reports, "total": len(reports)}
+
+
+@router.get("/agents/{agent_account_id}/schedules")
+def get_agent_schedules(agent_account_id: str, account_id: str = Depends(require_account_id)):
+    """Return schedules for a specific sponsored agent."""
+    with db_conn() as (conn, cur):
+        if not verify_affiliate_account(cur, account_id):
+            raise HTTPException(403, detail="Not an affiliate account")
+
+        cur.execute("""
+            SELECT 1 FROM accounts
+            WHERE id = %s::uuid AND sponsor_account_id = %s::uuid
+        """, (agent_account_id, account_id))
+        if not cur.fetchone():
+            raise HTTPException(403, detail="This agent is not in your book")
+
+        cur.execute("""
+            SELECT s.id::text, s.name, s.report_type,
+                   COALESCE(s.city, s.zip_codes[1], 'Unknown') AS area,
+                   s.cadence, s.send_hour, s.send_minute, s.timezone,
+                   s.active, s.last_run_at, s.next_run_at,
+                   s.created_at,
+                   (SELECT COUNT(*) FROM schedule_runs sr WHERE sr.schedule_id = s.id) AS total_runs,
+                   s.recipients
+            FROM schedules s
+            WHERE s.account_id = %s::uuid
+            ORDER BY s.created_at DESC
+        """, (agent_account_id,))
+        schedules = [
+            {
+                "id": r[0], "name": r[1], "report_type": r[2],
+                "area": r[3], "cadence": r[4],
+                "send_hour": r[5], "send_minute": r[6], "timezone": r[7],
+                "active": r[8],
+                "last_run_at": r[9].isoformat() if r[9] else None,
+                "next_run_at": r[10].isoformat() if r[10] else None,
+                "created_at": r[11].isoformat() if r[11] else None,
+                "total_runs": r[12],
+                "recipient_count": len(r[13]) if r[13] else 0,
+            }
+            for r in cur.fetchall()
+        ]
+
+        return {"schedules": schedules, "total": len(schedules)}
+
+
+@router.get("/agents/{agent_account_id}/usage")
+def get_agent_usage(agent_account_id: str, account_id: str = Depends(require_account_id)):
+    """Return per-product usage summary for a specific sponsored agent."""
+    with db_conn() as (conn, cur):
+        if not verify_affiliate_account(cur, account_id):
+            raise HTTPException(403, detail="Not an affiliate account")
+
+        cur.execute("""
+            SELECT 1 FROM accounts
+            WHERE id = %s::uuid AND sponsor_account_id = %s::uuid
+        """, (agent_account_id, account_id))
+        if not cur.fetchone():
+            raise HTTPException(403, detail="This agent is not in your book")
+
+        from ..services.usage import get_full_plan_usage
+        return get_full_plan_usage(cur, agent_account_id)

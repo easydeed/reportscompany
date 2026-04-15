@@ -468,6 +468,142 @@ def list_agents(company: dict = Depends(get_company_admin)):
     return {"agents": agents}
 
 
+# ── 4b. GET /reports and GET /schedules — cross-org visibility ───────────────
+
+@router.get("/reports")
+def get_company_reports(
+    rep_id: str = None,
+    limit: int = 50,
+    offset: int = 0,
+    company: dict = Depends(get_company_admin),
+):
+    """All reports across reps and agents under this company."""
+    company_id = company["company_account_id"]
+
+    with db_conn() as (conn, cur):
+        cur.execute("""
+            SELECT id FROM accounts
+            WHERE parent_account_id = %s::uuid AND account_type = 'INDUSTRY_AFFILIATE'
+        """, (company_id,))
+        rep_ids = [row[0] for row in cur.fetchall()]
+
+        if not rep_ids:
+            return {"reports": [], "total": 0}
+
+        if rep_id:
+            cur.execute("""
+                SELECT id FROM accounts WHERE sponsor_account_id = %s::uuid
+            """, (rep_id,))
+        else:
+            cur.execute("""
+                SELECT id FROM accounts WHERE sponsor_account_id = ANY(%s)
+            """, (rep_ids,))
+        agent_ids = [row[0] for row in cur.fetchall()]
+
+        all_ids = agent_ids + rep_ids
+        if not all_ids:
+            return {"reports": [], "total": 0}
+
+        cur.execute("""
+            SELECT COUNT(*) FROM report_generations WHERE account_id = ANY(%s)
+        """, (all_ids,))
+        total = cur.fetchone()[0]
+
+        cur.execute("""
+            SELECT rg.id::text, rg.report_type, rg.status, rg.generated_at,
+                   COALESCE(rg.input_params->>'city', rg.cities[1], 'Unknown') AS city,
+                   rg.pdf_url, a.name AS account_name,
+                   CASE WHEN a.account_type = 'INDUSTRY_AFFILIATE' THEN 'Rep'
+                        ELSE 'Agent' END AS user_type,
+                   u.first_name || ' ' || COALESCE(u.last_name, '') AS user_name
+            FROM report_generations rg
+            JOIN accounts a ON a.id = rg.account_id
+            LEFT JOIN account_users au ON au.account_id = a.id AND au.role = 'OWNER'
+            LEFT JOIN users u ON u.id = au.user_id
+            WHERE rg.account_id = ANY(%s)
+            ORDER BY rg.generated_at DESC
+            LIMIT %s OFFSET %s
+        """, (all_ids, limit, offset))
+        reports = [
+            {
+                "id": r[0], "report_type": r[1], "status": r[2],
+                "generated_at": r[3].isoformat() if r[3] else None,
+                "city": r[4], "pdf_url": r[5],
+                "account_name": r[6], "user_type": r[7],
+                "user_name": (r[8] or "").strip(),
+            }
+            for r in cur.fetchall()
+        ]
+
+    return {"reports": reports, "total": total}
+
+
+@router.get("/schedules")
+def get_company_schedules(
+    rep_id: str = None,
+    company: dict = Depends(get_company_admin),
+):
+    """All schedules across reps and agents under this company."""
+    company_id = company["company_account_id"]
+
+    with db_conn() as (conn, cur):
+        cur.execute("""
+            SELECT id FROM accounts
+            WHERE parent_account_id = %s::uuid AND account_type = 'INDUSTRY_AFFILIATE'
+        """, (company_id,))
+        rep_ids = [row[0] for row in cur.fetchall()]
+
+        if not rep_ids:
+            return {"schedules": [], "total": 0}
+
+        if rep_id:
+            cur.execute("""
+                SELECT id FROM accounts WHERE sponsor_account_id = %s::uuid
+            """, (rep_id,))
+        else:
+            cur.execute("""
+                SELECT id FROM accounts WHERE sponsor_account_id = ANY(%s)
+            """, (rep_ids,))
+        agent_ids = [row[0] for row in cur.fetchall()]
+
+        all_ids = agent_ids + rep_ids
+        if not all_ids:
+            return {"schedules": [], "total": 0}
+
+        cur.execute("""
+            SELECT s.id::text, s.name, s.report_type,
+                   COALESCE(s.city, 'Unknown') AS area,
+                   s.cadence, s.active, s.last_run_at, s.next_run_at,
+                   a.name AS account_name,
+                   CASE WHEN a.account_type = 'INDUSTRY_AFFILIATE' THEN 'Rep'
+                        ELSE 'Agent' END AS user_type,
+                   u.first_name || ' ' || COALESCE(u.last_name, '') AS user_name,
+                   s.send_hour, s.send_minute, s.timezone,
+                   (SELECT COUNT(*) FROM schedule_runs sr WHERE sr.schedule_id = s.id) AS total_runs
+            FROM schedules s
+            JOIN accounts a ON a.id = s.account_id
+            LEFT JOIN account_users au ON au.account_id = a.id AND au.role = 'OWNER'
+            LEFT JOIN users u ON u.id = au.user_id
+            WHERE s.account_id = ANY(%s)
+            ORDER BY s.created_at DESC
+        """, (all_ids,))
+        schedules = [
+            {
+                "id": r[0], "name": r[1], "report_type": r[2],
+                "area": r[3], "cadence": r[4], "active": r[5],
+                "last_run_at": r[6].isoformat() if r[6] else None,
+                "next_run_at": r[7].isoformat() if r[7] else None,
+                "account_name": r[8], "user_type": r[9],
+                "user_name": (r[10] or "").strip(),
+                "send_hour": r[11], "send_minute": r[12], "timezone": r[13],
+                "total_runs": r[14],
+            }
+            for r in cur.fetchall()
+        ]
+
+    return {"schedules": schedules, "total": len(schedules)}
+
+
 # ── 4. POST /invite-rep ──────────────────────────────────────────────────────
 
 def _company_inviter_user_id(request: Request) -> Optional[str]:
