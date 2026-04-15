@@ -13,10 +13,21 @@ export async function GET(request: NextRequest) {
       headers: { 'Authorization': `Bearer ${token}` },
       cache: 'no-store',
     });
-    const data = await response.json();
+
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { error: 'Backend error', detail: text.slice(0, 500) };
+    }
+
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     console.error('[API Proxy] Failed to fetch company metrics:', error);
-    return NextResponse.json({ error: 'Failed to fetch company metrics' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to fetch company metrics', detail: String(error) },
+      { status: 500 }
+    );
   }
 }

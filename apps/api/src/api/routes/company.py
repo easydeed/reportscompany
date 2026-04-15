@@ -443,98 +443,132 @@ def invite_rep(
     company_id = company["company_account_id"]
     email = body.email.strip().lower()
 
-    with db_conn() as (conn, cur):
-        cur.execute(
-            "SELECT id FROM users WHERE LOWER(email) = %s", (email,)
-        )
-        if cur.fetchone():
-            raise HTTPException(
-                status_code=400,
-                detail="A user with this email already exists.",
-            )
-
-        slug_base = body.name.lower().replace(" ", "-").replace(".", "").replace(",", "").replace("'", "")[:40]
-        import time as _time
-        slug = f"{slug_base}-{int(_time.time())}"[:50]
-
-        cur.execute("""
-            INSERT INTO accounts (name, slug, account_type, plan_slug, parent_account_id)
-            VALUES (%s, %s, 'INDUSTRY_AFFILIATE', 'sponsored_free', %s::uuid)
-            RETURNING id::text
-        """, (body.name.strip(), slug, company_id))
-        rep_account_id = cur.fetchone()[0]
-
-        cur.execute("""
-            INSERT INTO users (
-                account_id, email, is_active, email_verified, role,
-                first_name, last_name, phone, job_title
-            ) VALUES (
-                %s::uuid, %s, TRUE, FALSE, 'member',
-                %s, %s, %s, %s
-            )
-            RETURNING id::text
-        """, (
-            rep_account_id, email,
-            body.first_name.strip(), body.last_name.strip(),
-            body.phone, body.title,
-        ))
-        user_id = cur.fetchone()[0]
-
-        cur.execute("""
-            INSERT INTO account_users (account_id, user_id, role)
-            VALUES (%s::uuid, %s::uuid, 'OWNER')
-        """, (rep_account_id, user_id))
-
-        token = secrets.token_urlsafe(32)
-        cur.execute("""
-            INSERT INTO signup_tokens (token, user_id, account_id, expires_at)
-            VALUES (%s, %s::uuid, %s::uuid, NOW() + INTERVAL '7 days')
-        """, (token, user_id, rep_account_id))
-
-        # Cascade company branding to new rep (non-override copy)
-        cur.execute("""
-            INSERT INTO affiliate_branding (
-                account_id, brand_display_name, logo_url, email_logo_url,
-                footer_logo_url, email_footer_logo_url,
-                primary_color, accent_color, rep_photo_url,
-                contact_line1, contact_line2, website_url,
-                branding_override
-            )
-            SELECT
-                %s::uuid, brand_display_name, logo_url, email_logo_url,
-                footer_logo_url, email_footer_logo_url,
-                primary_color, accent_color, NULL,
-                contact_line1, contact_line2, website_url,
-                FALSE
-            FROM affiliate_branding
-            WHERE account_id = %s::uuid
-        """, (rep_account_id, company_id))
-
-        # Fallback: if company had no branding row, create a minimal one for the rep
-        cur.execute("SELECT 1 FROM affiliate_branding WHERE account_id = %s::uuid", (rep_account_id,))
-        if not cur.fetchone():
-            cur.execute("""
-                INSERT INTO affiliate_branding (account_id, branding_override)
-                VALUES (%s::uuid, false)
-            """, (rep_account_id,))
-
-        conn.commit()
-
-    inviter_name, company_name = _get_inviter_info(company_id, request)
     try:
-        background_tasks.add_task(
-            send_invite_email, email, inviter_name, company_name, token,
-            body.first_name.strip() if body.first_name else None,
-        )
-        logger.info(f"Rep invite email queued for {email}")
-    except Exception as e:
-        logger.error(f"Failed to queue rep invite for {email}: {e}")
+        with db_conn() as (conn, cur):
+            cur.execute(
+                "SELECT id FROM users WHERE LOWER(email) = %s", (email,)
+            )
+            if cur.fetchone():
+                raise HTTPException(
+                    status_code=400,
+                    detail="A user with this email already exists.",
+                )
 
-    return {
-        "ok": True,
-        "rep_account_id": rep_account_id,
-        "email_queued": True,
-    }
+            base_slug = body.name.lower().replace(" ", "-").replace(".", "").replace(",", "").replace("'", "")[:30]
+            slug = f"{base_slug}-{secrets.token_hex(4)}"
+
+            cur.execute("""
+                INSERT INTO accounts (name, slug, account_type, plan_slug, parent_account_id)
+                VALUES (%s, %s, 'INDUSTRY_AFFILIATE', 'sponsored_free', %s::uuid)
+                RETURNING id::text
+            """, (body.name.strip(), slug, company_id))
+            rep_account_id = cur.fetchone()[0]
+
+            cur.execute("""
+                INSERT INTO users (
+                    account_id, email, is_active, email_verified, role,
+                    first_name, last_name, phone, job_title
+                ) VALUES (
+                    %s::uuid, %s, TRUE, FALSE, 'member',
+                    %s, %s, %s, %s
+                )
+                RETURNING id::text
+            """, (
+                rep_account_id, email,
+                body.first_name.strip(), body.last_name.strip(),
+                body.phone, body.title,
+            ))
+            user_id = cur.fetchone()[0]
+
+            cur.execute("""
+                INSERT INTO account_users (account_id, user_id, role)
+                VALUES (%s::uuid, %s::uuid, 'OWNER')
+            """, (rep_account_id, user_id))
+
+            token = secrets.token_urlsafe(32)
+            cur.execute("""
+                INSERT INTO signup_tokens (token, user_id, account_id, expires_at)
+                VALUES (%s, %s::uuid, %s::uuid, NOW() + INTERVAL '7 days')
+            """, (token, user_id, rep_account_id))
+
+            # Copy company branding to rep (defensive — handle missing columns)
+            try:
+                cur.execute("""
+                    INSERT INTO affiliate_branding (
+                        account_id, brand_display_name, logo_url, email_logo_url,
+                        footer_logo_url, email_footer_logo_url,
+                        primary_color, accent_color, rep_photo_url,
+                        contact_line1, contact_line2, website_url,
+                        branding_override
+                    )
+                    SELECT
+                        %s::uuid, brand_display_name, logo_url, email_logo_url,
+                        footer_logo_url, email_footer_logo_url,
+                        primary_color, accent_color, NULL,
+                        contact_line1, contact_line2, website_url,
+                        FALSE
+                    FROM affiliate_branding
+                    WHERE account_id = %s::uuid
+                """, (rep_account_id, company_id))
+            except Exception as e:
+                logger.warning(f"Branding copy with branding_override failed, trying without: {e}")
+                conn.rollback()
+                cur.execute("""
+                    INSERT INTO affiliate_branding (
+                        account_id, brand_display_name, logo_url, email_logo_url,
+                        footer_logo_url, email_footer_logo_url,
+                        primary_color, accent_color, rep_photo_url,
+                        contact_line1, contact_line2, website_url
+                    )
+                    SELECT
+                        %s::uuid, brand_display_name, logo_url, email_logo_url,
+                        footer_logo_url, email_footer_logo_url,
+                        primary_color, accent_color, NULL,
+                        contact_line1, contact_line2, website_url
+                    FROM affiliate_branding
+                    WHERE account_id = %s::uuid
+                """, (rep_account_id, company_id))
+
+            # Fallback: if company had no branding row, create minimal row for rep
+            cur.execute("SELECT 1 FROM affiliate_branding WHERE account_id = %s::uuid", (rep_account_id,))
+            if not cur.fetchone():
+                try:
+                    cur.execute("""
+                        INSERT INTO affiliate_branding (account_id, branding_override)
+                        VALUES (%s::uuid, false)
+                    """, (rep_account_id,))
+                except Exception:
+                    cur.execute("""
+                        INSERT INTO affiliate_branding (account_id)
+                        VALUES (%s::uuid)
+                    """, (rep_account_id,))
+
+            conn.commit()
+
+        inviter_name, company_name = _get_inviter_info(company_id, request)
+        try:
+            background_tasks.add_task(
+                send_invite_email, email, inviter_name, company_name, token,
+                invitee_first_name=body.first_name.strip() if body.first_name else None,
+            )
+            logger.info(f"Rep invite email queued for {email}")
+        except Exception as e:
+            logger.error(f"Failed to queue rep invite for {email}: {e}")
+
+        return {
+            "ok": True,
+            "rep_account_id": rep_account_id,
+            "email_queued": True,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to invite rep: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "invite_failed", "message": f"Failed to create rep invitation: {str(e)}"},
+        )
 
 
 # ── 5. POST /resend-rep-invite ───────────────────────────────────────────────
@@ -690,47 +724,78 @@ def update_branding(
 
         reps_updated = 0
         if saved:
-            # Cascade to child reps that haven't overridden
-            cur.execute("""
-                UPDATE affiliate_branding ab SET
-                    brand_display_name    = %s,
-                    logo_url              = %s,
-                    email_logo_url        = %s,
-                    footer_logo_url       = %s,
-                    email_footer_logo_url = %s,
-                    primary_color         = %s,
-                    accent_color          = %s,
-                    website_url           = %s,
-                    updated_at            = NOW()
-                FROM accounts a
-                WHERE ab.account_id = a.id
-                  AND a.parent_account_id = %s::uuid
-                  AND a.account_type = 'INDUSTRY_AFFILIATE'
-                  AND COALESCE(ab.branding_override, false) = false
-            """, (
+            cascade_vals = (
                 saved[0], saved[1], saved[2], saved[3], saved[4],
-                saved[5], saved[6], saved[10],
-                company_id,
-            ))
+                saved[5], saved[6], saved[10], company_id,
+            )
+
+            # Cascade to child reps that haven't overridden
+            try:
+                cur.execute("""
+                    UPDATE affiliate_branding ab SET
+                        brand_display_name    = %s,
+                        logo_url              = %s,
+                        email_logo_url        = %s,
+                        footer_logo_url       = %s,
+                        email_footer_logo_url = %s,
+                        primary_color         = %s,
+                        accent_color          = %s,
+                        website_url           = %s,
+                        updated_at            = NOW()
+                    FROM accounts a
+                    WHERE ab.account_id = a.id
+                      AND a.parent_account_id = %s::uuid
+                      AND a.account_type = 'INDUSTRY_AFFILIATE'
+                      AND COALESCE(ab.branding_override, false) = false
+                """, cascade_vals)
+            except Exception as e:
+                logger.warning(f"Cascade with branding_override failed, cascading to all: {e}")
+                conn.rollback()
+                cur.execute("""
+                    UPDATE affiliate_branding ab SET
+                        brand_display_name    = %s,
+                        logo_url              = %s,
+                        email_logo_url        = %s,
+                        footer_logo_url       = %s,
+                        email_footer_logo_url = %s,
+                        primary_color         = %s,
+                        accent_color          = %s,
+                        website_url           = %s,
+                        updated_at            = NOW()
+                    FROM accounts a
+                    WHERE ab.account_id = a.id
+                      AND a.parent_account_id = %s::uuid
+                      AND a.account_type = 'INDUSTRY_AFFILIATE'
+                """, cascade_vals)
             reps_updated = cur.rowcount or 0
 
             # Insert branding for reps that don't have a row yet
-            cur.execute("""
-                INSERT INTO affiliate_branding (
-                    account_id, brand_display_name, logo_url, email_logo_url,
-                    footer_logo_url, email_footer_logo_url,
-                    primary_color, accent_color, website_url, branding_override
-                )
-                SELECT a.id, %s, %s, %s, %s, %s, %s, %s, %s, false
-                FROM accounts a
-                WHERE a.parent_account_id = %s::uuid
-                  AND a.account_type = 'INDUSTRY_AFFILIATE'
-                  AND NOT EXISTS (SELECT 1 FROM affiliate_branding ab WHERE ab.account_id = a.id)
-            """, (
-                saved[0], saved[1], saved[2], saved[3], saved[4],
-                saved[5], saved[6], saved[10],
-                company_id,
-            ))
+            try:
+                cur.execute("""
+                    INSERT INTO affiliate_branding (
+                        account_id, brand_display_name, logo_url, email_logo_url,
+                        footer_logo_url, email_footer_logo_url,
+                        primary_color, accent_color, website_url, branding_override
+                    )
+                    SELECT a.id, %s, %s, %s, %s, %s, %s, %s, %s, false
+                    FROM accounts a
+                    WHERE a.parent_account_id = %s::uuid
+                      AND a.account_type = 'INDUSTRY_AFFILIATE'
+                      AND NOT EXISTS (SELECT 1 FROM affiliate_branding ab WHERE ab.account_id = a.id)
+                """, cascade_vals)
+            except Exception:
+                cur.execute("""
+                    INSERT INTO affiliate_branding (
+                        account_id, brand_display_name, logo_url, email_logo_url,
+                        footer_logo_url, email_footer_logo_url,
+                        primary_color, accent_color, website_url
+                    )
+                    SELECT a.id, %s, %s, %s, %s, %s, %s, %s, %s
+                    FROM accounts a
+                    WHERE a.parent_account_id = %s::uuid
+                      AND a.account_type = 'INDUSTRY_AFFILIATE'
+                      AND NOT EXISTS (SELECT 1 FROM affiliate_branding ab WHERE ab.account_id = a.id)
+                """, cascade_vals)
             reps_updated += cur.rowcount or 0
 
         conn.commit()

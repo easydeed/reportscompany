@@ -18,10 +18,21 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify(body),
     });
-    const data = await response.json();
+
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { error: 'Backend error', detail: text.slice(0, 500) };
+    }
+
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     console.error('[API Proxy] Failed to resend rep invite:', error);
-    return NextResponse.json({ error: 'Failed to resend rep invitation' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to resend rep invitation', detail: String(error) },
+      { status: 500 }
+    );
   }
 }
