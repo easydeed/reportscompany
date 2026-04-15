@@ -16,6 +16,7 @@ from .email.send import send_schedule_email
 from .report_builders import build_result_json
 from .limit_checker import check_usage_limit, log_limit_decision_worker
 from .utils.photo_proxy import proxy_report_photos_inplace
+from .property_tasks.property_report import embed_images_as_base64
 from .filter_resolver import compute_market_stats, resolve_filters, build_filters_label, elastic_widen_filters
 from .sms import send_report_sms, send_agent_notification_sms
 import boto3
@@ -1156,6 +1157,9 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
             html_content = builder.render_html()
             print(f"🔍 REPORT RUN {run_id}: server-side HTML rendered ({len(html_content)} chars)")
 
+            logger.info("Embedding MLS photos as base64 for market report PDF...")
+            html_content = embed_images_as_base64(html_content)
+
             pdf_path, html_url = render_pdf(
                 run_id=run_id,
                 account_id=account_id,
@@ -1748,6 +1752,9 @@ def process_consumer_report(self, report_id: str):
                     builder = PropertyReportBuilder(report_data_for_pdf)
                     html_content = builder.render_html()
                     logger.info("CMA PDF HTML rendered: %d chars", len(html_content))
+
+                    logger.info("Embedding images as base64 for CMA PDF...")
+                    html_content = embed_images_as_base64(html_content)
 
                     pdf_path, _ = render_pdf(
                         run_id=str(report_id),
