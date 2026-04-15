@@ -25,7 +25,6 @@ from ..services.branding import (
 )
 from ..services.email import send_role_invite_email
 from ..services.invite_service import (
-    copy_branding_to_child,
     create_invited_user,
     find_user_for_resend,
     get_inviter_context,
@@ -145,9 +144,6 @@ def invite_agent(
                 license_number=body.license_number,
                 account_name=body.name.strip(),
                 sponsor_account_id=account_id,
-            )
-            copy_branding_to_child(
-                cur, source_account_id=account_id, target_account_id=result["account_id"]
             )
             ctx = get_inviter_context(
                 cur, account_id=account_id, inviter_user_id=_inviter_user_id(request)
@@ -310,9 +306,6 @@ async def bulk_invite_agents(
                     license_number=row.get("license_number") or None,
                     account_name=name,
                     sponsor_account_id=account_id,
-                )
-                copy_branding_to_child(
-                    cur, source_account_id=account_id, target_account_id=result["account_id"]
                 )
                 email_tasks.append(
                     (result["email"], result["token"], fn)

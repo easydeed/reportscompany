@@ -342,12 +342,12 @@ export default function BrandingPage() {
     <div className="max-w-[1400px] mx-auto">
       {/* Trial agent info banner */}
       {isSponsored && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 dark:bg-blue-950/30 dark:border-blue-800">
+        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-6 dark:bg-indigo-950/30 dark:border-indigo-800">
           <div className="flex items-start gap-3">
-            <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
-            <p className="text-sm text-blue-800 dark:text-blue-300">
-              Your reports currently use your sponsor&apos;s branding. Set up your own logo
-              and colors below to personalize reports sent to your clients.
+            <Info className="w-4 h-4 text-indigo-600 dark:text-indigo-400 mt-0.5 shrink-0" />
+            <p className="text-sm text-indigo-800 dark:text-indigo-300">
+              Upload your logo and set your brand colors &mdash; these appear on every
+              report you send to clients.
             </p>
           </div>
         </div>

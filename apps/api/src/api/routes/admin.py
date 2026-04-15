@@ -18,7 +18,6 @@ from ..services.schedule_utils import compute_next_run
 from ..services.email import send_role_invite_email
 from ..services.invite_service import (
     create_invited_user,
-    copy_branding_to_child,
     find_owner_pending_for_account,
     get_inviter_context,
     infer_role_for_resend,
@@ -1721,9 +1720,6 @@ def admin_invite_agent(
                 account_name=body.agent_name.strip(),
                 sponsor_account_id=affiliate_id,
             )
-            copy_branding_to_child(
-                cur, source_account_id=affiliate_id, target_account_id=inv["account_id"]
-            )
             ctx = get_inviter_context(
                 cur, account_id=affiliate_id, inviter_user_id=_admin.get("id")
             )
@@ -2323,9 +2319,6 @@ def bulk_import_agents(
                     last_name=ln,
                     account_name=name,
                     sponsor_account_id=affiliate_id,
-                )
-                copy_branding_to_child(
-                    cur, source_account_id=affiliate_id, target_account_id=inv["account_id"]
                 )
                 try:
                     background_tasks.add_task(

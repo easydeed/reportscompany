@@ -128,35 +128,55 @@ def _fetch_ab(cur, account_id: str) -> dict | None:
 
 def _resolve_property_brand(cur, data: dict) -> dict | None:
     """
-    Resolve branding for a property report following Company→Rep→Agent.
+    Resolve branding for a property report.
 
-    Returns a branding dict or None.
+    REGULAR accounts (sponsored or not) use their own branding from the
+    accounts table. No sponsor/affiliate fallback.
+
+    INDUSTRY_AFFILIATE / TITLE_COMPANY use affiliate_branding with
+    company→rep inheritance.
     """
     acc_type = data.get("account_type")
-    sponsor_id = data.get("sponsor_account_id")
     parent_id = data.get("parent_account_id")
 
-    # Determine the branding source account
-    if acc_type == "REGULAR" and sponsor_id:
-        branding_acct_id = sponsor_id
-    elif acc_type in ("INDUSTRY_AFFILIATE", "TITLE_COMPANY"):
-        branding_acct_id = data.get("account_id")
-    else:
+    if acc_type == "REGULAR":
+        account_id = data.get("account_id")
+        cur.execute("""
+            SELECT a.name, a.logo_url, a.primary_color, a.secondary_color,
+                   a.footer_logo_url, a.email_logo_url, a.email_footer_logo_url,
+                   a.contact_line1, a.contact_line2, a.website_url,
+                   COALESCE(u.photo_url, u.avatar_url)
+            FROM accounts a
+            LEFT JOIN users u ON u.account_id = a.id
+            WHERE a.id = %s::uuid
+            LIMIT 1
+        """, (account_id,))
+        row = cur.fetchone()
+        if not row:
+            return None
+        return {
+            "display_name": row[0],
+            "logo_url": row[1],
+            "primary_color": row[2] or "#4F46E5",
+            "accent_color": row[3] or "#1a1a1a",
+            "footer_logo_url": row[4],
+            "email_logo_url": row[5],
+            "email_footer_logo_url": row[6],
+            "contact_line1": row[7],
+            "contact_line2": row[8],
+            "website_url": row[9],
+            "rep_photo_url": row[10],
+        }
+
+    if acc_type not in ("INDUSTRY_AFFILIATE", "TITLE_COMPANY"):
         return None
 
+    branding_acct_id = data.get("account_id")
     rep_brand = _fetch_ab(cur, branding_acct_id)
     if not rep_brand:
         return None
 
-    # If the branding source is a rep under a company, walk up
-    if acc_type == "REGULAR" and sponsor_id:
-        cur.execute("SELECT parent_account_id::text FROM accounts WHERE id = %s::uuid", (sponsor_id,))
-        sp_row = cur.fetchone()
-        rep_parent = sp_row[0] if sp_row else None
-    elif acc_type == "INDUSTRY_AFFILIATE":
-        rep_parent = parent_id
-    else:
-        rep_parent = None
+    rep_parent = parent_id if acc_type == "INDUSTRY_AFFILIATE" else None
 
     if rep_parent and not rep_brand.get("branding_override"):
         company_brand = _fetch_ab(cur, rep_parent)

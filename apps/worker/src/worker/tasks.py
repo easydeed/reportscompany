@@ -410,61 +410,32 @@ def _resolve_email_brand(cur, account_id: str):
     """
     Resolve white-label brand and account_type for email sending.
 
-    Hierarchy:
-      Company (TITLE_COMPANY) → owns branding master (logos, colors, website)
-      Rep (INDUSTRY_AFFILIATE with parent_account_id) → inherits company
-            branding unless branding_override=true; always provides own
-            rep_photo, contact_line1, contact_line2
-      Agent (REGULAR with sponsor_account_id) → uses sponsor rep's resolved
-            branding (which may itself come from the company)
-      Standalone INDUSTRY_AFFILIATE → uses own branding
-      Regular non-sponsored → uses own account/user info
+    REGULAR accounts (sponsored or not) always use their own branding
+    from the accounts table. No sponsor/affiliate fallback.
+
+    INDUSTRY_AFFILIATE / TITLE_COMPANY use the affiliate_branding table
+    (with company→rep inheritance when branding_override is false).
     """
     brand = None
     acc_type = "REGULAR"
     try:
         cur.execute("""
-            SELECT account_type, sponsor_account_id::text, parent_account_id::text
+            SELECT account_type, parent_account_id::text
             FROM accounts
             WHERE id = %s::uuid
         """, (account_id,))
         acc_row = cur.fetchone()
 
         if acc_row:
-            acc_type, sponsor_id, parent_id = acc_row
+            acc_type, parent_id = acc_row
 
-            if acc_type == 'REGULAR' and sponsor_id:
-                # Agent sponsored by a rep — resolve the rep's branding first
-                rep_brand = _fetch_affiliate_branding(cur, sponsor_id)
-
-                # Check if the rep belongs to a company
-                cur.execute("""
-                    SELECT parent_account_id::text FROM accounts WHERE id = %s::uuid
-                """, (sponsor_id,))
-                rep_row = cur.fetchone()
-                rep_parent_id = rep_row[0] if rep_row else None
-
-                if rep_parent_id and rep_brand and not rep_brand.get("branding_override"):
-                    # Rep hasn't overridden → merge company logos/colors + rep contact
-                    company_brand = _fetch_affiliate_branding(cur, rep_parent_id)
-                    if company_brand:
-                        brand = {
-                            **company_brand,
-                            "rep_photo_url": rep_brand.get("rep_photo_url") or company_brand.get("rep_photo_url"),
-                            "contact_line1": rep_brand.get("contact_line1") or company_brand.get("contact_line1"),
-                            "contact_line2": rep_brand.get("contact_line2") or company_brand.get("contact_line2"),
-                        }
-                        brand.pop("branding_override", None)
-                    else:
-                        brand = {k: v for k, v in rep_brand.items() if k != "branding_override"}
-                elif rep_brand:
-                    brand = {k: v for k, v in rep_brand.items() if k != "branding_override"}
+            if acc_type == 'REGULAR':
+                brand = _build_regular_brand(cur, account_id)
 
             elif acc_type in ('INDUSTRY_AFFILIATE', 'TITLE_COMPANY'):
                 own_brand = _fetch_affiliate_branding(cur, account_id)
 
                 if acc_type == 'INDUSTRY_AFFILIATE' and parent_id and own_brand and not own_brand.get("branding_override"):
-                    # Rep hasn't overridden → merge company logos/colors + rep contact
                     company_brand = _fetch_affiliate_branding(cur, parent_id)
                     if company_brand:
                         brand = {
@@ -479,56 +450,64 @@ def _resolve_email_brand(cur, account_id: str):
                 elif own_brand:
                     brand = {k: v for k, v in own_brand.items() if k != "branding_override"}
 
-            else:
-                # Regular non-sponsored account — build brand from account + user
-                cur.execute("""
-                    SELECT
-                        COALESCE(u.photo_url, u.avatar_url),
-                        u.first_name, u.last_name,
-                        u.job_title, u.phone, u.email, u.website,
-                        a.name, a.logo_url, a.email_logo_url,
-                        a.primary_color, a.secondary_color,
-                        a.footer_logo_url, a.email_footer_logo_url
-                    FROM accounts a
-                    LEFT JOIN users u ON u.account_id = a.id
-                    WHERE a.id = %s::uuid
-                    LIMIT 1
-                """, (account_id,))
-                acc_brand_row = cur.fetchone()
-                if acc_brand_row:
-                    first_name = acc_brand_row[1] or ""
-                    last_name = acc_brand_row[2] or ""
-                    job_title = acc_brand_row[3] or ""
-                    phone = acc_brand_row[4] or ""
-                    email = acc_brand_row[5] or ""
-                    website = acc_brand_row[6] or ""
-
-                    name = f"{first_name} {last_name}".strip()
-                    if name and job_title:
-                        contact_line1 = f"{name} • {job_title}"
-                    else:
-                        contact_line1 = name or job_title or ""
-
-                    phone_fmt = phone
-                    if phone_fmt and len(phone_fmt) == 10:
-                        phone_fmt = f"({phone_fmt[:3]}) {phone_fmt[3:6]}-{phone_fmt[6:]}"
-                    if phone_fmt and email:
-                        contact_line2 = f"{phone_fmt} • {email}"
-                    else:
-                        contact_line2 = phone_fmt or email or ""
-
-                    brand = {
-                        "display_name": acc_brand_row[7], "logo_url": acc_brand_row[8],
-                        "email_logo_url": acc_brand_row[9], "primary_color": acc_brand_row[10],
-                        "accent_color": acc_brand_row[11], "rep_photo_url": acc_brand_row[0],
-                        "contact_line1": contact_line1, "contact_line2": contact_line2,
-                        "website_url": website,
-                        "footer_logo_url": acc_brand_row[12],
-                        "email_footer_logo_url": acc_brand_row[13],
-                    }
     except Exception as e:
         print(f"⚠️  Error loading brand for email: {e}")
     return brand, acc_type
+
+
+def _build_regular_brand(cur, account_id: str) -> dict | None:
+    """Build brand dict from accounts + users tables for a REGULAR account."""
+    cur.execute("""
+        SELECT
+            COALESCE(u.photo_url, u.avatar_url),
+            u.first_name, u.last_name,
+            u.job_title, u.phone, u.email, u.website,
+            a.name, a.logo_url, a.email_logo_url,
+            a.primary_color, a.secondary_color,
+            a.footer_logo_url, a.email_footer_logo_url
+        FROM accounts a
+        LEFT JOIN users u ON u.account_id = a.id
+        WHERE a.id = %s::uuid
+        LIMIT 1
+    """, (account_id,))
+    row = cur.fetchone()
+    if not row:
+        return None
+
+    first_name = row[1] or ""
+    last_name = row[2] or ""
+    job_title = row[3] or ""
+    phone = row[4] or ""
+    email = row[5] or ""
+    website = row[6] or ""
+
+    name = f"{first_name} {last_name}".strip()
+    if name and job_title:
+        contact_line1 = f"{name} • {job_title}"
+    else:
+        contact_line1 = name or job_title or ""
+
+    phone_fmt = phone
+    if phone_fmt and len(phone_fmt) == 10:
+        phone_fmt = f"({phone_fmt[:3]}) {phone_fmt[3:6]}-{phone_fmt[6:]}"
+    if phone_fmt and email:
+        contact_line2 = f"{phone_fmt} • {email}"
+    else:
+        contact_line2 = phone_fmt or email or ""
+
+    return {
+        "display_name": row[7],
+        "logo_url": row[8],
+        "email_logo_url": row[9],
+        "primary_color": row[10] or "#4F46E5",
+        "accent_color": row[11] or "#1a1a1a",
+        "rep_photo_url": row[0],
+        "contact_line1": contact_line1,
+        "contact_line2": contact_line2,
+        "website_url": website,
+        "footer_logo_url": row[12],
+        "email_footer_logo_url": row[13],
+    }
 
 
 def _build_email_payload(report_type, city, zips, lookback, result, pdf_url):

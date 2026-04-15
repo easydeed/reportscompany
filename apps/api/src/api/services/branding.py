@@ -1,9 +1,14 @@
 """
-Phase 30: Affiliate Branding Service
+Branding Service
 
 Provides brand resolution logic for white-label output.
-Determines which brand (TrendyReports, affiliate, or custom) should be used
-for client-facing reports and emails.
+Determines which brand should appear on client-facing reports and emails.
+
+Brand Resolution (simple):
+  REGULAR accounts  → always use their OWN accounts-table branding.
+                       No sponsor/affiliate fallback. NULL logos are fine.
+  INDUSTRY_AFFILIATE / TITLE_COMPANY → use affiliate_branding table
+                       (with optional company→rep inheritance).
 """
 
 from typing import Optional, TypedDict
@@ -28,94 +33,72 @@ class Brand(TypedDict, total=False):
     website_url: Optional[str]
 
 
-# Default TrendyReports brand colors (Phase 26 palette)
-DEFAULT_PRIMARY = "#7C3AED"   # Trendy violet
-DEFAULT_ACCENT = "#F26B2B"    # Trendy coral
+DEFAULT_PRIMARY = "#4F46E5"   # Indigo
+DEFAULT_ACCENT  = "#1a1a1a"   # Near-black
 
 
 def get_brand_for_account(cur, account_id: str) -> Brand:
     """
-    Returns the brand that should appear to CLIENTS for this account.
-    
-    Brand Resolution Logic:
-    1. If account is REGULAR with sponsor_account_id:
-       → Use sponsor's branding (affiliate white-label)
-    2. If account is INDUSTRY_AFFILIATE:
-       → Use its own branding (if configured)
-    3. Else:
-       → Fall back to TrendyReports default brand
-    
-    Args:
-        cur: Database cursor
-        account_id: The account generating the report/email
-    
-    Returns:
-        Brand dict with display_name, colors, logo, contact info
+    Returns the brand that should appear on reports/emails for this account.
+
+    REGULAR accounts (sponsored or not) always use their own branding from
+    the accounts table. No sponsor fallback.
+
+    INDUSTRY_AFFILIATE / TITLE_COMPANY use the affiliate_branding table
+    (with company→rep inheritance if the rep hasn't overridden).
     """
-    # Load account info
     cur.execute("""
-        SELECT 
-            id::text,
-            name,
-            account_type,
-            sponsor_account_id::text
+        SELECT id::text, name, account_type
         FROM accounts
         WHERE id = %s::uuid
     """, (account_id,))
-    
+
     account_row = cur.fetchone()
-    
     if not account_row:
-        # Account not found - return default
         return _get_default_brand()
-    
-    acc_id, acc_name, acc_type, sponsor_id = account_row
-    
-    # Determine which account's branding to use
-    if acc_type == 'REGULAR' and sponsor_id:
-        # Trial/sponsored agent: check if they have configured their OWN branding
-        # (logo or custom color saved via the branding page → accounts table).
-        # If yes → use agent's own brand (personalized client reports).
-        # If no  → fall back to sponsor's branding (inherited default).
-        try:
-            cur.execute("""
-                SELECT logo_url, primary_color FROM accounts
-                WHERE id = %s::uuid
-            """, (acc_id,))
-            agent_row = cur.fetchone()
-            if agent_row and (agent_row[0] or agent_row[1]):
-                return _get_regular_user_brand(cur, acc_id, acc_name)
-        except Exception:
-            pass  # Defensive — proceed to sponsor fallback
-        branding_account_id = sponsor_id
-    else:
-        # Affiliate or unsponsored regular user → use own branding
-        branding_account_id = acc_id
-    
-    # Look up branding configuration
-    # Note: affiliate_branding table may not exist in all environments
-    # Gracefully handle missing columns
+
+    acc_id, acc_name, acc_type = account_row
+
+    # ── REGULAR agents (sponsored or not) — always own branding ──
+    if acc_type == 'REGULAR':
+        return _get_regular_user_brand(cur, acc_id, acc_name)
+
+    # ── Affiliates / Title Companies — affiliate_branding table ──
+    branding_account_id = acc_id
+    branding_row = _fetch_affiliate_branding_row(cur, branding_account_id)
+
+    if branding_row:
+        return branding_row
+
+    # Affiliate without branding config — use account name + defaults
+    return Brand(
+        display_name=acc_name,
+        logo_url=None,
+        email_logo_url=None,
+        footer_logo_url=None,
+        email_footer_logo_url=None,
+        primary_color=DEFAULT_PRIMARY,
+        accent_color=DEFAULT_ACCENT,
+        rep_photo_url=None,
+        contact_line1=None,
+        contact_line2=None,
+        website_url=None,
+    )
+
+
+def _fetch_affiliate_branding_row(cur, account_id: str) -> Optional[Brand]:
+    """Query affiliate_branding for an account, handling schema variations."""
+    query_version = "full"
     branding_row = None
-    query_version = "full"  # full, legacy, minimal
-    
+
     try:
-        # Try full query with all columns (including email_footer_logo_url)
         cur.execute("""
-            SELECT
-                brand_display_name,
-                logo_url,
-                email_logo_url,
-                footer_logo_url,
-                email_footer_logo_url,
-                primary_color,
-                accent_color,
-                rep_photo_url,
-                contact_line1,
-                contact_line2,
-                website_url
+            SELECT brand_display_name, logo_url, email_logo_url, footer_logo_url,
+                   email_footer_logo_url, primary_color, accent_color,
+                   rep_photo_url, contact_line1, contact_line2, website_url
             FROM affiliate_branding
             WHERE account_id = %s::uuid
-        """, (branding_account_id,))
+        """, (account_id,))
         branding_row = cur.fetchone()
     except Exception as e:
         err_str = str(e).lower()
@@ -123,133 +106,77 @@ def get_brand_for_account(cur, account_id: str) -> Brand:
             query_version = "legacy"
         elif "footer_logo_url" in err_str or "email_logo_url" in err_str:
             query_version = "minimal"
-        
+
         if query_version == "legacy":
             try:
                 cur.execute("""
-                    SELECT
-                        brand_display_name,
-                        logo_url,
-                        email_logo_url,
-                        footer_logo_url,
-                        primary_color,
-                        accent_color,
-                        rep_photo_url,
-                        contact_line1,
-                        contact_line2,
-                        website_url
+                    SELECT brand_display_name, logo_url, email_logo_url, footer_logo_url,
+                           primary_color, accent_color, rep_photo_url,
+                           contact_line1, contact_line2, website_url
                     FROM affiliate_branding
                     WHERE account_id = %s::uuid
-                """, (branding_account_id,))
+                """, (account_id,))
                 branding_row = cur.fetchone()
             except Exception:
                 query_version = "minimal"
-        
+
         if query_version == "minimal":
             try:
                 cur.execute("""
-                    SELECT
-                        brand_display_name,
-                        logo_url,
-                        primary_color,
-                        accent_color,
-                        rep_photo_url,
-                        contact_line1,
-                        contact_line2,
-                        website_url
+                    SELECT brand_display_name, logo_url, primary_color, accent_color,
+                           rep_photo_url, contact_line1, contact_line2, website_url
                     FROM affiliate_branding
                     WHERE account_id = %s::uuid
-                """, (branding_account_id,))
+                """, (account_id,))
                 branding_row = cur.fetchone()
             except Exception:
                 pass
-    
-    if branding_row:
-        # Branding configured - use it
-        if query_version == "full":
-            return Brand(
-                display_name=branding_row[0],
-                logo_url=branding_row[1],
-                email_logo_url=branding_row[2],
-                footer_logo_url=branding_row[3],
-                email_footer_logo_url=branding_row[4],
-                primary_color=branding_row[5] or DEFAULT_PRIMARY,
-                accent_color=branding_row[6] or DEFAULT_ACCENT,
-                rep_photo_url=branding_row[7],
-                contact_line1=branding_row[8],
-                contact_line2=branding_row[9],
-                website_url=branding_row[10],
-            )
-        elif query_version == "legacy":
-            return Brand(
-                display_name=branding_row[0],
-                logo_url=branding_row[1],
-                email_logo_url=branding_row[2],
-                footer_logo_url=branding_row[3],
-                email_footer_logo_url=None,
-                primary_color=branding_row[4] or DEFAULT_PRIMARY,
-                accent_color=branding_row[5] or DEFAULT_ACCENT,
-                rep_photo_url=branding_row[6],
-                contact_line1=branding_row[7],
-                contact_line2=branding_row[8],
-                website_url=branding_row[9],
-            )
-        else:  # minimal
-            return Brand(
-                display_name=branding_row[0],
-                logo_url=branding_row[1],
-                email_logo_url=None,
-                footer_logo_url=None,
-                email_footer_logo_url=None,
-                primary_color=branding_row[2] or DEFAULT_PRIMARY,
-                accent_color=branding_row[3] or DEFAULT_ACCENT,
-                rep_photo_url=branding_row[4],
-                contact_line1=branding_row[5],
-                contact_line2=branding_row[6],
-                website_url=branding_row[7],
-            )
-    
-    # No affiliate_branding row found
-    if acc_type == 'INDUSTRY_AFFILIATE':
-        # Affiliate without branding config - use account name as brand
+
+    if not branding_row:
+        return None
+
+    if query_version == "full":
         return Brand(
-            display_name=acc_name,
-            logo_url=None,
+            display_name=branding_row[0],
+            logo_url=branding_row[1],
+            email_logo_url=branding_row[2],
+            footer_logo_url=branding_row[3],
+            email_footer_logo_url=branding_row[4],
+            primary_color=branding_row[5] or DEFAULT_PRIMARY,
+            accent_color=branding_row[6] or DEFAULT_ACCENT,
+            rep_photo_url=branding_row[7],
+            contact_line1=branding_row[8],
+            contact_line2=branding_row[9],
+            website_url=branding_row[10],
+        )
+    elif query_version == "legacy":
+        return Brand(
+            display_name=branding_row[0],
+            logo_url=branding_row[1],
+            email_logo_url=branding_row[2],
+            footer_logo_url=branding_row[3],
+            email_footer_logo_url=None,
+            primary_color=branding_row[4] or DEFAULT_PRIMARY,
+            accent_color=branding_row[5] or DEFAULT_ACCENT,
+            rep_photo_url=branding_row[6],
+            contact_line1=branding_row[7],
+            contact_line2=branding_row[8],
+            website_url=branding_row[9],
+        )
+    else:
+        return Brand(
+            display_name=branding_row[0],
+            logo_url=branding_row[1],
             email_logo_url=None,
             footer_logo_url=None,
             email_footer_logo_url=None,
-            primary_color=DEFAULT_PRIMARY,
-            accent_color=DEFAULT_ACCENT,
-            rep_photo_url=None,
-            contact_line1=None,
-            contact_line2=None,
-            website_url=None,
+            primary_color=branding_row[2] or DEFAULT_PRIMARY,
+            accent_color=branding_row[3] or DEFAULT_ACCENT,
+            rep_photo_url=branding_row[4],
+            contact_line1=branding_row[5],
+            contact_line2=branding_row[6],
+            website_url=branding_row[7],
         )
-    
-    if sponsor_id:
-        # Sponsored agent without sponsor branding - get sponsor name
-        cur.execute("""
-            SELECT name FROM accounts WHERE id = %s::uuid
-        """, (sponsor_id,))
-        sponsor_row = cur.fetchone()
-        sponsor_name = sponsor_row[0] if sponsor_row else acc_name
-        
-        return Brand(
-            display_name=sponsor_name,
-            logo_url=None,
-            email_logo_url=None,
-            footer_logo_url=None,
-            email_footer_logo_url=None,
-            primary_color=DEFAULT_PRIMARY,
-            accent_color=DEFAULT_ACCENT,
-            rep_photo_url=None,
-            contact_line1=None,
-            contact_line2=None,
-            website_url=None,
-        )
-    
-    # Unsponsored REGULAR account → Use accounts table branding + user avatar (Option A)
-    return _get_regular_user_brand(cur, acc_id, acc_name)
 
 
 def _get_default_brand() -> Brand:
@@ -271,11 +198,10 @@ def _get_default_brand() -> Brand:
 
 def _get_regular_user_brand(cur, account_id: str, account_name: str) -> Brand:
     """
-    Returns branding for un-sponsored regular users (Option A).
-    
-    Uses:
-    - Branding fields from accounts table (logos, colors, contact info)
-    - User's avatar_url as their headshot (rep_photo_url)
+    Returns branding for ALL regular accounts (sponsored or not).
+
+    Reads logos, colors, contact info from the accounts table.
+    NULL logos are returned as-is (no logo on the report is fine).
     """
     # Get branding from accounts table + user's avatar
     try:

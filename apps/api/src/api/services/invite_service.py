@@ -103,6 +103,16 @@ def create_invited_user(
         )
         account_id = cur.fetchone()[0]
 
+        # Seed default brand colors for sponsored agents so reports have
+        # sensible styling even before the agent configures branding.
+        if role == "sponsored_agent":
+            cur.execute("""
+                UPDATE accounts
+                SET primary_color  = COALESCE(primary_color, '#4F46E5'),
+                    secondary_color = COALESCE(secondary_color, '#1a1a1a')
+                WHERE id = %s::uuid
+            """, (account_id,))
+
     cur.execute(
         """
         INSERT INTO users (account_id, email, is_active, email_verified, role,
