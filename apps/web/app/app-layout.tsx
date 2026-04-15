@@ -129,6 +129,8 @@ function getNavigation({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }: Ti
         { name: "Company Dashboard", href: "/app/company", icon: Building },
         { name: "Title Reps", href: "/app/company/reps", icon: Users },
         { name: "All Agents", href: "/app/company/agents", icon: UserCheck },
+        { name: "All Reports", href: "/app/company/reports", icon: FileText },
+        { name: "All Schedules", href: "/app/company/schedules", icon: Calendar },
       ] as NavItem[],
       settings: [
         { name: "Profile", href: "/app/settings/profile", icon: User },
@@ -144,6 +146,8 @@ function getNavigation({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }: Ti
     return {
       main: [
         { name: "My Agents", href: "/app/affiliate", icon: Users },
+        { name: "Agent Reports", href: "/app/affiliate/reports", icon: FileText },
+        { name: "Agent Schedules", href: "/app/affiliate/schedules", icon: Calendar },
         { name: "Market Reports", href: "/app/reports", icon: FileText },
         { name: "Property Reports", href: "/app/property", icon: Home },
         { name: "Schedules", href: "/app/schedules", icon: Calendar },
