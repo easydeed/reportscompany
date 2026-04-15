@@ -497,7 +497,7 @@ export default function AffiliateDetailPage() {
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Sponsored Agents ({affiliate.agent_count})
+            Trial Agents ({affiliate.agent_count})
           </CardTitle>
           <CardDescription>
             Agents using {affiliate.name}&apos;s branding

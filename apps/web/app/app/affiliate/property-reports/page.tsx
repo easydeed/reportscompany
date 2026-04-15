@@ -157,7 +157,7 @@ export default function AffiliatePropertyReportsPage() {
         <div>
           <h1 className="text-2xl font-bold">Property Reports Analytics</h1>
           <p className="text-muted-foreground">
-            Performance metrics for your sponsored agents • Last 30 days
+            Performance metrics for your trial agents • Last 30 days
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={fetchStats}>
@@ -174,7 +174,7 @@ export default function AffiliatePropertyReportsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{summary.total_agents}</div>
-            <p className="text-xs text-muted-foreground mt-1">sponsored agents</p>
+            <p className="text-xs text-muted-foreground mt-1">trial agents</p>
           </CardContent>
         </Card>
 

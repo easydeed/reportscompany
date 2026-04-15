@@ -75,17 +75,6 @@ export function StripeBillingActions({
     }
   };
 
-  // Sponsored accounts cannot self-upgrade
-  if (isSponsored) {
-    return (
-      <div className="p-4 rounded-lg bg-muted/50 border border-border">
-        <p className="text-sm text-muted-foreground">
-          Your access is sponsored by your industry affiliate. Contact them for plan changes.
-        </p>
-      </div>
-    );
-  }
-
   // INDUSTRY_AFFILIATE accounts - treat like REGULAR (per spec choice)
   // For now, we'll show the same upgrade options
 

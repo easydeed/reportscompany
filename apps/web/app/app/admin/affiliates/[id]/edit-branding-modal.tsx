@@ -124,7 +124,7 @@ export function EditBrandingModal({ affiliateId, branding, onSaved }: EditBrandi
         <DialogHeader>
           <DialogTitle>Edit Affiliate Branding</DialogTitle>
           <DialogDescription>
-            Update the white-label branding for this affiliate and all their sponsored agents.
+            Update the white-label branding for this affiliate and all their trial agents.
           </DialogDescription>
         </DialogHeader>
 

@@ -207,7 +207,7 @@ export default function SponsoredAccountDetailPage() {
               <div>
                 <CardTitle className="text-2xl">{account.name}</CardTitle>
                 <CardDescription className="mt-1">
-                  Sponsored Agent Account
+                  Trial Agent Account
                 </CardDescription>
               </div>
             </div>

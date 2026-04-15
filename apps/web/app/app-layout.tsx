@@ -160,7 +160,7 @@ function getNavigation({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }: Ti
     }
   }
 
-  // TIER 4 — Sponsored Agent: tools but no branding/billing (managed by company)
+  // TIER 4 — Trial Agent (sponsored): tools + billing; branding is inherited (blocked)
   if (isSponsored) {
     return {
       main: [
@@ -176,6 +176,7 @@ function getNavigation({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }: Ti
       settings: [
         { name: "Profile", href: "/app/settings/profile", icon: User },
         { name: "Security", href: "/app/settings/security", icon: Lock },
+        { name: "Billing", href: "/app/settings/billing", icon: CreditCard },
       ] as NavItem[],
     }
   }
@@ -456,7 +457,7 @@ function DashboardTopbar({ accountType, isAdmin, isCompanyAdmin, isAffiliate, is
       )}
       {!isAdmin && accountType === "REGULAR" && isSponsored && (
         <span className="rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-semibold px-2.5 py-0.5 border border-emerald-200 uppercase tracking-wide">
-          Sponsored Agent
+          Trial Agent
         </span>
       )}
       {!isAdmin && accountType === "REGULAR" && !isSponsored && (
@@ -495,7 +496,7 @@ function DashboardTopbar({ accountType, isAdmin, isCompanyAdmin, isAffiliate, is
               </Link>
             </DropdownMenuItem>
           )}
-          {!isSponsored && !isAffiliate && !isAdmin && (
+          {!isAffiliate && !isAdmin && (
             <DropdownMenuItem asChild>
               <Link href="/app/settings/billing" prefetch={false}>
                 <CreditCard className="w-3.5 h-3.5 mr-2" />Billing

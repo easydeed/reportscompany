@@ -162,7 +162,7 @@ export default async function PropertyReportsAdminPage() {
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-blue-600">Sponsored Agents</p>
+                <p className="text-xs text-blue-600">Trial Agents</p>
                 <p className="text-xl font-bold text-blue-700">{byType.sponsored || 0}</p>
               </div>
               <Building2 className="h-5 w-5 text-blue-300" />

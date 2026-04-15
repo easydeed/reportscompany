@@ -217,7 +217,7 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
           title={isCompanyRep ? "My Agents" : "Affiliate Dashboard"}
           description={isCompanyRep
             ? `${companyName}${companyName ? ' • ' : ''}Manage your agents and track their activity`
-            : "Manage your sponsored agents and track their activity"}
+            : "Manage your trial agents and track their activity"}
           action={
             <div className="flex items-center gap-2">
               <BulkInviteModal />
@@ -270,17 +270,17 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
         )}
 
         <div className="grid gap-3 md:grid-cols-2">
-          <MetricCard label={isCompanyRep ? "Agents" : "Sponsored Accounts"} value={overview.sponsored_count} icon={<Users2 className="w-4 h-4" />} index={0} />
+          <MetricCard label={isCompanyRep ? "Agents" : "Trial Agents"} value={overview.sponsored_count} icon={<Users2 className="w-4 h-4" />} index={0} />
           <MetricCard label="Reports This Month" value={overview.total_reports_this_month} icon={<TrendingUp className="w-4 h-4" />} index={1} />
         </div>
 
         <Card className="border-border bg-card shadow-sm">
           <CardHeader className="border-b border-border">
             <CardTitle className="text-lg font-semibold text-foreground">
-              {isCompanyRep ? 'My Agents' : 'Sponsored Accounts'}
+              {isCompanyRep ? 'My Agents' : 'Trial Agents'}
             </CardTitle>
             <CardDescription className="text-muted-foreground">
-              {isCompanyRep ? 'View and manage the agents in your book' : 'View and manage your sponsored agent accounts'}
+              {isCompanyRep ? 'View and manage the agents in your book' : 'View and manage your trial agent accounts'}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
@@ -290,7 +290,7 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
                   <Users2 className="h-8 w-8 text-muted-foreground/60" />
                 </div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">
-                  {isCompanyRep ? 'No Agents Yet' : 'No Sponsored Accounts Yet'}
+                  {isCompanyRep ? 'No Agents Yet' : 'No Trial Agents Yet'}
                 </h3>
                 <p className="text-sm text-muted-foreground max-w-sm mx-auto">
                   {isCompanyRep

@@ -307,7 +307,7 @@ export default function PeoplePage() {
     if (!editingSponsoredAgent) return
     
     if (!confirm(
-      `Remove sponsorship from ${editingSponsoredAgent.name}? They will become an independent account with a free plan.`
+      `Remove trial access from ${editingSponsoredAgent.name}? They will become an independent account with a free plan.`
     )) return
 
     try {
@@ -651,7 +651,7 @@ export default function PeoplePage() {
       name: s.name,
       email: "", // Sponsored accounts don't have a direct email in this view
       type: "sponsored_agent",
-      displayType: "Agent (Sponsored)",
+      displayType: "Trial Agent",
       lastActivity: s.last_report_at || undefined,
       reportsThisMonth: s.reports_this_month,
       groups: s.groups || [],
@@ -711,7 +711,7 @@ export default function PeoplePage() {
         title="My Contacts"
         description={
           isAffiliate
-            ? "Manage your sponsored agents and client contacts"
+            ? "Manage your trial agents and client contacts"
             : "Manage your client contacts and recipients"
         }
         action={
@@ -933,7 +933,7 @@ export default function PeoplePage() {
           <DialogHeader>
             <DialogTitle>New Group</DialogTitle>
             <DialogDescription>
-              Create a group to organize your contacts and sponsored agents.
+              Create a group to organize your contacts and trial agents.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -1135,7 +1135,7 @@ export default function PeoplePage() {
       }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Sponsored Agent</DialogTitle>
+            <DialogTitle>Edit Trial Agent</DialogTitle>
             <DialogDescription>
               Manage {editingSponsoredAgent?.name || "this agent"}
             </DialogDescription>
@@ -1188,7 +1188,7 @@ export default function PeoplePage() {
             <div className="space-y-2 pt-4 border-t">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-sm font-semibold">Sponsored by your account</Label>
+                  <Label className="text-sm font-semibold">Trial agent (managed by you)</Label>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Remove sponsorship to make them independent
                   </p>
@@ -1246,7 +1246,7 @@ export default function PeoplePage() {
             },
             isAffiliate
               ? {
-                  label: "Sponsored Agents",
+                  label: "Trial Agents",
                   value: sponsoredAccounts.length,
                   icon: Shield,
                   color: "bg-primary/10 text-primary",
@@ -1298,7 +1298,7 @@ export default function PeoplePage() {
                   <h3 className="text-sm font-semibold text-foreground">All People</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {isAffiliate
-                      ? "Your sponsored agents and contacts in one place"
+                      ? "Your trial agents and contacts in one place"
                       : "Your client contacts and recipients"}
                   </p>
                 </div>
@@ -1324,7 +1324,7 @@ export default function PeoplePage() {
                     <SelectItem value="all">All People</SelectItem>
                     <SelectItem value="agents">Agents</SelectItem>
                     <SelectItem value="groups">Groups</SelectItem>
-                    {isAffiliate && <SelectItem value="sponsored_agents">Sponsored Agents</SelectItem>}
+                    {isAffiliate && <SelectItem value="sponsored_agents">Trial Agents</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>
@@ -1647,7 +1647,7 @@ export default function PeoplePage() {
                             : "bg-muted text-muted-foreground"
                         )}
                       >
-                        {member.member_type === "contact" ? "Contact" : "Sponsored Agent"}
+                        {member.member_type === "contact" ? "Contact" : "Trial Agent"}
                       </Badge>
                       <Button
                         variant="ghost"
@@ -1684,7 +1684,7 @@ export default function PeoplePage() {
           <DialogHeader>
             <DialogTitle>Add Members to {activeGroup?.name}</DialogTitle>
             <DialogDescription>
-              Select contacts and sponsored agents to add to this group.
+              Select contacts and trial agents to add to this group.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -1723,7 +1723,7 @@ export default function PeoplePage() {
                   )
                 })}
 
-                {/* Sponsored Agents (if affiliate) */}
+                {/* Trial Agents (if affiliate) */}
                 {isAffiliate &&
                   sponsoredAccounts.map((agent) => {
                     const isAlreadyMember = groupDetailMembers.some(
@@ -1751,7 +1751,7 @@ export default function PeoplePage() {
                         )}
                       >
                         <div className="font-medium">{agent.name}</div>
-                        <div className="text-xs text-muted-foreground">Sponsored Agent</div>
+                        <div className="text-xs text-muted-foreground">Trial Agent</div>
                       </button>
                     )
                   })}

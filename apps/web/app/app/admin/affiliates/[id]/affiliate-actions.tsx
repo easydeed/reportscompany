@@ -98,8 +98,8 @@ export function AffiliateActions({ affiliate }: AffiliateActionsProps) {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {affiliate.is_active
-                ? "This will disable the affiliate account and all their sponsored agents will no longer be able to generate reports."
-                : "This will re-enable the affiliate account and their sponsored agents."}
+                ? "This will disable the affiliate account and all their trial agents will no longer be able to generate reports."
+                : "This will re-enable the affiliate account and their trial agents."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

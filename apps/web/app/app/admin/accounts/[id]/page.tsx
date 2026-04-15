@@ -384,7 +384,7 @@ export default function AdminAccountDetailPage() {
             <div className="flex items-center gap-3">
               <Building className="h-5 w-5 text-indigo-500" />
               <div>
-                <p className="text-sm text-muted-foreground">Sponsored by</p>
+                <p className="text-sm text-muted-foreground">Trial plan — provided by</p>
                 <Link
                   href={`/app/admin/affiliates/${account.account.sponsor_account_id}`}
                   className="font-semibold text-indigo-600 hover:underline inline-flex items-center gap-1"
@@ -409,7 +409,7 @@ export default function AdminAccountDetailPage() {
                   href={`/app/admin/affiliates/${accountId}`}
                   className="font-semibold text-indigo-600 hover:underline inline-flex items-center gap-1"
                 >
-                  View Sponsored Agents
+                  View Trial Agents
                   <ExternalLink className="h-3.5 w-3.5" />
                 </Link>
               </div>
@@ -509,7 +509,7 @@ export default function AdminAccountDetailPage() {
                   <SelectItem value="pro">Pro</SelectItem>
                   <SelectItem value="team">Team</SelectItem>
                   <SelectItem value="affiliate">Affiliate</SelectItem>
-                  <SelectItem value="sponsored_free">Trial (Sponsored)</SelectItem>
+                  <SelectItem value="sponsored_free">Trial</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">

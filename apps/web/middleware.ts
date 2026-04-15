@@ -91,9 +91,9 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL("/app", req.url))
     }
 
-    // Sponsored agents cannot access branding or billing
+    // Sponsored agents cannot access branding (inherited from company); billing is allowed
     if (decoded.is_sponsored === true) {
-      if (pathname === "/app/settings/branding" || pathname === "/app/settings/billing") {
+      if (pathname === "/app/settings/branding") {
         return NextResponse.redirect(new URL("/app", req.url))
       }
     }

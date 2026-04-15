@@ -373,7 +373,7 @@ export function SetupWizard({ open, onOpenChange, onComplete, isAffiliate = fals
                     icon: Palette,
                     title: isAffiliateAccount ? "Set up white-label branding" : "Set up your branding",
                     desc: isAffiliateAccount
-                      ? "Your branding appears on sponsored agent reports"
+                      ? "Your branding appears on trial agent reports"
                       : "Upload your logo and brand colors",
                     color: "bg-orange-500/10 text-orange-600",
                   },
@@ -673,7 +673,7 @@ export function SetupWizard({ open, onOpenChange, onComplete, isAffiliate = fals
                       </div>
                       <h3 className="font-bold text-lg mb-1">Invite Your First Agent</h3>
                       <p className="text-sm text-muted-foreground mb-4 max-w-xs mx-auto">
-                        Sponsored agents get your branding on all their reports.
+                        Trial agents get your branding on all their reports.
                       </p>
                     </>
                   ) : (
