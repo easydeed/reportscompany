@@ -7,11 +7,14 @@ from fastapi import APIRouter, HTTPException, Request, Query, Depends, Backgroun
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
+import calendar as _calendar
 import secrets
 import logging
+from zoneinfo import ZoneInfo
 from ..db import db_conn, set_rls
 from ..deps.admin import get_admin_user
 from ..services import get_monthly_usage, resolve_plan_for_account, evaluate_report_limit
+from ..services.schedule_utils import compute_next_run
 from ..services.email import send_role_invite_email
 from ..services.invite_service import (
     create_invited_user,
@@ -511,24 +514,43 @@ def update_admin_schedule(
     with db_conn() as (conn, cur):
         # Set admin role for RLS bypass
         set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
-        
-        # Update schedule
+
+        # Fetch current schedule fields needed for next_run_at computation
         cur.execute("""
-            UPDATE schedules
-            SET active = %s, next_run_at = NULL
-            WHERE id = %s::uuid
-            RETURNING id
-        """, (active, schedule_id))
-        
-        if not cur.fetchone():
+            SELECT cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone
+            FROM schedules WHERE id = %s::uuid
+        """, (schedule_id,))
+        sched = cur.fetchone()
+        if not sched:
             raise HTTPException(status_code=404, detail="Schedule not found")
-        
+
+        cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone = sched
+
+        # When activating: compute the next valid run time so it never fires immediately.
+        # When pausing: clear next_run_at so the ticker skips it cleanly.
+        if active:
+            next_run_at = compute_next_run(
+                cadence, weekly_dow, monthly_dom,
+                send_hour, send_minute, timezone or "UTC"
+            )
+            cur.execute("""
+                UPDATE schedules
+                SET active = %s, next_run_at = %s
+                WHERE id = %s::uuid
+            """, (active, next_run_at, schedule_id))
+        else:
+            cur.execute("""
+                UPDATE schedules
+                SET active = %s, next_run_at = NULL
+                WHERE id = %s::uuid
+            """, (active, schedule_id))
+
         conn.commit()
-        
+
         return {
             "message": f"Schedule {'activated' if active else 'paused'}",
             "schedule_id": schedule_id,
-            "active": active
+            "active": active,
         }
 
 

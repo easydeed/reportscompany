@@ -73,10 +73,23 @@ def get_brand_for_account(cur, account_id: str) -> Brand:
     
     # Determine which account's branding to use
     if acc_type == 'REGULAR' and sponsor_id:
-        # Sponsored agent → use affiliate's branding
+        # Trial/sponsored agent: check if they have configured their OWN branding
+        # (logo or custom color saved via the branding page → accounts table).
+        # If yes → use agent's own brand (personalized client reports).
+        # If no  → fall back to sponsor's branding (inherited default).
+        try:
+            cur.execute("""
+                SELECT logo_url, primary_color FROM accounts
+                WHERE id = %s::uuid
+            """, (acc_id,))
+            agent_row = cur.fetchone()
+            if agent_row and (agent_row[0] or agent_row[1]):
+                return _get_regular_user_brand(cur, acc_id, acc_name)
+        except Exception:
+            pass  # Defensive — proceed to sponsor fallback
         branding_account_id = sponsor_id
     else:
-        # Affiliate or unsponsored → use own branding
+        # Affiliate or unsponsored regular user → use own branding
         branding_account_id = acc_id
     
     # Look up branding configuration

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useAccount, useMe } from "@/hooks/use-api"
+import { useAccount, useMe, usePlanUsage } from "@/hooks/use-api"
 import { useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -84,6 +84,7 @@ type BrandingData = {
 export default function BrandingPage() {
   const { data: accountData, isLoading: accountLoading } = useAccount()
   const { data: meData, isLoading: meLoading } = useMe()
+  const { data: planUsage } = usePlanUsage()
   const queryClient = useQueryClient()
   const isLoading = accountLoading || meLoading
 
@@ -331,8 +332,27 @@ export default function BrandingPage() {
     )
   }
 
+  // Sponsored (trial) agents can set their own branding — show an info note
+  const isSponsored = !!(
+    (planUsage as any)?.account?.sponsor_account_id &&
+    acc?.account_type !== "INDUSTRY_AFFILIATE"
+  )
+
   return (
     <div className="max-w-[1400px] mx-auto">
+      {/* Trial agent info banner */}
+      {isSponsored && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 dark:bg-blue-950/30 dark:border-blue-800">
+          <div className="flex items-start gap-3">
+            <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+            <p className="text-sm text-blue-800 dark:text-blue-300">
+              Your reports currently use your sponsor&apos;s branding. Set up your own logo
+              and colors below to personalize reports sent to your clients.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

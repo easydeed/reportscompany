@@ -160,7 +160,7 @@ function getNavigation({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }: Ti
     }
   }
 
-  // TIER 4 — Trial Agent (sponsored): tools + billing; branding is inherited (blocked)
+  // TIER 4 — Trial Agent (sponsored): full tools + own branding + billing
   if (isSponsored) {
     return {
       main: [
@@ -176,6 +176,7 @@ function getNavigation({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }: Ti
       settings: [
         { name: "Profile", href: "/app/settings/profile", icon: User },
         { name: "Security", href: "/app/settings/security", icon: Lock },
+        { name: "Branding", href: "/app/settings/branding", icon: Palette },
         { name: "Billing", href: "/app/settings/billing", icon: CreditCard },
       ] as NavItem[],
     }

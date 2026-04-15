@@ -7,6 +7,7 @@ import traceback
 from ..db import db_conn, set_rls, fetchone_dict, fetchall_dicts
 from ..crmls_cities import VALID_CITY_NAMES
 from ..services import get_full_plan_usage
+from ..services.schedule_utils import compute_next_run as _compute_next_run
 
 
 # ====== Filter Schema ======
@@ -354,16 +355,22 @@ def create_schedule(
             
             # Serialize filters to JSON (empty dict if None)
             filters_json = json.dumps(payload.filters.model_dump(exclude_none=True) if payload.filters else {})
-            
+
+            # Pre-compute next_run_at so the schedule never fires immediately on first tick
+            first_run_at = _compute_next_run(
+                payload.cadence, payload.weekly_dow, payload.monthly_dom,
+                payload.send_hour, payload.send_minute, payload.timezone or "UTC"
+            )
+
             cur.execute("""
                 INSERT INTO schedules (
                     account_id, name, report_type, city, zip_codes, lookback_days,
                     cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone,
-                    recipients, include_attachment, active, filters
+                    recipients, include_attachment, active, filters, next_run_at
                 ) VALUES (
                     %s, %s, %s, %s, %s, %s,
                     %s, %s, %s, %s, %s, %s,
-                    %s, %s, %s, %s::jsonb
+                    %s, %s, %s, %s::jsonb, %s
                 )
                 RETURNING id::text, name, report_type, city, zip_codes, lookback_days,
                           cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone,
@@ -373,7 +380,7 @@ def create_schedule(
                 account_id, payload.name, payload.report_type, payload.city, zip_codes_array,
                 payload.lookback_days, payload.cadence, payload.weekly_dow, payload.monthly_dom,
                 payload.send_hour, payload.send_minute, payload.timezone, recipients_array,
-                payload.include_attachment, payload.active, filters_json
+                payload.include_attachment, payload.active, filters_json, first_run_at
             ))
             
             row = cur.fetchone()
@@ -624,29 +631,50 @@ def update_schedule(
         
         if not updates:
             raise HTTPException(status_code=400, detail="No fields to update")
-        
-        # Always null out next_run_at on updates so ticker recomputes
-        updates.append("next_run_at = NULL")
-        
+
+        # Compute next_run_at from updated (or existing) schedule fields.
+        # Fetch the current values first so a partial update (e.g. name-only) still
+        # gets the correct next_run_at instead of NULLing it and firing immediately.
+        cur.execute("""
+            SELECT cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone
+            FROM schedules WHERE id = %s::uuid AND account_id = %s
+        """, (schedule_id, account_id))
+        sched_row = cur.fetchone()
+        if not sched_row:
+            raise HTTPException(status_code=404, detail="Schedule not found")
+        cur_cadence, cur_dow, cur_dom, cur_hour, cur_min, cur_tz = sched_row
+
+        # Merge: prefer payload values over current values
+        eff_cadence = payload.cadence      if payload.cadence      is not None else cur_cadence
+        eff_dow     = payload.weekly_dow   if payload.weekly_dow   is not None else cur_dow
+        eff_dom     = payload.monthly_dom  if payload.monthly_dom  is not None else cur_dom
+        eff_hour    = payload.send_hour    if payload.send_hour    is not None else cur_hour
+        eff_min     = payload.send_minute  if payload.send_minute  is not None else cur_min
+        eff_tz      = payload.timezone     if payload.timezone     is not None else (cur_tz or "UTC")
+
+        new_next_run = _compute_next_run(eff_cadence, eff_dow, eff_dom, eff_hour, eff_min, eff_tz)
+        updates.append("next_run_at = %s")
+        params.append(new_next_run)
+
         # Add schedule_id and account_id to params
         # CRITICAL: Always filter by account_id for data isolation
         params.append(schedule_id)
         params.append(account_id)
-        
+
         query = f"""
             UPDATE schedules
             SET {", ".join(updates)}
             WHERE id = %s::uuid AND account_id = %s
             RETURNING id::text
         """
-        
+
         cur.execute(query, params)
         row = cur.fetchone()
         conn.commit()
-        
+
         if not row:
             raise HTTPException(status_code=404, detail="Schedule not found")
-        
+
         return {"id": row[0], "message": "Schedule updated"}
 
 
