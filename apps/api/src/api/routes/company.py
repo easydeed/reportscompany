@@ -8,12 +8,18 @@ and metrics for Title Company administrators.
 from fastapi import APIRouter, HTTPException, Request, Depends, BackgroundTasks
 from pydantic import BaseModel, EmailStr
 from typing import Optional
-import secrets
 import logging
 
 from ..db import db_conn, fetchall_dicts, fetchone_dict
 from ..deps.company import get_company_admin
-from ..services.email import send_invite_email
+from ..services.email import send_role_invite_email
+from ..services.invite_service import (
+    copy_branding_to_child,
+    create_invited_user,
+    find_user_for_resend,
+    get_inviter_context,
+    regenerate_invite_token,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -433,6 +439,11 @@ def list_agents(company: dict = Depends(get_company_admin)):
 
 # ── 4. POST /invite-rep ──────────────────────────────────────────────────────
 
+def _company_inviter_user_id(request: Request) -> Optional[str]:
+    u = getattr(request.state, "user", None) or {}
+    return u.get("id")
+
+
 @router.post("/invite-rep")
 def invite_rep(
     body: InviteRepRequest,
@@ -441,126 +452,45 @@ def invite_rep(
     company: dict = Depends(get_company_admin),
 ):
     company_id = company["company_account_id"]
-    email = body.email.strip().lower()
-
     try:
         with db_conn() as (conn, cur):
-            cur.execute(
-                "SELECT id FROM users WHERE LOWER(email) = %s", (email,)
+            result = create_invited_user(
+                cur,
+                role="title_rep",
+                email=body.email,
+                first_name=body.first_name.strip(),
+                last_name=(body.last_name or "").strip(),
+                phone=body.phone,
+                job_title=body.title,
+                account_name=body.name.strip(),
+                parent_account_id=company_id,
             )
-            if cur.fetchone():
-                raise HTTPException(
-                    status_code=400,
-                    detail="A user with this email already exists.",
-                )
-
-            base_slug = body.name.lower().replace(" ", "-").replace(".", "").replace(",", "").replace("'", "")[:30]
-            slug = f"{base_slug}-{secrets.token_hex(4)}"
-
-            cur.execute("""
-                INSERT INTO accounts (name, slug, account_type, plan_slug, parent_account_id)
-                VALUES (%s, %s, 'INDUSTRY_AFFILIATE', 'sponsored_free', %s::uuid)
-                RETURNING id::text
-            """, (body.name.strip(), slug, company_id))
-            rep_account_id = cur.fetchone()[0]
-
-            cur.execute("""
-                INSERT INTO users (
-                    account_id, email, is_active, email_verified, role,
-                    first_name, last_name, phone, job_title
-                ) VALUES (
-                    %s::uuid, %s, TRUE, FALSE, 'member',
-                    %s, %s, %s, %s
-                )
-                RETURNING id::text
-            """, (
-                rep_account_id, email,
-                body.first_name.strip(), body.last_name.strip(),
-                body.phone, body.title,
-            ))
-            user_id = cur.fetchone()[0]
-
-            cur.execute("""
-                INSERT INTO account_users (account_id, user_id, role)
-                VALUES (%s::uuid, %s::uuid, 'OWNER')
-            """, (rep_account_id, user_id))
-
-            token = secrets.token_urlsafe(32)
-            cur.execute("""
-                INSERT INTO signup_tokens (token, user_id, account_id, expires_at)
-                VALUES (%s, %s::uuid, %s::uuid, NOW() + INTERVAL '7 days')
-            """, (token, user_id, rep_account_id))
-
-            # Copy company branding to rep (defensive — handle missing columns)
-            try:
-                cur.execute("""
-                    INSERT INTO affiliate_branding (
-                        account_id, brand_display_name, logo_url, email_logo_url,
-                        footer_logo_url, email_footer_logo_url,
-                        primary_color, accent_color, rep_photo_url,
-                        contact_line1, contact_line2, website_url,
-                        branding_override
-                    )
-                    SELECT
-                        %s::uuid, brand_display_name, logo_url, email_logo_url,
-                        footer_logo_url, email_footer_logo_url,
-                        primary_color, accent_color, NULL,
-                        contact_line1, contact_line2, website_url,
-                        FALSE
-                    FROM affiliate_branding
-                    WHERE account_id = %s::uuid
-                """, (rep_account_id, company_id))
-            except Exception as e:
-                logger.warning(f"Branding copy with branding_override failed, trying without: {e}")
-                conn.rollback()
-                cur.execute("""
-                    INSERT INTO affiliate_branding (
-                        account_id, brand_display_name, logo_url, email_logo_url,
-                        footer_logo_url, email_footer_logo_url,
-                        primary_color, accent_color, rep_photo_url,
-                        contact_line1, contact_line2, website_url
-                    )
-                    SELECT
-                        %s::uuid, brand_display_name, logo_url, email_logo_url,
-                        footer_logo_url, email_footer_logo_url,
-                        primary_color, accent_color, NULL,
-                        contact_line1, contact_line2, website_url
-                    FROM affiliate_branding
-                    WHERE account_id = %s::uuid
-                """, (rep_account_id, company_id))
-
-            # Fallback: if company had no branding row, create minimal row for rep
-            cur.execute("SELECT 1 FROM affiliate_branding WHERE account_id = %s::uuid", (rep_account_id,))
-            if not cur.fetchone():
-                try:
-                    cur.execute("""
-                        INSERT INTO affiliate_branding (account_id, branding_override)
-                        VALUES (%s::uuid, false)
-                    """, (rep_account_id,))
-                except Exception:
-                    cur.execute("""
-                        INSERT INTO affiliate_branding (account_id)
-                        VALUES (%s::uuid)
-                    """, (rep_account_id,))
-
+            copy_branding_to_child(
+                cur, source_account_id=company_id, target_account_id=result["account_id"]
+            )
+            ctx = get_inviter_context(
+                cur, account_id=company_id, inviter_user_id=_company_inviter_user_id(request)
+            )
             conn.commit()
 
-        inviter_name, company_name = _get_inviter_info(company_id, request)
-        try:
-            background_tasks.add_task(
-                send_invite_email, email, inviter_name, company_name, token,
-                invitee_first_name=body.first_name.strip() if body.first_name else None,
-            )
-            logger.info(f"Rep invite email queued for {email}")
-        except Exception as e:
-            logger.error(f"Failed to queue rep invite for {email}: {e}")
-
+        rep_account_id = result["account_id"]
+        background_tasks.add_task(
+            send_role_invite_email,
+            result["email"],
+            ctx["inviter_name"],
+            ctx["company_name"],
+            result["token"],
+            invitee_first_name=body.first_name.strip(),
+            role="title_rep",
+        )
+        logger.info(f"Rep invite email queued for {result['email']}")
         return {
             "ok": True,
             "rep_account_id": rep_account_id,
             "email_queued": True,
         }
-
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
@@ -581,59 +511,51 @@ def resend_rep_invite(
     company: dict = Depends(get_company_admin),
 ):
     company_id = company["company_account_id"]
-    email = body.email.strip().lower()
-
-    with db_conn() as (conn, cur):
-        cur.execute("""
-            SELECT u.id::text, u.email_verified,
-                   u.password_hash IS NOT NULL AS has_password,
-                   a.id::text AS rep_account_id
-            FROM users u
-            JOIN account_users au ON au.user_id = u.id AND au.role = 'OWNER'
-            JOIN accounts a ON a.id = au.account_id
-            WHERE LOWER(u.email) = %s
-              AND a.parent_account_id = %s::uuid
-              AND a.account_type = 'INDUSTRY_AFFILIATE'
-        """, (email, company_id))
-        row = cur.fetchone()
-
-        if not row:
-            raise HTTPException(
-                status_code=404,
-                detail="Rep not found or not under your company.",
-            )
-
-        user_id, email_verified, has_password, rep_account_id = row
-
-        if email_verified and has_password:
-            raise HTTPException(
-                status_code=400,
-                detail="This rep has already accepted their invitation.",
-            )
-
-        cur.execute("""
-            UPDATE signup_tokens SET used = TRUE
-            WHERE user_id = %s::uuid AND used = FALSE
-        """, (user_id,))
-
-        token = secrets.token_urlsafe(32)
-        cur.execute("""
-            INSERT INTO signup_tokens (token, user_id, account_id, expires_at)
-            VALUES (%s, %s::uuid, %s::uuid, NOW() + INTERVAL '7 days')
-        """, (token, user_id, rep_account_id))
-
-        conn.commit()
-
-    inviter_name, company_name = _get_inviter_info(company_id, request)
     try:
-        background_tasks.add_task(
-            send_invite_email, email, inviter_name, company_name, token
-        )
-        logger.info(f"Rep resend invite queued for {email}")
-    except Exception as e:
-        logger.error(f"Failed to queue rep resend invite for {email}: {e}")
+        with db_conn() as (conn, cur):
+            user = find_user_for_resend(
+                cur,
+                email=body.email,
+                parent_account_id=company_id,
+                account_type="INDUSTRY_AFFILIATE",
+            )
+            if not user:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Rep not found or not under your company.",
+                )
+            if user["already_accepted"]:
+                raise HTTPException(
+                    status_code=400,
+                    detail="This rep has already accepted their invitation.",
+                )
+            token = regenerate_invite_token(
+                cur, user_id=user["user_id"], account_id=user["account_id"]
+            )
+            ctx = get_inviter_context(
+                cur, account_id=company_id, inviter_user_id=_company_inviter_user_id(request)
+            )
+            conn.commit()
 
-    return {"ok": True, "email_queued": True}
+        background_tasks.add_task(
+            send_role_invite_email,
+            user["email"],
+            ctx["inviter_name"],
+            ctx["company_name"],
+            token,
+            invitee_first_name=(user.get("first_name") or "").strip(),
+            role="title_rep",
+        )
+        logger.info(f"Rep resend invite queued for {user['email']}")
+        return {"ok": True, "email_queued": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to resend rep invite: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "resend_failed", "message": str(e)},
+        )
 
 
 # ── 6. GET /branding ─────────────────────────────────────────────────────────
@@ -922,29 +844,3 @@ def get_metrics(company: dict = Depends(get_company_admin)):
     }
 
 
-# ── Internal helpers ─────────────────────────────────────────────────────────
-
-def _get_inviter_info(company_id: str, request: Request) -> tuple[str, str]:
-    """Return (inviter_name, company_name) for invite emails."""
-    with db_conn() as (conn, cur):
-        cur.execute(
-            "SELECT name FROM accounts WHERE id = %s::uuid", (company_id,)
-        )
-        row = cur.fetchone()
-        company_name = row[0] if row else "Your Company"
-
-    inviter_name = company_name
-    user_info = getattr(request.state, "user", None)
-    if user_info and user_info.get("id"):
-        with db_conn() as (conn, cur):
-            cur.execute("""
-                SELECT COALESCE(
-                    NULLIF(TRIM(first_name || ' ' || last_name), ''),
-                    email
-                ) FROM users WHERE id = %s::uuid
-            """, (user_info["id"],))
-            urow = cur.fetchone()
-            if urow and urow[0]:
-                inviter_name = urow[0]
-
-    return inviter_name, company_name

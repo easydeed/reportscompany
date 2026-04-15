@@ -348,7 +348,12 @@ def send_invite_email(
     invite_token: str,
     invitee_first_name: str | None = None,
 ) -> Dict[str, Any]:
-    """Send invitation email to a sponsored agent."""
+    """
+    Send invitation email to a sponsored agent.
+
+    Deprecated for new code: prefer send_role_invite_email so copy and CTA stay
+    consistent per invite type (company admin, rep, agent, etc.).
+    """
     invite_url = f"{email_service.app_base}/welcome?token={invite_token}"
 
     html = get_invite_email_html(inviter_name, company_name, invite_url, invitee_first_name)
@@ -356,6 +361,105 @@ def send_invite_email(
     return email_service.send_email_sync(
         to=email,
         subject=f"{inviter_name} invited you to TrendyReports",
+        html=html,
+        tags=[{"name": "category", "value": "invite"}],
+    )
+
+
+def send_role_invite_email(
+    email: str,
+    inviter_name: str,
+    company_name: str,
+    invite_token: str,
+    *,
+    invitee_first_name: str = "",
+    role: str = "sponsored_agent",
+) -> Dict[str, Any]:
+    """Send role-appropriate invitation email (shared invite service)."""
+    invite_url = f"{email_service.app_base}/welcome?token={invite_token}"
+    greeting = f"Hi {invitee_first_name}," if (invitee_first_name or "").strip() else "Hi,"
+
+    if role == "company_admin":
+        subject = f"You're invited to manage {company_name} on TrendyReports"
+        body_inner = f"""
+              <p style="margin: 0 0 20px; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; color: #111827;">
+                {greeting}
+              </p>
+              <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.7; color: #374151;">
+                <strong>{inviter_name}</strong> has set up <strong>{company_name}</strong> on TrendyReports
+                and invited you as the company administrator.
+              </p>
+              <p style="margin: 0 0 12px; font-size: 15px; line-height: 1.7; color: #374151;">
+                As company admin, you&rsquo;ll be able to:
+              </p>
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 0 0 8px;">
+                <tr><td style="padding: 6px 0; font-size: 15px; line-height: 1.7; color: #374151;">&#10003;&ensp; Set up your company&rsquo;s branding (logo and colors)</td></tr>
+                <tr><td style="padding: 6px 0; font-size: 15px; line-height: 1.7; color: #374151;">&#10003;&ensp; Invite and manage your title reps</td></tr>
+                <tr><td style="padding: 6px 0; font-size: 15px; line-height: 1.7; color: #374151;">&#10003;&ensp; Monitor agent activity across your team</td></tr>
+              </table>
+        """
+    elif role == "affiliate_admin":
+        subject = "You're invited to join TrendyReports as an affiliate"
+        body_inner = f"""
+              <p style="margin: 0 0 20px; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; color: #111827;">
+                {greeting}
+              </p>
+              <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.7; color: #374151;">
+                <strong>{inviter_name}</strong> has invited you to join TrendyReports
+                to manage <strong>{company_name}</strong>.
+              </p>
+              <p style="margin: 0 0 12px; font-size: 15px; line-height: 1.7; color: #374151;">
+                You&rsquo;ll be able to:
+              </p>
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 0 0 8px;">
+                <tr><td style="padding: 6px 0; font-size: 15px; line-height: 1.7; color: #374151;">&#10003;&ensp; Set up white-label branding for your agents</td></tr>
+                <tr><td style="padding: 6px 0; font-size: 15px; line-height: 1.7; color: #374151;">&#10003;&ensp; Invite and manage sponsored agents</td></tr>
+                <tr><td style="padding: 6px 0; font-size: 15px; line-height: 1.7; color: #374151;">&#10003;&ensp; Track agent activity and report generation</td></tr>
+              </table>
+        """
+    elif role == "title_rep":
+        subject = f"You're invited to join {company_name} on TrendyReports"
+        body_inner = f"""
+              <p style="margin: 0 0 20px; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; color: #111827;">
+                {greeting}
+              </p>
+              <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.7; color: #374151;">
+                <strong>{inviter_name}</strong> from <strong>{company_name}</strong> has invited you
+                to join as a title rep on TrendyReports.
+              </p>
+              <p style="margin: 0 0 12px; font-size: 15px; line-height: 1.7; color: #374151;">
+                Your company&rsquo;s branding can be applied to your book. You can invite agents &mdash;
+                their reports can carry {company_name}&rsquo;s branding with your contact information.
+              </p>
+        """
+    else:
+        subject = "You're invited to join TrendyReports"
+        body_inner = f"""
+              <p style="margin: 0 0 20px; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; color: #111827;">
+                {greeting}
+              </p>
+              <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.7; color: #374151;">
+                <strong>{inviter_name}</strong> from <strong>{company_name}</strong> has invited you
+                to join TrendyReports.
+              </p>
+              <p style="margin: 0 0 12px; font-size: 15px; line-height: 1.7; color: #374151;">
+                Your account includes access to branded market reports &mdash;
+                generate professional reports for your clients in under 30 seconds.
+              </p>
+        """
+
+    content = (
+        f"{body_inner}"
+        f"{_cta_button(invite_url, 'Accept Invitation')}"
+        """<p style="margin: 16px 0 0; font-size: 13px; line-height: 1.6; color: #6b7280;">
+                This invitation expires in 7 days.
+              </p>"""
+    )
+    html = _email_base(content)
+
+    return email_service.send_email_sync(
+        to=email,
+        subject=subject,
         html=html,
         tags=[{"name": "category", "value": "invite"}],
     )

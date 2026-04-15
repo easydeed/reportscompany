@@ -12,7 +12,16 @@ import logging
 from ..db import db_conn, set_rls
 from ..deps.admin import get_admin_user
 from ..services import get_monthly_usage, resolve_plan_for_account, evaluate_report_limit
-from ..services.email import send_invite_email
+from ..services.email import send_role_invite_email
+from ..services.invite_service import (
+    create_invited_user,
+    copy_branding_to_child,
+    find_owner_pending_for_account,
+    get_inviter_context,
+    infer_role_for_resend,
+    regenerate_invite_token,
+)
+from ..settings import settings
 from ..services.property_stats import get_platform_stats, refresh_stats
 
 logger = logging.getLogger(__name__)
@@ -1031,44 +1040,41 @@ def create_affiliate(
 
         if body.admin_email:
             email = body.admin_email.strip().lower()
-
-            cur.execute("""
-                INSERT INTO users (account_id, email, first_name, last_name, is_active, email_verified, role)
-                VALUES (%s::uuid, %s, %s, %s, true, false, 'member')
-                RETURNING id::text
-            """, (account_id, email, body.admin_first_name, body.admin_last_name))
-            user_id = cur.fetchone()[0]
-
-            cur.execute("""
-                INSERT INTO account_users (account_id, user_id, role)
-                VALUES (%s::uuid, %s::uuid, 'OWNER')
-            """, (account_id, user_id))
-
-            token = secrets.token_urlsafe(32)
-            cur.execute("""
-                INSERT INTO signup_tokens (token, user_id, account_id)
-                VALUES (%s, %s::uuid, %s::uuid)
-            """, (token, user_id, account_id))
-
+            try:
+                inv = create_invited_user(
+                    cur,
+                    role="affiliate_admin",
+                    email=email,
+                    first_name=(body.admin_first_name or "").strip() or "there",
+                    last_name=(body.admin_last_name or "").strip(),
+                    existing_account_id=account_id,
+                )
+            except ValueError as e:
+                raise HTTPException(status_code=409, detail=str(e))
+            ctx = get_inviter_context(
+                cur, account_id=account_id, inviter_user_id=_admin.get("id")
+            )
             conn.commit()
-
             try:
                 background_tasks.add_task(
-                    send_invite_email, email,
-                    "TrendyReports Admin", body.company_name, token,
-                    body.admin_first_name,
+                    send_role_invite_email,
+                    inv["email"],
+                    ctx["inviter_name"],
+                    ctx["company_name"],
+                    inv["token"],
+                    invitee_first_name=(body.admin_first_name or "").strip(),
+                    role="affiliate_admin",
                 )
                 logger.info(f"Affiliate welcome email queued for {email}")
             except Exception as e:
                 logger.error(f"Failed to queue affiliate welcome email: {e}")
 
-            from ..settings import settings
             result.update({
-                "user_id": user_id,
+                "user_id": inv["user_id"],
                 "admin_email": email,
                 "admin_invited": True,
                 "status": "admin_invited",
-                "invite_url": f"{settings.APP_BASE}/welcome?token={token}",
+                "invite_url": inv["invite_url"],
             })
         else:
             conn.commit()
@@ -1148,45 +1154,41 @@ def create_company(
 
         if body.admin_email:
             email = body.admin_email.strip().lower()
-
-            cur.execute("""
-                INSERT INTO users (account_id, email, first_name, last_name,
-                                   is_active, email_verified, role)
-                VALUES (%s::uuid, %s, %s, %s, true, false, 'member')
-                RETURNING id::text
-            """, (company_id, email, body.admin_first_name, body.admin_last_name))
-            user_id = cur.fetchone()[0]
-
-            cur.execute("""
-                INSERT INTO account_users (account_id, user_id, role)
-                VALUES (%s::uuid, %s::uuid, 'OWNER')
-            """, (company_id, user_id))
-
-            token = secrets.token_urlsafe(32)
-            cur.execute("""
-                INSERT INTO signup_tokens (token, user_id, account_id, expires_at)
-                VALUES (%s, %s::uuid, %s::uuid, NOW() + INTERVAL '7 days')
-            """, (token, user_id, company_id))
-
+            try:
+                inv = create_invited_user(
+                    cur,
+                    role="company_admin",
+                    email=email,
+                    first_name=(body.admin_first_name or "").strip() or "there",
+                    last_name=(body.admin_last_name or "").strip(),
+                    existing_account_id=company_id,
+                )
+            except ValueError as e:
+                raise HTTPException(status_code=409, detail=str(e))
+            ctx = get_inviter_context(
+                cur, account_id=company_id, inviter_user_id=_admin.get("id")
+            )
             conn.commit()
-
             try:
                 background_tasks.add_task(
-                    send_invite_email, email,
-                    "TrendyReports Admin", body.company_name.strip(), token,
-                    body.admin_first_name,
+                    send_role_invite_email,
+                    inv["email"],
+                    ctx["inviter_name"],
+                    ctx["company_name"],
+                    inv["token"],
+                    invitee_first_name=(body.admin_first_name or "").strip(),
+                    role="company_admin",
                 )
                 logger.info(f"Company admin invite queued for {email}")
             except Exception as e:
                 logger.error(f"Failed to queue company admin invite: {e}")
 
-            from ..settings import settings
             result.update({
-                "user_id": user_id,
+                "user_id": inv["user_id"],
                 "admin_email": email,
                 "admin_invited": True,
                 "status": "admin_invited",
-                "invite_url": f"{settings.APP_BASE}/welcome?token={token}",
+                "invite_url": inv["invite_url"],
             })
         else:
             conn.commit()
@@ -1516,68 +1518,60 @@ def invite_company_admin(
         comp_row = cur.fetchone()
         if not comp_row:
             raise HTTPException(status_code=404, detail="Company not found")
-        company_name = comp_row[1]
 
-        cur.execute("""
-            SELECT u.id::text, u.email_verified, u.password_hash IS NOT NULL AS has_password
-            FROM users u
-            JOIN account_users au ON au.user_id = u.id
-            WHERE au.account_id = %s::uuid AND au.role = 'OWNER'
-            LIMIT 1
-        """, (company_id,))
-        existing = cur.fetchone()
+        owner = find_owner_pending_for_account(cur, account_id=company_id)
+        if owner and owner["already_accepted"]:
+            raise HTTPException(status_code=400, detail="Admin has already accepted their invitation")
 
-        if existing:
-            user_id = existing[0]
-            if existing[1] and existing[2]:
-                raise HTTPException(status_code=400, detail="Admin has already accepted their invitation")
-
-            cur.execute("UPDATE signup_tokens SET used = true WHERE user_id = %s::uuid AND used = false", (user_id,))
-            token = secrets.token_urlsafe(32)
-            cur.execute("""
-                INSERT INTO signup_tokens (token, user_id, account_id, expires_at)
-                VALUES (%s, %s::uuid, %s::uuid, NOW() + INTERVAL '7 days')
-            """, (token, user_id, company_id))
+        if owner:
+            token = regenerate_invite_token(
+                cur, user_id=owner["user_id"], account_id=company_id
+            )
+            ctx = get_inviter_context(
+                cur, account_id=company_id, inviter_user_id=_admin.get("id")
+            )
             conn.commit()
             background_tasks.add_task(
-                send_invite_email, body.email.strip().lower(),
-                "TrendyReports Admin", company_name, token, body.first_name,
+                send_role_invite_email,
+                owner["email"],
+                ctx["inviter_name"],
+                ctx["company_name"],
+                token,
+                invitee_first_name=(owner.get("first_name") or "").strip(),
+                role="company_admin",
             )
-            return {"ok": True, "action": "resent", "user_id": user_id}
+            return {"ok": True, "action": "resent", "user_id": owner["user_id"]}
 
         email = body.email.strip().lower()
-        cur.execute("SELECT id FROM users WHERE LOWER(email) = %s", (email,))
-        if cur.fetchone():
-            raise HTTPException(status_code=400, detail="A user with this email already exists")
-
-        cur.execute("""
-            INSERT INTO users (account_id, email, first_name, last_name, is_active, email_verified, role)
-            VALUES (%s::uuid, %s, %s, %s, true, false, 'member')
-            RETURNING id::text
-        """, (company_id, email, body.first_name.strip(), body.last_name.strip()))
-        user_id = cur.fetchone()[0]
-
-        cur.execute("""
-            INSERT INTO account_users (account_id, user_id, role)
-            VALUES (%s::uuid, %s::uuid, 'OWNER')
-        """, (company_id, user_id))
-
-        token = secrets.token_urlsafe(32)
-        cur.execute("""
-            INSERT INTO signup_tokens (token, user_id, account_id, expires_at)
-            VALUES (%s, %s::uuid, %s::uuid, NOW() + INTERVAL '7 days')
-        """, (token, user_id, company_id))
+        try:
+            inv = create_invited_user(
+                cur,
+                role="company_admin",
+                email=email,
+                first_name=body.first_name.strip(),
+                last_name=body.last_name.strip(),
+                existing_account_id=company_id,
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=409, detail=str(e))
+        ctx = get_inviter_context(
+            cur, account_id=company_id, inviter_user_id=_admin.get("id")
+        )
         conn.commit()
 
         background_tasks.add_task(
-            send_invite_email, email,
-            "TrendyReports Admin", company_name, token, body.first_name,
+            send_role_invite_email,
+            inv["email"],
+            ctx["inviter_name"],
+            ctx["company_name"],
+            inv["token"],
+            invitee_first_name=body.first_name.strip(),
+            role="company_admin",
         )
 
-        from ..settings import settings
         return {
-            "ok": True, "action": "created", "user_id": user_id,
-            "invite_url": f"{settings.APP_BASE}/welcome?token={token}",
+            "ok": True, "action": "created", "user_id": inv["user_id"],
+            "invite_url": inv["invite_url"],
         }
 
 
@@ -1605,81 +1599,60 @@ def invite_affiliate_admin(
         aff_row = cur.fetchone()
         if not aff_row:
             raise HTTPException(status_code=404, detail="Affiliate not found")
-        company_name = aff_row[1]
 
-        # Check if an OWNER already exists
-        cur.execute("""
-            SELECT u.id::text, u.email_verified, u.password_hash IS NOT NULL AS has_password
-            FROM users u
-            JOIN account_users au ON au.user_id = u.id
-            WHERE au.account_id = %s::uuid AND au.role = 'OWNER'
-            LIMIT 1
-        """, (affiliate_id,))
-        existing = cur.fetchone()
+        owner = find_owner_pending_for_account(cur, account_id=affiliate_id)
+        if owner and owner["already_accepted"]:
+            raise HTTPException(status_code=400, detail="Admin has already accepted their invitation")
 
-        if existing:
-            user_id = existing[0]
-            email_verified = existing[1]
-            has_password = existing[2]
-            if email_verified and has_password:
-                raise HTTPException(status_code=400, detail="Admin has already accepted their invitation")
-
-            # Invalidate old tokens and resend
-            cur.execute("""
-                UPDATE signup_tokens SET used = true
-                WHERE user_id = %s::uuid AND used = false
-            """, (user_id,))
-
-            token = secrets.token_urlsafe(32)
-            cur.execute("""
-                INSERT INTO signup_tokens (token, user_id, account_id, expires_at)
-                VALUES (%s, %s::uuid, %s::uuid, NOW() + INTERVAL '7 days')
-            """, (token, user_id, affiliate_id))
-            conn.commit()
-
-            background_tasks.add_task(
-                send_invite_email,
-                body.email.strip().lower(),
-                "TrendyReports Admin",
-                company_name,
-                token,
+        if owner:
+            token = regenerate_invite_token(
+                cur, user_id=owner["user_id"], account_id=affiliate_id
             )
-            return {"ok": True, "action": "resent", "user_id": user_id}
+            ctx = get_inviter_context(
+                cur, account_id=affiliate_id, inviter_user_id=_admin.get("id")
+            )
+            conn.commit()
+            background_tasks.add_task(
+                send_role_invite_email,
+                owner["email"],
+                ctx["inviter_name"],
+                ctx["company_name"],
+                token,
+                invitee_first_name=(owner.get("first_name") or "").strip(),
+                role="affiliate_admin",
+            )
+            return {"ok": True, "action": "resent", "user_id": owner["user_id"]}
 
-        # No admin exists — create one
         email = body.email.strip().lower()
-        cur.execute("SELECT id FROM users WHERE email = %s", (email,))
-        if cur.fetchone():
-            raise HTTPException(status_code=400, detail="A user with this email already exists")
-
-        cur.execute("""
-            INSERT INTO users (account_id, email, first_name, last_name, is_active, email_verified, role)
-            VALUES (%s::uuid, %s, %s, %s, true, false, 'member')
-            RETURNING id::text
-        """, (affiliate_id, email, body.first_name.strip(), body.last_name.strip()))
-        user_id = cur.fetchone()[0]
-
-        cur.execute("""
-            INSERT INTO account_users (account_id, user_id, role)
-            VALUES (%s::uuid, %s::uuid, 'OWNER')
-        """, (affiliate_id, user_id))
-
-        token = secrets.token_urlsafe(32)
-        cur.execute("""
-            INSERT INTO signup_tokens (token, user_id, account_id, expires_at)
-            VALUES (%s, %s::uuid, %s::uuid, NOW() + INTERVAL '7 days')
-        """, (token, user_id, affiliate_id))
+        try:
+            inv = create_invited_user(
+                cur,
+                role="affiliate_admin",
+                email=email,
+                first_name=body.first_name.strip(),
+                last_name=body.last_name.strip(),
+                existing_account_id=affiliate_id,
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=409, detail=str(e))
+        ctx = get_inviter_context(
+            cur, account_id=affiliate_id, inviter_user_id=_admin.get("id")
+        )
         conn.commit()
 
         background_tasks.add_task(
-            send_invite_email,
-            email,
-            "TrendyReports Admin",
-            company_name,
-            token,
+            send_role_invite_email,
+            inv["email"],
+            ctx["inviter_name"],
+            ctx["company_name"],
+            inv["token"],
+            invitee_first_name=body.first_name.strip(),
+            role="affiliate_admin",
         )
-        logger.info(f"Admin {_admin.get('email')} invited affiliate admin {email} for {company_name}")
-        return {"ok": True, "action": "created", "user_id": user_id}
+        logger.info(
+            f"Admin {_admin.get('email')} invited affiliate admin {email} for {ctx['company_name']}"
+        )
+        return {"ok": True, "action": "created", "user_id": inv["user_id"]}
 
 
 class InviteAgentAdminRequest(BaseModel):
@@ -1701,89 +1674,66 @@ def admin_invite_agent(
 
     Similar to the affiliate's own invite, but done by admin.
     """
-    with db_conn() as (conn, cur):
-        # Set admin role for RLS bypass
-        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+    try:
+        with db_conn() as (conn, cur):
+            set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
 
-        # Verify affiliate exists
-        cur.execute("""
-            SELECT name FROM accounts
-            WHERE id = %s::uuid AND account_type = 'INDUSTRY_AFFILIATE'
-        """, (affiliate_id,))
-        affiliate_row = cur.fetchone()
-        if not affiliate_row:
-            raise HTTPException(status_code=404, detail="Affiliate not found")
+            cur.execute("""
+                SELECT name FROM accounts
+                WHERE id = %s::uuid AND account_type = 'INDUSTRY_AFFILIATE'
+            """, (affiliate_id,))
+            affiliate_row = cur.fetchone()
+            if not affiliate_row:
+                raise HTTPException(status_code=404, detail="Affiliate not found")
 
-        company_name = affiliate_row[0]
+            parts = body.agent_name.strip().split(None, 1)
+            first_name = parts[0] if parts else body.agent_name.strip()
+            last_name = parts[1] if len(parts) > 1 else ""
 
-        # Check if email already exists
-        cur.execute("SELECT id FROM users WHERE email = %s", (body.agent_email,))
-        if cur.fetchone():
-            raise HTTPException(status_code=400, detail="Email already exists")
-
-        # Generate slug
-        slug = body.agent_name.lower().replace(' ', '-').replace('.', '').replace(',', '')[:50]
-
-        cur.execute("SELECT id FROM accounts WHERE slug = %s", (slug,))
-        if cur.fetchone():
-            import time
-            slug = f"{slug}-{int(time.time())}"[:50]
-
-        # Create agent account
-        cur.execute("""
-            INSERT INTO accounts (name, slug, account_type, plan_slug, sponsor_account_id)
-            VALUES (%s, %s, 'REGULAR', 'sponsored_free', %s::uuid)
-            RETURNING id::text
-        """, (body.agent_name, slug, affiliate_id))
-        new_account_id = cur.fetchone()[0]
-
-        # Create user
-        cur.execute("""
-            INSERT INTO users (account_id, email, is_active, email_verified, role)
-            VALUES (%s::uuid, %s, true, false, 'member')
-            RETURNING id::text
-        """, (new_account_id, body.agent_email))
-        new_user_id = cur.fetchone()[0]
-
-        # Create account_users entry
-        cur.execute("""
-            INSERT INTO account_users (account_id, user_id, role)
-            VALUES (%s::uuid, %s::uuid, 'OWNER')
-        """, (new_account_id, new_user_id))
-
-        # Generate invite token
-        token = secrets.token_urlsafe(32)
-
-        cur.execute("""
-            INSERT INTO signup_tokens (token, user_id, account_id)
-            VALUES (%s, %s::uuid, %s::uuid)
-        """, (token, new_user_id, new_account_id))
-
-        conn.commit()
-
-        # Send invite email
-        try:
-            background_tasks.add_task(
-                send_invite_email,
-                body.agent_email,
-                "TrendyReports Admin",
-                company_name,
-                token
+            inv = create_invited_user(
+                cur,
+                role="sponsored_agent",
+                email=body.agent_email,
+                first_name=first_name,
+                last_name=last_name,
+                account_name=body.agent_name.strip(),
+                sponsor_account_id=affiliate_id,
             )
-            logger.info(f"Agent invite email queued for {body.agent_email}")
-        except Exception as e:
-            logger.error(f"Failed to queue agent invite email: {e}")
+            copy_branding_to_child(
+                cur, source_account_id=affiliate_id, target_account_id=inv["account_id"]
+            )
+            ctx = get_inviter_context(
+                cur, account_id=affiliate_id, inviter_user_id=_admin.get("id")
+            )
+            conn.commit()
 
+        background_tasks.add_task(
+            send_role_invite_email,
+            inv["email"],
+            ctx["inviter_name"],
+            ctx["company_name"],
+            inv["token"],
+            invitee_first_name=first_name,
+            role="sponsored_agent",
+        )
+        logger.info(f"Agent invite email queued for {body.agent_email}")
         return {
             "ok": True,
-            "account_id": new_account_id,
-            "user_id": new_user_id,
+            "account_id": inv["account_id"],
+            "user_id": inv["user_id"],
             "name": body.agent_name,
             "email": body.agent_email,
             "affiliate_id": affiliate_id,
-            "affiliate_name": company_name,
-            "invite_url": f"https://reportscompany-web.vercel.app/welcome?token={token}",
+            "affiliate_name": ctx["company_name"],
+            "invite_url": inv["invite_url"],
         }
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Admin invite agent failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.patch("/affiliates/{affiliate_id}")
@@ -2339,63 +2289,31 @@ def bulk_import_agents(
                 continue
 
             try:
-                # Check if email already exists
-                cur.execute("SELECT id FROM users WHERE email = %s", (email,))
-                if cur.fetchone():
-                    results.append({
-                        "email": email,
-                        "success": False,
-                        "error": "Email already exists"
-                    })
-                    error_count += 1
-                    continue
-
-                # Generate slug
-                slug = name.lower().replace(' ', '-').replace('.', '').replace(',', '')[:50]
-
-                cur.execute("SELECT id FROM accounts WHERE slug = %s", (slug,))
-                if cur.fetchone():
-                    import time
-                    slug = f"{slug}-{int(time.time())}"[:50]
-
-                # Create agent account
-                cur.execute("""
-                    INSERT INTO accounts (name, slug, account_type, plan_slug, sponsor_account_id)
-                    VALUES (%s, %s, 'REGULAR', 'sponsored_free', %s::uuid)
-                    RETURNING id::text
-                """, (name, slug, affiliate_id))
-                new_account_id = cur.fetchone()[0]
-
-                # Create user
-                cur.execute("""
-                    INSERT INTO users (account_id, email, first_name, last_name, is_active, email_verified, role)
-                    VALUES (%s::uuid, %s, %s, %s, true, false, 'member')
-                    RETURNING id::text
-                """, (new_account_id, email, first_name, last_name))
-                new_user_id = cur.fetchone()[0]
-
-                # Create account_users entry
-                cur.execute("""
-                    INSERT INTO account_users (account_id, user_id, role)
-                    VALUES (%s::uuid, %s::uuid, 'OWNER')
-                """, (new_account_id, new_user_id))
-
-                # Generate invite token
-                token = secrets.token_urlsafe(32)
-
-                cur.execute("""
-                    INSERT INTO signup_tokens (token, user_id, account_id)
-                    VALUES (%s, %s::uuid, %s::uuid)
-                """, (token, new_user_id, new_account_id))
-
-                # Queue invite email
+                fn = (first_name or "").strip() or (
+                    (email or "a").split("@")[0].replace(".", " ").title()
+                )
+                ln = (last_name or "").strip()
+                inv = create_invited_user(
+                    cur,
+                    role="sponsored_agent",
+                    email=email,
+                    first_name=fn,
+                    last_name=ln,
+                    account_name=name,
+                    sponsor_account_id=affiliate_id,
+                )
+                copy_branding_to_child(
+                    cur, source_account_id=affiliate_id, target_account_id=inv["account_id"]
+                )
                 try:
                     background_tasks.add_task(
-                        send_invite_email,
-                        email,
+                        send_role_invite_email,
+                        inv["email"],
                         "TrendyReports Admin",
                         company_name,
-                        token
+                        inv["token"],
+                        invitee_first_name=fn,
+                        role="sponsored_agent",
                     )
                 except Exception as e:
                     logger.error(f"Failed to queue invite email for {email}: {e}")
@@ -2403,11 +2321,18 @@ def bulk_import_agents(
                 results.append({
                     "email": email,
                     "success": True,
-                    "account_id": new_account_id,
-                    "user_id": new_user_id,
+                    "account_id": inv["account_id"],
+                    "user_id": inv["user_id"],
                 })
                 success_count += 1
 
+            except ValueError as e:
+                results.append({
+                    "email": email,
+                    "success": False,
+                    "error": str(e),
+                })
+                error_count += 1
             except Exception as e:
                 logger.error(f"Failed to create agent {email}: {e}")
                 results.append({
@@ -2500,12 +2425,11 @@ def resend_user_invite(
     Resend invite email to a user who hasn't set up their password yet.
     """
     with db_conn() as (conn, cur):
-        # Set admin role for RLS bypass
         set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
 
-        # Get user info
         cur.execute("""
-            SELECT u.email, u.email_verified, a.name as account_name, a.sponsor_account_id
+            SELECT u.email, u.email_verified, u.first_name,
+                   a.id::text, a.sponsor_account_id::text
             FROM users u
             JOIN accounts a ON a.id = u.account_id
             WHERE u.id = %s::uuid
@@ -2515,58 +2439,39 @@ def resend_user_invite(
         if not row:
             raise HTTPException(status_code=404, detail="User not found")
 
-        email, email_verified, account_name, sponsor_id = row
+        email, email_verified, first_name, account_id, sponsor_id = row
 
         if email_verified:
             raise HTTPException(status_code=400, detail="User already verified")
 
-        # Get sponsor name if sponsored
-        company_name = account_name
-        if sponsor_id:
-            cur.execute("SELECT name FROM accounts WHERE id = %s", (sponsor_id,))
-            sponsor_row = cur.fetchone()
-            if sponsor_row:
-                company_name = sponsor_row[0]
-
-        # Generate new token
-        token = secrets.token_urlsafe(32)
-
-        # Delete old tokens and create new one
-        cur.execute("""
-            DELETE FROM signup_tokens WHERE user_id = %s::uuid
-        """, (user_id,))
-
-        cur.execute("""
-            SELECT account_id FROM users WHERE id = %s::uuid
-        """, (user_id,))
-        account_id = cur.fetchone()[0]
-
-        cur.execute("""
-            INSERT INTO signup_tokens (token, user_id, account_id)
-            VALUES (%s, %s::uuid, %s)
-        """, (token, user_id, account_id))
-
+        ctx_account_id = sponsor_id if sponsor_id else account_id
+        token = regenerate_invite_token(cur, user_id=user_id, account_id=account_id)
+        role = infer_role_for_resend(cur, user_id=user_id)
+        ctx = get_inviter_context(
+            cur, account_id=ctx_account_id, inviter_user_id=_admin.get("id")
+        )
         conn.commit()
 
-        # Send invite email
-        try:
-            background_tasks.add_task(
-                send_invite_email,
-                email,
-                "TrendyReports Admin",
-                company_name,
-                token
-            )
-            logger.info(f"Resent invite email to {email}")
-        except Exception as e:
-            logger.error(f"Failed to resend invite: {e}")
-            raise HTTPException(status_code=500, detail="Failed to send email")
+    try:
+        background_tasks.add_task(
+            send_role_invite_email,
+            email,
+            ctx["inviter_name"],
+            ctx["company_name"],
+            token,
+            invitee_first_name=(first_name or "").strip(),
+            role=role,
+        )
+        logger.info(f"Resent invite email to {email}")
+    except Exception as e:
+        logger.error(f"Failed to resend invite: {e}")
+        raise HTTPException(status_code=500, detail="Failed to send email")
 
-        return {
-            "ok": True,
-            "email": email,
-            "invite_url": f"https://reportscompany-web.vercel.app/welcome?token={token}",
-        }
+    return {
+        "ok": True,
+        "email": email,
+        "invite_url": f"{settings.APP_BASE}/welcome?token={token}",
+    }
 
 
 # ==================== Plans Management ====================
