@@ -13,6 +13,7 @@ import {
 import { InviteAgentModal } from '@/components/invite-agent-modal';
 import { BulkInviteModal } from '@/components/affiliate/bulk-invite-modal';
 import { PageHeader } from '@/components/page-header';
+import { usePlanUsage } from '@/lib/hooks/use-plan-usage';
 import { useToast } from '@/components/ui/use-toast';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -99,9 +100,22 @@ function StatusBadge({ status }: { status: string }) {
   }
 }
 
+function UsageBar({ label, used, limit }: { label: string; used: number; limit: number }) {
+  const isUnlimited = limit >= 99999;
+  return (
+    <div className="flex items-center justify-between text-[12px]">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium">
+        {used.toLocaleString()} / {isUnlimited ? '∞' : limit.toLocaleString()}
+      </span>
+    </div>
+  );
+}
+
 export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
   const { overview, metrics: rawMetrics, sponsoredAccounts, onRefresh, isCompanyRep = false, companyName = '' } = props;
   const router = useRouter();
+  const { data: planUsage } = usePlanUsage();
   const metrics: AgentMetrics = rawMetrics || {
     total_agents: overview.sponsored_count,
     total_agent_reports: overview.total_reports_this_month,
@@ -254,6 +268,36 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
             )}
           </div>
         </Card>
+
+        {planUsage && (
+          <Card className="border border-border rounded-xl">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-semibold">Your Reports</p>
+                <span className="text-xs bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400 px-2 py-0.5 rounded-full">
+                  {planUsage.plan?.plan_name || 'Affiliate'} Plan
+                </span>
+              </div>
+              <div className="space-y-2">
+                <UsageBar
+                  label="Market Reports"
+                  used={planUsage.usage?.market_reports_used || 0}
+                  limit={planUsage.plan?.market_reports_limit || 5000}
+                />
+                <UsageBar
+                  label="Schedules"
+                  used={planUsage.usage?.schedules_active || 0}
+                  limit={planUsage.plan?.schedules_limit || 99999}
+                />
+                <UsageBar
+                  label="Property Reports"
+                  used={planUsage.usage?.property_reports_used || 0}
+                  limit={planUsage.plan?.property_reports_limit || 100}
+                />
+              </div>
+            </div>
+          </Card>
+        )}
 
         <Card className="border-border bg-card shadow-sm">
           <CardHeader className="border-b border-border">
