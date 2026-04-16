@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { useAccount, useMe } from "@/hooks/use-api"
-import { useQueryClient } from "@tanstack/react-query"
+import { useMe } from "@/hooks/use-api"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -81,10 +81,24 @@ type BrandingData = {
 }
 
 export default function CompanyBrandingPage() {
-  const { data: accountData, isLoading: accountLoading } = useAccount()
+  // READ from the same source the save WRITES to: /v1/company/branding
+  // (backed by the affiliate_branding table). The previous implementation
+  // read from useAccount(), which points at the `accounts` table — so
+  // after save + reload the stale accounts row overwrote the form and
+  // made it look like nothing had been saved.
+  const { data: companyBranding, isLoading: brandingLoading } = useQuery<{
+    branding: Record<string, any> | null
+  }>({
+    queryKey: ["company", "branding"],
+    queryFn: async () => {
+      const r = await fetch("/api/proxy/v1/company/branding", { credentials: "include" })
+      if (!r.ok) throw new Error("Failed to load branding")
+      return r.json()
+    },
+  })
   const { data: meData, isLoading: meLoading } = useMe()
   const queryClient = useQueryClient()
-  const isLoading = accountLoading || meLoading
+  const isLoading = brandingLoading || meLoading
 
   const [formInitialized, setFormInitialized] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -115,28 +129,30 @@ export default function CompanyBrandingPage() {
   const [sendSuccess, setSendSuccess] = useState(false)
 
   useEffect(() => {
-    if (accountData && meData && !formInitialized) {
-      const acc = accountData as Record<string, any>
-      const profile = meData as Record<string, any>
-      const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(" ")
-      setBranding({
-        display_name: acc.display_name || acc.name || "",
-        tagline: "",
-        primary_color: acc.primary_color || "#818CF8",
-        accent_color: acc.secondary_color || "#F59E0B",
-        default_theme_id: acc.default_theme_id || 4,
-        header_logo_url: acc.logo_url || acc.email_logo_url || null,
-        footer_logo_url: acc.footer_logo_url || acc.email_footer_logo_url || null,
-        agent_name: fullName || "",
-        agent_title: profile.job_title || "",
-        agent_phone: profile.phone || "",
-        agent_email: profile.email || "",
-        agent_photo_url: profile.avatar_url || null,
-      })
-      setTestEmail(profile.email || "")
-      setFormInitialized(true)
-    }
-  }, [accountData, meData, formInitialized])
+    if (formInitialized) return
+    // Wait until both queries have resolved — branding must win over any
+    // accounts-table defaults, and meData supplies the admin profile side.
+    if (!companyBranding || !meData) return
+    const b = (companyBranding.branding || {}) as Record<string, any>
+    const profile = meData as Record<string, any>
+    const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(" ")
+    setBranding({
+      display_name: b.brand_display_name || "",
+      tagline: "",
+      primary_color: b.primary_color || "#818CF8",
+      accent_color: b.accent_color || "#F59E0B",
+      default_theme_id: b.default_theme_id || 4,
+      header_logo_url: b.logo_url || b.email_logo_url || null,
+      footer_logo_url: b.footer_logo_url || b.email_footer_logo_url || null,
+      agent_name: fullName || "",
+      agent_title: profile.job_title || "",
+      agent_phone: profile.phone || "",
+      agent_email: profile.email || "",
+      agent_photo_url: profile.avatar_url || null,
+    })
+    setTestEmail(profile.email || "")
+    setFormInitialized(true)
+  }, [companyBranding, meData, formInitialized])
 
   async function save() {
     setSaving(true)
@@ -171,10 +187,14 @@ export default function CompanyBrandingPage() {
       ])
       if (!brandingRes.ok) throw new Error("Failed to save branding")
       if (!profileRes.ok) console.warn("Failed to save agent profile — branding saved OK")
+      // Invalidate the source this page reads from — plus the adjacent
+      // caches other pages depend on — then let the form re-populate
+      // from the freshly refetched server state.
+      queryClient.invalidateQueries({ queryKey: ["company", "branding"] })
       queryClient.invalidateQueries({ queryKey: ["account"] })
       queryClient.invalidateQueries({ queryKey: ["me"] })
       queryClient.invalidateQueries({ queryKey: ["branding"] })
-      queryClient.invalidateQueries({ queryKey: ["company", "branding"] })
+      setFormInitialized(false)
       toast({ title: "Branding Saved", description: "Company branding has been updated. Changes will cascade to all reps." })
     } catch {
       toast({ title: "Error", description: "Failed to save branding", variant: "destructive" })
