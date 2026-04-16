@@ -25,6 +25,7 @@ Usage:
 import os
 import re
 import time
+import html as _html
 import logging
 import psycopg
 import boto3
@@ -364,11 +365,15 @@ def embed_images_as_base64(html: str) -> str:
     def _replace(url: str) -> str:
         if not url or url.startswith("data:"):
             return url
-        if url in seen:
-            return seen[url] if seen[url] else url
-        logger.info("[IMG-EMBED] Fetching: %s", url[:100])
-        b64 = fetch_image_as_base64(url)
-        seen[url] = b64
+        # CRITICAL: Jinja2 auto-escapes & -> &amp; in URLs. R2 presigned
+        # URLs contain &-separated query params; the literal "&amp;" breaks
+        # the signature and returns 400. Unescape before fetching.
+        clean_url = _html.unescape(url)
+        if clean_url in seen:
+            return seen[clean_url] if seen[clean_url] else url
+        logger.info("[IMG-EMBED] Fetching: %s", clean_url[:100])
+        b64 = fetch_image_as_base64(clean_url)
+        seen[clean_url] = b64
         if b64:
             logger.info("[IMG-EMBED] OK (%d chars)", len(b64))
         else:

@@ -82,7 +82,7 @@
 {# ── Market Narrative Layout (B): market_snapshot ───────────────────────────── #}
 {% macro market_narrative_layout(header, listings, stats, report_type, agent, ai_insights=none, ai_narrative=none) %}
 <div class="hero-stat avoid-break">
-  <div class="hero-stat-value">{% if stats.median_list_price %}{{ stats.median_list_price | format_currency }}{% else %}&mdash;{% endif %}</div>
+  <div class="hero-stat-value">{% if stats.median_close_price %}{{ stats.median_close_price | format_currency }}{% elif stats.median_list_price %}{{ stats.median_list_price | format_currency }}{% else %}&mdash;{% endif %}</div>
   <div class="hero-stat-label">Median Sale Price</div>
 </div>
 
@@ -250,9 +250,9 @@
   </div>
   {% endfor %}
   {% else %}
-  {% if stats.median_list_price %}
+  {% if stats.median_close_price or stats.median_list_price %}
   <div class="stat-block">
-    <div class="stat-block-value">{{ stats.median_list_price | format_currency_short }}</div>
+    <div class="stat-block-value">{{ (stats.median_close_price or stats.median_list_price) | format_currency_short }}</div>
     <div class="stat-block-label">Median Price</div>
   </div>
   {% endif %}
@@ -335,9 +335,9 @@
     </div>
     {% endfor %}
     {% else %}
-    {% if stats.median_list_price %}
+    {% if stats.median_close_price or stats.median_list_price %}
     <div class="stat-card">
-      <div class="stat-card-value">{{ stats.median_list_price | format_currency_short }}</div>
+      <div class="stat-card-value">{{ (stats.median_close_price or stats.median_list_price) | format_currency_short }}</div>
       <div class="stat-card-label">Median Price</div>
     </div>
     {% endif %}
