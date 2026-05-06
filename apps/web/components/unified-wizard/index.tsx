@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Loader2, ChevronLeft, ChevronRight, Sparkles, Check, FileDown, Globe, CheckCircle2, AlertCircle, Plus, ArrowUpCircle } from "lucide-react"
+import { Loader2, ChevronLeft, ChevronRight, Sparkles, Check, FileDown, Globe, CheckCircle2, AlertCircle, Plus, ArrowUpCircle, ArrowLeft } from "lucide-react"
+import { useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { SharedEmailPreview } from "@/components/shared/email-preview"
@@ -48,6 +49,7 @@ const STEP_LABELS = ["Story", "Audience", "Where & When", "Deliver"]
 
 export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: UnifiedWizardProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [state, setState] = useState<WizardState>({ ...INITIAL_STATE, deliveryMode: defaultMode })
   const [step, setStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -173,6 +175,9 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
           pollingRef.current = null
           setPdfUrl(data.pdf_url || null)
           setGenerationState("complete")
+          // Refresh the reports list cache so /app/reports shows the new
+          // row immediately instead of waiting out the staleTime window.
+          queryClient.invalidateQueries({ queryKey: ["reports"] })
           if (data.pdf_url) {
             window.open(data.pdf_url, "_blank")
             if (state.downloadPdf) triggerDownload(data.pdf_url)
@@ -459,6 +464,16 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
                           className="gap-2"
                         >
                           View Report Details
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            queryClient.invalidateQueries({ queryKey: ["reports"] })
+                            router.push("/app/reports")
+                          }}
+                          className="gap-2"
+                        >
+                          <ArrowLeft className="w-4 h-4" /> Back to Reports
                         </Button>
                       </div>
                     </>

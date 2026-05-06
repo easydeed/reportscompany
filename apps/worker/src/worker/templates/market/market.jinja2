@@ -11,7 +11,7 @@
   --accent-on-dark: {{ accent_on_dark | default('#5eead4', true) }};
   --accent-on-light: {{ accent_on_light | default('#0f766e', true) }};
   --accent-light: {{ accent_light | default('#a6e4de', true) }};
-  --accent-text: #ffffff;
+  --accent-text: {{ theme_color_text | default('#ffffff', true) }};
   --header-bg: {{ primary_color | default('#18235c', true) }};
   --font-display: 'Outfit', 'Inter', sans-serif;
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;

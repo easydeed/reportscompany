@@ -236,6 +236,9 @@ class MarketReportBuilder:
             "accent_on_dark": color_roles["theme_color_on_dark"],
             "accent_on_light": color_roles["theme_color_on_light"],
             "accent_light": color_roles["theme_color_light"],
+            # Text color guaranteed readable when overlaid on the accent
+            # (used by .listing-status pill via --accent-text).
+            "theme_color_text": color_roles["theme_color_text"],
             # Section contexts
             "header": self._build_header_context(),
             "listings": self._build_listings_context(),

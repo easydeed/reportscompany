@@ -263,8 +263,11 @@
       letter-spacing: 1px;
       padding: 3px 8px;
       border-radius: 4px;
-      background: var(--primary-color);
-      color: var(--accent-text);
+      /* Always-readable combination: accent-on-light is WCAG-darkened
+         from the brand accent, so white text stays legible regardless
+         of which theme color the agent picked. */
+      background: var(--accent-on-light, var(--primary-color));
+      color: #ffffff;
     }
 
     .listing-status.featured {
@@ -549,7 +552,9 @@
     }
 
     .data-table .td-muted {
-      color: var(--gray-500);
+      /* Explicit hex so DOM/secondary cells stay visible even if the
+         CSS variable fails to resolve in the PDF renderer. */
+      color: #6b7280; /* gray-500 */
     }
 
     /* ===================== STATS BAR ===================== */
@@ -758,11 +763,11 @@
 
     .property-card-detail {
       font-size: 11px;
-      color: var(--gray-500);
+      color: #6b7280; /* gray-500, explicit hex for PDF reliability */
     }
 
     .property-card-detail strong {
-      color: var(--gray-700);
+      color: #374151; /* gray-700 */
       font-weight: 600;
     }
 

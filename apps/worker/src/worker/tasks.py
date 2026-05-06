@@ -1077,10 +1077,11 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
 
         # 5) Generate PDF — server-side (themed) or legacy (frontend navigation)
         #
-        # Strategy B: If theme_id is set on the report_generations row, render
-        # server-side via MarketReportBuilder and pass HTML directly to PDFShift.
-        # Otherwise, fall back to the legacy frontend /print/{runId} path.
-        # (Same html_content pattern used by process_consumer_report.)
+        # Always render via the new MarketReportBuilder. The legacy
+        # /print/{runId} frontend path produced unbranded PDFs missing the
+        # Outfit font, themed header, and AI narrative — so we never fall
+        # back to it. Reports created without an explicit theme_id default
+        # to theme 1 (teal) so the builder still has a layout to use.
         theme_id = None
         theme_accent = None
         with psycopg.connect(DATABASE_URL, autocommit=False) as conn:
@@ -1095,85 +1096,81 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                     theme_id, theme_accent = theme_row
             conn.commit()
 
-        if theme_id:
-            print(f"🔍 REPORT RUN {run_id}: step=generate_pdf (server-side, theme={theme_id})")
-            from .market_builder import MarketReportBuilder
+        effective_theme_id = theme_id or 1
+        print(
+            f"🔍 REPORT RUN {run_id}: step=generate_pdf "
+            f"(server-side, theme={effective_theme_id}"
+            f"{' [defaulted]' if not theme_id else ''})"
+        )
+        from .market_builder import MarketReportBuilder
 
-            # Load agent info + hierarchy-resolved branding
-            branding_ctx = {}
-            with psycopg.connect(DATABASE_URL, autocommit=False) as conn:
-                with conn.cursor() as cur:
-                    cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
-                    cur.execute("""
-                        SELECT u.first_name, u.last_name, u.job_title, u.phone,
-                               u.email, COALESCE(u.photo_url, u.avatar_url),
-                               u.company_name, a.name
-                        FROM accounts a
-                        LEFT JOIN users u ON u.account_id = a.id
-                        WHERE a.id = %s::uuid LIMIT 1
-                    """, (account_id,))
-                    brow = cur.fetchone()
-                    brand, _ = _resolve_email_brand(cur, account_id)
-                    if brow:
-                        agent_name = f"{brow[0] or ''} {brow[1] or ''}".strip()
-                        branding_ctx = {
-                            "agent_name": agent_name,
-                            "agent_title": brow[2] or "",
-                            "agent_phone": brow[3] or "",
-                            "agent_email": brow[4] or "",
-                            "agent_photo_url": brow[5] or (brand or {}).get("rep_photo_url"),
-                            "company_name": (brand or {}).get("display_name") or brow[6] or brow[7] or "",
-                            "logo_url": (brand or {}).get("logo_url"),
-                            "primary_color": (brand or {}).get("primary_color"),
-                            "accent_color": (brand or {}).get("accent_color"),
-                        }
-                conn.commit()
+        # Load agent info + hierarchy-resolved branding
+        branding_ctx = {}
+        with psycopg.connect(DATABASE_URL, autocommit=False) as conn:
+            with conn.cursor() as cur:
+                cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
+                cur.execute("""
+                    SELECT u.first_name, u.last_name, u.job_title, u.phone,
+                           u.email, COALESCE(u.photo_url, u.avatar_url),
+                           u.company_name, a.name
+                    FROM accounts a
+                    LEFT JOIN users u ON u.account_id = a.id
+                    WHERE a.id = %s::uuid LIMIT 1
+                """, (account_id,))
+                brow = cur.fetchone()
+                brand, _ = _resolve_email_brand(cur, account_id)
+                if brow:
+                    agent_name = f"{brow[0] or ''} {brow[1] or ''}".strip()
+                    branding_ctx = {
+                        "agent_name": agent_name,
+                        "agent_title": brow[2] or "",
+                        "agent_phone": brow[3] or "",
+                        "agent_email": brow[4] or "",
+                        "agent_photo_url": brow[5] or (brand or {}).get("rep_photo_url"),
+                        "company_name": (brand or {}).get("display_name") or brow[6] or brow[7] or "",
+                        "logo_url": (brand or {}).get("logo_url"),
+                        "primary_color": (brand or {}).get("primary_color"),
+                        "accent_color": (brand or {}).get("accent_color"),
+                    }
+            conn.commit()
 
-            # Merge result_json + branding + theme for the builder
-            builder_data = {}
-            if isinstance(result, dict):
-                builder_data.update(result)
-            builder_data["report_type"] = report_type
-            builder_data["theme_id"] = theme_id
-            builder_data["accent_color"] = theme_accent or branding_ctx.get("accent_color")
-            builder_data["branding"] = branding_ctx
+        # Merge result_json + branding + theme for the builder
+        builder_data = {}
+        if isinstance(result, dict):
+            builder_data.update(result)
+        builder_data["report_type"] = report_type
+        builder_data["theme_id"] = effective_theme_id
+        builder_data["accent_color"] = theme_accent or branding_ctx.get("accent_color")
+        builder_data["branding"] = branding_ctx
 
-            # Generate AI narrative (non-fatal — report renders without it)
-            if not builder_data.get("ai_insights"):
-                try:
-                    from .ai_market_narrative import generate_market_pdf_narrative
-                    narrative = generate_market_pdf_narrative(
-                        report_type,
-                        builder_data.get("city", ""),
-                        builder_data,
-                    )
-                    if narrative:
-                        builder_data["ai_insights"] = narrative
-                        print(f"✅ REPORT RUN {run_id}: AI narrative generated ({len(narrative)} chars)")
-                except Exception as ai_err:
-                    print(f"⚠️  REPORT RUN {run_id}: AI narrative failed (non-fatal): {ai_err}")
+        # Generate AI narrative (non-fatal — report renders without it)
+        if not builder_data.get("ai_insights"):
+            try:
+                from .ai_market_narrative import generate_market_pdf_narrative
+                narrative = generate_market_pdf_narrative(
+                    report_type,
+                    builder_data.get("city", ""),
+                    builder_data,
+                )
+                if narrative:
+                    builder_data["ai_insights"] = narrative
+                    print(f"✅ REPORT RUN {run_id}: AI narrative generated ({len(narrative)} chars)")
+            except Exception as ai_err:
+                print(f"⚠️  REPORT RUN {run_id}: AI narrative failed (non-fatal): {ai_err}")
 
-            builder = MarketReportBuilder(builder_data)
-            html_content = builder.render_html()
-            print(f"🔍 REPORT RUN {run_id}: server-side HTML rendered ({len(html_content)} chars)")
+        builder = MarketReportBuilder(builder_data)
+        html_content = builder.render_html()
+        print(f"🔍 REPORT RUN {run_id}: server-side HTML rendered ({len(html_content)} chars)")
 
-            logger.info("Embedding MLS photos as base64 for market report PDF...")
-            html_content = embed_images_as_base64(html_content)
+        logger.info("Embedding MLS photos as base64 for market report PDF...")
+        html_content = embed_images_as_base64(html_content)
 
-            pdf_path, html_url = render_pdf(
-                run_id=run_id,
-                account_id=account_id,
-                html_content=html_content,
-                print_base=DEV_BASE,
-            )
-        else:
-            print(f"🔍 REPORT RUN {run_id}: step=generate_pdf (legacy frontend)")
-            pdf_path, html_url = render_pdf(
-                run_id=run_id,
-                account_id=account_id,
-                html_content=None,
-                print_base=DEV_BASE,
-            )
+        pdf_path, html_url = render_pdf(
+            run_id=run_id,
+            account_id=account_id,
+            html_content=html_content,
+            print_base=DEV_BASE,
+        )
         print(f"✅ REPORT RUN {run_id}: generate_pdf complete (path={pdf_path})")
         
         # 6) Upload PDF to Cloudflare R2

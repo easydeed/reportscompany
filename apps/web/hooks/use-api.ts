@@ -159,7 +159,9 @@ export function useReports() {
   return useQuery({
     queryKey: queryKeys.reports.list(),
     queryFn: () => apiFetchRQ("/v1/reports"),
-    staleTime: 5 * 60 * 1000,
+    // Short staleTime so the list refreshes quickly after wizard generation.
+    // (Wizard also explicitly invalidates ["reports"] on completion.)
+    staleTime: 30 * 1000,
   })
 }
 
