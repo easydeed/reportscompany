@@ -4,6 +4,7 @@ import { ScheduleTable } from "@/components/schedules/schedule-table"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
 import { Calendar, Plus, Pause } from 'lucide-react'
 import { PageHeader } from "@/components/page-header"
 import { MetricCard } from "@/components/metric-card"
@@ -15,6 +16,7 @@ export type SchedulesListShellProps = {
 
 export function SchedulesListShell(props: SchedulesListShellProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const list = Array.isArray(props.schedules) ? props.schedules : []
 
   const handleEdit = (id: string) => {
@@ -27,15 +29,17 @@ export function SchedulesListShell(props: SchedulesListShellProps) {
 
   const handleToggleActive = async (id: string, active: boolean) => {
     try {
-      await fetch(`/api/proxy/v1/schedules/${id}`, {
+      const res = await fetch(`/api/proxy/v1/schedules/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ active }),
       })
-      router.refresh()
-    } catch (err) {
-      console.error("Failed to toggle schedule:", err)
+      if (res.ok) {
+        queryClient.invalidateQueries({ queryKey: ["schedules"] })
+      }
+    } catch (e) {
+      console.error("Failed to toggle schedule:", e)
     }
   }
 
@@ -43,13 +47,15 @@ export function SchedulesListShell(props: SchedulesListShellProps) {
     if (!confirm("Are you sure you want to delete this schedule?")) return
     
     try {
-      await fetch(`/api/proxy/v1/schedules/${id}`, {
+      const res = await fetch(`/api/proxy/v1/schedules/${id}`, {
         method: "DELETE",
         credentials: "include",
       })
-      router.refresh()
-    } catch (err) {
-      console.error("Failed to delete schedule:", err)
+      if (res.ok || res.status === 204) {
+        queryClient.invalidateQueries({ queryKey: ["schedules"] })
+      }
+    } catch (e) {
+      console.error("Failed to delete schedule:", e)
     }
   }
 

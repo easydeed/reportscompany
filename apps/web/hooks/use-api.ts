@@ -176,7 +176,7 @@ export function usePropertyReports() {
 export function useSchedules() {
   return useQuery({
     queryKey: queryKeys.schedules.list(),
-    queryFn: () => apiFetchRQ("/v1/schedules"),
+    queryFn: () => apiFetchRQ("/v1/schedules?active_only=false"),
     staleTime: 5 * 60 * 1000,
   })
 }
