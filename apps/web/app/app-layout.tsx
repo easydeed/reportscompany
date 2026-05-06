@@ -47,6 +47,7 @@ import {
   Mail,
   BarChart3,
   Server,
+  BookUser,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -141,25 +142,37 @@ function getNavigation({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }: Ti
     }
   }
 
-  // TIER 3 — Title Rep (Affiliate): agents + tools, no billing
+  // TIER 3 — Title Rep (Affiliate): split into "My Book" (managing
+  // sponsored agents) and "My Work" (using the platform themselves).
+  // Lead Pages is intentionally omitted — reps don't run their own CMA
+  // capture page; the feature stays in-product for agents.
   if (isAffiliate) {
     return {
-      main: [
-        { name: "My Agents", href: "/app/affiliate", icon: Users },
-        { name: "Agent Reports", href: "/app/affiliate/reports", icon: FileText },
-        { name: "Agent Schedules", href: "/app/affiliate/schedules", icon: Calendar },
-        { name: "Market Reports", href: "/app/reports", icon: FileText },
-        { name: "Property Reports", href: "/app/property", icon: Home },
-        { name: "Schedules", href: "/app/schedules", icon: Calendar },
-      ] as NavItem[],
-      engage: [
-        { name: "Lead Pages", href: "/app/lead-page", icon: Link2 },
-        { name: "Contacts", href: "/app/people", icon: Users },
-      ] as NavItem[],
+      sections: [
+        {
+          label: "My Book",
+          items: [
+            { name: "My Agents", href: "/app/affiliate", icon: Users },
+            { name: "Agent Reports", href: "/app/affiliate/reports", icon: FileText },
+            { name: "Agent Schedules", href: "/app/affiliate/schedules", icon: Calendar },
+          ] as NavItem[],
+        },
+        {
+          label: "My Work",
+          items: [
+            { name: "Dashboard", href: "/app", icon: LayoutDashboard },
+            { name: "Market Reports", href: "/app/reports", icon: FileText },
+            { name: "Property Reports", href: "/app/property", icon: Home },
+            { name: "Schedules", href: "/app/schedules", icon: Calendar },
+            { name: "Contacts", href: "/app/people", icon: BookUser },
+          ] as NavItem[],
+        },
+      ] as { label: string; items: NavItem[] }[],
       settings: [
         { name: "Profile", href: "/app/settings/profile", icon: User },
-        { name: "Security", href: "/app/settings/security", icon: Lock },
         { name: "Branding", href: "/app/settings/branding", icon: Palette },
+        { name: "Billing", href: "/app/settings/billing", icon: CreditCard },
+        { name: "Security", href: "/app/settings/security", icon: Lock },
       ] as NavItem[],
     }
   }
@@ -264,27 +277,53 @@ function DashboardSidebar({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }:
           </div>
         )}
 
-        {/* Main Navigation */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.08em] font-semibold text-sidebar-muted px-3">
-            {isAdmin ? "Platform" : "Reports"}
-          </SidebarGroupLabel>
-          <SidebarMenu>
-            {nav.main.map((item) => {
-              const isActive = pathname === item.href || (!exactHomeHrefs.includes(item.href) && pathname?.startsWith(item.href))
-              return (
-                <SidebarMenuItem key={item.name}>
-                  <SidebarMenuButton asChild isActive={isActive}>
-                    <Link href={item.href}>
-                      <item.icon className="w-4 h-4" />
-                      <span className="text-[13px]">{item.name}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )
-            })}
-          </SidebarMenu>
-        </SidebarGroup>
+        {/* Sectioned Navigation (rep tier) */}
+        {'sections' in nav && (nav as any).sections ? (
+          (nav as any).sections.map((section: { label: string; items: NavItem[] }) => (
+            <SidebarGroup key={section.label}>
+              <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.08em] font-semibold text-sidebar-muted px-3">
+                {section.label}
+              </SidebarGroupLabel>
+              <SidebarMenu>
+                {section.items.map((item) => {
+                  const isActive = pathname === item.href || (!exactHomeHrefs.includes(item.href) && pathname?.startsWith(item.href))
+                  return (
+                    <SidebarMenuItem key={item.name}>
+                      <SidebarMenuButton asChild isActive={isActive}>
+                        <Link href={item.href}>
+                          <item.icon className="w-4 h-4" />
+                          <span className="text-[13px]">{item.name}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                })}
+              </SidebarMenu>
+            </SidebarGroup>
+          ))
+        ) : (
+          /* Flat "main" navigation (other tiers) */
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.08em] font-semibold text-sidebar-muted px-3">
+              {isAdmin ? "Platform" : "Reports"}
+            </SidebarGroupLabel>
+            <SidebarMenu>
+              {(nav as any).main?.map((item: NavItem) => {
+                const isActive = pathname === item.href || (!exactHomeHrefs.includes(item.href) && pathname?.startsWith(item.href))
+                return (
+                  <SidebarMenuItem key={item.name}>
+                    <SidebarMenuButton asChild isActive={isActive}>
+                      <Link href={item.href}>
+                        <item.icon className="w-4 h-4" />
+                        <span className="text-[13px]">{item.name}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
 
         {/* Admin Section (Tier 1 only) */}
         {'admin' in nav && (nav as any).admin && (
