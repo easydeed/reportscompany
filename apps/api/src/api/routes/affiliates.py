@@ -863,8 +863,11 @@ def get_all_agent_reports(
         cur.execute("""
             SELECT id FROM accounts WHERE sponsor_account_id = %s::uuid
         """, (account_id,))
-        agent_ids = [row[0] for row in cur.fetchall()]
-        all_ids = agent_ids + [account_id]
+        # cur returns UUID objects; account_id from the JWT is a str.
+        # psycopg cannot dump a list with mixed UUID + str types into
+        # ANY(%s), so coerce every id to str up front.
+        agent_ids = [str(row[0]) for row in cur.fetchall()]
+        all_ids = agent_ids + [str(account_id)]
 
         cur.execute("""
             SELECT COUNT(*) FROM report_generations WHERE account_id = ANY(%s)
@@ -907,8 +910,11 @@ def get_all_agent_schedules(account_id: str = Depends(require_account_id)):
         cur.execute("""
             SELECT id FROM accounts WHERE sponsor_account_id = %s::uuid
         """, (account_id,))
-        agent_ids = [row[0] for row in cur.fetchall()]
-        all_ids = agent_ids + [account_id]
+        # See get_all_agent_reports — must coerce UUIDs to str to match
+        # the JWT-derived account_id, otherwise psycopg refuses the mixed
+        # list when binding ANY(%s).
+        agent_ids = [str(row[0]) for row in cur.fetchall()]
+        all_ids = agent_ids + [str(account_id)]
 
         cur.execute("""
             SELECT s.id::text, s.name, s.report_type,
