@@ -5,6 +5,7 @@ import logging
 import os
 
 from ..db import db_conn, set_rls
+from ..services.agent_code import generate_unique_agent_code
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1")
@@ -74,12 +75,16 @@ def me(request: Request):
 # ============================================================================
 
 class LeadPageSettingsUpdate(BaseModel):
-    """Update lead page settings"""
+    """Update lead page settings.
+
+    NOTE: agent_code is intentionally absent — codes are permanent (they
+    end up on business cards, email signatures, etc.). Admin support
+    flows can change a code via the admin endpoint if needed.
+    """
     headline: Optional[str] = None
     subheadline: Optional[str] = None
     theme_color: Optional[str] = None
     enabled: Optional[bool] = None
-    agent_code: Optional[str] = None
 
 
 @router.get("/me/lead-page")
@@ -134,7 +139,20 @@ def get_lead_page_settings(request: Request):
             raise HTTPException(status_code=404, detail="User not found")
         
         agent_code = row[0]
-        
+
+        # Lazy-mint a code for users who pre-date code generation. The
+        # GET handler is the right place because it's the first thing
+        # the lead-page UI hits — nothing further down the wizard will
+        # render a usable URL until a code exists.
+        if not agent_code:
+            agent_code = generate_unique_agent_code(cur)
+            cur.execute(
+                "UPDATE users SET agent_code = %s WHERE id = %s::uuid",
+                (agent_code, user_id),
+            )
+            conn.commit()
+            logger.info("Minted agent_code=%s for user %s", agent_code, user_id)
+
         # Generate URL and QR code
         url = f"{APP_URL}/cma/{agent_code}" if agent_code else None
         qr_code_url = None
@@ -210,18 +228,10 @@ def update_lead_page_settings(updates: LeadPageSettingsUpdate, request: Request)
         if updates.enabled is not None:
             fields.append("landing_page_enabled = %s")
             values.append(updates.enabled)
-        
-        if updates.agent_code is not None:
-            import re as _re
-            code = _re.sub(r'[^A-Za-z0-9]', '', updates.agent_code).upper()
-            if len(code) < 3 or len(code) > 20:
-                raise HTTPException(status_code=400, detail="Agent code must be 3-20 alphanumeric characters")
-            cur.execute("SELECT 1 FROM users WHERE agent_code = %s AND id != %s::uuid", (code, user_id))
-            if cur.fetchone():
-                raise HTTPException(status_code=409, detail="Agent code already taken")
-            fields.append("agent_code = %s")
-            values.append(code)
-        
+
+        # NOTE: agent_code is intentionally NOT updatable here. Codes
+        # are permanent — see LeadPageSettingsUpdate docstring.
+
         if not fields:
             raise HTTPException(status_code=400, detail="No fields to update")
         

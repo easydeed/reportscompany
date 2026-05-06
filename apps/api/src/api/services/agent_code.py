@@ -1,98 +1,102 @@
 """
 Agent Code Generation Service
 
-Generates unique 6-character codes for agents.
-Format: Alphanumeric, uppercase, no confusing characters (0, O, I, L)
+Generates short, unambiguous, *permanent* codes for agent CMA pages.
+
+Format: 4 characters from a Crockford-style alphabet that excludes the
+common "look-alike" characters (0/O, 1/I/l, 5/S, 2/Z, etc.) so codes
+read cleanly on business cards, in email signatures, and over the
+phone. 27^4 = 531,441 combinations — plenty of room for a long time.
+
+Codes are CASE-INSENSITIVE: lookups in `get_agent_by_code` use
+`LOWER()` so both new lowercase codes and historical uppercase codes
+continue to resolve correctly.
 """
 
-import random
-import string
 import logging
+import secrets
 from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-# Characters that are easy to read (no 0/O, I/L confusion)
-ALLOWED_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+# Crockford-style alphabet — excludes confusing characters:
+#   0/O, 1/I/l, 5/S, 2/Z, plus uppercase look-alikes.
+CLEAN_ALPHABET = "346789abcdefghjkmnpqrtuvwxy"
 
 
-def generate_agent_code(length: int = 6) -> str:
-    """Generate a random agent code."""
-    return ''.join(random.choices(ALLOWED_CHARS, k=length))
+def _clean_random(length: int = 4) -> str:
+    """Generate a random string from the unambiguous alphabet."""
+    return "".join(secrets.choice(CLEAN_ALPHABET) for _ in range(length))
 
 
-def create_unique_agent_code(conn, cursor, user_id: str, max_attempts: int = 10) -> str:
+def generate_unique_agent_code(cur, max_attempts: int = 20) -> str:
     """
-    Generate a unique agent code and save to user record.
-    Retries if code already exists.
-    
-    Args:
-        conn: Database connection
-        cursor: Database cursor
-        user_id: User UUID to assign the code to
-        max_attempts: Maximum retry attempts
-        
-    Returns:
-        The generated agent code
-        
-    Raises:
-        ValueError: If unable to generate unique code after max attempts
+    Mint a unique, unused 4-character agent code.
+
+    27^4 = 531,441 combinations, so collisions are extremely rare. If
+    we somehow hit 20 in a row at 4 chars we expand to 6 (387,420,489
+    combinations) and finally fall back to 8 chars as a hard guarantee.
+
+    The caller is responsible for writing the code to the appropriate
+    column (the function doesn't UPDATE — it just returns a free code).
     """
-    for _ in range(max_attempts):
-        code = generate_agent_code()
-        
-        # Check if code exists
-        cursor.execute("SELECT 1 FROM users WHERE agent_code = %s", (code,))
-        existing = cursor.fetchone()
-        
-        if not existing:
-            # Save to user
-            cursor.execute(
-                "UPDATE users SET agent_code = %s WHERE id = %s",
-                (code, user_id)
+    for length in (4, 6, 8):
+        for _ in range(max_attempts):
+            code = _clean_random(length)
+            cur.execute(
+                "SELECT 1 FROM users WHERE LOWER(agent_code) = %s",
+                (code,),
             )
-            conn.commit()
-            logger.info(f"Generated agent code {code} for user {user_id}")
-            return code
-    
-    raise ValueError("Could not generate unique agent code after max attempts")
+            if not cur.fetchone():
+                return code
+    # 20 collisions at every length is statistically impossible; if we
+    # somehow get here something else is wrong. Surface it.
+    raise RuntimeError("Could not generate a unique agent code after retries")
+
+
+# ── Backwards-compatible aliases ──────────────────────────────────────
+# Older call sites used these names. They still work, but new callers
+# should prefer generate_unique_agent_code(cur).
+
+def generate_agent_code(length: int = 4) -> str:
+    """Random code (no uniqueness check). Prefer generate_unique_agent_code."""
+    return _clean_random(length)
+
+
+def create_unique_agent_code(conn, cursor, user_id: str, max_attempts: int = 20) -> str:
+    """Generate AND persist a unique code on the users row."""
+    code = generate_unique_agent_code(cursor, max_attempts=max_attempts)
+    cursor.execute(
+        "UPDATE users SET agent_code = %s WHERE id = %s",
+        (code, user_id),
+    )
+    conn.commit()
+    logger.info("Generated agent code %s for user %s", code, user_id)
+    return code
 
 
 def get_or_create_agent_code(conn, cursor, user_id: str) -> str:
-    """
-    Get existing code or create new one.
-    
-    Args:
-        conn: Database connection
-        cursor: Database cursor
-        user_id: User UUID
-        
-    Returns:
-        The user's agent code (existing or newly generated)
-    """
+    """Return existing code, minting one if missing."""
     cursor.execute("SELECT agent_code FROM users WHERE id = %s", (user_id,))
     result = cursor.fetchone()
-    
     if result and result[0]:
         return result[0]
-    
     return create_unique_agent_code(conn, cursor, user_id)
 
 
 def validate_agent_code(code: str) -> bool:
-    """
-    Validate that a code follows the expected format.
-    Accepts 3-20 alphanumeric characters.
-    """
+    """Validate an external code matches our format. Case-insensitive."""
     if not code or len(code) < 3 or len(code) > 20:
         return False
-    
-    return all(c in ALLOWED_CHARS for c in code.upper())
+    return all(c in CLEAN_ALPHABET for c in code.lower())
 
+
+# ── Lookup helpers ────────────────────────────────────────────────────
 
 def get_agent_by_code(cursor, agent_code: str) -> Optional[dict]:
     """
-    Look up an agent by their unique code.
+    Look up an agent by their unique code (case-insensitive so old
+    uppercase codes and new lowercase codes both resolve).
     Joins accounts to pull branding (logo, primary_color).
     """
     cursor.execute(
@@ -121,9 +125,9 @@ def get_agent_by_code(cursor, agent_code: str) -> Optional[dict]:
             a.secondary_color
         FROM users u
         JOIN accounts a ON a.id = u.account_id
-        WHERE u.agent_code = %s
+        WHERE LOWER(u.agent_code) = LOWER(%s)
         """,
-        (agent_code.upper(),)
+        (agent_code,),
     )
     row = cursor.fetchone()
     
@@ -157,16 +161,12 @@ def get_agent_by_code(cursor, agent_code: str) -> Optional[dict]:
 
 def increment_landing_page_visits(conn, cursor, agent_code: str) -> None:
     """
-    Increment the visit counter for an agent's landing page.
-    
-    Args:
-        conn: Database connection
-        cursor: Database cursor
-        agent_code: The agent's unique code
+    Increment the visit counter for an agent's landing page
+    (case-insensitive match so historical uppercase codes still work).
     """
     cursor.execute(
-        "UPDATE users SET landing_page_visits = landing_page_visits + 1 WHERE agent_code = %s",
-        (agent_code.upper(),)
+        "UPDATE users SET landing_page_visits = landing_page_visits + 1 "
+        "WHERE LOWER(agent_code) = LOWER(%s)",
+        (agent_code,),
     )
     conn.commit()
-

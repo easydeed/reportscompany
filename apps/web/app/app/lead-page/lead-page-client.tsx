@@ -72,9 +72,10 @@ export function LeadPageClient() {
   const [subheadline, setSubheadline] = useState('');
   const [themeColor, setThemeColor] = useState('#818CF8');
   const [enabled, setEnabled] = useState(true);
-  const [agentCode, setAgentCode] = useState('');
   const [showSettings, setShowSettings] = useState(false);
-  const [codeError, setCodeError] = useState('');
+
+  // Agent code is permanent — read-only display only. No state.
+  const agentCode = settings?.agent_code || '';
 
   useEffect(() => {
     if (settings && !formInitialized) {
@@ -82,45 +83,38 @@ export function LeadPageClient() {
       setSubheadline(settings.subheadline || '');
       setThemeColor(settings.theme_color || '#818CF8');
       setEnabled(settings.enabled !== false);
-      setAgentCode(settings.agent_code || '');
       setFormInitialized(true);
     }
   }, [settings, formInitialized]);
 
   const saveSettings = async () => {
     setSaving(true);
-    setCodeError('');
     try {
-      const payload: Record<string, unknown> = {
-        headline,
-        subheadline,
-        theme_color: themeColor,
-        enabled,
-      };
-      if (agentCode && agentCode !== settings?.agent_code) {
-        payload.agent_code = agentCode;
-      }
-      const updated = await apiFetch('/v1/me/lead-page', {
+      await apiFetch('/v1/me/lead-page', {
         method: 'PATCH',
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          headline,
+          subheadline,
+          theme_color: themeColor,
+          enabled,
+        }),
       });
-      
-      setAgentCode(updated.agent_code);
+
       queryClient.invalidateQueries({ queryKey: ["lead-page"] });
       toast.success('Settings saved!');
       setShowSettings(false);
-      
-    } catch (err: any) {
-      const msg = err?.message || '';
-      if (msg.includes('already taken') || msg.includes('409')) {
-        setCodeError('This agent code is already taken. Try another.');
-      } else {
-        console.error('Failed to save settings', err);
-        toast.error('Failed to save settings');
-      }
+    } catch (err) {
+      console.error('Failed to save settings', err);
+      toast.error('Failed to save settings');
     } finally {
       setSaving(false);
     }
+  };
+
+  const copyAgentUrl = () => {
+    if (!agentCode) return;
+    navigator.clipboard.writeText(`https://trendyreports.io/cma/${agentCode}`);
+    toast.success('URL copied to clipboard!');
   };
 
   const copyUrl = () => {
@@ -212,23 +206,25 @@ export function LeadPageClient() {
             <CardTitle className="text-lg">Customize Your Lead Page</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <Label>Agent Code</Label>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-sm text-muted-foreground whitespace-nowrap">trendyreports.io/cma/</span>
-                <Input
-                  value={agentCode}
-                  onChange={(e) => {
-                    setAgentCode(e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase());
-                    setCodeError('');
-                  }}
-                  placeholder="SARAHC2025"
-                  className="w-40 font-mono uppercase"
-                  maxLength={20}
-                />
+            <div className="space-y-2">
+              <Label>Your CMA Page URL</Label>
+              <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                <span className="text-sm text-muted-foreground">trendyreports.io/cma/</span>
+                <span className="text-sm font-mono font-semibold flex-1 truncate">{agentCode || '—'}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={copyAgentUrl}
+                  disabled={!agentCode}
+                  className="h-7 w-7 p-0"
+                  title="Copy URL"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </Button>
               </div>
-              {codeError && <p className="text-sm text-red-500 mt-1">{codeError}</p>}
-              <p className="text-xs text-muted-foreground mt-1">3-20 alphanumeric characters. This is your permanent shareable URL.</p>
+              <p className="text-xs text-muted-foreground">
+                This is your permanent CMA page URL. Use it on business cards, email signatures, and social profiles. Need to change it? Contact support.
+              </p>
             </div>
             <div>
               <Label>Headline</Label>
