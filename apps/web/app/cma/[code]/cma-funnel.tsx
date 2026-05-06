@@ -18,6 +18,7 @@ interface Props {
   agentPhone: string | null;
   agentEmail: string | null;
   prefillAddress?: string;
+  isDemo?: boolean;
 }
 
 type Step = 'address' | 'confirm' | 'contact' | 'processing' | 'success';
@@ -54,7 +55,7 @@ const REPORT_STAGES = [
 ];
 
 export function CmaFunnel({
-  agentCode, themeColor, agentName, agentPhone, agentEmail, prefillAddress,
+  agentCode, themeColor, agentName, agentPhone, agentEmail, prefillAddress, isDemo = false,
 }: Props) {
   const [step, setStep] = useState<Step>('address');
   const [address, setAddress] = useState(prefillAddress || '');
@@ -132,11 +133,34 @@ export function CmaFunnel({
     return digits;
   };
 
+  // Fake property used in demo mode so reps can walk through the full
+  // funnel without hitting SiteX or burning property-search credits.
+  const buildDemoProperty = (input: string, city = 'San Diego', state = 'CA'): Property => ({
+    apn: 'DEMO-0000',
+    fips: '00000',
+    address: input || '742 Evergreen Terrace',
+    city,
+    state,
+    zip: '92101',
+    owner_name: 'Sample Homeowner',
+    bedrooms: 4,
+    bathrooms: 2.5,
+    sqft: 2150,
+    year_built: 1998,
+    property_type: 'Single Family',
+  });
+
   const searchFromPlace = async (place: PlaceResult) => {
     setSearching(true);
     setSearchStage(0);
     setError('');
     try {
+      if (isDemo) {
+        // Brief stage animation then jump to confirm with demo data.
+        await new Promise(r => setTimeout(r, 1800));
+        handleSearchResults([buildDemoProperty(place.address, place.city, place.state)]);
+        return;
+      }
       const res = await fetch(`/api/proxy/v1/cma/${agentCode}/search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -161,6 +185,11 @@ export function CmaFunnel({
     setSearchStage(0);
     setError('');
     try {
+      if (isDemo) {
+        await new Promise(r => setTimeout(r, 1800));
+        handleSearchResults([buildDemoProperty(address)]);
+        return;
+      }
       const res = await fetch(`/api/proxy/v1/cma/${agentCode}/search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -206,6 +235,13 @@ export function CmaFunnel({
     setStep('processing');
     setReportStage(0);
     setError('');
+
+    if (isDemo) {
+      // Run the processing animation but never submit. Reps see the
+      // exact homeowner success screen without creating a real lead.
+      setTimeout(() => setStep('success'), 5500);
+      return;
+    }
 
     try {
       const res = await fetch(`/api/proxy/v1/cma/${agentCode}/request`, {

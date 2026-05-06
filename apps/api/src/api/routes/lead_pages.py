@@ -40,6 +40,10 @@ class AgentLandingPageInfo(BaseModel):
     accent_color: str
     logo_url: Optional[str] = None
     website_url: Optional[str] = None
+    # When true the page is rendered for sales/training; the consumer
+    # form must short-circuit instead of creating a real lead. Set only
+    # by the special agent_code "demo".
+    is_demo: bool = False
 
 
 class PropertySearchRequest(BaseModel):
@@ -127,7 +131,30 @@ async def get_landing_page_info(
     """
     Get agent info for rendering the landing page.
     Called when consumer visits: /cma/{agent_code}
+
+    Special case: agent_code == "demo" returns a synthetic record so
+    title reps can preview the homeowner experience while pitching the
+    feature. The page renders with is_demo=True and the consumer form
+    skips real submission.
     """
+    if agent_code == "demo":
+        return AgentLandingPageInfo(
+            name="Sample Agent",
+            job_title="Real Estate Professional",
+            photo_url=None,
+            company_name="Demo Real Estate",
+            phone="(555) 123-4567",
+            email="demo@trendyreports.io",
+            license_number=None,
+            headline="Get Your Home's Value in 60 Seconds",
+            subheadline="Free, no obligation home value report",
+            theme_color="#4F46E5",
+            accent_color="#1a1a1a",
+            logo_url=None,
+            website_url=None,
+            is_demo=True,
+        )
+
     with db_conn() as (conn, cur):
         agent = get_agent_by_code(cur, agent_code)
         

@@ -317,6 +317,30 @@ export const HELP_SECTIONS: HelpSection[] = [
     icon: "Target",
     articles: [
       {
+        id: "cma-lead-pages",
+        title: "CMA Lead Pages",
+        type: "guide",
+        description: "Every agent on TrendyReports gets a personal home valuation page — a 24/7 lead capture tool that turns curious homeowners into leads.",
+        steps: [
+          {
+            title: "What it is",
+            body: "A branded landing page at trendyreports.io/cma/{agent-name} where homeowners can enter their address and request a free home value report. The agent gets the lead instantly via SMS and dashboard.",
+          },
+          {
+            title: "Why it matters",
+            body: "Most agents have no consistent lead capture system. The CMA page works while they sleep. Every Zillow visitor, every Facebook click, every business card — leads to leads.",
+          },
+          {
+            title: "How to pitch it to agents",
+            body: "\"Your TrendyReports account comes with a free CMA lead page at trendyreports.io/cma/your-name. Put it in your bio, your business cards, your email signature. Anyone who visits can request a home value report — you get a lead in your dashboard. Set it once, runs forever.\"",
+          },
+          {
+            title: "Try the demo",
+            body: "Visit trendyreports.io/cma/demo to see exactly what your agents' homeowners will experience. The demo runs the full flow (address search, property confirmation, contact form, success screen) but doesn't create a real lead. Use it to walk agents through the feature.",
+          },
+        ],
+      },
+      {
         id: "setup-lead-page",
         title: "Set Up Lead Capture",
         type: "guide",

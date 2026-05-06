@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import {
   Search, FileText, Download, CheckCircle2, XCircle,
   Clock, ChevronLeft, ChevronRight, AlertCircle, Calendar, Zap,
+  Sparkles, ExternalLink, BookOpen,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -100,6 +102,7 @@ function TableSkeleton() {
 const PAGE_SIZE = 25
 
 export default function AffiliateReportsPage() {
+  const router = useRouter()
   const [data, setData] = useState<ReportsResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -311,6 +314,59 @@ export default function AffiliateReportsPage() {
             )}
           </>
         )}
+      </div>
+
+      {/* Educational card — explains the CMA Lead Page so reps can pitch
+          it to their agents. Reps don't use the lead page themselves;
+          this is a sales/training tool. */}
+      <div className="rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-white shadow-[var(--shadow-card)]">
+        <div className="p-6">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div className="flex-1 space-y-3">
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">
+                  Each of your agents gets a CMA Lead Page
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  A personal home valuation page at <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">trendyreports.io/cma/their-name</span> where their clients can request a free home value report. Branded with the agent&apos;s name and your company. Captures leads automatically, 24/7.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  How to pitch this to your agents
+                </p>
+                <p className="text-sm text-gray-600 italic border-l-2 border-indigo-300 pl-3">
+                  &ldquo;Your TrendyReports account comes with your own home value lead page. Put the link in your bio, business cards, and email signature. Anyone who visits can request a free home value report — and you get a lead in your dashboard. Set it once, runs forever.&rdquo;
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open("/cma/demo", "_blank")}
+                  className="gap-2"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  See the homeowner experience
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push("/app/help#lead-capture")}
+                  className="gap-2"
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  Learn more
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

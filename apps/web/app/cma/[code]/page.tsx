@@ -23,6 +23,7 @@ export interface AgentInfo {
   accent_color: string;
   logo_url: string | null;
   website_url: string | null;
+  is_demo?: boolean;
 }
 
 async function getAgentInfo(code: string): Promise<AgentInfo | null> {
@@ -91,6 +92,11 @@ export default async function CmaLandingPage({ params, searchParams }: PageProps
 
   return (
     <div className="min-h-screen bg-slate-50">
+      {agent.is_demo && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-center text-sm text-amber-800">
+          <strong>Demo Mode</strong> — This is a preview of what your agents&apos; CMA pages look like. No leads will be captured.
+        </div>
+      )}
       {/* Gradient Hero — matches email banner */}
       <div className="relative overflow-hidden">
         <div
@@ -250,6 +256,7 @@ export default async function CmaLandingPage({ params, searchParams }: PageProps
                 agentPhone={agent.phone}
                 agentEmail={agent.email}
                 prefillAddress={prefillAddress}
+                isDemo={agent.is_demo === true}
               />
             </div>
 

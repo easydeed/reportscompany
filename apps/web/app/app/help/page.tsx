@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import {
   Rocket,
   FileText,
@@ -185,6 +185,21 @@ function SectionNavItem({
 export default function HelpCenterPage() {
   const [activeSection, setActiveSection] = useState("getting-started")
   const [searchQuery, setSearchQuery] = useState("")
+
+  // Sync to URL hash so deep links like /app/help#lead-capture open
+  // the matching section. Listens to subsequent hash changes too.
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const apply = () => {
+      const id = window.location.hash.replace("#", "")
+      if (id && HELP_SECTIONS.some((s) => s.id === id)) {
+        setActiveSection(id)
+      }
+    }
+    apply()
+    window.addEventListener("hashchange", apply)
+    return () => window.removeEventListener("hashchange", apply)
+  }, [])
 
   const currentSection = HELP_SECTIONS.find((s) => s.id === activeSection)
 
