@@ -89,7 +89,7 @@
         {% if report_type == 'featured_listings' %}
         <span class="listing-status featured">Featured</span>
         {% elif report_type == 'open_houses' %}
-        <span class="listing-status">{% if listing.next_open_house %}Open {{ listing.next_open_house | truncate(10, True, '') }}{% else %}Open House{% endif %}</span>
+        <span class="listing-status">{% if listing.next_open_house %}Open {{ listing.next_open_house[:10] }}{% else %}Open House{% endif %}</span>
         {% elif report_type == 'new_listings_gallery' %}
         <span class="listing-status">New</span>
         {% endif %}
