@@ -54,16 +54,27 @@
     /* ===================== RESET & PRINT ===================== */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* PDF-COMPREHENSIVE Part 1 — let listing pages flow across multiple
-       sheets. The @page margin gives every page after the first the
-       breathing room the original .page-content padding only gave
-       page 1. */
-    @page { size: letter; margin: 0.5in; }
+    /* PDF-COMPREHENSIVE — multi-page pagination.
+       Top/bottom @page margin gives pages 2+ a top safe area (the
+       gradient header doesn't repeat) and keeps the agent footer
+       off the paper edge. Side margins stay 0 so the gradient
+       header bleeds full-width to the page edges, matching the
+       original V0 design. The .page-content side padding
+       (--page-padding: 0.45in) handles the body-content gutters. */
+    @page { size: letter; margin: 0.5in 0 0.5in 0; }
 
     @media print {
       html, body { background: white; margin: 0; padding: 0; }
       .report-page { box-shadow: none; }
       .report-page + .report-page { page-break-before: always; }
+      /* Atomic blocks — never split mid-card / mid-row.
+         NOTE: .gallery-section is intentionally NOT in this list.
+         If it were, the entire heading + cards collection would be
+         yanked atomically to a fresh page whenever the full set
+         couldn't fit, leaving page 1 with hundreds of pixels of
+         whitespace. Letting the section flow lets the first row
+         of cards fill the page-1 gap; only individual cards stay
+         atomic. */
       .avoid-break,
       .listing-card,
       .property-card,
@@ -74,9 +85,11 @@
       .hero-stat-row,
       .stat-blocks,
       .stats-bar,
-      .more-listings-note,
-      .gallery-section { page-break-inside: avoid; break-inside: avoid; }
-      .gallery-section { page-break-before: auto; break-before: auto; }
+      .more-listings-note { page-break-inside: avoid; break-inside: avoid; }
+      /* Bind heading + subtitle to the first card so we never get
+         an orphan section header alone at the bottom of a page. */
+      .gallery-heading,
+      .gallery-subtitle { page-break-after: avoid; break-after: avoid; }
       * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
 

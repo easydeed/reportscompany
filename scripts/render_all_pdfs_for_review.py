@@ -175,7 +175,13 @@ def main() -> int:
         print("ERROR: PDFSHIFT_API_KEY not set in environment.", file=sys.stderr)
         return 2
 
-    out_dir = REPO_ROOT / "tmp" / "pdf_review"
+    # Write to %TEMP% instead of tmp/pdf_review by default — Dropbox's
+    # sync daemon intermittently locks files inside the Dropbox folder
+    # while a PDF viewer has them open, causing PermissionError on
+    # overwrite. Override with --out / OUT env var if you really want
+    # the previews inside the repo.
+    default_out = Path(os.environ.get("TEMP", "/tmp")) / "trendy_pdf_review"
+    out_dir = Path(os.environ.get("PDF_REVIEW_OUT", default_out))
     out_dir.mkdir(parents=True, exist_ok=True)
     print(f"Writing PDFs to {out_dir}")
     print(f"Engine: PDFShift (production parity)")
