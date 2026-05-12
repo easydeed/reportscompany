@@ -55,13 +55,17 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     /* PDF-COMPREHENSIVE — multi-page pagination.
-       Top/bottom @page margin gives pages 2+ a top safe area (the
-       gradient header doesn't repeat) and keeps the agent footer
-       off the paper edge. Side margins stay 0 so the gradient
-       header bleeds full-width to the page edges, matching the
-       original V0 design. The .page-content side padding
-       (--page-padding: 0.45in) handles the body-content gutters. */
-    @page { size: letter; margin: 0.5in 0 0.5in 0; }
+       Page 1 uses zero margins so the gradient header bleeds
+       full-bleed to all four edges (no whitespace strip above
+       or beside it). Pages 2+ get a small top/bottom margin so
+       continuation content doesn't slam into the paper edge
+       (the header doesn't repeat). Side margins stay 0 on every
+       page; body gutters come from .page-content's
+       --page-padding (0.45in). */
+    @page { size: letter; margin: 0; }
+    @page :first { margin: 0; }
+    @page { margin-top: 0.4in; margin-bottom: 0.4in; }
+    @page :first { margin-top: 0; margin-bottom: 0; }
 
     @media print {
       html, body { background: white; margin: 0; padding: 0; }
