@@ -262,9 +262,10 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
         "price_tiers": {tier["label"]: tier for tier in price_tiers},
         
         # Sample listings for fallback view (mix of closed and active).
-        # EMAIL-DEPTH-PASS1: bumped from 20 → 30 so the email cap (8)
-        # has comfortable headroom and the PDF (Pass 2) can use more.
-        "listings_sample": (closed[:15] + active[:15])[:30]
+        # PDF-COMPREHENSIVE Part 5: bumped from 30 → 50 so the PDF cap
+        # (8 in PDF_CONFIG) plus the truncation note have honest
+        # numbers to report ("Showing 8 of 50" instead of "of 30").
+        "listings_sample": (closed[:30] + active[:30])[:50]
     }
 
 
@@ -848,9 +849,9 @@ def build_featured_listings_result(listings: List[Dict], context: Dict) -> Dict:
     active = [l for l in listings if l.get("status") == "Active"]
     
     # Sort by list price desc (most expensive first).
-    # EMAIL-DEPTH-PASS1: bumped from top 4 → top 12 so emails (cap 8)
-    # have headroom and the PDF (Pass 2) can render more cards.
-    featured = sorted(active, key=lambda x: x.get("list_price") or 0, reverse=True)[:12]
+    # PDF-COMPREHENSIVE Part 5: bumped from 12 → 15 so the PDF cap
+    # (12 in PDF_CONFIG) has 3 spare to draw from.
+    featured = sorted(active, key=lambda x: x.get("list_price") or 0, reverse=True)[:15]
 
     print(f"📊 FEATURED: {len(active)} active listings, showing top {len(featured)} by price")
     
@@ -895,6 +896,72 @@ def build_featured_listings_result(listings: List[Dict], context: Dict) -> Dict:
     }
 
 
+def build_open_houses_result(properties: List[Dict], context: Dict) -> Dict:
+    """
+    Open Houses — listings with at least one open house scheduled in
+    the next 7 days.
+
+    PDF-COMPREHENSIVE Part 4 — was previously aliased to
+    build_inventory_result, which silently turned this report into an
+    "inventory snapshot" no matter what. Now we actually filter on
+    openHouseDates / open_house_dates and surface only properties
+    with an upcoming session in the next week.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    city = context.get("city", "Market")
+    properties = _filter_by_city(properties, city)
+
+    today = datetime.now(timezone.utc).date()
+    week_out = today + timedelta(days=7)
+
+    open_house_listings: List[Dict] = []
+    for p in properties:
+        oh_dates = (
+            p.get("openHouseDates")
+            or p.get("open_house_dates")
+            or []
+        )
+        if not oh_dates:
+            continue
+
+        for dt_val in oh_dates:
+            try:
+                date_str = str(dt_val)
+                if "T" in date_str:
+                    oh_date = datetime.fromisoformat(
+                        date_str.replace("Z", "+00:00")
+                    ).date()
+                else:
+                    oh_date = datetime.strptime(date_str[:10], "%Y-%m-%d").date()
+
+                if today <= oh_date <= week_out:
+                    p["next_open_house"] = date_str
+                    open_house_listings.append(p)
+                    break
+            except (ValueError, AttributeError, TypeError):
+                continue
+
+    open_house_listings.sort(key=lambda x: x.get("next_open_house", ""))
+
+    return {
+        "report_type": "open_houses",
+        "city": city,
+        "lookback_days": 7,
+        "period_label": "Open Houses This Week",
+        "report_date": today.isoformat(),
+        "counts": {
+            "OpenHouses": len(open_house_listings),
+            "Active": len(open_house_listings),
+        },
+        "metrics": {},
+        # Match the storage shape of the other builders (cap is enforced
+        # by the email/PDF builders, not here).
+        "listings": open_house_listings[:30],
+        "listings_sample": open_house_listings[:30],
+    }
+
+
 def build_result_json(report_type: str, listings: List[Dict], context: Dict) -> Dict:
     """
     Main dispatcher for report builders.
@@ -917,7 +984,7 @@ def build_result_json(report_type: str, listings: List[Dict], context: Dict) -> 
         "inventory": build_inventory_result,
         "closed": build_closed_result,
         "price_bands": build_price_bands_result,
-        "open_houses": build_inventory_result,  # Reuse inventory builder for open houses
+        "open_houses": build_open_houses_result,  # PDF-COMPREHENSIVE: real filter (was: inventory alias)
         "new_listings_gallery": build_new_listings_gallery_result,
         "featured_listings": build_featured_listings_result,
     }

@@ -1,7 +1,38 @@
 {# =============================================================================
    MARKET REPORT MACROS — V0 Final Design System
    Reusable components for all 4 market report layouts.
+
+   PDF-COMPREHENSIVE — every layout that renders a listings collection now:
+     • Wraps it in a .gallery-section with the brand-colored section heading
+     • Renders the "Showing X of Y …" truncation subtitle from the builder
+     • Renders the "+ N more listings, contact me…" callout when more exist
+     • Iterates the *full* `listings` array (the cap is owned by the builder)
    ============================================================================= #}
+
+
+{# Tiny helper: section header + subtitle, used at the top of every
+   listings collection. Keeps the visual language consistent across
+   gallery / market_narrative / closed_inventory / analytics / pricebands. #}
+{% macro listings_section_header(label, subtitle) %}
+  {% if label %}
+    <h2 class="gallery-heading">{{ label }}</h2>
+  {% endif %}
+  {% if subtitle %}
+    <p class="gallery-subtitle">{{ subtitle }}</p>
+  {% endif %}
+{% endmacro %}
+
+
+{# "+ N more listings. Contact me…" callout. Renders only when a more_note
+   was supplied by the builder (i.e. total > cap AND PDF_CONFIG declares
+   a more_template for this report type). #}
+{% macro more_listings_callout(more_note) %}
+  {% if more_note %}
+    <div class="more-listings-note avoid-break">
+      <p>{{ more_note }}</p>
+    </div>
+  {% endif %}
+{% endmacro %}
 
 
 {# ── Report Header ─────────────────────────────────────────────────────────── #}
@@ -29,7 +60,9 @@
 
 
 {# ── Gallery Layout (A): new_listings_gallery, featured_listings, open_houses #}
-{% macro gallery_layout(header, listings, stats, report_type, agent, ai_narrative=none) %}
+{% macro gallery_layout(header, listings, stats, report_type, agent, ai_narrative=none,
+                        listings_section_label=none, listings_truncation_note=none,
+                        listings_more_note=none) %}
 <div class="count-bar">
   <div class="count-circle">{{ header.total_count | default(0) }}</div>
   <div>
@@ -47,40 +80,53 @@
 {% endif %}
 
 {% if listings %}
-<div class="gallery-grid">
-  {% for listing in listings[:6] %}
-  <div class="listing-card avoid-break">
-    <div class="listing-photo{% if not listing.photo_url %} no-image{% endif %}"{% if listing.photo_url %} style="background-image: url('{{ listing.photo_url }}');"{% endif %}>
-      {% if report_type == 'featured_listings' %}
-      <span class="listing-status featured">Featured</span>
-      {% elif report_type == 'open_houses' %}
-      <span class="listing-status">Open House</span>
-      {% elif report_type == 'new_listings_gallery' %}
-      <span class="listing-status">New</span>
-      {% endif %}
-    </div>
-    <div class="listing-info">
-      <div class="listing-price">{% if listing.list_price %}{{ listing.list_price | format_currency }}{% else %}&mdash;{% endif %}</div>
-      <div class="listing-address">{{ listing.address | default('Address unavailable') | truncate(40) }}</div>
-      <div class="listing-details">
-        {% if listing.beds %}<span class="listing-detail"><strong>{{ listing.beds }}</strong> bd</span>{% endif %}
-        {% if listing.baths %}<span class="listing-detail"><strong>{{ listing.baths }}</strong> ba</span>{% endif %}
-        {% if listing.sqft %}<span class="listing-detail"><strong>{{ listing.sqft | format_number }}</strong> sf</span>{% endif %}
+<div class="gallery-section">
+  {{ listings_section_header(listings_section_label, listings_truncation_note) }}
+  <div class="gallery-grid">
+    {% for listing in listings %}
+    <div class="listing-card avoid-break">
+      <div class="listing-photo{% if not listing.photo_url %} no-image{% endif %}"{% if listing.photo_url %} style="background-image: url('{{ listing.photo_url }}');"{% endif %}>
+        {% if report_type == 'featured_listings' %}
+        <span class="listing-status featured">Featured</span>
+        {% elif report_type == 'open_houses' %}
+        <span class="listing-status">{% if listing.next_open_house %}Open {{ listing.next_open_house | truncate(10, True, '') }}{% else %}Open House{% endif %}</span>
+        {% elif report_type == 'new_listings_gallery' %}
+        <span class="listing-status">New</span>
+        {% endif %}
+      </div>
+      <div class="listing-info">
+        <div class="listing-price">{% if listing.list_price %}{{ listing.list_price | format_currency }}{% else %}&mdash;{% endif %}</div>
+        <div class="listing-address">{{ listing.address | default('Address unavailable') | truncate(40) }}</div>
+        <div class="listing-details">
+          {% if listing.beds %}<span class="listing-detail"><strong>{{ listing.beds }}</strong> bd</span>{% endif %}
+          {% if listing.baths %}<span class="listing-detail"><strong>{{ listing.baths }}</strong> ba</span>{% endif %}
+          {% if listing.sqft %}<span class="listing-detail"><strong>{{ listing.sqft | format_number }}</strong> sf</span>{% endif %}
+        </div>
       </div>
     </div>
+    {% endfor %}
   </div>
-  {% endfor %}
+  {{ more_listings_callout(listings_more_note) }}
+</div>
+{% else %}
+{% if report_type == 'open_houses' %}
+<div class="empty-state">
+  <p>No upcoming open houses found in this area for the next 7 days.</p>
+  <p class="subtle">Open house data is updated weekly from MLS.</p>
 </div>
 {% else %}
 <div class="gallery-grid">
   <p style="grid-column:1/-1;text-align:center;color:var(--gray-500);padding:2in 0;font-size:11px;">No listings found for this period.</p>
 </div>
 {% endif %}
+{% endif %}
 {% endmacro %}
 
 
 {# ── Market Narrative Layout (B): market_snapshot ───────────────────────────── #}
-{% macro market_narrative_layout(header, listings, stats, report_type, agent, ai_insights=none, ai_narrative=none) %}
+{% macro market_narrative_layout(header, listings, stats, report_type, agent, ai_insights=none, ai_narrative=none,
+                                 listings_section_label=none, listings_truncation_note=none,
+                                 listings_more_note=none) %}
 <div class="hero-stat avoid-break">
   <div class="hero-stat-value">{% if stats.median_close_price %}{{ stats.median_close_price | format_currency }}{% elif stats.median_list_price %}{{ stats.median_list_price | format_currency }}{% else %}&mdash;{% endif %}</div>
   <div class="hero-stat-label">Median Sale Price</div>
@@ -90,19 +136,6 @@
 <div class="ai-narrative avoid-break">
   <div class="ai-narrative-label">AI Market Insight</div>
   <p class="ai-narrative-text">{{ ai_narrative or ai_insights }}</p>
-</div>
-{% endif %}
-
-{% if listings %}
-<div class="photo-grid avoid-break">
-  {% for listing in listings[:4] %}
-  <div class="photo-grid-item"{% if listing.photo_url %} style="background-image: url('{{ listing.photo_url }}');"{% endif %}>
-    <div class="photo-overlay">
-      <div class="photo-overlay-price">{% if listing.list_price %}{{ listing.list_price | format_currency }}{% endif %}</div>
-      <div class="photo-overlay-address">{{ listing.address | default('') | truncate(28) }}</div>
-    </div>
-  </div>
-  {% endfor %}
 </div>
 {% endif %}
 
@@ -133,11 +166,40 @@
   {% endif %}
 </div>
 
+{% if listings %}
+<div class="gallery-section">
+  {{ listings_section_header(listings_section_label, listings_truncation_note) }}
+  <div class="gallery-grid">
+    {% for listing in listings %}
+    <div class="listing-card avoid-break">
+      <div class="listing-photo{% if not listing.photo_url %} no-image{% endif %}"{% if listing.photo_url %} style="background-image: url('{{ listing.photo_url }}');"{% endif %}>
+        {% if listing.status %}
+        <span class="listing-status">{{ listing.status }}</span>
+        {% endif %}
+      </div>
+      <div class="listing-info">
+        <div class="listing-price">{% if listing.list_price %}{{ listing.list_price | format_currency }}{% else %}&mdash;{% endif %}</div>
+        <div class="listing-address">{{ listing.address | default('Address unavailable') | truncate(40) }}</div>
+        <div class="listing-details">
+          {% if listing.beds %}<span class="listing-detail"><strong>{{ listing.beds }}</strong> bd</span>{% endif %}
+          {% if listing.baths %}<span class="listing-detail"><strong>{{ listing.baths }}</strong> ba</span>{% endif %}
+          {% if listing.sqft %}<span class="listing-detail"><strong>{{ listing.sqft | format_number }}</strong> sf</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {{ more_listings_callout(listings_more_note) }}
+</div>
+{% endif %}
+
 {% endmacro %}
 
 
 {# ── Closed / Inventory Layout (C): closed, inventory ─────────────────────── #}
-{% macro closed_inventory_layout(header, listings, stats, report_type, agent, ai_insights=none, ai_narrative=none) %}
+{% macro closed_inventory_layout(header, listings, stats, report_type, agent, ai_insights=none, ai_narrative=none,
+                                 listings_section_label=none, listings_truncation_note=none,
+                                 listings_more_note=none) %}
 <div class="hero-stat-row avoid-break">
   <div class="hero-stat-left">
     {% if report_type == 'closed' %}
@@ -176,22 +238,6 @@
   </div>
 </div>
 
-{% if listings %}
-<div class="photo-grid avoid-break">
-  {% for listing in listings[:4] %}
-  <div class="photo-grid-item"{% if listing.photo_url %} style="background-image: url('{{ listing.photo_url }}');"{% endif %}>
-    {% if listing.status %}
-    <span class="photo-badge {{ listing.status | lower }}">{{ listing.status }}</span>
-    {% endif %}
-    <div class="photo-overlay">
-      <div class="photo-overlay-price">{% if report_type == 'closed' and listing.close_price %}{{ listing.close_price | format_currency }}{% elif listing.list_price %}{{ listing.list_price | format_currency }}{% endif %}</div>
-      <div class="photo-overlay-address">{{ listing.address | default('') | truncate(28) }}</div>
-    </div>
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
-
 {% if ai_narrative or ai_insights %}
 <div class="ai-narrative avoid-break">
   <div class="ai-narrative-label">AI Market Insight</div>
@@ -200,8 +246,8 @@
 {% endif %}
 
 {% if listings %}
-<div class="data-table-section avoid-break">
-  <div class="data-table-title">{% if report_type == 'closed' %}Recent Closed Sales{% else %}Active Inventory{% endif %}</div>
+<div class="gallery-section">
+  {{ listings_section_header(listings_section_label, listings_truncation_note) }}
   <table class="data-table">
     <thead>
       <tr>
@@ -213,7 +259,7 @@
       </tr>
     </thead>
     <tbody>
-      {% for l in listings[:5] %}
+      {% for l in listings %}
       <tr>
         <td class="td-address">{{ l.address | default('-') | truncate(28) }}</td>
         <td class="td-muted">{{ l.beds | default('-') }}/{{ l.baths | default('-') }}</td>
@@ -224,13 +270,16 @@
       {% endfor %}
     </tbody>
   </table>
+  {{ more_listings_callout(listings_more_note) }}
 </div>
 {% endif %}
 {% endmacro %}
 
 
-{# ── Analytics Layout (D): price_bands, new_listings ─────────────────────── #}
-{% macro analytics_layout(header, listings, stats, price_bands, report_type, agent, ai_insights=none, ai_narrative=none) %}
+{# ── Analytics Layout (D): new_listings ──────────────────────────────────── #}
+{% macro analytics_layout(header, listings, stats, price_bands, report_type, agent, ai_insights=none, ai_narrative=none,
+                          listings_section_label=none, listings_truncation_note=none,
+                          listings_more_note=none) %}
 <div class="hero-stat avoid-break">
   {% if report_type == 'price_bands' %}
   <div class="hero-stat-value">{{ header.total_count | default(0) }}</div>
@@ -285,31 +334,35 @@
 {% endif %}
 
 {% if listings %}
-<div class="property-list">
-  {% set tier_labels = ['Low', 'Median', 'High'] %}
-  {% set tier_classes = ['tier-low', 'tier-median', 'tier-high'] %}
-  {% for listing in listings[:3] %}
-  <div class="property-card avoid-break">
-    <div class="property-card-photo{% if not listing.photo_url %} no-image{% endif %}"{% if listing.photo_url %} style="background-image: url('{{ listing.photo_url }}');"{% endif %}>
-      {% if report_type != 'new_listings' and listing.status %}
-      <span class="property-card-badge">{{ listing.status }}</span>
-      {% endif %}
-    </div>
-    <div class="property-card-info">
-      {% if report_type == 'new_listings' %}
-      <span class="listing-tier-badge {{ tier_classes[loop.index0] }}" style="position:absolute;top:10px;right:10px;">{{ tier_labels[loop.index0] }}</span>
-      {% endif %}
-      <div class="property-card-price">{% if listing.list_price %}{{ listing.list_price | format_currency }}{% else %}&mdash;{% endif %}</div>
-      <div class="property-card-address">{{ listing.address | default('Address unavailable') | truncate(40) }}{% if listing.city %}, {{ listing.city }}{% endif %}</div>
-      <div class="property-card-details">
-        {% if listing.beds %}<span class="property-card-detail"><strong>{{ listing.beds }}</strong> beds</span>{% endif %}
-        {% if listing.baths %}<span class="property-card-detail"><strong>{{ listing.baths }}</strong> baths</span>{% endif %}
-        {% if listing.sqft %}<span class="property-card-detail"><strong>{{ listing.sqft | format_number }}</strong> sqft</span>{% endif %}
-        {% if listing.days_on_market %}<span class="property-card-detail"><strong>{{ listing.days_on_market }}</strong> DOM</span>{% endif %}
+<div class="gallery-section">
+  {{ listings_section_header(listings_section_label, listings_truncation_note) }}
+  <div class="property-list">
+    {% set tier_labels = ['Low', 'Median', 'High'] %}
+    {% set tier_classes = ['tier-low', 'tier-median', 'tier-high'] %}
+    {% for listing in listings %}
+    <div class="property-card avoid-break">
+      <div class="property-card-photo{% if not listing.photo_url %} no-image{% endif %}"{% if listing.photo_url %} style="background-image: url('{{ listing.photo_url }}');"{% endif %}>
+        {% if report_type != 'new_listings' and listing.status %}
+        <span class="property-card-badge">{{ listing.status }}</span>
+        {% endif %}
+      </div>
+      <div class="property-card-info">
+        {% if report_type == 'new_listings' and loop.index0 < 3 %}
+        <span class="listing-tier-badge {{ tier_classes[loop.index0] }}" style="position:absolute;top:10px;right:10px;">{{ tier_labels[loop.index0] }}</span>
+        {% endif %}
+        <div class="property-card-price">{% if listing.list_price %}{{ listing.list_price | format_currency }}{% else %}&mdash;{% endif %}</div>
+        <div class="property-card-address">{{ listing.address | default('Address unavailable') | truncate(40) }}{% if listing.city %}, {{ listing.city }}{% endif %}</div>
+        <div class="property-card-details">
+          {% if listing.beds %}<span class="property-card-detail"><strong>{{ listing.beds }}</strong> beds</span>{% endif %}
+          {% if listing.baths %}<span class="property-card-detail"><strong>{{ listing.baths }}</strong> baths</span>{% endif %}
+          {% if listing.sqft %}<span class="property-card-detail"><strong>{{ listing.sqft | format_number }}</strong> sqft</span>{% endif %}
+          {% if listing.days_on_market %}<span class="property-card-detail"><strong>{{ listing.days_on_market }}</strong> DOM</span>{% endif %}
+        </div>
       </div>
     </div>
+    {% endfor %}
   </div>
-  {% endfor %}
+  {{ more_listings_callout(listings_more_note) }}
 </div>
 {% else %}
 <div class="property-list">
@@ -320,7 +373,9 @@
 
 
 {# ── Price Bands Layout: price_bands ──────────────────────────────────────── #}
-{% macro pricebands_layout(header, listings, stats, price_bands, report_type, agent, ai_insights=none, ai_narrative=none) %}
+{% macro pricebands_layout(header, listings, stats, price_bands, report_type, agent, ai_insights=none, ai_narrative=none,
+                           listings_section_label=none, listings_truncation_note=none,
+                           listings_more_note=none) %}
 <div class="top-row">
   <div class="hero-card">
     <div class="hero-card-value">{{ header.total_count | default(0) }}</div>
@@ -370,29 +425,33 @@
 {% endif %}
 
 {% if listings %}
-<div class="property-rows">
-  {% for listing in listings[:5] %}
-  <div class="property-row">
-    <div class="property-photo{% if not listing.photo_url %} no-image{% endif %}">
-      {% if listing.photo_url %}
-      <img src="{{ listing.photo_url }}" alt="Property">
-      {% endif %}
+<div class="gallery-section">
+  {{ listings_section_header(listings_section_label, listings_truncation_note) }}
+  <div class="property-rows">
+    {% for listing in listings %}
+    <div class="property-row">
+      <div class="property-photo{% if not listing.photo_url %} no-image{% endif %}">
+        {% if listing.photo_url %}
+        <img src="{{ listing.photo_url }}" alt="Property">
+        {% endif %}
+      </div>
+      <div class="property-info">
+        <div class="property-address">{{ listing.address | default('Address unavailable') | truncate(35) }}</div>
+        <div class="property-city">{% if listing.city %}{{ listing.city }}{% endif %}</div>
+      </div>
+      <div class="property-details">
+        <div class="property-price">{% if listing.list_price %}{{ listing.list_price | format_currency }}{% else %}&mdash;{% endif %}</div>
+        <div class="property-specs">{% if listing.beds %}{{ listing.beds }} bd{% endif %}{% if listing.baths %} &bull; {{ listing.baths }} ba{% endif %}{% if listing.sqft %} &bull; {{ listing.sqft | format_number }} sqft{% endif %}</div>
+      </div>
+      <div class="property-status">
+        {% if listing.status %}
+        <span class="status-badge {{ listing.status | lower }}">{{ listing.status }}</span>
+        {% endif %}
+      </div>
     </div>
-    <div class="property-info">
-      <div class="property-address">{{ listing.address | default('Address unavailable') | truncate(35) }}</div>
-      <div class="property-city">{% if listing.city %}{{ listing.city }}{% endif %}</div>
-    </div>
-    <div class="property-details">
-      <div class="property-price">{% if listing.list_price %}{{ listing.list_price | format_currency }}{% else %}&mdash;{% endif %}</div>
-      <div class="property-specs">{% if listing.beds %}{{ listing.beds }} bd{% endif %}{% if listing.baths %} &bull; {{ listing.baths }} ba{% endif %}{% if listing.sqft %} &bull; {{ listing.sqft | format_number }} sqft{% endif %}</div>
-    </div>
-    <div class="property-status">
-      {% if listing.status %}
-      <span class="status-badge {{ listing.status | lower }}">{{ listing.status }}</span>
-      {% endif %}
-    </div>
+    {% endfor %}
   </div>
-  {% endfor %}
+  {{ more_listings_callout(listings_more_note) }}
 </div>
 {% else %}
 <div class="property-rows">

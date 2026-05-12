@@ -67,6 +67,79 @@ LAYOUT_MAP: Dict[str, str] = {
 ALL_REPORT_TYPES = list(LAYOUT_MAP.keys())
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# PDF-COMPREHENSIVE — per-report PDF caps + honest "what's shown" copy
+# ─────────────────────────────────────────────────────────────────────────────
+# Each report type has a clear narrative purpose. The cap matches the
+# story we're telling, and the truncation/more-listings copy tells the
+# reader exactly what they're seeing vs what exists in the market.
+#
+# Templates:
+#   {city}      — report_data.city                (e.g. "Irvine")
+#   {lookback}  — report_data.lookback_days       (e.g. 7)
+#   {showing}   — number of listings rendered
+#   {total}     — total available in the dataset
+#   {remaining} — total - cap (only used by more_template)
+#
+# more_template = None  →  no "+ N more …" callout (full inventory shown).
+
+PDF_CONFIG: Dict[str, Dict[str, Any]] = {
+    "market_snapshot": {
+        "cap": 8,
+        "section_label": "Recent Activity",
+        "truncation_template": "Showing the {showing} most recent of {total} listings in {city}.",
+        "more_template": "+ {remaining} more listings. Contact me for the complete list.",
+    },
+    "new_listings_gallery": {
+        "cap": 24,
+        "section_label": "New Listings",
+        "truncation_template": "Showing all {total} new listings from the past {lookback} days.",
+        "more_template": None,
+    },
+    "new_listings": {
+        "cap": 24,
+        "section_label": "New Listings",
+        "truncation_template": "Showing {showing} of {total} new listings.",
+        "more_template": "+ {remaining} more new listings. Contact me for the complete list.",
+    },
+    "closed": {
+        "cap": 20,
+        "section_label": "Recent Closed Sales",
+        "truncation_template": "Showing the {showing} most recent of {total} closed sales.",
+        "more_template": "+ {remaining} more closed sales. Contact me for the complete list.",
+    },
+    "inventory": {
+        "cap": 20,
+        "section_label": "Active Inventory Sample",
+        "truncation_template": "Showing {showing} of {total} active listings.",
+        "more_template": "+ {remaining} more active listings. Contact me for the complete list.",
+    },
+    "featured_listings": {
+        "cap": 12,
+        "section_label": "Hand-Picked Highlights",
+        "truncation_template": "{showing} featured listings curated from the current market.",
+        "more_template": None,
+    },
+    "open_houses": {
+        "cap": 20,
+        "section_label": "Open Houses This Week",
+        "truncation_template": "All {total} open houses scheduled in the next 7 days.",
+        "more_template": None,
+    },
+    "price_bands": {
+        "cap": 8,
+        "section_label": "Example Listings by Price Band",
+        "truncation_template": "Sample listings shown — see band totals above for complete counts.",
+        "more_template": None,
+    },
+}
+
+
+def _pdf_config_for(report_type: str) -> Dict[str, Any]:
+    """Return the PDF_CONFIG entry for a report type (with safe fallback)."""
+    return PDF_CONFIG.get(report_type, PDF_CONFIG["market_snapshot"])
+
+
 class MarketReportBuilder:
     """
     Builds brand-driven HTML market reports using Jinja2 templates.
@@ -137,11 +210,24 @@ class MarketReportBuilder:
             "total_count": total,
         }
 
-    def _build_listings_context(self) -> list:
+    def _build_listings_context(self) -> Dict[str, Any]:
+        """Build the listings context plus the "what's shown vs what
+        exists" copy that goes with it.
+
+        PDF-COMPREHENSIVE — returns a dict so the template can read
+        section_label / truncation_note / more_note alongside the
+        listing items themselves. The cap comes from PDF_CONFIG and is
+        applied here (was: per-template `[:6]` / `[:4]` slices).
+        """
         raw = self.report_data.get("listings") or self.report_data.get("listings_sample") or []
-        listings = []
-        for item in raw:
-            listings.append({
+        config = _pdf_config_for(self.report_type)
+        cap = config["cap"]
+        total = len(raw)
+        showing = min(cap, total)
+
+        items = []
+        for item in raw[:cap]:
+            items.append({
                 "address": item.get("street_address") or item.get("address", ""),
                 "city": item.get("city", ""),
                 "list_price": item.get("list_price") or item.get("price", 0),
@@ -154,8 +240,37 @@ class MarketReportBuilder:
                 "photo_url": item.get("hero_photo_url") or item.get("photo_url") or item.get("image_url"),
                 "lat": item.get("lat") or item.get("latitude"),
                 "lng": item.get("lng") or item.get("longitude"),
+                "next_open_house": item.get("next_open_house"),
             })
-        return listings
+
+        fmt_kwargs = {
+            "showing": showing,
+            "total": total,
+            "remaining": max(total - cap, 0),
+            "city": self.report_data.get("city") or "this area",
+            "lookback": self.report_data.get("lookback_days", 30),
+        }
+
+        try:
+            truncation_note = config["truncation_template"].format(**fmt_kwargs) if total > 0 else ""
+        except (KeyError, ValueError):
+            truncation_note = ""
+
+        more_note = None
+        if config.get("more_template") and total > cap:
+            try:
+                more_note = config["more_template"].format(**fmt_kwargs)
+            except (KeyError, ValueError):
+                more_note = None
+
+        return {
+            "items": items,
+            "section_label": config["section_label"],
+            "truncation_note": truncation_note,
+            "more_note": more_note,
+            "total_available": total,
+            "showing": showing,
+        }
 
     def _build_stats_context(self) -> Dict[str, Any]:
         metrics = self.report_data.get("metrics") or {}
@@ -227,6 +342,8 @@ class MarketReportBuilder:
                 logger.warning("AI narrative generation failed (non-fatal): %s", e)
                 ai_insights = ""
 
+        listings_ctx = self._build_listings_context()
+
         context: Dict[str, Any] = {
             "layout": self.layout,
             "report_type": self.report_type,
@@ -241,7 +358,16 @@ class MarketReportBuilder:
             "theme_color_text": color_roles["theme_color_text"],
             # Section contexts
             "header": self._build_header_context(),
-            "listings": self._build_listings_context(),
+            # PDF-COMPREHENSIVE — listings is still a flat array so the
+            # existing macro iteration keeps working; the section
+            # label / truncation note / more-listings callout / counts
+            # are exposed alongside it as separate context keys.
+            "listings": listings_ctx["items"],
+            "listings_section_label": listings_ctx["section_label"],
+            "listings_truncation_note": listings_ctx["truncation_note"],
+            "listings_more_note": listings_ctx["more_note"],
+            "listings_total_available": listings_ctx["total_available"],
+            "listings_showing": listings_ctx["showing"],
             "stats": self._build_stats_context(),
             "agent": self._build_agent_context(),
             # AI narrative (optional — exposed under both names for template compat)

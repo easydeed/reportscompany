@@ -54,13 +54,29 @@
     /* ===================== RESET & PRINT ===================== */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    @page { size: letter; margin: 0; }
+    /* PDF-COMPREHENSIVE Part 1 — let listing pages flow across multiple
+       sheets. The @page margin gives every page after the first the
+       breathing room the original .page-content padding only gave
+       page 1. */
+    @page { size: letter; margin: 0.5in; }
 
     @media print {
       html, body { background: white; margin: 0; padding: 0; }
-      .report-page { box-shadow: none; page-break-inside: avoid; }
+      .report-page { box-shadow: none; }
       .report-page + .report-page { page-break-before: always; }
-      .avoid-break { page-break-inside: avoid; break-inside: avoid; }
+      .avoid-break,
+      .listing-card,
+      .property-card,
+      .property-row,
+      .data-table tbody tr,
+      .ai-narrative,
+      .hero-stat,
+      .hero-stat-row,
+      .stat-blocks,
+      .stats-bar,
+      .more-listings-note,
+      .gallery-section { page-break-inside: avoid; break-inside: avoid; }
+      .gallery-section { page-break-before: auto; break-before: auto; }
       * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
 
@@ -74,14 +90,16 @@
     }
 
     /* ===================== PAGE SHELL ===================== */
+    /* PDF-COMPREHENSIVE Part 1 — was fixed `height: 11in; overflow: hidden;
+       display: flex` which clipped everything past page 1. Now uses
+       block flow + min-height so content paginates naturally; the
+       header sits at the top, the agent + page footer at the very end
+       (only on the last page). */
     .report-page {
       width: var(--page-width);
-      height: var(--page-height);
+      min-height: var(--page-height);
       background: var(--white);
       position: relative;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
     }
 
     /* ===================== GRADIENT HEADER (2-column) ===================== */
@@ -163,12 +181,10 @@
     }
 
     /* ===================== CONTENT AREA ===================== */
+    /* PDF-COMPREHENSIVE Part 1 — no longer a clipped flex container so
+       extra listings can paginate. Block flow stacks sections in order. */
     .page-content {
-      flex: 1;
       padding: 0 var(--page-padding);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
     }
 
     /* ===================== COUNT BADGE (Gallery) ===================== */
@@ -1064,6 +1080,52 @@
       border-top: 1px solid var(--gray-100);
     }
 
+    /* ===================== PDF-COMPREHENSIVE — gallery section,
+                                truncation note, more-listings callout,
+                                open-houses empty state ============== */
+    .gallery-section {
+      margin: 24px 0;
+    }
+
+    .gallery-heading {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary-color);
+      margin: 0 0 4px 0;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--primary-color);
+    }
+
+    .gallery-subtitle {
+      font-size: 12px;
+      color: #6b7280;
+      margin: 0 0 16px 0;
+      font-style: italic;
+    }
+
+    .more-listings-note {
+      text-align: center;
+      padding: 16px;
+      margin-top: 16px;
+      color: #374151;
+      font-size: 12px;
+      font-weight: 500;
+      background: #f9fafb;
+      border-radius: 8px;
+      border: 1px dashed #d1d5db;
+    }
+
+    .more-listings-note p { margin: 0; }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--gray-500);
+    }
+    .empty-state p { margin: 0 0 6px 0; font-size: 13px; }
+    .empty-state p.subtle { font-size: 11px; color: var(--gray-400); }
+
     /* ===================== THEME OVERRIDES ===================== */
     {% block theme_styles %}{% endblock %}
   </style>
@@ -1074,18 +1136,27 @@
 
     <div class="page-content">
       {% block content %}
+        {# PDF-COMPREHENSIVE — every layout receives the section label,
+           truncation note, and "+ N more …" callout text from the
+           builder so it can render the listings collection honestly. #}
         {% if layout == "gallery" %}
-          {{ macros.gallery_layout(header, listings, stats, report_type, agent, ai_narrative) }}
+          {{ macros.gallery_layout(header, listings, stats, report_type, agent, ai_narrative,
+                                   listings_section_label, listings_truncation_note, listings_more_note) }}
         {% elif layout == "market_narrative" %}
-          {{ macros.market_narrative_layout(header, listings, stats, report_type, agent, ai_insights, ai_narrative) }}
+          {{ macros.market_narrative_layout(header, listings, stats, report_type, agent, ai_insights, ai_narrative,
+                                            listings_section_label, listings_truncation_note, listings_more_note) }}
         {% elif layout == "closed_inventory" %}
-          {{ macros.closed_inventory_layout(header, listings, stats, report_type, agent, ai_insights, ai_narrative) }}
+          {{ macros.closed_inventory_layout(header, listings, stats, report_type, agent, ai_insights, ai_narrative,
+                                            listings_section_label, listings_truncation_note, listings_more_note) }}
         {% elif layout == "pricebands" %}
-          {{ macros.pricebands_layout(header, listings, stats, price_bands, report_type, agent, ai_insights, ai_narrative) }}
+          {{ macros.pricebands_layout(header, listings, stats, price_bands, report_type, agent, ai_insights, ai_narrative,
+                                      listings_section_label, listings_truncation_note, listings_more_note) }}
         {% elif layout == "analytics" %}
-          {{ macros.analytics_layout(header, listings, stats, price_bands, report_type, agent, ai_insights, ai_narrative) }}
+          {{ macros.analytics_layout(header, listings, stats, price_bands, report_type, agent, ai_insights, ai_narrative,
+                                     listings_section_label, listings_truncation_note, listings_more_note) }}
         {% else %}
-          {{ macros.gallery_layout(header, listings, stats, report_type, agent, ai_narrative) }}
+          {{ macros.gallery_layout(header, listings, stats, report_type, agent, ai_narrative,
+                                   listings_section_label, listings_truncation_note, listings_more_note) }}
         {% endif %}
       {% endblock %}
     </div>
