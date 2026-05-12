@@ -698,20 +698,83 @@ def _build_market_narrative_body(
     filter_description: str = None,
     listings: List[Dict] = None,
     accent_on_light: str = "#0d7c72",
+    listings_label: str = "Notable Listings",
 ) -> str:
-    """Market Snapshot / New Listings / Price Bands layout.
-    Ref: V0 market-narrative.tsx"""
+    """Market Snapshot / New Listings / Open Houses layout.
+    Ref: V0 market-narrative.tsx
+
+    EMAIL-DEPTH-PASS1: render every listing the payload provides via
+    the adaptive layout selector instead of capping at 4. Email is the
+    destination — we don't want to punt to the PDF.
+    """
     body = _build_filter_blurb(filter_description, primary_color)
     body += _build_ai_narrative(insight_text, accent_color, accent_on_light)
     body += _build_hero_stat(hero_value, hero_label, primary_color)
     if listings and len(listings) >= 2:
-        show = listings[:4]
-        body += _build_gallery_count(len(show), "Notable Sales", primary_color)
-        body += _build_2x2_photo_grid(show, accent_color)
+        body += _build_gallery_count(len(listings), listings_label, primary_color)
+        body += _render_adaptive_listings(listings, primary_color, accent_color)
     body += _build_stacked_stats(stats, primary_color)
     if not insight_text:
         body += _build_quick_take(quick_take, accent_color, primary_color)
     return body
+
+
+def _render_adaptive_listings(
+    listings: List[Dict], primary_color: str, accent_color: str
+) -> str:
+    """Render a listings collection using whichever layout best fits
+    the count. Used by market_snapshot, new_listings, open_houses, and
+    price_bands so the same visual language applies everywhere.
+    """
+    if not listings:
+        return ""
+    layout = _select_gallery_layout(len(listings))
+    if layout == "single_stacked":
+        chunks = []
+        for i, l in enumerate(listings):
+            chunks.append(_build_stacked_property_card(l, primary_color, accent_color))
+            if i < len(listings) - 1:
+                chunks.append(_build_branded_divider(primary_color, accent_color))
+        return f'<div style="margin-bottom: 32px;">{"".join(chunks)}</div>'
+    if layout == "gallery_2x2":
+        cards = [_build_gallery_card_large(l, accent_color) for l in listings[:4]]
+        rows = ""
+        for r in range(0, len(cards), 2):
+            c1 = cards[r] if r < len(cards) else ""
+            c2 = cards[r + 1] if r + 1 < len(cards) else ""
+            rows += (
+                f'<tr>'
+                f'<td width="50%" style="padding: 0 4px 8px 0; vertical-align: top;">{c1}</td>'
+                f'<td width="50%" style="padding: 0 0 8px 4px; vertical-align: top;">{c2}</td>'
+                f'</tr>'
+            )
+        return (
+            '<table role="presentation" cellpadding="0" cellspacing="0" '
+            'width="100%" style="margin-bottom: 32px;">' + rows + '</table>'
+        )
+    if layout == "gallery_3x2":
+        cards = [_build_gallery_card_compact(l, accent_color) for l in listings[:9]]
+        rows = ""
+        for r in range(0, len(cards), 3):
+            cells = ""
+            for c in range(3):
+                idx = r + c
+                pad = (
+                    "padding: 0 3px 6px 0;" if c == 0
+                    else ("padding: 0 0 6px 3px;" if c == 2 else "padding: 0 3px 6px 3px;")
+                )
+                card = cards[idx] if idx < len(cards) else ""
+                cells += f'<td width="33%" style="{pad} vertical-align: top;">{card}</td>'
+            rows += f'<tr>{cells}</tr>'
+        return (
+            '<table role="presentation" cellpadding="0" cellspacing="0" '
+            'width="100%" style="margin-bottom: 32px;">' + rows + '</table>'
+        )
+    rows_html = "".join(
+        _build_property_row(l, accent_color, is_last=(i == len(listings) - 1))
+        for i, l in enumerate(listings)
+    )
+    return f'<div style="margin-bottom: 32px;">{rows_html}</div>'
 
 
 def _build_2x2_photo_grid(listings: List[Dict], accent_color: str) -> str:
@@ -873,6 +936,7 @@ def _build_analytics_body(
     filter_description: str = None,
     accent_on_light: str = "#0d7c72",
     supporting_metrics: List[Tuple[str, str]] = None,
+    listings: List[Dict] = None,
 ) -> str:
     """Analytics / Price Bands layout with bar chart. Ref: V0 email-price-bands.html
 
@@ -960,9 +1024,67 @@ def _build_analytics_body(
                 </tr>
               </table>'''
 
+    # EMAIL-DEPTH-PASS1: render example listings beneath the band
+    # aggregates so the email tells the full story (was: PDF-only).
+    if listings and len(listings) >= 2:
+        body += _build_gallery_count(len(listings), "Example Listings", primary_color)
+        body += _render_adaptive_listings(listings, primary_color, accent_color)
+
     if not insight_text:
         body += _build_quick_take(quick_take, accent_color, primary_color)
     return body
+
+
+# ---------------------------------------------------------------------------
+# EMAIL-DEPTH-PASS1: Truncation note + always-on PDF CTA
+# ---------------------------------------------------------------------------
+
+def _build_truncation_note(
+    total_available: int, showing: int, pdf_url: Optional[str],
+    primary_color: str,
+) -> str:
+    """Tiny "Showing X of Y · View all in the PDF" line. Renders only
+    when there are listings hidden behind the cap AND we have a PDF
+    URL to link to.
+    """
+    if not pdf_url or total_available <= showing or showing <= 0:
+        return ""
+    return f'''
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td align="center" style="padding: 8px 0 16px;">
+                  <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; color: #6b7280;">
+                    Showing {showing} of {total_available} listings.
+                    <a href="{pdf_url}" style="color: {primary_color}; text-decoration: underline;">View all in the PDF &rarr;</a>
+                  </p>
+                </td>
+              </tr>
+            </table>'''
+
+
+def _build_pdf_cta(pdf_url: Optional[str], primary_color: str) -> str:
+    """Big branded "Download Full PDF Report" button rendered just
+    above the agent footer on every email."""
+    if not pdf_url:
+        return ""
+    return f'''
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 24px auto;">
+              <tr>
+                <td style="border-radius: 8px; background-color: {primary_color};">
+                  <!--[if mso]>
+                  <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{pdf_url}" style="height:48px;v-text-anchor:middle;width:260px;" arcsize="17%" stroke="f" fillcolor="{primary_color}">
+                    <w:anchorlock/>
+                    <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;">Download Full PDF Report</center>
+                  </v:roundrect>
+                  <![endif]-->
+                  <!--[if !mso]><!-->
+                  <a href="{pdf_url}" style="display: inline-block; padding: 14px 28px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px;">
+                    Download Full PDF Report
+                  </a>
+                  <!--<![endif]-->
+                </td>
+              </tr>
+            </table>'''
 
 
 # ---------------------------------------------------------------------------
@@ -1696,6 +1818,8 @@ def schedule_email_html(
     total_found: int = 0,
     total_shown: int = 0,
     audience_name: Optional[str] = None,
+    total_available: int = 0,
+    showing: int = 0,
 ) -> str:
     """
     Generate HTML email for a scheduled report notification.
@@ -1939,6 +2063,7 @@ def schedule_email_html(
             filter_description=filter_description,
             accent_on_light=accent_on_light,
             supporting_metrics=supporting,
+            listings=listings,
         )
 
     else:
@@ -1951,6 +2076,11 @@ def schedule_email_html(
             secondary += [(ci1_label, ci1_value), (ci2_label, ci2_value), (ci3_label, ci3_value)]
         if not secondary:
             secondary = [(m1_label, m1_value), (m2_label, m2_value), (m3_label, m3_value)]
+        narrative_label = {
+            "market_snapshot": "Recent Activity",
+            "new_listings":    "New Listings",
+            "open_houses":     "Open Houses",
+        }.get(report_type, "Notable Listings")
         body_html = _build_market_narrative_body(
             insight_text=insight_text, hero_value=hero_val, hero_label=hero_lbl,
             stats=secondary, quick_take=quick_take,
@@ -1958,8 +2088,21 @@ def schedule_email_html(
             filter_description=filter_description,
             listings=listings,
             accent_on_light=accent_on_light,
+            listings_label=narrative_label,
         )
     
+    # ------------------------------------------------------------------
+    # EMAIL-DEPTH-PASS1: Truncation note + always-on PDF CTA
+    # Appended AFTER the body builder runs so every report type gets
+    # both, regardless of which layout was selected.
+    # ------------------------------------------------------------------
+    # Fall back to the legacy total_shown / list length if a caller
+    # hasn't been updated to forward total_available/showing yet.
+    _shown = showing or total_shown or (len(listings) if listings else 0)
+    _total = total_available or total_found or _shown
+    body_html += _build_truncation_note(_total, _shown, pdf_url, primary_color)
+    body_html += _build_pdf_cta(pdf_url, primary_color)
+
     # ============================================================================
     # V16: Agent Footer (kept from V15 — already matches V0 email-footer.tsx)
     # ============================================================================

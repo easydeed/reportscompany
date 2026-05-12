@@ -261,8 +261,10 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
         "by_property_type": {pt["label"]: pt for pt in by_type},
         "price_tiers": {tier["label"]: tier for tier in price_tiers},
         
-        # Sample listings for fallback view (mix of closed and active)
-        "listings_sample": (closed[:10] + active[:10])[:20]
+        # Sample listings for fallback view (mix of closed and active).
+        # EMAIL-DEPTH-PASS1: bumped from 20 → 30 so the email cap (8)
+        # has comfortable headroom and the PDF (Pass 2) can use more.
+        "listings_sample": (closed[:15] + active[:15])[:30]
     }
 
 
@@ -692,8 +694,10 @@ def build_price_bands_result(listings: List[Dict], context: Dict) -> Dict:
         "hottest_band": hottest,
         "slowest_band": slowest,
         
-        # Sample listings
-        "listings_sample": listings[:20]
+        # Sample listings.
+        # EMAIL-DEPTH-PASS1: bumped from 20 → 24 so emails can show
+        # 6 examples beneath the band aggregates with headroom.
+        "listings_sample": listings[:24]
     }
 
 
@@ -843,10 +847,12 @@ def build_featured_listings_result(listings: List[Dict], context: Dict) -> Dict:
     # Get active listings
     active = [l for l in listings if l.get("status") == "Active"]
     
-    # Sort by list price desc (most expensive first), limit to 4
-    featured = sorted(active, key=lambda x: x.get("list_price") or 0, reverse=True)[:4]
-    
-    print(f"📊 FEATURED: {len(active)} active listings, showing top 4 by price")
+    # Sort by list price desc (most expensive first).
+    # EMAIL-DEPTH-PASS1: bumped from top 4 → top 12 so emails (cap 8)
+    # have headroom and the PDF (Pass 2) can render more cards.
+    featured = sorted(active, key=lambda x: x.get("list_price") or 0, reverse=True)[:12]
+
+    print(f"📊 FEATURED: {len(active)} active listings, showing top {len(featured)} by price")
     
     # Format for gallery display
     gallery_listings = []

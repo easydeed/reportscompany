@@ -542,6 +542,29 @@ def _build_email_payload(report_type, city, zips, lookback, result, pdf_url):
     if report_type in ("new_listings_gallery", "featured_listings"):
         email_metrics["total_listings"] = result.get("total_listings", len(result.get("listings", [])))
 
+    # ── EMAIL-DEPTH-PASS1: every report type that has listings should
+    # render them in the email. Source from whichever key the builder
+    # populated (`listings` or `listings_sample`) and apply a per-type
+    # cap so we don't blow past Gmail's 102 KB clip threshold.
+    available_listings = (
+        result.get("listings")
+        or result.get("listings_sample")
+        or []
+    )
+
+    EMAIL_LISTING_CAPS = {
+        "market_snapshot":      8,
+        "new_listings_gallery": 15,
+        "new_listings":         15,
+        "closed":               12,
+        "inventory":            12,
+        "featured_listings":    8,
+        "open_houses":          12,
+        "price_bands":          6,
+    }
+    cap = EMAIL_LISTING_CAPS.get(report_type, 10)
+    capped_listings = available_listings[:cap]
+
     payload = {
         "report_type": report_type,
         "city": city,
@@ -551,31 +574,15 @@ def _build_email_payload(report_type, city, zips, lookback, result, pdf_url):
         "pdf_url": pdf_url,
         "preset_display_name": result.get("preset_display_name") if isinstance(result, dict) else None,
         "filter_description": result.get("filters_label") if isinstance(result, dict) else None,
-        "total_listings": result.get("total_listings", 0) if isinstance(result, dict) else 0,
-        "total_shown": result.get("total_shown", 0) if isinstance(result, dict) else 0,
+        # total_listings preserved for legacy AI-prompt context.
+        "total_listings": result.get("total_listings", len(available_listings)) if isinstance(result, dict) else 0,
+        "total_shown": result.get("total_shown", len(capped_listings)) if isinstance(result, dict) else 0,
         "audience_key": result.get("audience_key", "all") if isinstance(result, dict) else "all",
+        # New EMAIL-DEPTH-PASS1 fields:
+        "listings": capped_listings,
+        "total_available": len(available_listings),
+        "showing": min(cap, len(available_listings)),
     }
-
-    if report_type in ("new_listings_gallery", "featured_listings"):
-        payload["listings"] = result.get("listings", [])
-
-    if report_type == "inventory":
-        listings_sample = result.get("listings_sample", [])[:10]
-        payload["listings"] = [
-            {"street_address": l.get("street_address"), "city": l.get("city"),
-             "bedrooms": l.get("bedrooms"), "bathrooms": l.get("bathrooms"),
-             "list_price": l.get("list_price")}
-            for l in listings_sample
-        ]
-
-    if report_type == "closed":
-        listings_sample = result.get("listings_sample", [])[:10]
-        payload["listings"] = [
-            {"street_address": l.get("street_address"), "city": l.get("city"),
-             "bedrooms": l.get("bedrooms"), "bathrooms": l.get("bathrooms"),
-             "list_price": l.get("close_price")}
-            for l in listings_sample
-        ]
 
     return payload
 

@@ -118,6 +118,13 @@ def send_schedule_email(
     total_found = payload.get("total_listings", 0)  # Total in market
     total_shown = payload.get("total_shown", len(listings) if listings else 0)  # How many displayed
     audience_key = payload.get("audience_key", "all")  # Preset audience type
+
+    # EMAIL-DEPTH-PASS1: explicit truncation accounting from
+    # _build_email_payload — drives the "Showing X of Y · View all in
+    # the PDF" note. Falls back to the V14 fields if an older caller
+    # hasn't populated them.
+    total_available = payload.get("total_available", total_found)
+    showing = payload.get("showing", total_shown)
     
     if not pdf_url:
         logger.error("No PDF URL provided in payload")
@@ -151,6 +158,8 @@ def send_schedule_email(
         total_found=total_found,  # V14: Total listings in market
         total_shown=total_shown,  # V14: How many displayed
         audience_name=preset_display_name,  # V14: Audience for AI context
+        total_available=total_available,  # EMAIL-DEPTH-PASS1: truncation note
+        showing=showing,                  # EMAIL-DEPTH-PASS1: truncation note
     )
     
     # Send email via provider

@@ -307,13 +307,18 @@ Write 4-5 engaging sentences that make the reader want to explore the attached r
 
 # Default caps for email (PDF caps are fixed at 9 for layout)
 AUDIENCE_EMAIL_CAPS = {
-    "all": 24,               # All Listings - comprehensive view
-    "first_time_buyers": 24, # First-Time Buyers - need lots of options
-    "families": 18,          # Family Homes - moderate selection
-    "condo": 18,             # Condo Watch - moderate selection
-    "luxury": 8,             # Luxury - curated, exclusive
-    "investors": 12,         # Investors - focused on deals
-    "default": 24,           # Default fallback
+    # EMAIL-DEPTH-PASS1: every cap bumped so the gallery email has
+    # comfortable material to draw from. The email payload still
+    # caps display at 15 (EMAIL_LISTING_CAPS["new_listings_gallery"]),
+    # so these values are the *storage* ceiling — extra rows are
+    # used by the AI prompt and reserved for the PDF in Pass 2.
+    "all":               32,  # All Listings — comprehensive view
+    "first_time_buyers": 24,  # First-Time Buyers — need lots of options
+    "families":          24,  # Family Homes — moderate selection
+    "condo":             24,  # Condo Watch — moderate selection
+    "luxury":            18,  # Luxury — still curated, but more headroom
+    "investors":         18,  # Investors — focused on deals
+    "default":           32,  # Default fallback
 }
 
 def get_email_listing_cap(audience_key: str = "default") -> int:
