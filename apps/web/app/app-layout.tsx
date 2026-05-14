@@ -1,7 +1,6 @@
 "use client"
 
 import { Suspense, useMemo } from "react"
-import { QueryProvider } from "@/components/providers/query-provider"
 import {
   SidebarProvider,
   Sidebar,
@@ -81,12 +80,16 @@ interface TierProps {
 const BUILDER_ROUTES = [
   "/app/property/new",
   "/app/schedules/new",
-  // NOTE: do NOT add "/app/schedules/" here — it would catch the list view
-  // (with a trailing slash) and skip the QueryProvider, crashing useSchedules().
+  // NOTE: do NOT add "/app/schedules/" here. It would match the trailing-
+  // slash variant of the list view and strip the sidebar (and previously
+  // also skipped the QueryProvider — that part is now fixed by hoisting
+  // QueryProvider to app/app/layout.tsx, see DEBT-001).
   // The schedule edit route is matched explicitly below.
 ]
 
-function isBuilderRoute(pathname: string | null): boolean {
+// Exported so __tests__/app-layout.test.tsx can verify the route-matching
+// matrix. Keep this in sync with the BUILDER_ROUTES list above.
+export function isBuilderRoute(pathname: string | null): boolean {
   if (!pathname) return false
 
   // Exact match for new-report / new-schedule routes
@@ -631,9 +634,13 @@ export default function AppLayoutClient({
     )
   }
   
-  // Normal mode: With sidebar
+  // Normal mode: With sidebar.
+  // NOTE: QueryProvider was previously wrapped here, but is now hoisted to
+  // app/app/layout.tsx so it applies to BOTH builder mode and normal mode.
+  // Don't add it back — it would create a nested provider and break the
+  // single shared QueryClient instance.
   return (
-    <QueryProvider>
+    <>
       <SidebarProvider>
         <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
           <div className="flex min-h-screen w-full bg-background text-foreground">
@@ -647,6 +654,6 @@ export default function AppLayoutClient({
       </SidebarProvider>
       <Toaster />
       <SonnerToaster position="top-right" />
-    </QueryProvider>
+    </>
   )
 }

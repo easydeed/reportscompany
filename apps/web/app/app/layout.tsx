@@ -1,4 +1,5 @@
 import AppLayoutClient from "../app-layout"
+import { QueryProvider } from "@/components/providers/query-provider"
 import { cookies } from 'next/headers'
 
 // Force dynamic rendering for all /app routes (uses cookies for auth)
@@ -47,15 +48,23 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     console.error("Failed to access cookies in layout:", error)
   }
 
+  // QueryProvider is hoisted here so every route under /app — including
+  // builder-mode routes that render without the sidebar — has access to
+  // React Query. Previously it lived inside the "normal mode" branch of
+  // AppLayoutClient, which meant any pathname classified as builder-mode
+  // would crash any hook calling useQuery() (see HOTFIX-SCHEDULES-LAYOUT
+  // and DEBT-001). It must stay at this level.
   return (
-    <AppLayoutClient
-      isAdmin={isAdmin}
-      isCompanyAdmin={isCompanyAdmin}
-      isAffiliate={isAffiliate}
-      isSponsored={isSponsored}
-      accountType={accountType}
-    >
-      {children}
-    </AppLayoutClient>
+    <QueryProvider>
+      <AppLayoutClient
+        isAdmin={isAdmin}
+        isCompanyAdmin={isCompanyAdmin}
+        isAffiliate={isAffiliate}
+        isSponsored={isSponsored}
+        accountType={accountType}
+      >
+        {children}
+      </AppLayoutClient>
+    </QueryProvider>
   )
 }
