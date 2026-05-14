@@ -10,7 +10,6 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, EmailStr
 from typing import Optional
-from urllib.parse import urlencode
 import io
 import os
 import httpx
@@ -20,6 +19,11 @@ import sys
 from .reports import require_account_id
 from ..db import db_conn
 from ..services.affiliates import verify_affiliate_account
+from ..services.brand_resolver import resolve_brand
+from ..services.sample_report_data import (
+    get_sample_data,
+    SUPPORTED_SAMPLE_REPORT_TYPES,
+)
 
 # Import the unified email template
 # Try shared package first, then worker path, then fallback
@@ -56,6 +60,57 @@ if not UNIFIED_TEMPLATE_AVAILABLE:
 if not UNIFIED_TEMPLATE_AVAILABLE:
     print("[Branding Tools] ⚠️ Using fallback template (update shared package for full features)")
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Worker MarketReportBuilder loader (Sample PDF Rewire — Issue 7)
+#
+# Sample PDFs now render via the worker's MarketReportBuilder so they go
+# through the EXACT same code path as production reports (multi-page support,
+# section labels, "+ N more" callouts, Outfit font, AI narrative section).
+#
+# The API process imports the worker package lazily on first use. The worker
+# uses absolute imports like `from worker.template_filters import ...`, so we
+# add the worker `src/` directory to sys.path before importing.
+# ─────────────────────────────────────────────────────────────────────────────
+
+_MarketReportBuilder = None  # cached class reference
+_WORKER_IMPORT_ERROR: Optional[str] = None
+
+
+def _load_market_report_builder():
+    """
+    Lazily import `worker.market_builder.MarketReportBuilder`.
+
+    Returns the class on success, or None if the worker package or its
+    transitive deps (jinja2, etc.) aren't available in the API runtime.
+    Failure is cached so we don't retry on every request.
+    """
+    global _MarketReportBuilder, _WORKER_IMPORT_ERROR
+    if _MarketReportBuilder is not None:
+        return _MarketReportBuilder
+    if _WORKER_IMPORT_ERROR is not None:
+        return None
+
+    try:
+        worker_src = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__),
+                "../../../../worker/src",
+            )
+        )
+        if worker_src not in sys.path:
+            sys.path.insert(0, worker_src)
+
+        from worker.market_builder import MarketReportBuilder as _Cls
+        _MarketReportBuilder = _Cls
+        print(f"[Branding Tools] ✅ MarketReportBuilder loaded from {worker_src}")
+        return _MarketReportBuilder
+    except Exception as e:
+        _WORKER_IMPORT_ERROR = f"{type(e).__name__}: {e}"
+        print(f"[Branding Tools] ⚠️ MarketReportBuilder import failed: {_WORKER_IMPORT_ERROR}")
+        return None
+
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/branding", tags=["branding-tools"])
@@ -63,7 +118,6 @@ router = APIRouter(prefix="/v1/branding", tags=["branding-tools"])
 # PDFShift configuration
 PDFSHIFT_API_KEY = os.getenv("PDF_API_KEY", "")
 PDFSHIFT_URL = "https://api.pdfshift.io/v3/convert/pdf"
-PRINT_BASE = os.getenv("PRINT_BASE", "https://www.trendyreports.io")
 
 # SendGrid configuration (optional - for test emails)
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", "")
@@ -75,11 +129,105 @@ DEFAULT_FROM_NAME = os.getenv("DEFAULT_FROM_NAME", "TrendyReports")
 class SamplePdfRequest(BaseModel):
     """Request model for sample PDF generation."""
     report_type: str = "market_snapshot"
+    city: Optional[str] = None
+    theme_id: Optional[int] = None
 
 
 class SampleJpgRequest(BaseModel):
     """Request model for sample social image (JPG) generation."""
     report_type: str = "market_snapshot"
+    city: Optional[str] = None
+    theme_id: Optional[int] = None
+
+
+def _build_agent_branding_ctx(cur, account_id: str, user_id: Optional[str]) -> dict:
+    """
+    Build the `branding` sub-dict that MarketReportBuilder expects.
+
+    Pulls agent identity from the requesting user's profile (so the sample PDF
+    shows the requester's name/phone/email in the agent card) and brand
+    identity from `brand_resolver` (so title-rep inheritance applies).
+    Falls back to sensible placeholders if no user is available.
+    """
+    resolved = resolve_brand(cur, account_id)
+
+    agent = {
+        "agent_name": "Your Name",
+        "agent_title": "Real Estate Professional",
+        "agent_phone": "",
+        "agent_email": "",
+        "agent_photo_url": None,
+    }
+    if user_id:
+        try:
+            cur.execute(
+                """
+                SELECT first_name, last_name, job_title, phone, email,
+                       COALESCE(photo_url, avatar_url)
+                FROM users
+                WHERE id = %s::uuid AND is_active = TRUE
+                """,
+                (user_id,),
+            )
+            urow = cur.fetchone()
+            if urow:
+                full_name = f"{urow[0] or ''} {urow[1] or ''}".strip()
+                agent = {
+                    "agent_name": full_name or "Your Name",
+                    "agent_title": urow[2] or "Real Estate Professional",
+                    "agent_phone": urow[3] or "",
+                    "agent_email": urow[4] or "",
+                    "agent_photo_url": urow[5],
+                }
+        except Exception as e:
+            logger.warning(f"[Sample PDF] Could not load user profile: {e}")
+
+    return {
+        **agent,
+        "company_name": resolved["display_name"],
+        "logo_url": resolved["logo_url"],
+        "primary_color": resolved["primary_color"],
+        "accent_color": resolved["accent_color"],
+    }
+
+
+def _render_sample_html(
+    cur,
+    account_id: str,
+    user_id: Optional[str],
+    report_type: str,
+    city: Optional[str],
+    theme_id: Optional[int],
+) -> str:
+    """
+    Render the same HTML production uses, for the given account + report type.
+
+    Raises HTTPException(503) if MarketReportBuilder cannot be imported.
+    """
+    Builder = _load_market_report_builder()
+    if Builder is None:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                f"Sample report renderer unavailable: {_WORKER_IMPORT_ERROR}. "
+                "The worker package must be importable from the API runtime."
+            ),
+        )
+
+    branding_ctx = _build_agent_branding_ctx(cur, account_id, user_id)
+
+    sample = get_sample_data(report_type, city=city or "Irvine")
+
+    builder_data = dict(sample)
+    builder_data["branding"] = branding_ctx
+    # accent_color at the top level lets the builder skip the branding lookup
+    # path — mirrors how worker/tasks.py merges accent.
+    builder_data["accent_color"] = branding_ctx.get("accent_color")
+    if theme_id is not None:
+        builder_data["theme_id"] = theme_id
+
+    builder = Builder(builder_data)
+    return builder.render_html()
 
 
 class TestEmailRequest(BaseModel):
@@ -89,91 +237,77 @@ class TestEmailRequest(BaseModel):
 
 
 def get_branding_for_account(cur, account_id: str) -> dict:
-    """Get branding data for an account (affiliate or regular)."""
-    # Check if this is an affiliate
-    cur.execute("""
-        SELECT account_type FROM accounts WHERE id = %s::uuid
-    """, (account_id,))
-    row = cur.fetchone()
-    
-    if row and row[0] == "INDUSTRY_AFFILIATE":
-        # Get affiliate branding - try with email_logo_url first, fall back if column doesn't exist
-        try:
-            cur.execute("""
-                SELECT 
-                    brand_display_name,
-                    logo_url,
-                    email_logo_url,
-                    primary_color,
-                    accent_color,
-                    rep_photo_url,
-                    contact_line1,
-                    contact_line2,
-                    website_url
-                FROM affiliate_branding
-                WHERE account_id = %s::uuid
-            """, (account_id,))
-            brand_row = cur.fetchone()
-            
-            if brand_row:
-                return {
-                    "brand_display_name": brand_row[0],
-                    "logo_url": brand_row[1],
-                    "email_logo_url": brand_row[2],  # Light version for email headers
-                    "primary_color": brand_row[3] or "#7C3AED",
-                    "accent_color": brand_row[4] or "#F26B2B",
-                    "rep_photo_url": brand_row[5],
-                    "contact_line1": brand_row[6],
-                    "contact_line2": brand_row[7],
-                    "website_url": brand_row[8],
-                }
-        except Exception:
-            # Fallback if email_logo_url column doesn't exist yet
-            cur.execute("""
-                SELECT 
-                    brand_display_name,
-                    logo_url,
-                    primary_color,
-                    accent_color,
-                    rep_photo_url,
-                    contact_line1,
-                    contact_line2,
-                    website_url
-                FROM affiliate_branding
-                WHERE account_id = %s::uuid
-            """, (account_id,))
-            brand_row = cur.fetchone()
-            
-            if brand_row:
-                return {
-                    "brand_display_name": brand_row[0],
-                    "logo_url": brand_row[1],
-                    "email_logo_url": None,  # Column doesn't exist yet
-                    "primary_color": brand_row[2] or "#7C3AED",
-                    "accent_color": brand_row[3] or "#F26B2B",
-                    "rep_photo_url": brand_row[4],
-                    "contact_line1": brand_row[5],
-                    "contact_line2": brand_row[6],
-                    "website_url": brand_row[7],
-                }
-    
-    # Get account name as fallback
-    cur.execute("""
-        SELECT name, logo_url, primary_color 
-        FROM accounts WHERE id = %s::uuid
-    """, (account_id,))
-    acc_row = cur.fetchone()
-    
-    return {
-        "brand_display_name": acc_row[0] if acc_row else "Your Brand",
-        "logo_url": acc_row[1] if acc_row else None,
+    """
+    Get branding data for an account (affiliate or regular).
+
+    Uses the centralized brand_resolver so title reps inherit their parent
+    company's logo/colors/display_name (unless branding_override=true). The
+    rep-specific extras (rep_photo_url, contact lines, email_logo_url,
+    website_url) always come from the rep's own row so the contact card
+    still identifies the rep, not the parent company.
+
+    Return shape is preserved for downstream consumers (sample PDF preview,
+    test email rendering).
+    """
+    resolved = resolve_brand(cur, account_id)
+
+    # Rep-level extras come from the rep's own affiliate_branding row when
+    # present. These never inherit from the parent because the contact card
+    # should identify the rep, not the company.
+    rep_extras = {
         "email_logo_url": None,
-        "primary_color": acc_row[2] if acc_row else "#7C3AED",
-        "accent_color": "#F26B2B",
         "rep_photo_url": None,
         "contact_line1": None,
         "contact_line2": None,
         "website_url": None,
+    }
+    try:
+        cur.execute(
+            """
+            SELECT email_logo_url, rep_photo_url, contact_line1, contact_line2, website_url
+            FROM affiliate_branding
+            WHERE account_id = %s::uuid
+            """,
+            (account_id,),
+        )
+        extras_row = cur.fetchone()
+        if extras_row:
+            rep_extras = {
+                "email_logo_url": extras_row[0],
+                "rep_photo_url": extras_row[1],
+                "contact_line1": extras_row[2],
+                "contact_line2": extras_row[3],
+                "website_url": extras_row[4],
+            }
+    except Exception:
+        # email_logo_url may be missing on very old schemas — fall back gracefully.
+        try:
+            cur.execute(
+                """
+                SELECT rep_photo_url, contact_line1, contact_line2, website_url
+                FROM affiliate_branding
+                WHERE account_id = %s::uuid
+                """,
+                (account_id,),
+            )
+            extras_row = cur.fetchone()
+            if extras_row:
+                rep_extras = {
+                    "email_logo_url": None,
+                    "rep_photo_url": extras_row[0],
+                    "contact_line1": extras_row[1],
+                    "contact_line2": extras_row[2],
+                    "website_url": extras_row[3],
+                }
+        except Exception:
+            pass
+
+    return {
+        "brand_display_name": resolved["display_name"],
+        "logo_url": resolved["logo_url"],
+        "primary_color": resolved["primary_color"],
+        "accent_color": resolved["accent_color"],
+        **rep_extras,
     }
 
 
@@ -185,58 +319,42 @@ async def generate_sample_pdf(
 ):
     """
     Generate a sample branded PDF for preview/download.
-    
-    Uses sample data (not real MLS data) to show how branding appears.
-    The PDF is generated on-the-fly and not stored.
-    
-    Pass B4.1: Sample PDF Generation
+
+    Renders the SAME HTML production uses (via worker.MarketReportBuilder) with
+    canned sample data, then ships the rendered HTML to PDFShift. The output
+    is therefore visually identical to a real generated market report —
+    multi-page support, "Recent Activity" section labels, "Showing 8 of 50",
+    "+ 42 more listings" callouts, Outfit font, AI narrative section, and the
+    requesting account's resolved branding (with parent-rep inheritance).
     """
     report_type = body.report_type
-    
-    # Validate report type
-    valid_types = [
-        "market_snapshot", "new_listings", "inventory", "closed",
-        "price_bands", "open_houses", "new_listings_gallery", "featured_listings"
-    ]
-    if report_type not in valid_types:
+
+    if report_type not in SUPPORTED_SAMPLE_REPORT_TYPES:
         raise HTTPException(status_code=400, detail=f"Invalid report type: {report_type}")
-    
-    # Get branding
-    with db_conn() as (conn, cur):
-        branding = get_branding_for_account(cur, account_id)
-    
-    # Build the preview URL with branding params
-    # We'll use a special preview endpoint that renders sample data
-    params = {
-        "brand_name": branding['brand_display_name'] or "Your Brand",
-    }
-    if branding.get("logo_url"):
-        params["logo_url"] = branding['logo_url']
-    if branding.get("primary_color"):
-        params["primary_color"] = branding['primary_color'].replace('#', '')
-    if branding.get("accent_color"):
-        params["accent_color"] = branding['accent_color'].replace('#', '')
-    # Pass contact/footer info for branded footer
-    if branding.get("rep_photo_url"):
-        params["rep_photo_url"] = branding['rep_photo_url']
-    if branding.get("contact_line1"):
-        params["contact_line1"] = branding['contact_line1']
-    if branding.get("contact_line2"):
-        params["contact_line2"] = branding['contact_line2']
-    if branding.get("website_url"):
-        params["website_url"] = branding['website_url']
-    
-    preview_url = f"{PRINT_BASE}/branding-preview/{report_type}?{urlencode(params)}"
-    print(f"[Branding PDF] Preview URL: {preview_url}")
-    
-    # Generate PDF using PDFShift
+
     if not PDFSHIFT_API_KEY:
-        # Fallback: return a simple HTML-based PDF placeholder
         raise HTTPException(
             status_code=503,
-            detail="PDF generation service not configured. Please contact support."
+            detail="PDF generation service not configured. Please contact support.",
         )
-    
+
+    user = getattr(request.state, "user", None)
+    user_id = user.get("id") if user else None
+
+    # Render HTML via the worker's MarketReportBuilder (synchronous — same code
+    # path as production, just with canned `report_data`).
+    with db_conn() as (conn, cur):
+        html_content = _render_sample_html(
+            cur,
+            account_id=account_id,
+            user_id=user_id,
+            report_type=report_type,
+            city=body.city,
+            theme_id=body.theme_id,
+        )
+    print(f"[Branding PDF] Rendered HTML for {report_type}: {len(html_content)} chars")
+
+    # Ship HTML to PDFShift. `source` accepts raw HTML as well as URLs.
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
@@ -244,46 +362,48 @@ async def generate_sample_pdf(
                 headers={
                     "X-API-Key": PDFSHIFT_API_KEY,
                     "Content-Type": "application/json",
-                    "X-Processor-Version": "142",  # New conversion engine (better CSS3, faster)
+                    "X-Processor-Version": "142",
                 },
                 json={
-                    "source": preview_url,
+                    "source": html_content,
                     "landscape": False,
                     "use_print": True,
                     "format": "Letter",
-                    "margin": "0",
-                    # Image loading options - CRITICAL for MLS photos!
-                    "delay": 8000,             # 8s delay to let images load
-                    "wait_for_network": True,  # Wait for network to go idle
-                    "lazy_load_images": True,  # Scroll to trigger lazy-loaded images
-                    "timeout": 100,            # Max 100s total
+                    # Match worker pdf_adapter: margins handled by @page CSS.
+                    "margin": {"top": "0", "right": "0", "bottom": "0", "left": "0"},
+                    "remove_blank": True,
+                    # Stock photos load from Unsplash — give PDFShift time.
+                    "delay": 4000,
+                    "wait_for_network": True,
+                    "lazy_load_images": True,
+                    "timeout": 100,
                 },
             )
-            
+
             if response.status_code != 200:
-                print(f"[Branding PDF] PDFShift error: {response.status_code} - {response.text}")
+                print(f"[Branding PDF] PDFShift error: {response.status_code} - {response.text[:500]}")
                 raise HTTPException(
                     status_code=502,
-                    detail="Failed to generate PDF. Please try again."
+                    detail="Failed to generate PDF. Please try again.",
                 )
-            
+
             pdf_bytes = response.content
+    except HTTPException:
+        raise
     except httpx.TimeoutException:
         raise HTTPException(status_code=504, detail="PDF generation timed out. Please try again.")
     except Exception as e:
         print(f"[Branding PDF] Error: {e}")
         raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
-    
-    # Return PDF as downloadable file
+
     filename = f"sample-{report_type.replace('_', '-')}.pdf"
-    
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
             "Content-Length": str(len(pdf_bytes)),
-        }
+        },
     )
 
 
@@ -295,60 +415,39 @@ async def generate_sample_jpg(
 ):
     """
     Generate a sample branded JPG (1080x1920) for social media preview.
-    
-    Perfect for Instagram Stories, TikTok, LinkedIn Stories.
-    Uses PDFShift's image conversion API.
+
+    Renders the SAME HTML production uses (via worker.MarketReportBuilder) and
+    sends it to PDFShift's JPEG endpoint. The output captures the first
+    viewport's worth of the report, suitable for Instagram Stories etc.
     """
     report_type = body.report_type
-    
-    # Validate report type
-    valid_types = [
-        "market_snapshot", "new_listings", "inventory", "closed",
-        "price_bands", "open_houses", "new_listings_gallery", "featured_listings"
-    ]
-    if report_type not in valid_types:
+
+    if report_type not in SUPPORTED_SAMPLE_REPORT_TYPES:
         raise HTTPException(status_code=400, detail=f"Invalid report type: {report_type}")
-    
-    # Get branding
-    with db_conn() as (conn, cur):
-        branding = get_branding_for_account(cur, account_id)
-    
-    # Build the social preview URL with branding params
-    params = {
-        "brand_name": branding['brand_display_name'] or "Your Brand",
-    }
-    if branding.get("logo_url"):
-        params["logo_url"] = branding['logo_url']
-    if branding.get("primary_color"):
-        params["primary_color"] = branding['primary_color'].replace('#', '')
-    if branding.get("accent_color"):
-        params["accent_color"] = branding['accent_color'].replace('#', '')
-    if branding.get("rep_photo_url"):
-        params["rep_photo_url"] = branding['rep_photo_url']
-    if branding.get("contact_line1"):
-        params["contact_line1"] = branding['contact_line1']
-    if branding.get("contact_line2"):
-        params["contact_line2"] = branding['contact_line2']
-    if branding.get("website_url"):
-        params["website_url"] = branding['website_url']
-    
-    preview_url = f"{PRINT_BASE}/branding-preview/social/{report_type}?{urlencode(params)}"
-    print(f"[Branding JPG] Social Preview URL: {preview_url}")
-    
-    # Generate JPG using PDFShift
+
     if not PDFSHIFT_API_KEY:
         raise HTTPException(
             status_code=503,
-            detail="Image generation service not configured. Please contact support."
+            detail="Image generation service not configured. Please contact support.",
         )
-    
+
+    user = getattr(request.state, "user", None)
+    user_id = user.get("id") if user else None
+
+    with db_conn() as (conn, cur):
+        html_content = _render_sample_html(
+            cur,
+            account_id=account_id,
+            user_id=user_id,
+            report_type=report_type,
+            city=body.city,
+            theme_id=body.theme_id,
+        )
+    print(f"[Branding JPG] Rendered HTML for {report_type}: {len(html_content)} chars")
+
     try:
-        # PDFShift JPEG endpoint with X-API-Key auth (per docs.pdfshift.io)
         print(f"[Branding JPG] Calling PDFShift JPEG endpoint")
-        print(f"[Branding JPG] Source URL: {preview_url}")
-        
         async with httpx.AsyncClient(timeout=120.0) as client:
-            # JPEG endpoint supports: source, viewport, delay, wait_for_network
             response = await client.post(
                 "https://api.pdfshift.io/v3/convert/jpeg",
                 headers={
@@ -356,9 +455,9 @@ async def generate_sample_jpg(
                     "Content-Type": "application/json",
                 },
                 json={
-                    "source": preview_url,
-                    "viewport": "1080x1920",  # Browser viewport size
-                    "delay": 5000,            # 5s delay for fonts/images
+                    "source": html_content,
+                    "viewport": "1080x1920",
+                    "delay": 4000,
                 },
             )
             
