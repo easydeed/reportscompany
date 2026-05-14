@@ -25,6 +25,15 @@ import sys
 import time
 from pathlib import Path
 
+# Make sure emoji + non-ASCII chars in the summary don't crash on Windows
+# consoles still defaulted to cp1252. On Python 3.7+ stdout/stderr expose
+# a reconfigure() method that lets us switch the encoding in-place.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+    except Exception:
+        pass
+
 # ─── Path setup ──────────────────────────────────────────────────────────────
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
@@ -32,6 +41,28 @@ WORKER_SRC = REPO_ROOT / "apps" / "worker" / "src"
 sys.path.insert(0, str(WORKER_SRC))
 
 OUTPUT_DIR = REPO_ROOT / "output" / "market_reports"
+
+# Auto-load env so PDFSHIFT_API_KEY (and friends) are picked up without
+# requiring the developer to `source .env` first. Prefer real .env, fall back
+# to .env.example so the script works straight out of a fresh clone where the
+# dev has already pasted the shared dev keys into .env.example.
+for _env_path in (REPO_ROOT / ".env", REPO_ROOT / ".env.example"):
+    if _env_path.exists():
+        try:
+            from dotenv import load_dotenv  # type: ignore
+            load_dotenv(_env_path, override=False)
+        except ImportError:
+            # No python-dotenv installed — parse manually (no new dep needed).
+            with open(_env_path, encoding="utf-8") as _fh:
+                for _line in _fh:
+                    _line = _line.strip()
+                    if _line and not _line.startswith("#") and "=" in _line:
+                        _k, _, _v = _line.partition("=")
+                        os.environ.setdefault(
+                            _k.strip(),
+                            _v.strip().strip('"').strip("'"),
+                        )
+        break
 
 ALL_REPORT_TYPES = [
     "new_listings_gallery",
@@ -43,6 +74,34 @@ ALL_REPORT_TYPES = [
     "price_bands",
     "new_listings",
 ]
+
+# Themes mirror the playbook (MARKET_REPORT_PDF_PLAYBOOK.md §4). Market
+# reports are color-only — no per-theme Jinja template (unlike property
+# reports) — so a "theme" is just a (primary, accent) tuple piped into the
+# branding payload that MarketReportBuilder reads.
+THEMES = {
+    1: {"slug": "teal",    "primary": "#18235c", "accent": "#0d9488"},
+    2: {"slug": "bold",    "primary": "#1B365D", "accent": "#D4A853"},
+    3: {"slug": "classic", "primary": "#1e3a5f", "accent": "#4a90d9"},
+    4: {"slug": "elegant", "primary": "#1a1a1a", "accent": "#8B2252"},
+    5: {"slug": "modern",  "primary": "#0f172a", "accent": "#FF6B54"},
+}
+_SLUG_TO_THEME_ID = {v["slug"]: k for k, v in THEMES.items()}
+
+
+def resolve_theme(value: str | int) -> dict:
+    """Accept either a numeric id (1-5) or a slug (teal/bold/...)."""
+    if isinstance(value, str) and value.isdigit():
+        value = int(value)
+    if isinstance(value, int) and value in THEMES:
+        return {"id": value, **THEMES[value]}
+    if isinstance(value, str) and value in _SLUG_TO_THEME_ID:
+        tid = _SLUG_TO_THEME_ID[value]
+        return {"id": tid, **THEMES[tid]}
+    raise ValueError(
+        f"Unknown theme {value!r}. Valid: "
+        f"{list(THEMES.keys())} or {list(_SLUG_TO_THEME_ID.keys())}"
+    )
 
 # ─── Sample data ─────────────────────────────────────────────────────────────
 
@@ -205,14 +264,34 @@ SAMPLE_NARRATIVES = {
 }
 
 
-def build_sample_data(report_type: str, use_ai: bool = False) -> dict:
-    """Build a complete report_data dict for the builder."""
+def build_sample_data(
+    report_type: str,
+    use_ai: bool = False,
+    theme: dict | None = None,
+    accent_override: str | None = None,
+) -> dict:
+    """Build a complete report_data dict for the builder.
+
+    `theme` is a resolved theme dict (id/slug/primary/accent). When provided,
+    its primary becomes the header background and its accent drives the
+    accent color system. `accent_override` (hex string) wins over `theme`'s
+    accent if both are set.
+    """
     narrative = ""
     if use_ai:
         # Let the builder call GPT-4o at render time (requires OPENAI_API_KEY)
         narrative = ""
     else:
         narrative = SAMPLE_NARRATIVES.get(report_type, SAMPLE_NARRATIVES["market_snapshot"])
+
+    # Compose branding: defaults from SAMPLE_BRANDING, overridden by theme
+    # palette so we can swap themes without editing the fixture.
+    branding = dict(SAMPLE_BRANDING)
+    if theme:
+        branding["primary_color"] = theme["primary"]
+        branding["accent_color"] = theme["accent"]
+    if accent_override:
+        branding["accent_color"] = accent_override
 
     return {
         "report_type": report_type,
@@ -224,7 +303,9 @@ def build_sample_data(report_type: str, use_ai: bool = False) -> dict:
         "metrics": SAMPLE_METRICS,
         "counts": SAMPLE_COUNTS,
         "total_listings": sum(SAMPLE_COUNTS.values()),
-        "branding": SAMPLE_BRANDING,
+        "branding": branding,
+        # Top-level accent_color overrides branding.accent_color in the builder.
+        "accent_color": accent_override or (theme["accent"] if theme else None),
         "ai_insights": narrative,
         "price_bands": SAMPLE_PRICE_BANDS if report_type == "price_bands" else [],
     }
@@ -285,10 +366,22 @@ def _pdf_via_pdfshift(html: str, pdf_path: Path) -> int:
 
 # ─── Rendering ───────────────────────────────────────────────────────────────
 
-def render_variant(report_type: str, html_only: bool, pdf_engine: str = "playwright", use_ai: bool = False) -> dict:
+def render_variant(
+    report_type: str,
+    html_only: bool,
+    pdf_engine: str = "playwright",
+    use_ai: bool = False,
+    theme: dict | None = None,
+    accent_override: str | None = None,
+) -> dict:
     from worker.market_builder import MarketReportBuilder
 
-    data = build_sample_data(report_type, use_ai=use_ai)
+    data = build_sample_data(
+        report_type,
+        use_ai=use_ai,
+        theme=theme,
+        accent_override=accent_override,
+    )
     builder = MarketReportBuilder(data)
 
     t0 = time.perf_counter()
@@ -300,7 +393,14 @@ def render_variant(report_type: str, html_only: bool, pdf_engine: str = "playwri
 
     status = "OK" if len(html) > 500 else "WARN:short"
 
-    result = {"report_type": report_type, "ok": status == "OK", "html_len": len(html)}
+    result = {
+        "report_type": report_type,
+        "ok": status == "OK",
+        "html_len": len(html),
+        "html_path": html_path,
+        "pdf_path": None,
+        "error": None,
+    }
 
     if not html_only:
         pdf_path = OUTPUT_DIR / f"{report_type}.pdf"
@@ -310,11 +410,14 @@ def render_variant(report_type: str, html_only: bool, pdf_engine: str = "playwri
             else:
                 size = _pdf_via_playwright(html, pdf_path)
             result["pdf_size"] = size
+            result["pdf_path"] = pdf_path
             size_kb = size / 1024
             print(f"  {report_type:28s}  {len(html):>7,} chars  {size_kb:>6.0f} KB pdf  {elapsed:.2f}s  [{status}]")
         except Exception as e:
+            result["ok"] = False
+            result["error"] = f"{type(e).__name__}: {e}"
             print(f"  {report_type:28s}  {len(html):>7,} chars  PDF FAIL  {elapsed:.2f}s  [{status}]")
-            print(f"    ⚠ {type(e).__name__}: {e}")
+            print(f"    ⚠ {result['error']}")
     else:
         print(f"  {report_type:28s}  {len(html):>7,} chars  {elapsed:.2f}s  [{status}]")
 
@@ -382,36 +485,80 @@ def _open_file(path: str):
 def main():
     parser = argparse.ArgumentParser(description="Generate market report HTML/PDF variants")
     parser.add_argument("--html-only", action="store_true", help="Skip PDF generation (HTML only)")
-    parser.add_argument("--pdf-engine", default="playwright", choices=["playwright", "pdfshift"],
-                        help="PDF engine: playwright (local, free) or pdfshift (cloud API key)")
+    parser.add_argument(
+        "--pdf-engine",
+        default="auto",
+        choices=["auto", "playwright", "pdfshift"],
+        help="PDF engine: auto (pdfshift if PDFSHIFT_API_KEY is set, else "
+             "playwright), playwright (local Chromium), or pdfshift (cloud API)",
+    )
     parser.add_argument("--no-open", action="store_true", help="Skip opening output in browser")
     parser.add_argument("--with-ai", action="store_true",
                         help="Generate real GPT-4o narratives (requires OPENAI_API_KEY)")
     parser.add_argument("--report-type", default="all", choices=ALL_REPORT_TYPES + ["all"])
+    parser.add_argument(
+        "--theme",
+        default="1",
+        help="Theme id (1-5) or slug (teal/bold/classic/elegant/modern). "
+             "Default: 1 (teal). Themes drive header + accent colors.",
+    )
+    parser.add_argument(
+        "--accent",
+        default=None,
+        help="Override the accent hex (e.g. '#FF6B54'). Wins over --theme's accent.",
+    )
     args = parser.parse_args()
+
+    # Resolve theme up front so a bad value fails before we render anything.
+    try:
+        theme = resolve_theme(args.theme)
+    except ValueError as exc:
+        print(f"  ERROR: {exc}")
+        sys.exit(2)
+
+    # Engine auto-detect: prefer PDFShift if a key is present, fall back to
+    # local Playwright. The ticket says "Playwright if local, PDFShift if
+    # PDFSHIFT_API_KEY set" — this is that policy.
+    pdf_engine = args.pdf_engine
+    if pdf_engine == "auto":
+        pdf_engine = "pdfshift" if (os.getenv("PDFSHIFT_API_KEY")
+                                    or os.getenv("PDF_API_KEY")) else "playwright"
 
     report_types = ALL_REPORT_TYPES if args.report_type == "all" else [args.report_type]
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    mode = "HTML only" if args.html_only else f"HTML + PDF ({args.pdf_engine})"
+    mode = "HTML only" if args.html_only else f"HTML + PDF ({pdf_engine})"
     if args.with_ai:
         mode += " + GPT-4o narratives"
+    accent_str = args.accent or theme["accent"]
     print(f"\n{'='*60}")
     print(f"  Market Report Generator")
     print(f"  {len(report_types)} report types")
-    print(f"  Mode: {mode}")
-    print(f"  Output: {OUTPUT_DIR}")
+    print(f"  Theme   : {theme['id']} ({theme['slug']}) — primary {theme['primary']}, accent {accent_str}")
+    print(f"  Mode    : {mode}")
+    print(f"  Output  : {OUTPUT_DIR}")
     print(f"{'='*60}\n")
 
     t_all = time.perf_counter()
     results = []
     for rt in report_types:
         try:
-            r = render_variant(rt, html_only=args.html_only, pdf_engine=args.pdf_engine, use_ai=args.with_ai)
+            r = render_variant(
+                rt,
+                html_only=args.html_only,
+                pdf_engine=pdf_engine,
+                use_ai=args.with_ai,
+                theme=theme,
+                accent_override=args.accent,
+            )
             results.append(r)
         except Exception as e:
             print(f"  {rt:28s}  ERROR: {e}")
-            results.append({"report_type": rt, "ok": False, "html_len": 0})
+            results.append({
+                "report_type": rt, "ok": False, "html_len": 0,
+                "html_path": None, "pdf_path": None,
+                "error": f"{type(e).__name__}: {e}",
+            })
 
     global _playwright_browser
     if _playwright_browser is not None:
@@ -425,8 +572,24 @@ def main():
     total = len(report_types)
     fail_count = total - ok_count
 
+    # Path-style summary (per LOCAL-PDF-DUMP ticket). Paths are printed
+    # repo-relative so they're click-friendly in most terminals.
     print(f"\n{'='*60}")
-    print(f"  Done in {total_time:.1f}s — {ok_count}/{total} OK", end="")
+    print(f"  Summary")
+    print(f"{'='*60}")
+    type_col = max(len(r["report_type"]) for r in results)
+    for r in results:
+        target = r.get("pdf_path") or r.get("html_path")
+        if r["ok"] and target:
+            try:
+                rel = target.relative_to(REPO_ROOT)
+            except (ValueError, AttributeError):
+                rel = target
+            print(f"  ✅ {r['report_type']:<{type_col}}  → {rel}")
+        else:
+            err = r.get("error") or "render failed"
+            print(f"  ❌ {r['report_type']:<{type_col}}  → FAILED: {err}")
+    print(f"\n  Done in {total_time:.1f}s — {ok_count}/{total} OK", end="")
     if fail_count:
         print(f", {fail_count} FAILED")
     else:
