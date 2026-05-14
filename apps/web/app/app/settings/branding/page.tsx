@@ -125,12 +125,12 @@ export default function BrandingPage() {
       const profile = meData as Record<string, any>
       const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(" ")
       setBranding({
-        display_name: acc.display_name || acc.name || "",
+        display_name: acc.resolved_display_name || acc.display_name || acc.name || "",
         tagline: "",
-        primary_color: acc.primary_color || "#818CF8",
-        accent_color: acc.secondary_color || "#F59E0B",
+        primary_color: acc.resolved_primary_color || acc.primary_color || "#818CF8",
+        accent_color: acc.resolved_accent_color || acc.secondary_color || "#F59E0B",
         default_theme_id: acc.default_theme_id || 4,
-        header_logo_url: acc.logo_url || acc.email_logo_url || null,
+        header_logo_url: acc.resolved_logo_url || acc.logo_url || acc.email_logo_url || null,
         footer_logo_url: acc.footer_logo_url || acc.email_footer_logo_url || null,
         agent_name: fullName || "",
         agent_title: profile.job_title || "",
@@ -283,40 +283,50 @@ export default function BrandingPage() {
         <div className="rounded-xl border bg-card p-6 space-y-5">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Current Branding</h2>
 
-          {acc?.logo_url && (
-            <div>
-              <label className="text-xs font-medium text-muted-foreground uppercase">Company Logo</label>
-              <img src={acc.logo_url} alt="Company logo" className="mt-2 max-h-12 object-contain" />
-            </div>
-          )}
+          {(() => {
+            const effLogo = (acc as any)?.resolved_logo_url || acc?.logo_url
+            const effPrimary = (acc as any)?.resolved_primary_color || acc?.primary_color
+            const effAccent = (acc as any)?.resolved_accent_color || acc?.secondary_color
+            const effDisplayName = (acc as any)?.resolved_display_name || (acc as any)?.display_name || acc?.name
+            return (
+              <>
+                {effLogo && (
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground uppercase">Company Logo</label>
+                    <img src={effLogo} alt="Company logo" className="mt-2 max-h-12 object-contain" />
+                  </div>
+                )}
 
-          <div className="flex gap-6">
-            {acc?.primary_color && (
-              <div>
-                <label className="text-xs font-medium text-muted-foreground uppercase">Primary Color</label>
-                <div className="mt-1.5 flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg border" style={{ backgroundColor: acc.primary_color }} />
-                  <span className="text-sm text-muted-foreground font-mono">{acc.primary_color}</span>
+                <div className="flex gap-6">
+                  {effPrimary && (
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground uppercase">Primary Color</label>
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg border" style={{ backgroundColor: effPrimary }} />
+                        <span className="text-sm text-muted-foreground font-mono">{effPrimary}</span>
+                      </div>
+                    </div>
+                  )}
+                  {effAccent && (
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground uppercase">Accent Color</label>
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg border" style={{ backgroundColor: effAccent }} />
+                        <span className="text-sm text-muted-foreground font-mono">{effAccent}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
-            {acc?.secondary_color && (
-              <div>
-                <label className="text-xs font-medium text-muted-foreground uppercase">Accent Color</label>
-                <div className="mt-1.5 flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg border" style={{ backgroundColor: acc.secondary_color }} />
-                  <span className="text-sm text-muted-foreground font-mono">{acc.secondary_color}</span>
-                </div>
-              </div>
-            )}
-          </div>
 
-          {(acc?.display_name || acc?.name) && (
-            <div>
-              <label className="text-xs font-medium text-muted-foreground uppercase">Display Name</label>
-              <p className="mt-1 text-sm font-medium">{acc.display_name || acc.name}</p>
-            </div>
-          )}
+                {effDisplayName && (
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground uppercase">Display Name</label>
+                    <p className="mt-1 text-sm font-medium">{effDisplayName}</p>
+                  </div>
+                )}
+              </>
+            )
+          })()}
         </div>
 
         <div className="flex items-start gap-2 text-xs text-muted-foreground">
@@ -571,14 +581,16 @@ export default function BrandingPage() {
             </div>
             <div className="mt-3 space-y-1.5">
               <Label className="text-xs font-medium">Agent Photo</Label>
-              <ImageUpload
-                label=""
-                value={branding.agent_photo_url}
-                onChange={(url) => update({ agent_photo_url: url })}
-                assetType="headshot"
-                aspectRatio="square"
-                helpText="Square photo, at least 200×200px"
-              />
+              <div className="max-w-[200px]">
+                <ImageUpload
+                  label=""
+                  value={branding.agent_photo_url}
+                  onChange={(url) => update({ agent_photo_url: url })}
+                  assetType="headshot"
+                  aspectRatio="square"
+                  helpText="Square photo, at least 200×200px"
+                />
+              </div>
             </div>
           </Section>
         </div>

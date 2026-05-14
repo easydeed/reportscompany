@@ -23,6 +23,7 @@ from ..services.branding import (
     validate_brand_input,
     Brand
 )
+from ..services.brand_resolver import resolve_brand
 from ..services.email import send_role_invite_email
 from ..services.invite_service import (
     create_invited_user,
@@ -387,7 +388,18 @@ def get_branding(request: Request, account_id: str = Depends(require_account_id)
                     "message": "This account is not an industry affiliate."
                 }
             )
-        
+
+        # Centralized brand resolution (handles title-rep → parent inheritance)
+        resolved = resolve_brand(cur, account_id)
+        resolved_fields = {
+            "resolved_logo_url": resolved["logo_url"],
+            "resolved_primary_color": resolved["primary_color"],
+            "resolved_accent_color": resolved["accent_color"],
+            "resolved_display_name": resolved["display_name"],
+            "brand_source": resolved["source"],
+            "brand_source_account_id": resolved["source_account_id"],
+        }
+
         # Try to load branding configuration (with graceful handling for missing columns)
         try:
             cur.execute("""
@@ -421,6 +433,7 @@ def get_branding(request: Request, account_id: str = Depends(require_account_id)
                     "contact_line1": row[8],
                     "contact_line2": row[9],
                     "website_url": row[10],
+                    **resolved_fields,
                 }
         except Exception as e:
             # Column may not exist yet - try legacy query
@@ -456,6 +469,7 @@ def get_branding(request: Request, account_id: str = Depends(require_account_id)
                         "contact_line1": row[7],
                         "contact_line2": row[8],
                         "website_url": row[9],
+                        **resolved_fields,
                     }
             except Exception as e2:
                 logger.warning(f"Legacy branding query also failed: {e2}")
@@ -480,6 +494,7 @@ def get_branding(request: Request, account_id: str = Depends(require_account_id)
             "contact_line1": None,
             "contact_line2": None,
             "website_url": None,
+            **resolved_fields,
         }
 
 

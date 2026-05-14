@@ -15,6 +15,7 @@ from ..services.usage import (
     get_full_plan_usage,
 )
 from ..services.plans import get_plan_catalog
+from ..services.brand_resolver import resolve_brand
 
 router = APIRouter(prefix="/v1")
 
@@ -47,6 +48,15 @@ class AccountOut(BaseModel):
     plan_slug: Optional[str] = None
     billing_status: Optional[str] = None
     stripe_customer_id: Optional[str] = None
+    # Resolved branding (parent-account inheritance applied).
+    # Prefer these on the frontend when present; raw fields above remain
+    # unchanged for backwards compatibility.
+    resolved_logo_url: Optional[str] = None
+    resolved_primary_color: Optional[str] = None
+    resolved_accent_color: Optional[str] = None
+    resolved_display_name: Optional[str] = None
+    brand_source: Optional[str] = None              # "self" | "parent" | "default"
+    brand_source_account_id: Optional[str] = None
 
 class BrandingPatch(BaseModel):
     """
@@ -146,6 +156,8 @@ def get_account(request: Request, account_id: str = Depends(require_account_id))
                 )
                 website_url = user_row[6]
         
+        resolved = resolve_brand(cur, account_id)
+
         return AccountOut(
             id=acc_row[0],
             name=acc_row[1],
@@ -169,7 +181,13 @@ def get_account(request: Request, account_id: str = Depends(require_account_id))
             api_rate_limit=acc_row[11],
             plan_slug=acc_row[12],
             billing_status=acc_row[13],
-            stripe_customer_id=acc_row[14]
+            stripe_customer_id=acc_row[14],
+            resolved_logo_url=resolved["logo_url"],
+            resolved_primary_color=resolved["primary_color"],
+            resolved_accent_color=resolved["accent_color"],
+            resolved_display_name=resolved["display_name"],
+            brand_source=resolved["source"],
+            brand_source_account_id=resolved["source_account_id"],
         )
 
 @router.patch("/account/branding", response_model=AccountOut, status_code=status.HTTP_200_OK)
@@ -257,6 +275,8 @@ def patch_branding(payload: BrandingPatch, request: Request, account_id: str = D
                 )
                 website_url = user_row[6]
         
+        resolved = resolve_brand(cur, account_id)
+
         return AccountOut(
             id=acc_row[0],
             name=acc_row[1],
@@ -280,7 +300,13 @@ def patch_branding(payload: BrandingPatch, request: Request, account_id: str = D
             api_rate_limit=acc_row[11],
             plan_slug=acc_row[12],
             billing_status=acc_row[13],
-            stripe_customer_id=acc_row[14]
+            stripe_customer_id=acc_row[14],
+            resolved_logo_url=resolved["logo_url"],
+            resolved_primary_color=resolved["primary_color"],
+            resolved_accent_color=resolved["accent_color"],
+            resolved_display_name=resolved["display_name"],
+            brand_source=resolved["source"],
+            brand_source_account_id=resolved["source_account_id"],
         )
 
 
