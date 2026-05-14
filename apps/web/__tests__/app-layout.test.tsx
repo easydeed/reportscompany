@@ -27,10 +27,10 @@ describe("isBuilderRoute", () => {
 
   it("returns true for new routes", () => {
     expect(isBuilderRoute("/app/schedules/new")).toBe(true)
-    // /app/reports/new is intentionally NOT in BUILDER_ROUTES today — the
-    // market report wizard renders inside the normal sidebar layout.
-    // Update this assertion if /app/reports/new ever moves to builder mode.
-    expect(isBuilderRoute("/app/reports/new")).toBe(false)
+    // /app/reports/new is the market-report wizard — it renders full-bleed
+    // without the sidebar, same as the other "new" wizards.
+    // (BUILDER-ROUTES-REPORTS)
+    expect(isBuilderRoute("/app/reports/new")).toBe(true)
     expect(isBuilderRoute("/app/property/new")).toBe(true)
   })
 

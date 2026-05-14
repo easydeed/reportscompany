@@ -80,6 +80,7 @@ interface TierProps {
 const BUILDER_ROUTES = [
   "/app/property/new",
   "/app/schedules/new",
+  "/app/reports/new",
   // NOTE: do NOT add "/app/schedules/" here. It would match the trailing-
   // slash variant of the list view and strip the sidebar (and previously
   // also skipped the QueryProvider — that part is now fixed by hoisting
