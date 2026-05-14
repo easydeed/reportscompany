@@ -130,24 +130,21 @@ def create_checkout_session(
         
         acc_id, acc_name, acc_type, current_plan, sponsor_id, stripe_customer_id = acc_row
         
-        # Validate account can upgrade
+        # Block non-REGULAR accounts (companies, affiliates) from agent-tier checkout
+        # They use separate billing flows.
         if acc_type != 'REGULAR':
             raise HTTPException(
                 status_code=400,
                 detail={
                     "error": "invalid_account_type",
-                    "message": f"Only REGULAR accounts can upgrade via Stripe. Your account type: {acc_type}"
+                    "message": f"This account type ({acc_type}) doesn't use self-serve billing. Contact support if you need help."
                 }
             )
-        
-        if sponsor_id:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "sponsored_account",
-                    "message": "Sponsored accounts cannot self-upgrade. Contact your affiliate for plan changes."
-                }
-            )
+
+        # NOTE: Sponsored agents (REGULAR with sponsor_account_id) CAN self-upgrade.
+        # Title companies are compliance-prohibited from paying for agent subscriptions,
+        # so agents pay their own way.
+
         
         # Get user email for Stripe customer
         cur.execute("""

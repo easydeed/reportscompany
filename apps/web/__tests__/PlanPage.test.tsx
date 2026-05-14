@@ -47,7 +47,9 @@ const MockPlanPage = ({ mockData }: { mockData: any }) => {
       {usageRatio >= 0.8 && <div data-testid="warning">Approaching limit</div>}
       {account.plan_slug === 'sponsored_free' && <div data-testid="sponsored-badge">Trial</div>}
       <div data-testid="stripe-actions-wrapper">
-        {account.plan_slug !== 'sponsored_free' && <button>Stripe Action</button>}
+        {/* Note: As of 2026-05-13, sponsored agents CAN self-upgrade.
+            Title companies cannot pay for agent subscriptions (compliance). */}
+        <button>Stripe Action</button>
       </div>
     </div>
   );
@@ -106,7 +108,10 @@ describe('Plan Page', () => {
       expect(screen.getByText('Trial')).toBeInTheDocument();
     });
 
-    it('should NOT show Stripe buttons for sponsored accounts', async () => {
+    it('should SHOW Stripe upgrade buttons for sponsored accounts', async () => {
+      // As of 2026-05-13, sponsored agents CAN self-upgrade via Stripe.
+      // Title companies cannot pay for agent subscriptions (compliance), so
+      // agents must pay their own way — same upgrade path as free accounts.
       const mockData = {
         account: { account_type: 'REGULAR', plan_slug: 'sponsored_free' },
         plan: { plan_slug: 'sponsored_free', plan_name: 'Trial', monthly_report_limit: 75 },
@@ -120,7 +125,7 @@ describe('Plan Page', () => {
       });
 
       const stripeWrapper = screen.getByTestId('stripe-actions-wrapper');
-      expect(stripeWrapper.querySelector('button')).not.toBeInTheDocument();
+      expect(stripeWrapper.querySelector('button')).toBeInTheDocument();
     });
   });
 

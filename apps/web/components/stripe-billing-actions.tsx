@@ -78,8 +78,8 @@ export function StripeBillingActions({
   // INDUSTRY_AFFILIATE accounts - treat like REGULAR (per spec choice)
   // For now, we'll show the same upgrade options
 
-  // Show upgrade button for free plan
-  if (planSlug === 'free') {
+  // Show upgrade button for free or trial/sponsored plans
+  if (planSlug === 'free' || planSlug === 'sponsored_free' || planSlug === 'trial') {
     return (
       <div className="flex flex-col gap-3 sm:flex-row">
         <Button
@@ -95,7 +95,7 @@ export function StripeBillingActions({
           ) : (
             <>
               <CreditCard className="mr-2 h-4 w-4" />
-              Upgrade to Pro
+              Upgrade to Growth Plus
             </>
           )}
         </Button>
