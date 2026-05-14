@@ -103,7 +103,7 @@ function getStatusBadge(status: Agent["status"]) {
 function getPlanBadge(plan: Agent["plan"]) {
   if (plan === "pro") {
     return (
-      <Badge className="bg-[#EEF2FF] text-[#4338CA] hover:bg-[#EEF2FF]">Pro</Badge>
+      <Badge className="bg-[#EEF2FF] text-[#4338CA] hover:bg-[#EEF2FF]">Growth Plus</Badge>
     )
   }
   return (
@@ -221,7 +221,7 @@ export default function AgentsListPage() {
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Pro Plans
+            Growth Plus Plans
           </p>
           <p className="mt-1 text-2xl font-bold text-[#6366F1]">{proCount}</p>
         </div>
@@ -295,7 +295,7 @@ export default function AgentsListPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Plans</SelectItem>
-            <SelectItem value="pro">Pro</SelectItem>
+            <SelectItem value="pro">Growth Plus</SelectItem>
             <SelectItem value="free">Free</SelectItem>
           </SelectContent>
         </Select>

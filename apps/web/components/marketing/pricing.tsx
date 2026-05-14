@@ -23,8 +23,8 @@ const plans = [
     featured: false,
   },
   {
-    name: "Starter",
-    price: "$29",
+    name: "Growth",
+    price: "$19",
     priceSub: "per month",
     features: [
       "25 Market Reports / month",
@@ -38,8 +38,8 @@ const plans = [
     featured: true,
   },
   {
-    name: "Pro",
-    price: "$59",
+    name: "Growth Plus",
+    price: "$29",
     priceSub: "per month",
     features: [
       "Unlimited Market Reports",

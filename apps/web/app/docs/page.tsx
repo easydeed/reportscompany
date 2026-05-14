@@ -72,7 +72,7 @@ const features = [
   {
     icon: Shield,
     title: "Rate Limiting",
-    description: "Fair rate limits with clear headers. Pro plans get higher limits.",
+    description: "Fair rate limits with clear headers. Growth Plus plans get higher limits.",
   },
 ]
 
@@ -344,7 +344,7 @@ export default function DocsPage() {
             Ready to integrate?
           </h2>
           <p className="text-xl text-slate-600 mb-8">
-            API access is available on Pro and Enterprise plans. Contact us to get started.
+            API access is available on Growth Plus and Enterprise plans. Contact us to get started.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a

@@ -426,7 +426,7 @@ console.log('PDF:', data.pdf_url);`
               </a>
             </motion.div>
 
-            {/* Starter — highlighted */}
+            {/* Growth — highlighted */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -438,11 +438,11 @@ console.log('PDF:', data.pdf_url);`
                 Most Popular
               </div>
               <div className="mb-6">
-                <h3 className="font-pricing font-bold text-xl mb-1 text-white">Starter</h3>
+                <h3 className="font-pricing font-bold text-xl mb-1 text-white">Growth</h3>
                 <p className="text-sm text-indigo-200">per month</p>
               </div>
               <div className="mb-6">
-                <span className="font-pricing font-bold text-5xl text-white">$29</span>
+                <span className="font-pricing font-bold text-5xl text-white">$19</span>
                 <span className="text-indigo-200 text-sm ml-1">/month</span>
               </div>
               <ul className="space-y-3 mb-8 flex-1">
@@ -468,7 +468,7 @@ console.log('PDF:', data.pdf_url);`
               </a>
             </motion.div>
 
-            {/* Pro */}
+            {/* Growth Plus */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -477,11 +477,11 @@ console.log('PDF:', data.pdf_url);`
               className="bg-white rounded-2xl border-2 border-slate-200 p-8 hover:border-indigo-300 hover:shadow-xl transition-all flex flex-col"
             >
               <div className="mb-6">
-                <h3 className="font-pricing font-bold text-xl mb-1 text-slate-900">Pro</h3>
+                <h3 className="font-pricing font-bold text-xl mb-1 text-slate-900">Growth Plus</h3>
                 <p className="text-sm text-slate-500">per month</p>
               </div>
               <div className="mb-6">
-                <span className="font-pricing font-bold text-5xl text-slate-900">$59</span>
+                <span className="font-pricing font-bold text-5xl text-slate-900">$29</span>
                 <span className="text-slate-500 text-sm ml-1">/month</span>
               </div>
               <ul className="space-y-3 mb-8 flex-1">

@@ -32,12 +32,12 @@ const faqs = [
   {
     question: "Do my clients know this comes from TrendyReports?",
     answer:
-      "On the Pro plan and above, reports are fully white-labeled. Your clients see your brand only.",
+      "On the Growth Plus plan and above, reports are fully white-labeled. Your clients see your brand only.",
   },
   {
     question: "What happens after the free trial?",
     answer:
-      "You can stay on the free Starter plan (50 reports/month) or upgrade to Pro or Team. No pressure, no surprise charges.",
+      "You can stay on the free plan or upgrade to Growth, Growth Plus, or Team. No pressure, no surprise charges.",
   },
   {
     question: "Can I use this for listing presentations?",

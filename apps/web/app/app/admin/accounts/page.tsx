@@ -190,7 +190,7 @@ export default function AdminAccountsPage() {
               <SelectContent>
                 <SelectItem value="all">All Plans</SelectItem>
                 <SelectItem value="free">Free</SelectItem>
-                <SelectItem value="pro">Pro</SelectItem>
+                <SelectItem value="pro">Growth Plus</SelectItem>
                 <SelectItem value="team">Team</SelectItem>
                 <SelectItem value="affiliate">Affiliate</SelectItem>
                 <SelectItem value="sponsored_free">Trial</SelectItem>

@@ -311,7 +311,7 @@ export default function AccountDetailPage() {
                 </SelectTrigger>
                 <SelectContent className="bg-white border-slate-200">
                   <SelectItem value="free">Free (5 reports/month)</SelectItem>
-                  <SelectItem value="pro">Pro (300 reports/month)</SelectItem>
+                  <SelectItem value="pro">Growth Plus (300 reports/month)</SelectItem>
                   <SelectItem value="team">Team (1,000 reports/month)</SelectItem>
                   <SelectItem value="affiliate">Affiliate (5,000 reports/month)</SelectItem>
                   <SelectItem value="sponsored_free">Trial (10 reports/month)</SelectItem>

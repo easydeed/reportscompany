@@ -505,8 +505,8 @@ export default function AdminAccountDetailPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="free">Free</SelectItem>
-                  <SelectItem value="starter">Starter</SelectItem>
-                  <SelectItem value="pro">Pro</SelectItem>
+                  <SelectItem value="starter">Growth</SelectItem>
+                  <SelectItem value="pro">Growth Plus</SelectItem>
                   <SelectItem value="team">Team</SelectItem>
                   <SelectItem value="affiliate">Affiliate</SelectItem>
                   <SelectItem value="sponsored_free">Trial</SelectItem>

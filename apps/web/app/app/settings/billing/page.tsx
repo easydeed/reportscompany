@@ -73,9 +73,9 @@ const plans = [
     ],
   },
   {
-    name: "Starter",
+    name: "Growth",
     slug: "starter",
-    price: 29,
+    price: 19,
     popular: true,
     features: [
       "25 Market Reports / month",
@@ -87,9 +87,9 @@ const plans = [
     ],
   },
   {
-    name: "Pro",
+    name: "Growth Plus",
     slug: "pro",
-    price: 59,
+    price: 29,
     features: [
       "Unlimited Market Reports",
       "Unlimited Schedules",

@@ -72,7 +72,7 @@ const PLAN_PRICES: Record<string, number> = {
 
 const PLAN_LABELS: Record<string, string> = {
   free: "Free",
-  pro: "Pro ($29/mo)",
+  pro: "Growth Plus ($29/mo)",
   team: "Team ($99/mo)",
   affiliate: "Affiliate",
   sponsored_free: "Trial",
@@ -362,7 +362,7 @@ export default function AdminBillingPage() {
               <SelectContent>
                 <SelectItem value="all">All Plans</SelectItem>
                 <SelectItem value="free">Free</SelectItem>
-                <SelectItem value="pro">Pro</SelectItem>
+                <SelectItem value="pro">Growth Plus</SelectItem>
                 <SelectItem value="team">Team</SelectItem>
                 <SelectItem value="affiliate">Affiliate</SelectItem>
                 <SelectItem value="sponsored_free">Trial</SelectItem>
