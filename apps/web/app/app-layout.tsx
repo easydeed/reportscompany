@@ -81,13 +81,22 @@ interface TierProps {
 const BUILDER_ROUTES = [
   "/app/property/new",
   "/app/schedules/new",
-  "/app/schedules/", // Will check for /edit suffix
+  // NOTE: do NOT add "/app/schedules/" here — it would catch the list view
+  // (with a trailing slash) and skip the QueryProvider, crashing useSchedules().
+  // The schedule edit route is matched explicitly below.
 ]
 
 function isBuilderRoute(pathname: string | null): boolean {
   if (!pathname) return false
+
+  // Exact match for new-report / new-schedule routes
   if (BUILDER_ROUTES.includes(pathname)) return true
-  if (pathname.startsWith("/app/schedules/") && pathname.endsWith("/edit")) return true
+
+  // Schedule edit route: /app/schedules/{id}/edit (id must be non-empty,
+  // optional trailing slash). Anchored so /app/schedules/ and
+  // /app/schedules/abc-123 (detail view) do NOT match.
+  if (/^\/app\/schedules\/[^/]+\/edit\/?$/.test(pathname)) return true
+
   return false
 }
 
