@@ -60,6 +60,9 @@ export interface ReportTypeConfig {
   category: "gallery" | "data" | "analytics"
   defaultLookback: 7 | 14 | 30 | 60 | 90
   hasAudienceStep: boolean
+  // Hides the report from the wizard story picker without removing it from
+  // the worker, API, or REPORT_TYPE_LABELS (existing schedules still display).
+  disabled?: boolean
 }
 
 export const REPORT_TYPES: ReportTypeConfig[] = [
@@ -89,6 +92,9 @@ export const REPORT_TYPES: ReportTypeConfig[] = [
     category: "gallery",
     defaultLookback: 7,
     hasAudienceStep: false,
+    // TEMPORARILY HIDDEN — SimplyRETS open house data not reliably updated.
+    // Re-enable when verified.
+    disabled: true,
   },
   {
     id: "closed",

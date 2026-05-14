@@ -46,13 +46,13 @@ export function StepStory({ selected, onSelect }: StepStoryProps) {
       </div>
 
       {CATEGORIES.map((cat) => {
-        const items = REPORT_TYPES.filter((r) => r.category === cat.key)
+        const items = REPORT_TYPES.filter((r) => r.category === cat.key && !r.disabled)
         return (
           <div key={cat.key}>
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               {cat.label}
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {items.map((rt) => {
                 const active = selected === rt.id
                 const Icon = iconMap[rt.icon]
@@ -61,7 +61,7 @@ export function StepStory({ selected, onSelect }: StepStoryProps) {
                     key={rt.id}
                     onClick={() => onSelect(rt.id)}
                     className={cn(
-                      "group relative flex flex-col items-start gap-2 rounded-xl border-2 p-4 text-left transition-all",
+                      "group relative flex flex-col items-start gap-2 rounded-xl border-2 p-3 text-left transition-all",
                       active
                         ? "border-primary bg-primary/5 shadow-sm"
                         : "border-gray-200 hover:border-primary/40 hover:bg-gray-50/50"
@@ -83,7 +83,7 @@ export function StepStory({ selected, onSelect }: StepStoryProps) {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-gray-500 leading-relaxed">{rt.description}</p>
+                    <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">{rt.description}</p>
                   </button>
                 )
               })}
