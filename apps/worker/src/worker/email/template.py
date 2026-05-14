@@ -1063,8 +1063,8 @@ def _build_truncation_note(
 
 
 def _build_pdf_cta(pdf_url: Optional[str], primary_color: str) -> str:
-    """Big branded "Download Full PDF Report" button rendered just
-    above the agent footer on every email."""
+    """Big branded "View Full PDF" button rendered just above the
+    agent footer on every email."""
     if not pdf_url:
         return ""
     return f'''
@@ -1074,12 +1074,12 @@ def _build_pdf_cta(pdf_url: Optional[str], primary_color: str) -> str:
                   <!--[if mso]>
                   <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{pdf_url}" style="height:48px;v-text-anchor:middle;width:260px;" arcsize="17%" stroke="f" fillcolor="{primary_color}">
                     <w:anchorlock/>
-                    <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;">Download Full PDF Report</center>
+                    <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;">📄 View Full PDF</center>
                   </v:roundrect>
                   <![endif]-->
                   <!--[if !mso]><!-->
                   <a href="{pdf_url}" style="display: inline-block; padding: 14px 28px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px;">
-                    Download Full PDF Report
+                    📄 View Full PDF
                   </a>
                   <!--<![endif]-->
                 </td>

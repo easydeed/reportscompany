@@ -12,7 +12,7 @@ export function PreviewCta({ primaryColor }: PreviewCtaProps) {
         className="inline-block rounded-md px-5 py-2 text-[11px] font-semibold text-white"
         style={{ backgroundColor: primaryColor }}
       >
-        View Full Report &rarr;
+        📄 View Full PDF
       </div>
     </div>
   )

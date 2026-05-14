@@ -7,8 +7,7 @@ import { Loader2, ChevronLeft, ChevronRight, Sparkles, Check, FileDown, Globe, C
 import { useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { SharedEmailPreview } from "@/components/shared/email-preview"
-import { SAMPLE_PHOTOS } from "@/components/shared/email-preview/sample-data"
+import { SharedEmailPreview, PREVIEW_DEFAULT_PRIMARY, PREVIEW_DEFAULT_ACCENT } from "@/components/shared/email-preview"
 import { StepStory } from "./step-story"
 import { StepAudience } from "./step-audience"
 import { StepWhereWhen } from "./step-where-when"
@@ -54,8 +53,8 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
   const [step, setStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [branding, setBranding] = useState({
-    primaryColor: "#4F46E5",
-    accentColor: "#818CF8",
+    primaryColor: PREVIEW_DEFAULT_PRIMARY,
+    accentColor: PREVIEW_DEFAULT_ACCENT,
     headerLogoUrl: null as string | null,
     displayName: null as string | null,
   })
@@ -91,10 +90,10 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
         if (bRes.ok) {
           const d = await bRes.json()
           setBranding({
-            primaryColor: d.primary_color || "#4F46E5",
-            accentColor: d.accent_color || d.secondary_color || "#818CF8",
-            headerLogoUrl: d.email_logo_url || d.logo_url || null,
-            displayName: d.display_name || d.name || null,
+            primaryColor: d.resolved_primary_color || d.primary_color || PREVIEW_DEFAULT_PRIMARY,
+            accentColor: d.resolved_accent_color || d.accent_color || d.secondary_color || PREVIEW_DEFAULT_ACCENT,
+            headerLogoUrl: d.resolved_logo_url || d.email_logo_url || d.logo_url || null,
+            displayName: d.resolved_display_name || d.display_name || d.brand_display_name || d.name || null,
           })
         }
         if (pRes.ok) {
@@ -112,8 +111,19 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
           if (a.default_theme_id && THEME_ID_MAP[a.default_theme_id]) {
             setThemeId(THEME_ID_MAP[a.default_theme_id])
           }
-          if (a.secondary_color) {
-            setBranding((prev) => ({ ...prev, accentColor: a.secondary_color }))
+          // Prefer resolved accent (parent inheritance) over the raw secondary_color.
+          const resolvedAccent = a.resolved_accent_color || a.secondary_color
+          if (resolvedAccent) {
+            setBranding((prev) => ({ ...prev, accentColor: resolvedAccent }))
+          }
+          // Apply resolved logo/primary/displayName too, so wizard preview matches PDF.
+          if (a.resolved_logo_url || a.resolved_primary_color || a.resolved_display_name) {
+            setBranding((prev) => ({
+              ...prev,
+              primaryColor: a.resolved_primary_color || prev.primaryColor,
+              headerLogoUrl: a.resolved_logo_url || prev.headerLogoUrl,
+              displayName: a.resolved_display_name || prev.displayName,
+            }))
           }
         }
       } catch { /* silent */ }
@@ -401,7 +411,7 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
 
       {/* Main content */}
       <main className="max-w-[1400px] mx-auto px-6 py-6">
-        <div className="grid lg:grid-cols-[1fr_420px] gap-6">
+        <div className="grid lg:grid-cols-[1fr_460px] gap-6">
           {/* Left: Step content or generation state */}
           <div>
             {generationState !== "idle" ? (
@@ -535,7 +545,7 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
               </div>
             ) : (
               <>
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 min-h-[480px]">
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                   {step === 0 && <StepStory selected={state.reportType} onSelect={(rt) => update({ reportType: rt, audience: "all" })} />}
                   {step === 1 && <StepAudience selected={state.audience} onSelect={(a) => update({ audience: a })} />}
                   {step === 2 && <StepWhereWhen state={state} onChange={update} />}
@@ -586,7 +596,7 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
               <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 bg-gray-50/50">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 <h3 className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-                  {defaultMode === "schedule" ? "Email Preview" : "Report Preview"}
+                  Email Preview
                 </h3>
                 <span className="ml-auto text-[10px] text-gray-400">Updates as you build</span>
               </div>
@@ -602,40 +612,22 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
               </div>
 
               <div className="p-4 bg-stone-100/50 max-h-[calc(100vh-220px)] overflow-y-auto">
-                {defaultMode === "schedule" ? (
-                  <SharedEmailPreview
-                    primaryColor={branding.primaryColor}
-                    accentColor={branding.accentColor}
-                    headerLogoUrl={branding.headerLogoUrl}
-                    displayName={branding.displayName}
-                    agentName={profile.name}
-                    agentTitle={profile.title}
-                    agentPhone={profile.phone}
-                    agentEmail={profile.email}
-                    agentPhotoUrl={profile.photoUrl}
-                    reportType={previewReportType}
-                    audienceLabel={audienceLabel}
-                    areaName={areaName}
-                    lookbackDays={state.lookbackDays || 30}
-                    scale={0.92}
-                  />
-                ) : (
-                  <ReportPreview
-                    themeId={themeId}
-                    primaryColor={branding.primaryColor}
-                    accentColor={branding.accentColor}
-                    displayName={branding.displayName}
-                    agentName={profile.name}
-                    agentTitle={profile.title}
-                    agentPhone={profile.phone}
-                    agentEmail={profile.email}
-                    agentPhotoUrl={profile.photoUrl}
-                    reportType={previewReportType}
-                    areaName={areaName}
-                    lookbackDays={state.lookbackDays || 30}
-                    logoUrl={branding.headerLogoUrl}
-                  />
-                )}
+                <SharedEmailPreview
+                  primaryColor={branding.primaryColor}
+                  accentColor={branding.accentColor}
+                  headerLogoUrl={branding.headerLogoUrl}
+                  displayName={branding.displayName}
+                  agentName={profile.name}
+                  agentTitle={profile.title}
+                  agentPhone={profile.phone}
+                  agentEmail={profile.email}
+                  agentPhotoUrl={profile.photoUrl}
+                  reportType={previewReportType}
+                  audienceLabel={audienceLabel}
+                  areaName={areaName}
+                  lookbackDays={state.lookbackDays || 30}
+                  scale={0.92}
+                />
               </div>
             </div>
           </div>
@@ -650,295 +642,5 @@ function Pill({ children }: { children: React.ReactNode }) {
     <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
       {children}
     </span>
-  )
-}
-
-function ReportPreview({
-  themeId,
-  primaryColor,
-  accentColor,
-  displayName,
-  agentName,
-  agentTitle,
-  agentPhone,
-  agentEmail,
-  agentPhotoUrl,
-  reportType,
-  areaName,
-  lookbackDays,
-  logoUrl,
-}: {
-  themeId: string
-  primaryColor: string
-  accentColor: string
-  displayName: string | null
-  agentName: string
-  agentTitle?: string | null
-  agentPhone?: string | null
-  agentEmail?: string | null
-  agentPhotoUrl?: string | null
-  reportType: string
-  areaName: string
-  lookbackDays: number
-  logoUrl: string | null
-}) {
-  const label = REPORT_TYPE_LABELS[reportType] || "Market Report"
-  const isGallery = reportType === "new_listings_gallery" || reportType === "featured_listings" || reportType === "open_houses"
-  const isClosed = reportType === "closed" || reportType === "inventory"
-  const isSnapshot = reportType === "market_snapshot"
-  const isAnalytics = reportType === "price_bands" || reportType === "new_listings"
-  const contactParts = [agentPhone, agentEmail].filter(Boolean)
-  const outfitFont = "'Outfit', sans-serif"
-
-  const samplePrices = ["$525,000", "$389,000", "$612,000", "$445,000", "$510,000", "$475,000"]
-  const sampleAddrs = ["742 Oak Ave", "118 Pine St", "903 Elm Dr", "221 Maple Ln", "56 River Rd", "889 Hill St"]
-
-  return (
-    <div
-      className="aspect-[8.5/11] rounded-lg overflow-hidden shadow-md border border-gray-200 bg-white flex flex-col"
-      style={{ fontSize: "10px" }}
-    >
-      {/* 2-column header */}
-      <div
-        className="px-2.5 py-2 text-white flex items-center justify-between gap-2"
-        style={{ background: `linear-gradient(115deg, ${primaryColor} 0%, ${primaryColor} 30%, ${accentColor} 100%)` }}
-      >
-        <div className="flex-[0_0_65%] min-w-0">
-          <div className="text-[10px] font-bold text-white truncate" style={{ fontFamily: outfitFont }}>
-            {label} — {areaName}
-          </div>
-          <div className="text-[5.5px] text-white/70 mt-0.5 truncate">
-            March 2026 &bull; Data via MLS &bull; TrendyReports
-          </div>
-          <div className="flex items-baseline gap-1.5 mt-1">
-            <span className="text-[14px] font-bold text-white" style={{ fontFamily: outfitFont }}>
-              {isClosed ? "42" : isSnapshot ? "$825K" : isGallery ? "12" : isAnalytics ? "6" : "38"}
-            </span>
-            <span className="text-[5.5px] text-white/80">
-              {isClosed ? "Homes Sold" : isSnapshot ? "Median Price" : isGallery ? "New Listings" : isAnalytics ? "Price Bands" : "Listings"}
-            </span>
-          </div>
-        </div>
-        <div className="flex-[0_0_35%] flex justify-end">
-          {logoUrl ? (
-            <img src={logoUrl} alt="" className="max-h-[20px] w-auto object-contain" />
-          ) : (
-            <div className="w-7 h-7 rounded bg-white/20 flex items-center justify-center text-[7px] font-bold text-white">
-              {(displayName || "MR").slice(0, 2).toUpperCase()}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Content area */}
-      <div className="px-2.5 py-1.5 flex-1 min-h-0 flex flex-col gap-1.5">
-        {/* Hero stat row for closed/inventory */}
-        {isClosed && (
-          <div className="flex gap-1.5">
-            <div className="flex-1 flex flex-col items-center justify-center rounded py-1" style={{ backgroundColor: `${accentColor}0F` }}>
-              <div className="text-[14px] font-bold" style={{ color: primaryColor, fontFamily: outfitFont }}>$825K</div>
-              <div className="text-[5px] text-gray-400 uppercase">Median Price</div>
-            </div>
-            <div className="flex-1 grid grid-cols-2 gap-1">
-              {[
-                { v: "24", l: "Avg DOM" },
-                { v: "97%", l: "Sale/List" },
-                { v: "$412", l: "$/SqFt" },
-                { v: "2.1", l: "Mo Supply" },
-              ].map(s => (
-                <div key={s.l} className="rounded bg-gray-50 px-1 py-0.5 text-center">
-                  <div className="text-[7px] font-bold" style={{ color: primaryColor, fontFamily: outfitFont }}>{s.v}</div>
-                  <div className="text-[4.5px] text-gray-400">{s.l}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Count badge for gallery types */}
-        {isGallery && (
-          <div className="flex items-center gap-1.5 py-0.5">
-            <div className="rounded px-1.5 py-0.5 text-[6px] font-bold text-white" style={{ backgroundColor: accentColor }}>
-              12 listings
-            </div>
-            <div className="text-[5px] text-gray-400">Last {lookbackDays} days &bull; All property types</div>
-          </div>
-        )}
-
-        {/* Snapshot hero stat */}
-        {isSnapshot && (
-          <div className="flex gap-1.5">
-            <div className="w-[45px] flex flex-col items-center justify-center rounded py-1" style={{ backgroundColor: `${accentColor}0F` }}>
-              <div className="text-[14px] font-bold" style={{ color: primaryColor, fontFamily: outfitFont }}>$825K</div>
-              <div className="text-[4.5px] text-gray-400 uppercase">Median</div>
-            </div>
-            <div className="flex-1 rounded px-2 py-1" style={{ backgroundColor: `${accentColor}0A`, borderLeft: `2px solid ${accentColor}66` }}>
-              <div className="text-[5px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: accentColor }}>Market Insight</div>
-              <div className="text-[6px] text-gray-500 leading-[1.4]">
-                Irvine&apos;s median sale price rose 3.2% month-over-month to $825K, with inventory tightening as days on market fell to 24.
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* AI Narrative for non-snapshot types */}
-        {!isSnapshot && (
-          <div className="rounded px-2 py-1" style={{ backgroundColor: `${accentColor}0A`, borderLeft: `2px solid ${accentColor}66` }}>
-            <div className="text-[5px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: accentColor }}>Market Insight</div>
-            <div className="text-[6px] text-gray-500 leading-[1.4]">
-              {isClosed
-                ? "42 homes closed in the last 30 days with a median sale price of $825K, reflecting steady demand across all price tiers."
-                : isGallery
-                  ? "12 new listings hit the market this week, with the majority priced between $400K–$650K in established neighborhoods."
-                  : "Active inventory remains tight with 38 listings and an average of 12 days on market, signaling continued seller advantage."}
-            </div>
-          </div>
-        )}
-
-        {/* Photo grid — gallery 3×2 */}
-        {isGallery && (
-          <div className="grid grid-cols-3 gap-1 flex-1 min-h-0">
-            {SAMPLE_PHOTOS.slice(0, 6).map((url, i) => (
-              <div key={i} className="flex flex-col rounded overflow-hidden bg-gray-50">
-                <div className="aspect-[3/2.4] overflow-hidden">
-                  <img src={url} alt="" className="w-full h-full object-cover" />
-                </div>
-                <div className="px-1 py-0.5">
-                  <div className="text-[7px] font-bold" style={{ fontFamily: outfitFont }}>{samplePrices[i]}</div>
-                  <div className="text-[5px] text-gray-400 truncate">{sampleAddrs[i]}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Photo grid — closed/inventory 2×2 + data table */}
-        {isClosed && (
-          <>
-            <div className="grid grid-cols-2 gap-1">
-              {SAMPLE_PHOTOS.slice(0, 4).map((url, i) => (
-                <div key={i} className="aspect-[4/3] rounded overflow-hidden bg-gray-100 relative">
-                  <img src={url} alt="" className="w-full h-full object-cover" />
-                  <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent px-1 py-0.5">
-                    <div className="text-[7px] font-bold text-white" style={{ fontFamily: outfitFont }}>{samplePrices[i]}</div>
-                    <div className="text-[4.5px] text-white/80 truncate">{sampleAddrs[i]}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="rounded border border-gray-100 overflow-hidden text-[5.5px]">
-              <div className="grid grid-cols-4 bg-gray-50 font-semibold text-gray-500 px-1 py-0.5">
-                <span>Address</span><span>Price</span><span>DOM</span><span>$/Sq</span>
-              </div>
-              {sampleAddrs.slice(0, 3).map((addr, i) => (
-                <div key={addr} className="grid grid-cols-4 px-1 py-0.5 text-gray-600 border-t border-gray-50">
-                  <span className="truncate">{addr}</span>
-                  <span style={{ fontFamily: outfitFont }}>{samplePrices[i]}</span>
-                  <span>{[18, 24, 7][i]}d</span>
-                  <span>${[412, 389, 455][i]}</span>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Photo grid — snapshot 4-col with overlays */}
-        {isSnapshot && (
-          <div className="grid grid-cols-4 gap-1 flex-1 min-h-0">
-            {SAMPLE_PHOTOS.slice(0, 4).map((url, i) => (
-              <div key={i} className="aspect-[3/4] rounded overflow-hidden bg-gray-100 relative">
-                <img src={url} alt="" className="w-full h-full object-cover" />
-                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent px-1 py-0.5">
-                  <div className="text-[7px] font-bold text-white" style={{ fontFamily: outfitFont }}>{samplePrices[i]}</div>
-                  <div className="text-[4px] text-white/80 truncate">{sampleAddrs[i]}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Analytics layout — stat cards + listing rows */}
-        {!isGallery && !isClosed && !isSnapshot && (
-          <>
-            <div className="flex gap-1">
-              {[
-                { v: "38", l: "Active" },
-                { v: "12", l: "Avg DOM" },
-                { v: "$412", l: "$/SqFt" },
-                { v: "97%", l: "Sale/List" },
-              ].map(s => (
-                <div key={s.l} className="flex-1 rounded bg-gray-50 px-1 py-1 text-center">
-                  <div className="text-[8px] font-bold" style={{ color: primaryColor, fontFamily: outfitFont }}>{s.v}</div>
-                  <div className="text-[4.5px] text-gray-400">{s.l}</div>
-                </div>
-              ))}
-            </div>
-            {SAMPLE_PHOTOS.slice(0, 3).map((url, i) => (
-              <div key={i} className="flex gap-1.5 items-center">
-                <div className="w-[40px] aspect-[4/3] rounded overflow-hidden bg-gray-100 flex-shrink-0">
-                  <img src={url} alt="" className="w-full h-full object-cover" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[6.5px] font-semibold text-gray-800 truncate">{sampleAddrs[i]}</div>
-                  <div className="text-[5px] text-gray-400">3 bd &bull; 2 ba &bull; 1,850 sqft</div>
-                </div>
-                <div className="text-[8px] font-bold flex-shrink-0" style={{ color: primaryColor, fontFamily: outfitFont }}>
-                  {samplePrices[i]}
-                </div>
-              </div>
-            ))}
-          </>
-        )}
-
-        {/* Stats bar */}
-        {!isClosed && (
-          <div className="flex justify-between bg-gray-50 rounded px-2 py-1">
-            {[
-              { label: "Active", val: "67" },
-              { label: "Pending", val: "12" },
-              { label: "Sold", val: "38" },
-              { label: "Avg DOM", val: "12" },
-            ].map((s) => (
-              <div key={s.label} className="text-center">
-                <div className="text-[7px] font-bold" style={{ color: primaryColor, fontFamily: outfitFont }}>{s.val}</div>
-                <div className="text-[4.5px] text-gray-400">{s.label}</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Agent footer */}
-      <div className="px-2.5 py-1.5 bg-gray-50 border-t border-gray-100 mt-auto">
-        <div className="flex items-center gap-1.5">
-          <div
-            className="w-6 h-6 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center bg-gray-200"
-          >
-            {agentPhotoUrl ? (
-              <img src={agentPhotoUrl} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-[6px] font-semibold text-gray-400">{agentName?.charAt(0) || "?"}</span>
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-[7px] font-semibold text-gray-800 truncate" style={{ fontFamily: outfitFont }}>{agentName}</div>
-            {agentTitle && <div className="text-[5px] text-gray-400">{agentTitle}</div>}
-            {contactParts.length > 0 && (
-              <div className="text-[5px] text-gray-400 truncate">
-                {contactParts.join(" \u2022 ")}
-              </div>
-            )}
-          </div>
-          {logoUrl && (
-            <img src={logoUrl} alt="" className="max-h-[14px] w-auto object-contain opacity-60 flex-shrink-0" />
-          )}
-        </div>
-      </div>
-
-      {/* Powered by */}
-      <div className="text-center py-0.5 text-[4.5px] text-gray-300">
-        Powered by TrendyReports
-      </div>
-    </div>
   )
 }

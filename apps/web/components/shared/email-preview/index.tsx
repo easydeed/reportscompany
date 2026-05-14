@@ -8,9 +8,17 @@ import { PreviewStackedStats } from "./preview-stacked-stats"
 import { PreviewDataTable } from "./preview-data-table"
 import { PreviewAgentFooter } from "./preview-agent-footer"
 import { PreviewGalleryCount } from "./preview-gallery-count"
-import { PREVIEW_CONTENT, type PreviewReportType } from "./sample-data"
+import { PreviewCta } from "./preview-cta"
+import { PREVIEW_CONTENT, PREVIEW_CAPS, type PreviewReportType } from "./sample-data"
 
 export type { PreviewReportType } from "./sample-data"
+
+// Match worker defaults in apps/worker/src/worker/market_builder.py
+// (DEFAULT_PRIMARY = "#18235c", DEFAULT_ACCENT = "#0d9488"). Keep in sync so the
+// wizard preview matches what the actual PDF/email engine renders for unbranded
+// accounts.
+export const PREVIEW_DEFAULT_PRIMARY = "#18235c"
+export const PREVIEW_DEFAULT_ACCENT = "#0d9488"
 
 export interface SharedEmailPreviewProps {
   primaryColor: string
@@ -50,6 +58,33 @@ export function SharedEmailPreview({
   const content = PREVIEW_CONTENT[reportType]
   if (!content) return null
 
+  const cap = PREVIEW_CAPS[reportType]
+  const total = content.totalAvailable ?? content.listings.length
+  const showing = Math.min(content.listings.length, cap)
+  const isTruncated = total > showing
+  const remaining = isTruncated ? total - showing : 0
+
+  const truncationNote = isTruncated ? (
+    <div className="text-center text-[10px] text-stone-500">
+      Showing {showing} of {total} listings
+    </div>
+  ) : null
+
+  const moreCallout = remaining > 0 ? (
+    <div
+      className="rounded-md border border-dashed px-3 py-2 text-center text-[11px] font-medium"
+      style={{
+        borderColor: `${accentColor}66`,
+        color: accentColor,
+        backgroundColor: `${accentColor}0F`,
+      }}
+    >
+      + {remaining} more listings — see the full PDF
+    </div>
+  ) : null
+
+  const cta = <PreviewCta primaryColor={primaryColor} />
+
   const agentFooter = (
     <PreviewAgentFooter
       agentName={agentName}
@@ -63,7 +98,16 @@ export function SharedEmailPreview({
     />
   )
 
-  const body = renderBody(reportType, content, primaryColor, accentColor, agentFooter)
+  const body = renderBody(
+    reportType,
+    content,
+    primaryColor,
+    accentColor,
+    truncationNote,
+    moreCallout,
+    cta,
+    agentFooter,
+  )
 
   return (
     <div
@@ -100,6 +144,9 @@ function renderBody(
   content: (typeof PREVIEW_CONTENT)[PreviewReportType],
   primary: string,
   accent: string,
+  truncationNote: React.ReactNode,
+  moreCallout: React.ReactNode,
+  cta: React.ReactNode,
   agentFooter: React.ReactNode,
 ) {
   switch (type) {
@@ -113,13 +160,16 @@ function renderBody(
             sub={content.heroSub}
             primaryColor={primary}
           />
+          {truncationNote}
           <PreviewPhotoGrid
             listings={content.listings}
             layout="2x2"
             primaryColor={primary}
             accentColor={accent}
           />
+          {moreCallout}
           <PreviewStackedStats stats={content.stats} primaryColor={primary} />
+          {cta}
           {agentFooter}
         </>
       )
@@ -143,12 +193,15 @@ function renderBody(
             />
           )}
           <PreviewStackedStats stats={content.stats} primaryColor={primary} />
+          {truncationNote}
           <PreviewPhotoGrid
             listings={content.listings}
             layout="3x2"
             primaryColor={primary}
             accentColor={accent}
           />
+          {moreCallout}
+          {cta}
           {agentFooter}
         </>
       )
@@ -164,13 +217,16 @@ function renderBody(
             primaryColor={primary}
           />
           <PreviewStackedStats stats={content.stats} primaryColor={primary} />
+          {truncationNote}
           <PreviewPhotoGrid
             listings={content.listings}
             layout="2x2"
             primaryColor={primary}
             accentColor={accent}
           />
+          {moreCallout}
           <PreviewDataTable rows={content.tableRows} primaryColor={primary} />
+          {cta}
           {agentFooter}
         </>
       )
@@ -186,13 +242,16 @@ function renderBody(
             primaryColor={primary}
           />
           <PreviewStackedStats stats={content.stats} primaryColor={primary} />
+          {truncationNote}
           <PreviewPhotoGrid
             listings={content.listings}
             layout="2x2"
             primaryColor={primary}
             accentColor={accent}
           />
+          {moreCallout}
           <PreviewDataTable rows={content.tableRows} primaryColor={primary} />
+          {cta}
           {agentFooter}
         </>
       )
@@ -208,13 +267,16 @@ function renderBody(
               accentColor={accent}
             />
           )}
+          {truncationNote}
           <PreviewPhotoGrid
             listings={content.listings}
             layout="large-cards"
             primaryColor={primary}
             accentColor={accent}
           />
+          {moreCallout}
           <PreviewStackedStats stats={content.stats} primaryColor={primary} />
+          {cta}
           {agentFooter}
         </>
       )
@@ -230,12 +292,15 @@ function renderBody(
             primaryColor={primary}
           />
           <PreviewStackedStats stats={content.stats} primaryColor={primary} />
+          {truncationNote}
           <PreviewPhotoGrid
             listings={content.listings}
             layout="2x2"
             primaryColor={primary}
             accentColor={accent}
           />
+          {moreCallout}
+          {cta}
           {agentFooter}
         </>
       )
@@ -251,12 +316,15 @@ function renderBody(
             primaryColor={primary}
           />
           <PreviewStackedStats stats={content.stats} primaryColor={primary} />
+          {truncationNote}
           <PreviewPhotoGrid
             listings={content.listings}
             layout="2x2"
             primaryColor={primary}
             accentColor={accent}
           />
+          {moreCallout}
+          {cta}
           {agentFooter}
         </>
       )
