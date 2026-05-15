@@ -748,11 +748,18 @@ def build_new_listings_gallery_result(listings: List[Dict], context: Dict) -> Di
             except:
                 pass
     
-    print(f"📊 GALLERY: {len(new_listings)} listings found, showing {min(len(new_listings), email_cap)} (cap={email_cap}, audience={audience_key})")
-    
-    # V14: Sort by list date desc, use audience-based cap
-    new_listings_sorted = sorted(new_listings, key=lambda x: x.get("list_date") or datetime.min, reverse=True)[:email_cap]
-    
+    print(f"📊 GALLERY: {len(new_listings)} listings found, audience_email_cap={email_cap} (audience={audience_key})")
+
+    # CAPS-SPLIT-SNAPSHOT-CATALOG — store ALL sorted matches so the multi-page
+    # PDF can render every new listing. The email pipeline still caps to
+    # `audience_email_cap` (exposed below) and PDF_CONFIG caps inside the
+    # market builder for the PDF.
+    new_listings_sorted = sorted(
+        new_listings,
+        key=lambda x: x.get("list_date") or datetime.min,
+        reverse=True,
+    )
+
     # Format listings for gallery display
     gallery_listings = []
     for l in new_listings_sorted:
@@ -788,9 +795,14 @@ def build_new_listings_gallery_result(listings: List[Dict], context: Dict) -> Di
         "period_label": _period_label(lookback_days),
         "report_date": datetime.now().strftime("%B %d, %Y"),
         "total_listings": len(new_listings),  # Total count (not capped)
-        "total_shown": len(gallery_listings),  # V14: How many displayed
+        "total_shown": len(gallery_listings),
         "audience_key": audience_key,  # V14: For AI prompt context
+        # CAPS-SPLIT-SNAPSHOT-CATALOG — `listings` holds ALL matches so the
+        # multi-page PDF can render every one. The email pipeline reads
+        # `audience_email_cap` as its slice hint (see tasks.py
+        # EMAIL_LISTING_CAPS application).
         "listings": gallery_listings,
+        "audience_email_cap": email_cap,
         "metrics": metrics,  # For email template compatibility
     }
 
@@ -944,6 +956,11 @@ def build_open_houses_result(properties: List[Dict], context: Dict) -> Dict:
 
     open_house_listings.sort(key=lambda x: x.get("next_open_house", ""))
 
+    # NOTE: This builder cap (100) must stay in sync with PDF_CONFIG["open_houses"].cap
+    # in market_builder.py. The builder cap protects SimplyRETS fetch volume;
+    # the PDF cap protects render volume. If either needs raising, both must move.
+    open_house_listings = open_house_listings[:100]
+
     return {
         "report_type": "open_houses",
         "city": city,
@@ -955,10 +972,8 @@ def build_open_houses_result(properties: List[Dict], context: Dict) -> Dict:
             "Active": len(open_house_listings),
         },
         "metrics": {},
-        # Match the storage shape of the other builders (cap is enforced
-        # by the email/PDF builders, not here).
-        "listings": open_house_listings[:30],
-        "listings_sample": open_house_listings[:30],
+        "listings": open_house_listings,
+        "listings_sample": open_house_listings,
     }
 
 

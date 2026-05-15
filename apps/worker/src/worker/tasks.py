@@ -562,7 +562,15 @@ def _build_email_payload(report_type, city, zips, lookback, result, pdf_url):
         "open_houses":          12,
         "price_bands":          6,
     }
-    cap = EMAIL_LISTING_CAPS.get(report_type, 10)
+    # CAPS-SPLIT-SNAPSHOT-CATALOG — `audience_email_cap` is an optional hint
+    # from the builder (currently used by new_listings_gallery for audience-
+    # based caps). If present, it overrides the per-type default. Falls back
+    # to EMAIL_LISTING_CAPS for everything else.
+    email_cap_default = EMAIL_LISTING_CAPS.get(report_type, 10)
+    audience_override = (
+        result.get("audience_email_cap") if isinstance(result, dict) else None
+    )
+    cap = audience_override or email_cap_default
     capped_listings = available_listings[:cap]
 
     payload = {

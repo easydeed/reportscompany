@@ -8,8 +8,10 @@ export type PreviewReportType =
   | "price_bands"
   | "open_houses"
 
-// Per-type listing caps mirroring PDF_CONFIG in
-// apps/worker/src/worker/market_builder.py. Keep in sync.
+// Preview caps are DELIBERATELY independent of worker PDF_CONFIG.
+// CATALOG report types (closed, inventory, new_listings, etc.) generate
+// multi-page PDFs with 100-200 listings. The preview shows a representative
+// sample for layout purposes. The actual PDF may have many more.
 export const PREVIEW_CAPS: Record<PreviewReportType, number> = {
   market_snapshot: 8,
   new_listings_gallery: 24,
@@ -25,10 +27,10 @@ export const PREVIEW_CAPS: Record<PreviewReportType, number> = {
 // apps/worker/src/worker/market_builder.py. Keep in sync.
 export const PDF_SECTION_LABELS: Record<PreviewReportType, string> = {
   market_snapshot: "Recent Activity",
-  new_listings_gallery: "New Listings",
+  new_listings_gallery: "New Listings Gallery",
   new_listings: "New Listings",
   closed: "Recent Closed Sales",
-  inventory: "Active Inventory Sample",
+  inventory: "Active Inventory",
   featured_listings: "Hand-Picked Highlights",
   open_houses: "Open Houses This Week",
   price_bands: "Example Listings by Price Band",

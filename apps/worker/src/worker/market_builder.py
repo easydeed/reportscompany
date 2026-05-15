@@ -83,53 +83,66 @@ ALL_REPORT_TYPES = list(LAYOUT_MAP.keys())
 #
 # more_template = None  →  no "+ N more …" callout (full inventory shown).
 
+# CAPS-SPLIT-SNAPSHOT-CATALOG — Market reports now split into two modes:
+#
+#   SNAPSHOT (1-page, curated sample):
+#     market_snapshot, price_bands, featured_listings
+#   CATALOG (multi-page, ALL matching listings):
+#     closed, inventory, new_listings, new_listings_gallery, open_houses
+#
+# CATALOG types have `more_template = None` and a high cap (100-200) so the
+# PDF renders every matching listing. The previous "+ N more — contact me for
+# the complete list" callout was dishonest (agents had no way to produce
+# that list) and is now removed across the board.
 PDF_CONFIG: Dict[str, Dict[str, Any]] = {
+    # ── SNAPSHOT mode ───────────────────────────────────────────────────────
     "market_snapshot": {
         "cap": 8,
         "section_label": "Recent Activity",
-        "truncation_template": "Showing the {showing} most recent of {total} listings in {city}.",
-        "more_template": "+ {remaining} more listings. Contact me for the complete list.",
-    },
-    "new_listings_gallery": {
-        "cap": 24,
-        "section_label": "New Listings",
-        "truncation_template": "Showing all {total} new listings from the past {lookback} days.",
-        "more_template": None,
-    },
-    "new_listings": {
-        "cap": 24,
-        "section_label": "New Listings",
-        "truncation_template": "Showing {showing} of {total} new listings.",
-        "more_template": "+ {remaining} more new listings. Contact me for the complete list.",
-    },
-    "closed": {
-        "cap": 20,
-        "section_label": "Recent Closed Sales",
-        "truncation_template": "Showing the {showing} most recent of {total} closed sales.",
-        "more_template": "+ {remaining} more closed sales. Contact me for the complete list.",
-    },
-    "inventory": {
-        "cap": 20,
-        "section_label": "Active Inventory Sample",
-        "truncation_template": "Showing {showing} of {total} active listings.",
-        "more_template": "+ {remaining} more active listings. Contact me for the complete list.",
-    },
-    "featured_listings": {
-        "cap": 12,
-        "section_label": "Hand-Picked Highlights",
-        "truncation_template": "{showing} featured listings curated from the current market.",
-        "more_template": None,
-    },
-    "open_houses": {
-        "cap": 20,
-        "section_label": "Open Houses This Week",
-        "truncation_template": "All {total} open houses scheduled in the next 7 days.",
+        "truncation_template": "Recent market activity — a curated sample of {showing} listings in {city}.",
         "more_template": None,
     },
     "price_bands": {
         "cap": 8,
         "section_label": "Example Listings by Price Band",
         "truncation_template": "Sample listings shown — see band totals above for complete counts.",
+        "more_template": None,
+    },
+    "featured_listings": {
+        "cap": 12,
+        "section_label": "Hand-Picked Highlights",
+        "truncation_template": "Showing {showing} hand-picked listings.",
+        "more_template": None,
+    },
+    # ── CATALOG mode ────────────────────────────────────────────────────────
+    "closed": {
+        "cap": 200,
+        "section_label": "Recent Closed Sales",
+        "truncation_template": "All {total} closed sales in {city} in the last {lookback} days.",
+        "more_template": None,
+    },
+    "inventory": {
+        "cap": 200,
+        "section_label": "Active Inventory",
+        "truncation_template": "All {total} active listings in {city}.",
+        "more_template": None,
+    },
+    "new_listings": {
+        "cap": 200,
+        "section_label": "New Listings",
+        "truncation_template": "All {total} new listings in {city} in the last {lookback} days.",
+        "more_template": None,
+    },
+    "new_listings_gallery": {
+        "cap": 200,
+        "section_label": "New Listings Gallery",
+        "truncation_template": "Gallery of all {total} new listings in {city}.",
+        "more_template": None,
+    },
+    "open_houses": {
+        "cap": 100,
+        "section_label": "Open Houses This Week",
+        "truncation_template": "All {total} open houses scheduled this week in {city}.",
         "more_template": None,
     },
 }
