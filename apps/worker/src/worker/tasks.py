@@ -1178,38 +1178,33 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
 
         builder = MarketReportBuilder(builder_data)
         html_content = builder.render_html()
-        # PDFSHIFT-NATIVE-HEADER-FOOTER — render the compact continuation
-        # header (pages 2+) and the agent footer (every page) as standalone
-        # HTML docs that PDFShift's `header` / `footer` params consume.
-        header_html = builder.render_page_header_html()
+        # HERO-RESTORE — The inline gradient cover header (macros.report_header)
+        # renders at the top of page 1 in the body HTML. We no longer send a
+        # PDFShift `header` param; pages 2+ have no header element. The agent
+        # footer still repeats on every page via PDFShift's `footer` param
+        # (start_at=1; PDFShift's "header.start_at must match footer.start_at"
+        # constraint no longer applies because there's no header to match).
+        # render_page_header_html() and page_header.jinja2 remain available for
+        # future use but are not invoked here.
         footer_html = builder.render_page_footer_html()
         print(
             f"🔍 REPORT RUN {run_id}: server-side HTML rendered "
-            f"(body={len(html_content)} chars, header={len(header_html)}, footer={len(footer_html)})"
+            f"(body={len(html_content)} chars, footer={len(footer_html)})"
         )
 
-        # Embed external image URLs as base64 in ALL THREE documents.
-        # PDFShift fetches header/footer images in a separate context; inlining
+        # Embed external image URLs as base64 in the body and footer docs.
+        # PDFShift fetches footer images in a separate context; inlining
         # ensures reliable rendering (and avoids hitting MLS/CDN allowlists
         # twice).
-        logger.info("Embedding images as base64 for market report PDF (body + header + footer)...")
+        logger.info("Embedding images as base64 for market report PDF (body + footer)...")
         html_content = embed_images_as_base64(html_content)
-        header_html = embed_images_as_base64(header_html)
         footer_html = embed_images_as_base64(footer_html)
 
         pdf_path, html_url = render_pdf(
             run_id=run_id,
             account_id=account_id,
             html_content=html_content,
-            header_html=header_html,
             footer_html=footer_html,
-            # PDFShift constraint: when `header` AND `footer` are both sent,
-            # they MUST share the same `start_at` value (or PDFShift silently
-            # coerces one to match the other). We use 1 for both so the agent
-            # footer appears on page 1 — the inline page-1 cover header has
-            # been removed from base.jinja2; the compact PDFShift header now
-            # serves as THE header on every page including page 1.
-            header_start_at=1,
             footer_start_at=1,
             print_base=DEV_BASE,
         )

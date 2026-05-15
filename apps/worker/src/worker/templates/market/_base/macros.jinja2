@@ -35,15 +35,12 @@
 {% endmacro %}
 
 
-{# ── Report Header (DEPRECATED) ────────────────────────────────────────────
-   PDFSHIFT-FOOTER-PAGE1 — This was the inline page-1 gradient cover header,
-   rendered once at the top of page 1 and never repeated. It's been
-   replaced by PDFShift's native `header` parameter, which uses the
-   standalone _base/page_header.jinja2 template and repeats on every page
-   including page 1. No callers remain in base.jinja2.
-
-   Kept defined for safety / quick rollback. Safe to delete in a future
-   cleanup ticket once we're confident nothing else invokes it. #}
+{# ── Report Header ──────────────────────────────────────────────────────────
+   The big inline gradient cover header rendered at the top of page 1.
+   Bleeds edge-to-edge because @page :first { margin-top: 0 } in base.jinja2.
+   Contains: title (with city), subtitle (lookback + properties + data source),
+   total_count metric pill, agent logo on the right.
+   NOT rendered on continuation pages — pages 2+ have no header. #}
 {% macro report_header(header, report_type, agent) %}
 <header class="report-header">
   <div class="header-left">
@@ -426,9 +423,17 @@
   </div>
 </div>
 
+{# HERO-RESTORE — Use the canonical .ai-narrative block (matching
+   market_narrative_layout) for visual consistency. The old .pb-narrative
+   class with its orange callout box + 10px body text drifted from the
+   rest of the report; we now share the plain-white-card + uppercase
+   "AI MARKET INSIGHT" label + 14px body across all layouts. The
+   .pb-narrative CSS in base.jinja2 is now orphan; safe to delete in a
+   future cleanup. #}
 {% if ai_narrative or ai_insights %}
-<div class="pb-narrative avoid-break">
-  <p>{{ ai_narrative or ai_insights }}</p>
+<div class="ai-narrative avoid-break">
+  <div class="ai-narrative-label">AI Market Insight</div>
+  <p class="ai-narrative-text">{{ ai_narrative or ai_insights }}</p>
 </div>
 {% endif %}
 

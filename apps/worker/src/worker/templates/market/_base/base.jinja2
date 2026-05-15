@@ -62,17 +62,17 @@
        (the header doesn't repeat). Side margins stay 0 on every
        page; body gutters come from .page-content's
        --page-padding (0.45in). */
-    /* PDFSHIFT-NATIVE-HEADER-FOOTER — Margins are controlled by PDFShift's
-       `margin` parameter (set in pdf_engine.py). PDFShift auto-reserves
-       space at the top/bottom of every page for the `header` / `footer`
-       params, so we no longer rely on CSS Paged Media `position: running()`.
-       Both the compact continuation header (_base/page_header.jinja2) and
-       the agent footer (_base/page_footer.jinja2) repeat on EVERY page
-       including page 1 (start_at: 1 for both — PDFShift requires header
-       and footer to share start_at). The previous page-1 inline gradient
-       cover header has been removed; the PDFShift header is THE header
-       on every page. */
+    /* HERO-RESTORE — Margins are controlled by PDFShift's `margin`
+       parameter (set in pdf_engine.py). PDFShift reserves bottom margin
+       for the footer (renders on every page via `footer` param with
+       start_at=1). NO PDFShift header param is sent — the inline page-1
+       gradient cover header (macros.report_header at base.jinja2's body)
+       carries page 1's branding, and pages 2+ have no header element.
+
+       @page :first { margin-top: 0 } lets the page-1 gradient hero
+       bleed edge-to-edge at the top. */
     @page { size: letter; }
+    @page :first { margin-top: 0; }
 
     @media print {
       html, body { background: white; margin: 0; padding: 0; }
@@ -1161,16 +1161,14 @@
 </head>
 <body>
   <div class="report-page">
-    {# PDFSHIFT-FOOTER-PAGE1 — The inline page-1 gradient cover header
-       (macros.report_header) used to live here. It was removed because:
-       1) PDFShift requires header.start_at and footer.start_at to match,
-          so we couldn't have footer on page 1 while skipping the PDFShift
-          header on page 1.
-       2) The compact PDFShift header (_base/page_header.jinja2) now
-          repeats on EVERY page including page 1, serving as THE header.
-       The report_header macro remains defined in macros.jinja2 marked
-       deprecated; safe to delete in a future cleanup ticket. #}
-
+    {# HERO-RESTORE — The inline page-1 gradient cover header is back.
+       It renders ONCE at the top of page 1 in normal block flow.
+       Pages 2+ have no header (PDFShift `header` param is no longer
+       sent — see pdf_engine.py / tasks.py). The agent footer renders
+       on every page via PDFShift `footer` param (start_at=1).
+       Page numbers on continuation pages are handled by the user's
+       PDF reader rather than rendered in-document. #}
+    {{ macros.report_header(header, report_type, agent) }}
     <div class="page-content">
       {% block content %}
         {# PDF-COMPREHENSIVE — every layout receives the section label,
