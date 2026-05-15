@@ -43,10 +43,14 @@ sys.path.insert(0, str(WORKER_SRC))
 OUTPUT_DIR = REPO_ROOT / "output" / "market_reports"
 
 # Auto-load env so PDFSHIFT_API_KEY (and friends) are picked up without
-# requiring the developer to `source .env` first. Prefer real .env, fall back
-# to .env.example so the script works straight out of a fresh clone where the
-# dev has already pasted the shared dev keys into .env.example.
-for _env_path in (REPO_ROOT / ".env", REPO_ROOT / ".env.example"):
+# requiring the developer to `source .env` first. Prefer app-specific env files
+# first, then repo-level envs.
+for _env_path in (
+    REPO_ROOT / "apps" / "worker" / ".env",
+    REPO_ROOT / "apps" / "api" / ".env",
+    REPO_ROOT / ".env",
+    REPO_ROOT / ".env.example",
+):
     if _env_path.exists():
         try:
             from dotenv import load_dotenv  # type: ignore
@@ -62,7 +66,6 @@ for _env_path in (REPO_ROOT / ".env", REPO_ROOT / ".env.example"):
                             _k.strip(),
                             _v.strip().strip('"').strip("'"),
                         )
-        break
 
 ALL_REPORT_TYPES = [
     "new_listings_gallery",
@@ -105,7 +108,7 @@ def resolve_theme(value: str | int) -> dict:
 
 # ─── Sample data ─────────────────────────────────────────────────────────────
 
-SAMPLE_LISTINGS = [
+_BASE_LISTINGS = [
     {
         "street_address": "123 Main St",
         "city": "Irvine",
@@ -180,6 +183,34 @@ SAMPLE_LISTINGS = [
     },
 ]
 
+
+def _photo_with_sig(url: str, sig: int) -> str:
+    separator = "&" if "?" in url else "?"
+    return f"{url}{separator}sig={sig}"
+
+
+def _expand_to_50_listings() -> list[dict]:
+    """Generate 50 unique-ish listings from the 6 base templates."""
+    expanded = []
+    for i in range(50):
+        base = dict(_BASE_LISTINGS[i % len(_BASE_LISTINGS)])
+        street_parts = base["street_address"].split(" ", 1)
+        street_name = street_parts[1] if len(street_parts) > 1 else base["street_address"]
+
+        base["street_address"] = f"{1000 + i * 17} {street_name}"
+        base["list_price"] = base["list_price"] + (i * 12500)
+        if base.get("close_price") is not None:
+            base["close_price"] = base["close_price"] + (i * 11000)
+        if "days_on_market" in base:
+            base["days_on_market"] = (i * 3) % 90
+        if base.get("photo_url"):
+            base["photo_url"] = _photo_with_sig(base["photo_url"], 1000 + i)
+        expanded.append(base)
+    return expanded
+
+
+SAMPLE_LISTINGS = _expand_to_50_listings()
+
 SAMPLE_METRICS = {
     "median_list_price": 922500,
     "median_close_price": 907500,
@@ -200,6 +231,7 @@ SAMPLE_BRANDING = {
     "agent_photo_url": "https://randomuser.me/api/portraits/women/44.jpg",
     "company_name": "Luxury Estates Realty",
     "logo_url": "https://placehold.co/200x60/1B365D/white?text=Luxury+Estates",
+    "footer_logo_url": "https://placehold.co/200x60/0d9488/white?text=Footer+Logo",
     "primary_color": "#1B365D",
     "accent_color": "#0d9488",
 }
@@ -340,27 +372,32 @@ def _pdf_via_playwright(html: str, pdf_path: Path) -> int:
     return pdf_path.stat().st_size
 
 
-def _pdf_via_pdfshift(html: str, pdf_path: Path) -> int:
-    import httpx
+def _pdf_via_pdfshift(html: str, pdf_path: Path, footer_html: str | None = None) -> int:
+    """
+    Production-parity PDF render via PDFShift.
 
-    api_key = os.getenv("PDFSHIFT_API_KEY") or os.getenv("PDF_API_KEY", "")
-    if not api_key:
-        raise RuntimeError("PDFSHIFT_API_KEY not set")
-    resp = httpx.post(
-        "https://api.pdfshift.io/v3/convert/pdf",
-        json={
-            "source": html,
-            "sandbox": False,
-            "use_print": True,
-            "format": "Letter",
-            "margin": {"top": "0", "right": "0", "bottom": "0", "left": "0"},
-            "delay": 2000,
-        },
-        headers={"X-API-Key": api_key, "Content-Type": "application/json"},
-        timeout=60.0,
+    Delegates to the same render_pdf_pdfshift() function used by the
+    production worker (apps/worker/src/worker/pdf_engine.py), so the local
+    preview output exactly matches what Render produces.
+
+    Handles:
+    - Footer HTML (agent footer on every page)
+    - Dynamic margin inflation (1.0in bottom when footer present)
+    - X-Processor-Version: 142 header
+    - All image_loading_options (delay, wait_for_network, etc.)
+    """
+    from worker.pdf_engine import render_pdf_pdfshift
+
+    # render_pdf_pdfshift writes to PDF_DIR (env var, defaults /tmp/mr_reports)
+    # then returns the path. Move it to this script's output directory.
+    generated_path, _ = render_pdf_pdfshift(
+        run_id=pdf_path.stem,
+        account_id="00000000-0000-0000-0000-000000000000",
+        html_content=html,
+        footer_html=footer_html,
+        footer_start_at=1,
     )
-    resp.raise_for_status()
-    pdf_path.write_bytes(resp.content)
+    Path(generated_path).replace(pdf_path)
     return pdf_path.stat().st_size
 
 
@@ -388,6 +425,28 @@ def render_variant(
     html = builder.render_html()
     elapsed = time.perf_counter() - t0
 
+    # Generate the agent footer HTML — production sends this as PDFShift's
+    # `footer` parameter so it repeats on every page. Match production.
+    footer_html = None
+    if pdf_engine in ("pdfshift", "playwright"):
+        try:
+            footer_html = builder.render_page_footer_html()
+        except AttributeError:
+            # Older builder versions still render the body correctly.
+            pass
+
+    # Embed images as base64 before sending to PDFShift. Production does this
+    # to prevent CRMLS hotlink protection from blocking PDFShift image fetches.
+    # It also handles R2 presigned URLs with HTML-escaped query strings (&amp;).
+    if pdf_engine in ("pdfshift", "playwright"):
+        try:
+            from worker.property_tasks.property_report import embed_images_as_base64
+            html = embed_images_as_base64(html)
+            if footer_html:
+                footer_html = embed_images_as_base64(footer_html)
+        except ImportError:
+            print("⚠️  embed_images_as_base64 not available; images sent raw")
+
     html_path = OUTPUT_DIR / f"{report_type}.html"
     html_path.write_text(html, encoding="utf-8")
 
@@ -406,8 +465,10 @@ def render_variant(
         pdf_path = OUTPUT_DIR / f"{report_type}.pdf"
         try:
             if pdf_engine == "pdfshift":
-                size = _pdf_via_pdfshift(html, pdf_path)
+                size = _pdf_via_pdfshift(html, pdf_path, footer_html=footer_html)
             else:
+                if pdf_engine == "playwright" and footer_html:
+                    print("⚠️  Playwright engine ignores footers — use --pdf-engine pdfshift for footer preview")
                 size = _pdf_via_playwright(html, pdf_path)
             result["pdf_size"] = size
             result["pdf_path"] = pdf_path
