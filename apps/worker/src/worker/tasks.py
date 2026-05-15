@@ -1144,6 +1144,9 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                         "agent_photo_url": brow[5] or (brand or {}).get("rep_photo_url"),
                         "company_name": (brand or {}).get("display_name") or brow[6] or brow[7] or "",
                         "logo_url": (brand or {}).get("logo_url"),
+                        # PDFShift footer uses a dark-on-light logo; falls back to
+                        # the header logo when no dedicated footer_logo_url is set.
+                        "footer_logo_url": (brand or {}).get("footer_logo_url") or (brand or {}).get("logo_url"),
                         "primary_color": (brand or {}).get("primary_color"),
                         "accent_color": (brand or {}).get("accent_color"),
                     }
@@ -1175,15 +1178,33 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
 
         builder = MarketReportBuilder(builder_data)
         html_content = builder.render_html()
-        print(f"🔍 REPORT RUN {run_id}: server-side HTML rendered ({len(html_content)} chars)")
+        # PDFSHIFT-NATIVE-HEADER-FOOTER — render the compact continuation
+        # header (pages 2+) and the agent footer (every page) as standalone
+        # HTML docs that PDFShift's `header` / `footer` params consume.
+        header_html = builder.render_page_header_html()
+        footer_html = builder.render_page_footer_html()
+        print(
+            f"🔍 REPORT RUN {run_id}: server-side HTML rendered "
+            f"(body={len(html_content)} chars, header={len(header_html)}, footer={len(footer_html)})"
+        )
 
-        logger.info("Embedding MLS photos as base64 for market report PDF...")
+        # Embed external image URLs as base64 in ALL THREE documents.
+        # PDFShift fetches header/footer images in a separate context; inlining
+        # ensures reliable rendering (and avoids hitting MLS/CDN allowlists
+        # twice).
+        logger.info("Embedding images as base64 for market report PDF (body + header + footer)...")
         html_content = embed_images_as_base64(html_content)
+        header_html = embed_images_as_base64(header_html)
+        footer_html = embed_images_as_base64(footer_html)
 
         pdf_path, html_url = render_pdf(
             run_id=run_id,
             account_id=account_id,
             html_content=html_content,
+            header_html=header_html,
+            footer_html=footer_html,
+            header_start_at=2,  # Page 1 keeps its inline gradient cover header.
+            footer_start_at=1,  # Agent footer on every page including page 1.
             print_base=DEV_BASE,
         )
         print(f"✅ REPORT RUN {run_id}: generate_pdf complete (path={pdf_path})")

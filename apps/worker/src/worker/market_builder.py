@@ -311,6 +311,8 @@ class MarketReportBuilder:
             "photo_url": branding.get("agent_photo_url"),
             "company_name": branding.get("company_name", ""),
             "logo_url": branding.get("logo_url"),
+            # Fall back to header logo if no dedicated dark-on-light footer logo.
+            "footer_logo_url": branding.get("footer_logo_url") or branding.get("logo_url"),
         }
 
     # ── render ────────────────────────────────────────────────────────────
@@ -410,3 +412,45 @@ class MarketReportBuilder:
                 e,
             )
             raise
+
+    # ── PDFShift-native header/footer rendering ───────────────────────────
+    # PDFSHIFT-NATIVE-HEADER-FOOTER — These two methods produce standalone
+    # HTML documents that PDFShift's `header` / `footer` parameters consume.
+    # PDFShift renders them in a separate document context (no shared CSS
+    # custom properties with the main body), so the templates inline all
+    # brand colors as literal hex values from the build context.
+
+    def render_page_header_html(self) -> str:
+        """Render the compact continuation header for pages 2+ as a standalone HTML doc."""
+        primary_color, accent_color = self._resolve_colors()
+        color_roles = compute_color_roles(accent_color, primary_color)
+        header_ctx = self._build_header_context()
+
+        subtitle_text = header_ctx.get("subtitle") or "All Properties"
+
+        context = {
+            "primary_color": primary_color,
+            "accent_color": accent_color,
+            "accent_on_dark": color_roles["theme_color_on_dark"],
+            "report_title": header_ctx.get("title") or "Market Report",
+            "city": header_ctx.get("city") or "",
+            "lookback_days": header_ctx.get("lookback_days") or 30,
+            "subtitle_text": subtitle_text,
+        }
+        template = self.env.get_template("_base/page_header.jinja2")
+        return template.render(**context)
+
+    def render_page_footer_html(self) -> str:
+        """Render the agent footer as a standalone HTML doc, repeated on every page."""
+        primary_color, accent_color = self._resolve_colors()
+        color_roles = compute_color_roles(accent_color, primary_color)
+
+        context = {
+            "primary_color": primary_color,
+            "accent_color": accent_color,
+            "accent_light": color_roles["theme_color_light"],
+            "accent_on_light": color_roles["theme_color_on_light"],
+            "agent": self._build_agent_context(),
+        }
+        template = self.env.get_template("_base/page_footer.jinja2")
+        return template.render(**context)

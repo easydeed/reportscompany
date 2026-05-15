@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+{# PDFShift native agent footer — repeats on every page (start_at: 1).
+   Lifted from the inline agent_footer macro (macros.jinja2) but with all
+   CSS custom properties replaced by literal hex values passed via context,
+   because PDFShift renders header/footer in a separate document context.
+#}
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+    width: 8.5in;
+  }
+  .agent-footer {
+    padding: 12px 25px 14px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f9fafb;
+    width: 100%;
+  }
+  .af-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .af-photo {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid {{ accent_light }};
+    flex-shrink: 0;
+  }
+  .af-photo-placeholder {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: {{ accent_light }};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: {{ primary_color }};
+    flex-shrink: 0;
+  }
+  .af-name {
+    font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 1px;
+  }
+  .af-title {
+    font-size: 10px;
+    color: #6b7280;
+    margin-bottom: 3px;
+  }
+  .af-contact {
+    display: flex;
+    gap: 6px;
+  }
+  .af-contact-pill {
+    font-size: 9px;
+    color: {{ accent_on_light }};
+    border: 1px solid {{ accent_light }};
+    padding: 2px 7px;
+    border-radius: 12px;
+    font-weight: 500;
+  }
+  .af-logo {
+    max-height: 28px;
+    max-width: 100px;
+    object-fit: contain;
+    opacity: 0.85;
+  }
+</style>
+</head>
+<body>
+<div class="agent-footer">
+  <div class="af-info">
+    {% if agent.photo_url %}
+    <img class="af-photo" src="{{ agent.photo_url }}" alt="">
+    {% else %}
+    <div class="af-photo-placeholder">{{ agent.name[0]|upper if agent.name else '' }}</div>
+    {% endif %}
+    <div>
+      <div class="af-name">{{ agent.name }}</div>
+      {% if agent.title %}<div class="af-title">{{ agent.title }}</div>{% endif %}
+      {% if agent.phone or agent.email %}
+      <div class="af-contact">
+        {% if agent.phone %}<span class="af-contact-pill">{{ agent.phone }}</span>{% endif %}
+        {% if agent.email %}<span class="af-contact-pill">{{ agent.email }}</span>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% if agent.footer_logo_url %}
+  <img class="af-logo" src="{{ agent.footer_logo_url }}" alt="">
+  {% endif %}
+</div>
+</body>
+</html>

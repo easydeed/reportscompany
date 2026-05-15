@@ -37,22 +37,46 @@ PDF_DIR = os.getenv("PDF_DIR", "/tmp/mr_reports")
 Path(PDF_DIR).mkdir(parents=True, exist_ok=True)
 
 
-def render_pdf_playwright(run_id: str, account_id: str, html_content: Optional[str] = None, print_base: Optional[str] = None) -> Tuple[str, str]:
+def render_pdf_playwright(
+    run_id: str,
+    account_id: str,
+    html_content: Optional[str] = None,
+    print_base: Optional[str] = None,
+    header_html: Optional[str] = None,
+    footer_html: Optional[str] = None,
+    header_start_at: int = 1,
+    footer_start_at: int = 1,
+) -> Tuple[str, str]:
     """
     Render PDF using local Playwright/Chromium.
-    
+
     Args:
         run_id: Report generation ID
         account_id: Account UUID
         html_content: Optional HTML string (if None, navigates to print page)
         print_base: Base URL for print pages (uses PRINT_BASE if not provided)
-    
+        header_html: Standalone HTML doc to repeat at top of pages (accepted
+            for API parity with PDFShift; currently IGNORED by Playwright —
+            flagged for follow-up ticket).
+        footer_html: Standalone HTML doc to repeat at bottom of pages (same
+            caveat as header_html).
+        header_start_at: Page number to start repeating header (ignored by
+            Playwright for now).
+        footer_start_at: Page number to start repeating footer (ignored by
+            Playwright for now).
+
     Returns:
         (pdf_path, print_url): Local path to PDF and the URL that was rendered
-    
+
     Raises:
         Exception: If Playwright fails to launch or render
     """
+    # NOTE: Playwright PDF API supports headerTemplate / footerTemplate with
+    # displayHeaderFooter=True, but it has a different size model than
+    # PDFShift's per-page header/footer params. Wiring that up cleanly is
+    # a follow-up. For now we accept the kwargs and ignore them so the
+    # caller signature is consistent across backends.
+    _ = (header_html, footer_html, header_start_at, footer_start_at)
     from playwright.sync_api import sync_playwright
     
     effective_base = print_base or PRINT_BASE
@@ -98,46 +122,87 @@ def render_pdf_playwright(run_id: str, account_id: str, html_content: Optional[s
     return pdf_path, print_url
 
 
-def render_pdf_pdfshift(run_id: str, account_id: str, html_content: Optional[str] = None, print_base: Optional[str] = None) -> Tuple[str, str]:
+def render_pdf_pdfshift(
+    run_id: str,
+    account_id: str,
+    html_content: Optional[str] = None,
+    print_base: Optional[str] = None,
+    header_html: Optional[str] = None,
+    footer_html: Optional[str] = None,
+    header_start_at: int = 1,
+    footer_start_at: int = 1,
+) -> Tuple[str, str]:
     """
     Render PDF using PDFShift cloud API.
-    
+
     Args:
         run_id: Report generation ID
         account_id: Account UUID
         html_content: Optional HTML string (if None, uses print page URL)
         print_base: Base URL for print pages (uses PRINT_BASE if not provided)
-    
+        header_html: Optional standalone HTML doc PDFShift repeats on pages.
+            When provided, PDFShift's `header` parameter is set and the top
+            margin is reserved for it. Use `header_start_at` to skip pages
+            (e.g. start_at=2 means pages 2+ only).
+        footer_html: Optional standalone HTML doc PDFShift repeats on pages.
+            Same start_at semantics as header_html.
+        header_start_at: First page index where the header should appear.
+        footer_start_at: First page index where the footer should appear.
+
     Returns:
         (pdf_path, print_url): Local path to PDF and the URL/HTML that was rendered
-    
+
     Raises:
         httpx.HTTPError: If API request fails
         Exception: If API key is missing or response is invalid
     """
     if not PDFSHIFT_API_KEY:
         raise Exception("PDFSHIFT_API_KEY environment variable is required when PDF_ENGINE=pdfshift")
-    
+
     effective_base = print_base or PRINT_BASE
     print_url = f"{effective_base}/print/{run_id}"
     pdf_path = os.path.join(PDF_DIR, f"{run_id}.pdf")
-    
-    # Prepare request payload
-    # CRITICAL: Set margin to 0 - our HTML templates handle all margins via CSS
-    # Templates use @page { margin: 0 } and .page { padding: 0.25in }
-    # Adding PDFShift margins ON TOP of CSS causes content overflow to blank pages
+
+    # PDFSHIFT-NATIVE-HEADER-FOOTER — When a `header` or `footer` is sent,
+    # PDFShift reserves the declared height inside the page margin. We need
+    # to widen the top/bottom margins so body content doesn't overlap.
+    # When neither is sent, keep zero margins so the existing CSS @page
+    # rule remains the source of truth (legacy behavior preserved).
+    if header_html or footer_html:
+        margin = {
+            "top": "0.8in" if header_html else "0",
+            "right": "0",
+            "bottom": "1.0in" if footer_html else "0",
+            "left": "0",
+        }
+    else:
+        margin = {"top": "0", "right": "0", "bottom": "0", "left": "0"}
+
     base_payload = {
         "sandbox": False,
-        "use_print": True,  # Use @media print stylesheet
-        "format": "Letter",  # US Letter: 8.5" x 11"
-        "margin": {          # ZERO margins - CSS handles this
-            "top": "0",
-            "right": "0",
-            "bottom": "0",
-            "left": "0"
-        },
-        "remove_blank": True,  # Remove blank trailing pages
+        "use_print": True,
+        "format": "Letter",
+        "margin": margin,
+        "remove_blank": True,
     }
+
+    # Attach header/footer when provided. Heights MUST match the actual
+    # rendered content height of the templates — too small clips content,
+    # too large leaves whitespace. Tuned for the compact gradient header
+    # (~10px padding + ~30px text content) and the agent footer
+    # (~48px photo + ~24px padding + 1px border).
+    if header_html:
+        base_payload["header"] = {
+            "source": header_html,
+            "height": "0.7in",
+            "start_at": header_start_at,
+        }
+    if footer_html:
+        base_payload["footer"] = {
+            "source": footer_html,
+            "height": "0.9in",
+            "start_at": footer_start_at,
+        }
     
     # PDFShift options to improve reliability with pages that load images/data after initial HTML.
     # - delay: give the page time to render
@@ -219,34 +284,52 @@ def render_pdf(
     run_id: str,
     account_id: str,
     html_content: Optional[str] = None,
-    print_base: Optional[str] = None
+    print_base: Optional[str] = None,
+    header_html: Optional[str] = None,
+    footer_html: Optional[str] = None,
+    header_start_at: int = 1,
+    footer_start_at: int = 1,
 ) -> Tuple[str, str]:
     """
     Render PDF using the configured engine.
-    
+
     Args:
         run_id: Report generation ID
         account_id: Account UUID
         html_content: Optional HTML string to render
         print_base: Optional override for PRINT_BASE
-    
+        header_html: Optional standalone HTML for page header (PDFShift only).
+        footer_html: Optional standalone HTML for page footer (PDFShift only).
+        header_start_at: First page index where the header appears.
+        footer_start_at: First page index where the footer appears.
+
     Returns:
         (pdf_path, print_url): Local path to generated PDF and source URL
-    
+
     Raises:
         ValueError: If PDF_ENGINE is invalid
         Exception: If rendering fails
     """
-    # Use local variable to avoid race conditions in concurrent workers
-    # DO NOT mutate global PRINT_BASE - it causes race conditions!
     effective_print_base = print_base or PRINT_BASE
-    
+
     print(f"📄 PDF Engine: {PDF_ENGINE}, print_base: {effective_print_base}")
-    
+
     if PDF_ENGINE == "playwright":
-        return render_pdf_playwright(run_id, account_id, html_content, effective_print_base)
+        return render_pdf_playwright(
+            run_id, account_id, html_content, effective_print_base,
+            header_html=header_html,
+            footer_html=footer_html,
+            header_start_at=header_start_at,
+            footer_start_at=footer_start_at,
+        )
     elif PDF_ENGINE == "pdfshift":
-        return render_pdf_pdfshift(run_id, account_id, html_content, effective_print_base)
+        return render_pdf_pdfshift(
+            run_id, account_id, html_content, effective_print_base,
+            header_html=header_html,
+            footer_html=footer_html,
+            header_start_at=header_start_at,
+            footer_start_at=footer_start_at,
+        )
     else:
         raise ValueError(f"Invalid PDF_ENGINE: {PDF_ENGINE}. Must be 'playwright' or 'pdfshift'")
 
