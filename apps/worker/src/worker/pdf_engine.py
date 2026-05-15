@@ -217,9 +217,17 @@ def render_pdf_pdfshift(
     
     # Common options for image loading (applies to both URL and HTML sources)
     image_loading_options = {
-        "delay": 5000,             # 5s delay to let images load
+        # PDFSHIFT-DELAY-REDUCTION — Reduced from 5000ms because we now
+        # base64-inline all images (agent photo, logos, etc.) via
+        # embed_images_as_base64 before sending HTML to PDFShift.
+        # No external image fetches happen on PDFShift's side, so the
+        # 5-second delay was pure dead time. 1000ms is a safe floor for
+        # font / CSS settling. Recoverable savings: ~4-5 sec per report.
+        "delay": 1000,
         "wait_for_network": True,  # Wait for network to go idle (no requests for 500ms)
-        "lazy_load_images": True,  # Scroll to trigger lazy-loaded images
+        # PDFSHIFT-DELAY-REDUCTION — Disabled lazy_load_images because all
+        # images are base64-inlined; no external resources to lazy-load.
+        "lazy_load_images": False,
         "timeout": 100,            # Max 100s total (PDFShift plan limit)
     }
     
