@@ -421,21 +421,24 @@ class MarketReportBuilder:
     # brand colors as literal hex values from the build context.
 
     def render_page_header_html(self) -> str:
-        """Render the compact continuation header for pages 2+ as a standalone HTML doc."""
+        """Render the big gradient hero header as a standalone HTML doc,
+        repeated on every page via PDFShift's `header` parameter."""
         primary_color, accent_color = self._resolve_colors()
         color_roles = compute_color_roles(accent_color, primary_color)
         header_ctx = self._build_header_context()
-
         subtitle_text = header_ctx.get("subtitle") or "All Properties"
-
         context = {
             "primary_color": primary_color,
             "accent_color": accent_color,
             "accent_on_dark": color_roles["theme_color_on_dark"],
+            "header_bg": "#18235c",  # Navy gradient stop. Hardcoded default;
+                                     # can be made dynamic per brand later if needed.
             "report_title": header_ctx.get("title") or "Market Report",
             "city": header_ctx.get("city") or "",
             "lookback_days": header_ctx.get("lookback_days") or 30,
             "subtitle_text": subtitle_text,
+            "total_count": header_ctx.get("total_count"),
+            "agent": self._build_agent_context(),
         }
         template = self.env.get_template("_base/page_header.jinja2")
         return template.render(**context)

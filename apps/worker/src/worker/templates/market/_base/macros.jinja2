@@ -35,35 +35,6 @@
 {% endmacro %}
 
 
-{# ── Report Header ──────────────────────────────────────────────────────────
-   The big inline gradient cover header rendered at the top of page 1.
-   Bleeds edge-to-edge because @page :first { margin-top: 0 } in base.jinja2.
-   Contains: title (with city), subtitle (lookback + properties + data source),
-   total_count metric pill, agent logo on the right.
-   NOT rendered on continuation pages — pages 2+ have no header. #}
-{% macro report_header(header, report_type, agent) %}
-<header class="report-header">
-  <div class="header-left">
-    <h1 class="header-title">{{ header.title | default('Market Report') }} <span>&mdash; {{ header.city | default('') }}</span></h1>
-    <p class="header-subtitle">
-      Last <span>{{ header.lookback_days | default(30) }} days</span> &middot; {{ header.subtitle if header.subtitle else 'All Properties' }} &middot; Live MLS Data
-    </p>
-    {% if header.total_count is defined and header.total_count %}
-    <div class="header-metric">
-      <span class="header-metric-value">{{ header.total_count }}</span>
-      <span class="header-metric-label">{{ header.title | default('Listings') }}</span>
-    </div>
-    {% endif %}
-  </div>
-  <div class="header-right">
-    {% if agent and agent.logo_url %}
-    <img class="header-logo" src="{{ agent.logo_url }}" alt="">
-    {% endif %}
-  </div>
-</header>
-{% endmacro %}
-
-
 {# ── Gallery Layout (A): new_listings_gallery, featured_listings, open_houses #}
 {% macro gallery_layout(header, listings, stats, report_type, agent, ai_narrative=none,
                         listings_section_label=none, listings_truncation_note=none,

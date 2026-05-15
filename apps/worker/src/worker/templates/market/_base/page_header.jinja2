@@ -1,18 +1,15 @@
 <!DOCTYPE html>
-{# PDFShift native header — repeats on EVERY page including page 1.
-   This template renders a standalone HTML document that PDFShift's
-   `header` parameter consumes (start_at: 1 in tasks.py — must match
-   footer.start_at per PDFShift's constraint). The inline page-1
-   gradient cover header that previously lived in base.jinja2 has
-   been removed; this compact header is now THE header on every page.
-
+{# PDFShift native page header — the big gradient cover hero, repeats on
+   EVERY page including page 1 (start_at: 1 in tasks.py; must match
+   footer.start_at per PDFShift's constraint).
+   Visual: navy-to-primary gradient background, large report title with
+   city, subtitle (lookback + filters + data source), count metric pill,
+   agent logo on the right.
    IMPORTANT: PDFShift renders header/footer in a separate document
    context — CSS custom properties from the main document (--primary-color,
-   etc.) do NOT resolve here. Use literal hex values passed via context.
-
-   The {{ '{{page}}' }} / {{ '{{total}}' }} dance escapes Jinja so the
-   literal `{{page}}` and `{{total}}` strings reach PDFShift's renderer,
-   which then substitutes them at render time.
+   etc.) do NOT resolve here. All colors are literal hex values passed
+   via context. The agent logo is base64-embedded at render time
+   (embed_images_as_base64 in tasks.py).
 #}
 <html>
 <head>
@@ -25,59 +22,93 @@
     font-family: 'Outfit', 'Inter', system-ui, sans-serif;
     width: 8.5in;
   }
-  .compact-header {
-    background: linear-gradient(135deg, {{ primary_color }} 0%, {{ primary_color }} 50%, {{ accent_color }} 100%);
-    padding: 10px 25px;
+  .report-header {
+    background: linear-gradient(135deg, {{ header_bg }} 0%, {{ header_bg }} 50%, {{ primary_color }} 100%);
+    padding: 15px 25px;
     color: #ffffff;
     display: flex;
     justify-content: space-between;
     align-items: center;
     width: 100%;
   }
-  .ch-left {
+  .rh-left {
+    flex: 0 0 65%;
+    min-width: 0;
+  }
+  .rh-right {
+    flex: 0 0 35%;
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    justify-content: flex-end;
+    align-items: center;
   }
-  .ch-title {
+  .rh-title {
     font-family: 'Outfit', 'Inter', system-ui, sans-serif;
-    font-size: 14px;
+    font-size: 24px;
     font-weight: 700;
-    line-height: 1.2;
     color: #ffffff;
+    line-height: 1.2;
+    margin-bottom: 4px;
   }
-  .ch-title-city {
+  .rh-title-city {
     font-weight: 400;
     opacity: 0.85;
   }
-  .ch-subtitle {
-    font-size: 9px;
+  .rh-subtitle {
+    font-size: 11px;
+    color: rgba(255,255,255,0.7);
     font-weight: 400;
-    color: rgba(255,255,255,0.75);
     letter-spacing: 0.02em;
+    margin-bottom: 8px;
   }
-  .ch-subtitle-highlight {
+  .rh-subtitle-highlight {
     color: {{ accent_on_dark }};
     font-weight: 600;
   }
-  .ch-right {
-    font-size: 10px;
+  .rh-metric {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .rh-metric-value {
+    font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1;
+  }
+  .rh-metric-label {
+    font-size: 11px;
     font-weight: 500;
-    color: rgba(255,255,255,0.85);
-    letter-spacing: 0.05em;
+    color: rgba(255,255,255,0.7);
     text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .rh-logo {
+    max-height: 40px;
+    width: auto;
+    object-fit: contain;
   }
 </style>
 </head>
 <body>
-<div class="compact-header">
-  <div class="ch-left">
-    <div class="ch-title">{{ report_title }} <span class="ch-title-city">— {{ city }}</span></div>
-    <div class="ch-subtitle">
-      Last <span class="ch-subtitle-highlight">{{ lookback_days }} days</span> · {{ subtitle_text }} · Live MLS Data
+<div class="report-header">
+  <div class="rh-left">
+    <h1 class="rh-title">{{ report_title }} <span class="rh-title-city">— {{ city }}</span></h1>
+    <p class="rh-subtitle">
+      Last <span class="rh-subtitle-highlight">{{ lookback_days }} days</span> · {{ subtitle_text }} · Live MLS Data
+    </p>
+    {% if total_count %}
+    <div class="rh-metric">
+      <span class="rh-metric-value">{{ total_count }}</span>
+      <span class="rh-metric-label">{{ report_title }}</span>
     </div>
+    {% endif %}
   </div>
-  <div class="ch-right">Page {{ '{{page}}' }} of {{ '{{total}}' }}</div>
+  <div class="rh-right">
+    {% if agent and agent.logo_url %}
+    <img class="rh-logo" src="{{ agent.logo_url }}" alt="">
+    {% endif %}
+  </div>
 </div>
 </body>
 </html>

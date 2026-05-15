@@ -1178,33 +1178,35 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
 
         builder = MarketReportBuilder(builder_data)
         html_content = builder.render_html()
-        # HERO-RESTORE — The inline gradient cover header (macros.report_header)
-        # renders at the top of page 1 in the body HTML. We no longer send a
-        # PDFShift `header` param; pages 2+ have no header element. The agent
-        # footer still repeats on every page via PDFShift's `footer` param
-        # (start_at=1; PDFShift's "header.start_at must match footer.start_at"
-        # constraint no longer applies because there's no header to match).
-        # render_page_header_html() and page_header.jinja2 remain available for
-        # future use but are not invoked here.
+        # HERO-EVERY-PAGE — Big gradient hero header repeats on EVERY page via
+        # PDFShift's `header` param. Agent footer repeats on every page via
+        # PDFShift's `footer` param. Both use start_at=1 (PDFShift requires
+        # header.start_at and footer.start_at to match when either > 1).
+        # Inline body hero (macros.report_header) has been removed from base.jinja2.
+        header_html = builder.render_page_header_html()
         footer_html = builder.render_page_footer_html()
         print(
             f"🔍 REPORT RUN {run_id}: server-side HTML rendered "
-            f"(body={len(html_content)} chars, footer={len(footer_html)})"
+            f"(body={len(html_content)} chars, header={len(header_html)}, "
+            f"footer={len(footer_html)})"
         )
 
-        # Embed external image URLs as base64 in the body and footer docs.
-        # PDFShift fetches footer images in a separate context; inlining
-        # ensures reliable rendering (and avoids hitting MLS/CDN allowlists
-        # twice).
-        logger.info("Embedding images as base64 for market report PDF (body + footer)...")
+        # Embed external image URLs as base64 in body + header + footer docs.
+        # PDFShift renders header/footer in a separate context — external images
+        # need to be inlined to render reliably (avoid R2 presigned URL escaping
+        # issues, MLS allowlists, etc.).
+        logger.info("Embedding images as base64 for market report PDF (body + header + footer)...")
         html_content = embed_images_as_base64(html_content)
+        header_html = embed_images_as_base64(header_html)
         footer_html = embed_images_as_base64(footer_html)
 
         pdf_path, html_url = render_pdf(
             run_id=run_id,
             account_id=account_id,
             html_content=html_content,
+            header_html=header_html,
             footer_html=footer_html,
+            header_start_at=1,
             footer_start_at=1,
             print_base=DEV_BASE,
         )

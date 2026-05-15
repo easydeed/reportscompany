@@ -62,17 +62,13 @@
        (the header doesn't repeat). Side margins stay 0 on every
        page; body gutters come from .page-content's
        --page-padding (0.45in). */
-    /* HERO-RESTORE — Margins are controlled by PDFShift's `margin`
-       parameter (set in pdf_engine.py). PDFShift reserves bottom margin
-       for the footer (renders on every page via `footer` param with
-       start_at=1). NO PDFShift header param is sent — the inline page-1
-       gradient cover header (macros.report_header at base.jinja2's body)
-       carries page 1's branding, and pages 2+ have no header element.
-
-       @page :first { margin-top: 0 } lets the page-1 gradient hero
-       bleed edge-to-edge at the top. */
+    /* HERO-EVERY-PAGE — Margins are controlled by PDFShift's `margin`
+       parameter (set in pdf_engine.py). PDFShift reserves space at top for
+       the `header` (page_header.jinja2) and at bottom for the `footer`
+       (page_footer.jinja2). Both repeat on every page including page 1.
+       No @page :first override needed — every page has identical top margin
+       (the PDFShift-reserved hero space). */
     @page { size: letter; }
-    @page :first { margin-top: 0; }
 
     @media print {
       html, body { background: white; margin: 0; padding: 0; }
@@ -114,9 +110,9 @@
     }
 
     /* ===================== PAGE SHELL ===================== */
-    /* PDFSHIFT-FOOTER-PAGE1 — Dropped `min-height: var(--page-height)`.
-       PDFShift's reserved header (0.8in) + footer (1.0in) margins eat
-       ~1.8in of every page. With min-height forcing .report-page to be
+    /* HERO-EVERY-PAGE — Keep `min-height: var(--page-height)` off.
+       PDFShift's reserved header (1.3in) + footer (1.0in) margins eat
+       ~2.3in of every page. With min-height forcing .report-page to be
        >= 11in, Chromium injected phantom page breaks because content
        area was effectively < 11in. Block flow without a height floor
        lets PDFShift's pagination logic determine breaks naturally. */
@@ -1161,14 +1157,14 @@
 </head>
 <body>
   <div class="report-page">
-    {# HERO-RESTORE — The inline page-1 gradient cover header is back.
-       It renders ONCE at the top of page 1 in normal block flow.
-       Pages 2+ have no header (PDFShift `header` param is no longer
-       sent — see pdf_engine.py / tasks.py). The agent footer renders
-       on every page via PDFShift `footer` param (start_at=1).
-       Page numbers on continuation pages are handled by the user's
-       PDF reader rather than rendered in-document. #}
-    {{ macros.report_header(header, report_type, agent) }}
+    {# HERO-EVERY-PAGE — The gradient hero banner now renders via PDFShift's
+       `header` parameter (see _base/page_header.jinja2 + market_builder.
+       render_page_header_html). It repeats on every page including page 1.
+       NO inline hero is rendered in the body anymore; that would double up
+       on page 1. The agent footer also repeats via PDFShift's `footer`
+       param (page_footer.jinja2).
+       Both header.start_at and footer.start_at are 1 (PDFShift requires
+       them to match when > 1; both at 1 satisfies the constraint). #}
     <div class="page-content">
       {% block content %}
         {# PDF-COMPREHENSIVE — every layout receives the section label,

@@ -170,7 +170,10 @@ def render_pdf_pdfshift(
     # rule remains the source of truth (legacy behavior preserved).
     if header_html or footer_html:
         margin = {
-            "top": "0.8in" if header_html else "0",
+            # HERO-EVERY-PAGE — Top margin sized for the big gradient hero
+            # header (page_header.jinja2). Hero is ~1.2-1.3in tall depending
+            # on subtitle wrap; 1.3in gives slight breathing room.
+            "top": "1.3in" if header_html else "0",
             "right": "0",
             "bottom": "1.0in" if footer_html else "0",
             "left": "0",
@@ -188,13 +191,15 @@ def render_pdf_pdfshift(
 
     # Attach header/footer when provided. Heights MUST match the actual
     # rendered content height of the templates — too small clips content,
-    # too large leaves whitespace. Tuned for the compact gradient header
-    # (~10px padding + ~30px text content) and the agent footer
-    # (~48px photo + ~24px padding + 1px border).
+    # too large leaves whitespace. Tuned for the big gradient hero header
+    # (~1.3in) and the agent footer (~48px photo + ~24px padding + 1px border).
     if header_html:
         base_payload["header"] = {
             "source": header_html,
-            "height": "0.7in",
+            # HERO-EVERY-PAGE — Matched to margin.top = 1.3in for the big
+            # gradient hero header. Slightly smaller height than margin so
+            # the hero sits flush at the top edge of the reserved space.
+            "height": "1.3in",
             "start_at": header_start_at,
         }
     if footer_html:

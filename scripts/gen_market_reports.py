@@ -372,7 +372,12 @@ def _pdf_via_playwright(html: str, pdf_path: Path) -> int:
     return pdf_path.stat().st_size
 
 
-def _pdf_via_pdfshift(html: str, pdf_path: Path, footer_html: str | None = None) -> int:
+def _pdf_via_pdfshift(
+    html: str,
+    pdf_path: Path,
+    header_html: str | None = None,
+    footer_html: str | None = None,
+) -> int:
     """
     Production-parity PDF render via PDFShift.
 
@@ -381,6 +386,7 @@ def _pdf_via_pdfshift(html: str, pdf_path: Path, footer_html: str | None = None)
     preview output exactly matches what Render produces.
 
     Handles:
+    - Header HTML (big gradient hero on every page)
     - Footer HTML (agent footer on every page)
     - Dynamic margin inflation (1.0in bottom when footer present)
     - X-Processor-Version: 142 header
@@ -394,7 +400,9 @@ def _pdf_via_pdfshift(html: str, pdf_path: Path, footer_html: str | None = None)
         run_id=pdf_path.stem,
         account_id="00000000-0000-0000-0000-000000000000",
         html_content=html,
+        header_html=header_html,
         footer_html=footer_html,
+        header_start_at=1,
         footer_start_at=1,
     )
     Path(generated_path).replace(pdf_path)
@@ -425,11 +433,13 @@ def render_variant(
     html = builder.render_html()
     elapsed = time.perf_counter() - t0
 
-    # Generate the agent footer HTML — production sends this as PDFShift's
-    # `footer` parameter so it repeats on every page. Match production.
+    # Generate PDFShift header/footer HTML. Production sends these as native
+    # PDFShift params so the hero and agent footer repeat on every page.
+    header_html = None
     footer_html = None
     if pdf_engine in ("pdfshift", "playwright"):
         try:
+            header_html = builder.render_page_header_html()
             footer_html = builder.render_page_footer_html()
         except AttributeError:
             # Older builder versions still render the body correctly.
@@ -442,6 +452,8 @@ def render_variant(
         try:
             from worker.property_tasks.property_report import embed_images_as_base64
             html = embed_images_as_base64(html)
+            if header_html:
+                header_html = embed_images_as_base64(header_html)
             if footer_html:
                 footer_html = embed_images_as_base64(footer_html)
         except ImportError:
@@ -465,10 +477,15 @@ def render_variant(
         pdf_path = OUTPUT_DIR / f"{report_type}.pdf"
         try:
             if pdf_engine == "pdfshift":
-                size = _pdf_via_pdfshift(html, pdf_path, footer_html=footer_html)
+                size = _pdf_via_pdfshift(
+                    html,
+                    pdf_path,
+                    header_html=header_html,
+                    footer_html=footer_html,
+                )
             else:
-                if pdf_engine == "playwright" and footer_html:
-                    print("⚠️  Playwright engine ignores footers — use --pdf-engine pdfshift for footer preview")
+                if pdf_engine == "playwright" and (header_html or footer_html):
+                    print("⚠️  Playwright engine ignores headers/footers — use --pdf-engine pdfshift for full preview")
                 size = _pdf_via_playwright(html, pdf_path)
             result["pdf_size"] = size
             result["pdf_path"] = pdf_path
