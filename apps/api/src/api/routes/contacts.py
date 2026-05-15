@@ -16,25 +16,16 @@ router = APIRouter(prefix="/v1")
 
 class ContactCreate(BaseModel):
     name: str
-    email: EmailStr | None = None
-    type: Literal["client", "list", "agent", "group"]
+    email: EmailStr
+    type: Literal["client"] = "client"
     phone: str | None = None
     notes: str | None = None
-    
-    def model_post_init(self, __context):
-        """Validate fields based on type."""
-        if self.type == "agent":
-            if not self.email:
-                raise ValueError("Email is required for agent contacts")
-        elif self.type == "group":
-            # Groups don't require email or phone
-            pass
 
 
 class ContactUpdate(BaseModel):
     name: str | None = None
     email: EmailStr | None = None
-    type: Literal["client", "list", "agent", "group"] | None = None
+    type: Literal["client"] | None = None
     phone: str | None = None
     notes: str | None = None
 
@@ -264,7 +255,7 @@ def import_contacts(request: Request, file: UploadFile = File(...)):
     Expected columns (header row):
       - name (required)
       - email (required)
-      - type (optional: client | agent | list; default: client)
+      - type (optional legacy column; all imported contacts are saved as client)
       - group (optional: group name; will create group if missing)
 
     If group is provided, a contact group will be created (if needed) and the
@@ -294,18 +285,17 @@ def import_contacts(request: Request, file: UploadFile = File(...)):
         for idx, row in enumerate(reader, start=2):  # start=2 to account for header row
             name = (row.get("name") or "").strip()
             email = (row.get("email") or "").strip()
-            raw_type = (row.get("type") or "").strip().lower()
             group_name = (row.get("group") or "").strip()
 
             if not name or not email:
                 errors.append({"row": idx, "reason": "Missing name or email"})
                 continue
 
-            contact_type: str
-            if raw_type in ("client", "agent", "list"):
-                contact_type = raw_type
-            else:
-                contact_type = "client"
+            # CONTACTS-SIMPLIFY-TO-CLIENT-AND-GROUP — contacts now have a
+            # single DB-supported type. Keep accepting legacy CSV `type`
+            # values for backwards-compatible imports, but coerce them to
+            # client before insert so the tightened CHECK constraint holds.
+            contact_type = "client"
 
             try:
                 # Insert contact (dedupe on email within account)

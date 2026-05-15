@@ -32,7 +32,6 @@ import {
 import { Badge } from "@/components/ui/badge"
 import {
   UserPlus,
-  Mail,
   Trash2,
   Users,
   Shield,
@@ -41,11 +40,7 @@ import {
   Upload,
   Download,
   FolderPlus,
-  Building2,
-  UserCheck,
-  MoreHorizontal,
   ChevronRight,
-  Sparkles,
   Filter,
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
@@ -58,7 +53,7 @@ type Contact = {
   id: string
   name: string
   email: string | null
-  type: "client" | "list" | "agent" | "group"
+  type: "client"
   phone?: string | null
   notes?: string | null
   created_at: string
@@ -79,7 +74,6 @@ type Person = {
   name: string
   email: string
   type: string
-  displayType: string
   lastActivity?: string
   reportsThisMonth?: number
   groups?: Array<{ id: string; name: string }>
@@ -137,7 +131,7 @@ export default function PeoplePage() {
   } | null>(null)
   const [importFile, setImportFile] = useState<File | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [filterType, setFilterType] = useState<"all" | "agents" | "groups" | "sponsored_agents">("all")
+  const [filterType, setFilterType] = useState<"all" | "agents" | "sponsored_agents">("all")
   const [selectedPeopleIds, setSelectedPeopleIds] = useState<string[]>([])
   const [activeGroup, setActiveGroup] = useState<ContactGroup | null>(null)
   const [groupDetailMembers, setGroupDetailMembers] = useState<any[]>([])
@@ -152,7 +146,6 @@ export default function PeoplePage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    type: "" as "" | "client" | "list" | "agent" | "group",
     phone: "",
     notes: "",
   })
@@ -160,7 +153,6 @@ export default function PeoplePage() {
   const [editFormData, setEditFormData] = useState({
     name: "",
     email: "",
-    type: "client" as "client" | "list" | "agent" | "group",
     phone: "",
     notes: "",
   })
@@ -171,16 +163,6 @@ export default function PeoplePage() {
   }
 
   async function handleAddContact() {
-    // Validate based on type
-    if (!formData.type) {
-      toast({
-        title: "Error",
-        description: "Please select a contact type",
-        variant: "destructive",
-      })
-      return
-    }
-    
     if (!formData.name) {
       toast({
         title: "Error",
@@ -189,30 +171,23 @@ export default function PeoplePage() {
       })
       return
     }
-    
-    if (formData.type === "agent" && !formData.email) {
+
+    if (!formData.email) {
       toast({
         title: "Error",
-        description: "Email is required for agent contacts",
+        description: "Email is required",
         variant: "destructive",
       })
       return
     }
 
     try {
-      // Build payload based on type
       const payload: any = {
         name: formData.name,
-        type: formData.type,
+        email: formData.email,
         notes: formData.notes || null,
       }
-      
-      // Add email if provided (required for agent)
-      if (formData.email) {
-        payload.email = formData.email
-      }
-      
-      // Add phone if provided (for agent)
+
       if (formData.phone) {
         payload.phone = formData.phone
       }
@@ -234,7 +209,7 @@ export default function PeoplePage() {
       })
 
       setDialogOpen(false)
-      setFormData({ name: "", email: "", type: "", phone: "", notes: "" })
+      setFormData({ name: "", email: "", phone: "", notes: "" })
       refreshAll()
     } catch (error) {
       toast({
@@ -640,11 +615,6 @@ export default function PeoplePage() {
       name: c.name,
       email: c.email || "",
       type: c.type,
-      displayType: 
-        c.type === "client" ? "Client" : 
-        c.type === "list" ? "List" : 
-        c.type === "group" ? "Group" :
-        "Agent",
       lastActivity: undefined,
       reportsThisMonth: undefined,
       groups: c.groups || [],
@@ -655,7 +625,6 @@ export default function PeoplePage() {
       name: s.name,
       email: "", // Sponsored accounts don't have a direct email in this view
       type: "sponsored_agent",
-      displayType: "Trial Agent",
       lastActivity: s.last_report_at || undefined,
       reportsThisMonth: s.reports_this_month,
       groups: s.groups || [],
@@ -676,23 +645,10 @@ export default function PeoplePage() {
   // Apply type filter
   const people = searchFiltered.filter((person) => {
     if (filterType === "all") return true
-    if (filterType === "agents") return person.type === "agent" || person.kind === "sponsored_agent"
-    if (filterType === "groups") return person.type === "group"
+    if (filterType === "agents") return person.kind === "sponsored_agent"
     if (filterType === "sponsored_agents") return person.kind === "sponsored_agent"
     return true
   })
-
-  // Badge color helper
-  function getTypeBadgeClasses(type: string, kind: string) {
-    if (kind === "sponsored_agent") return "bg-primary/10 text-primary border-primary/20"
-    switch (type) {
-      case "agent": return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-800"
-      case "client": return "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800"
-      case "group": return "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-400 dark:border-purple-800"
-      case "list": return "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800"
-      default: return "bg-muted text-muted-foreground"
-    }
-  }
 
   // Avatar initial helper
   function getInitials(name: string) {
@@ -732,7 +688,7 @@ export default function PeoplePage() {
                   <DialogTitle>Import Contacts from CSV</DialogTitle>
                   <DialogDescription>
                     Upload a CSV file with columns: <code className="px-1 py-0.5 bg-muted rounded text-xs">name</code>, <code className="px-1 py-0.5 bg-muted rounded text-xs">email</code>, optional{" "}
-                    <code className="px-1 py-0.5 bg-muted rounded text-xs">type</code>, and optional <code className="px-1 py-0.5 bg-muted rounded text-xs">group</code>.
+                    <code className="px-1 py-0.5 bg-muted rounded text-xs">group</code>.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
@@ -808,120 +764,59 @@ export default function PeoplePage() {
                 <DialogHeader>
                   <DialogTitle>Add New Contact</DialogTitle>
                   <DialogDescription>
-                    Select a type first, then fill in the required details
+                    Add a client contact who can receive reports.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
-                  {/* Type - FIRST */}
                   <div className="space-y-2">
-                    <Label htmlFor="type" className="text-xs font-medium">Type *</Label>
-                    <Select
-                      value={formData.type}
-                      onValueChange={(value: "client" | "list" | "agent" | "group") =>
-                        setFormData({ ...formData, type: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a type..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="agent">Agent (External)</SelectItem>
-                        <SelectItem value="group">Group (Office/Company)</SelectItem>
-                        <SelectItem value="client">Client (Individual)</SelectItem>
-                        <SelectItem value="list">List (Recipients)</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="name" className="text-xs font-medium">Name *</Label>
+                    <Input
+                      id="name"
+                      placeholder="e.g. Jane Smith"
+                      required
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    />
                   </div>
-
-                  {/* Conditional fields based on type */}
-                  {formData.type && (
-                    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                      {/* Name - Required for all */}
-                      <div className="space-y-2">
-                        <Label htmlFor="name" className="text-xs font-medium">Name *</Label>
-                        <Input
-                          id="name"
-                          placeholder={
-                            formData.type === "group"
-                              ? "e.g. ABC Realty - La Verne"
-                              : formData.type === "agent"
-                                ? "e.g. John Doe"
-                                : "e.g. Jane Smith"
-                          }
-                          value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        />
-                      </div>
-
-                      {/* Email - Required for agent, optional for others */}
-                      {formData.type === "agent" && (
-                        <div className="space-y-2">
-                          <Label htmlFor="email" className="text-xs font-medium">Email *</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            placeholder="john@example.com"
-                            value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                          />
-                        </div>
-                      )}
-
-                      {/* Email - Optional for others except group */}
-                      {formData.type !== "agent" && formData.type !== "group" && (
-                        <div className="space-y-2">
-                          <Label htmlFor="email" className="text-xs font-medium">Email</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            placeholder="email@example.com (optional)"
-                            value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                          />
-                        </div>
-                      )}
-
-                      {/* Phone - Show for agent only */}
-                      {formData.type === "agent" && (
-                        <div className="space-y-2">
-                          <Label htmlFor="phone" className="text-xs font-medium">Phone</Label>
-                          <Input
-                            id="phone"
-                            type="tel"
-                            placeholder="(555) 123-4567 (optional)"
-                            value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          />
-                        </div>
-                      )}
-
-                      {/* Notes - Always optional */}
-                      <div className="space-y-2">
-                        <Label htmlFor="notes" className="text-xs font-medium">
-                          {formData.type === "group" ? "Description" : "Notes"}
-                        </Label>
-                        <Input
-                          id="notes"
-                          placeholder={
-                            formData.type === "group"
-                              ? "e.g. Real estate office in La Verne..."
-                              : "Any additional notes..."
-                          }
-                          value={formData.notes}
-                          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-xs font-medium">Email * (required)</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="jane@example.com"
+                      required
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="text-xs font-medium">Phone</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="(555) 123-4567 (optional)"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="notes" className="text-xs font-medium">Notes</Label>
+                    <Input
+                      id="notes"
+                      placeholder="Any additional notes..."
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    />
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => {
                     setDialogOpen(false)
-                    setFormData({ name: "", email: "", type: "", phone: "", notes: "" })
+                    setFormData({ name: "", email: "", phone: "", notes: "" })
                   }}>
                     Cancel
                   </Button>
-                  <Button onClick={handleAddContact} disabled={!formData.type || !formData.name}>
+                  <Button onClick={handleAddContact} disabled={!formData.name || !formData.email}>
                     Add Contact
                   </Button>
                 </DialogFooter>
@@ -1088,24 +983,6 @@ export default function PeoplePage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-type" className="text-xs font-medium">Type</Label>
-              <Select
-                value={editFormData.type}
-                onValueChange={(value: "client" | "list" | "agent") =>
-                  setEditFormData({ ...editFormData, type: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="client">Client (Individual)</SelectItem>
-                  <SelectItem value="list">List (Group)</SelectItem>
-                  <SelectItem value="agent">Agent (External)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="edit-notes" className="text-xs font-medium">Notes (Optional)</Label>
               <Input
                 id="edit-notes"
@@ -1228,7 +1105,7 @@ export default function PeoplePage() {
 
       {/* Modern Summary Cards */}
       {!loading && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {[
             {
               label: "Total Contacts",
@@ -1237,30 +1114,21 @@ export default function PeoplePage() {
               color: "bg-blue-500/10 text-blue-600",
             },
             {
-              label: "Agent Contacts",
-              value: contacts.filter((c) => c.type === "agent").length,
-              icon: UserCheck,
-              color: "bg-emerald-500/10 text-emerald-600",
+              label: "Total Groups",
+              value: groups.length,
+              icon: FolderPlus,
+              color: "bg-orange-500/10 text-orange-600",
             },
-            {
-              label: "Group Contacts",
-              value: contacts.filter((c) => c.type === "group").length,
-              icon: Building2,
-              color: "bg-purple-500/10 text-purple-600",
-            },
-            isAffiliate
-              ? {
-                  label: "Trial Agents",
-                  value: sponsoredAccounts.length,
-                  icon: Shield,
-                  color: "bg-primary/10 text-primary",
-                }
-              : {
-                  label: "Total Groups",
-                  value: groups.length,
-                  icon: FolderPlus,
-                  color: "bg-orange-500/10 text-orange-600",
-                },
+            ...(isAffiliate
+              ? [
+                  {
+                    label: "Trial Agents",
+                    value: sponsoredAccounts.length,
+                    icon: Shield,
+                    color: "bg-primary/10 text-primary",
+                  },
+                ]
+              : []),
           ].map((card, i) => (
             <div
               key={i}
@@ -1327,7 +1195,6 @@ export default function PeoplePage() {
                   <SelectContent>
                     <SelectItem value="all">All People</SelectItem>
                     <SelectItem value="agents">Agents</SelectItem>
-                    <SelectItem value="groups">Groups</SelectItem>
                     {isAffiliate && <SelectItem value="sponsored_agents">Trial Agents</SelectItem>}
                   </SelectContent>
                 </Select>
@@ -1372,7 +1239,6 @@ export default function PeoplePage() {
                       </TableHead>
                       <TableHead className="text-xs font-semibold">Name</TableHead>
                       <TableHead className="text-xs font-semibold">Email</TableHead>
-                      <TableHead className="text-xs font-semibold">Type</TableHead>
                       <TableHead className="text-xs font-semibold">Groups</TableHead>
                       {isAffiliate && <TableHead className="text-xs font-semibold">Reports</TableHead>}
                       {isAffiliate && <TableHead className="text-xs font-semibold">Last Activity</TableHead>}
@@ -1408,14 +1274,6 @@ export default function PeoplePage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">{person.email || "—"}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={cn("text-[10px] font-semibold px-2 py-0.5", getTypeBadgeClasses(person.type, person.kind))}
-                          >
-                            {person.displayType}
-                          </Badge>
-                        </TableCell>
                         <TableCell>
                           {person.groups && person.groups.length > 0 ? (
                             <div className="flex gap-1 flex-wrap">
@@ -1455,7 +1313,6 @@ export default function PeoplePage() {
                                     setEditFormData({
                                       name: contact.name,
                                       email: contact.email || "",
-                                      type: contact.type,
                                       phone: contact.phone || "",
                                       notes: contact.notes || "",
                                     })
