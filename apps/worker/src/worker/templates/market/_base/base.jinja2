@@ -62,10 +62,26 @@
        (the header doesn't repeat). Side margins stay 0 on every
        page; body gutters come from .page-content's
        --page-padding (0.45in). */
-    @page { size: letter; margin: 0; }
-    @page :first { margin: 0; }
-    @page { margin-top: 0.4in; margin-bottom: 0.4in; }
-    @page :first { margin-top: 0; margin-bottom: 0; }
+    /* FOOTER-PIN — Reserve bottom margin on every @page and pin the agent
+       footer to @bottom-center via CSS Paged Media. .agent-footer below uses
+       `position: running(agentFooterRunning)` to opt into this slot. The
+       :first page keeps its edge-to-edge gradient header (top/left/right=0)
+       but still reserves bottom space for the running footer. */
+    @page {
+      size: letter;
+      margin-top: 0.4in;
+      margin-right: 0;
+      margin-bottom: 1.2in;
+      margin-left: 0;
+      @bottom-center { content: element(agentFooterRunning); }
+    }
+    @page :first {
+      margin-top: 0;
+      margin-right: 0;
+      margin-bottom: 1.2in;
+      margin-left: 0;
+      @bottom-center { content: element(agentFooterRunning); }
+    }
 
     @media print {
       html, body { background: white; margin: 0; padding: 0; }
@@ -1012,9 +1028,11 @@
       color: var(--primary-color);
     }
 
-    /* ===================== AGENT FOOTER ===================== */
+    /* ===================== AGENT FOOTER =====================
+       FOOTER-PIN — Pulled out of flow into @page @bottom-center via
+       `position: running(...)`. Identifier MUST match @page rule above. */
     .agent-footer {
-      flex-shrink: 0;
+      position: running(agentFooterRunning);
       padding: 12px var(--page-padding) 14px;
       border-top: 1px solid var(--gray-200);
       display: flex;
