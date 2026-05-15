@@ -8,6 +8,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { SharedEmailPreview, PREVIEW_DEFAULT_PRIMARY, PREVIEW_DEFAULT_ACCENT } from "@/components/shared/email-preview"
+import { SharedPDFPreview } from "@/components/shared/pdf-preview"
 import { StepStory } from "./step-story"
 import { StepAudience } from "./step-audience"
 import { StepWhereWhen } from "./step-where-when"
@@ -596,7 +597,7 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
               <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 bg-gray-50/50">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 <h3 className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-                  Email Preview
+                  {defaultMode === "schedule" ? "Email Preview" : "Report Preview"}
                 </h3>
                 <span className="ml-auto text-[10px] text-gray-400">Updates as you build</span>
               </div>
@@ -612,22 +613,41 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
               </div>
 
               <div className="p-4 bg-stone-100/50 max-h-[calc(100vh-220px)] overflow-y-auto">
-                <SharedEmailPreview
-                  primaryColor={branding.primaryColor}
-                  accentColor={branding.accentColor}
-                  headerLogoUrl={branding.headerLogoUrl}
-                  displayName={branding.displayName}
-                  agentName={profile.name}
-                  agentTitle={profile.title}
-                  agentPhone={profile.phone}
-                  agentEmail={profile.email}
-                  agentPhotoUrl={profile.photoUrl}
-                  reportType={previewReportType}
-                  audienceLabel={audienceLabel}
-                  areaName={areaName}
-                  lookbackDays={state.lookbackDays || 30}
-                  scale={0.92}
-                />
+                {defaultMode === "schedule" ? (
+                  <SharedEmailPreview
+                    primaryColor={branding.primaryColor}
+                    accentColor={branding.accentColor}
+                    headerLogoUrl={branding.headerLogoUrl}
+                    displayName={branding.displayName}
+                    agentName={profile.name}
+                    agentTitle={profile.title}
+                    agentPhone={profile.phone}
+                    agentEmail={profile.email}
+                    agentPhotoUrl={profile.photoUrl}
+                    reportType={previewReportType}
+                    audienceLabel={audienceLabel}
+                    areaName={areaName}
+                    lookbackDays={state.lookbackDays || 30}
+                    scale={0.92}
+                  />
+                ) : (
+                  <SharedPDFPreview
+                    primaryColor={branding.primaryColor}
+                    accentColor={branding.accentColor}
+                    headerLogoUrl={branding.headerLogoUrl}
+                    displayName={branding.displayName}
+                    agentName={profile.name}
+                    agentTitle={profile.title}
+                    agentPhone={profile.phone}
+                    agentEmail={profile.email}
+                    agentPhotoUrl={profile.photoUrl}
+                    reportType={previewReportType}
+                    audienceLabel={audienceLabel}
+                    areaName={areaName}
+                    lookbackDays={state.lookbackDays || 30}
+                    scale={0.92}
+                  />
+                )}
               </div>
             </div>
           </div>

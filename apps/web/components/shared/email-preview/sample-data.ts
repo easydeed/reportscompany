@@ -21,6 +21,39 @@ export const PREVIEW_CAPS: Record<PreviewReportType, number> = {
   price_bands: 8,
 }
 
+// Section labels mirror PDF_CONFIG[type].section_label in
+// apps/worker/src/worker/market_builder.py. Keep in sync.
+export const PDF_SECTION_LABELS: Record<PreviewReportType, string> = {
+  market_snapshot: "Recent Activity",
+  new_listings_gallery: "New Listings",
+  new_listings: "New Listings",
+  closed: "Recent Closed Sales",
+  inventory: "Active Inventory Sample",
+  featured_listings: "Hand-Picked Highlights",
+  open_houses: "Open Houses This Week",
+  price_bands: "Example Listings by Price Band",
+}
+
+// Layout grouping for PDF preview rendering.
+// Mirrors LAYOUT_MAP in apps/worker/src/worker/market_builder.py.
+export type PDFLayoutType =
+  | "gallery"
+  | "market_narrative"
+  | "closed_inventory"
+  | "analytics"
+  | "pricebands"
+
+export const PDF_LAYOUT_MAP: Record<PreviewReportType, PDFLayoutType> = {
+  new_listings_gallery: "gallery",
+  featured_listings: "gallery",
+  open_houses: "gallery",
+  market_snapshot: "market_narrative",
+  closed: "closed_inventory",
+  inventory: "closed_inventory",
+  price_bands: "pricebands",
+  new_listings: "analytics",
+}
+
 export const SAMPLE_PHOTOS = [
   "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=280&h=200&fit=crop",
   "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=280&h=200&fit=crop",
