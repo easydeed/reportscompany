@@ -40,6 +40,17 @@ const REPORT_TYPE_LABELS: Record<string, string> = {
 
 type GenerationState = "idle" | "creating" | "polling" | "complete" | "error" | "limit_reached"
 
+// Cycling waiting-screen stages while we poll the report status. The labels
+// mirror what the worker actually does (apps/worker/src/worker/...). Backend
+// doesn't expose true progress today, so we time-cycle on advertised
+// durations and stick on the final stage until the response arrives.
+const POLLING_STAGES: { label: string; durationMs: number }[] = [
+  { label: "Pulling MLS data", durationMs: 12000 },
+  { label: "Analyzing market activity", durationMs: 13000 },
+  { label: "Generating AI market insight", durationMs: 20000 },
+  { label: "Rendering your branded PDF", durationMs: 999000 },
+]
+
 interface UnifiedWizardProps {
   defaultMode?: DeliveryMode
   scheduleId?: string
@@ -72,6 +83,7 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
   const [generationError, setGenerationError] = useState<string | null>(null)
   const [limitInfo, setLimitInfo] = useState<{ product: string; used: number; limit: number } | null>(null)
+  const [pollingStage, setPollingStage] = useState(0)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const selectedReport = REPORT_TYPES.find(r => r.id === state.reportType)
@@ -138,6 +150,33 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
       if (rt) setState((prev) => ({ ...prev, lookbackDays: rt.defaultLookback }))
     }
   }, [state.reportType, state.lookbackDays])
+
+  // Cycle through POLLING_STAGES while we wait for the report to finish.
+  // Each stage advances on its configured timer; the final stage sticks
+  // until generationState transitions out of "polling" (success or error).
+  useEffect(() => {
+    if (generationState !== "polling") {
+      setPollingStage(0)
+      return
+    }
+    let cancelled = false
+    const timers: ReturnType<typeof setTimeout>[] = []
+    const advance = (idx: number) => {
+      if (cancelled || idx >= POLLING_STAGES.length - 1) return
+      const t = setTimeout(() => {
+        if (cancelled) return
+        setPollingStage(idx + 1)
+        advance(idx + 1)
+      }, POLLING_STAGES[idx].durationMs)
+      timers.push(t)
+    }
+    setPollingStage(0)
+    advance(0)
+    return () => {
+      cancelled = true
+      timers.forEach(clearTimeout)
+    }
+  }, [generationState])
 
   const update = useCallback((patch: Partial<WizardState>) => {
     setState((prev) => ({ ...prev, ...patch }))
@@ -418,32 +457,79 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
             {generationState !== "idle" ? (
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 min-h-[480px] flex items-center justify-center">
                 <div className="text-center max-w-sm mx-auto space-y-4">
-                  {(generationState === "creating" || generationState === "polling") && (
+                  {generationState === "creating" && (
                     <>
                       <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
                         <Loader2 className="w-8 h-8 text-primary animate-spin" />
                       </div>
                       <div>
                         <h2 className="text-lg font-semibold text-gray-900">
-                          {generationState === "creating" ? "Creating your report..." : "Generating your report..."}
+                          Creating your report...
                         </h2>
                         <p className="text-sm text-gray-500 mt-1">
-                          {generationState === "polling"
-                            ? "This usually takes 30–60 seconds. Please don\u2019t close this page."
-                            : "Setting things up..."}
+                          Setting things up...
                         </p>
                       </div>
-                      {generationState === "polling" && (
-                        <div className="flex justify-center gap-1 pt-2">
-                          {[0, 1, 2].map((i) => (
-                            <div
-                              key={i}
-                              className="w-2 h-2 rounded-full bg-primary/40 animate-bounce"
-                              style={{ animationDelay: `${i * 150}ms` }}
-                            />
-                          ))}
+                    </>
+                  )}
+
+                  {generationState === "polling" && (
+                    <>
+                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-semibold text-gray-900">
+                          Generating your report...
+                        </h2>
+                        <p className="text-sm text-gray-500 mt-1">
+                          This usually takes 30&ndash;60 seconds. Please don&rsquo;t close this page.
+                        </p>
+                      </div>
+
+                      {/* Progress bar — width transitions over the active stage's duration */}
+                      <div className="w-full max-w-xs mx-auto pt-2">
+                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-primary transition-all ease-linear"
+                            style={{
+                              width: `${((pollingStage + 1) / POLLING_STAGES.length) * 100}%`,
+                              transitionDuration: `${POLLING_STAGES[pollingStage]?.durationMs || 0}ms`,
+                            }}
+                          />
                         </div>
-                      )}
+                      </div>
+
+                      {/* Stage list — done/active/pending */}
+                      <ul className="space-y-2 text-left max-w-xs mx-auto pt-1">
+                        {POLLING_STAGES.map((stage, idx) => {
+                          const isDone = idx < pollingStage
+                          const isActive = idx === pollingStage
+                          const isPending = idx > pollingStage
+                          return (
+                            <li
+                              key={stage.label}
+                              className={cn(
+                                "flex items-center gap-2 text-sm transition-colors",
+                                isDone && "text-gray-400",
+                                isActive && "text-gray-900 font-medium",
+                                isPending && "text-gray-300"
+                              )}
+                            >
+                              {isDone && (
+                                <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                              )}
+                              {isActive && (
+                                <Loader2 className="w-4 h-4 text-primary animate-spin flex-shrink-0" />
+                              )}
+                              {isPending && (
+                                <div className="w-4 h-4 rounded-full border-2 border-gray-200 flex-shrink-0" />
+                              )}
+                              <span>{stage.label}</span>
+                            </li>
+                          )
+                        })}
+                      </ul>
                     </>
                   )}
 
