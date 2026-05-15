@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-{# PDFShift native continuation header for pages 2+.
+{# PDFShift native header — repeats on EVERY page including page 1.
    This template renders a standalone HTML document that PDFShift's
-   `header` parameter repeats on every page after page 1
-   (start_at: 2 is set in tasks.py). Page 1 keeps the big inline
-   gradient cover header from the report_header macro.
+   `header` parameter consumes (start_at: 1 in tasks.py — must match
+   footer.start_at per PDFShift's constraint). The inline page-1
+   gradient cover header that previously lived in base.jinja2 has
+   been removed; this compact header is now THE header on every page.
 
    IMPORTANT: PDFShift renders header/footer in a separate document
    context — CSS custom properties from the main document (--primary-color,

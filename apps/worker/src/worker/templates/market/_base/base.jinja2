@@ -66,12 +66,13 @@
        `margin` parameter (set in pdf_engine.py). PDFShift auto-reserves
        space at the top/bottom of every page for the `header` / `footer`
        params, so we no longer rely on CSS Paged Media `position: running()`.
-       The compact continuation header lives in _base/page_header.jinja2
-       (start_at: 2). The agent footer lives in _base/page_footer.jinja2
-       (start_at: 1). Page 1 keeps its inline gradient cover header from
-       the report_header macro and bleeds edge-to-edge at the top. */
+       Both the compact continuation header (_base/page_header.jinja2) and
+       the agent footer (_base/page_footer.jinja2) repeat on EVERY page
+       including page 1 (start_at: 1 for both — PDFShift requires header
+       and footer to share start_at). The previous page-1 inline gradient
+       cover header has been removed; the PDFShift header is THE header
+       on every page. */
     @page { size: letter; }
-    @page :first { margin-top: 0; }
 
     @media print {
       html, body { background: white; margin: 0; padding: 0; }
@@ -113,14 +114,14 @@
     }
 
     /* ===================== PAGE SHELL ===================== */
-    /* PDF-COMPREHENSIVE Part 1 — was fixed `height: 11in; overflow: hidden;
-       display: flex` which clipped everything past page 1. Now uses
-       block flow + min-height so content paginates naturally; the
-       header sits at the top, the agent + page footer at the very end
-       (only on the last page). */
+    /* PDFSHIFT-FOOTER-PAGE1 — Dropped `min-height: var(--page-height)`.
+       PDFShift's reserved header (0.8in) + footer (1.0in) margins eat
+       ~1.8in of every page. With min-height forcing .report-page to be
+       >= 11in, Chromium injected phantom page breaks because content
+       area was effectively < 11in. Block flow without a height floor
+       lets PDFShift's pagination logic determine breaks naturally. */
     .report-page {
       width: var(--page-width);
-      min-height: var(--page-height);
       background: var(--white);
       position: relative;
     }
@@ -1160,7 +1161,15 @@
 </head>
 <body>
   <div class="report-page">
-    {{ macros.report_header(header, report_type, agent) }}
+    {# PDFSHIFT-FOOTER-PAGE1 — The inline page-1 gradient cover header
+       (macros.report_header) used to live here. It was removed because:
+       1) PDFShift requires header.start_at and footer.start_at to match,
+          so we couldn't have footer on page 1 while skipping the PDFShift
+          header on page 1.
+       2) The compact PDFShift header (_base/page_header.jinja2) now
+          repeats on EVERY page including page 1, serving as THE header.
+       The report_header macro remains defined in macros.jinja2 marked
+       deprecated; safe to delete in a future cleanup ticket. #}
 
     <div class="page-content">
       {% block content %}

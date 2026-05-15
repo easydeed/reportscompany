@@ -1203,8 +1203,14 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
             html_content=html_content,
             header_html=header_html,
             footer_html=footer_html,
-            header_start_at=2,  # Page 1 keeps its inline gradient cover header.
-            footer_start_at=1,  # Agent footer on every page including page 1.
+            # PDFShift constraint: when `header` AND `footer` are both sent,
+            # they MUST share the same `start_at` value (or PDFShift silently
+            # coerces one to match the other). We use 1 for both so the agent
+            # footer appears on page 1 — the inline page-1 cover header has
+            # been removed from base.jinja2; the compact PDFShift header now
+            # serves as THE header on every page including page 1.
+            header_start_at=1,
+            footer_start_at=1,
             print_base=DEV_BASE,
         )
         print(f"✅ REPORT RUN {run_id}: generate_pdf complete (path={pdf_path})")

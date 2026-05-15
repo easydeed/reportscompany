@@ -35,7 +35,15 @@
 {% endmacro %}
 
 
-{# ── Report Header ─────────────────────────────────────────────────────────── #}
+{# ── Report Header (DEPRECATED) ────────────────────────────────────────────
+   PDFSHIFT-FOOTER-PAGE1 — This was the inline page-1 gradient cover header,
+   rendered once at the top of page 1 and never repeated. It's been
+   replaced by PDFShift's native `header` parameter, which uses the
+   standalone _base/page_header.jinja2 template and repeats on every page
+   including page 1. No callers remain in base.jinja2.
+
+   Kept defined for safety / quick rollback. Safe to delete in a future
+   cleanup ticket once we're confident nothing else invokes it. #}
 {% macro report_header(header, report_type, agent) %}
 <header class="report-header">
   <div class="header-left">
