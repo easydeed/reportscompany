@@ -170,12 +170,19 @@ def render_pdf_pdfshift(
     # rule remains the source of truth (legacy behavior preserved).
     if header_html or footer_html:
         margin = {
-            # HERO-EVERY-PAGE — Top margin sized for the big gradient hero
-            # header (page_header.jinja2). Hero is ~1.2-1.3in tall depending
-            # on subtitle wrap; 1.3in gives slight breathing room.
-            "top": "1.3in" if header_html else "0",
+            # HERO-MARGIN-STACK-FIX — PDFShift treats margin.top and
+            # header.height as ADDITIVE (header rendered inside header.height
+            # slot, then margin.top is applied below it). Originally we
+            # reserved 1.3in here thinking it included the header height,
+            # but visual evidence shows the two stack. Reduce margin.top to
+            # a small spacer for breathing room only. The header itself is
+            # already accounted for by header.height in the payload below.
+            "top": "0.1in" if header_html else "0",
             "right": "0",
-            "bottom": "1.0in" if footer_html else "0",
+            # Same additive behavior likely applies to footer. Reduce bottom
+            # to a small spacer; footer.height in the payload reserves footer
+            # space separately.
+            "bottom": "0.1in" if footer_html else "0",
             "left": "0",
         }
     else:
@@ -196,15 +203,20 @@ def render_pdf_pdfshift(
     if header_html:
         base_payload["header"] = {
             "source": header_html,
-            # HERO-EVERY-PAGE — Matched to margin.top = 1.3in for the big
-            # gradient hero header. Slightly smaller height than margin so
-            # the hero sits flush at the top edge of the reserved space.
+            # HERO-MARGIN-STACK-FIX — header.height reserves space for the
+            # rendered hero (~1.2in actual content). PDFShift then applies
+            # margin.top (currently 0.1in) BELOW this. Total top reservation:
+            # 1.4in. To grow/shrink the hero, change height here; to add
+            # breathing room below hero, change margin.top above.
             "height": "1.3in",
             "start_at": header_start_at,
         }
     if footer_html:
         base_payload["footer"] = {
             "source": footer_html,
+            # HERO-MARGIN-STACK-FIX — footer.height reserves space for the
+            # rendered footer (~0.7-0.8in actual content). PDFShift then
+            # applies margin.bottom (currently 0.1in) ABOVE this.
             "height": "0.9in",
             "start_at": footer_start_at,
         }
