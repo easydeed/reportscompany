@@ -97,7 +97,7 @@ ALL_REPORT_TYPES = list(LAYOUT_MAP.keys())
 PDF_CONFIG: Dict[str, Dict[str, Any]] = {
     # ── SNAPSHOT mode ───────────────────────────────────────────────────────
     "market_snapshot": {
-        "cap": 8,
+        "cap": 9,
         "section_label": "Recent Activity",
         "truncation_template": "Recent market activity — a curated sample of {showing} listings in {city}.",
         "more_template": None,
