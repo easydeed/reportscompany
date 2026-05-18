@@ -39,14 +39,8 @@
 {% macro gallery_layout(header, listings, stats, report_type, agent, ai_narrative=none,
                         listings_section_label=none, listings_truncation_note=none,
                         listings_more_note=none) %}
-<div class="count-bar">
-  <div class="count-circle">{{ header.total_count | default(0) }}</div>
-  <div>
-    <div class="count-label">{{ header.title | default('Listings') }}</div>
-    {% if header.subtitle %}<div class="count-sublabel">{{ header.subtitle }}</div>{% endif %}
-  </div>
-  <div class="count-divider"></div>
-</div>
+{# count-bar removed: redundant with the big gradient hero header that
+   shows report title + count + subtitle on every page #}
 
 {% if ai_narrative %}
 <div class="ai-narrative avoid-break">
