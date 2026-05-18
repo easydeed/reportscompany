@@ -21,7 +21,7 @@ from typing import Any, Dict
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from worker.property_builder import compute_color_roles
+from worker.property_builder import compute_color_roles, _darken
 from worker.template_filters import (
     format_currency,
     format_currency_short,
@@ -431,8 +431,10 @@ class MarketReportBuilder:
             "primary_color": primary_color,
             "accent_color": accent_color,
             "accent_on_dark": color_roles["theme_color_on_dark"],
-            "header_bg": "#18235c",  # Navy gradient stop. Hardcoded default;
-                                     # can be made dynamic per brand later if needed.
+            # Gradient dark stop: darkened version of the agent's primary color.
+            # Was hardcoded to "#18235c" navy in HERO-EVERY-PAGE; this brand-derives
+            # it so the gradient flows from the agent's brand identity correctly.
+            "header_bg": _darken(primary_color, 0.35),
             "report_title": header_ctx.get("title") or "Market Report",
             "city": header_ctx.get("city") or "",
             "lookback_days": header_ctx.get("lookback_days") or 30,
