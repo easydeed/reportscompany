@@ -49,9 +49,11 @@ def _is_public_path(path: str) -> bool:
     """Check if path is public (no auth required)."""
     if path.startswith(_PUBLIC_PREFIXES):
         return True
-    # Special case: /v1/reports/{id}/data is public (used by PDF generation)
-    if path.startswith("/v1/reports/") and path.endswith("/data"):
-        return True
+    # S3 — /v1/reports/{id}/data is no longer auto-public. The route now
+    # accepts either an authenticated account session OR an internal
+    # render token (X-Internal-Render-Token, used by the Next.js print
+    # page and social image route). The check lives in the route itself
+    # so the middleware can enforce auth as the default.
     # Special case: exact match
     if path == "/v1/leads/capture":
         return True

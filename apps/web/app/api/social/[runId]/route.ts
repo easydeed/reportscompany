@@ -30,11 +30,24 @@ async function fetchReportData(runId: string) {
   }
   
   const url = `${base}/v1/reports/${runId}/data`;
-  
+
+  // S3 — /v1/reports/{id}/data requires either an authenticated account
+  // session or the internal render token. This route handler runs
+  // server-side and has no user session, so we forward
+  // INTERNAL_RENDER_TOKEN. The token is server-only (no NEXT_PUBLIC_
+  // prefix), so it is never sent to the browser.
+  const internalToken = process.env.INTERNAL_RENDER_TOKEN;
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (internalToken) {
+    headers['X-Internal-Render-Token'] = internalToken;
+  } else {
+    console.warn('[Social API] INTERNAL_RENDER_TOKEN not set — API call will 401');
+  }
+
   try {
     const res = await fetch(url, {
       cache: "no-store",
-      headers: { 'Accept': 'application/json' }
+      headers,
     });
     
     if (!res.ok) {

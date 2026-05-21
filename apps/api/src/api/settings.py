@@ -23,6 +23,14 @@ class Settings(BaseSettings):
     APP_BASE: str = "https://www.trendyreports.io"
     STRIPE_WEBHOOK_SECRET: str = ""
 
+    # S3 — Internal render token for server-to-server calls from the Next.js
+    # print page and social image route to /v1/reports/{id}/data. When set,
+    # requests to that endpoint that carry header X-Internal-Render-Token
+    # equal to this value are treated as trusted internal renders. When
+    # empty (default), the token path is disabled and only authenticated
+    # account sessions can read report data.
+    INTERNAL_RENDER_TOKEN: str = ""
+
     # Email Configuration (SendGrid)
     SENDGRID_API_KEY: str = ""
     RESEND_API_KEY: str = ""  # Deprecated — kept for backwards compat, unused
