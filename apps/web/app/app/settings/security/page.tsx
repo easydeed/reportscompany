@@ -16,10 +16,8 @@ import {
 } from "@/components/ui/dialog"
 import {
   Mail,
-  Lock,
   ChevronRight,
   Loader2,
-  AlertTriangle,
   Eye,
   EyeOff,
   CheckCircle2,
@@ -58,11 +56,6 @@ export default function SecurityPage() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [savingPassword, setSavingPassword] = useState(false)
-
-  // Delete account modal
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
-  const [deleteConfirmText, setDeleteConfirmText] = useState("")
-  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     loadProfile()
@@ -186,35 +179,6 @@ export default function SecurityPage() {
       })
     } finally {
       setSavingPassword(false)
-    }
-  }
-
-  async function deleteAccount() {
-    if (deleteConfirmText !== "DELETE") {
-      toast({ title: "Error", description: "Please type DELETE to confirm", variant: "destructive" })
-      return
-    }
-
-    setDeleting(true)
-    try {
-      const res = await fetch("/api/proxy/v1/users/me", {
-        method: "DELETE",
-      })
-
-      if (!res.ok) {
-        const error = await res.json()
-        throw new Error(error.detail || "Failed to delete account")
-      }
-
-      // Redirect to logout
-      window.location.href = "/login"
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete account",
-        variant: "destructive",
-      })
-      setDeleting(false)
     }
   }
 
@@ -450,65 +414,55 @@ export default function SecurityPage() {
               Danger Zone
             </h3>
           </div>
+          {/*
+            S5 — Self-serve account deletion is not yet implemented in the
+            backend. Until it is, route users to support so we can run the
+            deletion manually with a real audit trail. A full DELETE
+            /v1/users/me endpoint (cascading DB deletes, R2 + Stripe cleanup,
+            soft-delete + 30-day hard-delete cron, audit log) is tracked as
+            a separate post-launch ticket.
+          */}
           <div className="p-5">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-4 min-w-0">
                 <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
                   <Trash2 className="w-5 h-5 text-red-600" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h3 className="text-sm font-medium text-foreground">Delete Account</h3>
                   <p className="text-sm text-muted-foreground">
-                    Permanently delete your account and all data.
+                    To delete your account and associated data, contact us at{" "}
+                    <a
+                      href={`mailto:support@trendyreports.io?subject=${encodeURIComponent(
+                        "Account Deletion Request",
+                      )}&body=${encodeURIComponent(
+                        `Hi TrendyReports team,\n\nI would like to request deletion of my account and all associated data.\n\nAccount email: ${profile?.email ?? ""}\n\nThank you.`,
+                      )}`}
+                      className="text-indigo-600 hover:text-indigo-700 hover:underline"
+                    >
+                      support@trendyreports.io
+                    </a>
+                    . We&apos;ll process your request as quickly as possible.
                   </p>
                 </div>
               </div>
 
-              <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="destructive" size="sm">
-                    Delete Account
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-red-600">
-                      <AlertTriangle className="w-5 h-5" />
-                      Delete Account
-                    </DialogTitle>
-                    <DialogDescription>
-                      This will permanently delete your account, all reports, schedules, and data. This cannot be undone.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="py-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-muted-foreground">
-                        Type DELETE to confirm
-                      </Label>
-                      <Input
-                        value={deleteConfirmText}
-                        onChange={(e) => setDeleteConfirmText(e.target.value)}
-                        placeholder="DELETE"
-                        className="h-9 font-mono"
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" size="sm" onClick={() => setDeleteModalOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={deleteAccount}
-                      disabled={deleting || deleteConfirmText !== "DELETE"}
-                    >
-                      {deleting && <Loader2 className="w-4 h-4 animate-spin mr-1.5" />}
-                      Delete Account
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="flex-shrink-0 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-700"
+              >
+                <a
+                  href={`mailto:support@trendyreports.io?subject=${encodeURIComponent(
+                    "Account Deletion Request",
+                  )}&body=${encodeURIComponent(
+                    `Hi TrendyReports team,\n\nI would like to request deletion of my account and all associated data.\n\nAccount email: ${profile?.email ?? ""}\n\nThank you.`,
+                  )}`}
+                >
+                  Request Account Deletion
+                </a>
+              </Button>
             </div>
           </div>
         </div>
