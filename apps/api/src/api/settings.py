@@ -5,6 +5,11 @@ from typing import List
 class Settings(BaseSettings):
     APP_NAME: str = "market-reports-api"
     PORT: int = 10000
+    # S2 — Environment gate for dev/seed endpoints. Defaults to "production"
+    # so any deploy that forgets to set ENVIRONMENT is treated as production
+    # (fail-safe). Set ENVIRONMENT=development locally or in staging to
+    # enable dev-only routes (/v1/auth/seed-dev, /dev-files/*, etc.).
+    ENVIRONMENT: str = "production"
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/market_reports"
     REDIS_URL: str = "redis://localhost:6379/0"
     JWT_SECRET: str = "dev-secret"

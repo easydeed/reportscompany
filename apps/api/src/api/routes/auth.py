@@ -199,6 +199,10 @@ class SeedIn(BaseModel):
 
 @router.post("/auth/seed-dev", status_code=status.HTTP_201_CREATED)
 def seed_dev(body: SeedIn):
+    # S2 — Hide this endpoint entirely in production. Returning 404 (rather
+    # than 403) so production probes can't even confirm the route exists.
+    if settings.ENVIRONMENT == "production":
+        raise HTTPException(status_code=404, detail="Not Found")
     with psycopg.connect(settings.DATABASE_URL, autocommit=True) as conn:
         with conn.cursor() as cur:
             cur.execute("INSERT INTO users (account_id, email, password_hash, role) VALUES (%s,%s,%s,'owner') ON CONFLICT (email) DO NOTHING",
