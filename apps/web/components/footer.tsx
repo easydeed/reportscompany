@@ -23,8 +23,8 @@ export function Footer() {
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-indigo-600 shrink-0" />
-                <a href="mailto:hello@trendyreports.com" className="hover:text-indigo-600 transition-colors">
-                  hello@trendyreports.com
+                <a href="mailto:support@trendyreports.io" className="hover:text-indigo-600 transition-colors">
+                  support@trendyreports.io
                 </a>
               </div>
               <div className="flex items-center gap-2">
@@ -41,28 +41,8 @@ export function Footer() {
             <h3 className="font-display font-semibold text-slate-900 mb-4">Product</h3>
             <ul className="space-y-3 text-sm">
               <li>
-                <Link href="#for-agents" className="text-slate-600 hover:text-indigo-600 transition-colors">
-                  For Agents
-                </Link>
-              </li>
-              <li>
-                <Link href="#for-affiliates" className="text-slate-600 hover:text-indigo-600 transition-colors">
-                  For Affiliates
-                </Link>
-              </li>
-              <li>
-                <Link href="#sample-report" className="text-slate-600 hover:text-indigo-600 transition-colors">
-                  Sample Reports
-                </Link>
-              </li>
-              <li>
-                <Link href="#pricing" className="text-slate-600 hover:text-indigo-600 transition-colors">
+                <Link href="/#pricing" className="text-slate-600 hover:text-indigo-600 transition-colors">
                   Pricing
-                </Link>
-              </li>
-              <li>
-                <Link href="/docs" className="text-slate-600 hover:text-indigo-600 transition-colors">
-                  API Docs
                 </Link>
               </li>
             </ul>
@@ -73,30 +53,15 @@ export function Footer() {
             <h3 className="font-display font-semibold text-slate-900 mb-4">Company</h3>
             <ul className="space-y-3 text-sm">
               <li>
-                <Link href="/about" className="text-slate-600 hover:text-indigo-600 transition-colors">
-                  About Us
-                </Link>
-              </li>
-              <li>
-                <Link href="/careers" className="text-slate-600 hover:text-indigo-600 transition-colors">
-                  Careers
-                </Link>
-              </li>
-              <li>
-                <Link href="/blog" className="text-slate-600 hover:text-indigo-600 transition-colors">
-                  Blog
-                </Link>
-              </li>
-              <li>
                 <a
-                  href="mailto:partners@trendyreports.com"
+                  href="mailto:partners@trendyreports.io"
                   className="text-slate-600 hover:text-indigo-600 transition-colors"
                 >
                   Partners
                 </a>
               </li>
               <li>
-                <a href="mailto:press@trendyreports.com" className="text-slate-600 hover:text-indigo-600 transition-colors">
+                <a href="mailto:press@trendyreports.io" className="text-slate-600 hover:text-indigo-600 transition-colors">
                   Press
                 </a>
               </li>
@@ -108,19 +73,9 @@ export function Footer() {
             <h3 className="font-display font-semibold text-slate-900 mb-4">Support</h3>
             <ul className="space-y-3 text-sm">
               <li>
-                <Link href="/help" className="text-slate-600 hover:text-indigo-600 transition-colors">
-                  Help Center
-                </Link>
-              </li>
-              <li>
-                <a href="mailto:support@trendyreports.com" className="text-slate-600 hover:text-indigo-600 transition-colors">
-                  Contact Support
+                <a href="mailto:support@trendyreports.io" className="text-slate-600 hover:text-indigo-600 transition-colors">
+                  Support
                 </a>
-              </li>
-              <li>
-                <Link href="/status" className="text-slate-600 hover:text-indigo-600 transition-colors">
-                  System Status
-                </Link>
               </li>
               <li>
                 <Link href="/privacy" className="text-slate-600 hover:text-indigo-600 transition-colors">
@@ -138,7 +93,7 @@ export function Footer() {
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-slate-600">© 2025 TrendyReports. All rights reserved.</p>
+          <p className="text-sm text-slate-600">© 2026 TrendyReports. All rights reserved.</p>
           <div className="flex items-center gap-6 text-sm text-slate-600">
             <Link href="/security" className="hover:text-indigo-600 transition-colors">
               Security

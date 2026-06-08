@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Menu, X, ChevronDown } from 'lucide-react'
 import { motion, AnimatePresence } from "framer-motion"
@@ -12,38 +13,21 @@ import { Logo } from "@/components/logo"
 const navLinks = [
   { 
     label: "Product", 
-    href: "#how-it-works",
+    href: "/#how-it-works",
     children: [
-      { label: "How It Works", href: "#how-it-works" },
-      { label: "Email Reports", href: "#email-reports" },
-      { label: "PDF Reports", href: "#pdf-reports" },
+      { label: "How It Works", href: "/#how-it-works" },
+      { label: "Email Reports", href: "/#email-reports" },
     ]
   },
-  { 
-    label: "Solutions", 
-    href: "#for-agents",
-    children: [
-      { label: "For Agents", href: "#for-agents" },
-      { label: "For Affiliates", href: "#for-affiliates" },
-    ]
-  },
-  { label: "Pricing", href: "#pricing" },
-  { 
-    label: "Company", 
-    href: "/about",
-    children: [
-      { label: "About Us", href: "/about" },
-      { label: "Blog", href: "/blog" },
-      { label: "Help Center", href: "/help" },
-      { label: "Contact", href: "mailto:hello@trendyreports.com" },
-    ]
-  },
+  { label: "Pricing", href: "/#pricing" },
+  { label: "Contact", href: "mailto:support@trendyreports.io" },
 ]
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = React.useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false)
   const [openDropdown, setOpenDropdown] = React.useState<string | null>(null)
+  const pathname = usePathname()
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -53,20 +37,24 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  // Smooth scroll handler for anchor links
+  // Anchor handler: smooth-scroll when already on the target page,
+  // otherwise let the browser navigate cross-page (e.g. /#pricing).
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    if (href.startsWith('#')) {
-      e.preventDefault()
-      const targetId = href.replace('#', '')
-      const element = document.getElementById(targetId)
-      if (element) {
-        const navHeight = 64
-        const elementPosition = element.getBoundingClientRect().top
-        const offsetPosition = elementPosition + window.pageYOffset - navHeight
-        window.scrollTo({
-          top: offsetPosition,
-          behavior: 'smooth'
-        })
+    if (href.includes('#')) {
+      const [path, targetId] = href.split('#')
+      const targetPath = path || '/'
+      if (pathname === targetPath) {
+        e.preventDefault()
+        const element = document.getElementById(targetId)
+        if (element) {
+          const navHeight = 64
+          const elementPosition = element.getBoundingClientRect().top
+          const offsetPosition = elementPosition + window.pageYOffset - navHeight
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+          })
+        }
       }
     }
     setIsMobileMenuOpen(false)
