@@ -63,10 +63,10 @@ export function WhoItsFor() {
               to call that isn't "just checking in."
             </p>
             <a
-              href="mailto:sales@trendyreports.com"
+              href="mailto:sales@trendyreports.io"
               className="mt-6 inline-flex items-center rounded-full border border-foreground/20 bg-transparent px-6 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-foreground/5"
             >
-              Learn more
+              Talk to us
             </a>
           </motion.div>
         </div>
