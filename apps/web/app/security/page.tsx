@@ -230,10 +230,10 @@ export default function SecurityPage() {
               We have a bug bounty program for valid security findings.
             </p>
             <a
-              href="mailto:security@trendyreports.com"
+              href="mailto:support@trendyreports.io"
               className="inline-flex items-center justify-center bg-white text-slate-900 font-medium px-6 py-3 rounded-lg hover:bg-slate-100 transition-colors"
             >
-              security@trendyreports.com
+              support@trendyreports.io
             </a>
           </div>
         </div>
@@ -271,7 +271,7 @@ export default function SecurityPage() {
               </h3>
               <p className="text-slate-600">
                 You can delete your reports and account data at any time from your account settings.
-                For complete account deletion, contact support@trendyreports.com.
+                For complete account deletion, contact support@trendyreports.io.
               </p>
             </div>
             <div className="bg-white rounded-xl p-6 border border-slate-200">

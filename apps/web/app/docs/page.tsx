@@ -111,7 +111,7 @@ export default function DocsPage() {
               <ArrowRight className="w-4 h-4 ml-2" />
             </a>
             <a
-              href="mailto:api@trendyreports.com?subject=API Access Request"
+              href="mailto:support@trendyreports.io?subject=API Access Request"
               className="inline-flex items-center justify-center border border-slate-300 hover:border-indigo-300 hover:bg-indigo-50 text-slate-700 font-medium px-6 py-3 rounded-lg transition-colors"
             >
               Request API Access
@@ -217,7 +217,7 @@ export default function DocsPage() {
 
           <p className="text-center text-slate-600 mt-6">
             Full API reference documentation coming soon.{" "}
-            <a href="mailto:api@trendyreports.com" className="text-indigo-600 hover:underline">
+            <a href="mailto:support@trendyreports.io" className="text-indigo-600 hover:underline">
               Contact us
             </a>{" "}
             for early access.
@@ -348,7 +348,7 @@ export default function DocsPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
-              href="mailto:api@trendyreports.com?subject=API Access Request"
+              href="mailto:support@trendyreports.io?subject=API Access Request"
               className="inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-lg transition-colors"
             >
               <Mail className="w-5 h-5 mr-2" />

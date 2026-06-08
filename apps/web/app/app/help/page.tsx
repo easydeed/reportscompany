@@ -425,7 +425,7 @@ export default function HelpCenterPage() {
           </div>
           <div className="flex items-center gap-3">
             <Button variant="outline" size="sm" asChild>
-              <a href="mailto:support@trendyreports.com" className="gap-2">
+              <a href="mailto:support@trendyreports.io" className="gap-2">
                 <Mail className="h-3.5 w-3.5" />
                 Contact Support
               </a>

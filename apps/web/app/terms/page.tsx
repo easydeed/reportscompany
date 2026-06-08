@@ -185,8 +185,8 @@ export default function TermsPage() {
               </p>
               <p className="text-slate-600">
                 Email:{" "}
-                <a href="mailto:legal@trendyreports.com" className="text-indigo-600 hover:underline">
-                  legal@trendyreports.com
+                <a href="mailto:support@trendyreports.io" className="text-indigo-600 hover:underline">
+                  support@trendyreports.io
                 </a>
               </p>
               <p className="text-slate-600">Address: 123 Market Street, San Francisco, CA 94103</p>

@@ -123,7 +123,7 @@ SAMPLE_CONTEXT = {
         "title": "Real Estate Specialist",
         "license": "DRE #01234567",
         "phone": "(213) 309-7286",
-        "email": "zoe@trendyreports.com",
+        "email": "zoe@trendyreports.io",
         "address": "123 Main St, Los Angeles, CA 90012",
         "photo_url": None,
         "company_name": "TrendyReports",

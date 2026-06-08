@@ -23,7 +23,7 @@ export function MarketingFooter() {
                 </a>
               </li>
               <li>
-                <a href="mailto:sales@trendyreports.com" className="text-sm transition-colors hover:text-white">
+                <a href="mailto:sales@trendyreports.io" className="text-sm transition-colors hover:text-white">
                   For Title Companies
                 </a>
               </li>
@@ -42,7 +42,7 @@ export function MarketingFooter() {
             </p>
             <ul className="mt-4 space-y-3">
               <li>
-                <a href="mailto:support@trendyreports.com" className="text-sm transition-colors hover:text-white">
+                <a href="mailto:support@trendyreports.io" className="text-sm transition-colors hover:text-white">
                   Contact Us
                 </a>
               </li>

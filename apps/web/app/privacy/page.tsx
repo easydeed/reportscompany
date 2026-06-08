@@ -138,8 +138,8 @@ export default function PrivacyPage() {
             </ul>
             <p className="text-slate-600 mb-6">
               To exercise these rights, please contact us at{" "}
-              <a href="mailto:privacy@trendyreports.com" className="text-indigo-600 hover:underline">
-                privacy@trendyreports.com
+              <a href="mailto:support@trendyreports.io" className="text-indigo-600 hover:underline">
+                support@trendyreports.io
               </a>
               .
             </p>
@@ -180,8 +180,8 @@ export default function PrivacyPage() {
               </p>
               <p className="text-slate-600">
                 Email:{" "}
-                <a href="mailto:privacy@trendyreports.com" className="text-indigo-600 hover:underline">
-                  privacy@trendyreports.com
+                <a href="mailto:support@trendyreports.io" className="text-indigo-600 hover:underline">
+                  support@trendyreports.io
                 </a>
               </p>
               <p className="text-slate-600">Address: 123 Market Street, San Francisco, CA 94103</p>

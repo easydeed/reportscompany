@@ -154,8 +154,8 @@ export default function CareersPage() {
           </h2>
           <p className="text-slate-600 text-center mb-12">
             Don't see a perfect fit? Email us at{" "}
-            <a href="mailto:careers@trendyreports.com" className="text-indigo-600 hover:underline">
-              careers@trendyreports.com
+            <a href="mailto:support@trendyreports.io" className="text-indigo-600 hover:underline">
+              support@trendyreports.io
             </a>
           </p>
 
@@ -163,7 +163,7 @@ export default function CareersPage() {
             {openPositions.map((position) => (
               <a
                 key={position.title}
-                href={`mailto:careers@trendyreports.com?subject=Application: ${position.title}`}
+                href={`mailto:support@trendyreports.io?subject=Application: ${position.title}`}
                 className="block bg-white rounded-xl p-6 border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all group"
               >
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
