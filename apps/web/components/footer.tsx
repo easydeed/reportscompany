@@ -54,14 +54,14 @@ export function Footer() {
             <ul className="space-y-3 text-sm">
               <li>
                 <a
-                  href="mailto:partners@trendyreports.io"
+                  href="mailto:support@trendyreports.io"
                   className="text-slate-600 hover:text-indigo-600 transition-colors"
                 >
                   Partners
                 </a>
               </li>
               <li>
-                <a href="mailto:press@trendyreports.io" className="text-slate-600 hover:text-indigo-600 transition-colors">
+                <a href="mailto:support@trendyreports.io" className="text-slate-600 hover:text-indigo-600 transition-colors">
                   Press
                 </a>
               </li>
