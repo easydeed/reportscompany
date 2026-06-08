@@ -122,7 +122,7 @@ export const HELP_SECTIONS: HelpSection[] = [
           },
           {
             title: "Select a report type",
-            body: "Choose from 8 report types: Market Snapshot, New Listings Gallery, Featured Listings, Open Houses, Closed Sales, Active Inventory, Price Bands, and New Listings Analytics. Each type is optimized for a different use case.",
+            body: "Choose from 7 report types: Market Snapshot, New Listings Gallery, Featured Listings, Closed Sales, Active Inventory, Price Bands, and New Listings Analytics. Each type is optimized for a different use case.",
             screenshot: "Report type selection cards",
           },
           {

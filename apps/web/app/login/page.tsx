@@ -209,7 +209,7 @@ function LoginForm() {
         <div className="grid grid-cols-3 gap-6">
           <div className="rounded-xl bg-white/5 p-5 backdrop-blur">
             <BarChart3 className="h-6 w-6 text-[#818CF8]" />
-            <p className="mt-3 text-2xl font-bold text-white">8</p>
+            <p className="mt-3 text-2xl font-bold text-white">7</p>
             <p className="mt-1 text-sm text-[#94A3B8]">Report types</p>
           </div>
           <div className="rounded-xl bg-white/5 p-5 backdrop-blur">

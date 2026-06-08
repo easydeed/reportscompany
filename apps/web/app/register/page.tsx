@@ -14,7 +14,7 @@ const benefits = [
   "Branded email and PDF delivery on autopilot",
   "Lead capture pages with QR code integration",
   "Contact management with group segmentation",
-  "8 report types \u2014 one click each",
+  "7 report types \u2014 one click each",
 ]
 
 export default function RegisterPage() {

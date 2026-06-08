@@ -9,7 +9,6 @@ import {
   DollarSign,
   Layers,
   ImageIcon,
-  MapPin,
   Star,
   Users,
   Briefcase,
@@ -43,7 +42,7 @@ const useCases = [
     icon: Home,
     title: "Impress buyers at every showing",
     description:
-      "New Listings, Open Houses, and Listings Gallery reports keep buyers engaged and position you as the local expert.",
+      "New Listings and Listings Gallery reports keep buyers engaged and position you as the local expert.",
     color: "bg-[#FEF3C7]",
     iconColor: "text-[#D97706]",
   },
@@ -87,11 +86,6 @@ const types = [
     icon: ImageIcon,
     title: "Listings Gallery",
     desc: "A beautiful photo grid of active listings. Great for email or print.",
-  },
-  {
-    icon: MapPin,
-    title: "Open Houses",
-    desc: "Give your buyers a weekend game plan with every upcoming open house.",
   },
   {
     icon: Star,
@@ -156,7 +150,7 @@ export function ReportTypes() {
             onClick={() => setShowAll(!showAll)}
             className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-6 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
           >
-            {showAll ? "Hide report types" : "See all 8 report types"}
+            {showAll ? "Hide report types" : "See all 7 report types"}
             <ChevronDown
               className={`h-4 w-4 transition-transform ${showAll ? "rotate-180" : ""}`}
             />

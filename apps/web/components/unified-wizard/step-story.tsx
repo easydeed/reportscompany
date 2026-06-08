@@ -42,7 +42,7 @@ export function StepStory({ selected, onSelect }: StepStoryProps) {
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-semibold text-gray-900">What report do you want to create?</h2>
-        <p className="text-sm text-gray-500 mt-1">Choose from 8 report types across gallery, data, and analytics formats.</p>
+        <p className="text-sm text-gray-500 mt-1">Choose from 7 report types across gallery, data, and analytics formats.</p>
       </div>
 
       {CATEGORIES.map((cat) => {
