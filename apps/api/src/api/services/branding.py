@@ -34,7 +34,7 @@ class Brand(TypedDict, total=False):
 
 
 DEFAULT_PRIMARY = "#4F46E5"   # Indigo
-DEFAULT_ACCENT  = "#1a1a1a"   # Near-black
+DEFAULT_ACCENT  = "#4F46E5"   # Indigo (monochrome brand default)
 
 
 def get_brand_for_account(cur, account_id: str) -> Brand:

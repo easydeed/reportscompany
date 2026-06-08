@@ -12,7 +12,7 @@
 
 // Default TrendyReports brand colors (Phase 26)
 const DEFAULT_PRIMARY_COLOR = "#4F46E5"; // Trendy violet
-const DEFAULT_ACCENT_COLOR = "#F26B2B";  // Trendy coral
+const DEFAULT_ACCENT_COLOR = "#4F46E5";  // Indigo (monochrome brand default)
 
 /**
  * Escape HTML special characters to prevent XSS attacks.
