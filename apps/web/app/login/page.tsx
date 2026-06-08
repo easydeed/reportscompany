@@ -223,26 +223,6 @@ function LoginForm() {
             <p className="mt-1 text-sm text-[#94A3B8]">Uptime SLA</p>
           </div>
         </div>
-
-        {/* Testimonial */}
-        <div>
-          <blockquote className="rounded-xl bg-white/5 p-6 backdrop-blur">
-            <p className="leading-relaxed text-[#E2E8F0]">
-              {
-                '"TrendyReports transformed how I communicate with clients. The automated market reports save me 5+ hours every week and my clients love them."'
-              }
-            </p>
-            <footer className="mt-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#6366F1] text-sm font-bold text-white">
-                SJ
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">Sarah Johnson</p>
-                <p className="text-sm text-[#94A3B8]">Top Producer, Compass Newport Beach</p>
-              </div>
-            </footer>
-          </blockquote>
-        </div>
       </div>
     </div>
   )

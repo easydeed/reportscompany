@@ -3,7 +3,6 @@
 import { MarketingNav } from "@/components/marketing/marketing-nav"
 import { Hero } from "@/components/marketing/hero"
 import { HowItWorks } from "@/components/marketing/how-it-works"
-import { Testimonials } from "@/components/marketing/testimonials"
 import { EmailReports } from "@/components/marketing/email-reports"
 import { PdfReports } from "@/components/marketing/pdf-reports"
 import { ReportTypes } from "@/components/marketing/report-types"
@@ -23,7 +22,9 @@ export function MarketingHome() {
       <main>
         <Hero />
         <HowItWorks />
-        <Testimonials />
+        {/* Testimonials removed pre-launch — will add Trustpilot widget
+            once we have real reviews. Component file retained at
+            components/marketing/testimonials.tsx */}
         <EmailReports />
         <PdfReports />
         <ReportTypes />
