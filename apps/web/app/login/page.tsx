@@ -238,7 +238,7 @@ function LoginForm() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-white">Sarah Johnson</p>
-                <p className="text-sm text-[#94A3B8]">Top Producer, Compass Austin</p>
+                <p className="text-sm text-[#94A3B8]">Top Producer, Compass Newport Beach</p>
               </div>
             </footer>
           </blockquote>

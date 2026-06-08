@@ -84,7 +84,7 @@ function PdfListingsGallery() {
 
 function PdfFeatured() {
   const listings = [
-    { addr: "1205 Lakeview Blvd", price: "$875K", info: "4 bd / 3 ba" },
+    { addr: "1205 Bayview Terrace", price: "$875K", info: "4 bd / 3 ba" },
     { addr: "437 Sunset Dr", price: "$650K", info: "3 bd / 2 ba" },
     { addr: "802 Crescent Way", price: "$720K", info: "4 bd / 2 ba" },
     { addr: "156 Hilltop Ln", price: "$540K", info: "3 bd / 2 ba" },

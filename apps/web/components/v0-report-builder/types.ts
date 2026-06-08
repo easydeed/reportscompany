@@ -153,17 +153,17 @@ export const AUDIENCE_PRESETS: AudiencePreset[] = [
 export const SIMULATED_CITIES = [
   "Los Angeles, CA",
   "Beverly Hills, CA",
-  "Austin, TX",
-  "Miami, FL",
-  "Denver, CO",
-  "Seattle, WA",
-  "San Francisco, CA",
-  "Portland, OR",
-  "Nashville, TN",
-  "Scottsdale, AZ",
+  "Irvine, CA",
+  "Newport Beach, CA",
+  "Pasadena, CA",
+  "Long Beach, CA",
+  "Santa Monica, CA",
+  "Laguna Beach, CA",
+  "Costa Mesa, CA",
+  "Anaheim, CA",
 ]
 
-export const RECENT_AREAS = ["Los Angeles, CA", "Beverly Hills, CA", "Austin, TX"]
+export const RECENT_AREAS = ["Los Angeles, CA", "Beverly Hills, CA", "Newport Beach, CA"]
 
 export const ALL_REPORT_TYPES = [...PRIMARY_REPORT_TYPES, ...SECONDARY_REPORT_TYPES]
 

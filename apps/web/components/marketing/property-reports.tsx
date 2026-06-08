@@ -106,10 +106,10 @@ export function PropertyReports() {
               {/* Property details */}
               <div className="px-6 py-5">
                 <p className="text-lg font-bold text-foreground">
-                  1205 Lakeview Blvd
+                  1205 Bayview Terrace
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Austin, TX 78703
+                  Irvine, CA 92602
                 </p>
                 <div className="mt-3 flex gap-3">
                   {["4 BD", "3 BA", "2,450 sqft"].map((spec) => (

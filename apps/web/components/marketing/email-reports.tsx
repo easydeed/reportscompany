@@ -110,7 +110,7 @@ function ListingsGrid() {
 
 function FeaturedListings() {
   const listings = [
-    { addr: "1205 Lakeview Blvd", price: "$875,000", beds: 4, baths: 3, sqft: "3,200" },
+    { addr: "1205 Bayview Terrace", price: "$875,000", beds: 4, baths: 3, sqft: "3,200" },
     { addr: "437 Sunset Dr", price: "$650,000", beds: 3, baths: 2, sqft: "2,100" },
   ];
   return (

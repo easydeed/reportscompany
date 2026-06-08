@@ -78,7 +78,7 @@ export function LeadCapture() {
                 </span>{" "}
                 viewed{" "}
                 <span className="font-semibold text-foreground">
-                  1205 Lakeview Blvd
+                  1205 Bayview Terrace
                 </span>{" "}
                 and requested more information.
               </p>
@@ -92,7 +92,7 @@ export function LeadCapture() {
                 <div className="rounded-lg bg-[#F8FAFC] p-2.5">
                   <p className="text-[10px] text-muted-foreground">Phone</p>
                   <p className="text-xs font-medium text-foreground">
-                    (512) 555-0142
+                    (949) 555-0142
                   </p>
                 </div>
               </div>
@@ -116,9 +116,9 @@ export function LeadCapture() {
                   </p>
                 </div>
                 <p className="mt-1 text-sm font-bold text-white">
-                  1205 Lakeview Blvd
+                  1205 Bayview Terrace
                 </p>
-                <p className="text-xs text-white/60">Austin, TX 78703</p>
+                <p className="text-xs text-white/60">Irvine, CA 92602</p>
               </div>
 
               <div className="h-28 overflow-hidden">
