@@ -10,8 +10,57 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Market Reports',
-  description: 'MLS data. Beautiful reports. Zero effort.',
+  title: {
+    default: 'TrendyReports — Branded Real Estate Market Reports on Autopilot',
+    template: '%s | TrendyReports',
+  },
+  description:
+    'Turn live MLS data into branded market reports and property reports, delivered to your sphere automatically. Built for Southern California real estate agents.',
+  keywords: [
+    'real estate market reports',
+    'CMA software',
+    'real estate marketing automation',
+    'MLS reports',
+    'real estate agent tools',
+    'Southern California real estate',
+    'CRMLS reports',
+    'branded property reports',
+  ],
+  metadataBase: new URL('https://www.trendyreports.io'),
+  openGraph: {
+    title: 'TrendyReports — Branded Real Estate Market Reports on Autopilot',
+    description:
+      'Turn live MLS data into branded market reports and property reports, delivered to your sphere automatically.',
+    url: 'https://www.trendyreports.io',
+    siteName: 'TrendyReports',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'TrendyReports — Branded real estate market reports on autopilot',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'TrendyReports — Branded Real Estate Market Reports on Autopilot',
+    description:
+      'Turn live MLS data into branded market reports and property reports, delivered to your sphere automatically.',
+    images: ['/og-image.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: '48x48' },
