@@ -141,7 +141,7 @@ export default function AboutPage() {
                 <div>
                   <h3 className="font-display font-semibold text-lg text-slate-900 mb-2">Trust & Security</h3>
                   <p className="text-slate-600">
-                    Your data is sacred. We use enterprise-grade security and never share your information.
+                    Your data is sacred. We use industry-standard security practices and never share your information.
                   </p>
                 </div>
               </div>

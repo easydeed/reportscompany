@@ -108,11 +108,10 @@ export default function PrivacyPage() {
               We implement industry-standard security measures to protect your data, including:
             </p>
             <ul className="list-disc pl-6 text-slate-600 space-y-2 mb-6">
-              <li>Encryption of data in transit (TLS 1.3) and at rest (AES-256)</li>
-              <li>Regular security audits and penetration testing</li>
-              <li>Access controls and authentication requirements</li>
-              <li>Secure data centers with SOC 2 Type II compliance</li>
-              <li>Regular employee security training</li>
+              <li>Data encrypted in transit and at rest</li>
+              <li>Tenant data isolation via row-level security</li>
+              <li>Passwords hashed before storage</li>
+              <li>Role-based access controls</li>
             </ul>
 
             <h2 className="font-display font-semibold text-2xl text-slate-900 mt-12 mb-4">

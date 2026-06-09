@@ -1,49 +1,28 @@
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
-import { Shield, Lock, Server, Eye, Users, FileCheck, AlertTriangle, CheckCircle } from "lucide-react"
+import { Shield, CheckCircle, Server, XCircle, Trash2, Mail } from "lucide-react"
 
 export const metadata = {
   title: "Security | TrendyReports",
-  description: "Learn about TrendyReports security practices - how we protect your data and maintain platform security.",
+  description: "How TrendyReports protects your data — our current security practices, the providers we use, and what we don't claim.",
 }
 
-const securityFeatures = [
-  {
-    icon: Lock,
-    title: "Encryption Everywhere",
-    description: "All data is encrypted in transit using TLS 1.3 and at rest using AES-256 encryption. Your information is protected at every step.",
-  },
-  {
-    icon: Server,
-    title: "SOC 2 Type II Compliant Infrastructure",
-    description: "Our cloud infrastructure is hosted on AWS with SOC 2 Type II certification, ensuring the highest standards of security and availability.",
-  },
-  {
-    icon: Eye,
-    title: "Access Controls",
-    description: "Role-based access control, multi-factor authentication, and audit logging ensure only authorized users can access your data.",
-  },
-  {
-    icon: Users,
-    title: "Employee Security",
-    description: "All employees undergo background checks and receive regular security training. Access to production systems is strictly limited.",
-  },
-  {
-    icon: FileCheck,
-    title: "Regular Audits",
-    description: "We conduct regular security audits, penetration testing, and vulnerability assessments by third-party security firms.",
-  },
-  {
-    icon: AlertTriangle,
-    title: "Incident Response",
-    description: "We have a documented incident response plan and dedicated security team ready to respond to any security concerns 24/7.",
-  },
+const whatWeHave = [
+  "Passwords are hashed with bcrypt before storage",
+  "PostgreSQL row-level security separates tenant data",
+  "Sessions use HTTP-only secure cookies",
+  "Stripe webhooks are signature-verified",
+  "Rate limiting on authentication endpoints",
+  "Role-based access controls for platform admins, title company admins, affiliates, and agents",
+  "Encrypted storage at rest (PostgreSQL on Render, file storage on Cloudflare R2)",
+  "HTTPS/TLS in transit",
 ]
 
-const certifications = [
-  { name: "SOC 2 Type II", description: "Service Organization Controls compliance" },
-  { name: "GDPR", description: "General Data Protection Regulation compliance" },
-  { name: "CCPA", description: "California Consumer Privacy Act compliance" },
+const whatWeDontClaim = [
+  "We are not SOC 2 certified",
+  "We don't offer multi-factor authentication",
+  "We don't support SSO (Google, Microsoft, SAML)",
+  "We have not undergone external penetration testing",
 ]
 
 export default function SecurityPage() {
@@ -61,173 +40,100 @@ export default function SecurityPage() {
             Security at TrendyReports
           </h1>
           <p className="text-xl text-slate-600 leading-relaxed">
-            Your data security is our top priority. We implement industry-leading security practices
-            to protect your information and maintain your trust.
+            TrendyReports runs on managed cloud infrastructure provided by Vercel,
+            Render, and Cloudflare — vendors that handle HTTPS at the edge,
+            encrypted storage at rest, and TLS for database connections by default.
           </p>
         </div>
       </section>
 
-      {/* Security Features */}
+      {/* What we have today */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-50">
         <div className="max-w-[1000px] mx-auto">
           <h2 className="font-display font-semibold text-3xl text-slate-900 mb-12 text-center">
-            How We Protect Your Data
+            What we have today
           </h2>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {securityFeatures.map((feature) => (
-              <div key={feature.title} className="bg-white rounded-xl p-6 border border-slate-200">
-                <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mb-4">
-                  <feature.icon className="w-6 h-6 text-indigo-600" />
-                </div>
-                <h3 className="font-display font-semibold text-lg text-slate-900 mb-2">
-                  {feature.title}
-                </h3>
-                <p className="text-slate-600 text-sm">{feature.description}</p>
+          <div className="grid md:grid-cols-2 gap-4">
+            {whatWeHave.map((item) => (
+              <div key={item} className="flex items-start gap-3 bg-white rounded-xl p-5 border border-slate-200">
+                <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                <span className="text-slate-700">{item}</span>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Data Protection */}
+      {/* Providers we use */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-[1000px] mx-auto">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="font-display font-semibold text-3xl text-slate-900 mb-6">
-                Data Protection Practices
-              </h2>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
-                  <div>
-                    <h4 className="font-semibold text-slate-900">Data Minimization</h4>
-                    <p className="text-slate-600 text-sm">
-                      We only collect data necessary to provide our service. MLS data is processed
-                      and not stored longer than needed.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
-                  <div>
-                    <h4 className="font-semibold text-slate-900">Data Retention</h4>
-                    <p className="text-slate-600 text-sm">
-                      Generated reports are retained for 90 days. You can delete your data at any
-                      time through your account settings.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
-                  <div>
-                    <h4 className="font-semibold text-slate-900">Secure Deletion</h4>
-                    <p className="text-slate-600 text-sm">
-                      When you delete data or close your account, it is permanently removed from
-                      all systems and backups within 30 days.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
-                  <div>
-                    <h4 className="font-semibold text-slate-900">No Data Selling</h4>
-                    <p className="text-slate-600 text-sm">
-                      We never sell your personal information or share it with third parties for
-                      marketing purposes.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl p-8 text-white">
-              <h3 className="font-display font-semibold text-xl mb-6">Compliance & Certifications</h3>
-              <div className="space-y-4">
-                {certifications.map((cert) => (
-                  <div key={cert.name} className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                      <CheckCircle className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="font-semibold">{cert.name}</div>
-                      <div className="text-indigo-200 text-sm">{cert.description}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+        <div className="max-w-[800px] mx-auto">
+          <div className="flex items-center justify-center w-12 h-12 bg-indigo-100 rounded-xl mx-auto mb-6">
+            <Server className="w-6 h-6 text-indigo-600" />
           </div>
-        </div>
-      </section>
-
-      {/* Infrastructure */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-50">
-        <div className="max-w-[1000px] mx-auto">
-          <h2 className="font-display font-semibold text-3xl text-slate-900 mb-8 text-center">
-            Infrastructure Security
+          <h2 className="font-display font-semibold text-3xl text-slate-900 mb-6 text-center">
+            Providers we use
           </h2>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-white rounded-xl p-6 border border-slate-200">
-              <h3 className="font-display font-semibold text-lg text-slate-900 mb-4">
-                Cloud Infrastructure
-              </h3>
-              <ul className="space-y-3 text-slate-600">
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500 mt-1 shrink-0" />
-                  <span>Hosted on AWS with multi-AZ deployment</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500 mt-1 shrink-0" />
-                  <span>Automated backups with point-in-time recovery</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500 mt-1 shrink-0" />
-                  <span>DDoS protection and WAF (Web Application Firewall)</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500 mt-1 shrink-0" />
-                  <span>99.9% uptime SLA</span>
-                </li>
-              </ul>
-            </div>
-            <div className="bg-white rounded-xl p-6 border border-slate-200">
-              <h3 className="font-display font-semibold text-lg text-slate-900 mb-4">
-                Application Security
-              </h3>
-              <ul className="space-y-3 text-slate-600">
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500 mt-1 shrink-0" />
-                  <span>OWASP Top 10 vulnerability protection</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500 mt-1 shrink-0" />
-                  <span>Secure coding practices and code review</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500 mt-1 shrink-0" />
-                  <span>Dependency scanning and automated updates</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500 mt-1 shrink-0" />
-                  <span>Rate limiting and abuse prevention</span>
-                </li>
-              </ul>
-            </div>
-          </div>
+          <p className="text-lg text-slate-600 leading-relaxed text-center">
+            We rely on reputable managed providers for infrastructure and operations:
+            Vercel (web hosting), Render (API and database hosting), Cloudflare R2
+            (file storage), Stripe (payments), SendGrid (transactional email), and
+            Twilio (SMS notifications).
+          </p>
         </div>
       </section>
 
-      {/* Report a Vulnerability */}
+      {/* What we don't claim */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-50">
+        <div className="max-w-[800px] mx-auto">
+          <h2 className="font-display font-semibold text-3xl text-slate-900 mb-8 text-center">
+            What we don't claim
+          </h2>
+          <p className="text-slate-600 mb-8 text-center">
+            We're explicit about what we don't offer today:
+          </p>
+          <div className="space-y-3">
+            {whatWeDontClaim.map((item) => (
+              <div key={item} className="flex items-start gap-3 bg-white rounded-xl p-5 border border-slate-200">
+                <XCircle className="w-5 h-5 text-slate-400 mt-0.5 shrink-0" />
+                <span className="text-slate-700">{item}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-slate-600 mt-8 text-center">
+            We continue to invest in our security program as the product matures.
+          </p>
+        </div>
+      </section>
+
+      {/* Account and data deletion */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[800px] mx-auto">
+          <div className="flex items-center justify-center w-12 h-12 bg-indigo-100 rounded-xl mx-auto mb-6">
+            <Trash2 className="w-6 h-6 text-indigo-600" />
+          </div>
+          <h2 className="font-display font-semibold text-3xl text-slate-900 mb-6 text-center">
+            Account and data deletion
+          </h2>
+          <p className="text-lg text-slate-600 leading-relaxed text-center">
+            To delete your account and associated data, contact us at{" "}
+            <a href="mailto:support@trendyreports.io" className="text-indigo-600 hover:text-indigo-700 font-medium">
+              support@trendyreports.io
+            </a>
+            . We'll process your request as quickly as possible.
+          </p>
+        </div>
+      </section>
+
+      {/* Questions */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[800px] mx-auto">
           <div className="bg-slate-900 rounded-2xl p-8 md:p-12 text-white text-center">
-            <AlertTriangle className="w-12 h-12 mx-auto mb-6 text-yellow-400" />
-            <h2 className="font-display font-semibold text-2xl mb-4">Report a Security Vulnerability</h2>
+            <Mail className="w-12 h-12 mx-auto mb-6 text-indigo-400" />
+            <h2 className="font-display font-semibold text-2xl mb-4">Questions</h2>
             <p className="text-slate-300 mb-6">
-              We take security seriously. If you discover a vulnerability, please report it responsibly.
-              We have a bug bounty program for valid security findings.
+              Contact us for security questions, vulnerability reports, or
+              compliance documentation.
             </p>
             <a
               href="mailto:support@trendyreports.io"
@@ -235,54 +141,6 @@ export default function SecurityPage() {
             >
               support@trendyreports.io
             </a>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-50">
-        <div className="max-w-[800px] mx-auto">
-          <h2 className="font-display font-semibold text-2xl text-slate-900 mb-8 text-center">
-            Security FAQ
-          </h2>
-
-          <div className="space-y-4">
-            <div className="bg-white rounded-xl p-6 border border-slate-200">
-              <h3 className="font-semibold text-slate-900 mb-2">
-                Where is my data stored?
-              </h3>
-              <p className="text-slate-600">
-                Your data is stored in secure AWS data centers located in the United States. All data
-                is encrypted at rest using AES-256 encryption.
-              </p>
-            </div>
-            <div className="bg-white rounded-xl p-6 border border-slate-200">
-              <h3 className="font-semibold text-slate-900 mb-2">
-                Do you share my data with third parties?
-              </h3>
-              <p className="text-slate-600">
-                We only share data with service providers necessary to operate our service (e.g., email
-                delivery, payment processing). We never sell your data.
-              </p>
-            </div>
-            <div className="bg-white rounded-xl p-6 border border-slate-200">
-              <h3 className="font-semibold text-slate-900 mb-2">
-                How can I delete my data?
-              </h3>
-              <p className="text-slate-600">
-                You can delete your reports and account data at any time from your account settings.
-                For complete account deletion, contact support@trendyreports.io.
-              </p>
-            </div>
-            <div className="bg-white rounded-xl p-6 border border-slate-200">
-              <h3 className="font-semibold text-slate-900 mb-2">
-                Is my payment information secure?
-              </h3>
-              <p className="text-slate-600">
-                Yes. We use Stripe for payment processing. Your payment details are never stored on our
-                servers. Stripe is PCI DSS Level 1 certified.
-              </p>
-            </div>
           </div>
         </div>
       </section>

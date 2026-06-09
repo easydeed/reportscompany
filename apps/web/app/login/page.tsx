@@ -219,8 +219,8 @@ function LoginForm() {
           </div>
           <div className="rounded-xl bg-white/5 p-5 backdrop-blur">
             <Shield className="h-6 w-6 text-[#818CF8]" />
-            <p className="mt-3 text-2xl font-bold text-white">99.9%</p>
-            <p className="mt-1 text-sm text-[#94A3B8]">Uptime SLA</p>
+            <p className="mt-3 text-2xl font-bold text-white">Reliable</p>
+            <p className="mt-1 text-sm text-[#94A3B8]">Uptime</p>
           </div>
         </div>
       </div>

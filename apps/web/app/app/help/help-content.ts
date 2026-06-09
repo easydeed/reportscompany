@@ -193,7 +193,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         title: "MLS data support",
         type: "faq",
         question: "What MLS data do you support?",
-        answer: "We support over 600 MLS systems across the United States. Data is refreshed daily to ensure accuracy. If you need a specific MLS added, contact support@trendyreports.io with the MLS name and we'll prioritize it.",
+        answer: "We currently support CRMLS, which covers all six Southern California counties. Data is refreshed daily to ensure accuracy. If you need additional MLS coverage, contact support@trendyreports.io with the MLS name and we'll consider it for the future.",
       },
       {
         id: "cr-faq-edit-report",
@@ -537,7 +537,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         title: "Missing MLS area",
         type: "faq",
         question: "I can't find my MLS area. What should I do?",
-        answer: "We support 600+ MLS systems, but some smaller or regional boards may not be included yet. Email support@trendyreports.io with your MLS name and service area, and we'll prioritize adding it. Most new MLS integrations are completed within 2 weeks.",
+        answer: "We currently support CRMLS, covering Southern California. Additional MLS coverage may come in the future. Email support@trendyreports.io with your MLS name and service area, and we'll consider it.",
       },
       {
         id: "ts-faq-password-reset",
