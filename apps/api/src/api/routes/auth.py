@@ -305,7 +305,24 @@ def register(body: RegisterIn, response: Response, background_tasks: BackgroundT
                 INSERT INTO account_users (account_id, user_id, role)
                 VALUES (%s::uuid, %s::uuid, 'OWNER')
             """, (account_id, user_id))
-            
+
+            # 4b. Seed an empty default "My Sphere" contact group so the schedule
+            # recipients UI shows the Groups selector from the first session.
+            # Idempotent (won't duplicate) and non-fatal: a seed failure is rolled
+            # back to a savepoint and logged, but must never block registration.
+            try:
+                with conn.transaction():
+                    cur.execute("""
+                        INSERT INTO contact_groups (account_id, name)
+                        SELECT %s::uuid, 'My Sphere'
+                        WHERE NOT EXISTS (
+                            SELECT 1 FROM contact_groups
+                            WHERE account_id = %s::uuid AND name = 'My Sphere'
+                        )
+                    """, (account_id, account_id))
+            except Exception as e:
+                logger.error(f"Failed to seed default 'My Sphere' group for account {account_id}: {e}")
+
             conn.commit()
             
             # 5. Generate JWT and set cookie
@@ -473,7 +490,26 @@ def accept_invite(body: AcceptInviteRequest, response: Response, background_task
             is_platform_admin = bool(extra_row[2]) if extra_row else False
             is_sponsored = bool(extra_row[3]) if extra_row else False
             parent_account_id = extra_row[4] if extra_row else None
-            
+
+            # Seed an empty default "My Sphere" contact group for the activated
+            # account so the schedule recipients UI shows the Groups selector from
+            # the first session. accept_invite() activates a pre-existing account
+            # (created at invite time), so this is guarded by NOT EXISTS to avoid a
+            # duplicate if the account already has one. Non-fatal: a seed failure is
+            # rolled back to a savepoint and logged, never blocking invite acceptance.
+            try:
+                with conn.transaction():
+                    cur.execute("""
+                        INSERT INTO contact_groups (account_id, name)
+                        SELECT %s::uuid, 'My Sphere'
+                        WHERE NOT EXISTS (
+                            SELECT 1 FROM contact_groups
+                            WHERE account_id = %s::uuid AND name = 'My Sphere'
+                        )
+                    """, (account_id, account_id))
+            except Exception as e:
+                logger.error(f"Failed to seed default 'My Sphere' group for account {account_id}: {e}")
+
             conn.commit()
             
             # 5. Generate auth session (JWT)
