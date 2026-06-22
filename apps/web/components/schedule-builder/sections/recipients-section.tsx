@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, X, Users, Mail, AlertCircle, Check, AtSign } from "lucide-react"
+import Link from "next/link"
+import { Search, X, Users, Mail, AlertCircle, Check, AtSign, ArrowRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import type { ScheduleBuilderState, Recipient } from "../types"
@@ -120,6 +121,12 @@ export function RecipientsSection({ recipients, onChange, hasRecipients, stepNum
   const contactCount = recipients.filter(r => r.type === "contact").length
   const groupCount = recipients.filter(r => r.type === "group").length
   const manualCount = recipients.filter(r => r.type === "manual_email").length
+
+  // Show a sphere-building nudge when the user genuinely has nobody to send to
+  // yet: no contacts at all, and any group(s) they have (e.g. a freshly-seeded
+  // "My Sphere") are empty. Hides once they have a contact or a populated group.
+  const hasPopulatedGroup = groups.some((g) => (g.member_count || 0) > 0)
+  const showSphereNudge = !isLoading && contacts.length === 0 && !hasPopulatedGroup
 
   return (
     <section className={cn(
@@ -275,7 +282,25 @@ export function RecipientsSection({ recipients, onChange, hasRecipients, stepNum
               </div>
             )}
 
-            {filteredContacts.length === 0 && groups.length === 0 && (
+            {showSphereNudge && (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+                <p className="text-sm font-medium text-gray-900">
+                  Build your sphere once, reach them every time.
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Add your people or import them from a file, then send to your whole sphere in one click.
+                </p>
+                <Link
+                  href="/app/people"
+                  className="inline-flex items-center gap-1 mt-2 text-sm font-medium text-primary hover:text-primary/80"
+                >
+                  Add people to My Sphere
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            )}
+
+            {!showSphereNudge && filteredContacts.length === 0 && groups.length === 0 && (
               <p className="py-4 text-center text-sm text-gray-400">No contacts found</p>
             )}
           </div>
