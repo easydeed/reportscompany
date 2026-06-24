@@ -147,17 +147,25 @@ of the diff, never on added (`+`) lines:
 
 ## Sub-Agents
 
-When a task — investigation OR implementation — has independent slices, the
-lead agent spawns focused sub-agents, one per slice, and synthesizes their
-reports. This is the pattern that produces clean, parallel, deep coverage.
+Sub-agents are for INVESTIGATION ONLY — read-only work. They map code,
+gather context, and report findings in parallel. They NEVER write code,
+branch, commit, or push.
 
-- Spawn a sub-agent per independent concern (e.g. "map the report builder",
-  "map the schedule builder", "map the backend onboarding logic").
-- Give each sub-agent a tight, self-contained brief.
-- The lead agent collects the reports and synthesizes — it does not just
-  concatenate them.
-- Sub-agents follow this same discipline (read before write, cite files, stay
+- Spawn a sub-agent per independent concern for investigation (e.g. "map the
+  report builder", "map the schedule builder", "map the backend onboarding
+  logic"). Give each a tight, self-contained brief. The lead agent collects
+  and synthesizes — it does not just concatenate.
+- Sub-agents follow this discipline (read before report, cite files, stay
   in scope).
+
+IMPLEMENTATION IS SEQUENTIAL. NEVER run parallel implementation agents.
+One ticket, one branch, built, verified, reviewed, and merged BEFORE the
+next ticket begins. Parallel implementation agents sharing one working tree
+commingle their commits across branches and tangle history — this has
+happened and cost a full cleanup cycle. The time "saved" by parallelism is
+lost to untangling. Sequential is faster in practice because it is clean by
+construction. If two tickets seem independent enough to parallelize, resist
+it: do them one after the other.
 
 ---
 
@@ -197,6 +205,10 @@ Never collapse these steps under time pressure. The collapse is the failure mode
 
 - **Stacking multiple tickets' changes in one working tree.** Causes commingled
   commits and "is this staged or not?" confusion. One branch per ticket.
+- **Running parallel implementation agents in one clone.** They commit
+  across each other's branches and tangle history. Implementation is
+  strictly sequential — one ticket fully merged before the next starts.
+  (Parallel *investigation* sub-agents are fine — they're read-only.)
 - **Committing before verifying the diff.** Always `git diff --cached` first.
 - **Pushing/merging before Reviewer pass.** The gate exists for a reason.
 - **Multiple agents pushing to `main`.** One pusher (Gopher) only.
