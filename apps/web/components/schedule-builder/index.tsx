@@ -16,8 +16,7 @@ import type {
   ScheduleBuilderState, 
   BrandingContext, 
   ProfileContext,
-  AudienceFilter,
-  Recipient 
+  AudienceFilter
 } from "./types"
 import { AUDIENCE_FILTER_PRESETS, getAreaDisplay, getEmailSubject } from "./types"
 
@@ -400,7 +399,7 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
               {/* Recipients Section */}
               <RecipientsSection
                 recipients={state.recipients}
-                onChange={updateState}
+                onChange={(recipients) => updateState({ recipients })}
                 hasRecipients={hasRecipients}
                 stepNumber={6}
               />
