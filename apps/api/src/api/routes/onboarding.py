@@ -13,9 +13,11 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import json
+import logging
 from ..db import db_conn
 
 router = APIRouter(prefix="/v1")
+logger = logging.getLogger(__name__)
 
 
 # ============ Constants ============
@@ -228,23 +230,81 @@ def check_auto_completions(cur, user_id: str, account_id: str, account_type: str
         if account and account[0]:
             auto_completed.append("branding_setup")
 
-    # Check first report
-    cur.execute("""
-        SELECT COUNT(*) FROM report_generations
-        WHERE account_id = %s::uuid AND status = 'completed'
-    """, (account_id,))
-    report_count = cur.fetchone()[0]
-    if report_count > 0:
-        auto_completed.append("first_report")
+    # Check first report: require a report email that was actually accepted by the provider.
+    try:
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT 1
+                FROM email_log
+                WHERE account_id = %s::uuid
+                  AND status = 'sent'
+                  AND report_id IS NOT NULL
+                  AND COALESCE(array_length(to_emails, 1), 0) > 0
+                LIMIT 1
+            )
+        """, (account_id,))
+        if cur.fetchone()[0]:
+            auto_completed.append("first_report")
+    except Exception:
+        logger.warning("Failed to auto-check first_report onboarding completion", exc_info=True)
+        cur.connection.rollback()
 
-    # Check first schedule
-    cur.execute("""
-        SELECT COUNT(*) FROM schedules
-        WHERE account_id = %s::uuid AND active = TRUE
-    """, (account_id,))
-    schedule_count = cur.fetchone()[0]
-    if schedule_count > 0:
-        auto_completed.append("first_schedule")
+    # Check first schedule: require an active schedule with at least one real recipient.
+    try:
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT 1
+                FROM schedules s
+                WHERE s.account_id = %s::uuid
+                  AND s.active = TRUE
+                  AND EXISTS (
+                    SELECT 1
+                    FROM unnest(s.recipients) AS recipient(recipient_value)
+                    WHERE (
+                        recipient.recipient_value !~ '^\\s*\\{'
+                        AND btrim(recipient.recipient_value) <> ''
+                        AND recipient.recipient_value LIKE '%%@%%'
+                    )
+                    OR (
+                        recipient.recipient_value ~ '"type"\\s*:\\s*"manual_email"'
+                        AND recipient.recipient_value ~ '"email"\\s*:\\s*"[^"]+@[^"]+"'
+                    )
+                    OR (
+                        recipient.recipient_value ~ '"type"\\s*:\\s*"contact"'
+                        AND EXISTS (
+                            SELECT 1
+                            FROM contacts c
+                            WHERE c.account_id = s.account_id
+                              AND c.id = substring(
+                                  recipient.recipient_value
+                                  FROM '"id"\\s*:\\s*"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"'
+                              )::uuid
+                              AND COALESCE(btrim(c.email), '') <> ''
+                            LIMIT 1
+                        )
+                    )
+                    OR (
+                        recipient.recipient_value ~ '"type"\\s*:\\s*"group"'
+                        AND EXISTS (
+                            SELECT 1
+                            FROM contact_group_members cgm
+                            WHERE cgm.account_id = s.account_id
+                              AND cgm.group_id = substring(
+                                  recipient.recipient_value
+                                  FROM '"id"\\s*:\\s*"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"'
+                              )::uuid
+                            LIMIT 1
+                        )
+                    )
+                  )
+                LIMIT 1
+            )
+        """, (account_id,))
+        if cur.fetchone()[0]:
+            auto_completed.append("first_schedule")
+    except Exception:
+        logger.warning("Failed to auto-check first_schedule onboarding completion", exc_info=True)
+        cur.connection.rollback()
 
     # For affiliates, check if they've invited an agent
     if account_type == "INDUSTRY_AFFILIATE":
