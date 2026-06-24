@@ -33,6 +33,15 @@ type ContactGroup = {
   member_count?: number
 }
 
+type ApiErrorBody = {
+  detail?: unknown
+  error?: unknown
+  message?: unknown
+  product?: unknown
+  used?: unknown
+  limit?: unknown
+}
+
 const STEPS = [
   "Welcome",
   "Your people",
@@ -60,6 +69,36 @@ function mapRecipientsForApi(recipients: Recipient[]) {
     if (recipient.type === "group") return { type: "group", id: recipient.id }
     return recipient
   })
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null
+}
+
+function asReadableString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value : null
+}
+
+function getApiErrorMessage(body: ApiErrorBody, status: number, fallback: string) {
+  const detail = isRecord(body.detail) ? body.detail : null
+  const source = (detail || body) as ApiErrorBody
+  const product = asReadableString(source.product)
+  const used = typeof source.used === "number" ? source.used : null
+  const limit = typeof source.limit === "number" ? source.limit : null
+
+  if (status === 429 && product === "schedules") {
+    const usage = used !== null && limit !== null
+      ? ` You've used ${used} of ${limit} schedules.`
+      : ""
+    return `Schedule limit reached — You've reached your plan's schedule limit.${usage} Upgrade to set up more recurring reports.`
+  }
+
+  return (
+    asReadableString(source.message) ||
+    asReadableString(body.message) ||
+    asReadableString(body.detail) ||
+    fallback
+  )
 }
 
 export function GuidedGetStarted() {
@@ -244,7 +283,7 @@ export function GuidedGetStarted() {
 
       if (!reportRes.ok) {
         const details = await reportRes.json().catch(() => ({}))
-        throw new Error(details.detail || details.message || "We could not send your first report.")
+        throw new Error(getApiErrorMessage(details, reportRes.status, "We could not send your first report."))
       }
 
       const reportData = await reportRes.json()
@@ -274,7 +313,7 @@ export function GuidedGetStarted() {
 
       if (!scheduleRes.ok) {
         const details = await scheduleRes.json().catch(() => ({}))
-        throw new Error(details.detail || details.message || "We could not turn on monthly autopilot.")
+        throw new Error(getApiErrorMessage(details, scheduleRes.status, "We could not turn on monthly autopilot."))
       }
 
       queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all })
