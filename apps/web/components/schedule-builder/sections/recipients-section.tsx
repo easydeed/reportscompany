@@ -5,11 +5,11 @@ import Link from "next/link"
 import { Search, X, Users, Mail, AlertCircle, Check, AtSign, ArrowRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
-import type { ScheduleBuilderState, Recipient } from "../types"
+import type { Recipient } from "@/lib/types/recipients"
 
 interface RecipientsSectionProps {
   recipients: Recipient[]
-  onChange: (updates: Partial<ScheduleBuilderState>) => void
+  onChange: (recipients: Recipient[]) => void
   hasRecipients: boolean
   stepNumber?: number
 }
@@ -60,42 +60,44 @@ export function RecipientsSection({ recipients, onChange, hasRecipients, stepNum
 
   const toggleContact = (contact: any) => {
     if (isContactSelected(contact.id)) {
-      onChange({ recipients: recipients.filter(r => !(r.type === "contact" && r.id === contact.id)) })
+      onChange(recipients.filter(r => !(r.type === "contact" && r.id === contact.id)))
     } else {
-      onChange({ 
-        recipients: [...recipients, { 
+      onChange([
+        ...recipients,
+        {
           type: "contact", 
           id: contact.id, 
           name: contact.name, 
           email: contact.email 
-        }] 
-      })
+        },
+      ])
     }
   }
 
   const toggleGroup = (group: any) => {
     if (isGroupSelected(group.id)) {
-      onChange({ recipients: recipients.filter(r => !(r.type === "group" && r.id === group.id)) })
+      onChange(recipients.filter(r => !(r.type === "group" && r.id === group.id)))
     } else {
-      onChange({ 
-        recipients: [...recipients, { 
+      onChange([
+        ...recipients,
+        {
           type: "group", 
           id: group.id, 
           name: group.name, 
           memberCount: group.member_count || 0 
-        }] 
-      })
+        },
+      ])
     }
   }
 
   const removeRecipient = (recipient: Recipient) => {
-    onChange({ 
-      recipients: recipients.filter(r => 
+    onChange(
+      recipients.filter(r =>
         !(r.type === recipient.type && 
           ((r.type === "manual_email" && recipient.type === "manual_email" && r.email === recipient.email) ||
            ((r as any).id === (recipient as any).id)))
-      ) 
-    })
+      )
+    )
   }
 
   const isEmailAlreadyAdded = (email: string) =>
@@ -114,7 +116,7 @@ export function RecipientsSection({ recipients, onChange, hasRecipients, stepNum
       return
     }
     setEmailError("")
-    onChange({ recipients: [...recipients, { type: "manual_email", email: trimmed }] })
+    onChange([...recipients, { type: "manual_email", email: trimmed }])
     setEmailInput("")
   }
 

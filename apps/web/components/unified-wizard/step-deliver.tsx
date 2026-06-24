@@ -157,7 +157,7 @@ function SendNowOptions({
           <div className="rounded-b-xl border-2 border-t-0 border-primary bg-primary/5 px-4 pb-4 pt-3 space-y-3">
             <RecipientsSection
               recipients={state.recipients}
-              onChange={(patch) => onChange(patch as Partial<WizardState>)}
+              onChange={(recipients) => onChange({ recipients })}
               hasRecipients={state.recipients.length > 0}
               stepNumber={undefined}
             />
@@ -271,7 +271,7 @@ function ScheduleOptions({
 
       <RecipientsSection
         recipients={state.recipients}
-        onChange={(patch) => onChange(patch as Partial<WizardState>)}
+        onChange={(recipients) => onChange({ recipients })}
         hasRecipients={state.recipients.length > 0}
         stepNumber={undefined}
       />
