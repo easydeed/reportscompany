@@ -78,6 +78,7 @@ interface TierProps {
 
 // Routes where sidebar should be hidden (builder modes)
 const BUILDER_ROUTES = [
+  "/app/get-started",
   "/app/property/new",
   "/app/schedules/new",
   "/app/reports/new",

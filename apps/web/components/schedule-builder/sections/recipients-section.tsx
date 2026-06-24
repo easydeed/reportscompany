@@ -12,11 +12,20 @@ interface RecipientsSectionProps {
   onChange: (recipients: Recipient[]) => void
   hasRecipients: boolean
   stepNumber?: number
+  title?: string
+  emptyMessage?: string
 }
 
 const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
 
-export function RecipientsSection({ recipients, onChange, hasRecipients, stepNumber = 6 }: RecipientsSectionProps) {
+export function RecipientsSection({
+  recipients,
+  onChange,
+  hasRecipients,
+  stepNumber = 6,
+  title = "Recipients",
+  emptyMessage = "Select at least one recipient",
+}: RecipientsSectionProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [emailInput, setEmailInput] = useState("")
   const [emailError, setEmailError] = useState("")
@@ -144,7 +153,7 @@ export function RecipientsSection({ recipients, onChange, hasRecipients, stepNum
         )}>
           {hasRecipients ? <Check className="w-3.5 h-3.5" /> : stepNumber}
         </div>
-        <h3 className="text-sm font-medium text-gray-900">Recipients</h3>
+        <h3 className="text-sm font-medium text-gray-900">{title}</h3>
       </div>
 
       <div className="px-5 pb-5">
@@ -311,7 +320,7 @@ export function RecipientsSection({ recipients, onChange, hasRecipients, stepNum
         {!hasRecipients && (
           <p className="text-xs text-amber-600 mt-3 flex items-center gap-1.5">
             <AlertCircle className="w-3.5 h-3.5" />
-            Select at least one recipient
+            {emptyMessage}
           </p>
         )}
       </div>
