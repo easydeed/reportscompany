@@ -172,7 +172,7 @@ export function OnboardingChecklist({
                 onClick={onOpenWizard}
               >
                 <Zap className="w-3 h-3" />
-                Quick Setup
+                Start Autopilot
               </Button>
             )}
             <Button
