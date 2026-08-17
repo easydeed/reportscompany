@@ -14,7 +14,6 @@ We are adding themed PDF generation to all 8 market report types — bringing th
 
 **Playbook:** `docs/plan/MARKET_REPORT_PDF_PLAYBOOK.md` — read this for phases, tickets, specs, and acceptance criteria.
 **Agent Prompts:** `docs/plan/MARKET_REPORT_AGENT_PROMPTS.md` — role definitions for each agent.
-**Gopher Report:** `docs/plan/GOPHER-001_REPORT.md` — pre-build investigation findings.
 
 ## Repo Structure
 
