@@ -205,11 +205,12 @@ logger.warning("[DIAGNOSTIC] TEMPLATES_DIR: %s, exists: %s", TEMPLATES_DIR, TEMP
 
 class PropertyReportBuilder:
     """
-    Builds HTML property reports using the orchestrator template system.
-    
-    The orchestrator (seller_report.jinja2) handles:
-    - Theme selection (1-5)
-    - Page set configuration (full 21 pages / compact 9 pages / custom)
+    Builds HTML property reports using the per-theme template system.
+
+    The per-theme entry template (templates/property/<theme>/<theme>_report.jinja2,
+    e.g. teal/teal_report.jinja2, extending _base/base.jinja2) handles:
+    - Theme selection (numbers 1-5 mapped to bold/classic/elegant/modern/teal)
+    - Page set configuration (default 7-page set, or custom via selected_pages)
     - Including all section templates
     
     Expected report_data structure:
