@@ -3,19 +3,19 @@
 **Date:** 2026-08-18
 **Plan:** `EXECUTION_PLAN_REV_A.md` Phase 2A (local only)
 **Tickets covered:** T2.1 (test account provisioning), T2.2 (company / title-company portal), T2.4 (registration → onboarding → first-run), T2.6 (authenticated smoke test), T2.7 (migration state)
-**Status:** partial — Phase 2A tickets T2.4, T2.6, T2.7 not yet run; all of Phase 2B blocked
+**Status:** Phase 2A complete (T2.1, T2.2, T2.4, T2.6, T2.7). All of Phase 2B remains blocked on deployed access.
 
 ## Severity counts
 
 | Severity | Count |
 |---|---|
-| BROKEN | 4 |
-| WRONG | 3 |
+| BROKEN | 6 |
+| WRONG | 5 |
 | FRAGILE | 6 |
 | ROUGH | 2 |
-| **Total** | **15** |
+| **Total** | **19** |
 
-Plus 3 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 1 UNVERIFIED.
+Plus 4 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 1 UNVERIFIED.
 
 ## Test environment
 
@@ -100,6 +100,65 @@ The 29 failures are concentrated in `apps/api/tests/test_plans_limits.py`, whose
 **Bearing on Phase 3 — start here.** The 29 failures sit in `test_plans_limits.py`, and Phase 3's entire subject is reconciling displayed plan limits against enforced plan limits. Those failing assertions encode what the limits were once expected to be; the diff between that and current behaviour is likely a substantial part of Phase 3's answer. Not investigated here — flagged so Phase 3 opens with it.
 
 **Also note:** the new `test_company_tenant_isolation.py` needs a live database and skips without one, so it will not fire in a CI job that has no Postgres service. Wiring one in is what turns that regression guard from present into effective.
+
+### D-016 — `signup_tokens` lives in a second migrations directory that nothing applies, so no invited account can be created
+**Severity:** BROKEN · **Affects:** TITLE_COMPANY, COMPANY_REP, SPONSORED, INDUSTRY_AFFILIATE (4 of the 5 personas)
+
+The `signup_tokens` table is created **only** in `apps/api/migrations/phase4_indexes.sql:38`. Neither runner touches that directory: `scripts/migrate.sh:9` globs `db/migrations/*.sql`, and `scripts/run_migrations.py:47` builds its path as `<repo>/db/migrations`. `grep -rl signup_tokens db/migrations/` returns nothing.
+
+Four code paths depend on the table — `services/invite_service.py`, `services/affiliates.py`, `routes/auth.py`, `routes/admin.py` — so on any database built from the repo's documented migration process, the table is absent and those paths fail at runtime.
+
+**Observed, on a database built exactly as the docs prescribe:**
+
+```
+POST /v1/company/invite-rep  -> 500
+  {"error":"invite_failed","message":"Failed to create rep invitation:
+   relation \"signup_tokens\" does not exist ... INSERT INTO signup_tokens ..."}
+
+GET  /v1/affiliate/overview  -> 500
+  psycopg.errors.UndefinedTable: relation "signup_tokens" does not exist
+  (services/affiliates.py:36 — the "last_invite_sent" subquery)
+```
+
+Consequence: **invite-based onboarding is impossible.** Only `REGULAR` self-registration works, and that is the one persona that does not use invites. Every title-company rep, sponsored agent, and affiliate-invited agent is created through this path.
+
+One thing that is right: the failed invite rolls back cleanly — 0 accounts and 0 users created after the 500, so there is no partial-write corruption.
+
+Production presumably has the table because the file was applied by hand at some point; there is no record of when, and nothing detects the divergence. See T2.7 below for the full migration story.
+
+### D-017 — `/v1/property/stats/affiliate` returns 500 on the empty state
+**Severity:** BROKEN · **Affects:** INDUSTRY_AFFILIATE
+
+`GET /v1/property/stats/affiliate` declares `response_model=AffiliateStatsResponse` (`apps/api/src/api/routes/property.py:835`) but the handler's return value omits the required `themes` field, so FastAPI raises after the handler succeeds:
+
+```
+fastapi.exceptions.ResponseValidationError: 1 validation error:
+{'type':'missing','loc':('response','themes'),'msg':'Field required',
+ 'input': {'period':{...},'summary':{'total_agents':0,...},'aggregate':{},
+           'leaderboard':[],'agents':[],'inactive_agents':[]}}
+```
+
+Reproduced as an `INDUSTRY_AFFILIATE` with no sponsored agents — i.e. **the state every new affiliate is in on day one**. The data-bearing path may populate `themes`; the empty path does not, and the response model does not allow its absence.
+
+### D-018 — `/v1/dev/stripe-prices` crashes on a type mismatch
+**Severity:** WRONG · **Affects:** all (dev/staging surface)
+
+`apps/api/src/api/routes/dev_stripe_prices.py:34` indexes the catalog entries as dicts — `plan["plan_name"]`, `plan["stripe_price_id"]` — but `get_plan_catalog()` returns `PlanCatalog` objects:
+
+```
+TypeError: 'PlanCatalog' object is not subscriptable
+```
+
+500 for every persona. The route is meant to be dev-only; note it is reachable (not 404'd) whenever `ENVIRONMENT != production`, so it is live on any staging deploy. Relevant to Phase 3: this is the endpoint intended to show which Stripe price IDs the app believes in.
+
+### D-019 — Email verification is not enforced anywhere
+**Severity:** WRONG · **Affects:** REGULAR (and any self-registered account)
+
+`POST /v1/auth/register` creates the user with `email_verified = false` (confirmed in the database) and returns `{"ok":true,"email_verified":false}`. Logging in immediately afterwards with the same credentials **succeeds**, and every authenticated surface then works normally — `/v1/onboarding`, `/v1/me`, `/v1/account/plan-usage`, `/v1/reports`, `/v1/schedules`, `/v1/contacts` all returned 200 for the unverified account.
+
+So the verification email is decorative: nothing gates on `users.email_verified`. Whether that is intended is a product decision, but it should be a decision — as written, the flow implies a gate that does not exist, and an address typo produces a working account nobody can reach.
+
+Minor, same endpoint: the docstring for `register` (`apps/api/src/api/routes/auth.py:229-238`) claims it "Returns auth session (JWT + cookie)". It does not — the response carries no token.
 
 ### D-001 — A fresh database cannot be built by `scripts/migrate.sh`
 **Severity:** BROKEN · **Affects:** all (dev onboarding, CI, disaster recovery)
@@ -190,6 +249,45 @@ The endpoint exists (`company.py:913`), its Next.js proxy exists (`apps/web/app/
 
 ---
 
+## T2.6 — Authenticated smoke test (results)
+
+Every parameter-free `GET` in the OpenAPI spec, as each of the five personas: **66 routes × 5 personas = 330 requests**. Route list taken from `/openapi.json` (157 documented paths, 91 GET operations, 66 without path parameters) rather than hand-assembled.
+
+| Status | Count | Reading |
+|---|---|---|
+| 403 | 192 | Expected — role gating (e.g. every persona but `company-a` is refused the company portal; non-admins refused `/v1/admin/*`) |
+| 200 | 105 | Expected |
+| 429 | 15 | **Sweep artifact, not a result** — see the caveat below |
+| 500 | 13 | Four unique routes, below |
+| 422 | 5 | Endpoints requiring query parameters the sweep did not supply |
+
+**Caveat that limits this ticket's coverage:** the rate limiter allows 60 requests/minute per account (`apps/api/src/api/middleware/authn.py:225`) and the sweep issues 66 per persona, so the tail of each persona's run was rate-limited. 15 results are therefore unknown rather than passing, and **S5 ("no route returns 5xx for any account type") is not fully satisfied by this run** — it is satisfied for the 315 requests that produced a real status. A paced re-run would close the gap; the 5xx set below is confirmed by isolated retries, not by the sweep alone.
+
+The four 5xx routes, each retried individually with pacing to rule out rate-limit contamination:
+
+| Route | Personas | Cause | Entry |
+|---|---|---|---|
+| `/v1/affiliate/overview` | affiliate, rep-a | missing `signup_tokens` table | D-016 |
+| `/v1/company/invite-rep` (POST, tested in T2.4) | company-a | missing `signup_tokens` table | D-016 |
+| `/v1/property/stats/affiliate` | affiliate | response model missing `themes` | D-017 |
+| `/v1/dev/stripe-prices` | all 5 | `PlanCatalog` not subscriptable | D-018 |
+| `/v1/billing/portal` | all 5 | **environment, not code** — returns a structured `{"error":"stripe_config_missing","message":"Missing: STRIPE_SECRET_KEY, ..."}` because no Stripe keys are set locally. Worth noting that a known configuration state is reported as `500`; `503` would be the honest status, and it means a Stripe misconfiguration in production would look like a crash. |
+
+## T2.7 — Migration state (results)
+
+**Which directories contain migrations:** two.
+
+1. `db/migrations/` — 52 numbered files (`0001_base.sql` … `0052_simplify_contact_types.sql`) plus `seed_demo_account.sql`.
+2. `apps/api/migrations/` — one file, `phase4_indexes.sql`, containing 7 `CREATE INDEX` statements **and the `CREATE TABLE signup_tokens` at line 38**.
+
+**What each runner applies:** both target only the first directory. `scripts/migrate.sh:9` globs `db/migrations/*.sql`; `scripts/run_migrations.py:47` resolves `<repo>/db/migrations`. **Nothing in the repository applies `apps/api/migrations/phase4_indexes.sql`** — no script, no CI step, no documentation. Its own header comment ("was previously CREATE TABLE in request handler") suggests it was extracted from application code and applied by hand.
+
+**Is it applied in production, and how would anyone know?** Unanswerable from here — see BLOCKED below. The detection method is `SELECT to_regclass('public.signup_tokens')`. There is no migration-tracking table anywhere in this project: no `schema_migrations`, no `alembic_version`, nothing recording which files have run. Both runners are idempotent-by-convention (`IF NOT EXISTS`) and re-run everything every time, so "which migrations has this database had?" has no answer beyond inspecting the schema.
+
+**Does a fresh local bring-up produce the same schema as production?** No — demonstrably. A fresh build following the documented process yields a database **without `signup_tokens`**, on which invite-based onboarding fails entirely (D-016) and `/v1/affiliate/overview` 500s. Production must have the table, or the platform's affiliate features could never have worked. That is drift between the repo's migration process and the deployed schema, of unknown extent: `signup_tokens` is the one instance this sweep proves, and the 7 indexes in the same file are equally unapplied locally (index absence degrades performance silently rather than erroring, so their production status is likewise unknown).
+
+Compounding it, D-001 means the documented process does not even complete without manual intervention, and D-002 means the alternative runner silently skips statements. There is currently no reliable way to construct a database that matches production.
+
 ## Confirmed correct (negative results worth recording)
 
 Tested by request, not inferred:
@@ -259,3 +357,4 @@ Today RLS is inert — the app connects as the `postgres` superuser, which owns 
 - **Is production's DB role a superuser?** D-005/D-006's real-world severity depends on it. If production also connects as owner/superuser, D-005 is live exactly as reproduced. If production uses a restricted role, D-005 is contained but D-006 means the portal is showing zeros.
 - **Production `PDF_ENGINE`, `PDF_API_URL`, `SITEX_BASE_URL`, `RESEND_API_KEY`, `PDFSHIFT_API_KEY` values** (T2.9/T2.10). `SITEX_BASE_URL` defaults to the **UAT** host (`apps/api/src/api/services/sitex.py:39`) — if unset in production, property reports are being built from test data.
 - **Scheduled delivery end-to-end** (T2.3). Needs a real send and a readable inbox.
+- **Is `apps/api/migrations/phase4_indexes.sql` applied in production?** (T2.7). Run `SELECT to_regclass('public.signup_tokens')` and check for the 7 indexes it declares. If the table is present the file was applied by hand at some point; if the indexes are missing, production is running without them. Nothing in the repo can answer this, and nothing detects the drift.
