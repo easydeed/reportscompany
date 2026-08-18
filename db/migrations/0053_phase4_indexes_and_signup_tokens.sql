@@ -1,7 +1,15 @@
 -- ============================================================================
--- Phase 4: Performance Indexes
--- Run this against Render PostgreSQL console or via a migration tool.
--- All indexes use IF NOT EXISTS so this is safe to re-run.
+-- 0053: Performance indexes + signup_tokens
+--
+-- Previously apps/api/migrations/phase4_indexes.sql — a second migrations
+-- directory that neither scripts/migrate.sh nor scripts/run_migrations.py ever
+-- applied, so it had to be run by hand. Production has these objects; no
+-- database built from this repository did, which made invite-based onboarding
+-- fail (signup_tokens missing) on every fresh environment.
+--
+-- Moved here so there is one migrations directory and one runner. Every
+-- statement is IF NOT EXISTS, so re-running it where the objects already exist
+-- (i.e. production) is a no-op.
 -- ============================================================================
 
 -- Report generation queries (affiliate overview, usage tracking, report list)

@@ -28,22 +28,27 @@ def list_stripe_prices(request: Request):
         
         # Format for readability
         result = []
+        # get_plan_catalog returns PlanCatalog models, not dicts, and the Stripe
+        # pricing fields live on the nested stripe_billing model rather than flat
+        # on the plan. Indexing them as dicts raised
+        # "TypeError: 'PlanCatalog' object is not subscriptable" for every caller.
         for slug, plan in catalog.items():
             entry = {
                 "plan_slug": slug,
-                "plan_name": plan["plan_name"],
-                "stripe_price_id": plan["stripe_price_id"],
-                "description": plan.get("description"),
+                "plan_name": plan.plan_name,
+                "stripe_price_id": plan.stripe_price_id,
+                "description": plan.description,
             }
-            
-            if plan["amount"]:
+
+            billing = plan.stripe_billing
+            if billing and billing.amount:
                 entry["pricing"] = {
-                    "amount": plan["amount"],
-                    "amount_display": f"${plan['amount'] / 100:.2f}",
-                    "currency": plan["currency"],
-                    "interval": plan["interval"],
-                    "interval_count": plan["interval_count"],
-                    "nickname": plan["nickname"],
+                    "amount": billing.amount,
+                    "amount_display": f"${billing.amount / 100:.2f}",
+                    "currency": billing.currency,
+                    "interval": billing.interval,
+                    "interval_count": billing.interval_count,
+                    "nickname": billing.nickname,
                 }
             else:
                 entry["pricing"] = None

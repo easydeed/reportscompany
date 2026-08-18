@@ -3,17 +3,18 @@
 **Date:** 2026-08-18
 **Plan:** `EXECUTION_PLAN_REV_A.md` Phase 2A (local only)
 **Tickets covered:** T2.1 (test account provisioning), T2.2 (company / title-company portal), T2.4 (registration → onboarding → first-run), T2.6 (authenticated smoke test), T2.7 (migration state)
-**Status:** Phase 2A complete (T2.1, T2.2, T2.4, T2.6, T2.7). All of Phase 2B remains blocked on deployed access.
+**Status:** Phase 2A complete (T2.1, T2.2, T2.4, T2.6, T2.7), plus the F5 affiliate-surface audit. All of Phase 2B remains blocked on deployed access.
+**Fix status:** D-005/D-007 fixed (PR #24). D-001, D-002, D-015 (collection errors), D-016, D-017, D-018, D-020 and D-022 fixed on `fix/p4-broken-defects`.
 
 ## Severity counts
 
 | Severity | Count |
 |---|---|
-| BROKEN | 6 |
-| WRONG | 5 |
-| FRAGILE | 6 |
-| ROUGH | 2 |
-| **Total** | **19** |
+| BROKEN | 7 |
+| WRONG | 7 |
+| FRAGILE | 7 |
+| ROUGH | 3 |
+| **Total** | **24** |
 
 Plus 4 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 1 UNVERIFIED.
 
@@ -91,7 +92,7 @@ $ pytest apps/api/tests/ -q --ignore=<those three>
 
 Collection errors: `ModuleNotFoundError: No module named 'api.app'` and `ImportError: attempted relative import beyond top-level package`. The modules import a package path that does not exist — so these tests cannot ever have passed in their current form against the current tree.
 
-The 29 failures are concentrated in `apps/api/tests/test_plans_limits.py`, whose mocked cursor return shapes no longer match what `apps/api/src/api/services/usage.py` reads.
+The failures are **not** concentrated in one file, as this entry originally stated. Measured after the collection errors were fixed, they are spread across `test_plans_limits.py` (12), `test_affiliate_branding.py` (11) and `test_accept_invite.py` (6) — mocked cursor return shapes that no longer match what the services read. Phase 3 should start with `test_plans_limits.py`, but it is 12 assertions, not 29.
 
 **Verified pre-existing:** both numbers reproduce on `main` with no Phase-2 changes applied (checked out `main`, ran the suite, same 3 errors / 29 failures). The cross-tenant isolation branch adds 9 passing tests and no new failures.
 
@@ -124,7 +125,7 @@ Consequence: **invite-based onboarding is impossible.** Only `REGULAR` self-regi
 
 One thing that is right: the failed invite rolls back cleanly — 0 accounts and 0 users created after the 500, so there is no partial-write corruption.
 
-Production presumably has the table because the file was applied by hand at some point; there is no record of when, and nothing detects the divergence. See T2.7 below for the full migration story.
+**Confirmed by Jerry against the live database: `signup_tokens` exists there.** So the deployed environment is unaffected — D-016 is scoped to databases built from this repository — but the table exists while being created solely by a file no runner has ever applied. That is the third independent indicator that the deployed schema was assembled partly by hand, after 0012's impossible seed rows (D-022) and 0011's abandoned column shape (D-001). The repository and the database have never been in a verified relationship; F7's tracking table is what ends that. See T2.7 below.
 
 ### D-017 — `/v1/property/stats/affiliate` returns 500 on the empty state
 **Severity:** BROKEN · **Affects:** INDUSTRY_AFFILIATE
@@ -235,6 +236,64 @@ Nothing in `apps/api/src/api/routes/company.py` writes an application-level reco
 
 Observed live during this phase — when local Postgres stopped, every authenticated request returned "Token has been invalidated" while the API log showed the real cause: `Blacklist check failed (denying request): couldn't get a connection after 10.00 sec`. To the user this is indistinguishable from being logged out, and it is invisible to monitoring: `/health` is on the middleware's public-path skip list (`authn.py:207`) and probes neither database nor Redis (`apps/api/src/api/routes/health.py:6-8`), so it stays green throughout. Combined with D-009 (Redis unreachable ⇒ 500 on every authenticated request), an infrastructure blip presents to a customer as "the product logged me out / is broken" with no corresponding signal on our side.
 
+### D-020 — `scripts/migrate.sh` cannot be run twice, so no future migration can be applied with it
+**Severity:** BROKEN · **Affects:** all (deployment)
+
+`migrate.sh` re-applies **every** file in `db/migrations/` on each invocation — there is no tracking table (see T2.7). A second run against the same database fails, so adding migration `0054` and running the documented runner would abort before reaching it.
+
+Observed on a database freshly built by that same script (run 1: exit 0, 54/54):
+
+```
+run 2 -> psql:db/migrations/0007_...sql:20: ERROR: column "slug" of relation "plans" does not exist
+        (0011/0013 rename slug -> plan_slug; 0007's COMMENT and its seed INSERT still name the old column)
+after guarding 0007:
+run 2 -> psql:db/migrations/0008_create_affiliate_branding.sql:35: ERROR:
+        relation "idx_affiliate_branding_account_id" already exists   (CREATE INDEX with no IF NOT EXISTS)
+```
+
+I guarded 0007 while investigating, hit 0008 next, and **reverted** rather than land a partial fix — a half-fixed re-run is still a broken re-run, and it would read as solved.
+
+Scope for whoever takes it (upper bound, since many are already inside `DO $$` guards): 1 unguarded `CREATE INDEX`, ~17 `ADD COLUMN` and ~9 `ADD CONSTRAINT` statements. The durable fix is a migration-tracking table so files are applied once, rather than making 54 historical files individually re-runnable.
+
+Not the same defect as D-001 (fresh build), which is fixed: a fresh database now builds cleanly end to end.
+
+### D-022 — `0012_seed_plans.sql` could never have succeeded on a fresh build
+**Severity:** WRONG · **Affects:** all (schema provenance)
+
+`db/migrations/0007_phase_29a_plans_and_account_types.sql:11-17` creates `plans` with `monthly_report_limit INT NOT NULL` and no default. `0012_seed_plans.sql:5` then inserted `(plan_slug, plan_name, stripe_price_id, description)` — omitting that column. On any database where 0007 created the table, the insert fails:
+
+```
+ERROR: null value in column "monthly_report_limit" of relation "plans" violates not-null constraint
+DETAIL: Failing row contains (solo, Solo Agent, null, f, 0, price_1SO4sD..., ...)
+```
+
+**So the `solo` and `affiliate` rows in the deployed database did not get there via this migration.** Combined with D-016 (`signup_tokens` only ever existed in an unapplied second directory), that is a second independent indication that the production schema was assembled partly by hand rather than by the documented runner.
+
+Fixed on `fix/p4-broken-defects`: 0012 now supplies the column, with the values 0051 assigns to those slugs, and remains inert where the rows already exist.
+
+### D-023 — Tenancy structure is assigned by a display-name string match
+**Severity:** FRAGILE · **Affects:** TITLE_COMPANY, INDUSTRY_AFFILIATE
+
+`db/migrations/0050_pct_to_title_company.sql:8-13` promotes accounts to `TITLE_COMPANY` by matching `name ILIKE '%pacific coast%' OR slug ILIKE '%pacific-coast%'`. An account's type — which decides whether it gets the company portal or the affiliate surface, and which `apps/api/src/api/deps/company.py:24-31` enforces on every company endpoint — is therefore a consequence of how someone typed a display name.
+
+Renaming that customer, or onboarding any other company whose name happens to contain those words, changes tenancy behaviour. Related to D-021, which is the same class of mismatch observed from the other direction.
+
+### D-024 — `/v1/affiliate/all-reports` is gated differently from every sibling endpoint
+**Severity:** ROUGH · **Affects:** REGULAR
+
+Every other affiliate endpoint refuses a non-affiliate caller with `403 {"error":"not_affiliate_account"}` via `verify_affiliate_account`. `GET /v1/affiliate/all-reports` instead returns `200 {"reports":[],"total":0}` (`apps/api/src/api/routes/affiliates.py:879`), because it derives its account set from `sponsor_account_id = <caller>` and a non-affiliate sponsors nobody.
+
+Not a leak — verified during the F5 audit — but the inconsistency means a caller cannot distinguish "you are not an affiliate" from "you are an affiliate with no agents".
+
+### D-021 — "Demo Title Company" sponsors agents while not being typed `TITLE_COMPANY`
+**Severity:** WRONG · **Affects:** TITLE_COMPANY, SPONSORED · **Source: Jerry's query against the deployed database, not reproduced locally**
+
+An account named "Demo Title Company" sponsors 3 agents but does not carry `account_type = 'TITLE_COMPANY'`. Consistent with `db/seed_demo_accounts_v2.sql:105-120`, which creates that account as `INDUSTRY_AFFILIATE` — the file predates `db/migrations/0048_title_company_hierarchy.sql`, which introduced the type.
+
+The name implies one role and the type grants another: this account gets the affiliate surface, not the company portal, and `apps/api/src/api/deps/company.py:24-31` would refuse it a company admin's endpoints. Anything reasoning about "which title companies exist" by name rather than by `account_type` will disagree with the code.
+
+Related and worth checking in the same pass: `db/migrations/0050_pct_to_title_company.sql:8-13` promotes accounts to `TITLE_COMPANY` by matching `name ILIKE '%pacific coast%'`, i.e. tenancy structure assigned by string match on a display name.
+
 ## ROUGH
 
 ### D-010 — `office_location` is accepted by the invite API and silently discarded
@@ -273,6 +332,27 @@ The four 5xx routes, each retried individually with pacing to rule out rate-limi
 | `/v1/dev/stripe-prices` | all 5 | `PlanCatalog` not subscriptable | D-018 |
 | `/v1/billing/portal` | all 5 | **environment, not code** — returns a structured `{"error":"stripe_config_missing","message":"Missing: STRIPE_SECRET_KEY, ..."}` because no Stripe keys are set locally. Worth noting that a known configuration state is reported as `500`; `503` would be the honest status, and it means a Stripe misconfiguration in production would look like a crash. |
 
+## F4 — Paced smoke re-run (S5 settled)
+
+The T2.6 sweep sent 66 requests per persona against a 60/minute limiter, so its tail was rate-limited and 15 of 330 results were artifacts. Re-run at ~1.1s per request: **330 requests, 0 rate-limited, every result real.**
+
+| Status | T2.6 (unpaced) | F4 (paced, after F3 fixes) |
+|---|---|---|
+| 403 (expected role gating) | 192 | 192 |
+| 200 | 105 | 126 |
+| 429 (artifact) | 15 | **0** |
+| 500 | 13 | **7** |
+| 422 (missing query params) | 5 | 5 |
+
+Unique 5xx routes fell from 4 to 2: `/v1/dev/stripe-prices` (D-018) and `/v1/property/stats/affiliate` (D-017) are fixed and no longer appear.
+
+The two that remain:
+
+- **`/v1/affiliate/overview`** (affiliate, rep-a) — D-016 on a database built before 0053 existed. Applying 0053 to it turned both into **200**. Not a separate defect; it is the same missing-`signup_tokens` failure, and it confirms the fix end to end on a second database.
+- **`/v1/billing/portal`** (all five personas) — **environment, not code**: `{"error":"stripe_config_missing","message":"Missing: STRIPE_SECRET_KEY, ..."}`. It is a deliberate, well-formed error handed back with the wrong status; `503` would be honest, and as written a Stripe misconfiguration in production is indistinguishable from a crash.
+
+**S5 verdict:** with the two D-016/D-017/D-018 fixes applied and Stripe unconfigured locally, **no route returns a 5xx for any account type except `/v1/billing/portal`, whose 500 is a configuration state rather than a fault.** That is as close to S5 as this environment can establish; confirming it fully requires a deployment with Stripe keys present (Phase 2B).
+
 ## T2.7 — Migration state (results)
 
 **Which directories contain migrations:** two.
@@ -287,6 +367,33 @@ The four 5xx routes, each retried individually with pacing to rule out rate-limi
 **Does a fresh local bring-up produce the same schema as production?** No — demonstrably. A fresh build following the documented process yields a database **without `signup_tokens`**, on which invite-based onboarding fails entirely (D-016) and `/v1/affiliate/overview` 500s. Production must have the table, or the platform's affiliate features could never have worked. That is drift between the repo's migration process and the deployed schema, of unknown extent: `signup_tokens` is the one instance this sweep proves, and the 7 indexes in the same file are equally unapplied locally (index absence degrades performance silently rather than erroring, so their production status is likewise unknown).
 
 Compounding it, D-001 means the documented process does not even complete without manual intervention, and D-002 means the alternative runner silently skips statements. There is currently no reliable way to construct a database that matches production.
+
+## F5 — Affiliate/sponsor surface audited for the D-005 defect class: **no leak found**
+
+Motivation: the deployed database has 17 sponsored accounts across 4 sponsors and **zero** `COMPANY_REP` accounts, so real sponsorship runs through the affiliate path, not the company portal. That path holds actual data and had never been tested for cross-tenant leakage. D-005 was a `sponsor_account_id` lookup with no ownership check; this surface performs the same class of lookup.
+
+**Method (same as T2.2 — tested by request, not inferred).** Two `INDUSTRY_AFFILIATE` accounts, each with a sponsored agent; affiliate B's agent owns rows carrying distinctive markers. Affiliate A then attempted every endpoint that accepts a caller-supplied identifier, targeting B's agent.
+
+| Request as affiliate A, targeting B's sponsored agent | Result |
+|---|---|
+| `GET /v1/affiliate/accounts/{B_agent}` | 404 "not found or not owned by you" |
+| `GET /v1/affiliate/agents/{B_agent}/reports` | 403 "This agent is not in your book" |
+| `GET /v1/affiliate/agents/{B_agent}/schedules` | 403 |
+| `GET /v1/affiliate/agents/{B_agent}/usage` | 403 |
+| `POST /v1/affiliate/accounts/{B_agent}/deactivate` | 404 |
+| `POST /v1/affiliate/accounts/{B_agent}/unsponsor` | 404 |
+| `POST /v1/affiliate/accounts/{B_agent}/reactivate` | 404 |
+| `POST /v1/affiliate/resend-invite` with B's agent email | 404 "not sponsored by your account" |
+| A targeting B's **affiliate account** itself (3 endpoints) | 403 / 404 |
+| `GET /all-reports`, `/all-schedules` as A | 200, A's own data only |
+
+Zero B-markers appeared in any A response. **The three state-changing endpoints did not mutate B's agent** — after all attempts, `is_active = true` and `sponsor_account_id` intact.
+
+Positive controls pass: affiliate B reads its own agent through every one of those endpoints (200, with its own data). Role gating holds: a `REGULAR` account is refused with `not_affiliate_account`.
+
+**Why this surface is safe where the company portal was not.** Every identifier-taking handler carries the ownership predicate inline — `WHERE id = %s::uuid AND sponsor_account_id = %s::uuid` (`apps/api/src/api/routes/affiliates.py:676-677, 728-729, 777-778, 848-849`) or an explicit pre-check that 403s (`:1080-1084`, `:1117-1121`, `:1161-1165`). The collection endpoints derive their id set from `sponsor_account_id = <caller>` and accept no caller-supplied id at all (`:879`, `:926`). The company portal's defect was structurally different: it accepted an id, looked up agents *by that id*, and then unioned the result with its own set.
+
+One inconsistency, not a leak: `GET /v1/affiliate/all-reports` returns `200 {"reports":[],"total":0}` for a non-affiliate `REGULAR` account, where every sibling endpoint returns `403 not_affiliate_account`. It is safe (the caller sponsors nobody, so the derived set is empty) but the gating is inconsistent.
 
 ## Confirmed correct (negative results worth recording)
 
