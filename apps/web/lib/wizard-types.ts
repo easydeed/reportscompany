@@ -43,7 +43,7 @@ export interface Comparable {
   days_on_market?: number;
 }
 
-// Theme definitions matching seller_report.jinja2
+// Theme definitions matching the worker's property templates (apps/worker/src/worker/templates/property/)
 export const THEMES = [
   {
     id: 1,
