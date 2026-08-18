@@ -4,6 +4,7 @@ import logging
 import hashlib
 import hmac
 from typing import List, Tuple, Dict, Optional
+from urllib.parse import quote
 
 from .providers.sendgrid import send_email
 from .template import schedule_email_html, schedule_email_subject
@@ -13,16 +14,41 @@ logger = logging.getLogger(__name__)
 WEB_BASE = os.getenv("WEB_BASE", "http://localhost:3000")
 
 # CRITICAL: This MUST be set in production environment variables!
+#
+# This module SIGNS the unsubscribe token; apps/api/src/api/routes/unsubscribe.py
+# VERIFIES it. The two must hold the same value or every link returns 400.
+#
+# DO NOT "fix" the dev fallback by making it equal to the API's fallback. The
+# two defaults differ deliberately. If they matched, an environment that forgot
+# to set EMAIL_UNSUB_SECRET would appear to work while signing with a secret
+# published in this repository — anyone could then forge a token and suppress
+# delivery for any address on any account. Mismatched defaults fail closed;
+# matched defaults fail open.
 EMAIL_UNSUB_SECRET = os.getenv("EMAIL_UNSUB_SECRET")
 if not EMAIL_UNSUB_SECRET:
-    logger.critical("⚠️  EMAIL_UNSUB_SECRET not set! Unsubscribe links will fail in production!")
+    logger.critical(
+        "EMAIL_UNSUB_SECRET not set (ENVIRONMENT=%s) — falling back to a dev "
+        "default. It will NOT match the API's verifying secret, so every "
+        "unsubscribe link in every email sent by this process will return 400 "
+        "and no recipient will be able to opt out. Set EMAIL_UNSUB_SECRET on "
+        "this service to the same value as the API service, then restart.",
+        os.getenv("ENVIRONMENT", "unset"),
+    )
     EMAIL_UNSUB_SECRET = "dev-only-secret-do-not-use-in-production"
+
+# Sentinel substituted per recipient after the body is rendered once. The body
+# is rendered a single time on purpose: schedule_email_html() reaches OpenAI for
+# the insight paragraph (template.py:1494-1506), so rendering per recipient
+# would cost one AI call each AND give recipients of the same report different
+# copy. Render once, swap only the link.
+_UNSUB_URL_SENTINEL = "__TRENDYREPORTS_UNSUBSCRIBE_URL__"
 
 
 def generate_unsubscribe_token(account_id: str, email: str) -> str:
     """
     Generate HMAC-SHA256 token for unsubscribe link.
-    Must match the token generation in the API unsubscribe endpoint.
+    Must match the token generation in the API unsubscribe endpoint
+    (apps/api/src/api/routes/unsubscribe.py:24-34).
     """
     message = f"{account_id}:{email}".encode()
     signature = hmac.new(
@@ -31,6 +57,46 @@ def generate_unsubscribe_token(account_id: str, email: str) -> str:
         hashlib.sha256
     ).hexdigest()
     return signature
+
+
+def build_unsubscribe_url(account_id: str, email: str) -> str:
+    """
+    Build the unsubscribe URL for ONE recipient.
+
+    The token is bound to that recipient's own address, so the link only ever
+    unsubscribes the person who received it. `email` is percent-encoded: an
+    unencoded '+' in a plus-addressed recipient decodes as a space on the API
+    side and the token then fails to verify.
+    """
+    token = generate_unsubscribe_token(account_id, email)
+    return f"{WEB_BASE}/api/v1/email/unsubscribe?token={token}&email={quote(email, safe='')}"
+
+
+def build_one_click_unsubscribe_headers(account_id: str, email: str) -> dict:
+    """
+    RFC 8058 one-click unsubscribe headers for ONE recipient.
+
+    These drive the native "Unsubscribe" control mail clients show next to the
+    sender name, and Gmail and Yahoo have required bulk senders to support them
+    since February 2024. The URL is a POST-only endpoint; a GET against it
+    returns 405 on purpose, because scanners, link prefetchers and corporate
+    mail gateways routinely fetch every URL in a message, and a GET-reachable
+    version would unsubscribe people who never clicked. See the route docstring
+    in apps/api/src/api/routes/unsubscribe.py.
+
+    Only an https URI is offered, deliberately — no `mailto:` alternative. A
+    mailto would route opt-outs to an inbox with nothing automated behind it,
+    which is the silent-failure shape this whole branch exists to remove.
+    """
+    token = generate_unsubscribe_token(account_id, email)
+    url = (
+        f"{WEB_BASE}/api/v1/email/unsubscribe/one-click"
+        f"?token={token}&email={quote(email, safe='')}"
+    )
+    return {
+        "List-Unsubscribe": f"<{url}>",
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    }
 
 
 def send_schedule_email(
@@ -130,17 +196,12 @@ def send_schedule_email(
         logger.error("No PDF URL provided in payload")
         return (400, "No PDF URL")
     
-    # Generate unsubscribe URLs (one per recipient)
-    # For v1, we'll use the first recipient's token for all
-    # (In production, you'd send individual emails with unique tokens)
-    first_recipient = recipients[0]
-    unsub_token = generate_unsubscribe_token(account_id, first_recipient)
-    unsubscribe_url = f"{WEB_BASE}/api/v1/email/unsubscribe?token={unsub_token}&email={first_recipient}"
-    
     # Generate email subject
     subject = schedule_email_subject(report_type, city, zip_codes)
-    
-    # Generate HTML content (Phase 30: with brand, V5-V14: full context for AI insights)
+
+    # Render the body ONCE with a sentinel in place of the unsubscribe URL; the
+    # real per-recipient URL is substituted in the send loop below. See
+    # _UNSUB_URL_SENTINEL for why this is not rendered per recipient.
     html_content = schedule_email_html(
         account_name=account_name or "there",
         report_type=report_type,
@@ -149,7 +210,7 @@ def send_schedule_email(
         lookback_days=lookback_days,
         metrics=metrics,
         pdf_url=pdf_url,
-        unsubscribe_url=unsubscribe_url,
+        unsubscribe_url=_UNSUB_URL_SENTINEL,
         brand=brand,
         listings=listings,  # V5: Photo gallery for gallery reports
         preset_display_name=preset_display_name,  # V6: Custom preset name
@@ -162,13 +223,58 @@ def send_schedule_email(
         showing=showing,                  # EMAIL-DEPTH-PASS1: truncation note
     )
     
-    # Send email via provider
-    logger.info(f"Sending schedule email to {len(filtered_recipients)} recipient(s): {filtered_recipients}")
-    status_code, response_text = send_email(
-        to_emails=filtered_recipients,
-        subject=subject,
-        html_content=html_content,
+    # Fail loudly rather than mailing a dead link to everyone. If the sentinel
+    # is missing, schedule_email_html() stopped honouring unsubscribe_url and
+    # every recipient would get an email with no working unsubscribe.
+    if _UNSUB_URL_SENTINEL not in html_content:
+        logger.critical(
+            "Unsubscribe sentinel missing from rendered email body — refusing to "
+            "send. schedule_email_html() no longer emits the unsubscribe_url it "
+            "was given (expected at template.py:2338)."
+        )
+        return (500, "Unsubscribe URL missing from rendered email body")
+
+    # Send ONE email per recipient, each carrying a token bound to that
+    # recipient's own address. Previously a single message went to the whole
+    # list carrying recipients[0]'s token, so every other recipient's
+    # "Unsubscribe" suppressed recipient #1 and left the clicker subscribed.
+    # One message per recipient also stops the To: header disclosing the whole
+    # recipient list to every recipient.
+    logger.info(
+        f"Sending schedule email to {len(filtered_recipients)} recipient(s) "
+        f"individually: {filtered_recipients}"
     )
-    
-    return (status_code, response_text)
+
+    failures: List[Tuple[str, int, str]] = []
+    for recipient in filtered_recipients:
+        personalised_html = html_content.replace(
+            _UNSUB_URL_SENTINEL, build_unsubscribe_url(account_id, recipient)
+        )
+        status_code, response_text = send_email(
+            to_emails=[recipient],
+            subject=subject,
+            html_content=personalised_html,
+            headers=build_one_click_unsubscribe_headers(account_id, recipient),
+        )
+        if status_code != 202:
+            logger.error(
+                f"Schedule email to {recipient} failed: {status_code} {response_text}"
+            )
+            failures.append((recipient, status_code, response_text))
+
+    if not failures:
+        return (202, "Email sent successfully")
+
+    # Partial success has no representation in email_log's status set
+    # ('sent' / 'suppressed' / 'failed' — see tasks.py:626-631), so a run with
+    # any failure is reported as a failure and the counts go in the response
+    # text. Reporting 202 here would record a send that did not happen for
+    # some recipients, which is the failure mode this branch exists to remove.
+    first_email, first_status, first_text = failures[0]
+    summary = (
+        f"{len(failures)} of {len(filtered_recipients)} recipient(s) failed; "
+        f"first: {first_email} -> {first_status} {first_text}"
+    )
+    logger.error(f"Schedule email partially or fully failed: {summary}")
+    return (first_status, summary)
 

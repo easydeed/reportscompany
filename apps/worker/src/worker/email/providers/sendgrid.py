@@ -3,7 +3,7 @@ import os
 import time
 import logging
 import httpx
-from typing import List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,7 @@ def send_email(
     html_content: str,
     from_name: str = None,
     from_email: str = None,
+    headers: Optional[Dict[str, str]] = None,
 ) -> Tuple[int, str]:
     """
     Send an email using SendGrid v3 API.
@@ -36,7 +37,11 @@ def send_email(
         html_content: HTML email body
         from_name: Sender name (defaults to DEFAULT_FROM_NAME)
         from_email: Sender email (defaults to DEFAULT_FROM_EMAIL)
-    
+        headers: Optional MESSAGE headers (not HTTP headers) to attach to this
+            personalization — e.g. List-Unsubscribe. Set per personalization
+            rather than at the top level so each recipient can carry their own
+            token; callers that send one message per recipient depend on that.
+
     Returns:
         Tuple of (status_code, response_text)
     """
@@ -53,13 +58,15 @@ def send_email(
     from_email = from_email or DEFAULT_FROM_EMAIL
     
     # Build SendGrid payload
+    personalization = {
+        "to": [{"email": email} for email in to_emails],
+        "subject": subject,
+    }
+    if headers:
+        personalization["headers"] = headers
+
     payload = {
-        "personalizations": [
-            {
-                "to": [{"email": email} for email in to_emails],
-                "subject": subject,
-            }
-        ],
+        "personalizations": [personalization],
         "from": {
             "email": from_email,
             "name": from_name,
@@ -72,7 +79,10 @@ def send_email(
         ],
     }
     
-    headers = {
+    # Named http_headers, not headers: the `headers` PARAMETER carries message
+    # headers into the personalization above. Reusing the name here shadowed it,
+    # and was correct only because the payload happens to be built first.
+    http_headers = {
         "Authorization": f"Bearer {SENDGRID_API_KEY}",
         "Content-Type": "application/json",
     }
@@ -90,7 +100,7 @@ def send_email(
                 time.sleep(delay)
             
             with httpx.Client(timeout=30.0) as client:
-                response = client.post(SENDGRID_API_URL, json=payload, headers=headers)
+                response = client.post(SENDGRID_API_URL, json=payload, headers=http_headers)
                 
                 if response.status_code == 202:
                     logger.info(f"Email sent successfully to {to_emails}")

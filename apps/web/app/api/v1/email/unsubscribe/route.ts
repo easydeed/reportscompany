@@ -13,11 +13,15 @@ export async function GET(request: NextRequest) {
   const email = searchParams.get("email");
   const token = searchParams.get("token");
 
+  // A person clicked a link in an email. Every outcome — including every
+  // failure — renders /unsubscribed, which explains what happened and gives
+  // them a way to reach a human. Returning raw JSON here showed recipients
+  // {"detail":"Invalid unsubscribe token"} with no way forward.
+  const landing = (status: "success" | "invalid" | "error") =>
+    NextResponse.redirect(new URL(`/unsubscribed?status=${status}`, request.url));
+
   if (!email || !token) {
-    return NextResponse.json(
-      { error: "Missing email or token parameter" },
-      { status: 400 }
-    );
+    return landing("invalid");
   }
 
   try {
@@ -33,22 +37,19 @@ export async function GET(request: NextRequest) {
       }),
     });
 
-    const data = await response.json();
-
     if (!response.ok) {
-      return NextResponse.json(data, { status: response.status });
+      // 400 is the API's "token did not verify" (routes/unsubscribe.py:77-81);
+      // anything else is a fault on our side, and the two need different copy.
+      console.error(
+        `[Unsubscribe] API returned ${response.status} for ${email}`
+      );
+      return landing(response.status === 400 ? "invalid" : "error");
     }
 
-    // Redirect to a success page
-    return NextResponse.redirect(
-      new URL("/unsubscribed?success=true", request.url)
-    );
+    return landing("success");
   } catch (error) {
     console.error("Unsubscribe error:", error);
-    return NextResponse.json(
-      { error: "Failed to process unsubscribe request" },
-      { status: 500 }
-    );
+    return landing("error");
   }
 }
 
