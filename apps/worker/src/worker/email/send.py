@@ -72,6 +72,33 @@ def build_unsubscribe_url(account_id: str, email: str) -> str:
     return f"{WEB_BASE}/api/v1/email/unsubscribe?token={token}&email={quote(email, safe='')}"
 
 
+def build_one_click_unsubscribe_headers(account_id: str, email: str) -> dict:
+    """
+    RFC 8058 one-click unsubscribe headers for ONE recipient.
+
+    These drive the native "Unsubscribe" control mail clients show next to the
+    sender name, and Gmail and Yahoo have required bulk senders to support them
+    since February 2024. The URL is a POST-only endpoint; a GET against it
+    returns 405 on purpose, because scanners, link prefetchers and corporate
+    mail gateways routinely fetch every URL in a message, and a GET-reachable
+    version would unsubscribe people who never clicked. See the route docstring
+    in apps/api/src/api/routes/unsubscribe.py.
+
+    Only an https URI is offered, deliberately — no `mailto:` alternative. A
+    mailto would route opt-outs to an inbox with nothing automated behind it,
+    which is the silent-failure shape this whole branch exists to remove.
+    """
+    token = generate_unsubscribe_token(account_id, email)
+    url = (
+        f"{WEB_BASE}/api/v1/email/unsubscribe/one-click"
+        f"?token={token}&email={quote(email, safe='')}"
+    )
+    return {
+        "List-Unsubscribe": f"<{url}>",
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    }
+
+
 def send_schedule_email(
     account_id: str,
     recipients: List[str],
@@ -227,6 +254,7 @@ def send_schedule_email(
             to_emails=[recipient],
             subject=subject,
             html_content=personalised_html,
+            headers=build_one_click_unsubscribe_headers(account_id, recipient),
         )
         if status_code != 202:
             logger.error(

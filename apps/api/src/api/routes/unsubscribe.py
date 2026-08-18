@@ -65,53 +65,108 @@ def verify_unsubscribe_token(account_id: str, email: str, token: str) -> bool:
     return hmac.compare_digest(expected_token, token)
 
 
-# ====== Routes ======
-@router.post("/email/unsubscribe", status_code=status.HTTP_200_OK)
-def unsubscribe_email(payload: UnsubscribeRequest):
+def _suppress(email: str, token: str, reason: str) -> str:
     """
-    Unsubscribe an email address from all schedules.
-    
-    Token format: HMAC-SHA256(email:account_id, secret)
-    
-    This endpoint does NOT require authentication - it uses the HMAC token
-    to verify the unsubscribe request came from a legitimate email link.
+    Resolve the account for `email`, verify `token` against it, and record a
+    suppression. Shared by the link endpoint and the RFC 8058 one-click
+    endpoint so there is exactly ONE implementation of the security check.
+
+    Returns a short human-readable outcome. Raises HTTPException(400) when the
+    token does not verify.
     """
-    # Extract account_id from database by finding schedules with this email
     with db_conn() as conn:
         cur = conn.cursor()
-        
+
         # Find account_id from schedules that contain this email
         cur.execute("""
             SELECT DISTINCT account_id::text
             FROM schedules
             WHERE %s = ANY(recipients)
             LIMIT 1
-        """, (payload.email,))
-        
+        """, (email,))
+
         row = cur.fetchone()
         if not row:
             # Email not found in any schedules - still return success (idempotent)
-            return {"message": "Email unsubscribed"}
-        
+            return "Email unsubscribed"
+
         account_id = row[0]
-        
+
         # Verify token
-        if not verify_unsubscribe_token(account_id, payload.email, payload.token):
+        if not verify_unsubscribe_token(account_id, email, token):
             raise HTTPException(
                 status_code=400,
                 detail="Invalid unsubscribe token"
             )
-        
+
         # Insert into suppressions (idempotent due to UNIQUE constraint)
         cur.execute("""
             INSERT INTO email_suppressions (account_id, email, reason)
             VALUES (%s::uuid, %s, %s)
             ON CONFLICT (account_id, email) DO NOTHING
-        """, (account_id, payload.email, payload.reason))
-        
+        """, (account_id, email, reason))
+
         conn.commit()
-        
-        return {"message": "Email unsubscribed successfully"}
+
+        return "Email unsubscribed successfully"
+
+
+# ====== Routes ======
+@router.post("/email/unsubscribe", status_code=status.HTTP_200_OK)
+def unsubscribe_email(payload: UnsubscribeRequest):
+    """
+    Unsubscribe an email address from all schedules.
+
+    Token format: HMAC-SHA256(email:account_id, secret)
+
+    This endpoint does NOT require authentication - it uses the HMAC token
+    to verify the unsubscribe request came from a legitimate email link.
+    """
+    return {"message": _suppress(payload.email, payload.token, payload.reason)}
+
+
+@router.post("/email/unsubscribe/one-click", status_code=status.HTTP_200_OK)
+def unsubscribe_one_click(email: EmailStr, token: str):
+    """
+    RFC 8058 one-click unsubscribe. The caller is the recipient's mail provider,
+    not a person — this is what Gmail and Yahoo invoke behind the native
+    "Unsubscribe" control next to the sender name.
+
+    The credential lives entirely in the query string because that is the only
+    place a mail provider will carry it: providers send a fixed
+    `List-Unsubscribe=One-Click` form body, never our JSON shape, and they do
+    not authenticate. The request body is deliberately ignored.
+
+    POST ONLY, and that is load-bearing. Registering no GET means a GET returns
+    405. Security scanners, link prefetchers and corporate mail gateways
+    routinely issue a GET against every URL in a message, including the one in
+    List-Unsubscribe. A GET-reachable one-click endpoint would silently
+    unsubscribe people who never clicked anything, and nothing in the request
+    would distinguish that from a genuine opt-out. RFC 8058 mandates POST for
+    exactly this reason. Do not add a GET handler.
+
+    WHY AN UNAUTHENTICATED POST IS SAFE HERE — read before changing anything
+    upstream of it. This endpoint suppresses delivery for whatever address the
+    caller names, and its only credential is `token`. That is acceptable solely
+    because the token is an HMAC-SHA256 over "account_id:email" keyed on a
+    secret held by the server and never published. The dependency chain:
+
+      * apps/worker/src/worker/email/send.py signs with EMAIL_UNSUB_SECRET.
+      * This module verifies with the same variable, and its dev fallback is
+        deliberately DIFFERENT from the worker's (see the top of this file).
+        Mismatched fallbacks fail closed.
+      * If those two fallbacks were ever made equal, an environment missing
+        EMAIL_UNSUB_SECRET would sign with a constant published in this
+        repository. Because the account is resolved server-side from the email
+        alone, anyone could then forge a token — and this endpoint would turn
+        that into a one-request, no-click mass-suppression API that mail
+        providers themselves can be induced to call.
+      * apps/worker/tests/test_unsubscribe_token_roundtrip.py asserts those two
+        fallbacks remain different, and that this route stays POST-only. Those
+        assertions are what keep this route safe; they are not tidiness.
+    """
+    _suppress(email, token, "one_click")
+    return {"message": "Email unsubscribed"}
 
 
 @router.get("/email/unsubscribe/token")

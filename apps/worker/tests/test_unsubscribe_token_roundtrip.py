@@ -56,8 +56,12 @@ def _install_stubs(sent):
 
     sendgrid = types.ModuleType("worker.email.providers.sendgrid")
 
-    def send_email(to_emails, subject, html_content, from_name=None, from_email=None):
-        sent.append({"to": list(to_emails), "html": html_content})
+    def send_email(
+        to_emails, subject, html_content, from_name=None, from_email=None, headers=None
+    ):
+        sent.append(
+            {"to": list(to_emails), "html": html_content, "headers": headers or {}}
+        )
         return (202, "Email sent successfully")
 
     sendgrid.send_email = send_email
@@ -298,3 +302,75 @@ def test_token_is_hmac_sha256_of_account_and_email(worker_send):
     ).hexdigest()
 
     assert worker.generate_unsubscribe_token(ACCOUNT_ID, "alice@example.com") == expected
+
+
+# ── 6. RFC 8058 one-click headers (U5) ───────────────────────────────────────
+
+def test_every_message_carries_one_click_headers(worker_send, api_verifier):
+    """Each message carries List-Unsubscribe and List-Unsubscribe-Post, and the
+    URL in the header is bound to that message's own recipient."""
+    secret = "shared-secret-value-for-this-test"
+    load_worker, sent = worker_send
+    worker = load_worker(secret)
+    api = api_verifier(secret)
+
+    _send(worker, RECIPIENTS)
+
+    for message in sent:
+        recipient = message["to"][0]
+        headers = message["headers"]
+
+        assert headers.get("List-Unsubscribe-Post") == "List-Unsubscribe=One-Click"
+
+        raw = headers["List-Unsubscribe"]
+        assert raw.startswith("<") and raw.endswith(">"), (
+            f"List-Unsubscribe must be a bracketed URI, got {raw!r}"
+        )
+
+        url = raw[1:-1]
+        assert url.startswith(f"{WEB_BASE}/api/v1/email/unsubscribe/one-click?")
+
+        query = parse_qs(urlparse(url).query)
+        assert query["email"][0] == recipient
+        assert api.verify_unsubscribe_token(ACCOUNT_ID, recipient, query["token"][0])
+
+        for other in RECIPIENTS:
+            if other != recipient:
+                assert not api.verify_unsubscribe_token(
+                    ACCOUNT_ID, other, query["token"][0]
+                ), f"{recipient}'s one-click token also unsubscribes {other}"
+
+
+def test_one_click_header_offers_no_mailto(worker_send):
+    """https only. A mailto: alternative would route opt-outs to an inbox with
+    no automation behind it — the silent-failure shape this branch removes."""
+    load_worker, sent = worker_send
+    worker = load_worker("shared-secret-value-for-this-test")
+
+    _send(worker, ["alice@example.com"])
+
+    header = sent[0]["headers"]["List-Unsubscribe"]
+    assert "mailto:" not in header.lower()
+    assert header.count("<") == 1, f"expected a single URI, got {header!r}"
+
+
+def test_one_click_url_is_post_only_in_the_api():
+    """The one-click path registers POST and nothing else, so a scanner's GET
+    gets 405 rather than silently unsubscribing someone. See the route
+    docstring — this assertion is the guard on that."""
+    import importlib
+
+    api = importlib.import_module("api.routes.unsubscribe")
+    methods = {
+        method
+        for route in api.router.routes
+        if getattr(route, "path", None) == "/v1/email/unsubscribe/one-click"
+        for method in route.methods
+    }
+
+    assert methods, "one-click route is not registered"
+    assert methods <= {"POST"}, (
+        f"one-click must be POST-only; found {sorted(methods)}. A GET-reachable "
+        "one-click endpoint unsubscribes people whose mail gateway prefetched "
+        "the link."
+    )
