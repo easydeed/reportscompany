@@ -78,10 +78,9 @@ ALL_REPORT_TYPES = [
     "new_listings",
 ]
 
-# Themes mirror the playbook (MARKET_REPORT_PDF_PLAYBOOK.md §4). Market
-# reports are color-only — no per-theme Jinja template (unlike property
-# reports) — so a "theme" is just a (primary, accent) tuple piped into the
-# branding payload that MarketReportBuilder reads.
+# Market reports are color-only — no per-theme Jinja template (unlike
+# property reports) — so a "theme" is just a (primary, accent) tuple piped
+# into the branding payload that MarketReportBuilder reads.
 THEMES = {
     1: {"slug": "teal",    "primary": "#18235c", "accent": "#0d9488"},
     2: {"slug": "bold",    "primary": "#1B365D", "accent": "#D4A853"},

@@ -166,7 +166,6 @@ See [LOCAL_SETUP_GUIDE.md](./LOCAL_SETUP_GUIDE.md) for detailed setup instructio
 | [docs/architecture/SOURCE_OF_TRUTH.md](./docs/architecture/SOURCE_OF_TRUTH.md) | **Master architecture document** — start here |
 | [docs/architecture/INDEX.md](./docs/architecture/INDEX.md) | Quick-reference source tree |
 | [docs/architecture/modules/](./docs/architecture/modules/) | Per-module deep dives (13 modules) |
-| [docs/plan/MARKET_REPORT_PDF_PLAYBOOK.md](./docs/plan/MARKET_REPORT_PDF_PLAYBOOK.md) | PDF generation playbook |
 | [LOCAL_SETUP_GUIDE.md](./LOCAL_SETUP_GUIDE.md) | Local development setup |
 
 ---

@@ -8,13 +8,6 @@ You are working on TrendyReports — a multi-tenant SaaS platform that generates
 
 Stack: Next.js 16 (App Router, Vercel), FastAPI (Render), Celery worker (Render), PostgreSQL + RLS, Redis, Cloudflare R2
 
-## Current Initiative: Market Report PDF Theming
-
-We are adding themed PDF generation to all 8 market report types — bringing them to full parity with property reports (5 Jinja2 themes, Smart Color System, server-side PDFShift rendering, R2 upload).
-
-**Playbook:** `docs/plan/MARKET_REPORT_PDF_PLAYBOOK.md` — read this for phases, tickets, specs, and acceptance criteria.
-**Agent Prompts:** `docs/plan/MARKET_REPORT_AGENT_PROMPTS.md` — role definitions for each agent.
-
 ## Repo Structure
 
 ```
@@ -25,7 +18,6 @@ db/migrations/               → PostgreSQL migrations
 scripts/                     → CLI/QA tools
 tests/                       → Test suites
 docs/architecture/           → Architecture docs
-docs/plan/                   → Project plans (playbook, agent prompts)
 ```
 
 ## Rules

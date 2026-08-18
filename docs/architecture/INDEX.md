@@ -3,7 +3,7 @@
 > Quick-reference source tree for the full codebase.
 > Each link points to a detailed module doc in this folder.
 >
-> **See also:** [SOURCE_OF_TRUTH.md](./SOURCE_OF_TRUTH.md) · [WIZARD_AND_API_CALLS.md](./WIZARD_AND_API_CALLS.md) · [SITE_ARCHITECTURE_TREE.md](./SITE_ARCHITECTURE_TREE.md) · [ARCHITECTURE_AUDIT.md](./ARCHITECTURE_AUDIT.md)
+> **See also:** [SOURCE_OF_TRUTH.md](./SOURCE_OF_TRUTH.md) · [WIZARD_AND_API_CALLS.md](./WIZARD_AND_API_CALLS.md)
 
 ---
 
@@ -35,7 +35,6 @@
 | [modules/email-template.md](./modules/email-template.md) | V16 modular email template engine (8 report types, adaptive layouts) | `email/template.py` |
 | [modules/property-builder.md](./modules/property-builder.md) | Jinja2 HTML renderer for property reports (5 themes, 7 pages) | `property_builder.py` `templates/property/` |
 | [modules/filter-resolver.md](./modules/filter-resolver.md) | Market-adaptive filter resolution + elastic widening | `filter_resolver.py` |
-| [modules/worker-simplyrets-vendor.md](./modules/worker-simplyrets-vendor.md) | Synchronous SimplyRETS client with rate limiter + pagination | `vendors/simplyrets.py` |
 
 ## Frontend (`apps/web/`)
 
@@ -44,7 +43,6 @@
 | [frontend-core.md](./frontend-core.md) | Next.js config, middleware, API clients, providers, hooks | `next.config.ts` `middleware.ts` `lib/` `hooks/` |
 | [frontend-pages.md](./frontend-pages.md) | All app-router pages (public + protected + admin) | `app/` |
 | [frontend-components.md](./frontend-components.md) | All components by domain | `components/` |
-| [frontend-api-proxy.md](./frontend-api-proxy.md) | Next.js API routes that proxy to the backend | `app/api/` |
 
 ## Tests & CLI Tools
 
@@ -52,12 +50,6 @@
 |-----|--------|-----------|
 | [modules/test-suite.md](./modules/test-suite.md) | pytest templates tests + Playwright E2E | `tests/` `e2e/` `pytest.ini` |
 | [modules/cli-tools.md](./modules/cli-tools.md) | QA delivery + smoke test scripts | `qa_deliver_reports.py` `scripts/test_*.py` |
-
-## Cross-Cutting
-
-| Doc | Covers |
-|-----|--------|
-| [performance-audit.md](./performance-audit.md) | Full performance audit with findings by severity |
 
 ---
 
