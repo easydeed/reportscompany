@@ -6,7 +6,7 @@ Verifies that new photo-driven report types can be created via schedules API.
 import pytest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
-from api.app import app
+from api.main import app
 
 client = TestClient(app)
 

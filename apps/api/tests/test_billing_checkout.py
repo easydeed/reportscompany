@@ -4,7 +4,7 @@ Test Phase 29D Stripe Billing - Checkout and Portal
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from fastapi.testclient import TestClient
-from api.app import app
+from api.main import app
 
 client = TestClient(app)
 

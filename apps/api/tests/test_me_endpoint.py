@@ -4,8 +4,8 @@ Tests for /v1/me endpoint to ensure it correctly returns user and account inform
 import pytest
 from fastapi.testclient import TestClient
 from uuid import uuid4
-from ..src.api.main import app
-from ..src.api.db import db_conn
+from api.main import app
+from api.db import db_conn
 
 
 @pytest.fixture
