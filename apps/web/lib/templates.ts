@@ -8,6 +8,21 @@
  * following the pattern: {{placeholder_name}} → actual value
  * 
  * SECURITY: All user-provided content is escaped to prevent XSS attacks.
+ *
+ * NOT DEAD CODE — do not delete. This module and the seven
+ * apps/web/templates/trendy-*.html files it loads look unused because the
+ * market-report PDF pipeline now renders server-side in the worker
+ * (MarketReportBuilder). They are still live:
+ *
+ *   - apps/web/app/print/[runId]/page.tsx:11 imports from here and maps all
+ *     seven templates by FILENAME STRING at runtime (page.tsx:122-131), so an
+ *     import-only search finds nothing.
+ *   - apps/worker/src/worker/pdf_engine.py:83,163 constructs
+ *     `${PRINT_BASE}/print/{run_id}` whenever render_pdf is called without
+ *     html_content — the fallback path into that page.
+ *
+ * Two archived documents asserted this route had been removed. Both were wrong.
+ * See docs/DEAD_CODE.md before touching any of it.
  */
 
 // Default TrendyReports brand colors (Phase 26)

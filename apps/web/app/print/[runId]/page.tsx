@@ -1,3 +1,21 @@
+/**
+ * NOT DEAD CODE — do not delete this route.
+ *
+ * It looks unused: the market-report PDF pipeline renders server-side in the
+ * worker now (apps/worker/src/worker/tasks.py:1093-1099 explicitly says it
+ * never falls back to this page), and no page in the app links here.
+ *
+ * It is still reachable. apps/worker/src/worker/pdf_engine.py:83 and :163 build
+ * `${PRINT_BASE}/print/{run_id}` at runtime whenever render_pdf is called
+ * without html_content, and apps/api/src/api/routes/report_data.py:21 documents
+ * this page as the consumer of that endpoint (the INTERNAL_RENDER_TOKEN path in
+ * settings.py exists for it). Every current caller happens to pass html_content,
+ * so the branch is unexercised today — but it is constructed at runtime, which
+ * is not the same thing as dead.
+ *
+ * Two archived documents claimed this route was removed while the worker was
+ * still building URLs against it. See docs/DEAD_CODE.md.
+ */
 import fs from 'fs/promises';
 import path from 'path';
 import { 
