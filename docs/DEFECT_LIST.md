@@ -4,17 +4,17 @@
 **Plan:** `EXECUTION_PLAN_REV_A.md` Phase 2A (local only)
 **Tickets covered:** T2.1 (test account provisioning), T2.2 (company / title-company portal), T2.4 (registration → onboarding → first-run), T2.6 (authenticated smoke test), T2.7 (migration state)
 **Status:** Phase 2A complete (T2.1, T2.2, T2.4, T2.6, T2.7), plus the F5 affiliate-surface audit. All of Phase 2B remains blocked on deployed access.
-**Fix status:** D-005/D-007 fixed (PR #24). D-001 and D-016 fixed on `fix/p4-broken-defects`.
+**Fix status:** D-005/D-007 fixed (PR #24). D-001, D-002, D-016, D-020 and D-022 fixed on `fix/p4-broken-defects`.
 
 ## Severity counts
 
 | Severity | Count |
 |---|---|
 | BROKEN | 7 |
-| WRONG | 6 |
-| FRAGILE | 6 |
-| ROUGH | 2 |
-| **Total** | **21** |
+| WRONG | 7 |
+| FRAGILE | 7 |
+| ROUGH | 3 |
+| **Total** | **24** |
 
 Plus 4 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 1 UNVERIFIED.
 
@@ -256,6 +256,34 @@ I guarded 0007 while investigating, hit 0008 next, and **reverted** rather than 
 Scope for whoever takes it (upper bound, since many are already inside `DO $$` guards): 1 unguarded `CREATE INDEX`, ~17 `ADD COLUMN` and ~9 `ADD CONSTRAINT` statements. The durable fix is a migration-tracking table so files are applied once, rather than making 54 historical files individually re-runnable.
 
 Not the same defect as D-001 (fresh build), which is fixed: a fresh database now builds cleanly end to end.
+
+### D-022 — `0012_seed_plans.sql` could never have succeeded on a fresh build
+**Severity:** WRONG · **Affects:** all (schema provenance)
+
+`db/migrations/0007_phase_29a_plans_and_account_types.sql:11-17` creates `plans` with `monthly_report_limit INT NOT NULL` and no default. `0012_seed_plans.sql:5` then inserted `(plan_slug, plan_name, stripe_price_id, description)` — omitting that column. On any database where 0007 created the table, the insert fails:
+
+```
+ERROR: null value in column "monthly_report_limit" of relation "plans" violates not-null constraint
+DETAIL: Failing row contains (solo, Solo Agent, null, f, 0, price_1SO4sD..., ...)
+```
+
+**So the `solo` and `affiliate` rows in the deployed database did not get there via this migration.** Combined with D-016 (`signup_tokens` only ever existed in an unapplied second directory), that is a second independent indication that the production schema was assembled partly by hand rather than by the documented runner.
+
+Fixed on `fix/p4-broken-defects`: 0012 now supplies the column, with the values 0051 assigns to those slugs, and remains inert where the rows already exist.
+
+### D-023 — Tenancy structure is assigned by a display-name string match
+**Severity:** FRAGILE · **Affects:** TITLE_COMPANY, INDUSTRY_AFFILIATE
+
+`db/migrations/0050_pct_to_title_company.sql:8-13` promotes accounts to `TITLE_COMPANY` by matching `name ILIKE '%pacific coast%' OR slug ILIKE '%pacific-coast%'`. An account's type — which decides whether it gets the company portal or the affiliate surface, and which `apps/api/src/api/deps/company.py:24-31` enforces on every company endpoint — is therefore a consequence of how someone typed a display name.
+
+Renaming that customer, or onboarding any other company whose name happens to contain those words, changes tenancy behaviour. Related to D-021, which is the same class of mismatch observed from the other direction.
+
+### D-024 — `/v1/affiliate/all-reports` is gated differently from every sibling endpoint
+**Severity:** ROUGH · **Affects:** REGULAR
+
+Every other affiliate endpoint refuses a non-affiliate caller with `403 {"error":"not_affiliate_account"}` via `verify_affiliate_account`. `GET /v1/affiliate/all-reports` instead returns `200 {"reports":[],"total":0}` (`apps/api/src/api/routes/affiliates.py:879`), because it derives its account set from `sponsor_account_id = <caller>` and a non-affiliate sponsors nobody.
+
+Not a leak — verified during the F5 audit — but the inconsistency means a caller cannot distinguish "you are not an affiliate" from "you are an affiliate with no agents".
 
 ### D-021 — "Demo Title Company" sponsors agents while not being typed `TITLE_COMPANY`
 **Severity:** WRONG · **Affects:** TITLE_COMPANY, SPONSORED · **Source: Jerry's query against the deployed database, not reproduced locally**
