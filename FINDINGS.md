@@ -25,3 +25,15 @@ ticket's scope and awaits its own ticket.
    `apps/`. The live mapping uses `STRIPE_PRICE_PRO_MONTH` /
    `STRIPE_PRICE_TEAM_MONTH` (`apps/api/src/api/config/billing.py:18-19`).
    Remove the dead fields or wire them up — relevant to Phase 2's plan-truth work.
+
+## From Phase 2A (T2.1/T2.2)
+
+4. **Phase 5 dead-code candidate: `_intake/*.zip`.** Binary archives at
+   `_intake/real-estate-saa-s.zip` and `_intake/website-updates.zip` contain
+   copies of files deleted in T1.1 (matched the `new-listings-gallery.html`
+   verification grep). Prove-death rules apply before removal.
+5. **`scripts/seed_production_demo_accounts.py:17-20` hardcodes a live Render
+   Postgres connection string, password included**, as the default
+   `DATABASE_URL`. Anyone running it without arguments writes to production.
+   Same class as the `.env.example` leak fixed in T0.2 — belongs in a security
+   ticket, not a cleanup one.
