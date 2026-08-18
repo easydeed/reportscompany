@@ -10,7 +10,7 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional
 import logging
 
-from ..db import db_conn, fetchall_dicts, fetchone_dict
+from ..db import db_conn, set_rls, fetchall_dicts, fetchone_dict
 from ..deps.company import get_company_admin
 from ..services.email import send_role_invite_email
 from ..services.usage import get_full_plan_usage
@@ -76,6 +76,7 @@ def get_overview(company: dict = Depends(get_company_admin)):
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
         # ── Company info + per-product plan limits ──
         cur.execute("""
             SELECT a.name, a.plan_slug
@@ -333,6 +334,7 @@ def list_reps(company: dict = Depends(get_company_admin)):
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
         cur.execute("""
             SELECT
                 a.id::text             AS rep_id,
@@ -408,6 +410,7 @@ def list_agents(company: dict = Depends(get_company_admin)):
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
         cur.execute("""
             SELECT
                 agent_acct.id::text     AS agent_id,
@@ -481,6 +484,7 @@ def get_company_reports(
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
         cur.execute("""
             SELECT id FROM accounts
             WHERE parent_account_id = %s::uuid AND account_type = 'INDUSTRY_AFFILIATE'
@@ -563,6 +567,7 @@ def get_company_schedules(
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
         cur.execute("""
             SELECT id FROM accounts
             WHERE parent_account_id = %s::uuid AND account_type = 'INDUSTRY_AFFILIATE'
@@ -653,6 +658,7 @@ def invite_rep(
     company_id = company["company_account_id"]
     try:
         with db_conn() as (conn, cur):
+            set_rls(cur, company_id)
             result = create_invited_user(
                 cur,
                 role="title_rep",
@@ -712,6 +718,7 @@ def resend_rep_invite(
     company_id = company["company_account_id"]
     try:
         with db_conn() as (conn, cur):
+            set_rls(cur, company_id)
             user = find_user_for_resend(
                 cur,
                 email=body.email,
@@ -764,6 +771,7 @@ def get_branding(company: dict = Depends(get_company_admin)):
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
         cur.execute("""
             SELECT brand_display_name, logo_url, email_logo_url,
                    footer_logo_url, email_footer_logo_url,
@@ -804,6 +812,7 @@ def update_branding(
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
         # Upsert company's own branding
         cur.execute("""
             INSERT INTO affiliate_branding (
@@ -947,6 +956,7 @@ def get_metrics(company: dict = Depends(get_company_admin)):
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
         rep_ids = _get_company_rep_ids(cur, company_id)
 
         if not rep_ids:
