@@ -1,8 +1,14 @@
+import os
 #!/usr/bin/env python3
 """Check database schema and run missing migrations."""
 import psycopg
 
-DATABASE_URL = "postgresql://mr_staging_db_user:vlFYf9ykajrJC7y62as6RKazBSr37fUU@dpg-d474qiqli9vc738g17e0-a.oregon-postgres.render.com/mr_staging_db"
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if not DATABASE_URL:
+    raise SystemExit(
+        "ERROR: DATABASE_URL is not set. This script has no default target; "
+        "set it explicitly, e.g. DATABASE_URL=postgresql://user:pass@host/db"
+    )
 
 def main():
     conn = psycopg.connect(DATABASE_URL)

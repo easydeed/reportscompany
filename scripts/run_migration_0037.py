@@ -2,9 +2,15 @@
 """Run migration 0037_property_report_stats.sql on staging database."""
 
 import psycopg2
+import os
 import sys
 
-DB_URL = "postgresql://mr_staging_db_user:vlFYf9ykajrJC7y62as6RKazBSr37fUU@dpg-d474qiqli9vc738g17e0-a.oregon-postgres.render.com/mr_staging_db"
+DB_URL = os.environ.get('DATABASE_URL')
+if not DB_URL:
+    raise SystemExit(
+        "ERROR: DATABASE_URL is not set. This script has no default target; "
+        "set it explicitly, e.g. DATABASE_URL=postgresql://user:pass@host/db"
+    )
 
 def main():
     print("Connecting to staging database...")

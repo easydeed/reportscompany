@@ -13,11 +13,19 @@ import os
 import sys
 import psycopg
 
-# Production database URL - read from environment
-DATABASE_URL = os.environ.get(
-    "DATABASE_URL",
-    "postgresql://mr_staging_db_user:vlFYf9ykajrJC7y62as6RKazBSr37fUU@dpg-d474qiqli9vc738g17e0-a.oregon-postgres.render.com/mr_staging_db"
-)
+# Database URL must be supplied explicitly. There is deliberately no default:
+# this script writes seed data to whatever database it is pointed at, and a
+# fallback value makes running it with no arguments a production write.
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    print(
+        "ERROR: DATABASE_URL is not set.\n"
+        "This script writes demo accounts to the database it is pointed at and has\n"
+        "no default target. Set it explicitly, e.g.:\n"
+        "  DATABASE_URL=postgresql://user:pass@host/db python scripts/seed_production_demo_accounts.py",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 def main():
     print("=" * 80)
@@ -43,7 +51,7 @@ def main():
     
     # Connect to database
     print("[INFO] Connecting to database...")
-    print(f"   Host: dpg-d474qiqli9vc738g17e0-a.oregon-postgres.render.com")
+    print("   Host: (from DATABASE_URL)")
     print(f"   Database: mr_staging_db")
     print()
     

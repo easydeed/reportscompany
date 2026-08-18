@@ -1,10 +1,11 @@
+import os
 """Grant admin role to a user."""
 import psycopg2
 
 EMAIL_TO_PROMOTE = "info@modernagent.io"
 
 conn = psycopg2.connect(
-    'postgresql://mr_staging_db_user:vlFYf9ykajrJC7y62as6RKazBSr37fUU@dpg-d474qiqli9vc738g17e0-a.oregon-postgres.render.com/mr_staging_db'
+    os.environ.get('DATABASE_URL')
 )
 cur = conn.cursor()
 
