@@ -30,3 +30,6 @@ _intake/
 
 # Lockfiles that may exist outside pnpm flow
 package-lock.json
+
+# Redis RDB snapshot written when running the local stack from the repo root
+dump.rdb
