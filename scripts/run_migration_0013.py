@@ -18,7 +18,7 @@ except ImportError:
 # Database URL (can be overridden via env var)
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://mr_staging_db_user:vlFYf9ykajrJC7y62as6RKazBSr37fUU@dpg-d474qiqli9vc738g17e0-a.oregon-postgres.render.com/mr_staging_db"
+    os.environ.get('DATABASE_URL')
 )
 
 def run_sql(conn, sql, description):
