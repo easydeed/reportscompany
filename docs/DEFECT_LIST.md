@@ -4,7 +4,7 @@
 **Plan:** `EXECUTION_PLAN_REV_A.md` Phase 2A (local only)
 **Tickets covered:** T2.1 (test account provisioning), T2.2 (company / title-company portal), T2.4 (registration → onboarding → first-run), T2.6 (authenticated smoke test), T2.7 (migration state)
 **Status:** Phase 2A complete (T2.1, T2.2, T2.4, T2.6, T2.7), plus the F5 affiliate-surface audit. All of Phase 2B remains blocked on deployed access.
-**Fix status:** D-005/D-007 fixed (PR #24). D-001, D-002, D-016, D-020 and D-022 fixed on `fix/p4-broken-defects`.
+**Fix status:** D-005/D-007 fixed (PR #24). D-001, D-002, D-015 (collection errors), D-016, D-017, D-018, D-020 and D-022 fixed on `fix/p4-broken-defects`.
 
 ## Severity counts
 
@@ -92,7 +92,7 @@ $ pytest apps/api/tests/ -q --ignore=<those three>
 
 Collection errors: `ModuleNotFoundError: No module named 'api.app'` and `ImportError: attempted relative import beyond top-level package`. The modules import a package path that does not exist — so these tests cannot ever have passed in their current form against the current tree.
 
-The 29 failures are concentrated in `apps/api/tests/test_plans_limits.py`, whose mocked cursor return shapes no longer match what `apps/api/src/api/services/usage.py` reads.
+The failures are **not** concentrated in one file, as this entry originally stated. Measured after the collection errors were fixed, they are spread across `test_plans_limits.py` (12), `test_affiliate_branding.py` (11) and `test_accept_invite.py` (6) — mocked cursor return shapes that no longer match what the services read. Phase 3 should start with `test_plans_limits.py`, but it is 12 assertions, not 29.
 
 **Verified pre-existing:** both numbers reproduce on `main` with no Phase-2 changes applied (checked out `main`, ran the suite, same 3 errors / 29 failures). The cross-tenant isolation branch adds 9 passing tests and no new failures.
 
@@ -125,7 +125,7 @@ Consequence: **invite-based onboarding is impossible.** Only `REGULAR` self-regi
 
 One thing that is right: the failed invite rolls back cleanly — 0 accounts and 0 users created after the 500, so there is no partial-write corruption.
 
-Production presumably has the table because the file was applied by hand at some point; there is no record of when, and nothing detects the divergence. See T2.7 below for the full migration story.
+**Confirmed by Jerry against the live database: `signup_tokens` exists there.** So the deployed environment is unaffected — D-016 is scoped to databases built from this repository — but the table exists while being created solely by a file no runner has ever applied. That is the third independent indicator that the deployed schema was assembled partly by hand, after 0012's impossible seed rows (D-022) and 0011's abandoned column shape (D-001). The repository and the database have never been in a verified relationship; F7's tracking table is what ends that. See T2.7 below.
 
 ### D-017 — `/v1/property/stats/affiliate` returns 500 on the empty state
 **Severity:** BROKEN · **Affects:** INDUSTRY_AFFILIATE
@@ -331,6 +331,27 @@ The four 5xx routes, each retried individually with pacing to rule out rate-limi
 | `/v1/property/stats/affiliate` | affiliate | response model missing `themes` | D-017 |
 | `/v1/dev/stripe-prices` | all 5 | `PlanCatalog` not subscriptable | D-018 |
 | `/v1/billing/portal` | all 5 | **environment, not code** — returns a structured `{"error":"stripe_config_missing","message":"Missing: STRIPE_SECRET_KEY, ..."}` because no Stripe keys are set locally. Worth noting that a known configuration state is reported as `500`; `503` would be the honest status, and it means a Stripe misconfiguration in production would look like a crash. |
+
+## F4 — Paced smoke re-run (S5 settled)
+
+The T2.6 sweep sent 66 requests per persona against a 60/minute limiter, so its tail was rate-limited and 15 of 330 results were artifacts. Re-run at ~1.1s per request: **330 requests, 0 rate-limited, every result real.**
+
+| Status | T2.6 (unpaced) | F4 (paced, after F3 fixes) |
+|---|---|---|
+| 403 (expected role gating) | 192 | 192 |
+| 200 | 105 | 126 |
+| 429 (artifact) | 15 | **0** |
+| 500 | 13 | **7** |
+| 422 (missing query params) | 5 | 5 |
+
+Unique 5xx routes fell from 4 to 2: `/v1/dev/stripe-prices` (D-018) and `/v1/property/stats/affiliate` (D-017) are fixed and no longer appear.
+
+The two that remain:
+
+- **`/v1/affiliate/overview`** (affiliate, rep-a) — D-016 on a database built before 0053 existed. Applying 0053 to it turned both into **200**. Not a separate defect; it is the same missing-`signup_tokens` failure, and it confirms the fix end to end on a second database.
+- **`/v1/billing/portal`** (all five personas) — **environment, not code**: `{"error":"stripe_config_missing","message":"Missing: STRIPE_SECRET_KEY, ..."}`. It is a deliberate, well-formed error handed back with the wrong status; `503` would be honest, and as written a Stripe misconfiguration in production is indistinguishable from a crash.
+
+**S5 verdict:** with the two D-016/D-017/D-018 fixes applied and Stripe unconfigured locally, **no route returns a 5xx for any account type except `/v1/billing/portal`, whose 500 is a configuration state rather than a fault.** That is as close to S5 as this environment can establish; confirming it fully requires a deployment with Stripe keys present (Phase 2B).
 
 ## T2.7 — Migration state (results)
 
