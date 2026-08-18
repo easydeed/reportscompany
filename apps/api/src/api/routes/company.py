@@ -10,7 +10,7 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional
 import logging
 
-from ..db import db_conn, fetchall_dicts, fetchone_dict
+from ..db import db_conn, set_rls, fetchall_dicts, fetchone_dict
 from ..deps.company import get_company_admin
 from ..services.email import send_role_invite_email
 from ..services.usage import get_full_plan_usage
@@ -76,6 +76,7 @@ def get_overview(company: dict = Depends(get_company_admin)):
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
         # ── Company info + per-product plan limits ──
         cur.execute("""
             SELECT a.name, a.plan_slug
@@ -333,6 +334,7 @@ def list_reps(company: dict = Depends(get_company_admin)):
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
         cur.execute("""
             SELECT
                 a.id::text             AS rep_id,
@@ -408,6 +410,7 @@ def list_agents(company: dict = Depends(get_company_admin)):
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
         cur.execute("""
             SELECT
                 agent_acct.id::text     AS agent_id,
@@ -481,6 +484,7 @@ def get_company_reports(
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
         cur.execute("""
             SELECT id FROM accounts
             WHERE parent_account_id = %s::uuid AND account_type = 'INDUSTRY_AFFILIATE'
@@ -490,17 +494,33 @@ def get_company_reports(
         if not rep_ids:
             return {"reports": [], "total": 0}
 
+        # A caller-supplied rep_id must belong to THIS company. Without this
+        # check the sponsored-agent lookup below accepts any rep id and leaks
+        # another company's agents' reports. Compare as text: rep_ids holds
+        # UUID objects, rep_id is a query-string str.
         if rep_id:
+            matched_rep = next((r for r in rep_ids if str(r) == rep_id), None)
+            if matched_rep is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Rep not found or not under your company.",
+                )
+            # Keep the row's own value (UUID), not the raw string — the id lists
+            # are combined and passed to ANY(%s), which rejects mixed types.
+            scoped_rep_ids = [matched_rep]
             cur.execute("""
                 SELECT id FROM accounts WHERE sponsor_account_id = %s::uuid
             """, (rep_id,))
         else:
+            scoped_rep_ids = rep_ids
             cur.execute("""
                 SELECT id FROM accounts WHERE sponsor_account_id = ANY(%s)
             """, (rep_ids,))
         agent_ids = [row[0] for row in cur.fetchall()]
 
-        all_ids = agent_ids + rep_ids
+        # Scope to the requested rep only — previously every rep of the company
+        # was appended regardless of the filter, so the filter never narrowed.
+        all_ids = agent_ids + scoped_rep_ids
         if not all_ids:
             return {"reports": [], "total": 0}
 
@@ -547,6 +567,7 @@ def get_company_schedules(
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
         cur.execute("""
             SELECT id FROM accounts
             WHERE parent_account_id = %s::uuid AND account_type = 'INDUSTRY_AFFILIATE'
@@ -556,17 +577,33 @@ def get_company_schedules(
         if not rep_ids:
             return {"schedules": [], "total": 0}
 
+        # A caller-supplied rep_id must belong to THIS company. Without this
+        # check the sponsored-agent lookup below accepts any rep id and leaks
+        # another company's agents' schedules. Compare as text: rep_ids holds
+        # UUID objects, rep_id is a query-string str.
         if rep_id:
+            matched_rep = next((r for r in rep_ids if str(r) == rep_id), None)
+            if matched_rep is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Rep not found or not under your company.",
+                )
+            # Keep the row's own value (UUID), not the raw string — the id lists
+            # are combined and passed to ANY(%s), which rejects mixed types.
+            scoped_rep_ids = [matched_rep]
             cur.execute("""
                 SELECT id FROM accounts WHERE sponsor_account_id = %s::uuid
             """, (rep_id,))
         else:
+            scoped_rep_ids = rep_ids
             cur.execute("""
                 SELECT id FROM accounts WHERE sponsor_account_id = ANY(%s)
             """, (rep_ids,))
         agent_ids = [row[0] for row in cur.fetchall()]
 
-        all_ids = agent_ids + rep_ids
+        # Scope to the requested rep only — previously every rep of the company
+        # was appended regardless of the filter, so the filter never narrowed.
+        all_ids = agent_ids + scoped_rep_ids
         if not all_ids:
             return {"schedules": [], "total": 0}
 
@@ -621,6 +658,7 @@ def invite_rep(
     company_id = company["company_account_id"]
     try:
         with db_conn() as (conn, cur):
+            set_rls(cur, company_id)
             result = create_invited_user(
                 cur,
                 role="title_rep",
@@ -680,6 +718,7 @@ def resend_rep_invite(
     company_id = company["company_account_id"]
     try:
         with db_conn() as (conn, cur):
+            set_rls(cur, company_id)
             user = find_user_for_resend(
                 cur,
                 email=body.email,
@@ -732,6 +771,7 @@ def get_branding(company: dict = Depends(get_company_admin)):
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
         cur.execute("""
             SELECT brand_display_name, logo_url, email_logo_url,
                    footer_logo_url, email_footer_logo_url,
@@ -772,6 +812,7 @@ def update_branding(
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
         # Upsert company's own branding
         cur.execute("""
             INSERT INTO affiliate_branding (
@@ -915,6 +956,7 @@ def get_metrics(company: dict = Depends(get_company_admin)):
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
         rep_ids = _get_company_rep_ids(cur, company_id)
 
         if not rep_ids:

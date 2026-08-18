@@ -1,3 +1,4 @@
+import os
 """
 Migration 0023: Reduce free tier report limits
 - Free plan: 50 -> 5 reports/month
@@ -7,7 +8,7 @@ import psycopg2
 
 # Connect to staging database
 conn = psycopg2.connect(
-    'postgresql://mr_staging_db_user:vlFYf9ykajrJC7y62as6RKazBSr37fUU@dpg-d474qiqli9vc738g17e0-a.oregon-postgres.render.com/mr_staging_db'
+    os.environ.get('DATABASE_URL')
 )
 cur = conn.cursor()
 

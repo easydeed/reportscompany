@@ -8,11 +8,17 @@ Usage:
 Or with explicit connection string:
     python scripts/run_migration_0019.py "postgresql://user:pass@host/db"
 """
+import os
 import sys
 import psycopg
 
 # Default to staging database
-DEFAULT_DB_URL = "postgresql://mr_staging_db_user:vlFYf9ykajrJC7y62as6RKazBSr37fUU@dpg-d474qiqli9vc738g17e0-a.oregon-postgres.render.com/mr_staging_db"
+DEFAULT_DB_URL = os.environ.get('DATABASE_URL')
+if not DEFAULT_DB_URL:
+    raise SystemExit(
+        "ERROR: DATABASE_URL is not set. This script has no default target; "
+        "set it explicitly, e.g. DATABASE_URL=postgresql://user:pass@host/db"
+    )
 
 MIGRATION_SQL = """
 -- Migration 0019: Add email_logo_url to affiliate_branding
