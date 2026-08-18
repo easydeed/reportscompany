@@ -1,5 +1,11 @@
 # TrendyReports — PDF Rendering Pipeline (Canonical)
 
+> ⚠️ **PARTIALLY FALSIFIED.** Audited 2026-08-17 against HEAD `f854ed6`; known-false
+> claims are catalogued in [`docs/DOCS_AUDIT_2026-08-17.md`](../../../../docs/DOCS_AUDIT_2026-08-17.md).
+> **All counts and line numbers in this file are unreliable — verify against code.**
+> Behavioural descriptions are more trustworthy than inventories, but neither is
+> guaranteed. Do not cite this document as evidence.
+
 > **PDFShift is the production PDF renderer. Nothing else.**
 
 ## The Truth

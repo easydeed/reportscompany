@@ -1,5 +1,11 @@
 # TrendyReports — Architecture Source of Truth
 
+> ⚠️ **PARTIALLY FALSIFIED.** Audited 2026-08-17 against HEAD `f854ed6`; known-false
+> claims are catalogued in [`docs/DOCS_AUDIT_2026-08-17.md`](../DOCS_AUDIT_2026-08-17.md).
+> **All counts and line numbers in this file are unreliable — verify against code.**
+> Behavioural descriptions are more trustworthy than inventories, but neither is
+> guaranteed. Do not cite this document as evidence.
+
 > **Version:** 16 (Apr 2026)
 > **Updated by:** Documenter agent — full code-verified audit
 > **Previous version:** V15 (Feb 2026)
@@ -501,8 +507,6 @@ See `.env.example` for the full template.
 |----------|-------------|
 | [INDEX.md](./INDEX.md) | Quick-reference source tree |
 | [WIZARD_AND_API_CALLS.md](./WIZARD_AND_API_CALLS.md) | Wizard flows, sequence diagrams, full API reference |
-| [SITE_ARCHITECTURE_TREE.md](./SITE_ARCHITECTURE_TREE.md) | Directory tree + logical component tree |
-| [ARCHITECTURE_AUDIT.md](./ARCHITECTURE_AUDIT.md) | Docs inventory, status, and audit trail |
 | [backend-core.md](./backend-core.md) | FastAPI app startup, DB, auth, settings |
 | [backend-middleware.md](./backend-middleware.md) | Auth + rate-limit middleware |
 | [backend-routes.md](./backend-routes.md) | All 28 API routes |
@@ -510,14 +514,11 @@ See `.env.example` for the full template.
 | [frontend-core.md](./frontend-core.md) | Next.js config, middleware, API clients |
 | [frontend-pages.md](./frontend-pages.md) | All app-router pages |
 | [frontend-components.md](./frontend-components.md) | Component organization |
-| [frontend-api-proxy.md](./frontend-api-proxy.md) | Next.js proxy routes |
 | [property-type-data-contract.md](./property-type-data-contract.md) | SiteX → SimplyRETS type mapping |
-| [performance-audit.md](./performance-audit.md) | Performance findings |
 | **Module Docs** (`modules/`) | |
 | [modules/simplyrets-api-service.md](./modules/simplyrets-api-service.md) | API-layer SimplyRETS client |
 | [modules/sitex-api-service.md](./modules/sitex-api-service.md) | SiteX Pro API client |
 | [modules/property-routes-comparables.md](./modules/property-routes-comparables.md) | Comparables route + fallback ladder |
-| [modules/worker-simplyrets-vendor.md](./modules/worker-simplyrets-vendor.md) | Worker-layer SimplyRETS client |
 | [modules/worker-tasks.md](./modules/worker-tasks.md) | Celery task definitions |
 | [modules/property-builder.md](./modules/property-builder.md) | Property report HTML renderer |
 | [modules/filter-resolver.md](./modules/filter-resolver.md) | Market-adaptive filter resolution |
@@ -526,11 +527,6 @@ See `.env.example` for the full template.
 | [modules/cli-tools.md](./modules/cli-tools.md) | CLI / QA tools reference |
 | [modules/test-suite.md](./modules/test-suite.md) | Automated test suite |
 | [modules/email-template.md](./modules/email-template.md) | Email template engine |
-| [modules/market-reports-audit.md](./modules/market-reports-audit.md) | Market reports audit trail |
-| **Plans & Playbooks** (`docs/plan/`) | |
-| [MARKET_REPORT_PDF_PLAYBOOK.md](../plan/MARKET_REPORT_PDF_PLAYBOOK.md) | PDF generation playbook |
-| [MARKET_REPORT_AGENT_PROMPTS.md](../plan/MARKET_REPORT_AGENT_PROMPTS.md) | AI prompt engineering reference |
-| [V0_MARKET_REPORTS_SPEC.md](../plan/V0_MARKET_REPORTS_SPEC.md) | Original market reports specification |
 | **Skill Files** (`.cursor/rules/`) | |
 | `market-report-templates-skill.md` | AI agent guide: market report PDF templates |
 | `branding-color-system-skill.md` | AI agent guide: branding & color system |

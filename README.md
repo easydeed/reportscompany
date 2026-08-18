@@ -1,5 +1,11 @@
 # TrendyReports
 
+> ⚠️ **PARTIALLY FALSIFIED.** Audited 2026-08-17 against HEAD `f854ed6`; known-false
+> claims are catalogued in [`docs/DOCS_AUDIT_2026-08-17.md`](./docs/DOCS_AUDIT_2026-08-17.md).
+> **All counts and line numbers in this file are unreliable — verify against code.**
+> Behavioural descriptions are more trustworthy than inventories, but neither is
+> guaranteed. Do not cite this document as evidence.
+
 > **A production-ready SaaS platform that transforms live MLS data into branded PDF market reports with automated scheduling, AI insights, and email delivery.**
 
 **Status:** Production Ready | **Last Updated:** April 13, 2026
@@ -163,10 +169,10 @@ See [LOCAL_SETUP_GUIDE.md](./LOCAL_SETUP_GUIDE.md) for detailed setup instructio
 
 | Document | Description |
 |----------|-------------|
-| [docs/architecture/SOURCE_OF_TRUTH.md](./docs/architecture/SOURCE_OF_TRUTH.md) | **Master architecture document** — start here |
+| [docs/DOCS_AUDIT_2026-08-17.md](./docs/DOCS_AUDIT_2026-08-17.md) | **Docs audit — the current source of truth for what is and is not accurate. Read this first.** |
+| [docs/architecture/SOURCE_OF_TRUTH.md](./docs/architecture/SOURCE_OF_TRUTH.md) | Master architecture document (see audit for known-false claims) |
 | [docs/architecture/INDEX.md](./docs/architecture/INDEX.md) | Quick-reference source tree |
 | [docs/architecture/modules/](./docs/architecture/modules/) | Per-module deep dives (13 modules) |
-| [docs/plan/MARKET_REPORT_PDF_PLAYBOOK.md](./docs/plan/MARKET_REPORT_PDF_PLAYBOOK.md) | PDF generation playbook |
 | [LOCAL_SETUP_GUIDE.md](./LOCAL_SETUP_GUIDE.md) | Local development setup |
 
 ---

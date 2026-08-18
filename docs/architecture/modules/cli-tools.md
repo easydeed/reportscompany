@@ -1,5 +1,11 @@
 # Module: CLI & QA Tools
 
+> ⚠️ **PARTIALLY FALSIFIED.** Audited 2026-08-17 against HEAD `f854ed6`; known-false
+> claims are catalogued in [`docs/DOCS_AUDIT_2026-08-17.md`](../../DOCS_AUDIT_2026-08-17.md).
+> **All counts and line numbers in this file are unreliable — verify against code.**
+> Behavioural descriptions are more trustworthy than inventories, but neither is
+> guaranteed. Do not cite this document as evidence.
+
 > `qa_deliver_reports.py`, `scripts/test_simplyrets.py`, `scripts/test_sitex.py`, `scripts/test_property_report_flow.py`, `scripts/test_all_reports.py`, `scripts/generate_all_property_pdfs.py`, `scripts/generate_theme_previews.py`
 
 ---
