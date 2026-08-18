@@ -12,9 +12,8 @@
 |------|-------------|---------------|
 | 1 | Address Search | User enters address → SiteX lookup → subject property loaded |
 | 2 | Comparable Selection | System fetches comps (fallback ladder) → user curates list |
-| 3 | Agent Info | User confirms/edits agent name, license, phone, email, headshot |
-| 4 | Theme & Pages | User selects visual theme (5 options) and pages to include |
-| 5 | Generate | PDF generation enqueued; user polls for completion |
+| 3 | Theme & Pages | User selects visual theme (5 options) and pages to include |
+| 4 | Generate | Report created and PDF generation enqueued in one request; user polls for completion |
 
 ### Property Report Flow (Sequence Diagram)
 
@@ -33,7 +32,7 @@ sequenceDiagram
     User->>FE: Enter address (Step 1)
     FE->>Proxy: POST /api/proxy/v1/property/search
     Proxy->>API: POST /v1/property/search
-    API->>SiteX: GET /v2/property/search?address=...
+    API->>SiteX: GET /realestatedata/search?addr=...&lastLine=...
     SiteX-->>API: PropertyCharacteristics (UseCode, beds, baths, sqft, APN...)
     API-->>FE: PropertyData (address, property_type, beds, baths, sqft, APN...)
 
@@ -54,20 +53,17 @@ sequenceDiagram
 
     API-->>FE: {comparables, confidence, ladder_level_used}
 
-    User->>FE: Curate comps, confirm agent info, pick theme (Steps 2-4)
-    FE->>Proxy: POST /api/proxy/v1/property/reports (create record)
+    User->>FE: Curate comps, pick theme & pages (Steps 2-3)
+
+    User->>FE: Click "Generate" (Step 4)
+    FE->>Proxy: POST /api/proxy/v1/property/reports
     Proxy->>API: POST /v1/property/reports
     API->>API: Insert property_reports row (status=pending)
+    API->>Worker: Enqueue generate_property_report(report_id)
     API-->>FE: {report_id}
 
-    User->>FE: Click "Generate PDF" (Step 5)
-    FE->>Proxy: POST /api/proxy/v1/property/reports/{id}/generate
-    Proxy->>API: POST /v1/property/reports/{id}/generate
-    API->>Worker: Enqueue generate_property_report_task(report_id)
-    API-->>FE: {status: "generating"}
-
     Worker->>Worker: Load report record from DB
-    Worker->>Worker: PropertyReportBuilder.render() → HTML
+    Worker->>Worker: PropertyReportBuilder.render_html() → HTML
     Worker->>PDFShift: POST /convert (HTML → PDF)
     PDFShift-->>Worker: PDF bytes
     Worker->>R2: Upload PDF (7-day presigned URL)
@@ -185,72 +181,69 @@ sequenceDiagram
 
 ### 3.1 SiteX Pro API
 
-**Base URL:** `https://api.sitexpro.com`
+> Verified against `apps/api/src/api/services/sitex.py` on 2026-08-17.
+
+**Base URL:** configured via `SITEX_BASE_URL`; default is the UAT gateway `https://api.uat.bkitest.com` (`sitex.py:39`).
 
 #### Authentication
 
 | Type | Details |
 |------|---------|
-| Flow | OAuth2 Client Credentials |
-| Token endpoint | `POST /oauth/token` |
-| Token TTL | 10 minutes (refreshed at 9 min) |
+| Flow | OAuth2 Client Credentials (`SITEX_CLIENT_ID` / `SITEX_CLIENT_SECRET`) |
+| Token endpoint | `POST {SITEX_BASE_URL}/ls/apigwy/oauth2/v1/token` (`sitex.py:46`) |
+| Token TTL | `expires_in` from the response (600s); singleton `SiteXTokenManager` refreshes with a 1-minute buffer, i.e. at ~9 minutes (`sitex.py:144-151,174-176`) |
 | Header | `Authorization: Bearer <token>` |
 
 #### Endpoint: Property Search by Address
 
 ```
-GET /v2/property/search
+GET {SITEX_BASE_URL}/realestatedata/search
 ```
+(`sitex.py:50`; called via `lookup_property()`, `sitex.py:610`)
 
 | Parameter | Required | Type | Notes |
 |-----------|----------|------|-------|
-| `address` | ✅ | `string` | Full street address |
-| `city` | ✅ | `string` | City name |
-| `state` | ✅ | `string` | 2-letter state code |
-| `zip` | ✅ | `string` | ZIP code |
+| `addr` | ✅ | `string` | Street address |
+| `lastLine` | ✅ | `string` | City/State/ZIP as one string |
+| `feedId` | ✅ | `string` | Feed identifier (`SITEX_FEED_ID`, default `100001`) |
+| `options` | | `string` | `search_exclude_nonres=Y` (`sitex.py:303,333`) |
 
-**Response fields used:**
-
-| Field path | Maps to | Notes |
-|-----------|---------|-------|
-| `PropertyCharacteristics.UseCode` | `property_type` | Drives SimplyRETS type mapping |
-| `PropertyCharacteristics.LivingArea` | `sqft` | |
-| `PropertyCharacteristics.Bedrooms` | `beds` | |
-| `PropertyCharacteristics.TotalBaths` | `baths` | |
-| `PropertyCharacteristics.YearBuilt` | `year_built` | |
-| `PropertyCharacteristics.LotSize` | `lot_size` | |
-| `PropertyCharacteristics.LegalDescription` | `legal_description` | |
-| `OwnerInformation.OwnerName` | `owner_name` | |
-| `AssessmentTaxInfo.TotalAssessedValue` | `assessed_value` | |
-| `PropertyCharacteristics.FIPSCode` | `fips` | For APN-based re-lookup |
-| `PropertyCharacteristics.APN` | `apn` | |
+The response is parsed into a `PropertyData` object (defined in `sitex.py:64`): address, APN + FIPS, owner name(s), legal description, beds/baths/sqft/lot size/year built, property type (UseCode), assessed value, lat/lng.
 
 **Possible errors:**
 
-| Status | Meaning | Handling |
-|--------|---------|---------|
-| 200, multiple results | Multiple properties matched | Raise `MultiMatchError` → prompt user for APN |
-| 404 | No results | Return `None` → UI shows "not found" |
-| 401 | Token expired/invalid | Auto-refresh token, retry once |
-| 503 | SiteX down | `HTTP 503` to client |
+| Condition | Handling |
+|--------|---------|
+| Multiple properties matched | Raise `SiteXMultiMatchError` (`sitex.py:206`) → UI shows a disambiguation picker |
+| No results | Return `None` → UI shows "not found" |
+| Auth failure | `SiteXAuthError` (`sitex.py:198`) |
 
 #### Endpoint: Property Search by APN
 
-```
-GET /v2/property/search
-```
-
-| Parameter | Required | Type | Notes |
-|-----------|----------|------|-------|
-| `fips` | ✅ | `string` | County FIPS (5 digits) |
-| `apn` | ✅ | `string` | Assessor's Parcel Number |
+Same `GET {SITEX_BASE_URL}/realestatedata/search`, with `fips` + `apn` in place of the address (via `lookup_property_by_apn(fips, apn)`, `sitex.py:672`).
 
 #### Caching (SiteX)
 
 | Cache type | TTL | Key |
 |------------|-----|-----|
-| In-memory dict | 24 hours | `"{address}:{city}:{state}:{zip}"` |
-| APN cache | 24 hours | `"{fips}:{apn}"` |
+| In-memory dict (process memory) | 24 hours | `"v3:" + md5(address\|city_state_zip)[:16]` (`sitex.py:562-572`) |
+
+#### Environment Variables (SiteX + SimplyRETS)
+
+| Variable | Used By | Purpose |
+|---|---|---|
+| `SITEX_BASE_URL` | API | SiteX Pro gateway URL (UAT or Prod) |
+| `SITEX_CLIENT_ID` | API | OAuth2 client ID |
+| `SITEX_CLIENT_SECRET` | API | OAuth2 client secret |
+| `SITEX_FEED_ID` | API | Feed identifier |
+| `SIMPLYRETS_BASE_URL` | API + Worker | Base URL (default: `https://api.simplyrets.com`) |
+| `SIMPLYRETS_USERNAME` | API + Worker | SimplyRETS username |
+| `SIMPLYRETS_PASSWORD` | API + Worker | SimplyRETS password |
+| `SIMPLYRETS_TIMEOUT_S` | API + Worker | HTTP timeout in seconds |
+| `SIMPLYRETS_RPM` | Worker | Rate limit — requests per minute (default: 60) |
+| `SIMPLYRETS_MAX_RESULTS` | Worker | Max listings fetched per report (default: 1000) |
+| `SIMPLYRETS_VENDOR` | Worker | MLS vendor ID (optional) |
+| `SIMPLYRETS_ALLOW_SORT` | Worker | Enable sorting (set `true` if the MLS account supports it) |
 
 ---
 
