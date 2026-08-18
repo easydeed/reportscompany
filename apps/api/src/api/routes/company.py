@@ -490,17 +490,33 @@ def get_company_reports(
         if not rep_ids:
             return {"reports": [], "total": 0}
 
+        # A caller-supplied rep_id must belong to THIS company. Without this
+        # check the sponsored-agent lookup below accepts any rep id and leaks
+        # another company's agents' reports. Compare as text: rep_ids holds
+        # UUID objects, rep_id is a query-string str.
         if rep_id:
+            matched_rep = next((r for r in rep_ids if str(r) == rep_id), None)
+            if matched_rep is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Rep not found or not under your company.",
+                )
+            # Keep the row's own value (UUID), not the raw string — the id lists
+            # are combined and passed to ANY(%s), which rejects mixed types.
+            scoped_rep_ids = [matched_rep]
             cur.execute("""
                 SELECT id FROM accounts WHERE sponsor_account_id = %s::uuid
             """, (rep_id,))
         else:
+            scoped_rep_ids = rep_ids
             cur.execute("""
                 SELECT id FROM accounts WHERE sponsor_account_id = ANY(%s)
             """, (rep_ids,))
         agent_ids = [row[0] for row in cur.fetchall()]
 
-        all_ids = agent_ids + rep_ids
+        # Scope to the requested rep only — previously every rep of the company
+        # was appended regardless of the filter, so the filter never narrowed.
+        all_ids = agent_ids + scoped_rep_ids
         if not all_ids:
             return {"reports": [], "total": 0}
 
@@ -556,17 +572,33 @@ def get_company_schedules(
         if not rep_ids:
             return {"schedules": [], "total": 0}
 
+        # A caller-supplied rep_id must belong to THIS company. Without this
+        # check the sponsored-agent lookup below accepts any rep id and leaks
+        # another company's agents' schedules. Compare as text: rep_ids holds
+        # UUID objects, rep_id is a query-string str.
         if rep_id:
+            matched_rep = next((r for r in rep_ids if str(r) == rep_id), None)
+            if matched_rep is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Rep not found or not under your company.",
+                )
+            # Keep the row's own value (UUID), not the raw string — the id lists
+            # are combined and passed to ANY(%s), which rejects mixed types.
+            scoped_rep_ids = [matched_rep]
             cur.execute("""
                 SELECT id FROM accounts WHERE sponsor_account_id = %s::uuid
             """, (rep_id,))
         else:
+            scoped_rep_ids = rep_ids
             cur.execute("""
                 SELECT id FROM accounts WHERE sponsor_account_id = ANY(%s)
             """, (rep_ids,))
         agent_ids = [row[0] for row in cur.fetchall()]
 
-        all_ids = agent_ids + rep_ids
+        # Scope to the requested rep only — previously every rep of the company
+        # was appended regardless of the filter, so the filter never narrowed.
+        all_ids = agent_ids + scoped_rep_ids
         if not all_ids:
             return {"schedules": [], "total": 0}
 
