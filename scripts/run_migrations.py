@@ -1,102 +1,138 @@
 #!/usr/bin/env python3
 """
-Run database migrations
+Apply pending migrations from db/migrations, once each.
 
-Usage:
     DATABASE_URL=postgresql://... python scripts/run_migrations.py
-"""
+    DATABASE_URL=postgresql://... python scripts/run_migrations.py --bootstrap
+    DATABASE_URL=postgresql://... python scripts/run_migrations.py --status
 
+--bootstrap records every unrecorded file as applied WITHOUT executing it. It is
+for a database that already has the schema but no tracking table — i.e. every
+database that existed before tracking was added. Run it there once, BEFORE a
+normal run, or the first normal run re-executes 50+ historical migrations
+against live data.
+
+scripts/migrate.sh implements the same contract against the same table; the
+table and that contract are defined in db/schema_migrations.sql.
+
+Each file is executed whole, in one transaction. It is not split on semicolons:
+splitting breaks DO $$ ... $$ blocks and silently dropped any statement that
+followed a comment line.
+"""
+import hashlib
 import os
 import sys
-import psycopg2
 from pathlib import Path
 
+import psycopg
 
-def run_migration(cur, migration_file):
-    """Run a single migration file"""
-    print(f"Running {migration_file.name}...")
-    sql = migration_file.read_text()
-    
-    # Split by semicolons and execute each statement separately
-    # This handles multi-statement migrations better
-    statements = [s.strip() for s in sql.split(';') if s.strip() and not s.strip().startswith('--')]
-    
-    for statement in statements:
-        if statement:
-            try:
-                cur.execute(statement)
-            except Exception as e:
-                # If it's a "relation already exists" error, that's OK
-                if "already exists" in str(e).lower():
-                    print(f"  [SKIP] Object already exists, continuing...")
-                else:
-                    raise
-    
-    print(f"[OK] {migration_file.name} completed")
+REPO_ROOT = Path(__file__).resolve().parent.parent
+MIGRATIONS_DIR = REPO_ROOT / "db" / "migrations"
+TRACKING_DDL = REPO_ROOT / "db" / "schema_migrations.sql"
 
 
-def main():
+def checksum(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def main() -> None:
+    mode = "apply"
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "--bootstrap":
+            mode = "bootstrap"
+        elif sys.argv[1] == "--status":
+            mode = "status"
+        else:
+            print(
+                f"unknown option: {sys.argv[1]} "
+                "(expected --bootstrap, --status, or no argument)",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+
     database_url = os.environ.get("DATABASE_URL")
-    
     if not database_url:
-        print("Error: DATABASE_URL environment variable not set", file=sys.stderr)
-        print("Usage: DATABASE_URL=postgresql://... python scripts/run_migrations.py", file=sys.stderr)
+        print(
+            "ERROR: DATABASE_URL is not set.\n"
+            "Usage: DATABASE_URL=postgresql://... python scripts/run_migrations.py",
+            file=sys.stderr,
+        )
         sys.exit(1)
-    
-    # Get migrations directory
-    migrations_dir = Path(__file__).parent.parent / "db" / "migrations"
-    
-    if not migrations_dir.exists():
-        print(f"Error: Migrations directory not found: {migrations_dir}", file=sys.stderr)
+
+    if not MIGRATIONS_DIR.exists():
+        print(f"ERROR: migrations directory not found: {MIGRATIONS_DIR}", file=sys.stderr)
         sys.exit(1)
-    
-    # Get migration files (sorted)
-    migration_files = sorted(migrations_dir.glob("*.sql"))
-    
-    if not migration_files:
-        print("No migration files found", file=sys.stderr)
+
+    files = sorted(MIGRATIONS_DIR.glob("*.sql"))
+    if not files:
+        print("ERROR: no migration files found", file=sys.stderr)
         sys.exit(1)
-    
-    print(f"Found {len(migration_files)} migration files\n")
-    
-    # Connect to database
-    try:
-        conn = psycopg2.connect(database_url)
-        conn.autocommit = False
-        cur = conn.cursor()
-        
-        print("Connected to database\n")
-        
-        # Run migrations
-        for migration_file in migration_files:
-            try:
-                run_migration(cur, migration_file)
-            except psycopg2.Error as e:
-                print(f"[ERROR] Error in {migration_file.name}: {e}", file=sys.stderr)
-                print("Rolling back...", file=sys.stderr)
-                conn.rollback()
-                sys.exit(1)
-        
-        # Commit all migrations
+
+    print(f"Migrations: {len(files)} files on disk (mode: {mode})")
+
+    applied = skipped = recorded = pending = 0
+
+    with psycopg.connect(database_url, autocommit=False) as conn:
+        # The tracking table has to exist before we can ask what has been applied.
+        with conn.cursor() as cur:
+            cur.execute(TRACKING_DDL.read_text())
         conn.commit()
-        print(f"\n[SUCCESS] All {len(migration_files)} migrations completed successfully!")
-        
-        # Show plans
-        cur.execute("SELECT plan_slug, plan_name, stripe_price_id FROM plans ORDER BY plan_slug")
-        print("\nCurrent plans:")
-        print("-" * 80)
-        for row in cur.fetchall():
-            price_id = row[2] if row[2] else "NULL"
-            print(f"  {row[0]:<15} {row[1]:<25} {price_id}")
-        
-        cur.close()
-        conn.close()
-        
-    except psycopg2.Error as e:
-        print(f"Database connection error: {e}", file=sys.stderr)
-        sys.exit(1)
+
+        with conn.cursor() as cur:
+            cur.execute("SELECT filename, checksum FROM schema_migrations")
+            already = dict(cur.fetchall())
+
+        for path in files:
+            name = path.name
+            digest = checksum(path)
+
+            if name in already:
+                if already[name] != digest:
+                    print(f"  ! {name} — already applied, but the file has changed since (not re-run)")
+                skipped += 1
+                continue
+
+            if mode == "status":
+                print(f"  pending: {name}")
+                pending += 1
+                continue
+
+            if mode == "bootstrap":
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO schema_migrations (filename, checksum) VALUES (%s, %s)"
+                        " ON CONFLICT (filename) DO NOTHING",
+                        (name, digest),
+                    )
+                conn.commit()
+                print(f"  marked applied WITHOUT running: {name}")
+                recorded += 1
+                continue
+
+            print(f">>> Running migration: {name}")
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(path.read_text())
+                    cur.execute(
+                        "INSERT INTO schema_migrations (filename, checksum) VALUES (%s, %s)"
+                        " ON CONFLICT (filename) DO NOTHING",
+                        (name, digest),
+                    )
+                conn.commit()
+            except psycopg.Error as exc:
+                conn.rollback()
+                print(f"[ERROR] {name} failed, rolled back: {exc}", file=sys.stderr)
+                sys.exit(1)
+            applied += 1
+
+    if mode == "status":
+        print(f"Status: {skipped} applied, {pending} pending.")
+    elif mode == "bootstrap":
+        print(f"Bootstrap complete: {recorded} marked as applied without running, {skipped} already recorded.")
+        print("Normal runs will now apply only genuinely new migrations.")
+    else:
+        print(f"All migrations applied. ({applied} newly applied, {skipped} already recorded)")
 
 
 if __name__ == "__main__":
     main()
-
