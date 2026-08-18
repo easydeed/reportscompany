@@ -11,11 +11,11 @@
 |---|---|
 | BROKEN | 3 |
 | WRONG | 3 |
-| FRAGILE | 3 |
+| FRAGILE | 5 |
 | ROUGH | 2 |
-| **Total** | **11** |
+| **Total** | **13** |
 
-Plus 3 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 2 UNVERIFIED.
+Plus 3 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 1 UNVERIFIED.
 
 ## Test environment
 
@@ -135,6 +135,18 @@ The README-documented runner splits each file on `;` and **drops any resulting c
 `RateLimitMiddleware` constructs its own Redis client at import/app-construction time (`apps/api/src/api/middleware/authn.py:203`) and calls `self.r.get(...)` / `.incr(...)` per request (`:216`, `:240`) with no try/except. If Redis is unreachable, **every authenticated request 500s**, including the entire company portal. `/health` is exempt only because it is on the public-path skip list (`:207`), so a health check would report the service up while every real request fails. (This also means D-009 is invisible to any monitor that polls `/health` — see the audit's finding that `/health` probes neither DB nor Redis.)
 
 ---
+
+### D-012 — No audit record for company-scoped reads
+**Severity:** FRAGILE · **Affects:** TITLE_COMPANY (and any incident response)
+
+Nothing in `apps/api/src/api/routes/company.py` writes an application-level record of who read what. There is no access-log table, and the `rep_id` filter value is not persisted anywhere. Consequence: the question "was D-005 ever exploited, and against whom?" **cannot be answered from the product's own database** — it has to go to the hosting provider's HTTP request logs, filtered to `/v1/company/reports` and `/v1/company/schedules` carrying a `rep_id` parameter, across the whole window since `db/migrations/0048_title_company_hierarchy.sql` shipped. Any tenant-scoped read path that a caller can parameterise should leave a record.
+
+### D-013 — A database or Redis outage is reported to users as an auth failure
+**Severity:** FRAGILE · **Affects:** all authenticated users
+
+`_is_token_blacklisted` fails **closed**: any exception returns `True` (`apps/api/src/api/middleware/authn.py:189-190`), so the request is rejected with `401 {"detail":"Token has been invalidated"}`. Failing closed is the correct security posture; the reporting is wrong.
+
+Observed live during this phase — when local Postgres stopped, every authenticated request returned "Token has been invalidated" while the API log showed the real cause: `Blacklist check failed (denying request): couldn't get a connection after 10.00 sec`. To the user this is indistinguishable from being logged out, and it is invisible to monitoring: `/health` is on the middleware's public-path skip list (`authn.py:207`) and probes neither database nor Redis (`apps/api/src/api/routes/health.py:6-8`), so it stays green throughout. Combined with D-009 (Redis unreachable ⇒ 500 on every authenticated request), an infrastructure blip presents to a customer as "the product logged me out / is broken" with no corresponding signal on our side.
 
 ## ROUGH
 
