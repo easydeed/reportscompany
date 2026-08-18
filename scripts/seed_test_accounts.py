@@ -38,10 +38,12 @@ PW = "TestPass123!"
 A_CO   = "aaaaaaaa-0000-4000-8000-000000000001"
 A_REP  = "aaaaaaaa-0000-4000-8000-000000000002"
 A_SPON = "aaaaaaaa-0000-4000-8000-000000000003"
+A_REP2 = "aaaaaaaa-0000-4000-8000-000000000004"  # 2nd rep under A — proves rep_id filtering narrows
 REG    = "cccccccc-0000-4000-8000-000000000001"
 AFF    = "cccccccc-0000-4000-8000-000000000002"
 B_CO   = "bbbbbbbb-0000-4000-8000-000000000001"
 B_REP  = "bbbbbbbb-0000-4000-8000-000000000002"
+B_AGENT = "bbbbbbbb-0000-4000-8000-000000000003"  # sponsored agent under B's rep — the leak target
 
 # account uuid -> (name, slug, account_type, plan_slug, parent, sponsor, email, role_label)
 ACCOUNTS = [
@@ -50,8 +52,10 @@ ACCOUNTS = [
     (A_CO,   "Test Company A",      "test-company-a", "TITLE_COMPANY",      "affiliate",      None,  None,  "company-a@test-tenant.example.com"),
     (A_REP,  "Test Rep A",          "test-rep-a",     "INDUSTRY_AFFILIATE", "affiliate",      A_CO,  None,  "rep-a@test-tenant.example.com"),
     (A_SPON, "Test Sponsored A",    "test-sponsored-a","REGULAR",           "sponsored_free", None,  A_REP, "sponsored-a@test-tenant.example.com"),
+    (A_REP2, "Test Rep A2",         "test-rep-a2",    "INDUSTRY_AFFILIATE", "affiliate",      A_CO,  None,  "rep-a2@test-tenant.example.com"),
     (B_CO,   "Test Company B",      "test-company-b", "TITLE_COMPANY",      "affiliate",      None,  None,  "company-b@test-tenant.example.com"),
     (B_REP,  "Test Rep B",          "test-rep-b",     "INDUSTRY_AFFILIATE", "affiliate",      B_CO,  None,  "rep-b@test-tenant.example.com"),
+    (B_AGENT,"Test Agent B",        "test-agent-b",   "REGULAR",            "sponsored_free", None,  B_REP, "agent-b@test-tenant.example.com"),
 ]
 
 ALL_ACCT_IDS = [a[0] for a in ACCOUNTS]
@@ -142,7 +146,28 @@ def up(cur):
             (acct, nm),
         )
 
-    # Give Company A one report so its own dashboard has a positive control
+    # B's sponsored agent owns the data the cross-tenant test tries to reach.
+    # Distinctive city/name strings so a leak is unambiguous in assertions.
+    cur.execute(
+        """
+        INSERT INTO report_generations (id, account_id, report_type, cities, status, generated_at)
+        VALUES (gen_random_uuid(), %s, 'closed', ARRAY['CONFIDENTIAL-B-CITY'], 'completed', now())
+        ON CONFLICT DO NOTHING;
+        """,
+        (B_AGENT,),
+    )
+    cur.execute(
+        """
+        INSERT INTO schedules (id, account_id, name, report_type, city, cadence, recipients, active, created_at)
+        VALUES (gen_random_uuid(), %s, 'B AGENT SECRET SCHEDULE', 'market_snapshot',
+                'CONFIDENTIAL-B-CITY', 'weekly', ARRAY['b-agent-client@example.com'], true, now())
+        ON CONFLICT DO NOTHING;
+        """,
+        (B_AGENT,),
+    )
+
+    # Give each of Company A's two reps one report, so rep_id filtering can be
+    # shown to actually narrow (with a single rep, "filter works" is untestable).
     cur.execute(
         """
         INSERT INTO report_generations (id, account_id, report_type, cities, status, generated_at)
@@ -150,6 +175,14 @@ def up(cur):
         ON CONFLICT DO NOTHING;
         """,
         (A_REP,),
+    )
+    cur.execute(
+        """
+        INSERT INTO report_generations (id, account_id, report_type, cities, status, generated_at)
+        VALUES (gen_random_uuid(), %s, 'inventory', ARRAY['REP-A2-ONLY-CITY'], 'completed', now())
+        ON CONFLICT DO NOTHING;
+        """,
+        (A_REP2,),
     )
     print(f"[up] provisioned {len(ACCOUNTS)} accounts + Company B data. password={PW}")
 
