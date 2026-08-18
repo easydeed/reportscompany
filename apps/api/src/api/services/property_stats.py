@@ -213,10 +213,21 @@ def get_affiliate_stats(affiliate_account_id: str, from_date: Optional[datetime]
         agent_ids = [a["account_id"] for a in sponsored_agents]
         
         if not agent_ids:
+            # Must carry every key AffiliateStatsResponse declares — "themes" was
+            # missing, so an affiliate with no sponsored agents (i.e. every new
+            # affiliate) got a 500 from response validation rather than an empty
+            # dashboard. Shape mirrors the populated return below.
             return {
                 "period": {"from": from_date.isoformat(), "to": to_date.isoformat()},
                 "summary": {"total_agents": 0, "active_agents": 0, "inactive_agents": 0},
                 "aggregate": {},
+                "themes": {
+                    "classic": 0,
+                    "modern": 0,
+                    "elegant": 0,
+                    "teal": 0,
+                    "bold": 0,
+                },
                 "leaderboard": [],
                 "agents": [],
                 "inactive_agents": []
