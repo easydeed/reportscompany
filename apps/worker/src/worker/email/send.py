@@ -14,9 +14,26 @@ logger = logging.getLogger(__name__)
 WEB_BASE = os.getenv("WEB_BASE", "http://localhost:3000")
 
 # CRITICAL: This MUST be set in production environment variables!
+#
+# This module SIGNS the unsubscribe token; apps/api/src/api/routes/unsubscribe.py
+# VERIFIES it. The two must hold the same value or every link returns 400.
+#
+# DO NOT "fix" the dev fallback by making it equal to the API's fallback. The
+# two defaults differ deliberately. If they matched, an environment that forgot
+# to set EMAIL_UNSUB_SECRET would appear to work while signing with a secret
+# published in this repository — anyone could then forge a token and suppress
+# delivery for any address on any account. Mismatched defaults fail closed;
+# matched defaults fail open.
 EMAIL_UNSUB_SECRET = os.getenv("EMAIL_UNSUB_SECRET")
 if not EMAIL_UNSUB_SECRET:
-    logger.critical("⚠️  EMAIL_UNSUB_SECRET not set! Unsubscribe links will fail in production!")
+    logger.critical(
+        "EMAIL_UNSUB_SECRET not set (ENVIRONMENT=%s) — falling back to a dev "
+        "default. It will NOT match the API's verifying secret, so every "
+        "unsubscribe link in every email sent by this process will return 400 "
+        "and no recipient will be able to opt out. Set EMAIL_UNSUB_SECRET on "
+        "this service to the same value as the API service, then restart.",
+        os.getenv("ENVIRONMENT", "unset"),
+    )
     EMAIL_UNSUB_SECRET = "dev-only-secret-do-not-use-in-production"
 
 # Sentinel substituted per recipient after the body is rendered once. The body

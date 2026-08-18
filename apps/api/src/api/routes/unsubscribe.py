@@ -2,14 +2,37 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, EmailStr
 import hmac
 import hashlib
+import logging
 import os
 from ..db import db_conn
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/v1")
 
-# Secret for HMAC token generation/validation
-# MUST match EMAIL_UNSUB_SECRET in Worker
-EMAIL_UNSUB_SECRET = os.getenv("EMAIL_UNSUB_SECRET", "dev-unsubscribe-secret-change-in-prod")
+# Secret for HMAC token generation/validation.
+# MUST match EMAIL_UNSUB_SECRET in the worker (apps/worker/src/worker/email/send.py).
+# The worker SIGNS the token; this module VERIFIES it. If the two values differ,
+# every unsubscribe link a recipient clicks returns 400 and nobody can opt out.
+#
+# DO NOT "fix" the dev fallback by making it equal to the worker's fallback.
+# The two defaults differ deliberately. If they matched, an environment that
+# forgot to set EMAIL_UNSUB_SECRET would appear to work while signing with a
+# secret published in this repository — anyone could then forge a token and
+# suppress delivery for any address on any account. Mismatched defaults fail
+# closed; matched defaults fail open. The correct fix for an unset secret is to
+# set it, which is what the critical log below tells you to do.
+EMAIL_UNSUB_SECRET = os.getenv("EMAIL_UNSUB_SECRET")
+if not EMAIL_UNSUB_SECRET:
+    logger.critical(
+        "EMAIL_UNSUB_SECRET not set (ENVIRONMENT=%s) — falling back to a dev "
+        "default. It will NOT match the worker's signing secret, so every "
+        "unsubscribe link will return 400 'Invalid unsubscribe token' and no "
+        "recipient will be able to opt out. Set EMAIL_UNSUB_SECRET on this "
+        "service to the same value as the worker service, then restart.",
+        os.getenv("ENVIRONMENT", "unset"),
+    )
+    EMAIL_UNSUB_SECRET = "dev-unsubscribe-secret-change-in-prod"
 
 
 # ====== Schemas ======
