@@ -2,21 +2,23 @@
 
 **Date:** 2026-08-18
 **Plan:** `EXECUTION_PLAN_REV_A.md` Phase 2A (local only)
-**Tickets covered:** T2.1 (test account provisioning), T2.2 (company / title-company portal), T2.4 (registration → onboarding → first-run), T2.6 (authenticated smoke test), T2.7 (migration state)
-**Status:** Phase 2A complete (T2.1, T2.2, T2.4, T2.6, T2.7), plus the F5 affiliate-surface audit. All of Phase 2B remains blocked on deployed access.
-**Fix status:** D-005/D-007 fixed (PR #24). D-001, D-002, D-015 (collection errors), D-016, D-017, D-018, D-020 and D-022 fixed on `fix/p4-broken-defects`.
+**Tickets covered:** T2.1 (test account provisioning), T2.2 (company / title-company portal), T2.4 (registration → onboarding → first-run), T2.6 (authenticated smoke test), T2.7 (migration state), plus P1/P2/P3 (configuration trace, `chore/p2b-config-trace`)
+**Status:** Phase 2A complete (T2.1, T2.2, T2.4, T2.6, T2.7), plus the F5 affiliate-surface audit and the P2B configuration trace. The rest of Phase 2B remains blocked on deployed access.
+**Fix status:** D-005/D-007 fixed (PR #24). D-001, D-002, D-015 (collection errors), D-016, D-017, D-018, D-020 and D-022 fixed on `fix/p4-broken-defects`. D-025 through D-034 are investigation findings only — nothing was fixed on `chore/p2b-config-trace`.
 
 ## Severity counts
 
-| Severity | Count |
-|---|---|
-| BROKEN | 7 |
-| WRONG | 7 |
-| FRAGILE | 7 |
-| ROUGH | 3 |
-| **Total** | **24** |
+| Severity | Count | Of which from the P2B config trace |
+|---|---|---|
+| BROKEN | 11 | 4 (D-025, D-026, D-028, D-031) |
+| WRONG | 10 | 3 (D-027, D-029, D-032) |
+| FRAGILE | 10 | 3 (D-030, D-033, D-034) |
+| ROUGH | 3 | — |
+| **Total** | **34** | **10** |
 
-Plus 4 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 1 UNVERIFIED.
+Plus 4 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 2 UNVERIFIED.
+
+D-001 through D-024 are grouped by severity below. D-025 through D-034 are grouped together in the **P2B — Configuration trace** section near the end, because they are only readable alongside the trace that produced them. **Six of the ten are conditional on an environment value I was not given** — each says so in its header, and the table at the end of that section says exactly which value settles which defect.
 
 ## Test environment
 
@@ -422,6 +424,7 @@ Tested by request, not inferred:
 ## UNVERIFIED
 
 - **Rep removal / orphaned agents** (Rev A T2.2 question). No endpoint to remove a rep exists in `company.py`; the deletion path, if any, lives in the admin tree and was not exercised. `accounts.parent_account_id` (`db/migrations/0048_title_company_hierarchy.sql:5`) declares no `ON DELETE` behaviour, so it defaults to `NO ACTION` — deleting a company row with reps attached would be refused by the FK rather than orphaning them, but this was not tested.
+- **`https://api.bkiconnect.com` as the SiteX production gateway** (P2). The string appears nowhere in this repository. It is a vendor fact; the code cannot confirm or refute it, and I did not probe a third-party production API to find out. See the P2 section for what the code *does* settle.
 
 ## Design brief — RLS enforcement (future ticket)
 
@@ -459,9 +462,184 @@ Today RLS is inert — the app connects as the `postgres` superuser, which owns 
 
 **Status:** C1 (predicate validation) and C2 (RLS context in all handlers) shipped on `fix/security-cross-tenant-leak`. C2 is a no-op until this ticket lands; it is a prerequisite for it, not a substitute.
 
+## P2B — Configuration trace (P1/P2/P3)
+
+**Branch:** `chore/p2b-config-trace` · **Date:** 2026-08-18 · **Method:** static trace only. No deployed access; no request was made to any production service. Every claim below cites the code that produces it.
+
+**The configuration I was given** (Jerry, API service only): `DATABASE_URL` set, `SENDGRID_API_KEY` set, `PDF_ENGINE=playwright`, `SITEX_BASE_URL=https://api.bkiconnect.com`, `PDFSHIFT_API_KEY` set. **Worker and Vercel env sets were not provided.** What that costs is stated per ticket.
+
+### P1 — Which engine renders a production report
+
+**Short answer: the value you gave me is on the wrong service and cannot affect a single report PDF.**
+
+Report PDFs are rendered in the **worker**, not the API. There are exactly three callers of `render_pdf`, all in worker code: `apps/worker/src/worker/tasks.py:1203` (market reports), `tasks.py:1795` (consumer/CMA reports), `apps/worker/src/worker/property_tasks/property_report.py:474` (property reports). Each reads `PDF_ENGINE` from `apps/worker/src/worker/pdf_engine.py:30`, which is the **worker process's** environment. `PDF_ENGINE` on the API service is read by nothing (`grep` for `PDF_ENGINE` across `apps/api/`: no match). So the production engine is **UNVERIFIED — could not confirm**; it is whatever the worker service has, which I was not given.
+
+**Does `PDF_API_URL` override `PDF_ENGINE`? No.** `PDF_API_URL` and `PDF_API_KEY` are read only by `apps/worker/src/worker/pdf_adapter.py:18-19`, and that module has **zero importers** — `grep -rn "pdf_adapter" --include=*.py` returns one hit, a comment at `apps/api/src/api/routes/branding_tools.py:372`. `pdf_adapter.generate_pdf` (`:22`) and `get_pdf_engine_info` (`:176`) are called from nowhere. The whole `PDF_ENGINE=api` / `PDF_API_URL` / `PDF_API_KEY` selector is unreachable code. Nothing it does can override anything.
+
+The two selectors are also **incompatible**, which is what makes D-025 possible: `pdf_adapter.py:17` expects `PDF_ENGINE` ∈ {`playwright`, `api`}; the live `pdf_engine.py:30,342-359` expects {`playwright`, `pdfshift`} and raises on anything else.
+
+`PDF_ENGINE` is read at **module import** (`pdf_engine.py:30`), so a change to it does not take effect until the worker process restarts.
+
+### D-025 — The worker's own env template tells you to set a value that makes every PDF render fail
+**Severity:** BROKEN · **Affects:** every persona that generates any report · **Conditional on the worker's actual `PDF_ENGINE`**
+
+`apps/worker/ENV_TEMPLATE.md:33` instructs the deployer to set `PDF_ENGINE=api` on the worker service. The code that actually renders (`pdf_engine.py:342-359`) accepts only `playwright` or `pdfshift`, and `:359` raises `ValueError: Invalid PDF_ENGINE: api. Must be 'playwright' or 'pdfshift'` for anything else. If the worker was configured from its own template, **every** report PDF — market, consumer, property — fails at the render step with an unhandled `ValueError`.
+
+The same template block (`:34-35`) tells you to set `PDF_API_URL` and `PDF_API_KEY`, which nothing reads (see P1 above). `apps/api/ENV_TEMPLATE.md:34` repeats `PDF_API_KEY` for the API — that one **is** read, and is wrong in a different way (D-028).
+
+**To settle it:** read `PDF_ENGINE` off the worker service. Three outcomes: unset or `playwright` → Playwright renders (see D-026); `pdfshift` → PDFShift renders and output is correct; `api` → nothing has rendered since that value was set, and D-025 is BROKEN in production right now.
+
+### D-026 — Under `PDF_ENGINE=playwright` every market report silently loses its branded header and footer
+**Severity:** BROKEN · **Affects:** REGULAR, SPONSORED, INDUSTRY_AFFILIATE, COMPANY_REP — every market report · **Conditional on the worker's actual `PDF_ENGINE`**
+
+The market report path **always** builds the repeating hero header and agent footer and always passes them: `tasks.py:1186-1187` (`builder.render_page_header_html()` / `render_page_footer_html()`), base64-inlined at `:1200-1201`, passed at `:1207-1208`.
+
+`render_pdf_playwright` **discards them**. `pdf_engine.py:79` is literally `_ = (header_html, footer_html, header_start_at, footer_start_at)`, and the docstring at `:58-66` says so: *"accepted for API parity with PDFShift; currently IGNORED by Playwright — flagged for follow-up ticket."* No warning is logged. No error is raised. A PDF is produced and uploaded, just without the agent's photo, name, phone, email, company name or logo on any page.
+
+The layout is worse than "header missing". The page geometry was tuned around PDFShift's additive margin model — `pdf_engine.py:176-186` reserves `header.height: 1.3in` plus `margin.top: 0.1in`, with the comment *"PDFShift treats margin.top and header.height as ADDITIVE"*. Playwright is called with all four margins at `0` (`:111-116`) and no header slot, so body content renders into space the CSS expects to be reserved.
+
+For a white-label branding product, this is not a cosmetic difference: it is the total, silent loss of the branding on every page of every market report. Graded BROKEN on that basis.
+
+Consumer (`tasks.py:1795`) and property (`property_report.py:474`) reports pass no header/footer, so they are unaffected by this specific defect.
+
+### D-027 — `pdf_adapter.py` is dead code that documents a third, non-existent engine selector
+**Severity:** WRONG · **Affects:** anyone reading the config
+
+Zero importers (proof in P1 above). It nonetheless defines `PDF_ENGINE` with a **different value set** than the live selector (`pdf_adapter.py:17` vs `pdf_engine.py:30`), and both `.env.example:91-92` and `apps/worker/ENV_TEMPLATE.md:34-35` advertise its variables as live configuration. `docs/architecture/SOURCE_OF_TRUTH.md:129,188` describes it as a "Playwright → PDFShift fallback", which is a mechanism that exists in neither module.
+
+This is a Phase 5 deletion candidate under the prove-death standard in `docs/DEAD_CODE.md` — it passes all three tests (no importers, no route reference, no runtime string construction). It was not on the Phase 5 candidate list and was not removed on that branch. `apps/worker/src/worker/social_engine.py` has the same status (zero importers; `render_social_image` called from nowhere) and should be assessed in the same ticket.
+
+### D-028 — The branding sample-PDF and sample-JPG endpoints read a different key name than the one that is set
+**Severity:** BROKEN · **Affects:** every persona using the branding preview · **Conditional on `PDF_API_KEY` on the API service**
+
+`apps/api/src/api/routes/branding_tools.py:119` reads `os.getenv("PDF_API_KEY", "")`. You told me the API service has **`PDFSHIFT_API_KEY`** set. Those are different variables; nothing maps one to the other. Every other PDFShift call site in the codebase uses `PDFSHIFT_API_KEY` (`pdf_engine.py:31`, `social_engine.py:28`) — `branding_tools.py` is the lone outlier.
+
+If `PDF_API_KEY` is unset, both endpoints fail closed with a 503 before doing any work: `:335-339` (`POST /v1/branding/sample-pdf`) and `:428-432` (`POST /v1/branding/sample-jpg`), both returning *"PDF generation service not configured. Please contact support."* Both are mounted (`apps/api/src/api/main.py:29,112`) and both are reachable from the UI through `apps/web/app/api/proxy/v1/branding/sample-pdf` and `.../sample-jpg`.
+
+**To settle it:** check whether `PDF_API_KEY` is also set on the API service. If it is, this is latent, not live — but two names for one secret is still the defect.
+
+### D-029 — `PRINT_BASE` on the worker is persisted as the user-visible "view in browser" link, and defaults to localhost
+**Severity:** WRONG · **Affects:** every persona · **Conditional on `PRINT_BASE` on the worker**
+
+`render_pdf` returns `(pdf_path, print_url)` where `print_url` is `f"{effective_base}/print/{run_id}"` (`pdf_engine.py:82-83`). The market path captures that second value as `html_url` (`tasks.py:1203`) and **writes it to the database** (`:1253-1255`, `UPDATE ... SET status='completed', html_url=%s ...`) and into the completion webhook payload (`:1376`).
+
+That column is user-facing. `apps/api/src/api/routes/reports.py:98,246,292` returns it, and the web app renders it as a link: `apps/web/app/app/reports/page.tsx:107-110` and `apps/web/app/app/reports/[id]/page.tsx:292-294`.
+
+`PRINT_BASE` defaults to `http://localhost:3000` (`pdf_engine.py:33`, and `tasks.py:249` for `DEV_BASE`, which is passed as `print_base=` at `:1211`). If it is unset on the worker, every report row is stamped with a `http://localhost:3000/print/<id>` link that is then shown to the customer. Nothing validates it and nothing fails.
+
+This also **upgrades the `/print/[runId]` finding in `docs/DEAD_CODE.md`**: that document records the route as reachable-but-unexercised because all three `render_pdf` callers pass `html_content=`. That is still true of *rendering*, but the URL is not merely constructed and dropped — it is persisted and published to users as a link. `/print/[runId]` is a live user-facing destination, not a latent fallback. Correction recorded here rather than edited into the Phase 5 branch, which is open as PR #27.
+
+### P2 — Is `https://api.bkiconnect.com` the production SiteX host?
+
+**UNVERIFIED — could not confirm.** The string `bkiconnect` appears **zero times** in this repository (`grep -rn "bkiconnect"` across all tracked files: no match). Nothing in the code, the docs, the env templates, or git history names a production SiteX host. This is a vendor fact that only ICE/SiteX or your onboarding paperwork can settle; I will not assert it from the code, and I did not probe a third-party production API to find out.
+
+What I **can** confirm, and it is the part that matters mechanically:
+
+1. **The host is used only as a prefix, so swapping it is safe in itself.** `SiteXConfig.base_url` (`apps/api/src/api/services/sitex.py:39`) is concatenated with two host-relative paths and nothing else: `/ls/apigwy/oauth2/v1/token` (`:46`) and `/realestatedata/search` (`:50`). No path, header, or payload is conditioned on the host value. If the production gateway exposes the same two paths, the swap works; if it does not, you get a 404 from the token call, surfaced as `SiteXAuthError` (`:181-183`).
+2. **You set it on the right service.** SiteX is called only from the API (`apps/api/src/api/services/sitex.py`, used by `routes/property.py`, `routes/lead_pages.py`, `routes/admin.py`). The worker never calls SiteX — every `sitex` hit in worker code reads the already-persisted `sitex_data` column (`property_tasks/property_report.py:228,262,292`, `property_builder.py:362-399`). No `SITEX_*` variable is needed on the worker.
+3. **Misconfiguration fails loudly, not silently.** `SiteXClient.initialize` calls `config.validate()` (`:249`) and raises `SiteXError("Invalid SiteX configuration")` if any of base URL / client id / client secret / feed id is blank. Unlike the PDF and email paths, this one does not pretend to succeed.
+4. **The client is a process-lifetime singleton** (`get_sitex_client`, `:601-605`), so the value is read once per API process — a change needs a restart, not just a redeploy of config.
+
+### D-030 — The UAT host is the default, so any unset environment silently queries test data
+**Severity:** FRAGILE · **Affects:** REGULAR, SPONSORED (property reports)
+
+`sitex.py:39` defaults `SITEX_BASE_URL` to `https://api.uat.bkitest.com`. There is no environment check, no startup log of which host is in use beyond one `logger.info` at `:255`, and no marker on the resulting data. An unset variable does not fail — it returns plausible-looking test property data that is then persisted into `property_reports.sitex_data` and rendered into a customer's PDF. A production default should not point at a vendor's test gateway.
+
+**Two things you still need to check, which the base URL alone does not cover:**
+
+- `SITEX_CLIENT_ID`, `SITEX_CLIENT_SECRET` and `SITEX_FEED_ID` were not in the config you sent. `SITEX_FEED_ID` defaults to `100001` (`sitex.py:42`), which the module docstring gives as the example feed. A production host with UAT credentials or a UAT feed id fails at the token call (`:181-183`) — or worse, succeeds against the wrong feed.
+- **Any property report generated while `SITEX_BASE_URL` was unset has UAT data frozen into `property_reports.sitex_data`.** Changing the variable does not correct rows already written. Worth a `SELECT count(*) FROM property_reports WHERE sitex_data IS NOT NULL AND created_at < '<the date you set the variable>'`.
+
+### P3 — `RESEND_API_KEY`: the code path, and what happens when it is absent
+
+**Confirmed. There are two call sites and they behave differently. One is a warning; the other writes a false record into the database.**
+
+Both read `os.environ.get("RESEND_API_KEY", "")` in the **worker**: `tasks.py:668` and `tasks.py:1894`. `apps/api/src/api/settings.py:36` declares `RESEND_API_KEY: str = ""` with the comment `# Deprecated — kept for backwards compat, unused` — that comment is true **of the API** and false of the product: the worker is where email for these two flows is actually sent, and both flows use Resend, not SendGrid. An operator reading `settings.py` would reasonably delete the variable.
+
+Note that the two providers are split by flow, not by environment: scheduled/ad-hoc **report delivery** goes through SendGrid (`_send_and_log_report_email`, `tasks.py:598-649`, `provider='sendgrid'` at `:641`), and only failure notifications and consumer-report delivery use Resend. `SENDGRID_API_KEY` being set does not cover the Resend paths.
+
+### D-031 — A consumer report is recorded as delivered when no email was sent
+**Severity:** BROKEN · **Affects:** REGULAR, SPONSORED (lead capture / consumer CMA delivery) · **Conditional on `RESEND_API_KEY` on the worker**
+
+`process_consumer_report` (`tasks.py:1441`), email delivery branch, `:1894-1901`:
+
+```python
+resend_key = os.environ.get("RESEND_API_KEY", "")
+if not resend_key:
+    logger.warning("RESEND_API_KEY not set — marking as sent without email")
+    cur.execute("""
+        UPDATE consumer_reports
+        SET status = 'sent', consumer_email_sent_at = NOW()
+        WHERE id = %s::uuid
+    """, (report_id,))
+    delivered = True
+```
+
+The consequence, plainly: **the consumer never receives their report, and the system records that they did.** `status='sent'` and a non-null `consumer_email_sent_at` timestamp are written for an email that was never attempted. No row is written to `email_log` — this path does not log at all, unlike the SendGrid path (`:637-644`) — so there is no record anywhere that contradicts the `sent` status.
+
+It then gets worse. `delivered = True` falls through to `:2027-2052`, which SMSes the **agent** that they have a new lead, with the consumer's phone and email. The agent is told a lead converted and was served a report. They follow up on a report the lead never saw.
+
+This is not recoverable after the fact by fixing the key: you cannot tell, from the database, which `sent` rows were real. The only distinguishing evidence is the `logger.warning` in the worker logs.
+
+### D-032 — An unrecognised delivery method is also recorded as sent
+**Severity:** WRONG · **Affects:** REGULAR, SPONSORED
+
+`tasks.py:2020-2025`, the `else` arm of the same dispatch:
+
+```python
+logger.warning(f"No valid delivery method for report {report_id}: method={delivery_method}")
+cur.execute("UPDATE consumer_reports SET status = 'sent' WHERE id = %s::uuid", (report_id,))
+delivered = True
+```
+
+Same failure shape as D-031, different trigger: a report with no usable delivery method — no phone for SMS, no address for email, or an unrecognised `delivery_method` value — is marked `sent` and fires the agent's "new lead" SMS. `status='failed'` exists and is used on the adjacent path (`:2054-2060`); this branch chooses not to use it.
+
+### D-033 — Failure notifications are the one alert that tells an agent their scheduled report broke, and they are skipped silently
+**Severity:** FRAGILE · **Affects:** every persona with a schedule · **Conditional on `RESEND_API_KEY` on the worker**
+
+`_send_failure_notification` (`tasks.py:654`), at `:668-671`:
+
+```python
+resend_key = os.environ.get("RESEND_API_KEY", "")
+if not resend_key:
+    logger.warning("RESEND_API_KEY not set — skipping failure notification")
+    return
+```
+
+Returning early here is the correct shape — unlike D-031, it does not lie. The severity is in what is lost: this is the only mechanism that tells an account owner a scheduled report failed. Without it, a schedule can fail silently every week and the customer's first signal is a recipient asking where the report went. Combined with the "Deprecated … unused" comment at `settings.py:36`, an operator has an explicit invitation to remove the variable that keeps this alive.
+
+### D-034 — Five environment variables name the same web app, with three different defaults, and two of them ship broken links when unset
+**Severity:** FRAGILE · **Affects:** every persona
+
+| Variable | Read at | Default | What breaks if unset |
+|---|---|---|---|
+| `PRINT_BASE` | `pdf_engine.py:33`, `social_engine.py:29`, `tasks.py:249` | `http://localhost:3000` | Report "view in browser" links (D-029) |
+| `WEB_BASE` | `apps/worker/src/worker/email/send.py:13` | `http://localhost:3000` | **Unsubscribe links in every outbound email** (`send.py:138`) |
+| `WEB_BASE` | `apps/api/src/api/routes/billing.py:21` | `https://reportscompany-web.vercel.app` | Stripe checkout return URLs (`:206-207,303`) land on the wrong domain |
+| `APP_BASE` | `apps/api/src/api/settings.py:23` | `https://www.trendyreports.io` | Invite links (`invite_service.py:160`, `admin.py:2488`) |
+| `APP_BASE` | `tasks.py:713` | `https://reportscompany-web.vercel.app` | Failure-notification links |
+| `FRONTEND_URL` | `tasks.py:1497` | `https://www.trendyreports.io` | Consumer report links |
+
+The same name (`WEB_BASE`, `APP_BASE`) resolves to a different default in two different services, so setting it correctly on one does not imply the other. The `send.py:13` case is the one to fix first: if `WEB_BASE` is unset on the worker, every marketing email you send carries an unsubscribe link pointing at `http://localhost:3000`, which is a deliverability and compliance problem, not a cosmetic one.
+
+### What I still need, and what it would settle
+
+| Needed | Settles |
+|---|---|
+| Worker service: `PDF_ENGINE` | D-025 (is it `api`, i.e. broken now?) and D-026 (is it `playwright`, i.e. unbranded now?). Nothing else can answer this. |
+| Worker service: `PRINT_BASE`, `WEB_BASE`, `APP_BASE`, `FRONTEND_URL` | D-029, D-034 |
+| Worker service: `RESEND_API_KEY` | D-031, D-033 — whether the false-`sent` path is live |
+| Worker service: `PDFSHIFT_API_KEY` | If `PDF_ENGINE=pdfshift` on the worker but the key is only on the API, `pdf_engine.py:159-160` raises on every render |
+| API service: `PDF_API_KEY` | D-028 |
+| API service: `SITEX_CLIENT_ID`, `SITEX_CLIENT_SECRET`, `SITEX_FEED_ID` | Whether the production host has production credentials (P2) |
+| Vercel: `NEXT_PUBLIC_API_BASE`, `INTERNAL_RENDER_TOKEN` | Whether `/print/[runId]` — now known to be a link we hand to customers (D-029) — actually renders. `page.tsx:36-39` returns null without the first; `:49-55` warns and 401s without the second. |
+| Vendor confirmation that `api.bkiconnect.com` is the SiteX production gateway | P2 |
+
+---
+
 ## BLOCKED-NEEDS-DEPLOYED-ACCESS (Phase 2B)
 
 - **Is production's DB role a superuser?** D-005/D-006's real-world severity depends on it. If production also connects as owner/superuser, D-005 is live exactly as reproduced. If production uses a restricted role, D-005 is contained but D-006 means the portal is showing zeros.
-- **Production `PDF_ENGINE`, `PDF_API_URL`, `SITEX_BASE_URL`, `RESEND_API_KEY`, `PDFSHIFT_API_KEY` values** (T2.9/T2.10). `SITEX_BASE_URL` defaults to the **UAT** host (`apps/api/src/api/services/sitex.py:39`) — if unset in production, property reports are being built from test data.
+- **Production env values** (T2.9/T2.10). Partially answered by the P2B trace above for the API service; the worker and Vercel sets are still outstanding — see "What I still need" above for exactly which variables settle which defect.
 - **Scheduled delivery end-to-end** (T2.3). Needs a real send and a readable inbox.
 - **Is `apps/api/migrations/phase4_indexes.sql` applied in production?** (T2.7). Run `SELECT to_regclass('public.signup_tokens')` and check for the 7 indexes it declares. If the table is present the file was applied by hand at some point; if the indexes are missing, production is running without them. Nothing in the repo can answer this, and nothing detects the drift.
