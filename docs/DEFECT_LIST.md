@@ -2,18 +2,18 @@
 
 **Date:** 2026-08-18
 **Plan:** `EXECUTION_PLAN_REV_A.md` Phase 2A (local only)
-**Tickets covered:** T2.1 (test account provisioning), T2.2 (company / title-company portal)
+**Tickets covered:** T2.1 (test account provisioning), T2.2 (company / title-company portal), T2.4 (registration → onboarding → first-run), T2.6 (authenticated smoke test), T2.7 (migration state)
 **Status:** partial — Phase 2A tickets T2.4, T2.6, T2.7 not yet run; all of Phase 2B blocked
 
 ## Severity counts
 
 | Severity | Count |
 |---|---|
-| BROKEN | 3 |
+| BROKEN | 4 |
 | WRONG | 3 |
 | FRAGILE | 6 |
 | ROUGH | 2 |
-| **Total** | **14** |
+| **Total** | **15** |
 
 Plus 3 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 1 UNVERIFIED.
 
@@ -72,6 +72,34 @@ The `rep_id` values needed are UUIDs, but they are not secret: they are returned
 Handlers querying RLS-protected tables with no RLS context: `get_overview` (`company.py:78`, queries `report_generations` at `:105,:111,:155,:193,:208,:226,:250`), `list_reps` (`:335` → `:347,:353,:358`), `list_agents` (`:410` → `:422,:426`), `get_company_reports` (`:483` → `:508,:512`), `get_company_schedules` (`:549` → `:573,:582`), `get_metrics` (`:917` → `:936,:945,:960,:981`).
 
 **Consequence:** the moment anyone hardens the DB role (non-superuser) or adds `FORCE ROW LEVEL SECURITY` — the standard fix for D-005's class — `current_setting('app.current_account_id', true)` is NULL, every policy predicate evaluates NULL, and these endpoints return **empty lists and zeros rather than errors**. The company dashboard would silently show a working page with no data. Fix D-005 and D-006 together; fixing either alone leaves the portal wrong.
+
+### D-015 — The API test suite does not run, and has not for some time
+**Severity:** BROKEN · **Affects:** all — this is the mechanism, not a symptom
+
+**Read this one first.** Every other defect in this document is a thing that broke. This is the reason nothing caught them. `pytest apps/api/tests/` on `main` does not complete: 3 of 8 test modules fail at import, and 29 of the tests that do collect fail.
+
+```
+$ pytest apps/api/tests/ -q          # on main, before any Phase-2 work
+ERROR apps/api/tests/test_billing_checkout.py
+ERROR apps/api/tests/test_me_endpoint.py
+ERROR apps/api/tests/test_schedules_report_types.py
+!!!!! Interrupted: 3 errors during collection !!!!!
+
+$ pytest apps/api/tests/ -q --ignore=<those three>
+29 failed, 21 passed
+```
+
+Collection errors: `ModuleNotFoundError: No module named 'api.app'` and `ImportError: attempted relative import beyond top-level package`. The modules import a package path that does not exist — so these tests cannot ever have passed in their current form against the current tree.
+
+The 29 failures are concentrated in `apps/api/tests/test_plans_limits.py`, whose mocked cursor return shapes no longer match what `apps/api/src/api/services/usage.py` reads.
+
+**Verified pre-existing:** both numbers reproduce on `main` with no Phase-2 changes applied (checked out `main`, ran the suite, same 3 errors / 29 failures). The cross-tenant isolation branch adds 9 passing tests and no new failures.
+
+**Why this is severity BROKEN rather than FRAGILE:** a suite in this state cannot have been run recently by anyone. The consequence is not "tests are untidy" — it is that D-005 (a live cross-tenant data leak) shipped, survived, and was found by hand-driven verification rather than by CI. `.github/workflows/backend-tests.yml` exists and runs on PR and push; either it is not running this suite or its result is not gating anything. Both possibilities are worth checking.
+
+**Bearing on Phase 3 — start here.** The 29 failures sit in `test_plans_limits.py`, and Phase 3's entire subject is reconciling displayed plan limits against enforced plan limits. Those failing assertions encode what the limits were once expected to be; the diff between that and current behaviour is likely a substantial part of Phase 3's answer. Not investigated here — flagged so Phase 3 opens with it.
+
+**Also note:** the new `test_company_tenant_isolation.py` needs a live database and skips without one, so it will not fire in a CI job that has no Postgres service. Wiring one in is what turns that regression guard from present into effective.
 
 ### D-001 — A fresh database cannot be built by `scripts/migrate.sh`
 **Severity:** BROKEN · **Affects:** all (dev onboarding, CI, disaster recovery)
