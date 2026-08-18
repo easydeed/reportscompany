@@ -1,5 +1,11 @@
 # TrendyReports: Wizard Flows & External API Calls
 
+> ⚠️ **PARTIALLY FALSIFIED.** Audited 2026-08-17 against HEAD `f854ed6`; known-false
+> claims are catalogued in [`docs/DOCS_AUDIT_2026-08-17.md`](../DOCS_AUDIT_2026-08-17.md).
+> **All counts and line numbers in this file are unreliable — verify against code.**
+> Behavioural descriptions are more trustworthy than inventories, but neither is
+> guaranteed. Do not cite this document as evidence.
+
 > Authoritative reference for the Property Report wizard, the Market Report (Schedule) wizard, all external API calls, the comparables fallback ladder, and caching rules.
 
 ---

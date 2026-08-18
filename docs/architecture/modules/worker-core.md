@@ -1,5 +1,11 @@
 # Module: Worker Core
 
+> ⚠️ **PARTIALLY FALSIFIED.** Audited 2026-08-17 against HEAD `f854ed6`; known-false
+> claims are catalogued in [`docs/DOCS_AUDIT_2026-08-17.md`](../../DOCS_AUDIT_2026-08-17.md).
+> **All counts and line numbers in this file are unreliable — verify against code.**
+> Behavioural descriptions are more trustworthy than inventories, but neither is
+> guaranteed. Do not cite this document as evidence.
+
 > `apps/worker/src/worker/app.py` (65 lines)
 > `apps/worker/src/worker/schedules_tick.py` (462 lines)
 > `apps/worker/src/worker/limit_checker.py`
