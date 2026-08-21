@@ -459,6 +459,62 @@ Today RLS is inert — the app connects as the `postgres` superuser, which owns 
 
 **Status:** C1 (predicate validation) and C2 (RLS context in all handlers) shipped on `fix/security-cross-tenant-leak`. C2 is a no-op until this ticket lands; it is a prerequisite for it, not a substitute.
 
+## Why none of this was caught: two independent mechanisms
+
+**Branch:** `fix/ci-restoration` · **Date:** 2026-08-18
+
+D-015 recorded that the API test suite does not run. That is one mechanism. There is a second, upstream of it, and together they explain how a class of defect accumulated invisibly for months.
+
+| | Mechanism | Effect |
+|---|---|---|
+| **1** | **The suite was broken** (D-015). Three modules imported a package path that does not exist; 29 more tests carried stale expectations. | Even a green pipeline would have told you nothing. |
+| **2** | **CI never reached the suite** (D-038, below). `.github/workflows/backend-tests.yml:16` ran `pip install -r requirements.txt` against a file that does not exist in this repository and never has. | The job failed at the install step, before a single test was collected. |
+
+These are independent. Fixing either alone leaves the other in place. D-015 was fixed in Phase 4; mechanism 2 survived it untouched, which is why nothing changed.
+
+**And they are not the whole chain — a third condition pinned it shut.** Even with a working `requirements.txt`, the workflow pinned Python 3.11, on which the API suite *cannot collect* (D-003/D-039). Verified on one tree, in one sitting:
+
+```
+Python 3.11:  Interrupted: 3 errors during collection   (SyntaxError, services/email.py:729)
+Python 3.12:  34 failed, 22 passed, 9 skipped, 5 errors  (collects and runs)
+```
+
+So the missing requirements file and the Python pin had to be fixed **together**; either alone still leaves CI red without running anything. That is why they landed in one branch.
+
+### D-038 — `requirements.txt` does not exist, so backend CI has never run a test
+**Severity:** BROKEN · **Affects:** all — this is a mechanism, not a symptom
+
+`.github/workflows/backend-tests.yml:16` ran `pip install -r requirements.txt`. No such file exists at the repository root or anywhere else; `git log -- requirements.txt` returns nothing, so it was never committed and later removed — it was never there. Every run of the Backend Tests workflow failed at that step.
+
+`apps/api` and `apps/worker` are Poetry projects, each with a `pyproject.toml` and a `poetry.lock` (lock-version 2.1). The Render services build with `pip install poetry && poetry install --no-root`. The `requirements.txt` reference was a fiction the workflow inherited; nothing in the repository ever produced or consumed that file.
+
+**Fixed on this branch** by switching the workflow to Poetry, installing both projects into one shared virtualenv, and running `pytest` once from the repository root. One environment is required rather than convenient: `pytest.ini` declares a single session spanning both packages, and `apps/worker/tests/test_unsubscribe_token_roundtrip.py` imports from both — the worker signs the unsubscribe token and the API verifies it, so testing that contract needs both dependency sets present together.
+
+`pytest` and `pytest-asyncio` were added to the worker's dev dependencies, which previously declared only `ruff` despite CI running `pytest apps/worker/tests`.
+
+### D-039 — `pyproject.toml` declares `^3.11` while the source requires 3.12+
+**Severity:** WRONG · **Affects:** all — CI, local setup, and anyone trusting the declaration · **Supersedes the diagnosis in D-003**
+
+All three `pyproject.toml` files (`apps/api`, `apps/worker`, `libs/shared`) declared `python = "^3.11"`. The API source does not compile on 3.11: `apps/api/src/api/services/email.py` interpolates strings containing `\u` escapes inside f-string **expression** parts, which PEP 701 permits only from 3.12. `py_compile` on 3.11 gives `SyntaxError: f-string expression part cannot include a backslash` at `services/email.py:729`.
+
+This is not confined to one module. `apps/api/src/api/main.py:14` imports `routes/auth.py`, which imports `services/email.py` at `:11` — so **the API application cannot start at all on Python 3.11.** `routes/admin.py:18`, `routes/reports.py:8`, `routes/company.py:15` and `routes/affiliates.py:27` import it too.
+
+**What the deployed runtime must be, and how we know.** The API service is live and serving in production. Since importing the app compiles `services/email.py`, and that file is a syntax error on 3.11, the deployed Python is necessarily **3.12 or newer**. That is an inference from the service being up, not a reading of Render's configuration — no deploy configuration exists in this repository (no `render.yaml`, no Dockerfile, no `runtime.txt`, no `.python-version`), so the version is set in the Render dashboard and cannot be confirmed from here. **Worth confirming directly, because the alternative would be far worse:** if Render were somehow on 3.11, the API could not be running, so the inference is strong — but it is still an inference.
+
+**Fixed on this branch** by raising the constraint to `^3.12` in all three `pyproject.toml` files, regenerating both lock files, and pinning CI to 3.12 — i.e. by matching the declaration to what the code actually requires and what production demonstrably runs, rather than by rewriting the f-strings to suit a version nothing uses.
+
+The alternative fix — replacing the `’` / `—` escapes in `services/email.py` with the literal characters, which removes the backslashes and restores 3.11 compatibility — is available and small, and would be the right call if anything actually needed to run on 3.11. Nothing does.
+
+### What this does NOT do
+
+**CI will now run, and it will be red.** Making the pipeline execute does not make it pass. On 3.12 the suite reports **34 failed, 22 passed, 9 skipped, 5 errors** — matching the post-Phase-4 baseline recorded above, which is the point: these are pre-existing, previously invisible failures, not regressions introduced here. Clearing them is D-015's remaining tail (`test_plans_limits.py`, `test_affiliate_branding.py`, `test_accept_invite.py`) and belongs to Phase 3.
+
+The choice of whether to land a running-but-red pipeline or to scope CI to a passing subset first is Jerry's; this branch implements the honest version, on the grounds that a red pipeline that reports real failures is strictly better than a green-or-erroring one that reports nothing.
+
+**Note on severity counts:** the table at the top of this document is not updated here. `chore/p2b-config-trace` and `chore/defect-reconciliation` both rewrite it and are unmerged; editing it on a third branch would guarantee a conflict. Reconcile the counts once those land.
+
+---
+
 ## BLOCKED-NEEDS-DEPLOYED-ACCESS (Phase 2B)
 
 - **Is production's DB role a superuser?** D-005/D-006's real-world severity depends on it. If production also connects as owner/superuser, D-005 is live exactly as reproduced. If production uses a restricted role, D-005 is contained but D-006 means the portal is showing zeros.

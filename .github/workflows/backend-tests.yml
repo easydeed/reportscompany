@@ -4,23 +4,69 @@ on:
     paths:
       - "apps/api/**"
       - "apps/worker/**"
+      - "pytest.ini"
       - ".github/workflows/backend-tests.yml"
   pull_request:
     paths:
       - "apps/api/**"
       - "apps/worker/**"
+      - "pytest.ini"
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # 3.12, not 3.11, and this is not a preference. apps/api/src/api/main.py
+      # imports routes/auth.py, which imports services/email.py, which does not
+      # COMPILE on 3.11: it interpolates strings containing \u escapes inside
+      # f-string expression parts, which PEP 701 only permits from 3.12
+      # ("SyntaxError: f-string expression part cannot include a backslash",
+      # services/email.py:729). The API service runs in production, so the
+      # deployed runtime is necessarily 3.12+. Pinning 3.11 here meant CI could
+      # not have collected the API suite even once the install step was fixed.
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-      - name: Run API tests
-        run: pytest apps/api/tests
-      - name: Run Worker tests
-        run: pytest apps/worker/tests
+          python-version: "3.12"
 
+      - name: Install Poetry
+        run: pipx install poetry
+
+      # There is no requirements.txt in this repository and there never has
+      # been; this workflow used to fail at `pip install -r requirements.txt`
+      # before running a single test. apps/api and apps/worker are Poetry
+      # projects with lock files, which is also how the Render services build
+      # (`pip install poetry && poetry install --no-root`), so Poetry is the
+      # honest source of truth.
+      #
+      # Both projects install into ONE shared virtualenv. pytest.ini declares a
+      # single session spanning both packages (testpaths + pythonpath), and
+      # apps/worker/tests/test_unsubscribe_token_roundtrip.py imports from both
+      # on purpose — the worker signs the unsubscribe token and the API
+      # verifies it, so testing that contract needs both dependency sets
+      # present at once. An explicit venv is used rather than
+      # virtualenvs.create=false, which installs into the system interpreter and
+      # collides with OS-managed packages.
+      - name: Create shared virtualenv
+        run: python -m venv .venv
+
+      - name: Install API dependencies
+        working-directory: apps/api
+        run: poetry install --no-root
+        env:
+          VIRTUAL_ENV: ${{ github.workspace }}/.venv
+          POETRY_VIRTUALENVS_CREATE: "false"
+
+      - name: Install Worker dependencies
+        working-directory: apps/worker
+        run: poetry install --no-root
+        env:
+          VIRTUAL_ENV: ${{ github.workspace }}/.venv
+          POETRY_VIRTUALENVS_CREATE: "false"
+
+      # One invocation from the repo root. pytest.ini's testpaths already covers
+      # apps/api/tests and apps/worker/tests; running them as separate steps
+      # would put the cross-package test in an environment missing half of what
+      # it imports.
+      - name: Run tests
+        run: .venv/bin/pytest
