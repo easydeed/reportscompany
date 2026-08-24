@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{ include = "worker", from = "src" }]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.12"
 # shared = {path = "../../libs/shared", develop = true}  # Optional: install for local dev
 celery = "^5.4.0"
 redis = "^5.0.8"
@@ -22,6 +22,8 @@ attrs = ">=23.1,<24"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.6.9"
+pytest = "^8.0.0"
+pytest-asyncio = "^0.23.0"
 
 [tool.ruff]
 line-length = 100

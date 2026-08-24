@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{ include = "api", from = "src" }]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.12"
 # shared = {path = "../../libs/shared", develop = true}  # Optional: install for local dev
 fastapi = "^0.115.0"
 uvicorn = {extras = ["standard"], version = "^0.30.0"}

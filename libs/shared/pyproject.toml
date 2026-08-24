@@ -6,7 +6,7 @@ authors = ["TrendyReports <info@trendyreports.io>"]
 packages = [{include = "shared", from = "src"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.12"
 
 [build-system]
 requires = ["poetry-core"]
