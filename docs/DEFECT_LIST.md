@@ -2,21 +2,25 @@
 
 **Date:** 2026-08-18
 **Plan:** `EXECUTION_PLAN_REV_A.md` Phase 2A (local only)
-**Tickets covered:** T2.1 (test account provisioning), T2.2 (company / title-company portal), T2.4 (registration → onboarding → first-run), T2.6 (authenticated smoke test), T2.7 (migration state)
-**Status:** Phase 2A complete (T2.1, T2.2, T2.4, T2.6, T2.7), plus the F5 affiliate-surface audit. All of Phase 2B remains blocked on deployed access.
-**Fix status:** D-005/D-007 fixed (PR #24). D-001, D-002, D-015 (collection errors), D-016, D-017, D-018, D-020 and D-022 fixed on `fix/p4-broken-defects`.
+**Tickets covered:** T2.1 (test account provisioning), T2.2 (company / title-company portal), T2.4 (registration → onboarding → first-run), T2.6 (authenticated smoke test), T2.7 (migration state), P1/P2/P3 (configuration trace, `chore/p2b-config-trace`), and the production-evidence reconciliation (`chore/defect-reconciliation`)
+**Status:** Phase 2A complete (T2.1, T2.2, T2.4, T2.6, T2.7), plus the F5 affiliate-surface audit and the P2B configuration trace. **S2 (autonomous delivery) is PROVEN in production** — see the S2 section. The rest of Phase 2B remains blocked on deployed access.
+**Fix status:** D-005/D-007 fixed (PR #24). D-001, D-002, D-015 (collection errors), D-016, D-017, D-018, D-020 and D-022 fixed on `fix/p4-broken-defects`. D-025 through D-037 are investigation findings only — no code was changed on `chore/p2b-config-trace` or `chore/defect-reconciliation`.
 
 ## Severity counts
 
-| Severity | Count |
-|---|---|
-| BROKEN | 7 |
-| WRONG | 7 |
-| FRAGILE | 7 |
-| ROUGH | 3 |
-| **Total** | **24** |
+| Severity | Open | Closed by evidence |
+|---|---|---|
+| BROKEN | 9 | 2 (D-025, D-026) |
+| WRONG | 11 | 1 (D-029) |
+| FRAGILE | 11 | — |
+| ROUGH | 3 | — |
+| **Total** | **34 open** | **3 closed** |
 
-Plus 4 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 1 UNVERIFIED.
+37 recorded in total. Plus 4 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 2 UNVERIFIED.
+
+D-001 through D-024 are grouped by severity below. D-025 through D-034 are grouped in the **P2B — Configuration trace** section, and D-035 through D-037 in the **Production evidence reconciliation** section, because each is only readable alongside the trace that produced it.
+
+**Reading note on the P2B entries:** six were written as conditional on environment values I did not have. Production logs have since settled three of them (two BROKEN, one WRONG — all closed, with evidence). The remaining conditionals are listed at the end of the reconciliation section.
 
 ## Test environment
 
@@ -362,7 +366,7 @@ The two that remain:
 
 **What each runner applies:** both target only the first directory. `scripts/migrate.sh:9` globs `db/migrations/*.sql`; `scripts/run_migrations.py:47` resolves `<repo>/db/migrations`. **Nothing in the repository applies `apps/api/migrations/phase4_indexes.sql`** — no script, no CI step, no documentation. Its own header comment ("was previously CREATE TABLE in request handler") suggests it was extracted from application code and applied by hand.
 
-**Is it applied in production, and how would anyone know?** Unanswerable from here — see BLOCKED below. The detection method is `SELECT to_regclass('public.signup_tokens')`. There is no migration-tracking table anywhere in this project: no `schema_migrations`, no `alembic_version`, nothing recording which files have run. Both runners are idempotent-by-convention (`IF NOT EXISTS`) and re-run everything every time, so "which migrations has this database had?" has no answer beyond inspecting the schema.
+**Is it applied in production, and how would anyone know?** Unanswerable from here at the time of writing; **answered 2026-08-18 — it is not, and neither is `0042_add_performance_indexes.sql`.** See the **Production evidence reconciliation** section, which also corrects the `--bootstrap` ordering this sweep originally implied. The detection method used was `SELECT to_regclass('public.signup_tokens')` plus a `pg_indexes` probe. There is no migration-tracking table anywhere in this project: no `schema_migrations`, no `alembic_version`, nothing recording which files have run. Both runners are idempotent-by-convention (`IF NOT EXISTS`) and re-run everything every time, so "which migrations has this database had?" has no answer beyond inspecting the schema.
 
 **Does a fresh local bring-up produce the same schema as production?** No — demonstrably. A fresh build following the documented process yields a database **without `signup_tokens`**, on which invite-based onboarding fails entirely (D-016) and `/v1/affiliate/overview` 500s. Production must have the table, or the platform's affiliate features could never have worked. That is drift between the repo's migration process and the deployed schema, of unknown extent: `signup_tokens` is the one instance this sweep proves, and the 7 indexes in the same file are equally unapplied locally (index absence degrades performance silently rather than erroring, so their production status is likewise unknown).
 
@@ -422,6 +426,7 @@ Tested by request, not inferred:
 ## UNVERIFIED
 
 - **Rep removal / orphaned agents** (Rev A T2.2 question). No endpoint to remove a rep exists in `company.py`; the deletion path, if any, lives in the admin tree and was not exercised. `accounts.parent_account_id` (`db/migrations/0048_title_company_hierarchy.sql:5`) declares no `ON DELETE` behaviour, so it defaults to `NO ACTION` — deleting a company row with reps attached would be refused by the FK rather than orphaning them, but this was not tested.
+- **`https://api.bkiconnect.com` as the SiteX production gateway** (P2). The string appears nowhere in this repository. It is a vendor fact; the code cannot confirm or refute it, and I did not probe a third-party production API to find out. See the P2 section for what the code *does* settle.
 
 ## Design brief — RLS enforcement (future ticket)
 
@@ -459,9 +464,335 @@ Today RLS is inert — the app connects as the `postgres` superuser, which owns 
 
 **Status:** C1 (predicate validation) and C2 (RLS context in all handlers) shipped on `fix/security-cross-tenant-leak`. C2 is a no-op until this ticket lands; it is a prerequisite for it, not a substitute.
 
+## P2B — Configuration trace (P1/P2/P3)
+
+**Branch:** `chore/p2b-config-trace` · **Date:** 2026-08-18 · **Method:** static trace only. No deployed access; no request was made to any production service. Every claim below cites the code that produces it.
+
+**The configuration I was given** (Jerry, API service only): `DATABASE_URL` set, `SENDGRID_API_KEY` set, `PDF_ENGINE=playwright`, `SITEX_BASE_URL=https://api.bkiconnect.com`, `PDFSHIFT_API_KEY` set. **Worker and Vercel env sets were not provided.** What that costs is stated per ticket.
+
+### P1 — Which engine renders a production report
+
+**Short answer: the value you gave me is on the wrong service and cannot affect a single report PDF.**
+
+Report PDFs are rendered in the **worker**, not the API. There are exactly three callers of `render_pdf`, all in worker code: `apps/worker/src/worker/tasks.py:1203` (market reports), `tasks.py:1795` (consumer/CMA reports), `apps/worker/src/worker/property_tasks/property_report.py:474` (property reports). Each reads `PDF_ENGINE` from `apps/worker/src/worker/pdf_engine.py:30`, which is the **worker process's** environment. `PDF_ENGINE` on the API service is read by nothing (`grep` for `PDF_ENGINE` across `apps/api/`: no match). So the production engine is **UNVERIFIED — could not confirm**; it is whatever the worker service has, which I was not given.
+
+**Does `PDF_API_URL` override `PDF_ENGINE`? No.** `PDF_API_URL` and `PDF_API_KEY` are read only by `apps/worker/src/worker/pdf_adapter.py:18-19`, and that module has **zero importers** — `grep -rn "pdf_adapter" --include=*.py` returns one hit, a comment at `apps/api/src/api/routes/branding_tools.py:372`. `pdf_adapter.generate_pdf` (`:22`) and `get_pdf_engine_info` (`:176`) are called from nowhere. The whole `PDF_ENGINE=api` / `PDF_API_URL` / `PDF_API_KEY` selector is unreachable code. Nothing it does can override anything.
+
+The two selectors are also **incompatible**, which is what makes D-025 possible: `pdf_adapter.py:17` expects `PDF_ENGINE` ∈ {`playwright`, `api`}; the live `pdf_engine.py:30,342-359` expects {`playwright`, `pdfshift`} and raises on anything else.
+
+`PDF_ENGINE` is read at **module import** (`pdf_engine.py:30`), so a change to it does not take effect until the worker process restarts.
+
+### D-025 — The worker's own env template tells you to set a value that makes every PDF render fail
+**Severity:** BROKEN · **Affects:** every persona that generates any report · **CLOSED 2026-08-18 — NOT LIVE**
+
+> **Resolution.** Worker logs show `📄 PDF Engine: pdfshift` three times on 8/17 (`pdf_engine.py:340`). The deployed worker is **not** configured from its own template, so `pdf_engine.py:359` never fires. The trap in `apps/worker/ENV_TEMPLATE.md:33` is real and still in the repo — anyone provisioning a new worker from that file walks into it — but nothing is broken in production today. Closed as not-live; the template line remains a documentation defect and is on the fix list below.
+
+`apps/worker/ENV_TEMPLATE.md:33` instructs the deployer to set `PDF_ENGINE=api` on the worker service. The code that actually renders (`pdf_engine.py:342-359`) accepts only `playwright` or `pdfshift`, and `:359` raises `ValueError: Invalid PDF_ENGINE: api. Must be 'playwright' or 'pdfshift'` for anything else. If the worker was configured from its own template, **every** report PDF — market, consumer, property — fails at the render step with an unhandled `ValueError`.
+
+The same template block (`:34-35`) tells you to set `PDF_API_URL` and `PDF_API_KEY`, which nothing reads (see P1 above). `apps/api/ENV_TEMPLATE.md:34` repeats `PDF_API_KEY` for the API — that one **is** read, and is wrong in a different way (D-028).
+
+**To settle it:** read `PDF_ENGINE` off the worker service. Three outcomes: unset or `playwright` → Playwright renders (see D-026); `pdfshift` → PDFShift renders and output is correct; `api` → nothing has rendered since that value was set, and D-025 is BROKEN in production right now.
+
+### D-026 — Under `PDF_ENGINE=playwright` every market report silently loses its branded header and footer
+**Severity:** BROKEN · **Affects:** REGULAR, SPONSORED, INDUSTRY_AFFILIATE, COMPANY_REP — every market report · **CLOSED 2026-08-18 — NOT LIVE**
+
+> **Resolution.** The worker runs `pdfshift`, which is the branch that *honours* `header_html`/`footer_html` (`pdf_engine.py:203-222`). Branded headers and footers are rendering in production. The silent-discard code path in `render_pdf_playwright` (`:79`) still exists and is still undefended — this defect becomes live the moment anyone sets `PDF_ENGINE=playwright`, which is exactly what `.env.example:87` defaults to and what is currently set on the API service. Closed as not-live; keep the entry, because the failure is silent and the trigger is a one-word env change.
+
+The market report path **always** builds the repeating hero header and agent footer and always passes them: `tasks.py:1186-1187` (`builder.render_page_header_html()` / `render_page_footer_html()`), base64-inlined at `:1200-1201`, passed at `:1207-1208`.
+
+`render_pdf_playwright` **discards them**. `pdf_engine.py:79` is literally `_ = (header_html, footer_html, header_start_at, footer_start_at)`, and the docstring at `:58-66` says so: *"accepted for API parity with PDFShift; currently IGNORED by Playwright — flagged for follow-up ticket."* No warning is logged. No error is raised. A PDF is produced and uploaded, just without the agent's photo, name, phone, email, company name or logo on any page.
+
+The layout is worse than "header missing". The page geometry was tuned around PDFShift's additive margin model — `pdf_engine.py:176-186` reserves `header.height: 1.3in` plus `margin.top: 0.1in`, with the comment *"PDFShift treats margin.top and header.height as ADDITIVE"*. Playwright is called with all four margins at `0` (`:111-116`) and no header slot, so body content renders into space the CSS expects to be reserved.
+
+For a white-label branding product, this is not a cosmetic difference: it is the total, silent loss of the branding on every page of every market report. Graded BROKEN on that basis.
+
+Consumer (`tasks.py:1795`) and property (`property_report.py:474`) reports pass no header/footer, so they are unaffected by this specific defect.
+
+### D-027 — `pdf_adapter.py` is dead code that documents a third, non-existent engine selector
+**Severity:** WRONG · **Affects:** anyone reading the config
+
+Zero importers (proof in P1 above). It nonetheless defines `PDF_ENGINE` with a **different value set** than the live selector (`pdf_adapter.py:17` vs `pdf_engine.py:30`), and both `.env.example:91-92` and `apps/worker/ENV_TEMPLATE.md:34-35` advertise its variables as live configuration. `docs/architecture/SOURCE_OF_TRUTH.md:129,188` describes it as a "Playwright → PDFShift fallback", which is a mechanism that exists in neither module.
+
+This is a Phase 5 deletion candidate under the prove-death standard in `docs/DEAD_CODE.md` — it passes all three tests (no importers, no route reference, no runtime string construction). It was not on the Phase 5 candidate list and was not removed on that branch. `apps/worker/src/worker/social_engine.py` has the same status (zero importers; `render_social_image` called from nowhere) and should be assessed in the same ticket.
+
+### D-028 — The branding sample-PDF and sample-JPG endpoints read a different key name than the one that is set
+**Severity:** BROKEN · **Affects:** every persona using the branding preview · **Conditional on `PDF_API_KEY` on the API service**
+
+`apps/api/src/api/routes/branding_tools.py:119` reads `os.getenv("PDF_API_KEY", "")`. You told me the API service has **`PDFSHIFT_API_KEY`** set. Those are different variables; nothing maps one to the other. Every other PDFShift call site in the codebase uses `PDFSHIFT_API_KEY` (`pdf_engine.py:31`, `social_engine.py:28`) — `branding_tools.py` is the lone outlier.
+
+If `PDF_API_KEY` is unset, both endpoints fail closed with a 503 before doing any work: `:335-339` (`POST /v1/branding/sample-pdf`) and `:428-432` (`POST /v1/branding/sample-jpg`), both returning *"PDF generation service not configured. Please contact support."* Both are mounted (`apps/api/src/api/main.py:29,112`) and both are reachable from the UI through `apps/web/app/api/proxy/v1/branding/sample-pdf` and `.../sample-jpg`.
+
+**To settle it:** check whether `PDF_API_KEY` is also set on the API service. If it is, this is latent, not live — but two names for one secret is still the defect.
+
+### D-029 — `PRINT_BASE` on the worker is persisted as the user-visible "view in browser" link, and defaults to localhost
+**Severity:** WRONG · **Affects:** every persona · **CLOSED 2026-08-18 — NOT LIVE**
+
+> **Resolution.** Worker logs show `print_base: https://reportscompany-web.vercel.app` (`pdf_engine.py:340`). `PRINT_BASE` is set, so no report row has been stamped with a localhost link. The mechanism described below is confirmed correct and is *not* closed as wrong — it is closed as not-currently-failing.
+>
+> **Two residuals worth a decision, neither a defect:** (1) the link handed to customers carries the `reportscompany-web.vercel.app` hostname rather than the branded `www.trendyreports.io`, and those links are **persisted**, so changing `PRINT_BASE` later will not retroactively fix rows already written. (2) The `/print/[runId]` route is now confirmed as a live customer-facing destination, which means the Vercel side of it (`NEXT_PUBLIC_API_BASE`, `INTERNAL_RENDER_TOKEN` — `page.tsx:36-39,49-55`) has to be right or those links render "Report Not Found". That is still unverified.
+
+`render_pdf` returns `(pdf_path, print_url)` where `print_url` is `f"{effective_base}/print/{run_id}"` (`pdf_engine.py:82-83`). The market path captures that second value as `html_url` (`tasks.py:1203`) and **writes it to the database** (`:1253-1255`, `UPDATE ... SET status='completed', html_url=%s ...`) and into the completion webhook payload (`:1376`).
+
+That column is user-facing. `apps/api/src/api/routes/reports.py:98,246,292` returns it, and the web app renders it as a link: `apps/web/app/app/reports/page.tsx:107-110` and `apps/web/app/app/reports/[id]/page.tsx:292-294`.
+
+`PRINT_BASE` defaults to `http://localhost:3000` (`pdf_engine.py:33`, and `tasks.py:249` for `DEV_BASE`, which is passed as `print_base=` at `:1211`). If it is unset on the worker, every report row is stamped with a `http://localhost:3000/print/<id>` link that is then shown to the customer. Nothing validates it and nothing fails.
+
+This also **upgrades the `/print/[runId]` finding in `docs/DEAD_CODE.md`**: that document records the route as reachable-but-unexercised because all three `render_pdf` callers pass `html_content=`. That is still true of *rendering*, but the URL is not merely constructed and dropped — it is persisted and published to users as a link. `/print/[runId]` is a live user-facing destination, not a latent fallback. Correction recorded here rather than edited into the Phase 5 branch, which is open as PR #27.
+
+### P2 — Is `https://api.bkiconnect.com` the production SiteX host?
+
+**UNVERIFIED — could not confirm.** The string `bkiconnect` appears **zero times** in this repository (`grep -rn "bkiconnect"` across all tracked files: no match). Nothing in the code, the docs, the env templates, or git history names a production SiteX host. This is a vendor fact that only ICE/SiteX or your onboarding paperwork can settle; I will not assert it from the code, and I did not probe a third-party production API to find out.
+
+What I **can** confirm, and it is the part that matters mechanically:
+
+1. **The host is used only as a prefix, so swapping it is safe in itself.** `SiteXConfig.base_url` (`apps/api/src/api/services/sitex.py:39`) is concatenated with two host-relative paths and nothing else: `/ls/apigwy/oauth2/v1/token` (`:46`) and `/realestatedata/search` (`:50`). No path, header, or payload is conditioned on the host value. If the production gateway exposes the same two paths, the swap works; if it does not, you get a 404 from the token call, surfaced as `SiteXAuthError` (`:181-183`).
+2. **You set it on the right service.** SiteX is called only from the API (`apps/api/src/api/services/sitex.py`, used by `routes/property.py`, `routes/lead_pages.py`, `routes/admin.py`). The worker never calls SiteX — every `sitex` hit in worker code reads the already-persisted `sitex_data` column (`property_tasks/property_report.py:228,262,292`, `property_builder.py:362-399`). No `SITEX_*` variable is needed on the worker.
+3. **Misconfiguration fails loudly, not silently.** `SiteXClient.initialize` calls `config.validate()` (`:249`) and raises `SiteXError("Invalid SiteX configuration")` if any of base URL / client id / client secret / feed id is blank. Unlike the PDF and email paths, this one does not pretend to succeed.
+4. **The client is a process-lifetime singleton** (`get_sitex_client`, `:601-605`), so the value is read once per API process — a change needs a restart, not just a redeploy of config.
+
+### D-030 — The UAT host is the default, so any unset environment silently queries test data
+**Severity:** FRAGILE · **Affects:** REGULAR, SPONSORED (property reports)
+
+`sitex.py:39` defaults `SITEX_BASE_URL` to `https://api.uat.bkitest.com`. There is no environment check, no startup log of which host is in use beyond one `logger.info` at `:255`, and no marker on the resulting data. An unset variable does not fail — it returns plausible-looking test property data that is then persisted into `property_reports.sitex_data` and rendered into a customer's PDF. A production default should not point at a vendor's test gateway.
+
+**Two things you still need to check, which the base URL alone does not cover:**
+
+- `SITEX_CLIENT_ID`, `SITEX_CLIENT_SECRET` and `SITEX_FEED_ID` were not in the config you sent. `SITEX_FEED_ID` defaults to `100001` (`sitex.py:42`), which the module docstring gives as the example feed. A production host with UAT credentials or a UAT feed id fails at the token call (`:181-183`) — or worse, succeeds against the wrong feed.
+- **Any property report generated while `SITEX_BASE_URL` was unset has UAT data frozen into `property_reports.sitex_data`.** Changing the variable does not correct rows already written. Worth a `SELECT count(*) FROM property_reports WHERE sitex_data IS NOT NULL AND created_at < '<the date you set the variable>'`.
+
+### P3 — `RESEND_API_KEY`: the code path, and what happens when it is absent
+
+**Confirmed. There are two call sites and they behave differently. One is a warning; the other writes a false record into the database.**
+
+Both read `os.environ.get("RESEND_API_KEY", "")` in the **worker**: `tasks.py:668` and `tasks.py:1894`. `apps/api/src/api/settings.py:36` declares `RESEND_API_KEY: str = ""` with the comment `# Deprecated — kept for backwards compat, unused` — that comment is true **of the API** and false of the product: the worker is where email for these two flows is actually sent, and both flows use Resend, not SendGrid. An operator reading `settings.py` would reasonably delete the variable.
+
+Note that the two providers are split by flow, not by environment: scheduled/ad-hoc **report delivery** goes through SendGrid (`_send_and_log_report_email`, `tasks.py:598-649`, `provider='sendgrid'` at `:641`), and only failure notifications and consumer-report delivery use Resend. `SENDGRID_API_KEY` being set does not cover the Resend paths.
+
+### D-031 — A consumer report is recorded as delivered when no email was sent
+**Severity:** BROKEN · **Affects:** REGULAR, SPONSORED (lead capture / consumer CMA delivery) · **Conditional on `RESEND_API_KEY` on the worker**
+
+`process_consumer_report` (`tasks.py:1441`), email delivery branch, `:1894-1901`:
+
+```python
+resend_key = os.environ.get("RESEND_API_KEY", "")
+if not resend_key:
+    logger.warning("RESEND_API_KEY not set — marking as sent without email")
+    cur.execute("""
+        UPDATE consumer_reports
+        SET status = 'sent', consumer_email_sent_at = NOW()
+        WHERE id = %s::uuid
+    """, (report_id,))
+    delivered = True
+```
+
+The consequence, plainly: **the consumer never receives their report, and the system records that they did.** `status='sent'` and a non-null `consumer_email_sent_at` timestamp are written for an email that was never attempted. No row is written to `email_log` — this path does not log at all, unlike the SendGrid path (`:637-644`) — so there is no record anywhere that contradicts the `sent` status.
+
+It then gets worse. `delivered = True` falls through to `:2027-2052`, which SMSes the **agent** that they have a new lead, with the consumer's phone and email. The agent is told a lead converted and was served a report. They follow up on a report the lead never saw.
+
+This is not recoverable after the fact by fixing the key: you cannot tell, from the database, which `sent` rows were real. The only distinguishing evidence is the `logger.warning` in the worker logs.
+
+### D-032 — An unrecognised delivery method is also recorded as sent
+**Severity:** WRONG · **Affects:** REGULAR, SPONSORED
+
+`tasks.py:2020-2025`, the `else` arm of the same dispatch:
+
+```python
+logger.warning(f"No valid delivery method for report {report_id}: method={delivery_method}")
+cur.execute("UPDATE consumer_reports SET status = 'sent' WHERE id = %s::uuid", (report_id,))
+delivered = True
+```
+
+Same failure shape as D-031, different trigger: a report with no usable delivery method — no phone for SMS, no address for email, or an unrecognised `delivery_method` value — is marked `sent` and fires the agent's "new lead" SMS. `status='failed'` exists and is used on the adjacent path (`:2054-2060`); this branch chooses not to use it.
+
+### D-033 — Failure notifications are the one alert that tells an agent their scheduled report broke, and they are skipped silently
+**Severity:** FRAGILE · **Affects:** every persona with a schedule · **Conditional on `RESEND_API_KEY` on the worker**
+
+`_send_failure_notification` (`tasks.py:654`), at `:668-671`:
+
+```python
+resend_key = os.environ.get("RESEND_API_KEY", "")
+if not resend_key:
+    logger.warning("RESEND_API_KEY not set — skipping failure notification")
+    return
+```
+
+Returning early here is the correct shape — unlike D-031, it does not lie. The severity is in what is lost: this is the only mechanism that tells an account owner a scheduled report failed. Without it, a schedule can fail silently every week and the customer's first signal is a recipient asking where the report went. Combined with the "Deprecated … unused" comment at `settings.py:36`, an operator has an explicit invitation to remove the variable that keeps this alive.
+
+### D-034 — Five environment variables name the same web app, with three different defaults, and two of them ship broken links when unset
+**Severity:** FRAGILE · **Affects:** every persona
+
+| Variable | Read at | Default | What breaks if unset |
+|---|---|---|---|
+| `PRINT_BASE` | `pdf_engine.py:33`, `social_engine.py:29`, `tasks.py:249` | `http://localhost:3000` | Report "view in browser" links (D-029) — **confirmed set in production**, so this row is settled |
+| `WEB_BASE` | `apps/worker/src/worker/email/send.py:13` | `http://localhost:3000` | **Unsubscribe links in every outbound email** (`send.py:138`) |
+| `WEB_BASE` | `apps/api/src/api/routes/billing.py:21` | `https://reportscompany-web.vercel.app` | Stripe checkout return URLs (`:206-207,303`) land on the wrong domain |
+| `APP_BASE` | `apps/api/src/api/settings.py:23` | `https://www.trendyreports.io` | Invite links (`invite_service.py:160`, `admin.py:2488`) |
+| `APP_BASE` | `tasks.py:713` | `https://reportscompany-web.vercel.app` | Failure-notification links |
+| `FRONTEND_URL` | `tasks.py:1497` | `https://www.trendyreports.io` | Consumer report links |
+
+The same name (`WEB_BASE`, `APP_BASE`) resolves to a different default in two different services, so setting it correctly on one does not imply the other. The `send.py:13` case is the one to fix first: if `WEB_BASE` is unset on the worker, every marketing email you send carries an unsubscribe link pointing at `http://localhost:3000`, which is a deliverability and compliance problem, not a cosmetic one.
+
+### What I still need, and what it would settle
+
+| Needed | Settles |
+|---|---|
+| ~~Worker: `PDF_ENGINE`~~ | **ANSWERED** — `pdfshift`. Closed D-025 and D-026. |
+| ~~Worker: `PRINT_BASE`~~ | **ANSWERED** — `https://reportscompany-web.vercel.app`. Closed D-029. |
+| ~~Worker: `PDFSHIFT_API_KEY`~~ | **ANSWERED by inference** — the engine is `pdfshift` and PDFs are being produced; `pdf_engine.py:159-160` would raise on every render if the key were absent. Confirm cheaply by grepping the same worker logs for `✅ PDF generated` alongside the three `PDF Engine: pdfshift` lines. |
+| Worker: `WEB_BASE`, `APP_BASE`, `FRONTEND_URL` | D-034. `WEB_BASE` is the urgent one — unset means every outbound email carries a `localhost:3000` unsubscribe link (`email/send.py:13,138`). |
+| Worker: `RESEND_API_KEY` | D-031, D-033 — whether the false-`sent` path is live |
+| API service: `PDF_API_KEY` | D-028 |
+| API service: `SITEX_CLIENT_ID`, `SITEX_CLIENT_SECRET`, `SITEX_FEED_ID` | Whether the production host has production credentials (P2) |
+| Vercel: `NEXT_PUBLIC_API_BASE`, `INTERNAL_RENDER_TOKEN` | Whether `/print/[runId]` — now confirmed a link we hand to customers (D-029) — actually renders. `page.tsx:36-39` returns null without the first; `:49-55` warns and 401s without the second. |
+| Vendor confirmation that `api.bkiconnect.com` is the SiteX production gateway | P2 |
+
+---
+
+## Production evidence reconciliation
+
+**Branch:** `chore/defect-reconciliation` · **Date:** 2026-08-18 · **Evidence source:** Jerry, from Cursor with deployed access. My part is reconciliation only — I checked each reported fact against the code and recorded what it settles, what it changes, and where it points somewhere different than first read.
+
+### S2 — Autonomous delivery: **PROVEN in production**
+
+769 `schedule_runs`, 585 completed, with the ticker → database → worker → `email_log` chain verified end to end. Scheduled reports generate and deliver themselves in production without a human.
+
+This is the first of the seven "Definition of Stable" items proven against production rather than a local harness, and it retires the largest open question in Rev A. It also matches the code path exactly: `apps/worker/src/worker/schedules_tick.py:300-301` dispatches with `celery.send_task("generate_report", ...)` **directly to Celery**, so scheduled delivery never touches the Redis bridge and is not exposed to D-036 or D-037 below.
+
+**One number to chase before calling it clean:** 769 − 585 = **184 runs that are not `completed`** (24%). If those are `failed`, that is close to a one-in-four failure rate on the product's flagship feature and belongs in Phase 3 as its own investigation. If they are `pending`/`running` rows from in-flight or abandoned ticks, it is bookkeeping. One query settles it:
+
+```sql
+SELECT status, count(*) FROM schedule_runs GROUP BY status ORDER BY 2 DESC;
+```
+
+### Migration state in production — the bootstrap warning is confirmed, and it reaches further than 0053
+
+Two facts reported: `schema_migrations` does not exist, nothing auto-applies migrations on startup, and of 0053's seven indexes only `idx_accounts_sponsor` and `idx_api_keys_hash` exist.
+
+**Those two are not evidence that 0053 partly applied. They are evidence that it never ran at all** — and that 0042 never ran either. Each index in 0053 is declared by other migrations too, and the pattern is decisive:
+
+| Index | Declared in | In production |
+|---|---|---|
+| `idx_api_keys_hash` | `0001_base.sql:113`, `0042:37`, `0053:41` | **present** |
+| `idx_accounts_sponsor` | `0042:16`, `0048_title_company_hierarchy.sql:17`, `0053:20` | **present** |
+| `idx_jwt_blacklist_hash` | `0042:27`, `0053:33` — **and nowhere else** | **absent** |
+| `idx_report_gen_account_status_generated` | `0053:16` only | absent |
+| `idx_cgm_member_lookup` | `0053:25` only | absent |
+| `idx_schedules_account` | `0053:29` only | absent |
+| `idx_schedule_runs_schedule_date` | `0053:37` only | absent |
+
+Both surviving indexes are also declared by a migration **other than** 0042 or 0053 — `0001` and `0048`, which evidently did apply. The one index declared *only* by 0042 and 0053 is missing. So neither 0042 nor 0053 has ever been applied to production, and the two that exist arrived by another route entirely.
+
+**That means a numbered migration in the main `db/migrations/` directory was skipped, with applied migrations on both sides of it.** Every previous drift indicator (D-001, D-016, D-022) pointed at the *second* directory or at hand-assembly. This one is different in kind: the sequence in the primary directory is not contiguous in production. `0048` ran, `0042` did not.
+
+**Confirming query** — all four are declared only by 0042, so if they are absent, 0042 is confirmed unapplied:
+
+```sql
+SELECT indexname FROM pg_indexes WHERE schemaname='public' AND indexname IN
+  ('idx_cgm_member','idx_property_reports_account_created',
+   'idx_report_generations_account_generated','idx_schedule_runs_schedule_created');
+```
+
+**What production is missing, in order of what it costs:** `idx_jwt_blacklist_hash` is consulted on **every authenticated request** (`middleware/authn.py`); `idx_schedule_runs_schedule_date` backs usage counting over a table with 769 rows and growing; `idx_report_gen_account_status_generated` backs the affiliate overview and report list. The two that exist are the two that matter least. Missing indexes degrade silently rather than erroring, which is why nothing surfaced this.
+
+#### The corrected deployment order
+
+`--bootstrap` records every unrecorded file as applied **without executing it**. Run against production as it stands, it would permanently assert that 0042 and 0053 had been applied. Those five indexes would then never be created by any future run, and the tracking table — the thing built specifically to end this class of uncertainty — would be lying from its first row. The warning raised when F7 shipped is now confirmed with evidence, and it inverts the order:
+
+1. **Audit first, bootstrap last.** Run the confirming query above. The index probe catches 0042 and 0053 because indexes are easy to probe; other migrations may be unapplied in ways nothing detects. The bootstrap is only as trustworthy as this audit, and that limit should be stated when it runs.
+2. **Apply the genuinely-unapplied files by hand.** Both candidates are pure `IF NOT EXISTS`, so both are safe to run against live data. **Apply 0053 only, not both** — see the duplication note below.
+3. **Then `--bootstrap`,** which now records something true.
+4. **Then normal runs** apply only genuinely new migrations.
+
+#### Two defects in 0053 itself, found while reconciling this
+
+Both are mine, from Phase 4, and neither was caught because 0053 was written against a local database where none of the objects existed:
+
+- **0042 and 0053 declare the same indexes under different names.** `idx_schedule_runs_schedule_date (schedule_id, created_at)` is definitionally identical to 0042's `idx_schedule_runs_schedule_created (schedule_id, created_at)`; `idx_cgm_member_lookup (member_type, member_id, account_id)` supersedes 0042's `idx_cgm_member (member_type, member_id)`; `idx_report_gen_account_status_generated` overlaps `idx_report_generations_account_generated`. Applying both files creates three redundant index pairs that cost write throughput and disk for nothing. Apply one.
+- **0053's `idx_api_keys_hash` can never be created.** `0001:113` already creates that name without a predicate; `0053:41` declares it `WHERE is_active = TRUE`. `CREATE INDEX IF NOT EXISTS` matches on **name, not definition**, so 0053's partial version is silently skipped wherever 0001 has run — which is everywhere. Production's index is 0001's unpartial one, and 0053 claims a partial index it will never produce. Harmless in effect, dishonest in the file.
+
+### D-035 — Three different limits could be enforced for the `starter` plan, and nobody has looked at the column that decides
+**Severity:** WRONG · **Affects:** REGULAR (every paying agent on `starter`) · **Extends D-004**
+
+Reported production `plans`: `free`=3, `starter`("Growth")=15, `pro`("Growth Plus")=99999, `solo`("Solo Agent")=25, `trial`=3, `team`, `affiliate`=5000, `sponsored_free`=3. Marketing sells Growth at 25/month.
+
+**The 15 is not what gates market report creation.** `POST /v1/reports` calls `get_full_plan_usage` (`routes/reports.py:156`), which reads `plan["market_reports_limit"]` (`services/usage.py:248,255`) — the **per-product** column added by `0051_per_product_limits.sql:5`. The reported 15 is `plans.monthly_report_limit`, the **legacy** column, read only by `evaluate_report_limit` (`usage.py:324`), which `usage.py:319` itself labels backward-compatibility and which the market-report gate no longer calls.
+
+So the enforced number depends entirely on `plans.market_reports_limit` — a column that was not in the dump. Three outcomes, and they are far apart:
+
+| If `starter.market_reports_limit` is… | Enforced limit | How |
+|---|---|---|
+| `25` (0051 applied — `:14` and `:56-60` both set it) | **25** | Matches marketing. The 15 is vestigial. |
+| `15` (set by hand, or by something later) | **15** | Matches the legacy column and the internal docs. Marketing oversells by 10. |
+| **`NULL`** (0051 never applied) | **3** | `_first_not_none(mkt_override, limit_override, mkt_plan_limit, default=3)` (`usage.py:131`) does **not** fall back to `monthly_report_limit` — it falls through to the hard floor of **3**. |
+
+The third is not hypothetical. We have just established that at least one numbered migration in this range never reached production; 0051 is four files away from 0042. **If 0051 is unapplied, every paying `starter` customer is capped at 3 market reports a month while being sold 25**, and the 429 they receive quotes `3` as their limit (`reports.py:160-172`). That would be a BROKEN customer-facing defect, not a WRONG one.
+
+**One query settles it, and it should be run before anything else in Phase 3:**
+
+```sql
+SELECT plan_slug, plan_name, monthly_report_limit, market_reports_limit,
+       schedules_limit, property_reports_per_month
+FROM plans ORDER BY plan_slug;
+```
+
+**Independent of the limit question, the naming is wrong three ways at once.** For `plan_slug='starter'`: the database says `plan_name='Growth'`; the API overrides it and returns **"Starter"** (`_PLAN_DISPLAY_NAMES` at `usage.py:32` wins over the DB value at `usage.py:139`); and every piece of user-facing copy says **"Growth"** (`apps/web/components/stripe-billing-actions.tsx:98`, `components/marketing/faq.tsx:35`, `.cursor/rules/skills/references/architecture.md:70-71`). A customer on Growth sees "Growth" on the marketing site and "Starter" in their own account page. The same collision exists for `pro`/`team` → "Pro" vs "Growth Plus".
+
+**`solo` is the trap.** It carries 25 — the number marketing sells — has no UI presence, and `_PLAN_DISPLAY_NAMES` maps it to "Starter" as well (`usage.py:33`). Anyone reconciling "which row holds the 25 we advertise?" will find `solo` and be tempted to point `starter` customers at it. `solo` is a legacy slug seeded by `0012_seed_plans.sql:11`; the live plan is `starter`. Fix the column, not the slug.
+
+**Also worth knowing:** `usage.py:327` treats any limit `>= 10000` as unlimited. `pro` at 99999 is therefore unlimited by sentinel, and `affiliate` at 5000 is genuinely capped. Raising affiliate to 10000 would silently make it unlimited.
+
+### D-036 — A bridge outage strands manual market reports at `pending` with no error, no retry and no alert
+**Severity:** FRAGILE · **Affects:** REGULAR, SPONSORED, INDUSTRY_AFFILIATE, COMPANY_REP (manual reports); admin (retry)
+
+The consumer bridge is a separate Render service running `run_redis_consumer_forever` (`apps/worker/src/worker/tasks.py:2087-2158`): `blpop` off a Redis list, then `generate_report.delay(...)`.
+
+**What routes through it, verified:** `POST /v1/reports` (`routes/reports.py:215` → `worker_client.py:12-20`, `r.rpush`) and admin retry (`routes/admin.py:422`). **What bypasses it, verified:** scheduled reports (`schedules_tick.py:300-301`, `celery.send_task`), property reports (`worker_client.py:23-29`, `send_task`), and consumer CMA reports (`routes/lead_pages.py:387`, `send_task`). Jerry's characterisation is exactly right.
+
+**What an outage costs.** `enqueue_generate_report` is `r.rpush` onto a Redis **list**. That succeeds whether or not the bridge is alive. So during a bridge outage:
+
+- `POST /v1/reports` returns success and writes `status='pending'`. The user's report sits at "pending" indefinitely.
+- Nothing errors. The failure handler at `reports.py:214-225` only fires if the **rpush itself** fails — i.e. if Redis is unreachable. A dead bridge is invisible to it.
+- No timeout, no retry, no alert. Celery's `autoretry_for` (`tasks.py:815-822`) never engages, because the task was never published.
+- **The jobs are not lost.** `blpop` is destructive but the list persists; when the bridge returns it drains the backlog and every stranded report generates at once. An outage is a delay, not data loss — provided Redis retained the list and the bridge actually restarts.
+
+So the cost of the two transient package-download 502s today was: nothing, if no manual report was submitted in the window; a delayed report, if one was. Deploy failures leave the *old* process running, so the bridge was never actually down — which is the one piece of good news in it running stale code.
+
+**The staleness is low-risk but not zero, and one question decides it.** The bridge has run commit `6d1e100d` since 2026-05-21 and has not picked up any Phase 4 or Phase 5 merge. That is fine *if* its start command is the consumer loop only, because the loop's entire contract is four dict keys (`run_id`, `account_id`, `report_type`, `params` — `tasks.py:2124`) and the actual report generation happens in the **worker** service on current code. **But if that service's start command also runs `celery -A worker.app.celery worker`, then three-month-old task code is executing today's jobs**, and every fix merged since May is absent from whatever it picks up. Confirm the start command before trusting the deploy failures as harmless.
+
+### D-037 — The bridge pops a job off the queue and then drops it permanently on any unexpected error
+**Severity:** WRONG · **Affects:** REGULAR, SPONSORED, INDUSTRY_AFFILIATE, COMPANY_REP (manual reports)
+
+`tasks.py:2116` pops with `blpop` — destructive — then parses and dispatches. The catch-all at `:2154-2157` logs and continues:
+
+```python
+except Exception as e:
+    consecutive_errors += 1
+    print(f"❌ Unexpected error in consumer (#{consecutive_errors}): {e}")
+    time.sleep(min(5, backoff))
+```
+
+The item is already gone from the list. It is not re-queued, not written anywhere, not retried. Any exception between the pop and the `.delay()` — a malformed payload, a missing key, a broker publish failure — **destroys that job permanently**. The `report_generations` row stays `pending` forever and the only trace is one line of stdout.
+
+This is the same user-visible symptom as D-036 (a report stuck at pending) with the opposite recovery property: an outage self-heals when the bridge returns, this does not. Distinguishing them in production means reading bridge logs; there is no state anywhere that separates "queued and waiting" from "silently destroyed".
+
+### Still open after this reconciliation
+
+| Item | Needs |
+|---|---|
+| D-028 | Is `PDF_API_KEY` set on the API service? (`PDFSHIFT_API_KEY` is, and `branding_tools.py:119` reads the other name.) |
+| D-030 | `SITEX_CLIENT_ID` / `SITEX_CLIENT_SECRET` / `SITEX_FEED_ID` on the API; plus vendor confirmation of `api.bkiconnect.com` |
+| D-031, D-032, D-033 | `RESEND_API_KEY` on the **worker** — the false-`sent` path. Still the highest-value unknown left: it writes incorrect data rather than failing. |
+| D-034 | `WEB_BASE`, `APP_BASE`, `FRONTEND_URL` on the worker. `WEB_BASE` first — unset means a `localhost:3000` unsubscribe link in every outbound email. |
+| D-035 | `SELECT ... market_reports_limit FROM plans` — decides whether starter is enforced at 3, 15 or 25 |
+| D-036 | The bridge service's start command |
+| S2 | `SELECT status, count(*) FROM schedule_runs GROUP BY status` — what the 184 non-completed runs are |
+| Migration audit | The four-index confirming query, before any `--bootstrap` |
+
+---
+
 ## BLOCKED-NEEDS-DEPLOYED-ACCESS (Phase 2B)
 
 - **Is production's DB role a superuser?** D-005/D-006's real-world severity depends on it. If production also connects as owner/superuser, D-005 is live exactly as reproduced. If production uses a restricted role, D-005 is contained but D-006 means the portal is showing zeros.
-- **Production `PDF_ENGINE`, `PDF_API_URL`, `SITEX_BASE_URL`, `RESEND_API_KEY`, `PDFSHIFT_API_KEY` values** (T2.9/T2.10). `SITEX_BASE_URL` defaults to the **UAT** host (`apps/api/src/api/services/sitex.py:39`) — if unset in production, property reports are being built from test data.
+- **Production env values** (T2.9/T2.10). Partially answered by the P2B trace above for the API service; the worker and Vercel sets are still outstanding — see "What I still need" above for exactly which variables settle which defect.
 - **Scheduled delivery end-to-end** (T2.3). Needs a real send and a readable inbox.
-- **Is `apps/api/migrations/phase4_indexes.sql` applied in production?** (T2.7). Run `SELECT to_regclass('public.signup_tokens')` and check for the 7 indexes it declares. If the table is present the file was applied by hand at some point; if the indexes are missing, production is running without them. Nothing in the repo can answer this, and nothing detects the drift.
+- ~~**Is `apps/api/migrations/phase4_indexes.sql` applied in production?**~~ **ANSWERED (2026-08-18): no, and neither is `0042`.** `signup_tokens` exists but 5 of the 7 indexes do not, and the 2 that do are each declared by an *other*, applied migration. The file never ran; the table arrived by the route its own header describes — created inline by an old request handler. See **Production evidence reconciliation** for the proof, the confirming query, and the corrected bootstrap order.
