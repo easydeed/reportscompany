@@ -499,11 +499,35 @@ All three `pyproject.toml` files (`apps/api`, `apps/worker`, `libs/shared`) decl
 
 This is not confined to one module. `apps/api/src/api/main.py:14` imports `routes/auth.py`, which imports `services/email.py` at `:11` — so **the API application cannot start at all on Python 3.11.** `routes/admin.py:18`, `routes/reports.py:8`, `routes/company.py:15` and `routes/affiliates.py:27` import it too.
 
-**What the deployed runtime must be, and how we know.** The API service is live and serving in production. Since importing the app compiles `services/email.py`, and that file is a syntax error on 3.11, the deployed Python is necessarily **3.12 or newer**. That is an inference from the service being up, not a reading of Render's configuration — no deploy configuration exists in this repository (no `render.yaml`, no Dockerfile, no `runtime.txt`, no `.python-version`), so the version is set in the Render dashboard and cannot be confirmed from here. **Worth confirming directly, because the alternative would be far worse:** if Render were somehow on 3.11, the API could not be running, so the inference is strong — but it is still an inference.
+**What the deployed runtime must be, and how we know.** The API service is live and serving in production. Since importing the app compiles `services/email.py`, and that file is a syntax error on 3.11, the deployed Python is necessarily **3.12 or newer**. That is an inference from the service being up, not a reading of Render's configuration — no deploy configuration exists in this repository (no `render.yaml`, no Dockerfile, no `runtime.txt`, no `.python-version`), so the version is set in the Render dashboard and cannot be confirmed from here. **Worth confirming directly, because the alternative would be far worse:** if Render were somehow on 3.11, the API could not be running, so the inference is strong — but it is still an inference. That it *has* to be an inference is its own defect: see D-040.
 
 **Fixed on this branch** by raising the constraint to `^3.12` in all three `pyproject.toml` files, regenerating both lock files, and pinning CI to 3.12 — i.e. by matching the declaration to what the code actually requires and what production demonstrably runs, rather than by rewriting the f-strings to suit a version nothing uses.
 
 The alternative fix — replacing the `’` / `—` escapes in `services/email.py` with the literal characters, which removes the backslashes and restores 3.11 compatibility — is available and small, and would be the right call if anything actually needed to run on 3.11. Nothing does.
+
+### D-040 — The deployed Python version is not pinned anywhere in the repository
+**Severity:** FRAGILE · **Affects:** all — every service, every deploy
+
+D-039's conclusion that production runs Python 3.12+ is **inferred from the API service being up**, not read from any configuration. It cannot be read from configuration, because none exists. Checked, all absent:
+
+```
+render.yaml   ABSENT      runtime.txt      ABSENT      Procfile   ABSENT
+render.yml    ABSENT      .python-version  ABSENT      app.json   ABSENT
+Dockerfile    ABSENT      .tool-versions   ABSENT
+```
+
+Every deploy setting — Python version, build command, start command, environment variables — lives only in the Render dashboard. Nothing in version control records what any service actually runs, and nothing detects drift between services.
+
+**Why that is more than untidy.** The Python version is now load-bearing in a way it was not before: the API source is a syntax error below 3.12 (D-039). If Render's default image moves, or a service is recreated from scratch, or someone sets a version on one service and not another, **the API stops booting** — and the repository contains nothing that would have warned them, nothing to diff against, and nothing to restore from. The three sibling services (`reportscompany-consumer-bridge`, `markets-report-ticker`, worker) import the same packages and are equally exposed; whether they are on the same interpreter is unknown.
+
+This is the same shape as the env-var drift class: configuration that exists only in a dashboard, described nowhere, verified by nothing. It is why the deploy timestamps, the `PDF_ENGINE` value, and the worker's `RESEND_API_KEY` all had to be asked for rather than looked up.
+
+**Two fixes, both small, neither done here** (this branch fixes CI, not deployment):
+
+1. **Pin the version in the repo** — a `.python-version` file, or `runtime.txt`, or an explicit `PYTHON_VERSION` in Render, committed alongside a note of which services it applies to. `pyproject.toml`'s `^3.12` now declares the requirement, but Render does not read it.
+2. **Adopt `render.yaml` (Render Blueprints)** so build commands, start commands, and non-secret configuration are version-controlled and reviewable. Larger change, and the honest one.
+
+**Confirm the current value first.** Read the Python version off each of the four services in the Render dashboard before pinning anything, so the pin matches what is running rather than freezing a guess.
 
 ### What this does NOT do
 
