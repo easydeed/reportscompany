@@ -3,20 +3,32 @@
 **Date:** 2026-08-18
 **Plan:** `EXECUTION_PLAN_REV_A.md` Phase 2A (local only)
 **Tickets covered:** T2.1 (test account provisioning), T2.2 (company / title-company portal), T2.4 (registration → onboarding → first-run), T2.6 (authenticated smoke test), T2.7 (migration state), P1/P2/P3 (configuration trace, `chore/p2b-config-trace`), and the production-evidence reconciliation (`chore/defect-reconciliation`)
-**Status:** Phase 2A complete (T2.1, T2.2, T2.4, T2.6, T2.7), plus the F5 affiliate-surface audit and the P2B configuration trace. **S2 (autonomous delivery) is PROVEN in production** — see the S2 section. The rest of Phase 2B remains blocked on deployed access.
-**Fix status:** D-005/D-007 fixed (PR #24). D-001, D-002, D-015 (collection errors), D-016, D-017, D-018, D-020 and D-022 fixed on `fix/p4-broken-defects`. D-025 through D-037 are investigation findings only — no code was changed on `chore/p2b-config-trace` or `chore/defect-reconciliation`.
+**Phase status:** Phase 2A complete (T2.1, T2.2, T2.4, T2.6, T2.7), plus the F5 affiliate-surface audit and the P2B configuration trace. **S2 (autonomous delivery) is PROVEN in production** — see the S2 section. The rest of Phase 2B remains blocked on deployed access.
 
-## Severity counts
+## Status
 
-| Severity | Open | Closed by evidence |
+**Last reconciled:** 2026-08-18, against `main` at `3751a5c` (all five branches merged).
+
+Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
+
+| State | Count | Meaning |
 |---|---|---|
-| BROKEN | 9 | 2 (D-025, D-026) |
-| WRONG | 11 | 1 (D-029) |
-| FRAGILE | 11 | — |
-| ROUGH | 3 | — |
-| **Total** | **34 open** | **3 closed** |
+| `recorded` | 0 | Observed, not yet triaged |
+| `open` | 24 | Real, unfixed |
+| `fixed` | 13 | Corrected in code, with the branch or PR named on the entry |
+| `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
+| **Total** | **40** | D-001 … D-040, contiguous, no duplicates |
 
-37 recorded in total. Plus 4 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 2 UNVERIFIED.
+**Open by severity:** BROKEN 3 · WRONG 8 · FRAGILE 10 · ROUGH 3.
+
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30).
+`closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
+
+**A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
+
+**How to re-derive:** parse `^### (D-\d{3}) —` for entries and the following `**Status:**` / `**Severity:**` lines. A count computed any other way — including by adding up what changed on each branch — is a hypothesis. The previous version of this table was produced that way and was wrong by three: it dropped D-035, D-036 and D-037 entirely.
+
+Plus 4 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 2 UNVERIFIED. Those are open questions, not defects, and are counted separately.
 
 D-001 through D-024 are grouped by severity below. D-025 through D-034 are grouped in the **P2B — Configuration trace** section, and D-035 through D-037 in the **Production evidence reconciliation** section, because each is only readable alongside the trace that produced it.
 
@@ -47,6 +59,7 @@ All tenant isolation observed below is produced by **hand-written SQL predicates
 
 ### D-005 — Cross-tenant data leak: any title company can read another company's reports and schedules
 **Severity:** BROKEN · **Affects:** TITLE_COMPANY (attacker), COMPANY_REP + SPONSORED of every other company (victims)
+**Status:** `fixed` — PR #24
 
 `GET /v1/company/reports` and `GET /v1/company/schedules` accept a caller-supplied `rep_id` and never verify it belongs to the caller's company.
 
@@ -71,6 +84,7 @@ The `rep_id` values needed are UUIDs, but they are not secret: they are returned
 
 ### D-006 — No route in the company portal sets RLS context; enforcing RLS would blank the portal
 **Severity:** BROKEN (latent) · **Affects:** all company-portal users
+**Status:** `open`
 
 `apps/api/src/api/routes/company.py:13` imports `db_conn, fetchall_dicts, fetchone_dict` — **`set_rls` is not imported**, and none of the 10 handlers call it. The contract in `apps/api/src/api/db.py:48-51` states the required pattern (`with db_conn() as (conn, cur): set_rls(cur, account_id); ...`); 14 other route modules follow it (e.g. `apps/api/src/api/routes/reports.py:152-153`).
 
@@ -80,6 +94,7 @@ Handlers querying RLS-protected tables with no RLS context: `get_overview` (`com
 
 ### D-015 — The API test suite does not run, and has not for some time
 **Severity:** BROKEN · **Affects:** all — this is the mechanism, not a symptom
+**Status:** `fixed` — `fix/p4-broken-defects`
 
 **Read this one first.** Every other defect in this document is a thing that broke. This is the reason nothing caught them. `pytest apps/api/tests/` on `main` does not complete: 3 of 8 test modules fail at import, and 29 of the tests that do collect fail.
 
@@ -108,6 +123,7 @@ The failures are **not** concentrated in one file, as this entry originally stat
 
 ### D-016 — `signup_tokens` lives in a second migrations directory that nothing applies, so no invited account can be created
 **Severity:** BROKEN · **Affects:** TITLE_COMPANY, COMPANY_REP, SPONSORED, INDUSTRY_AFFILIATE (4 of the 5 personas)
+**Status:** `fixed` — `fix/p4-broken-defects`
 
 The `signup_tokens` table is created **only** in `apps/api/migrations/phase4_indexes.sql:38`. Neither runner touches that directory: `scripts/migrate.sh:9` globs `db/migrations/*.sql`, and `scripts/run_migrations.py:47` builds its path as `<repo>/db/migrations`. `grep -rl signup_tokens db/migrations/` returns nothing.
 
@@ -133,6 +149,7 @@ One thing that is right: the failed invite rolls back cleanly — 0 accounts and
 
 ### D-017 — `/v1/property/stats/affiliate` returns 500 on the empty state
 **Severity:** BROKEN · **Affects:** INDUSTRY_AFFILIATE
+**Status:** `fixed` — `fix/p4-broken-defects`
 
 `GET /v1/property/stats/affiliate` declares `response_model=AffiliateStatsResponse` (`apps/api/src/api/routes/property.py:835`) but the handler's return value omits the required `themes` field, so FastAPI raises after the handler succeeds:
 
@@ -147,6 +164,7 @@ Reproduced as an `INDUSTRY_AFFILIATE` with no sponsored agents — i.e. **the st
 
 ### D-018 — `/v1/dev/stripe-prices` crashes on a type mismatch
 **Severity:** WRONG · **Affects:** all (dev/staging surface)
+**Status:** `fixed` — `fix/p4-broken-defects`
 
 `apps/api/src/api/routes/dev_stripe_prices.py:34` indexes the catalog entries as dicts — `plan["plan_name"]`, `plan["stripe_price_id"]` — but `get_plan_catalog()` returns `PlanCatalog` objects:
 
@@ -158,6 +176,7 @@ TypeError: 'PlanCatalog' object is not subscriptable
 
 ### D-019 — Email verification is not enforced anywhere
 **Severity:** WRONG · **Affects:** REGULAR (and any self-registered account)
+**Status:** `open`
 
 `POST /v1/auth/register` creates the user with `email_verified = false` (confirmed in the database) and returns `{"ok":true,"email_verified":false}`. Logging in immediately afterwards with the same credentials **succeeds**, and every authenticated surface then works normally — `/v1/onboarding`, `/v1/me`, `/v1/account/plan-usage`, `/v1/reports`, `/v1/schedules`, `/v1/contacts` all returned 200 for the unverified account.
 
@@ -167,6 +186,7 @@ Minor, same endpoint: the docstring for `register` (`apps/api/src/api/routes/aut
 
 ### D-001 — A fresh database cannot be built by `scripts/migrate.sh`
 **Severity:** BROKEN · **Affects:** all (dev onboarding, CI, disaster recovery)
+**Status:** `fixed` — `fix/p4-broken-defects`
 
 `bash scripts/migrate.sh` against an empty database aborts at file 11 of 53.
 
@@ -185,6 +205,7 @@ Minor, same endpoint: the docstring for `register` (`apps/api/src/api/routes/aut
 
 ### D-007 — The `rep_id` filter does not filter
 **Severity:** WRONG · **Affects:** TITLE_COMPANY
+**Status:** `fixed` — PR #24
 
 Separate from the leak: when `rep_id` **is** a legitimate rep of the caller's company, the response still includes every other rep's rows. `company.py:502` computes `all_ids = agent_ids + rep_ids`, where `rep_ids` is unconditionally *all* the company's reps (`:485-489`). Only the agent set narrows. Same at `:568` for schedules.
 
@@ -192,6 +213,7 @@ Separate from the leak: when `rep_id` **is** a legitimate rep of the caller's co
 
 ### D-008 — Company agents page builds a filter link from a field the API never returns
 **Severity:** WRONG · **Affects:** TITLE_COMPANY
+**Status:** `open`
 
 `apps/web/app/app/company/agents/page.tsx:369` and `:392` link to `/app/company/agents?rep=${agent.rep_id}`, but `GET /v1/company/agents` returns no `rep_id` key. Verified response shape: `{agent_id, agent_name, email, rep_name, status, plan, reports_this_month, last_activity, created_at}` (`apps/api/src/api/routes/company.py:456-466`). `agent.rep_id` is `undefined`, so the link resolves to `?rep=undefined` and the page's filter (`agents/page.tsx:129`, `searchParams.get("rep")`) matches nothing.
 
@@ -199,6 +221,7 @@ Note the API also accepts no server-side rep filter for this endpoint — `list_
 
 ### D-004 — Plan catalog disagrees with every document, and local seed drifts from production
 **Severity:** WRONG · **Affects:** all (billing correctness — hand to Phase 3)
+**Status:** `open`
 
 After a full local migration the `plans` table holds: `affiliate`(5000), `free`(3), `pro`(99999), `sponsored_free`(3), `starter`(25), `team`(99999), **`trial`(3)**. `trial` appears in no documentation and was not among the slugs the audit found (`starter`, `solo`). `solo` is **absent locally** because its seed lives in `0012_seed_plans.sql`, which is unrunnable in a fresh build (D-001) — so a rebuilt database and the evolved production database do not have the same plan rows.
 
@@ -208,6 +231,7 @@ After a full local migration the `plans` table holds: `affiliate`(5000), `free`(
 
 ### D-003 — API source requires Python 3.12+ while `pyproject.toml` declares `^3.11`
 **Severity:** FRAGILE · **Affects:** all (runtime/deploy)
+**Status:** `open`
 
 `apps/api/src/api/services/email.py:729` contains an f-string whose expression part includes a backslash — legal only from Python 3.12. On 3.11 the app fails at **import**:
 ```
@@ -218,11 +242,13 @@ SyntaxError: f-string expression part cannot include a backslash
 
 ### D-002 — `scripts/run_migrations.py` silently skips statements and cannot run 0013+
 **Severity:** FRAGILE · **Affects:** all (schema drift)
+**Status:** `fixed` — `fix/p4-broken-defects`
 
 The README-documented runner splits each file on `;` and **drops any resulting chunk whose first line starts with `--`** (`scripts/run_migrations.py:22`) — a statement preceded by a comment is skipped without a warning. The same split shatters `DO $$ ... END $$` blocks (used throughout `0013_unify_plans_table.sql:15-33` and later migrations) at their internal semicolons. Its only tolerated error is "already exists" (`:30`), so it also dies on D-001. A database migrated with this runner can differ from one migrated with `migrate.sh`, with no error either way.
 
 ### D-009 — Redis is a hard dependency of every authenticated request, with no failure handling
 **Severity:** FRAGILE · **Affects:** all
+**Status:** `open`
 
 `RateLimitMiddleware` constructs its own Redis client at import/app-construction time (`apps/api/src/api/middleware/authn.py:203`) and calls `self.r.get(...)` / `.incr(...)` per request (`:216`, `:240`) with no try/except. If Redis is unreachable, **every authenticated request 500s**, including the entire company portal. `/health` is exempt only because it is on the public-path skip list (`:207`), so a health check would report the service up while every real request fails. (This also means D-009 is invisible to any monitor that polls `/health` — see the audit's finding that `/health` probes neither DB nor Redis.)
 
@@ -230,11 +256,13 @@ The README-documented runner splits each file on `;` and **drops any resulting c
 
 ### D-012 — No audit record for company-scoped reads
 **Severity:** FRAGILE · **Affects:** TITLE_COMPANY (and any incident response)
+**Status:** `open`
 
 Nothing in `apps/api/src/api/routes/company.py` writes an application-level record of who read what. There is no access-log table, and the `rep_id` filter value is not persisted anywhere. Consequence: the question "was D-005 ever exploited, and against whom?" **cannot be answered from the product's own database** — it has to go to the hosting provider's HTTP request logs, filtered to `/v1/company/reports` and `/v1/company/schedules` carrying a `rep_id` parameter, across the whole window since `db/migrations/0048_title_company_hierarchy.sql` shipped. Any tenant-scoped read path that a caller can parameterise should leave a record.
 
 ### D-013 — A database or Redis outage is reported to users as an auth failure
 **Severity:** FRAGILE · **Affects:** all authenticated users
+**Status:** `open`
 
 `_is_token_blacklisted` fails **closed**: any exception returns `True` (`apps/api/src/api/middleware/authn.py:189-190`), so the request is rejected with `401 {"detail":"Token has been invalidated"}`. Failing closed is the correct security posture; the reporting is wrong.
 
@@ -242,6 +270,7 @@ Observed live during this phase — when local Postgres stopped, every authentic
 
 ### D-020 — `scripts/migrate.sh` cannot be run twice, so no future migration can be applied with it
 **Severity:** BROKEN · **Affects:** all (deployment)
+**Status:** `fixed` — `fix/p4-broken-defects`
 
 `migrate.sh` re-applies **every** file in `db/migrations/` on each invocation — there is no tracking table (see T2.7). A second run against the same database fails, so adding migration `0054` and running the documented runner would abort before reaching it.
 
@@ -263,6 +292,7 @@ Not the same defect as D-001 (fresh build), which is fixed: a fresh database now
 
 ### D-022 — `0012_seed_plans.sql` could never have succeeded on a fresh build
 **Severity:** WRONG · **Affects:** all (schema provenance)
+**Status:** `fixed` — `fix/p4-broken-defects`
 
 `db/migrations/0007_phase_29a_plans_and_account_types.sql:11-17` creates `plans` with `monthly_report_limit INT NOT NULL` and no default. `0012_seed_plans.sql:5` then inserted `(plan_slug, plan_name, stripe_price_id, description)` — omitting that column. On any database where 0007 created the table, the insert fails:
 
@@ -277,6 +307,7 @@ Fixed on `fix/p4-broken-defects`: 0012 now supplies the column, with the values 
 
 ### D-023 — Tenancy structure is assigned by a display-name string match
 **Severity:** FRAGILE · **Affects:** TITLE_COMPANY, INDUSTRY_AFFILIATE
+**Status:** `open`
 
 `db/migrations/0050_pct_to_title_company.sql:8-13` promotes accounts to `TITLE_COMPANY` by matching `name ILIKE '%pacific coast%' OR slug ILIKE '%pacific-coast%'`. An account's type — which decides whether it gets the company portal or the affiliate surface, and which `apps/api/src/api/deps/company.py:24-31` enforces on every company endpoint — is therefore a consequence of how someone typed a display name.
 
@@ -284,6 +315,7 @@ Renaming that customer, or onboarding any other company whose name happens to co
 
 ### D-024 — `/v1/affiliate/all-reports` is gated differently from every sibling endpoint
 **Severity:** ROUGH · **Affects:** REGULAR
+**Status:** `open`
 
 Every other affiliate endpoint refuses a non-affiliate caller with `403 {"error":"not_affiliate_account"}` via `verify_affiliate_account`. `GET /v1/affiliate/all-reports` instead returns `200 {"reports":[],"total":0}` (`apps/api/src/api/routes/affiliates.py:879`), because it derives its account set from `sponsor_account_id = <caller>` and a non-affiliate sponsors nobody.
 
@@ -291,6 +323,7 @@ Not a leak — verified during the F5 audit — but the inconsistency means a ca
 
 ### D-021 — "Demo Title Company" sponsors agents while not being typed `TITLE_COMPANY`
 **Severity:** WRONG · **Affects:** TITLE_COMPANY, SPONSORED · **Source: Jerry's query against the deployed database, not reproduced locally**
+**Status:** `open`
 
 An account named "Demo Title Company" sponsors 3 agents but does not carry `account_type = 'TITLE_COMPANY'`. Consistent with `db/seed_demo_accounts_v2.sql:105-120`, which creates that account as `INDUSTRY_AFFILIATE` — the file predates `db/migrations/0048_title_company_hierarchy.sql`, which introduced the type.
 
@@ -302,11 +335,13 @@ Related and worth checking in the same pass: `db/migrations/0050_pct_to_title_co
 
 ### D-010 — `office_location` is accepted by the invite API and silently discarded
 **Severity:** ROUGH · **Affects:** TITLE_COMPANY
+**Status:** `open`
 
 `InviteRepRequest` accepts `office_location` (`apps/api/src/api/routes/company.py:32-39`) but no handler persists it, and `office` is hardcoded to `""` in every response (`:144`, `:392`). The rep table's "Office" column is therefore permanently blank.
 
 ### D-011 — `/v1/company/metrics` is fully wired but unreachable from the product
 **Severity:** ROUGH · **Affects:** TITLE_COMPANY
+**Status:** `open`
 
 The endpoint exists (`company.py:913`), its Next.js proxy exists (`apps/web/app/api/proxy/v1/company/metrics/route.ts`), and no page or hook calls it (no `useCompanyMetrics` in `apps/web/hooks/use-api.ts`). Either dead code (Phase 5 candidate) or an unfinished feature.
 
@@ -432,6 +467,7 @@ Tested by request, not inferred:
 
 ### D-014 — RLS cannot be enforced until policies model the account hierarchy
 **Severity:** FRAGILE · **Affects:** TITLE_COMPANY, COMPANY_REP, SPONSORED
+**Status:** `open`
 
 This is the ticket that was originally scoped as "harden the DB role and add `FORCE ROW LEVEL SECURITY`". **Doing only that would blank the company portal.** Written to stand alone; no prior context needed.
 
@@ -462,7 +498,7 @@ Today RLS is inert — the app connects as the `postgres` superuser, which owns 
 
 **Prerequisite check:** confirm production's policy set matches `db/migrations/` before designing — `SELECT * FROM pg_policies` against production. A second migrations directory exists (`apps/api/migrations/`, see D-002), so the deployed policy set is not guaranteed to match the repo.
 
-**Status:** C1 (predicate validation) and C2 (RLS context in all handlers) shipped on `fix/security-cross-tenant-leak`. C2 is a no-op until this ticket lands; it is a prerequisite for it, not a substitute.
+**Prerequisite work:** C1 (predicate validation) and C2 (RLS context in all handlers) shipped on `fix/security-cross-tenant-leak`. C2 is a no-op until this ticket lands; it is a prerequisite for it, not a substitute.
 
 ## P2B — Configuration trace (P1/P2/P3)
 
@@ -484,6 +520,7 @@ The two selectors are also **incompatible**, which is what makes D-025 possible:
 
 ### D-025 — The worker's own env template tells you to set a value that makes every PDF render fail
 **Severity:** BROKEN · **Affects:** every persona that generates any report · **CLOSED 2026-08-18 — NOT LIVE**
+**Status:** `closed-not-live` — worker logs, 8/17 — `PDF Engine: pdfshift` (`pdf_engine.py:340`); the deployed worker is not configured from its own template
 
 > **Resolution.** Worker logs show `📄 PDF Engine: pdfshift` three times on 8/17 (`pdf_engine.py:340`). The deployed worker is **not** configured from its own template, so `pdf_engine.py:359` never fires. The trap in `apps/worker/ENV_TEMPLATE.md:33` is real and still in the repo — anyone provisioning a new worker from that file walks into it — but nothing is broken in production today. Closed as not-live; the template line remains a documentation defect and is on the fix list below.
 
@@ -495,6 +532,7 @@ The same template block (`:34-35`) tells you to set `PDF_API_URL` and `PDF_API_K
 
 ### D-026 — Under `PDF_ENGINE=playwright` every market report silently loses its branded header and footer
 **Severity:** BROKEN · **Affects:** REGULAR, SPONSORED, INDUSTRY_AFFILIATE, COMPANY_REP — every market report · **CLOSED 2026-08-18 — NOT LIVE**
+**Status:** `closed-not-live` — worker logs, 8/17 — `PDF Engine: pdfshift` (`pdf_engine.py:340`); PDFShift is the branch that honours header/footer
 
 > **Resolution.** The worker runs `pdfshift`, which is the branch that *honours* `header_html`/`footer_html` (`pdf_engine.py:203-222`). Branded headers and footers are rendering in production. The silent-discard code path in `render_pdf_playwright` (`:79`) still exists and is still undefended — this defect becomes live the moment anyone sets `PDF_ENGINE=playwright`, which is exactly what `.env.example:87` defaults to and what is currently set on the API service. Closed as not-live; keep the entry, because the failure is silent and the trigger is a one-word env change.
 
@@ -510,6 +548,7 @@ Consumer (`tasks.py:1795`) and property (`property_report.py:474`) reports pass 
 
 ### D-027 — `pdf_adapter.py` is dead code that documents a third, non-existent engine selector
 **Severity:** WRONG · **Affects:** anyone reading the config
+**Status:** `open`
 
 Zero importers (proof in P1 above). It nonetheless defines `PDF_ENGINE` with a **different value set** than the live selector (`pdf_adapter.py:17` vs `pdf_engine.py:30`), and both `.env.example:91-92` and `apps/worker/ENV_TEMPLATE.md:34-35` advertise its variables as live configuration. `docs/architecture/SOURCE_OF_TRUTH.md:129,188` describes it as a "Playwright → PDFShift fallback", which is a mechanism that exists in neither module.
 
@@ -517,6 +556,7 @@ This is a Phase 5 deletion candidate under the prove-death standard in `docs/DEA
 
 ### D-028 — The branding sample-PDF and sample-JPG endpoints read a different key name than the one that is set
 **Severity:** BROKEN · **Affects:** every persona using the branding preview · **Conditional on `PDF_API_KEY` on the API service**
+**Status:** `open`
 
 `apps/api/src/api/routes/branding_tools.py:119` reads `os.getenv("PDF_API_KEY", "")`. You told me the API service has **`PDFSHIFT_API_KEY`** set. Those are different variables; nothing maps one to the other. Every other PDFShift call site in the codebase uses `PDFSHIFT_API_KEY` (`pdf_engine.py:31`, `social_engine.py:28`) — `branding_tools.py` is the lone outlier.
 
@@ -526,6 +566,7 @@ If `PDF_API_KEY` is unset, both endpoints fail closed with a 503 before doing an
 
 ### D-029 — `PRINT_BASE` on the worker is persisted as the user-visible "view in browser" link, and defaults to localhost
 **Severity:** WRONG · **Affects:** every persona · **CLOSED 2026-08-18 — NOT LIVE**
+**Status:** `closed-not-live` — worker logs, 8/17 — `print_base: https://reportscompany-web.vercel.app` (`pdf_engine.py:340`); `PRINT_BASE` is set
 
 > **Resolution.** Worker logs show `print_base: https://reportscompany-web.vercel.app` (`pdf_engine.py:340`). `PRINT_BASE` is set, so no report row has been stamped with a localhost link. The mechanism described below is confirmed correct and is *not* closed as wrong — it is closed as not-currently-failing.
 >
@@ -552,6 +593,7 @@ What I **can** confirm, and it is the part that matters mechanically:
 
 ### D-030 — The UAT host is the default, so any unset environment silently queries test data
 **Severity:** FRAGILE · **Affects:** REGULAR, SPONSORED (property reports)
+**Status:** `open`
 
 `sitex.py:39` defaults `SITEX_BASE_URL` to `https://api.uat.bkitest.com`. There is no environment check, no startup log of which host is in use beyond one `logger.info` at `:255`, and no marker on the resulting data. An unset variable does not fail — it returns plausible-looking test property data that is then persisted into `property_reports.sitex_data` and rendered into a customer's PDF. A production default should not point at a vendor's test gateway.
 
@@ -570,6 +612,7 @@ Note that the two providers are split by flow, not by environment: scheduled/ad-
 
 ### D-031 — A consumer report is recorded as delivered when no email was sent
 **Severity:** BROKEN · **Affects:** REGULAR, SPONSORED (lead capture / consumer CMA delivery) · **Conditional on `RESEND_API_KEY` on the worker**
+**Status:** `open`
 
 `process_consumer_report` (`tasks.py:1441`), email delivery branch, `:1894-1901`:
 
@@ -593,6 +636,7 @@ This is not recoverable after the fact by fixing the key: you cannot tell, from 
 
 ### D-032 — An unrecognised delivery method is also recorded as sent
 **Severity:** WRONG · **Affects:** REGULAR, SPONSORED
+**Status:** `open`
 
 `tasks.py:2020-2025`, the `else` arm of the same dispatch:
 
@@ -606,6 +650,7 @@ Same failure shape as D-031, different trigger: a report with no usable delivery
 
 ### D-033 — Failure notifications are the one alert that tells an agent their scheduled report broke, and they are skipped silently
 **Severity:** FRAGILE · **Affects:** every persona with a schedule · **Conditional on `RESEND_API_KEY` on the worker**
+**Status:** `open`
 
 `_send_failure_notification` (`tasks.py:654`), at `:668-671`:
 
@@ -620,6 +665,7 @@ Returning early here is the correct shape — unlike D-031, it does not lie. The
 
 ### D-034 — Five environment variables name the same web app, with three different defaults, and two of them ship broken links when unset
 **Severity:** FRAGILE · **Affects:** every persona
+**Status:** `open`
 
 | Variable | Read at | Default | What breaks if unset |
 |---|---|---|---|
@@ -712,6 +758,7 @@ Both are mine, from Phase 4, and neither was caught because 0053 was written aga
 
 ### D-035 — Three different limits could be enforced for the `starter` plan, and nobody has looked at the column that decides
 **Severity:** WRONG · **Affects:** REGULAR (every paying agent on `starter`) · **Extends D-004**
+**Status:** `open`
 
 Reported production `plans`: `free`=3, `starter`("Growth")=15, `pro`("Growth Plus")=99999, `solo`("Solo Agent")=25, `trial`=3, `team`, `affiliate`=5000, `sponsored_free`=3. Marketing sells Growth at 25/month.
 
@@ -743,6 +790,7 @@ FROM plans ORDER BY plan_slug;
 
 ### D-036 — A bridge outage strands manual market reports at `pending` with no error, no retry and no alert
 **Severity:** FRAGILE · **Affects:** REGULAR, SPONSORED, INDUSTRY_AFFILIATE, COMPANY_REP (manual reports); admin (retry)
+**Status:** `open`
 
 The consumer bridge is a separate Render service running `run_redis_consumer_forever` (`apps/worker/src/worker/tasks.py:2087-2158`): `blpop` off a Redis list, then `generate_report.delay(...)`.
 
@@ -761,6 +809,7 @@ So the cost of the two transient package-download 502s today was: nothing, if no
 
 ### D-037 — The bridge pops a job off the queue and then drops it permanently on any unexpected error
 **Severity:** WRONG · **Affects:** REGULAR, SPONSORED, INDUSTRY_AFFILIATE, COMPANY_REP (manual reports)
+**Status:** `open`
 
 `tasks.py:2116` pops with `blpop` — destructive — then parses and dispatches. The catch-all at `:2154-2157` logs and continues:
 
@@ -811,10 +860,13 @@ So the missing requirements file and the Python pin had to be fixed **together**
 
 ### D-038 — `requirements.txt` does not exist, so backend CI has never run a test
 **Severity:** BROKEN · **Affects:** all — this is a mechanism, not a symptom
+**Status:** `fixed` — PR #29
 
 `.github/workflows/backend-tests.yml:16` ran `pip install -r requirements.txt`. No such file exists at the repository root or anywhere else; `git log -- requirements.txt` returns nothing, so it was never committed and later removed — it was never there. Every run of the Backend Tests workflow failed at that step.
 
 `apps/api` and `apps/worker` are Poetry projects, each with a `pyproject.toml` and a `poetry.lock` (lock-version 2.1). The Render services build with `pip install poetry && poetry install --no-root`. The `requirements.txt` reference was a fiction the workflow inherited; nothing in the repository ever produced or consumed that file.
+
+**First run that could execute, on merged `main` at `3751a5c`: 34 failed, 34 passed, 9 skipped, 5 errors.** That is the real number, not a projection — it matches the post-Phase-4 baseline, confirming the 34 failures are pre-existing and were simply never visible. Clearing them is D-015's tail and belongs to Phase 3.
 
 **Fixed on this branch** by switching the workflow to Poetry, installing both projects into one shared virtualenv, and running `pytest` once from the repository root. One environment is required rather than convenient: `pytest.ini` declares a single session spanning both packages, and `apps/worker/tests/test_unsubscribe_token_roundtrip.py` imports from both — the worker signs the unsubscribe token and the API verifies it, so testing that contract needs both dependency sets present together.
 
@@ -822,6 +874,7 @@ So the missing requirements file and the Python pin had to be fixed **together**
 
 ### D-039 — `pyproject.toml` declares `^3.11` while the source requires 3.12+
 **Severity:** WRONG · **Affects:** all — CI, local setup, and anyone trusting the declaration · **Supersedes the diagnosis in D-003**
+**Status:** `fixed` — PR #29
 
 All three `pyproject.toml` files (`apps/api`, `apps/worker`, `libs/shared`) declared `python = "^3.11"`. The API source does not compile on 3.11: `apps/api/src/api/services/email.py` interpolates strings containing `\u` escapes inside f-string **expression** parts, which PEP 701 permits only from 3.12. `py_compile` on 3.11 gives `SyntaxError: f-string expression part cannot include a backslash` at `services/email.py:729`.
 
@@ -835,6 +888,7 @@ The alternative fix — replacing the `’` / `—` escapes in `services/email.p
 
 ### D-040 — The deployed Python version is not pinned anywhere in the repository
 **Severity:** FRAGILE · **Affects:** all — every service, every deploy
+**Status:** `fixed` — PR #30
 
 D-039's conclusion that production runs Python 3.12+ is **inferred from the API service being up**, not read from any configuration. It cannot be read from configuration, because none exists. Checked, all absent:
 
