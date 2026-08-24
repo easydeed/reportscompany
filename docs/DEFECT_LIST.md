@@ -704,11 +704,21 @@ The same name (`WEB_BASE`, `APP_BASE`) resolves to a different default in two di
 
 This is the first of the seven "Definition of Stable" items proven against production rather than a local harness, and it retires the largest open question in Rev A. It also matches the code path exactly: `apps/worker/src/worker/schedules_tick.py:300-301` dispatches with `celery.send_task("generate_report", ...)` **directly to Celery**, so scheduled delivery never touches the Redis bridge and is not exposed to D-036 or D-037 below.
 
-**One number to chase before calling it clean:** 769 − 585 = **184 runs that are not `completed`** (24%). If those are `failed`, that is close to a one-in-four failure rate on the product's flagship feature and belongs in Phase 3 as its own investigation. If they are `pending`/`running` rows from in-flight or abandoned ticks, it is bookkeeping. One query settles it:
+**The 184 non-completed runs, resolved 2026-08-18** (queried by Cursor — do not re-run):
 
-```sql
-SELECT status, count(*) FROM schedule_runs GROUP BY status ORDER BY 2 DESC;
-```
+| status | count | reading |
+|---|---|---|
+| `completed` | 585 | delivered |
+| `skipped_limit` | 95 | the plan cap firing on real users — **not a failure**, see D-035 |
+| `queued` | 57 | in flight or abandoned ticks |
+| `failed` | 32 | actual failures |
+| **total** | **769** | |
+
+**The real failure rate is 32/769 = 4.2%, not the 24% this section originally implied.** That earlier figure was `769 − 585` treated as if every non-completed row were a failure, which is exactly the inference this document keeps warning against — a number derived by subtraction rather than read from the source. Corrected here rather than left standing.
+
+The 95 `skipped_limit` rows are the more interesting half. They are not delivery breaking; they are **D-035's cap firing on paying customers** — `starter` accounts hitting a 15-report ceiling while being sold 25. Autonomous delivery is working; the plan configuration is what is turning reports away.
+
+32 genuine failures across 769 runs is worth a Phase 3 look at *why*, but it is a tail, not a systemic problem, and S2 stands as proven.
 
 ### Migration state in production — the bootstrap warning is confirmed, and it reaches further than 0053
 
@@ -756,7 +766,7 @@ Both are mine, from Phase 4, and neither was caught because 0053 was written aga
 - **0042 and 0053 declare the same indexes under different names.** `idx_schedule_runs_schedule_date (schedule_id, created_at)` is definitionally identical to 0042's `idx_schedule_runs_schedule_created (schedule_id, created_at)`; `idx_cgm_member_lookup (member_type, member_id, account_id)` supersedes 0042's `idx_cgm_member (member_type, member_id)`; `idx_report_gen_account_status_generated` overlaps `idx_report_generations_account_generated`. Applying both files creates three redundant index pairs that cost write throughput and disk for nothing. Apply one.
 - **0053's `idx_api_keys_hash` can never be created.** `0001:113` already creates that name without a predicate; `0053:41` declares it `WHERE is_active = TRUE`. `CREATE INDEX IF NOT EXISTS` matches on **name, not definition**, so 0053's partial version is silently skipped wherever 0001 has run — which is everywhere. Production's index is 0001's unpartial one, and 0053 claims a partial index it will never produce. Harmless in effect, dishonest in the file.
 
-### D-035 — Three different limits could be enforced for the `starter` plan, and nobody has looked at the column that decides
+### D-035 — `starter` is enforced at 15 while marketing sells 25, and the cap is firing on real users
 **Severity:** WRONG · **Affects:** REGULAR (every paying agent on `starter`) · **Extends D-004**
 **Status:** `open`
 
@@ -764,23 +774,28 @@ Reported production `plans`: `free`=3, `starter`("Growth")=15, `pro`("Growth Plu
 
 **The 15 is not what gates market report creation.** `POST /v1/reports` calls `get_full_plan_usage` (`routes/reports.py:156`), which reads `plan["market_reports_limit"]` (`services/usage.py:248,255`) — the **per-product** column added by `0051_per_product_limits.sql:5`. The reported 15 is `plans.monthly_report_limit`, the **legacy** column, read only by `evaluate_report_limit` (`usage.py:324`), which `usage.py:319` itself labels backward-compatibility and which the market-report gate no longer calls.
 
-So the enforced number depends entirely on `plans.market_reports_limit` — a column that was not in the dump. Three outcomes, and they are far apart:
+**ANSWERED 2026-08-18 — queried against production by Cursor. Do not re-run this.**
+
+```
+plan_slug | plan_name | market_reports_limit | monthly_report_limit
+starter   | Growth    | 15                   | 15
+```
+
+`market_reports_limit = 15`. **Not NULL, and not the floor-of-3 case** — 0051 did reach production and set the column, so the third branch below is ruled out. The gate at `routes/reports.py:156` → `usage.py:248` reads 15 and enforces 15.
+
+So the answer is the middle row: **enforced at 15, sold at 25.** Marketing oversells by 10 reports a month, and the defect is WRONG rather than BROKEN — customers get fewer reports than advertised, not the catastrophic 3.
+
+**It is not theoretical: the cap is firing.** `schedule_runs` carries **95 rows with status `skipped_limit`** — real users hitting a ceiling set 10 below what they were sold. That figure also resolves the S2 question above; see that section.
+
+The three outcomes were enumerated before the query, and are kept because the reasoning that produced the floor-of-3 branch is what made the query worth running — `_first_not_none` genuinely does fall through to 3 rather than to `monthly_report_limit`, and that remains true for any plan whose `market_reports_limit` is NULL:
 
 | If `starter.market_reports_limit` is… | Enforced limit | How |
 |---|---|---|
-| `25` (0051 applied — `:14` and `:56-60` both set it) | **25** | Matches marketing. The 15 is vestigial. |
-| `15` (set by hand, or by something later) | **15** | Matches the legacy column and the internal docs. Marketing oversells by 10. |
-| **`NULL`** (0051 never applied) | **3** | `_first_not_none(mkt_override, limit_override, mkt_plan_limit, default=3)` (`usage.py:131`) does **not** fall back to `monthly_report_limit` — it falls through to the hard floor of **3**. |
+| `25` (0051 applied — `:14` and `:56-60` both set it) | **25** | Would match marketing. **Ruled out — the column is 15.** |
+| **`15`** | **15** | ← **This is production.** Matches the legacy column and the internal docs. Marketing oversells by 10. |
+| `NULL` (0051 never applied) | **3** | `_first_not_none(mkt_override, limit_override, mkt_plan_limit, default=3)` (`usage.py:131`) does **not** fall back to `monthly_report_limit` — it falls through to the hard floor of **3**. **Ruled out — the column is populated.** Still live for any plan whose column is NULL. |
 
-The third is not hypothetical. We have just established that at least one numbered migration in this range never reached production; 0051 is four files away from 0042. **If 0051 is unapplied, every paying `starter` customer is capped at 3 market reports a month while being sold 25**, and the 429 they receive quotes `3` as their limit (`reports.py:160-172`). That would be a BROKEN customer-facing defect, not a WRONG one.
-
-**One query settles it, and it should be run before anything else in Phase 3:**
-
-```sql
-SELECT plan_slug, plan_name, monthly_report_limit, market_reports_limit,
-       schedules_limit, property_reports_per_month
-FROM plans ORDER BY plan_slug;
-```
+**The fix is a value, not code.** Decide whether Growth is a 15-report plan or a 25-report plan, then set `market_reports_limit` and `monthly_report_limit` to match the marketing copy — or change the copy. Both columns, because the legacy one still feeds `evaluate_report_limit`.
 
 **Independent of the limit question, the naming is wrong three ways at once.** For `plan_slug='starter'`: the database says `plan_name='Growth'`; the API overrides it and returns **"Starter"** (`_PLAN_DISPLAY_NAMES` at `usage.py:32` wins over the DB value at `usage.py:139`); and every piece of user-facing copy says **"Growth"** (`apps/web/components/stripe-billing-actions.tsx:98`, `components/marketing/faq.tsx:35`, `.cursor/rules/skills/references/architecture.md:70-71`). A customer on Growth sees "Growth" on the marketing site and "Starter" in their own account page. The same collision exists for `pro`/`team` → "Pro" vs "Growth Plus".
 
@@ -832,9 +847,9 @@ This is the same user-visible symptom as D-036 (a report stuck at pending) with 
 | D-030 | `SITEX_CLIENT_ID` / `SITEX_CLIENT_SECRET` / `SITEX_FEED_ID` on the API; plus vendor confirmation of `api.bkiconnect.com` |
 | D-031, D-032, D-033 | `RESEND_API_KEY` on the **worker** — the false-`sent` path. Still the highest-value unknown left: it writes incorrect data rather than failing. |
 | D-034 | `WEB_BASE`, `APP_BASE`, `FRONTEND_URL` on the worker. `WEB_BASE` first — unset means a `localhost:3000` unsubscribe link in every outbound email. |
-| D-035 | `SELECT ... market_reports_limit FROM plans` — decides whether starter is enforced at 3, 15 or 25 |
+| ~~D-035~~ | **ANSWERED** — `market_reports_limit = 15`. Enforced 15, sold 25. Floor-of-3 ruled out. |
 | D-036 | The bridge service's start command |
-| S2 | `SELECT status, count(*) FROM schedule_runs GROUP BY status` — what the 184 non-completed runs are |
+| ~~S2~~ | **ANSWERED** — 585 completed / 95 `skipped_limit` / 57 queued / 32 failed. Real failure rate 4.2%. |
 | Migration audit | The four-index confirming query, before any `--bootstrap` |
 ## Why none of this was caught: two independent mechanisms
 
