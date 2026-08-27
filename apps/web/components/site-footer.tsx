@@ -1,10 +1,21 @@
 /**
  * Site-wide footer. Same rationale as site-nav.tsx.
  *
- * Anchors are root-relative so they work off the landing page.
+ * Anchors are root-relative so they work off the landing page. All three
+ * (#how-it-works, #pricing, #faq) were verified to have matching section IDs
+ * on the landing page — see how-it-works.tsx:385, pricing.tsx:59, faq.tsx:51.
  *
- * NOTE: the mailto entries here ("For Title Companies", "Contact Us") are
- * M4-T1/M4-T2 and are deliberately untouched by M2.
+ * Every remaining entry resolves to a real page or a real section. There are
+ * no mailto links left in the navigation columns (M4-T1, M4-T2):
+ *
+ * - "For Title Companies" was `mailto:sales@trendyreports.io`, sitting in a
+ *   list of page links, and `/for-title-companies` does not exist. A nav entry
+ *   that silently opens a blank email client is a dead end that looks like a
+ *   destination; a missing link is better. The page is M6, gated on G4 —
+ *   restore this entry when the route exists.
+ * - Support is now one labelled contact line showing the actual address,
+ *   instead of a nav-styled "Contact Us" that hid a mailto. The reader can see
+ *   where it goes, copy it, or use it in whatever client they actually use.
  */
 export function SiteFooter() {
   return (
@@ -31,11 +42,6 @@ export function SiteFooter() {
                 </a>
               </li>
               <li>
-                <a href="mailto:sales@trendyreports.io" className="text-sm transition-colors hover:text-white">
-                  For Title Companies
-                </a>
-              </li>
-              <li>
                 <a href="/#pricing" className="text-sm transition-colors hover:text-white">
                   Pricing
                 </a>
@@ -50,16 +56,20 @@ export function SiteFooter() {
             </p>
             <ul className="mt-4 space-y-3">
               <li>
-                <a href="mailto:support@trendyreports.io" className="text-sm transition-colors hover:text-white">
-                  Contact Us
-                </a>
-              </li>
-              <li>
                 <a href="/#faq" className="text-sm transition-colors hover:text-white">
                   FAQ
                 </a>
               </li>
             </ul>
+            <p className="mt-4 text-sm">
+              Email us at{" "}
+              <a
+                href="mailto:support@trendyreports.io"
+                className="text-white underline underline-offset-2 transition-colors hover:text-[#818CF8]"
+              >
+                support@trendyreports.io
+              </a>
+            </p>
           </div>
 
           {/* Legal */}
