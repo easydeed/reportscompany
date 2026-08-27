@@ -7,21 +7,21 @@
 
 ## Status
 
-**Last reconciled:** 2026-08-27, against `fix/m3-copy-truth` (stacked on `fix/frontend-ci`, itself cut from `main` at `d382808`).
+**Last reconciled:** 2026-08-27, against `fix/m4-nav-identity` (stacked on `fix/m3-copy-truth` → `fix/frontend-ci` → `main` at `d382808`).
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 29 | Real, unfixed |
-| `fixed` | 16 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 30 | Real, unfixed |
+| `fixed` | 17 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **48** | D-001 … D-048, contiguous, no duplicates |
+| **Total** | **50** | D-001 … D-050, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 11 · FRAGILE 10 · ROUGH 4. (Sums to 29, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 11 · FRAGILE 10 · ROUGH 5. (Sums to 30, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -30,7 +30,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 Plus 4 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 2 UNVERIFIED. Those are open questions, not defects, and are counted separately.
 
-D-001 through D-024 are grouped by severity below. D-025 through D-034 are grouped in the **P2B — Configuration trace** section, D-035 through D-037 in the **Production evidence reconciliation** section, and D-041 through D-048 in the **Phase M — Marketing / UX** section, because each is only readable alongside the trace that produced it.
+D-001 through D-024 are grouped by severity below. D-025 through D-034 are grouped in the **P2B — Configuration trace** section, D-035 through D-037 in the **Production evidence reconciliation** section, and D-041 through D-050 in the **Phase M — Marketing / UX** section, because each is only readable alongside the trace that produced it.
 
 **Reading note on the P2B entries:** six were written as conditional on environment values I did not have. Production logs have since settled three of them (two BROKEN, one WRONG — all closed, with evidence). The remaining conditionals are listed at the end of the reconciliation section.
 
@@ -1163,6 +1163,35 @@ Two distinct problems. **The site contradicts itself on how many customers it ha
 **Not edited here, deliberately.** Three of the four figures are social proof, which is M3-T3 and gated on G2. Removing only the uptime cell would leave the 1,200-versus-2,000 contradiction standing — the "one uniform-but-wrong site into two inconsistent halves" outcome. It needs one decision covering the page: correct the numbers once G2 is answered, or unpublish a page that is already unlinked and unindexed.
 
 **One more instance, dead rather than live:** `packages/ui/src/components/marketing-home.tsx:588-589` also carries `99.9% / Uptime`, plus the SOC 2 badge `725802a` explicitly deferred. `packages/ui` is imported by nothing in `apps/` — it meets the Phase 5 death standard and its copy should be deleted with the package rather than corrected.
+
+### D-049 — Footer navigation entries were mailto links, one of them to a page that does not exist
+**Severity:** ROUGH · **Affects:** every visitor to a secondary page
+**Status:** `fixed` — `fix/m4-nav-identity`
+
+Chrome findings #7 and #8. A nav entry that opens a blank email client is a dead end dressed as a destination — the reader clicks expecting a page and gets an empty compose window with no context.
+
+**In the live footer** (`components/site-footer.tsx`), two entries:
+
+- **"For Title Companies"** → `mailto:sales@trendyreports.io`, sitting in the Product column between two real page links. `apps/web/app/for-title-companies/` **does not exist**, so there was no page to link to even in principle. Removed. The page is M6, gated on G4; restore the entry when the route exists — a missing link is better than a dead end.
+- **"Contact Us"** → `mailto:support@trendyreports.io`, styled as a nav link. Replaced with a single labelled contact line that shows the actual address, so the reader can see where it goes, copy it, or use whatever client they actually use. FAQ stays a link because `#faq` is a real section.
+
+**In the dead footer** (`components/footer.tsx`), the "Company" column was **Partners, Press and Support — three nav entries, all mailto**. That is the "site with no company behind it" shape finding #7 describes. Per the ticket, deleting the headings is the fix rather than building Partners/Press pages; here the whole file went, because it renders nowhere.
+
+**`components/footer.tsx` and `components/navbar.tsx` deleted.** Both meet the Phase 5 death standard, confirmed rather than assumed: their exported symbols `Footer` and `Navbar` have **zero references anywhere** in `app/`, `components/` or `lib/` — searched by symbol as well as by import path, so relative imports could not hide one. M2 replaced them with `site-nav.tsx` / `site-footer.tsx`. Verified with a full `next build` (exit 0), not just `tsc`. Deleted here rather than left for a future audit to re-litigate.
+
+**Every remaining nav and footer entry was verified to resolve** — the eight anchors across both components all have matching section IDs on the landing page (`how-it-works.tsx:385`, `report-types.tsx:101`, `lead-capture.tsx:41`, `contact-management.tsx:123`, `pricing.tsx:59`, `faq.tsx:51`). This matters because M2 made these anchors root-relative, which fixed *where* they point without establishing that anything is *there*; a bare `#fragment` that resolves to nothing fails just as silently as one on the wrong route.
+
+**M4-T3 not done — G3 unanswered.** `/privacy:186` and `/terms:192` still carry "123 Market Street, San Francisco, CA 94103" and "(415) 555-1234", on the exact pages a title company reads during vendor diligence. Per the ticket, no substitute placeholder is to be shipped, and an omitted phone is neutral where a fake one is disqualifying.
+
+### D-050 — `components/v0/` is six files with no importers
+**Severity:** ROUGH · **Affects:** nobody at runtime — this is dead weight and a re-litigation risk
+**Status:** `open`
+
+`apps/web/components/v0/` contains `Navbar.tsx`, `code-tabs.tsx`, `dashboard-overview.tsx`, `new-report-wizard.tsx`, `segmented-control.tsx`, `tag-input.tsx`. **All six have zero importers.**
+
+`v0/Navbar.tsx:16` carries `{ label: "Partners", href: "#partners" }` — the same Partners entry M4-T1 removed, and `#partners` matches no section anywhere. So a future audit sweeping for "Partners" will find it again and re-open a closed finding.
+
+Recorded rather than deleted because this is a different path from PR #27's `v0-report-builder/` and belongs with that dead-code removal, not inside a navigation ticket. **PR #27 is still unmerged** — this should go in with it.
 
 ---
 
