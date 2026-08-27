@@ -1,6 +1,5 @@
 "use client"
 
-import { AVATAR_INITIALS } from "@/lib/demo-data";
 import * as React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
@@ -11,7 +10,11 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 
 const benefits = [
-  "Unlimited market reports from live MLS data",
+  // M3-T2: was "Unlimited market reports from live MLS data". This list is
+  // shown to someone signing up, and signup lands them on `free`, which is
+  // capped at 3 market reports a month. Only Growth Plus (`pro`) is unlimited,
+  // so the word promised the top tier's allowance to everyone reading it.
+  "Market reports from live MLS data",
   "Branded email and PDF delivery on autopilot",
   "Lead capture pages with QR code integration",
   "Contact management with group segmentation",
@@ -81,7 +84,8 @@ export default function RegisterPage() {
             market reports today.
           </h2>
           <p className="mt-4 text-lg text-[#94A3B8]">
-            14-day free trial. No credit card required.
+            {/* G1b: Free is a permanent plan, not a trial. */}
+            Free plan, no time limit. No credit card required.
           </p>
         </div>
 
@@ -97,44 +101,13 @@ export default function RegisterPage() {
           ))}
         </div>
 
-        {/* Social proof */}
-        <div>
-          <div className="flex items-center gap-1">
-            {[...Array(5)].map((_, i) => (
-              <svg
-                key={i}
-                className="h-5 w-5 text-[#818CF8]"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-                aria-hidden="true"
-              >
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-            ))}
-            <span className="ml-2 text-sm font-medium text-[#94A3B8]">
-              4.9/5 from 500+ agents
-            </span>
-          </div>
-          <div className="mt-4 flex -space-x-3">
-            {[
-              "bg-[#6366F1]",
-              "bg-[#4338CA]",
-              "bg-[#818CF8]",
-              "bg-[#475569]",
-              "bg-[#334155]",
-            ].map((color, i) => (
-              <div
-                key={i}
-                className={`flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#1E293B] text-xs font-bold text-white ${color}`}
-              >
-                {AVATAR_INITIALS[i]}
-              </div>
-            ))}
-            <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#1E293B] bg-white/10 text-xs font-medium text-[#94A3B8]">
-              +495
-            </div>
-          </div>
-        </div>
+        {/* G2: the social-proof block is deleted, not softened.
+            It carried "4.9/5 from 500+ agents" over a five-star row, plus an
+            avatar strip ending in "+495" — the same unsourced 500 encoded a
+            second time, so trimming the caption alone would have left the
+            claim standing in the graphic. Neither figure names a source, and
+            /login's adjacent "2,000+ agents" contradicted it.
+            Restore only with a real, citable number. */}
       </div>
 
       {/* Right — Form panel */}
@@ -149,7 +122,8 @@ export default function RegisterPage() {
             Create your account
           </h1>
           <p className="mt-2 text-muted-foreground">
-            Start your 14-day free trial. No credit card needed.
+            {/* G1b: Free is a permanent plan, not a trial. */}
+            Start on the free plan. No credit card needed.
           </p>
 
           {/* Error Display */}
@@ -163,17 +137,10 @@ export default function RegisterPage() {
             </div>
           )}
 
-          {/* Divider */}
-          <div className="relative mt-8">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="bg-background px-4 text-muted-foreground">
-                Register with email
-              </span>
-            </div>
-          </div>
+          {/* M3-T6: the "Register with email" divider is gone, not just the
+              "with email" qualifier — it divided the heading from the form with
+              nothing above it, and its only content implied sign-up
+              alternatives that do not exist. Restore if SSO ships. */}
 
           {/* Form */}
           <form className="mt-8 space-y-5" onSubmit={handleSubmit}>

@@ -28,7 +28,7 @@ export default function AboutPage() {
       {/* Story Section */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-50">
         <div className="max-w-[1000px] mx-auto">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div className="grid gap-12 items-center">
             <div>
               <h2 className="font-display font-semibold text-3xl text-slate-900 mb-6">Our Story</h2>
               <div className="space-y-4 text-slate-600 leading-relaxed">
@@ -42,31 +42,20 @@ export default function AboutPage() {
                   of 3 hours? What if it could be automated entirely?
                 </p>
                 <p>
-                  TrendyReports was born from that question. Today, we help over 1,200 real estate
-                  professionals reclaim their time while delivering better market intelligence to their clients.
+                  TrendyReports was born from that question, and that is still what the
+                  product does: turn MLS data into a branded, client-ready market report
+                  without the afternoon of spreadsheet work.
                 </p>
               </div>
             </div>
-            <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl p-8 text-white">
-              <div className="grid grid-cols-2 gap-8">
-                <div>
-                  <div className="text-4xl font-display font-bold mb-2">1,200+</div>
-                  <div className="text-indigo-200">Active Users</div>
-                </div>
-                <div>
-                  <div className="text-4xl font-display font-bold mb-2">50K+</div>
-                  <div className="text-indigo-200">Reports Generated</div>
-                </div>
-                <div>
-                  <div className="text-4xl font-display font-bold mb-2">3hrs</div>
-                  <div className="text-indigo-200">Saved Weekly/User</div>
-                </div>
-                <div>
-                  <div className="text-4xl font-display font-bold mb-2">99.9%</div>
-                  <div className="text-indigo-200">Uptime</div>
-                </div>
-              </div>
-            </div>
+            {/* G2: the entire stats card is deleted. All four figures were
+                unsourced — "1,200+ Active Users", "50K+ Reports Generated",
+                "3hrs Saved Weekly/User", "99.9% Uptime". The user count
+                contradicted /login ("2,000+ agents") and /register ("500+"),
+                and the 99.9% is the same uptime claim commit 725802a removed
+                from /login in June 2026 after deleting /status for fabricated
+                uptime numbers with no monitoring behind them — this page was
+                simply missed. Restore only figures that can name a source. */}
           </div>
         </div>
       </section>
@@ -183,13 +172,13 @@ export default function AboutPage() {
             Ready to reclaim your time?
           </h2>
           <p className="text-xl text-slate-600 mb-8">
-            Join 1,200+ real estate professionals who have automated their market reports.
+            Automate your market reports and get that afternoon back.
           </p>
           <a
-            href="/login"
+            href="/register"
             className="inline-flex items-center justify-center bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-lg px-8 h-14 rounded-lg shadow-lg hover:shadow-xl transition-all font-medium"
           >
-            Start Your Free Trial
+            Start free
           </a>
         </div>
       </section>

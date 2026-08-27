@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-08-27, against `chore/disable-e2e-workflow`, cut from `main` at `700ed44` (PRs #33–#37 all merged).
+**Last reconciled:** 2026-08-27, against `fix/m3-copy-truth`, cut from `main` at `524ce99` (PRs #33–#38 all merged).
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
@@ -15,13 +15,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 29 | Real, unfixed |
-| `fixed` | 18 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 20 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **50** | D-001 … D-050, contiguous, no duplicates |
+| **Total** | **52** | D-001 … D-052, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 3 · WRONG 11 · FRAGILE 10 · ROUGH 5. (Sums to 29, the open total.)
+**Open by severity:** BROKEN 3 · WRONG 10 · FRAGILE 10 · ROUGH 6. (Sums to 29, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -30,7 +30,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 Plus 4 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 2 UNVERIFIED. Those are open questions, not defects, and are counted separately.
 
-D-001 through D-024 are grouped by severity below. D-025 through D-034 are grouped in the **P2B — Configuration trace** section, D-035 through D-037 in the **Production evidence reconciliation** section, and D-041 through D-050 in the **Phase M — Marketing / UX** section, because each is only readable alongside the trace that produced it.
+D-001 through D-024 are grouped by severity below. D-025 through D-034 are grouped in the **P2B — Configuration trace** section, D-035 through D-037 in the **Production evidence reconciliation** section, and D-041 through D-052 in the **Phase M — Marketing / UX** section, because each is only readable alongside the trace that produced it.
 
 **Reading note on the P2B entries:** six were written as conditional on environment values I did not have. Production logs have since settled three of them (two BROKEN, one WRONG — all closed, with evidence). The remaining conditionals are listed at the end of the reconciliation section.
 
@@ -797,6 +797,14 @@ The three outcomes were enumerated before the query, and are kept because the re
 
 **The fix is a value, not code.** Decide whether Growth is a 15-report plan or a 25-report plan, then set `market_reports_limit` and `monthly_report_limit` to match the marketing copy — or change the copy. Both columns, because the legacy one still feeds `evaluate_report_limit`.
 
+**ANSWERED (G1a): Growth is 25, and the DATA changes, not the copy.**
+
+**Fix written, not yet applied — `db/migrations/0054_growth_plan_report_limit.sql` on `fix/m3-copy-truth`.** It sets both columns to 25 for `plan_slug='starter'`, leaves `plan_name` alone (production has renamed it "Growth"; overwriting that from a stale repository value inside a limits migration would be a silent regression), and is idempotent.
+
+**Status stays `open` deliberately.** This defect is a value in the production database, and writing a migration does not change one. It closes when Jerry applies 0054 and the verification query in its header returns `25 | 25`. Marking it `fixed` on the strength of an unapplied migration would be exactly the kind of unbacked status claim the header of this document forbids.
+
+Verified locally against a database seeded from `db/migrations/`: reproduced production's `15 | 15`, applied 0054, got `25 | 25`, re-applied and got `25 | 25` again. **95 `skipped_limit` rows say real users are hitting the 15 today**, so this is the one item in this batch with a live customer cost attached to the delay.
+
 **Independent of the limit question, the naming is wrong three ways at once.** For `plan_slug='starter'`: the database says `plan_name='Growth'`; the API overrides it and returns **"Starter"** (`_PLAN_DISPLAY_NAMES` at `usage.py:32` wins over the DB value at `usage.py:139`); and every piece of user-facing copy says **"Growth"** (`apps/web/components/stripe-billing-actions.tsx:98`, `components/marketing/faq.tsx:35`, `.cursor/rules/skills/references/architecture.md:70-71`). A customer on Growth sees "Growth" on the marketing site and "Starter" in their own account page. The same collision exists for `pro`/`team` → "Pro" vs "Growth Plus".
 
 **`solo` is the trap.** It carries 25 — the number marketing sells — has no UI presence, and `_PLAN_DISPLAY_NAMES` maps it to "Starter" as well (`usage.py:33`). Anyone reconciling "which row holds the 25 we advertise?" will find `solo` and be tempted to point `starter` customers at it. `solo` is a legacy slug seeded by `0012_seed_plans.sql:11`; the live plan is `starter`. Fix the column, not the slug.
@@ -1106,7 +1114,7 @@ Also verified with the sidebar **collapsed** as well as expanded (12/12 clean), 
 
 ### D-046 — "Priority Generation" is sold on the $29 tier and does not exist
 **Severity:** WRONG · **Affects:** every Growth Plus subscriber
-**Status:** `open`
+**Status:** `fixed` — `fix/m3-copy-truth`
 
 `apps/web/components/marketing/pricing.tsx:50` lists **Priority Generation** as a Growth Plus ($29/mo) feature, repeated in-app at `apps/web/app/app/settings/billing/page.tsx:99`. **No implementation exists anywhere in the repository.** A Growth Plus account's report is enqueued and processed identically to a Free account's.
 
@@ -1122,7 +1130,11 @@ Verified directly, not inferred:
 
 **This is why M3-T5 was not executed as written.** That ticket says to "derive real definitions from the code rather than inventing marketing language — these are implemented features," and to add explanatory tooltips. For this bullet there is nothing to derive: writing a tooltip would be inventing exactly the marketing language the ticket forbids, and would state the false claim more confidently than the bare bullet does.
 
-The correct fix is to delete the bullet, but that changes what a paid tier offers and is a product decision, not a copy fix — and the tier structure is already G1-gated. **Escalated rather than actioned.**
+The correct fix is to delete the bullet, but that changes what a paid tier offers and is a product decision, not a copy fix — and the tier structure was G1-gated. Escalated rather than actioned at the time.
+
+**ANSWERED (G1c): delete it from every tier.** Removed from `components/marketing/pricing.tsx` (Growth Plus) and `app/app/settings/billing/page.tsx` (the in-app plan card), with the evidence above recorded at both sites so it cannot be restored as copy without someone first building the feature. A repo-wide grep for "Priority Generation" now returns only those two comments.
+
+Nothing was built to back the claim, and nothing should be: this closes as a copy correction. If prioritised generation is ever wanted as a product, it starts from an empty queue design — there is no partial implementation to finish.
 
 ### D-047 — "AI Market Insights" is sold as a paid differentiator but is not plan-gated
 **Severity:** WRONG · **Affects:** pricing accuracy on every tier, in both directions
@@ -1152,7 +1164,7 @@ So the claim is wrong whichever way the worker is configured: with it **on**, Fr
 
 ### D-048 — `/about` contradicts `/login` on user count and still carries the uptime claim removed in June
 **Severity:** WRONG · **Affects:** anyone who reaches `/about` by URL
-**Status:** `open`
+**Status:** `fixed` — `fix/m3-copy-truth`
 
 Found by sweeping for the M3-T4 claims rather than editing only the page the ticket named. `apps/web/app/about/page.tsx:50-68` renders four figures, and `:45-46` the matching prose:
 
@@ -1169,7 +1181,24 @@ Two distinct problems. **The site contradicts itself on how many customers it ha
 
 `/about` is unlinked from all navigation and absent from `app/sitemap.ts`, but the route exists and is publicly reachable by URL.
 
-**Not edited here, deliberately.** Three of the four figures are social proof, which is M3-T3 and gated on G2. Removing only the uptime cell would leave the 1,200-versus-2,000 contradiction standing — the "one uniform-but-wrong site into two inconsistent halves" outcome. It needs one decision covering the page: correct the numbers once G2 is answered, or unpublish a page that is already unlinked and unindexed.
+**Was not edited at the time, deliberately** — three of the four figures are social proof, which was gated on G2, and removing only the uptime cell would have left the 1,200-versus-2,000 contradiction standing.
+
+**ANSWERED (G2): delete every unsourced number sitewide, in one pass.** Done on `fix/m3-copy-truth`:
+
+| Where | Removed |
+|---|---|
+| `/about` | the entire four-figure stats card — `1,200+ Active Users`, `50K+ Reports Generated`, `3hrs Saved Weekly/User`, `99.9% Uptime` — plus the prose "we help over 1,200 real estate professionals" and "Join 1,200+ real estate professionals" |
+| `/login` | `Trusted by 2,000+ agents` |
+| `/register` | the whole social-proof block: `4.9/5 from 500+ agents`, the five-star row, and the avatar strip ending `+495` |
+| `packages/ui` | `99.9% / Uptime` and the `SOC 2 / Ready` badge |
+
+Two of these were removed as a *block* rather than edited as a caption, because trimming the text would have left the claim standing in the graphic: `/register`'s `+495` encodes the same unsourced 500 a second time, and `/about`'s figures exist only as a card.
+
+`/about`'s two-column grid collapses to one column. Its CTA also read "Start Your Free Trial" and pointed at `/login` — now "Start free", pointing at `/register` (G1b).
+
+**Kept:** "7 / Report types" on `/login`. 8 report slugs exist, `open_houses` is disabled in the wizard, so 7 is what a user can actually count.
+
+The `packages/ui` copy was corrected even though the file is dead (D-050) — a dead file is precisely where a retired claim survives to be rediscovered. Its `SOC 2 / Ready` badge is the one commit `725802a` recorded as knowingly left behind "pending a separate decision on that package", while that same commit rewrote `/security` to state plainly that TrendyReports is **not** SOC 2 certified. That decision is now made.
 
 **One more instance, dead rather than live:** `packages/ui/src/components/marketing-home.tsx:588-589` also carries `99.9% / Uptime`, plus the SOC 2 badge `725802a` explicitly deferred. `packages/ui` is imported by nothing in `apps/` — it meets the Phase 5 death standard and its copy should be deleted with the package rather than corrected.
 
@@ -1201,6 +1230,42 @@ Chrome findings #7 and #8. A nav entry that opens a blank email client is a dead
 `v0/Navbar.tsx:16` carries `{ label: "Partners", href: "#partners" }` — the same Partners entry M4-T1 removed, and `#partners` matches no section anywhere. So a future audit sweeping for "Partners" will find it again and re-open a closed finding.
 
 Recorded rather than deleted because this is a different path from PR #27's `v0-report-builder/` and belongs with that dead-code removal, not inside a navigation ticket. **PR #27 is still unmerged** — this should go in with it.
+
+### D-051 — `plans.monthly_report_limit` and `plans.market_reports_limit` disagree on four plans
+**Severity:** WRONG · **Affects:** admin limit checks and the account API, on `free`, `sponsored_free`, `pro`, `team`
+**Status:** `open`
+
+Found while writing migration 0054 (G1a), which updates both columns for `starter` precisely so they cannot diverge. Checking whether the others were already divergent showed that **four of eight are**:
+
+| plan_slug | `monthly_report_limit` (legacy) | `market_reports_limit` (live) |
+|---|---|---|
+| `free` | **5** | 3 |
+| `sponsored_free` | **10** | 3 |
+| `pro` | **300** | 99999 (unlimited) |
+| `team` | **1000** | 99999 (unlimited) |
+| `affiliate`, `solo`, `starter`, `trial` | — | agree |
+
+The two columns are **not derived from one another**. In `apps/api/src/api/services/usage.py`, `market_reports_limit` → `market_limit` (`:131`) → `evaluate_product_limit` / `get_full_plan_usage` (`:248-255`), which is the live enforcement path for report creation; `monthly_report_limit` → `effective_limit` (`:135`) → `evaluate_report_limit` (`:324`).
+
+**Why this has not caused visible breakage:** the live path uses the correct column, and `evaluate_report_limit` has exactly one remaining caller, `routes/admin.py:621`. It is imported into `routes/reports.py:7` but never called there — the live route uses `get_full_plan_usage` at `:156`.
+
+**Where it does surface:** that one admin path, and `monthly_report_limit` is returned verbatim in the account API responses (`routes/account.py:180,299`). So an admin or API consumer reading a `pro` account sees a limit of **300** for a plan the product sells and enforces as unlimited, and a `free` account reads **5** against an enforced 3.
+
+**Also worth noting:** `:135` reads `plan_limit or 100`. A NULL legacy column does not fail closed — it silently grants **100**.
+
+**Measured locally, against a database built from `db/migrations/`.** Production values for `monthly_report_limit` are unknown; the production evidence supplied so far covers `market_reports_limit` only. **Confirm before fixing** — the production `plans` table has demonstrably been hand-edited (see 0054's header), so it may diverge differently.
+
+The fix is one statement extending 0054's shape to the other rows, deliberately not included: the instruction scoped that migration to `starter`, and silently rewriting limits on four more plans inside a ticket about the Growth tier is the kind of unrequested data change that should be its own reviewed decision.
+
+### D-052 — `_intake/` is 183 files referenced by nothing
+**Severity:** ROUGH · **Affects:** nobody at runtime — dead weight and a re-litigation risk
+**Status:** `open`
+
+`_intake/real-estate-saas/` contains 183 tracked files, including its own `components/footer.tsx` and `components/navbar.tsx`. **Nothing in `apps/web` references `_intake/`** — not the app code, not `tsconfig.json`, not `next.config`.
+
+Same class as D-050 (`components/v0/`), and the same specific hazard: it holds another copy of the footer whose Partners/Press/Support mailto entries M4-T1 removed, so an audit sweeping for those strings finds them again and re-opens a closed finding.
+
+Held for PR #27's dead-code removal alongside D-050, on the same reasoning: deleting 183 files is not a side effect of a copy ticket. **#27 is still unmerged**, and it should take D-050 and D-052 in with it.
 
 ---
 

@@ -82,7 +82,7 @@ export function SiteNav() {
             href="/register"
             className="inline-flex items-center rounded-full bg-[#6366F1] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#4F46E5]"
           >
-            Start free trial
+            Start free
           </a>
         </div>
 
@@ -110,7 +110,7 @@ export function SiteNav() {
               className="inline-flex items-center justify-center rounded-full bg-[#6366F1] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#4F46E5]"
               onClick={() => setMobileOpen(false)}
             >
-              Start free trial
+              Start free
             </a>
           </div>
         </div>

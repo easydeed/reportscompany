@@ -97,17 +97,12 @@ function LoginForm() {
             </div>
           )}
 
-          {/* Divider */}
-          <div className="relative mt-8">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="bg-background px-4 text-muted-foreground">
-                Sign in with email
-              </span>
-            </div>
-          </div>
+          {/* M3-T6: the "Sign in with email" divider is gone, not just the
+              "with email" qualifier. It separated the heading from the form
+              with nothing above it — there is no social or SSO sign-in on this
+              page — so it was a divider dividing nothing, whose only content
+              was a qualifier implying alternatives that do not exist.
+              Restore it (both halves) if SSO ships. */}
 
           {/* Form */}
           <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
@@ -186,7 +181,7 @@ function LoginForm() {
               href="/register"
               className="font-semibold text-[#6366F1] hover:text-[#4F46E5]"
             >
-              Start your free trial
+              Create a free account
             </Link>
           </p>
         </div>
@@ -195,9 +190,10 @@ function LoginForm() {
       {/* Right — Branded visual panel */}
       <div className="hidden flex-1 flex-col justify-between bg-[#1E293B] p-12 lg:flex xl:p-16">
         <div>
-          <p className="text-sm font-medium uppercase tracking-widest text-[#818CF8]">
-            Trusted by 2,000+ agents
-          </p>
+          {/* G2: "Trusted by 2,000+ agents" removed. Unsourced, and it
+              contradicted /register's adjacent "500+ agents" and /about's
+              "1,200+ Active Users" — three numbers for one fact, none citing
+              anything. Restore only with a real, citable figure. */}
           <h2 className="mt-6 text-balance text-4xl font-bold leading-tight text-white">
             Market reports that
             <br />

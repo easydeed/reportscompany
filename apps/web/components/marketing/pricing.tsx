@@ -46,8 +46,13 @@ const plans = [
       "Unlimited Schedules",
       "25 Property Reports / month",
       "CMA Lead Page",
+      // G1c: "Priority Generation" removed. No implementation exists (D-046):
+      // the market-report queue is a Redis rpush/blpop list — strict FIFO — with
+      // no score, no ZSET and no plan lookup on either side; Celery task_routes
+      // contains only "ping"; no enqueue site passes a priority; and no plans
+      // column or migration mentions one. A Growth Plus report is processed
+      // identically to a Free one.
       "AI Market Insights",
-      "Priority Generation",
     ],
     cta: "Start Free, Upgrade Later",
     featured: false,
