@@ -309,7 +309,19 @@ function SidebarInset({ className, ...props }: React.ComponentPropsWithoutRef<'m
     <main
       data-slot="sidebar-inset"
       className={cn(
-        'bg-background relative flex w-full flex-1 flex-col',
+        // min-w-0 is load-bearing, not cosmetic. This <main> is a flex child of
+        // the shell's row container, and a flex item's default `min-width:auto`
+        // refuses to shrink below its content's intrinsic width — `flex-1`
+        // cannot override that. Without it the inset stayed pinned at its
+        // content width (measured: 1012px on the Title Rep dashboard) at every
+        // viewport, pushing the topbar's account menu off the right edge below
+        // ~1280px and giving the whole document a horizontal scrollbar. It also
+        // defeats every `overflow-x-auto` wrapper nested inside, because a wide
+        // table's intrinsic width propagates straight through this element
+        // instead of being absorbed by its own scroll container.
+        // The other flex children in this file (SidebarGroup, SidebarMenu,
+        // SidebarMenuSub, SidebarMenuSubButton) already carry min-w-0.
+        'bg-background relative flex w-full min-w-0 flex-1 flex-col',
         'md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2',
         className,
       )}
