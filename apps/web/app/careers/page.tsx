@@ -1,10 +1,10 @@
-import { Navbar } from "@/components/navbar"
-import { Footer } from "@/components/footer"
+import { SiteNav } from "@/components/site-nav"
+import { SiteFooter } from "@/components/site-footer"
 import { MapPin, Clock, DollarSign, Heart, Zap, Users, ArrowRight } from "lucide-react"
 import Link from "next/link"
 
 export const metadata = {
-  title: "Careers | TrendyReports",
+  title: "Careers",
   description: "Join the TrendyReports team. We're building the future of real estate market intelligence.",
 }
 
@@ -75,7 +75,7 @@ const benefits = [
 export default function CareersPage() {
   return (
     <div className="min-h-screen bg-white">
-      <Navbar />
+      <SiteNav />
 
       {/* Hero */}
       <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8">
@@ -212,7 +212,7 @@ export default function CareersPage() {
         </div>
       </section>
 
-      <Footer />
+      <SiteFooter />
     </div>
   )
 }

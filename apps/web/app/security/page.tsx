@@ -1,9 +1,9 @@
-import { Navbar } from "@/components/navbar"
-import { Footer } from "@/components/footer"
+import { SiteNav } from "@/components/site-nav"
+import { SiteFooter } from "@/components/site-footer"
 import { Shield, CheckCircle, Server, XCircle, Trash2, Mail } from "lucide-react"
 
 export const metadata = {
-  title: "Security | TrendyReports",
+  title: "Security",
   description: "How TrendyReports protects your data — our current security practices, the providers we use, and what we don't claim.",
 }
 
@@ -28,7 +28,7 @@ const whatWeDontClaim = [
 export default function SecurityPage() {
   return (
     <div className="min-h-screen bg-white">
-      <Navbar />
+      <SiteNav />
 
       {/* Hero */}
       <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8">
@@ -145,7 +145,7 @@ export default function SecurityPage() {
         </div>
       </section>
 
-      <Footer />
+      <SiteFooter />
     </div>
   )
 }

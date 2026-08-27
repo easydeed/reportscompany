@@ -1,15 +1,15 @@
-import { Navbar } from "@/components/navbar"
-import { Footer } from "@/components/footer"
+import { SiteNav } from "@/components/site-nav"
+import { SiteFooter } from "@/components/site-footer"
 
 export const metadata = {
-  title: "Privacy Policy | TrendyReports",
+  title: "Privacy Policy",
   description: "TrendyReports Privacy Policy - How we collect, use, and protect your data.",
 }
 
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-white">
-      <Navbar />
+      <SiteNav />
 
       <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[800px] mx-auto">
@@ -189,7 +189,7 @@ export default function PrivacyPage() {
         </div>
       </section>
 
-      <Footer />
+      <SiteFooter />
     </div>
   )
 }

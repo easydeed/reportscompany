@@ -1,9 +1,23 @@
+/**
+ * Site-wide header. Used by the landing page AND every standalone content
+ * route (legal, about, blog, careers, docs, 404).
+ *
+ * The legal pages previously shipped a different header, nav and tagline
+ * than the landing page — Product / Pricing / Contact / Sign in versus
+ * How It Works / Reports / Lead Capture / Contacts / Pricing / Log in. It
+ * read as a different company's site.
+ *
+ * Section anchors are ROOT-RELATIVE ("/#pricing", not "#pricing") so they
+ * navigate back to the landing page from any route. A bare "#pricing" is a
+ * no-op everywhere except "/", which is the "no route back to the landing
+ * page's sections" half of the original finding.
+ */
 "use client";
 
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 
-export function MarketingNav() {
+export function SiteNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -29,31 +43,31 @@ export function MarketingNav() {
 
         <div className="hidden items-center gap-6 md:flex">
           <a
-            href="#how-it-works"
+            href="/#how-it-works"
             className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
           >
             How It Works
           </a>
           <a
-            href="#reports"
+            href="/#reports"
             className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
           >
             Reports
           </a>
           <a
-            href="#lead-capture"
+            href="/#lead-capture"
             className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
           >
             Lead Capture
           </a>
           <a
-            href="#contacts"
+            href="/#contacts"
             className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
           >
             Contacts
           </a>
           <a
-            href="#pricing"
+            href="/#pricing"
             className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
           >
             Pricing
@@ -85,11 +99,11 @@ export function MarketingNav() {
       {mobileOpen && (
         <div className="border-t border-border bg-background px-6 pb-6 pt-4 md:hidden">
           <div className="flex flex-col gap-4">
-            <a href="#how-it-works" className="text-sm font-medium text-foreground/70" onClick={() => setMobileOpen(false)}>How It Works</a>
-            <a href="#reports" className="text-sm font-medium text-foreground/70" onClick={() => setMobileOpen(false)}>Reports</a>
-            <a href="#lead-capture" className="text-sm font-medium text-foreground/70" onClick={() => setMobileOpen(false)}>Lead Capture</a>
-            <a href="#contacts" className="text-sm font-medium text-foreground/70" onClick={() => setMobileOpen(false)}>Contacts</a>
-            <a href="#pricing" className="text-sm font-medium text-foreground/70" onClick={() => setMobileOpen(false)}>Pricing</a>
+            <a href="/#how-it-works" className="text-sm font-medium text-foreground/70" onClick={() => setMobileOpen(false)}>How It Works</a>
+            <a href="/#reports" className="text-sm font-medium text-foreground/70" onClick={() => setMobileOpen(false)}>Reports</a>
+            <a href="/#lead-capture" className="text-sm font-medium text-foreground/70" onClick={() => setMobileOpen(false)}>Lead Capture</a>
+            <a href="/#contacts" className="text-sm font-medium text-foreground/70" onClick={() => setMobileOpen(false)}>Contacts</a>
+            <a href="/#pricing" className="text-sm font-medium text-foreground/70" onClick={() => setMobileOpen(false)}>Pricing</a>
             <a href="/login" className="text-sm font-medium text-foreground/70" onClick={() => setMobileOpen(false)}>Log in</a>
             <a
               href="/register"

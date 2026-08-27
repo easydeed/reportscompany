@@ -1,6 +1,6 @@
 "use client"
 
-import { MarketingNav } from "@/components/marketing/marketing-nav"
+import { SiteNav } from "@/components/site-nav"
 import { Hero } from "@/components/marketing/hero"
 import { HowItWorks } from "@/components/marketing/how-it-works"
 import { EmailReports } from "@/components/marketing/email-reports"
@@ -13,12 +13,12 @@ import { WhoItsFor } from "@/components/marketing/who-its-for"
 import { Pricing } from "@/components/marketing/pricing"
 import { FAQ } from "@/components/marketing/faq"
 import { FinalCta } from "@/components/marketing/final-cta"
-import { MarketingFooter } from "@/components/marketing/marketing-footer"
+import { SiteFooter } from "@/components/site-footer"
 
 export function MarketingHome() {
   return (
     <>
-      <MarketingNav />
+      <SiteNav />
       <main>
         <Hero />
         <HowItWorks />
@@ -36,7 +36,7 @@ export function MarketingHome() {
         <FAQ />
         <FinalCta />
       </main>
-      <MarketingFooter />
+      <SiteFooter />
     </>
   )
 }

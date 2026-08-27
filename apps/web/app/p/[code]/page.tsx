@@ -100,7 +100,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   
   if (result.status !== "success") {
     return {
-      title: "Property | TrendyReports",
+      title: "Property",
     };
   }
   

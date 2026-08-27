@@ -1,15 +1,15 @@
-import { Navbar } from "@/components/navbar"
-import { Footer } from "@/components/footer"
+import { SiteNav } from "@/components/site-nav"
+import { SiteFooter } from "@/components/site-footer"
 
 export const metadata = {
-  title: "Terms of Service | TrendyReports",
+  title: "Terms of Service",
   description: "TrendyReports Terms of Service - The agreement governing your use of our platform.",
 }
 
 export default function TermsPage() {
   return (
     <div className="min-h-screen bg-white">
-      <Navbar />
+      <SiteNav />
 
       <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[800px] mx-auto">
@@ -195,7 +195,7 @@ export default function TermsPage() {
         </div>
       </section>
 
-      <Footer />
+      <SiteFooter />
     </div>
   )
 }

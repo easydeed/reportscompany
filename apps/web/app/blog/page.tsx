@@ -1,10 +1,10 @@
-import { Navbar } from "@/components/navbar"
-import { Footer } from "@/components/footer"
+import { SiteNav } from "@/components/site-nav"
+import { SiteFooter } from "@/components/site-footer"
 import { Calendar, Clock, ArrowRight, Tag } from "lucide-react"
 import Link from "next/link"
 
 export const metadata = {
-  title: "Blog | TrendyReports",
+  title: "Blog",
   description: "Real estate market insights, product updates, and tips for growing your business.",
 }
 
@@ -73,7 +73,7 @@ const categories = ["All", "Product", "Strategy", "Market Insights", "Case Study
 export default function BlogPage() {
   return (
     <div className="min-h-screen bg-white">
-      <Navbar />
+      <SiteNav />
 
       {/* Hero */}
       <section className="pt-32 pb-12 px-4 sm:px-6 lg:px-8">
@@ -213,7 +213,7 @@ export default function BlogPage() {
         </div>
       </section>
 
-      <Footer />
+      <SiteFooter />
     </div>
   )
 }
