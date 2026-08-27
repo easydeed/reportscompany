@@ -7,21 +7,21 @@
 
 ## Status
 
-**Last reconciled:** 2026-08-27, against `fix/m5-responsive` (cut from `main` at `e8898fe`, PR #32 merged).
+**Last reconciled:** 2026-08-27, against `fix/frontend-ci` (cut from `main` at `d382808`, PRs #33 and #34 merged).
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 27 | Real, unfixed |
-| `fixed` | 14 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 26 | Real, unfixed |
+| `fixed` | 16 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **44** | D-001 … D-044, contiguous, no duplicates |
+| **Total** | **45** | D-001 … D-045, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 8 · FRAGILE 10 · ROUGH 4. (Sums to 27, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 8 · FRAGILE 10 · ROUGH 4. (Sums to 26, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -30,7 +30,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 Plus 4 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 2 UNVERIFIED. Those are open questions, not defects, and are counted separately.
 
-D-001 through D-024 are grouped by severity below. D-025 through D-034 are grouped in the **P2B — Configuration trace** section, D-035 through D-037 in the **Production evidence reconciliation** section, and D-041 through D-044 in the **Phase M — Marketing / UX** section, because each is only readable alongside the trace that produced it.
+D-001 through D-024 are grouped by severity below. D-025 through D-034 are grouped in the **P2B — Configuration trace** section, D-035 through D-037 in the **Production evidence reconciliation** section, and D-041 through D-045 in the **Phase M — Marketing / UX** section, because each is only readable alongside the trace that produced it.
 
 **Reading note on the P2B entries:** six were written as conditional on environment values I did not have. Production logs have since settled three of them (two BROKEN, one WRONG — all closed, with evidence). The remaining conditionals are listed at the end of the reconciliation section.
 
@@ -953,7 +953,7 @@ Fixing either alone leaves the suite still not running. **They must land togethe
 
 ### D-041 — The Frontend Tests workflow never installs `pnpm`, so it has failed every run
 **Severity:** BROKEN · **Affects:** all — this is a mechanism, not a symptom
-**Status:** `open`
+**Status:** `fixed` — `fix/frontend-ci`
 
 `.github/workflows/frontend-tests.yml` uses `actions/setup-node@v4` and then runs `pnpm install`. `setup-node` does not provide `pnpm`, and the workflow has no `pnpm/action-setup` step and never enables corepack. The job dies at the install step.
 
@@ -971,11 +971,18 @@ Exit 127 is "command not found" — the job fails before any dependency is insta
 
 The six suites under `apps/web/__tests__/` — including `app-layout.test.tsx`, which exists specifically to pin the route-matching matrix that `isBuilderRoute()` depends on — have therefore never been enforced by CI.
 
-**Not fixed here.** This branch fixes a responsive defect; CI restoration is its own change, exactly as `fix/ci-restoration` was. The fix is a `pnpm/action-setup` step (or `corepack enable`) before `pnpm install`, landed together with D-042.
+**Fixed on `fix/frontend-ci`** by adding `pnpm/action-setup@v4` before `actions/setup-node@v4`.
+
+**Deliberately no `version:` on the action.** `action-setup` then reads `packageManager` from the root `package.json` (`pnpm@9.12.3`) — the same field Vercel reads to choose the pnpm version for a build. Pinning a version in the workflow would have created a second declaration that could drift from the one production uses; this way, bumping `packageManager` moves CI and Vercel together.
+
+Two supporting changes in the same file, both for the same reason — CI should build the way the frontend actually builds:
+
+- **`node-version-file: .nvmrc` instead of `node-version: "20"`.** `.nvmrc` pins `20.18.1` and is what local development and Vercel both read. The literal `"20"` floated to whatever 20.x the runner shipped, so CI and production could differ by a patch release with nothing recording it.
+- **Ordering:** `pnpm/action-setup` must run *before* `setup-node`, because `cache: pnpm` shells out to pnpm to locate the store and fails if pnpm is not yet on PATH.
 
 ### D-042 — `ts-node` is missing, so jest cannot parse its own config
 **Severity:** BROKEN · **Affects:** all — this is a mechanism, not a symptom
-**Status:** `open`
+**Status:** `fixed` — `fix/frontend-ci`
 
 `apps/web/jest.config.ts` is a TypeScript config file. Jest requires `ts-node` to read one. `apps/web/package.json` declares `jest`, `jest-environment-jsdom`, `ts-jest`, `@types/jest` and `@testing-library/jest-dom` — but **not `ts-node`**. Observed directly, running the project's own `test` script locally with dependencies installed:
 
@@ -986,7 +993,13 @@ Error: Jest: Failed to parse the TypeScript config file .../apps/web/jest.config
 
 `ts-jest` is not a substitute — it transforms test files, it does not load the config. This failure is downstream of D-041: CI has never reached it, so it has never been reported by CI. It surfaces the moment D-041 is fixed, which is why fixing D-041 alone would produce a workflow that still runs zero tests.
 
-**Two candidate fixes**, both small: add `ts-node` to `devDependencies`, or rename the config to `jest.config.js`/`jest.config.mjs` so no TypeScript loader is needed. The second removes the dependency rather than adding one, and is the better default unless the config needs types.
+**Fixed on `fix/frontend-ci`** by adding `ts-node@^10.9.2` to `apps/web` devDependencies and regenerating `pnpm-lock.yaml`.
+
+The alternative — renaming the config to `jest.config.js` so no TypeScript loader is needed — removes a dependency rather than adding one and was the more attractive option in the abstract. It was **not** taken: `jest.config.ts` is what the repository already has, `next/jest` and the `Config` type import are written for it, and inventing a third convention for how this project configures jest is the failure mode being corrected here, not a fix for it.
+
+The lockfile diff is `ts-node` plus its small dependency tree (`arg`, `create-require`, `diff`, `v8-compile-cache-lib`, `yn`, `@cspotcode/source-map-support`, `@tsconfig/*`), and re-keying of jest's peer-resolution entries — jest declares `ts-node` as an *optional peer dependency*, so its resolution key gains a `(ts-node@10.9.2…)` suffix. **No existing package version changed**; verified by reading every removed line of the diff.
+
+Resolution is via pnpm's store (`node_modules/.pnpm/ts-node@10.9.2_…`), confirmed with `require.resolve`. During M5 this was satisfied by a symlink to a global copy, which proved the diagnosis but is not a fix — nothing in the repository would have reproduced it.
 
 **What the suite actually reports once it can run.** Measured on this branch by satisfying `ts-node` locally (a symlink to a global copy — nothing committed, `package.json` untouched):
 
@@ -995,9 +1008,32 @@ Test Suites: 4 failed, 3 passed, 7 total
 Tests:      13 failed, 38 passed, 51 total
 ```
 
-Failing suites: `AccountSwitcher`, `NewSchedulePage`, `PlanPage`, `TemplatesMapping`. `NewSchedulePage` fails inside `useQueryClient` — a missing `QueryClientProvider` in the test harness, i.e. a test-setup defect rather than a product one. These are pre-existing and previously invisible, exactly as the backend's 34 failures were: **fixing D-041 and D-042 will make the frontend pipeline run and it will be red.** That is the same trade recorded for D-038 — a red pipeline reporting real failures beats a pipeline reporting nothing — and the same decision is Jerry's to make.
+Failing suites: `AccountSwitcher`, `NewSchedulePage`, `PlanPage`, `TemplatesMapping`. `NewSchedulePage` fails inside `useQueryClient` — a missing `QueryClientProvider` in the test harness, i.e. a test-setup defect rather than a product one. These are pre-existing and previously invisible, exactly as the backend's 34 failures were.
+
+**The pipeline now runs, and it is red.** Running the exact command CI runs, on `fix/frontend-ci`, after `pnpm install --frozen-lockfile`:
+
+```
+$ pnpm --filter web test
+Test Suites: 4 failed, 3 passed, 7 total
+Tests:      13 failed, 41 passed, 54 total
+Exit status 1
+```
+
+(41 rather than 38 because D-044's three regression tests are now on `main`.) Landing it red is deliberate and is Jerry's call, recorded: scoping CI to a passing subset would recreate the exact condition that hid these since March. Clearing the 13 is separate work; the `NewSchedulePage` harness defect is the cheapest of them.
 
 **Run jest from `apps/web`, not the repo root.** From the root there is no jest config, so `rootDir` becomes the repository and jest collects `e2e/*.spec.ts` — Playwright specs, which fail immediately with `Cannot use import statement outside a module`. This is not a defect: `pnpm --filter web test` runs in `apps/web`, which is correct. It is recorded only because the root-level run produces an alarming "11 suites failed, 0 tests" that looks like a catastrophe and is purely an artifact of the wrong working directory.
+
+### D-045 — `e2e.yml` carries the identical `pnpm` defect and has also never run
+**Severity:** BROKEN · **Affects:** every E2E run since the workflow was written
+**Status:** `open`
+
+`.github/workflows/e2e.yml` has the same shape as `frontend-tests.yml` did — `actions/setup-node@v4`, then `pnpm install`, with nothing that installs pnpm. It reports **783 runs, and every one sampled failed**, including the two triggered by merging PRs #33 and #34.
+
+**Recorded rather than fixed, deliberately.** The one-line mechanism is identical to D-041 and the fix would be the same three lines, but this workflow is different in a way that matters: it runs `npx playwright test` against a **deployed** environment using five repository secrets (`E2E_BASE_URL`, `E2E_REGULAR_EMAIL/PASSWORD`, `E2E_AFFILIATE_EMAIL/PASSWORD`). Whether those secrets are populated cannot be read from here. Fixing pnpm would move it from `command not found` to whatever the next failure is — probably a connection or auth error against an unknown base URL — on every push to `main`.
+
+That is still strictly more informative than exit 127, so this is worth doing. It is a separate decision because it changes what a `main` push does, and it needs one answer first: **is the E2E environment real and are those secrets set?** If it is not, the honest fix is to disable the workflow rather than make it fail more eloquently — a permanently red check nobody can act on is what let D-041 hide for six months.
+
+It also does not gate anything today: `e2e.yml` triggers only on `push` to `main` and `workflow_dispatch`, so unlike `frontend-tests.yml` it never blocked a pull request.
 
 ### D-043 — The onboarding checklist card is clipped by up to 85px and the clipped content is unreachable
 **Severity:** ROUGH · **Affects:** REGULAR (agent) accounts on `/app`
@@ -1057,7 +1093,7 @@ Also verified with the sidebar **collapsed** as well as expanded (12/12 clean), 
 
 **REGULAR had to be un-blocked before it could be measured at all.** A freshly seeded agent account is redirected off `/app` to the `/app/get-started` wizard, which is a builder route and renders no sidebar — so the first sweep measured the wizard for REGULAR and reported it clean, satisfying "three account types" on paper only. The redirect is gated on `sessionStorage` (`dashboard-onboarding.tsx:31-36`), so the harness seeds `guided_onboarding_skipped`, putting the browser in the state a real user reaches by clicking "Skip for now" without mutating the database. The sweep now refuses to run for any account whose sidebar discovery returns fewer than two routes, so this cannot silently recur.
 
-**Regression test:** `apps/web/__tests__/SidebarInset.test.tsx`, 3 cases. jsdom does no layout — `scrollWidth` is always 0 there — so it cannot reproduce the defect; it asserts the rendered className instead, including under the exact class list `app-layout.tsx` passes and under a conflicting `w-*` class, so tailwind-merge is exercised rather than the source text being grepped. **Verified load-bearing:** all 3 fail with the fix stashed and pass with it applied. The suite is otherwise unchanged — 13 failed / 38 passed before, 13 failed / 41 passed after, same four failing suites (see D-042). Note this test cannot protect anything until D-041 and D-042 are fixed, because CI never runs it.
+**Regression test:** `apps/web/__tests__/SidebarInset.test.tsx`, 3 cases. jsdom does no layout — `scrollWidth` is always 0 there — so it cannot reproduce the defect; it asserts the rendered className instead, including under the exact class list `app-layout.tsx` passes and under a conflicting `w-*` class, so tailwind-merge is exercised rather than the source text being grepped. **Verified load-bearing:** all 3 fail with the fix stashed and pass with it applied. The suite is otherwise unchanged — 13 failed / 38 passed before, 13 failed / 41 passed after, same four failing suites (see D-042). When written, this test could not protect anything, because CI never ran it; `fix/frontend-ci` (D-041, D-042) closed that gap immediately afterwards.
 
 ---
 
