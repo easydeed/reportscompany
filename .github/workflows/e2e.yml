@@ -1,20 +1,69 @@
 name: E2E Tests
+
+# DISABLED (D-045). This workflow does not run automatically.
+#
+# It reported 783 runs and every one sampled failed, back to the oldest the
+# API will return. The immediate cause was the same defect as D-041 — no step
+# installed pnpm, so `pnpm install` died on `pnpm: command not found`, exit 127,
+# before anything else happened.
+#
+# It is disabled rather than fixed because a permanently red check that nobody
+# can act on is precisely what let D-041 hide for six months. Making this one
+# fail more eloquently — reaching Playwright and then failing to reach an
+# unknown host — would restore the noise without restoring the signal.
+#
+# The `push: branches: [main]` trigger is removed; `workflow_dispatch` is kept
+# so it can still be run by hand deliberately. Nothing fires on its own.
+#
+# TO RE-ENABLE, two things must be true, and both need confirming rather than
+# assuming:
+#
+#   1. A deployed environment exists that these tests can actually run against,
+#      reachable from a GitHub-hosted runner.
+#   2. All five repository secrets are populated:
+#        E2E_BASE_URL
+#        E2E_REGULAR_EMAIL      E2E_REGULAR_PASSWORD
+#        E2E_AFFILIATE_EMAIL    E2E_AFFILIATE_PASSWORD
+#      Settings → Secrets and variables → Actions. An unset secret expands to
+#      an empty string rather than erroring, so a missing E2E_BASE_URL does not
+#      announce itself — the run fails somewhere inside Playwright instead.
+#
+# Then restore the trigger by uncommenting the two lines below. The install
+# steps are already correct: the pnpm defect is fixed here (see the job), so
+# re-enabling is a two-line change and not a fresh debugging session.
+#
+# Confirm 1 and 2 first. If the environment does not exist, delete this file
+# rather than re-enabling it — an aspirational workflow is worse than none.
+
 on:
   workflow_dispatch:
-  push:
-    branches: [ "main" ]
+  # push:
+  #   branches: [ "main" ]
+
 jobs:
   e2e:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Fixed alongside the disable, so that whoever re-enables this does not
+      # rediscover D-041 from scratch. Identical to the setup now verified
+      # green in frontend-tests.yml: action-setup with no `version:` reads
+      # `packageManager` from the root package.json (the field Vercel reads),
+      # and it must precede setup-node because `cache: pnpm` shells out to pnpm.
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version-file: .nvmrc
+          cache: pnpm
+
       - name: Install deps
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
+
       - name: Install Playwright
         run: npx playwright install --with-deps
+
       - name: Run E2E tests
         env:
           E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
@@ -23,4 +72,3 @@ jobs:
           E2E_AFFILIATE_EMAIL: ${{ secrets.E2E_AFFILIATE_EMAIL }}
           E2E_AFFILIATE_PASSWORD: ${{ secrets.E2E_AFFILIATE_PASSWORD }}
         run: npx playwright test
-
