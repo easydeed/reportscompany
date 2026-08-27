@@ -7,21 +7,21 @@
 
 ## Status
 
-**Last reconciled:** 2026-08-27, against `fix/m4-nav-identity` (stacked on `fix/m3-copy-truth` → `fix/frontend-ci` → `main` at `d382808`).
+**Last reconciled:** 2026-08-27, against `chore/disable-e2e-workflow`, cut from `main` at `700ed44` (PRs #33–#37 all merged).
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 30 | Real, unfixed |
-| `fixed` | 17 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 29 | Real, unfixed |
+| `fixed` | 18 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **50** | D-001 … D-050, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 11 · FRAGILE 10 · ROUGH 5. (Sums to 30, the open total.)
+**Open by severity:** BROKEN 3 · WRONG 11 · FRAGILE 10 · ROUGH 5. (Sums to 29, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -1025,15 +1025,24 @@ Exit status 1
 
 ### D-045 — `e2e.yml` carries the identical `pnpm` defect and has also never run
 **Severity:** BROKEN · **Affects:** every E2E run since the workflow was written
-**Status:** `open`
+**Status:** `fixed` — `chore/disable-e2e-workflow`
 
-`.github/workflows/e2e.yml` has the same shape as `frontend-tests.yml` did — `actions/setup-node@v4`, then `pnpm install`, with nothing that installs pnpm. It reports **783 runs, and every one sampled failed**, including the two triggered by merging PRs #33 and #34.
+`.github/workflows/e2e.yml` had the same shape as `frontend-tests.yml` did — `actions/setup-node@v4`, then `pnpm install`, with nothing that installs pnpm. It reported **783 runs, and every one sampled failed**, including the two triggered by merging PRs #33 and #34.
 
-**Recorded rather than fixed, deliberately.** The one-line mechanism is identical to D-041 and the fix would be the same three lines, but this workflow is different in a way that matters: it runs `npx playwright test` against a **deployed** environment using five repository secrets (`E2E_BASE_URL`, `E2E_REGULAR_EMAIL/PASSWORD`, `E2E_AFFILIATE_EMAIL/PASSWORD`). Whether those secrets are populated cannot be read from here. Fixing pnpm would move it from `command not found` to whatever the next failure is — probably a connection or auth error against an unknown base URL — on every push to `main`.
+**Disabled rather than repaired, on Jerry's decision.** The `push: branches: [main]` trigger is removed and only `workflow_dispatch` remains, so nothing fires on its own. The reasoning is the one this document keeps arriving at from different directions: *a permanently red check that nobody can act on is precisely what let D-041 hide for six months.* Making this workflow fail more eloquently — reaching Playwright and then failing to reach an unknown host — would have restored the noise without restoring the signal.
 
-That is still strictly more informative than exit 127, so this is worth doing. It is a separate decision because it changes what a `main` push does, and it needs one answer first: **is the E2E environment real and are those secrets set?** If it is not, the honest fix is to disable the workflow rather than make it fail more eloquently — a permanently red check nobody can act on is what let D-041 hide for six months.
+**The pnpm defect is fixed in the same commit anyway**, using the setup now verified green in `frontend-tests.yml`. Not to make it run, but so that whoever re-enables it is not made to rediscover D-041 from scratch: re-enabling is now uncommenting two lines rather than a fresh debugging session. Leaving a known-broken install step inside a file being edited for this exact class of defect would have been the half-applied shape recorded in D-048.
 
-It also does not gate anything today: `e2e.yml` triggers only on `push` to `main` and `workflow_dispatch`, so unlike `frontend-tests.yml` it never blocked a pull request.
+**What must be confirmed before re-enabling** is written into the file itself rather than left here, because the file is what someone will read:
+
+1. A deployed environment exists that these tests can run against, reachable from a GitHub-hosted runner.
+2. All five secrets are populated — `E2E_BASE_URL`, `E2E_REGULAR_EMAIL/PASSWORD`, `E2E_AFFILIATE_EMAIL/PASSWORD`.
+
+Point 2 has a trap worth naming: **an unset GitHub secret expands to an empty string rather than erroring**, so a missing `E2E_BASE_URL` does not announce itself — the run fails somewhere inside Playwright, looking like a test problem. The header says so explicitly, and says to delete the file rather than re-enable it if the environment does not exist.
+
+Whether that environment exists is not a defect and has moved to BLOCKED-NEEDS-DEPLOYED-ACCESS.
+
+It never gated anything: `e2e.yml` triggered only on `push` to `main` and `workflow_dispatch`, so unlike `frontend-tests.yml` it never blocked a pull request.
 
 ### D-043 — The onboarding checklist card is clipped by up to 85px and the clipped content is unreachable
 **Severity:** ROUGH · **Affects:** REGULAR (agent) accounts on `/app`
@@ -1200,4 +1209,5 @@ Recorded rather than deleted because this is a different path from PR #27's `v0-
 - **Is production's DB role a superuser?** D-005/D-006's real-world severity depends on it. If production also connects as owner/superuser, D-005 is live exactly as reproduced. If production uses a restricted role, D-005 is contained but D-006 means the portal is showing zeros.
 - **Production env values** (T2.9/T2.10). Partially answered by the P2B trace above for the API service; the worker and Vercel sets are still outstanding — see "What I still need" above for exactly which variables settle which defect.
 - **Scheduled delivery end-to-end** (T2.3). Needs a real send and a readable inbox.
+- **Does a deployed E2E environment exist?** (D-045). `e2e.yml` is disabled until someone can confirm a host these tests can run against *and* that all five `E2E_*` repository secrets are populated. Not a defect — a fact about the deployment that cannot be read from the repository. If the answer is no, the workflow should be deleted rather than re-enabled.
 - ~~**Is `apps/api/migrations/phase4_indexes.sql` applied in production?**~~ **ANSWERED (2026-08-18): no, and neither is `0042`.** `signup_tokens` exists but 5 of the 7 indexes do not, and the 2 that do are each declared by an *other*, applied migration. The file never ran; the table arrived by the route its own header describes — created inline by an old request handler. See **Production evidence reconciliation** for the proof, the confirming query, and the corrected bootstrap order.
