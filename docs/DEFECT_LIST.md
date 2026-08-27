@@ -7,19 +7,19 @@
 
 ## Status
 
-**Last reconciled:** 2026-08-27, against `fix/frontend-ci` (cut from `main` at `d382808`, PRs #33 and #34 merged).
+**Last reconciled:** 2026-08-27, against `fix/m3-copy-truth` (stacked on `fix/frontend-ci`, itself cut from `main` at `d382808`).
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 26 | Real, unfixed |
+| `open` | 29 | Real, unfixed |
 | `fixed` | 16 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **45** | D-001 … D-045, contiguous, no duplicates |
+| **Total** | **48** | D-001 … D-048, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 8 · FRAGILE 10 · ROUGH 4. (Sums to 26, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 11 · FRAGILE 10 · ROUGH 4. (Sums to 29, the open total.)
 
 `fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
@@ -30,7 +30,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 Plus 4 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 2 UNVERIFIED. Those are open questions, not defects, and are counted separately.
 
-D-001 through D-024 are grouped by severity below. D-025 through D-034 are grouped in the **P2B — Configuration trace** section, D-035 through D-037 in the **Production evidence reconciliation** section, and D-041 through D-045 in the **Phase M — Marketing / UX** section, because each is only readable alongside the trace that produced it.
+D-001 through D-024 are grouped by severity below. D-025 through D-034 are grouped in the **P2B — Configuration trace** section, D-035 through D-037 in the **Production evidence reconciliation** section, and D-041 through D-048 in the **Phase M — Marketing / UX** section, because each is only readable alongside the trace that produced it.
 
 **Reading note on the P2B entries:** six were written as conditional on environment values I did not have. Production logs have since settled three of them (two BROKEN, one WRONG — all closed, with evidence). The remaining conditionals are listed at the end of the reconciliation section.
 
@@ -1094,6 +1094,75 @@ Also verified with the sidebar **collapsed** as well as expanded (12/12 clean), 
 **REGULAR had to be un-blocked before it could be measured at all.** A freshly seeded agent account is redirected off `/app` to the `/app/get-started` wizard, which is a builder route and renders no sidebar — so the first sweep measured the wizard for REGULAR and reported it clean, satisfying "three account types" on paper only. The redirect is gated on `sessionStorage` (`dashboard-onboarding.tsx:31-36`), so the harness seeds `guided_onboarding_skipped`, putting the browser in the state a real user reaches by clicking "Skip for now" without mutating the database. The sweep now refuses to run for any account whose sidebar discovery returns fewer than two routes, so this cannot silently recur.
 
 **Regression test:** `apps/web/__tests__/SidebarInset.test.tsx`, 3 cases. jsdom does no layout — `scrollWidth` is always 0 there — so it cannot reproduce the defect; it asserts the rendered className instead, including under the exact class list `app-layout.tsx` passes and under a conflicting `w-*` class, so tailwind-merge is exercised rather than the source text being grepped. **Verified load-bearing:** all 3 fail with the fix stashed and pass with it applied. The suite is otherwise unchanged — 13 failed / 38 passed before, 13 failed / 41 passed after, same four failing suites (see D-042). When written, this test could not protect anything, because CI never ran it; `fix/frontend-ci` (D-041, D-042) closed that gap immediately afterwards.
+
+### D-046 — "Priority Generation" is sold on the $29 tier and does not exist
+**Severity:** WRONG · **Affects:** every Growth Plus subscriber
+**Status:** `open`
+
+`apps/web/components/marketing/pricing.tsx:50` lists **Priority Generation** as a Growth Plus ($29/mo) feature, repeated in-app at `apps/web/app/app/settings/billing/page.tsx:99`. **No implementation exists anywhere in the repository.** A Growth Plus account's report is enqueued and processed identically to a Free account's.
+
+Verified directly, not inferred:
+
+| Where priority would have to live | What is actually there |
+|---|---|
+| Market-report queue | `r.rpush(QUEUE_KEY, …)` (`apps/api/src/api/worker_client.py:15`) / `r.blpop(QUEUE_KEY, …)` (`apps/worker/src/worker/tasks.py:2116`) — a Redis list. Right-push/left-pop is strict FIFO: no score, no ZSET, no plan lookup on either side. `account_id` is in the payload and is never used for ordering. |
+| Celery routing | `task_routes` contains exactly one entry, `{"ping": {"queue": "celery"}}` (`apps/worker/src/worker/app.py:41-43`). No `task_queue_max_priority`, no `task_default_priority`. |
+| Enqueue calls | Every `send_task` / `.delay()` site passes no `priority` and no queue but the default. |
+| Database | `grep -rniE "priority" db/migrations/*.sql` returns **nothing**. The `plans` table has no priority column. |
+| Schedule dispatch | Ordered `BY COALESCE(next_run_at, '1970-01-01') ASC` (`schedules_tick.py:336-347`). Plan is consulted only to *skip* over-limit accounts, never to reorder. |
+
+**This is why M3-T5 was not executed as written.** That ticket says to "derive real definitions from the code rather than inventing marketing language — these are implemented features," and to add explanatory tooltips. For this bullet there is nothing to derive: writing a tooltip would be inventing exactly the marketing language the ticket forbids, and would state the false claim more confidently than the bare bullet does.
+
+The correct fix is to delete the bullet, but that changes what a paid tier offers and is a product decision, not a copy fix — and the tier structure is already G1-gated. **Escalated rather than actioned.**
+
+### D-047 — "AI Market Insights" is sold as a paid differentiator but is not plan-gated
+**Severity:** WRONG · **Affects:** pricing accuracy on every tier, in both directions
+**Status:** `open`
+
+`pricing.tsx:34,49` lists **AI Market Insights** on Growth and Growth Plus but not Free. The feature is real — `generate_insight()` at `apps/worker/src/worker/ai_insights.py:82-179` calls `gpt-4o-mini` and returns a 4–5 sentence market paragraph that is rendered into scheduled-report emails (`email/template.py:1475-1516`, `:1930-1940`). But **there is no plan check on it anywhere.**
+
+The proof is structural rather than a grep result: `generate_insight()`'s signature (`ai_insights.py:82-92`) takes `report_type`, `area`, `metrics`, `lookback_days`, `filter_description`, `sender_type`, `total_found`, `total_shown`, `audience_name` — **no `account_id`, no plan, no account object**. Neither does `schedule_email_html()` (`template.py:1804-1822`). The function cannot consult a plan because it is never told which account it is generating for.
+
+The only gate is process-wide:
+
+```python
+AI_INSIGHTS_ENABLED = os.getenv("AI_INSIGHTS_ENABLED", "false").lower() == "true"   # ai_insights.py:21
+if not AI_INSIGHTS_ENABLED:                                                          # ai_insights.py:110
+    return None
+```
+
+So the claim is wrong whichever way the worker is configured: with it **on**, Free accounts get the paid feature; with it **off**, Growth Plus subscribers pay for something nobody receives. There is no configuration in which the pricing page is accurate.
+
+**Which it is in production is unknown** — the worker's environment variables have still not been provided (see BLOCKED-NEEDS-DEPLOYED-ACCESS). Worth knowing, because the two failure modes have opposite commercial consequences.
+
+**A fifth instance of env-var drift, and the first that is a value conflict rather than a name mismatch:** `.env.example:97` ships `AI_INSIGHTS_ENABLED=false`, while `apps/worker/ENV_TEMPLATE.md:131` documents `AI_INSIGHTS_ENABLED=true`. The four instances in `docs/ENV_VAR_AUDIT.md` were all names that did not match a runtime read; this is two documents disagreeing about the value of a flag that decides whether a paid feature functions.
+
+**Related, and also ungated:** two further OpenAI features have no plan check *and* no enable flag — they run whenever `OPENAI_API_KEY` is set. The PDF market narrative (`ai_market_narrative.py`, invoked `tasks.py:1165-1177`) and the property-report executive summary (`ai_overview.py:71-118`, invoked `property_builder.py:1127-1141`). Neither is mentioned on the pricing page at all.
+
+**Also confirmed, and clean:** **CMA Lead Page** is implemented (`routes/lead_pages.py`, `services/agent_code.py`, `app/cma/[code]/`), is available to every tier, and the pricing page correctly lists it on all three. One vestigial flag exists — `plans.lead_capture_enabled` (`db/migrations/0034_property_reports.sql:186`) — which the CMA funnel never reads, and which the one endpoint that does read it explicitly ignores: `routes/leads.py:329-330` logs "not enabled … but accepting lead anyway" and proceeds.
+
+### D-048 — `/about` contradicts `/login` on user count and still carries the uptime claim removed in June
+**Severity:** WRONG · **Affects:** anyone who reaches `/about` by URL
+**Status:** `open`
+
+Found by sweeping for the M3-T4 claims rather than editing only the page the ticket named. `apps/web/app/about/page.tsx:50-68` renders four figures, and `:45-46` the matching prose:
+
+| `/about` | `/login` |
+|---|---|
+| "1,200+ Active Users", and "we help over 1,200 real estate professionals" | "Trusted by 2,000+ agents" |
+| "50K+ **Reports Generated**" | "50K+ **Emails sent monthly**" (removed in M3-T4) |
+| "99.9% Uptime" | "Reliable / Uptime" — and 99.9% was deleted here in June |
+| "3hrs Saved Weekly/User" | — |
+
+Two distinct problems. **The site contradicts itself on how many customers it has**, 1,200+ against 2,000+, with no way for a reader to tell which is true. And the same "50K+" is attached to two different metrics on two pages.
+
+**The uptime figure is a half-applied fix.** Commit `725802a` (2026-06-09) changed the login tile from `99.9% / Uptime SLA` to `Reliable / Uptime` and deleted `/status` for "fabricated uptime numbers and incident history, no real monitoring" — but left `/about` untouched. That commit's own message also asserts it "Kept real stats (2,000+ agents, 50K+ emails)" while citing no source for either.
+
+`/about` is unlinked from all navigation and absent from `app/sitemap.ts`, but the route exists and is publicly reachable by URL.
+
+**Not edited here, deliberately.** Three of the four figures are social proof, which is M3-T3 and gated on G2. Removing only the uptime cell would leave the 1,200-versus-2,000 contradiction standing — the "one uniform-but-wrong site into two inconsistent halves" outcome. It needs one decision covering the page: correct the numbers once G2 is answered, or unpublish a page that is already unlinked and unindexed.
+
+**One more instance, dead rather than live:** `packages/ui/src/components/marketing-home.tsx:588-589` also carries `99.9% / Uptime`, plus the SOC 2 badge `725802a` explicitly deferred. `packages/ui` is imported by nothing in `apps/` — it meets the Phase 5 death standard and its copy should be deleted with the package rather than corrected.
 
 ---
 
