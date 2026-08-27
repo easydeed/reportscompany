@@ -7,21 +7,21 @@
 
 ## Status
 
-**Last reconciled:** 2026-08-18, against `main` at `3751a5c` (all five branches merged).
+**Last reconciled:** 2026-08-27, against `fix/m5-responsive` (cut from `main` at `e8898fe`, PR #32 merged).
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 24 | Real, unfixed |
-| `fixed` | 13 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 27 | Real, unfixed |
+| `fixed` | 14 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **40** | D-001 … D-040, contiguous, no duplicates |
+| **Total** | **44** | D-001 … D-044, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 3 · WRONG 8 · FRAGILE 10 · ROUGH 3.
+**Open by severity:** BROKEN 5 · WRONG 8 · FRAGILE 10 · ROUGH 4. (Sums to 27, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -30,7 +30,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 Plus 4 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 2 UNVERIFIED. Those are open questions, not defects, and are counted separately.
 
-D-001 through D-024 are grouped by severity below. D-025 through D-034 are grouped in the **P2B — Configuration trace** section, and D-035 through D-037 in the **Production evidence reconciliation** section, because each is only readable alongside the trace that produced it.
+D-001 through D-024 are grouped by severity below. D-025 through D-034 are grouped in the **P2B — Configuration trace** section, D-035 through D-037 in the **Production evidence reconciliation** section, and D-041 through D-044 in the **Phase M — Marketing / UX** section, because each is only readable alongside the trace that produced it.
 
 **Reading note on the P2B entries:** six were written as conditional on environment values I did not have. Production logs have since settled three of them (two BROKEN, one WRONG — all closed, with evidence). The remaining conditionals are listed at the end of the reconciliation section.
 
@@ -933,6 +933,131 @@ This is the same shape as the env-var drift class: configuration that exists onl
 The choice of whether to land a running-but-red pipeline or to scope CI to a passing subset first is Jerry's; this branch implements the honest version, on the grounds that a red pipeline that reports real failures is strictly better than a green-or-erroring one that reports nothing.
 
 **Note on severity counts:** the table at the top of this document is not updated here. `chore/p2b-config-trace` and `chore/defect-reconciliation` both rewrite it and are unmerged; editing it on a third branch would guarantee a conflict. Reconcile the counts once those land.
+
+---
+
+## Phase M — Marketing / UX (`fix/m5-responsive`)
+
+### The frontend CI has the same two-mechanism shape as the backend CI did
+
+D-038 and D-039 were landed together because either one alone still left backend CI red without running anything. The **Frontend Tests** workflow has the identical structure, and it was found the same way: not by reading the workflow, but by trying to run the suite locally during M5 and watching it fail.
+
+Two independent mechanisms, each sufficient on its own to hide every frontend test:
+
+| # | Mechanism | Where it stops |
+|---|---|---|
+| D-041 | `pnpm` is never installed on the runner | Before dependency install — the job never reaches jest |
+| D-042 | `ts-node` is not a dependency, so `jest.config.ts` cannot be parsed | At jest startup — no test file is ever collected |
+
+Fixing either alone leaves the suite still not running. **They must land together or neither helps** — the same framing recorded for D-038/D-039, arrived at independently on the frontend.
+
+### D-041 — The Frontend Tests workflow never installs `pnpm`, so it has failed every run
+**Severity:** BROKEN · **Affects:** all — this is a mechanism, not a symptom
+**Status:** `open`
+
+`.github/workflows/frontend-tests.yml` uses `actions/setup-node@v4` and then runs `pnpm install`. `setup-node` does not provide `pnpm`, and the workflow has no `pnpm/action-setup` step and never enables corepack. The job dies at the install step.
+
+**This is read from CI, not inferred.** Run `33099064110` (`main`, 2026-08-27, job `98611593553`):
+
+```
+Run pnpm install
+/home/runner/work/_temp/….sh: line 1: pnpm: command not found
+##[error]Process completed with exit code 127.
+```
+
+Exit 127 is "command not found" — the job fails before any dependency is installed and long before jest starts.
+
+**Scale.** The workflow reports **481 runs**. Every run I sampled failed: the 30 most recent (2026-06-08 → 2026-08-27) and the 30 oldest the API will return (2026-03-04 → 2026-03-13). I did not enumerate all 481, so the precise claim is *every sampled run across the full available date range failed*, not "all 481" — but the failing step is environmental, not code-dependent, so nothing in between could have passed while both ends failed.
+
+The six suites under `apps/web/__tests__/` — including `app-layout.test.tsx`, which exists specifically to pin the route-matching matrix that `isBuilderRoute()` depends on — have therefore never been enforced by CI.
+
+**Not fixed here.** This branch fixes a responsive defect; CI restoration is its own change, exactly as `fix/ci-restoration` was. The fix is a `pnpm/action-setup` step (or `corepack enable`) before `pnpm install`, landed together with D-042.
+
+### D-042 — `ts-node` is missing, so jest cannot parse its own config
+**Severity:** BROKEN · **Affects:** all — this is a mechanism, not a symptom
+**Status:** `open`
+
+`apps/web/jest.config.ts` is a TypeScript config file. Jest requires `ts-node` to read one. `apps/web/package.json` declares `jest`, `jest-environment-jsdom`, `ts-jest`, `@types/jest` and `@testing-library/jest-dom` — but **not `ts-node`**. Observed directly, running the project's own `test` script locally with dependencies installed:
+
+```
+Error: Jest: Failed to parse the TypeScript config file .../apps/web/jest.config.ts
+  Error: Jest: 'ts-node' is required for the TypeScript configuration files. Make sure it is installed
+```
+
+`ts-jest` is not a substitute — it transforms test files, it does not load the config. This failure is downstream of D-041: CI has never reached it, so it has never been reported by CI. It surfaces the moment D-041 is fixed, which is why fixing D-041 alone would produce a workflow that still runs zero tests.
+
+**Two candidate fixes**, both small: add `ts-node` to `devDependencies`, or rename the config to `jest.config.js`/`jest.config.mjs` so no TypeScript loader is needed. The second removes the dependency rather than adding one, and is the better default unless the config needs types.
+
+**What the suite actually reports once it can run.** Measured on this branch by satisfying `ts-node` locally (a symlink to a global copy — nothing committed, `package.json` untouched):
+
+```
+Test Suites: 4 failed, 3 passed, 7 total
+Tests:      13 failed, 38 passed, 51 total
+```
+
+Failing suites: `AccountSwitcher`, `NewSchedulePage`, `PlanPage`, `TemplatesMapping`. `NewSchedulePage` fails inside `useQueryClient` — a missing `QueryClientProvider` in the test harness, i.e. a test-setup defect rather than a product one. These are pre-existing and previously invisible, exactly as the backend's 34 failures were: **fixing D-041 and D-042 will make the frontend pipeline run and it will be red.** That is the same trade recorded for D-038 — a red pipeline reporting real failures beats a pipeline reporting nothing — and the same decision is Jerry's to make.
+
+**Run jest from `apps/web`, not the repo root.** From the root there is no jest config, so `rootDir` becomes the repository and jest collects `e2e/*.spec.ts` — Playwright specs, which fail immediately with `Cannot use import statement outside a module`. This is not a defect: `pnpm --filter web test` runs in `apps/web`, which is correct. It is recorded only because the root-level run produces an alarming "11 suites failed, 0 tests" that looks like a catastrophe and is purely an artifact of the wrong working directory.
+
+### D-043 — The onboarding checklist card is clipped by up to 85px and the clipped content is unreachable
+**Severity:** ROUGH · **Affects:** REGULAR (agent) accounts on `/app`
+**Status:** `open`
+
+Found while measuring M5, and **not** the M5 defect — it never reaches document level, so it produces no horizontal page scroll and did not appear in the `scrollWidth > clientWidth` sweep. It was caught only by the separate reachability check.
+
+The "Welcome! Let's get you set up" card sits in the one-third column of a `grid grid-cols-1 lg:grid-cols-3`. Its `CardHeader` row has an intrinsic width of **312px**, while the column is narrower, and the Card itself is `overflow-x: hidden` — so the excess is **clipped and cannot be scrolled to**. Measured on `/app` as `regular@test-tenant.example.com`:
+
+| Viewport | Column width | Header intrinsic | Clipped |
+|---|---|---|---|
+| 1024 | 227px | 312px | **85px** |
+| 1142 | 266px | 312px | **46px** |
+| 1280 | 310px | 312px | **2px** |
+| 1600 | — | 312px | none |
+
+**Confirmed pre-existing.** The identical three failures were measured with the M5 fix stashed, so this is not a regression introduced by `min-w-0`. It is width-dependent but not shell-related: the fix for D-044 does not touch it, because the clipping happens inside a grid cell that was already the correct size.
+
+**Not fixed here** — it is a content-layout change to the onboarding checklist, outside a branch scoped to the app shell.
+
+### D-044 — `SidebarInset` has no `min-w-0`, so the whole app shell cannot shrink below its content width
+**Severity:** WRONG · **Affects:** COMPANY_REP and TITLE_COMPANY at any viewport below ~1280px
+**Status:** `fixed` — `fix/m5-responsive`
+
+This is Chrome finding #17, reproduced and root-caused.
+
+`SidebarInset` (`apps/web/components/ui/sidebar.tsx:309`) renders the `<main>` that holds the entire authenticated UI, as a flex child of the shell's row container, with `flex w-full flex-1 flex-col`. A flex item's default `min-width: auto` refuses to shrink it below its content's intrinsic width, and `flex-1` does not override that. The element therefore stayed pinned at its content width at every viewport:
+
+```
+COMPANY_REP /app @1142 : document 1268/1142  inset width 1012  → CLIPPED
+COMPANY_REP /app @1024 : document 1268/1024  inset width 1012  → CLIPPED
+```
+
+The inset is **1012px wide at both viewports** — it is not responding to the viewport at all. 256px sidebar + 1012px inset = the 1268px the document scrolls to. The topbar's account menu sits at the right edge of that inset, which is why it lands off-screen, matching the original report.
+
+It also defeats every `overflow-x-auto` wrapper nested inside: on `/app/company/reps` the reps table's own scroll container could not absorb the table, because the table's intrinsic width propagated straight through the inset instead.
+
+**Measured, not read.** Local stack (Postgres + Redis + API on :10000 + Next on :3000, 54 migrations, 9 seeded accounts). Routes were discovered from each account's own rendered sidebar rather than hardcoded, then loaded at each width and probed twice with a settle gap, keeping the worse sample.
+
+| | Before | After |
+|---|---|---|
+| REGULAR (11 routes × 3 widths) | 33/33 clean | 33/33 clean |
+| TITLE_COMPANY (8 × 3) | 22/24 clean — `/app/company/reps` clipped at 1024 and 1142 | 24/24 clean |
+| COMPANY_REP (12 × 3) | 32/36 clean — `/app` and `/app/affiliate` clipped at 1024 and 1142 | 36/36 clean |
+| **Total** | **87/93** | **93/93** |
+
+**Fixed** by adding `min-w-0` to `SidebarInset`. Four of the sidebar's other flex children (`SidebarGroup`, `SidebarMenu`, `SidebarMenuSub`, `SidebarMenuSubButton`) already carry it; the inset was the one that was missed.
+
+**Two checks a `scrollWidth` sweep cannot make** were run separately, because `min-w-0` can convert "overflows the viewport" into "clipped and unreachable":
+
+1. The topbar account menu is inside the viewport **and opens on click** at all three widths for all three account types — 18/18.
+2. Nothing wider than its parent lacks a scrollable ancestor. 15/18 pass; the 3 failures are D-043 and were verified byte-identical with the fix stashed.
+
+Also verified with the sidebar **collapsed** as well as expanded (12/12 clean), since the fix changes how the inset shares space with the sidebar.
+
+**Single probe was not enough.** An earlier single-sample run reported COMPANY_REP `/app` @1142 as clean — the exact width the finding names — because content width moves as async data lands. The two-sample worst-case probe catches it consistently. A measurement claiming *absence* has to err toward sensitivity.
+
+**REGULAR had to be un-blocked before it could be measured at all.** A freshly seeded agent account is redirected off `/app` to the `/app/get-started` wizard, which is a builder route and renders no sidebar — so the first sweep measured the wizard for REGULAR and reported it clean, satisfying "three account types" on paper only. The redirect is gated on `sessionStorage` (`dashboard-onboarding.tsx:31-36`), so the harness seeds `guided_onboarding_skipped`, putting the browser in the state a real user reaches by clicking "Skip for now" without mutating the database. The sweep now refuses to run for any account whose sidebar discovery returns fewer than two routes, so this cannot silently recur.
+
+**Regression test:** `apps/web/__tests__/SidebarInset.test.tsx`, 3 cases. jsdom does no layout — `scrollWidth` is always 0 there — so it cannot reproduce the defect; it asserts the rendered className instead, including under the exact class list `app-layout.tsx` passes and under a conflicting `w-*` class, so tailwind-merge is exercised rather than the source text being grepped. **Verified load-bearing:** all 3 fail with the fix stashed and pass with it applied. The suite is otherwise unchanged — 13 failed / 38 passed before, 13 failed / 41 passed after, same four failing suites (see D-042). Note this test cannot protect anything until D-041 and D-042 are fixed, because CI never runs it.
 
 ---
 
