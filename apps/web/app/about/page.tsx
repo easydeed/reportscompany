@@ -1,16 +1,16 @@
-import { Navbar } from "@/components/navbar"
-import { Footer } from "@/components/footer"
+import { SiteNav } from "@/components/site-nav"
+import { SiteFooter } from "@/components/site-footer"
 import { Building2, Users, Target, Heart, Zap, Shield } from "lucide-react"
 
 export const metadata = {
-  title: "About Us | TrendyReports",
+  title: "About Us",
   description: "Learn about TrendyReports - the team behind the automated market report platform trusted by real estate professionals.",
 }
 
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-white">
-      <Navbar />
+      <SiteNav />
 
       {/* Hero */}
       <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8">
@@ -194,7 +194,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <Footer />
+      <SiteFooter />
     </div>
   )
 }

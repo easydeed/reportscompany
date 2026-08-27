@@ -1,4 +1,12 @@
-export function MarketingFooter() {
+/**
+ * Site-wide footer. Same rationale as site-nav.tsx.
+ *
+ * Anchors are root-relative so they work off the landing page.
+ *
+ * NOTE: the mailto entries here ("For Title Companies", "Contact Us") are
+ * M4-T1/M4-T2 and are deliberately untouched by M2.
+ */
+export function SiteFooter() {
   return (
     <footer className="bg-[#0F172A] px-6 py-24 text-[#94A3B8]">
       <div className="mx-auto max-w-7xl">
@@ -18,7 +26,7 @@ export function MarketingFooter() {
             </p>
             <ul className="mt-4 space-y-3">
               <li>
-                <a href="#how-it-works" className="text-sm transition-colors hover:text-white">
+                <a href="/#how-it-works" className="text-sm transition-colors hover:text-white">
                   For Agents
                 </a>
               </li>
@@ -28,7 +36,7 @@ export function MarketingFooter() {
                 </a>
               </li>
               <li>
-                <a href="#pricing" className="text-sm transition-colors hover:text-white">
+                <a href="/#pricing" className="text-sm transition-colors hover:text-white">
                   Pricing
                 </a>
               </li>
@@ -47,7 +55,7 @@ export function MarketingFooter() {
                 </a>
               </li>
               <li>
-                <a href="#faq" className="text-sm transition-colors hover:text-white">
+                <a href="/#faq" className="text-sm transition-colors hover:text-white">
                   FAQ
                 </a>
               </li>

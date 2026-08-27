@@ -1,10 +1,10 @@
-import { Navbar } from "@/components/navbar"
-import { Footer } from "@/components/footer"
+import { SiteNav } from "@/components/site-nav"
+import { SiteFooter } from "@/components/site-footer"
 import { Code, Book, Key, Zap, FileJson, Mail, Calendar, Shield, ArrowRight, ExternalLink } from "lucide-react"
 import Link from "next/link"
 
 export const metadata = {
-  title: "API Documentation | TrendyReports",
+  title: "API Documentation",
   description: "TrendyReports API documentation - Integrate automated market reports into your applications.",
 }
 
@@ -86,7 +86,7 @@ const methodColors: Record<string, string> = {
 export default function DocsPage() {
   return (
     <div className="min-h-screen bg-white">
-      <Navbar />
+      <SiteNav />
 
       {/* Hero */}
       <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8">
@@ -364,7 +364,7 @@ export default function DocsPage() {
         </div>
       </section>
 
-      <Footer />
+      <SiteFooter />
     </div>
   )
 }
