@@ -1,5 +1,6 @@
 "use client";
 
+import { DEMO_LISTING } from "@/lib/demo-data";
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Check, Eye, Lock, Palette, ShieldCheck } from "lucide-react";
@@ -316,7 +317,7 @@ export function StepTheme({
                 className="text-[11px] font-bold"
                 style={{ color: accentColor }}
               >
-                $485,000
+                {DEMO_LISTING.price}
               </p>
               <p className="text-[8px] text-white/50 mt-0.5">On dark</p>
             </div>
@@ -330,7 +331,7 @@ export function StepTheme({
                 className="text-[11px] font-bold"
                 style={{ color: accentColor }}
               >
-                $485,000
+                {DEMO_LISTING.price}
               </p>
               <p className="text-[8px] text-muted-foreground mt-0.5">
                 On light
@@ -346,7 +347,7 @@ export function StepTheme({
                 className="text-[11px] font-bold"
                 style={{ color: colorMetrics.textOnAccent }}
               >
-                $485,000
+                {DEMO_LISTING.price}
               </p>
               <p
                 className="text-[8px] mt-0.5"

@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { DEMO_AGENT, DEMO_MARKET } from "@/lib/demo-data";
 import { QrCode, FileInput, Bell, MapPin, Smartphone } from "lucide-react";
 
 const fadeUp = {
@@ -74,7 +75,7 @@ export function LeadCapture() {
               </div>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                 <span className="font-semibold text-foreground">
-                  Sarah Johnson
+                  {DEMO_AGENT.name}
                 </span>{" "}
                 viewed{" "}
                 <span className="font-semibold text-foreground">
@@ -118,7 +119,7 @@ export function LeadCapture() {
                 <p className="mt-1 text-sm font-bold text-white">
                   1205 Bayview Terrace
                 </p>
-                <p className="text-xs text-white/60">Irvine, CA 92602</p>
+                <p className="text-xs text-white/60">{DEMO_MARKET.cityState} {DEMO_MARKET.postalCode}</p>
               </div>
 
               <div className="h-28 overflow-hidden">

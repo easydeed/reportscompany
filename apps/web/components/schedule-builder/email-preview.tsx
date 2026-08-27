@@ -1,5 +1,6 @@
 "use client"
 
+import { DEMO_LISTING } from "@/lib/demo-data";
 import type {
   ScheduleBuilderState,
   BrandingContext,
@@ -194,7 +195,7 @@ function ReportContent({ state, branding }: { state: ScheduleBuilderState; brand
               <div className="text-right">Price</div>
             </div>
             {[
-              { addr: "123 Oak St", beds: 4, baths: 3, price: "$1.2M" },
+              { addr: DEMO_LISTING.address, beds: DEMO_LISTING.beds, baths: DEMO_LISTING.baths, price: DEMO_LISTING.priceShort },
               { addr: "456 Maple", beds: 3, baths: 2, price: "$985K" },
             ].map((sale, i) => (
               <div key={i} className="grid grid-cols-4 px-2 py-1.5 border-t border-gray-200">

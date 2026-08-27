@@ -1,5 +1,6 @@
 "use client"
 
+import { DEMO_PRICE_BANDS } from "@/lib/demo-data";
 import type { 
   ReportBuilderState, 
   ReportType, 
@@ -263,8 +264,8 @@ function ReportContent({ reportType, primaryColor, accentColor }: { reportType: 
           <div className="space-y-2">
             {[
               { label: "Entry Level", range: "Under $750K", count: 18, pct: 14 },
-              { label: "Move-Up", range: "$750K - $1.2M", count: 52, pct: 41 },
-              { label: "Premium", range: "$1.2M - $2M", count: 38, pct: 30 },
+              { label: "Move-Up", range: DEMO_PRICE_BANDS[1].range, count: 52, pct: 41 },
+              { label: "Premium", range: DEMO_PRICE_BANDS[2].range, count: 38, pct: 30 },
               { label: "Luxury", range: "Over $2M", count: 19, pct: 15 },
             ].map((band, i) => (
               <div key={i} className="flex items-center gap-2 text-xs">
