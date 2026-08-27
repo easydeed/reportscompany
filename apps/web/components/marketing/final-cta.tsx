@@ -31,14 +31,15 @@ export function FinalCta() {
             href="/register"
             className="inline-flex items-center rounded-full bg-[#6366F1] px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-[#6366F1]/25 transition-colors hover:bg-[#4F46E5]"
           >
-            Start free trial
+            Start free
           </a>
         </motion.div>
         <motion.p
           variants={fadeUp}
           className="mt-5 text-sm text-muted-foreground/70"
         >
-          {"Free for 14 days \u00B7 No credit card \u00B7 Cancel anytime"}
+          {/* G1b: Free is a permanent plan, not a 14-day trial. */}
+          {"Free plan, no time limit \u00B7 No credit card \u00B7 Upgrade any time"}
         </motion.p>
       </motion.div>
     </section>

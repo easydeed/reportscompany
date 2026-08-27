@@ -68,10 +68,29 @@ export default function TermsPage() {
               non-refundable except as expressly stated in these Terms.
             </p>
 
-            <h3 className="font-display font-semibold text-xl text-slate-900 mt-8 mb-3">Free Trial</h3>
+            {/* G1b. This subsection previously read: "We offer a 14-day free
+                trial for new users. No credit card is required during the trial
+                period. At the end of the trial, you must subscribe to continue
+                using the Service."
+
+                That described a product that does not exist. `free` and
+                `sponsored_free` are plan rows with real limits and there is no
+                expiry mechanism anywhere in the code — nothing ages an account
+                off the free plan, and no subscription is ever required to keep
+                using it. These are the Terms, so the sentence was not merely
+                inaccurate marketing: it asserted a payment obligation that the
+                Service does not create and could not enforce.
+
+                A `trial` plan row does exist and is deliberately left in place;
+                it is not wired to signup. If a real trial ships, this
+                subsection comes back — describing that trial. */}
+            <h3 className="font-display font-semibold text-xl text-slate-900 mt-8 mb-3">Free Plan</h3>
             <p className="text-slate-600 mb-4">
-              We offer a 14-day free trial for new users. No credit card is required during the trial
-              period. At the end of the trial, you must subscribe to continue using the Service.
+              We offer a free plan. No credit card is required to create an account, and the free plan
+              does not expire — there is no trial period after which you must subscribe. The free plan
+              includes a limited monthly allowance of reports and scheduled deliveries; current
+              allowances for each plan are shown on our pricing page. You may upgrade to a paid plan at
+              any time for higher limits, and you are never charged unless you choose to do so.
             </p>
 
             <h3 className="font-display font-semibold text-xl text-slate-900 mt-8 mb-3">Cancellation</h3>

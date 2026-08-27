@@ -43,7 +43,7 @@ export function WhoItsFor() {
               href="/register"
               className="mt-6 inline-flex items-center rounded-full bg-[#6366F1] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#4F46E5]"
             >
-              Start free trial
+              Start free
             </a>
           </motion.div>
 

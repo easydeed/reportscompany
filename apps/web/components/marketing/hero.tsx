@@ -124,7 +124,7 @@ export function Hero() {
             href="/register"
             className="inline-flex items-center rounded-full bg-[#6366F1] px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-[#6366F1]/25 transition-colors hover:bg-[#4F46E5]"
           >
-            Start free trial
+            Start free
           </a>
           <a
             href="#email-reports"
@@ -135,7 +135,11 @@ export function Hero() {
         </motion.div>
 
         <motion.p variants={fadeUp} className="mt-5 text-sm text-muted-foreground/70">
-          {"Free for 14 days \u00B7 No credit card \u00B7 Your first report in under 2 minutes"}
+          {/* G1b: Free is a permanent plan (3 market reports/month), not a
+              14-day trial. No expiry mechanism exists in the code \u2014 `free` and
+              `sponsored_free` are plan rows with real limits and nothing ages
+              an account out of them. */}
+          {"Free plan, no time limit \u00B7 No credit card \u00B7 Your first report in under 2 minutes"}
         </motion.p>
 
         <motion.div variants={fadeUp}>

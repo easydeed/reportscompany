@@ -583,18 +583,26 @@ console.log('PDF:', data.pdf_url);`
                   </p>
                 </div>
               </div>
+              {/* G2. Two badges removed from this row:
+
+                  "99.9% / Uptime" — unsourced, and the same figure commit
+                  725802a removed from /login in June 2026 after deleting
+                  /status for fabricated uptime numbers with no monitoring
+                  behind them.
+
+                  "SOC 2 / Ready" — that commit rewrote /security to state
+                  plainly that TrendyReports is NOT SOC 2 certified, and its
+                  message records this badge as knowingly left behind "pending
+                  a separate decision on that package". This is that decision.
+
+                  NOTE: this file is dead — packages/ui is imported by nothing
+                  in apps/ (D-050). It is corrected rather than skipped because
+                  a dead file is exactly where a retired claim survives to be
+                  rediscovered. It should be deleted with the package. */}
               <div className="flex items-center gap-8 shrink-0">
-                <div className="text-center">
-                  <div className="font-display font-bold text-2xl text-white font-mono">99.9%</div>
-                  <div className="text-xs text-slate-400">Uptime</div>
-                </div>
                 <div className="text-center">
                   <div className="font-display font-bold text-2xl text-white font-mono">256</div>
                   <div className="text-xs text-slate-400">Encryption</div>
-                </div>
-                <div className="text-center">
-                  <div className="font-display font-bold text-2xl text-white">SOC 2</div>
-                  <div className="text-xs text-slate-400">Ready</div>
                 </div>
               </div>
             </div>

@@ -35,9 +35,13 @@ const faqs = [
       "On the Growth Plus plan and above, reports are fully white-labeled. Your clients see your brand only.",
   },
   {
-    question: "What happens after the free trial?",
+    // G1b: there is no trial to end — Free is a permanent plan. The limits
+    // below are the `free` plan row, and match the pricing table above.
+    // "Team" was removed from the answer: no Team tier is offered on the
+    // pricing page, so it named a plan a reader could not buy.
+    question: "What does the free plan include?",
     answer:
-      "You can stay on the free plan or upgrade to Growth, Growth Plus, or Team. No pressure, no surprise charges.",
+      "Three market reports a month, one automated schedule, one property report, and your CMA lead page. It does not expire and needs no card. Upgrade to Growth or Growth Plus when you want more.",
   },
   {
     question: "Can I use this for listing presentations?",

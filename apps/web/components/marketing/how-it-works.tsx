@@ -447,7 +447,7 @@ export function HowItWorks() {
             href="/register"
             className="inline-flex items-center gap-3 rounded-full bg-[#6366F1] px-10 py-4 text-lg font-semibold text-white shadow-xl shadow-[#6366F1]/25 transition-all hover:bg-[#4F46E5] hover:shadow-2xl hover:shadow-[#6366F1]/30"
           >
-            Start your free trial
+            Start free
           </a>
           <p className="mt-4 text-[#64748B]">
             Your first report is ready in under 2 minutes. No credit card required.
