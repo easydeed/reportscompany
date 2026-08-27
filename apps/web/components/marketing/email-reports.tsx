@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { DEMO_AGENT, DEMO_MARKET } from "@/lib/demo-data";
 import { ReportCarousel } from "./report-carousel";
 
 const fadeUp = {
@@ -21,7 +22,7 @@ function StatGrid() {
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: "Median price", value: "$485K" },
-          { label: "Active listings", value: "1,247" },
+          { label: "Active listings", value: DEMO_MARKET.activeListings },
           { label: "Avg DOM", value: "28" },
         ].map((s) => (
           <div
@@ -59,9 +60,9 @@ function StatGrid() {
         </div>
         <div>
           <p className="text-sm font-semibold text-foreground">
-            Sarah Johnson
+            {DEMO_AGENT.name}
           </p>
-          <p className="text-xs text-muted-foreground">Compass</p>
+          <p className="text-xs text-muted-foreground">{DEMO_AGENT.brokerage}</p>
         </div>
       </div>
     </div>

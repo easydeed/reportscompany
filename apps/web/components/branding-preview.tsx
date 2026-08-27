@@ -1,5 +1,6 @@
 "use client"
 
+import { DEMO_MARKET, currentReportPeriod } from "@/lib/demo-data";
 import { Card, CardContent } from "@/components/ui/card"
 import { User } from "lucide-react"
 
@@ -58,7 +59,7 @@ export function BrandingPreview({
           <div className="p-3 space-y-2">
             <div className="text-center">
               <div className="text-[10px] font-bold text-gray-800">Market Snapshot</div>
-              <div className="text-[8px] text-gray-500">Irvine, CA • December 2025</div>
+              <div className="text-[8px] text-gray-500">{DEMO_MARKET.cityState} • {currentReportPeriod()}</div>
             </div>
 
             {/* Sample Stats */}

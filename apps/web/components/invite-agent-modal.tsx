@@ -305,7 +305,7 @@ export function InviteAgentModal({ isCompanyRep = false }: { isCompanyRep?: bool
                       <Label htmlFor="company_name" className="text-xs">Company</Label>
                       <Input
                         id="company_name"
-                        placeholder="Compass"
+                        placeholder="Marisol Ridge Realty"
                         value={formData.company_name}
                         onChange={(e) => setField('company_name', e.target.value)}
                         disabled={isSubmitting}

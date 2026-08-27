@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { DEMO_AGENT } from "@/lib/demo-data";
 import { Star } from "lucide-react";
 
 const fadeUp = {
@@ -21,7 +22,7 @@ const testimonials = [
     quote:
       "My clients actually reply to these reports. That never happened with my old newsletter.",
     name: "David C.",
-    title: "Agent, Irvine",
+    title: DEMO_AGENT.location,
     initials: "DC",
     color: "bg-[#4338CA]",
   },

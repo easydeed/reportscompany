@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { MapPin } from "lucide-react";
+import { DEMO_AGENT, DEMO_MARKET, currentReportPeriod } from "@/lib/demo-data";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
@@ -21,17 +22,17 @@ function ReportMockup() {
               TR
             </div>
             <div>
-              <p className="text-base font-semibold text-white">Market Snapshot — Irvine, CA</p>
-              <p className="text-sm text-white/70">January 2026 Report</p>
+              <p className="text-base font-semibold text-white">Market Snapshot — {DEMO_MARKET.cityState}</p>
+              <p className="text-sm text-white/70">{currentReportPeriod()} Report</p>
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-4 px-8 py-6">
           {[
-            { label: "Median price", value: "$485,000" },
-            { label: "Active listings", value: "1,247" },
-            { label: "Days on market", value: "28" },
+            { label: "Median price", value: DEMO_MARKET.medianPrice },
+            { label: "Active listings", value: DEMO_MARKET.activeListings },
+            { label: "Days on market", value: DEMO_MARKET.daysOnMarket },
           ].map((stat) => (
             <div key={stat.label} className="text-center">
               <p className="text-xl font-bold text-foreground">{stat.value}</p>
@@ -47,32 +48,32 @@ function ReportMockup() {
               <div className="h-2.5 flex-1 rounded-full bg-muted">
                 <div className="h-2.5 w-3/4 rounded-full bg-[#6366F1]" />
               </div>
-              <span className="text-sm font-medium text-[#4338CA]">+3.2%</span>
+              <span className="text-sm font-medium text-[#4338CA]">{DEMO_MARKET.trends.medianPrice}</span>
             </div>
             <div className="flex items-center gap-3">
               <span className="w-28 text-sm text-muted-foreground">Inventory</span>
               <div className="h-2.5 flex-1 rounded-full bg-muted">
                 <div className="h-2.5 w-1/2 rounded-full bg-[#A5B4FC]" />
               </div>
-              <span className="text-sm font-medium text-[#64748B]">-8.1%</span>
+              <span className="text-sm font-medium text-[#64748B]">{DEMO_MARKET.trends.inventory}</span>
             </div>
             <div className="flex items-center gap-3">
               <span className="w-28 text-sm text-muted-foreground">Days on mkt</span>
               <div className="h-2.5 flex-1 rounded-full bg-muted">
                 <div className="h-2.5 w-2/5 rounded-full bg-[#6366F1]" />
               </div>
-              <span className="text-sm font-medium text-[#4338CA]">-12%</span>
+              <span className="text-sm font-medium text-[#4338CA]">{DEMO_MARKET.trends.daysOnMarket}</span>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-3 rounded-b-2xl border-t border-border bg-muted/50 px-8 py-5">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#6366F1] text-sm font-bold text-white">
-            SJ
+            {DEMO_AGENT.initials}
           </div>
           <div>
-            <p className="text-base font-semibold text-foreground">Sarah Johnson</p>
-            <p className="text-sm text-muted-foreground">Compass Real Estate</p>
+            <p className="text-base font-semibold text-foreground">{DEMO_AGENT.name}</p>
+            <p className="text-sm text-muted-foreground">{DEMO_AGENT.brokerage}</p>
           </div>
         </div>
       </div>

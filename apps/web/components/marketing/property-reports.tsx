@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { DEMO_AGENT, DEMO_MARKET } from "@/lib/demo-data";
 import { FileText, MapPin, BarChart3, QrCode } from "lucide-react";
 
 const fadeUp = {
@@ -109,7 +110,7 @@ export function PropertyReports() {
                   1205 Bayview Terrace
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Irvine, CA 92602
+                  {DEMO_MARKET.cityState} {DEMO_MARKET.postalCode}
                 </p>
                 <div className="mt-3 flex gap-3">
                   {["4 BD", "3 BA", "2,450 sqft"].map((spec) => (
@@ -151,10 +152,10 @@ export function PropertyReports() {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-foreground">
-                        Sarah Johnson
+                        {DEMO_AGENT.name}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Compass Realty
+                        {DEMO_AGENT.brokerage}
                       </p>
                     </div>
                   </div>

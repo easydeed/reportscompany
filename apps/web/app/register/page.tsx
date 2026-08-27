@@ -1,5 +1,6 @@
 "use client"
 
+import { AVATAR_INITIALS } from "@/lib/demo-data";
 import * as React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
@@ -126,7 +127,7 @@ export default function RegisterPage() {
                 key={i}
                 className={`flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#1E293B] text-xs font-bold text-white ${color}`}
               >
-                {["SJ", "MC", "LP", "DR", "AW"][i]}
+                {AVATAR_INITIALS[i]}
               </div>
             ))}
             <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#1E293B] bg-white/10 text-xs font-medium text-[#94A3B8]">

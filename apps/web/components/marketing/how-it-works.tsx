@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { DEMO_MARKET, DEMO_MARKETS, currentReportPeriod } from "@/lib/demo-data";
 import {
   MapPin,
   Palette,
@@ -28,12 +29,7 @@ const scaleIn = {
 };
 
 function CitySearchMockup() {
-  const cities = [
-    { name: "Irvine", count: "2,847 listings", active: true },
-    { name: "Newport Beach", count: "1,432 listings", active: false },
-    { name: "Pasadena", count: "1,891 listings", active: false },
-    { name: "Laguna Beach", count: "876 listings", active: false },
-  ];
+  const cities = DEMO_MARKETS;
 
   const reportTypes = [
     { name: "Market Snapshot", icon: Home, selected: true },
@@ -192,15 +188,15 @@ function BrandingMockup() {
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-white">Market Snapshot</p>
-                  <p className="text-[10px] text-white/70">Irvine, CA</p>
+                  <p className="text-[10px] text-white/70">{DEMO_MARKET.cityState}</p>
                 </div>
               </div>
             </div>
             <div className="p-3">
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { label: "Median", value: "$1.2M" },
-                  { label: "Active", value: "847" },
+                  { label: "Median", value: DEMO_MARKET.medianPrice },
+                  { label: "Active", value: DEMO_MARKET.activeListings },
                   { label: "DOM", value: "24" },
                 ].map((stat) => (
                   <div key={stat.label} className="rounded-md bg-[#F8FAFC] p-2 text-center">
@@ -232,7 +228,7 @@ function BrandingMockup() {
 
 function ScheduleMockup() {
   const recipients = [
-    { name: "Irvine Buyers", count: 47, color: "bg-[#6366F1]" },
+    { name: `${DEMO_MARKET.city} Buyers`, count: 47, color: "bg-[#6366F1]" },
     { name: "Newport Sellers", count: 32, color: "bg-[#4338CA]" },
     { name: "OC Investors", count: 28, color: "bg-[#818CF8]" },
   ];
@@ -323,17 +319,17 @@ function ScheduleMockup() {
             <div className="p-3">
               <div className="mb-2 h-24 rounded-md bg-gradient-to-br from-[#6366F1] to-[#4338CA]">
                 <div className="flex h-full flex-col items-center justify-center text-white">
-                  <p className="text-xs font-semibold">Irvine Market Snapshot</p>
-                  <p className="text-[10px] opacity-70">March 2026</p>
+                  <p className="text-xs font-semibold">{DEMO_MARKET.city} Market Snapshot</p>
+                  <p className="text-[10px] opacity-70">{currentReportPeriod()}</p>
                 </div>
               </div>
               <div className="flex gap-2">
                 <div className="flex-1 rounded-md bg-[#F8FAFC] p-2 text-center">
-                  <p className="text-xs font-bold text-[#0F172A]">$1.2M</p>
+                  <p className="text-xs font-bold text-[#0F172A]">{DEMO_MARKET.medianPrice}</p>
                   <p className="text-[8px] text-[#94A3B8]">Median</p>
                 </div>
                 <div className="flex-1 rounded-md bg-[#F8FAFC] p-2 text-center">
-                  <p className="text-xs font-bold text-[#0F172A]">847</p>
+                  <p className="text-xs font-bold text-[#0F172A]">{DEMO_MARKET.activeListings}</p>
                   <p className="text-[8px] text-[#94A3B8]">Active</p>
                 </div>
               </div>

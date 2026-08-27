@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { DEMO_MARKET } from "@/lib/demo-data";
 import { ReportCarousel } from "./report-carousel";
 
 const fadeUp = {
@@ -30,7 +31,7 @@ function PdfStatPage() {
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: "Median price", value: "$485K" },
-          { label: "Active", value: "1,247" },
+          { label: "Active", value: DEMO_MARKET.activeListings },
           { label: "Avg DOM", value: "28" },
         ].map((s) => (
           <div key={s.label} className="rounded-md bg-[#F8FAFC] p-3 text-center">
