@@ -4,7 +4,7 @@ import * as React from "react"
 import { useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { Eye, EyeOff, ArrowRight, BarChart3, Mail, Shield, AlertCircle } from "lucide-react"
+import { Eye, EyeOff, ArrowRight, BarChart3, AlertCircle } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -205,22 +205,40 @@ function LoginForm() {
           </h2>
         </div>
 
-        {/* Stats row */}
-        <div className="grid grid-cols-3 gap-6">
-          <div className="rounded-xl bg-white/5 p-5 backdrop-blur">
+        {/* One tile, because it is the only figure here that can be
+            substantiated. (M3-T4)
+
+            Removed: "50K+ / Emails sent monthly". It could not be verified,
+            and the only production volume evidence available contradicts it
+            by roughly two orders of magnitude — `schedule_runs` holds 769 rows
+            in total, all time, of which 585 completed. 50,000 sends in a
+            single month would require ~85 recipients on every completed run
+            that has ever executed, compressed into one month. Confirm or
+            restore it with a real number by running, against production:
+
+              SELECT COUNT(*) AS rows,
+                     COALESCE(SUM(COALESCE(array_length(to_emails, 1), 0)), 0)
+                       AS recipients
+              FROM email_log
+              WHERE status = 'sent'
+                AND created_at >= NOW() - INTERVAL '30 days';
+
+            (`email_log.to_emails` is TEXT[], so rows and recipients differ;
+            `status` arrives in migration 0027.)
+
+            Removed: "Reliable / Uptime". "Reliable" is not a measurement, and
+            this tile already lost its real number once — it read "99.9% Uptime
+            SLA" until that was scrubbed as unsubstantiated in June 2026. There
+            is no uptime monitoring behind it to quote, so the tile goes rather
+            than getting a third wording.
+
+            Kept: "7 / Report types" — 8 report slugs exist, `open_houses` is
+            disabled in the wizard, so 7 is what a user can actually count. */}
+        <div>
+          <div className="w-fit rounded-xl bg-white/5 px-8 py-5 backdrop-blur">
             <BarChart3 className="h-6 w-6 text-[#818CF8]" />
             <p className="mt-3 text-2xl font-bold text-white">7</p>
             <p className="mt-1 text-sm text-[#94A3B8]">Report types</p>
-          </div>
-          <div className="rounded-xl bg-white/5 p-5 backdrop-blur">
-            <Mail className="h-6 w-6 text-[#818CF8]" />
-            <p className="mt-3 text-2xl font-bold text-white">50K+</p>
-            <p className="mt-1 text-sm text-[#94A3B8]">Emails sent monthly</p>
-          </div>
-          <div className="rounded-xl bg-white/5 p-5 backdrop-blur">
-            <Shield className="h-6 w-6 text-[#818CF8]" />
-            <p className="mt-3 text-2xl font-bold text-white">Reliable</p>
-            <p className="mt-1 text-sm text-[#94A3B8]">Uptime</p>
           </div>
         </div>
       </div>
