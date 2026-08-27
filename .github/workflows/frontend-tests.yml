@@ -12,11 +12,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # D-041: this step did not exist, so every run since at least 2026-03-04
+      # died on `pnpm: command not found` (exit 127) before installing anything
+      # — the suite was never reached, let alone run.
+      #
+      # No `version:` on purpose. action-setup reads `packageManager` from the
+      # root package.json (currently pnpm@9.12.3), which is the same field
+      # Vercel reads to pick the pnpm version for a build. One declaration, one
+      # source of truth: bumping pnpm in package.json moves CI and Vercel
+      # together, and neither can silently drift from the other.
+      - uses: pnpm/action-setup@v4
+
+      # Must come AFTER pnpm/action-setup — `cache: pnpm` shells out to pnpm to
+      # locate the store, so setup-node fails if pnpm is not on PATH yet.
+      #
+      # node-version-file rather than a literal "20": .nvmrc pins 20.18.1 and is
+      # what local development and Vercel both read. The previous "20" floated
+      # to whatever 20.x the runner shipped, so CI and production could differ
+      # by a patch release with nothing recording it.
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version-file: .nvmrc
+          cache: pnpm
+
       - name: Install deps
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      # Runs jest via apps/web's own `test` script, from apps/web. The working
+      # directory matters: run from the repository root there is no jest config,
+      # so rootDir becomes the repo and jest collects e2e/*.spec.ts — Playwright
+      # specs, which fail immediately as ESM. `--filter web` keeps the working
+      # directory correct.
       - name: Run web tests
         run: pnpm --filter web test
-
