@@ -515,6 +515,7 @@ See `.env.example` for the full template.
 | [frontend-pages.md](./frontend-pages.md) | All app-router pages |
 | [frontend-components.md](./frontend-components.md) | Component organization |
 | [property-type-data-contract.md](./property-type-data-contract.md) | SiteX → SimplyRETS type mapping |
+| [simplyrets-integration-report.md](./simplyrets-integration-report.md) | Live SimplyRETS integration, fields, and calculations (2026-09-01) |
 | **Module Docs** (`modules/`) | |
 | [modules/simplyrets-api-service.md](./modules/simplyrets-api-service.md) | API-layer SimplyRETS client |
 | [modules/sitex-api-service.md](./modules/sitex-api-service.md) | SiteX Pro API client |
