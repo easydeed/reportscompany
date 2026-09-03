@@ -7,21 +7,21 @@
 
 ## Status
 
-**Last reconciled:** 2026-08-27, against `fix/m3-copy-truth`, cut from `main` at `524ce99` (PRs #33–#38 all merged).
+**Last reconciled:** 2026-08-27, against `chore/migration-bootstrap-guard`, cut from `main` at `8528da6` (PRs #33–#39 all merged).
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 29 | Real, unfixed |
-| `fixed` | 20 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 30 | Real, unfixed |
+| `fixed` | 21 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **52** | D-001 … D-052, contiguous, no duplicates |
+| **Total** | **54** | D-001 … D-054, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 3 · WRONG 10 · FRAGILE 10 · ROUGH 6. (Sums to 29, the open total.)
+**Open by severity:** BROKEN 3 · WRONG 10 · FRAGILE 11 · ROUGH 6. (Sums to 30, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -30,7 +30,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 Plus 4 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 2 UNVERIFIED. Those are open questions, not defects, and are counted separately.
 
-D-001 through D-024 are grouped by severity below. D-025 through D-034 are grouped in the **P2B — Configuration trace** section, D-035 through D-037 in the **Production evidence reconciliation** section, and D-041 through D-052 in the **Phase M — Marketing / UX** section, because each is only readable alongside the trace that produced it.
+D-001 through D-024 are grouped by severity below. D-025 through D-034 are grouped in the **P2B — Configuration trace** section, D-035 through D-037 in the **Production evidence reconciliation** section, and D-041 through D-054 in the **Phase M — Marketing / UX** section, because each is only readable alongside the trace that produced it.
 
 **Reading note on the P2B entries:** six were written as conditional on environment values I did not have. Production logs have since settled three of them (two BROKEN, one WRONG — all closed, with evidence). The remaining conditionals are listed at the end of the reconciliation section.
 
@@ -803,7 +803,23 @@ The three outcomes were enumerated before the query, and are kept because the re
 
 **Status stays `open` deliberately.** This defect is a value in the production database, and writing a migration does not change one. It closes when Jerry applies 0054 and the verification query in its header returns `25 | 25`. Marking it `fixed` on the strength of an unapplied migration would be exactly the kind of unbacked status claim the header of this document forbids.
 
-Verified locally against a database seeded from `db/migrations/`: reproduced production's `15 | 15`, applied 0054, got `25 | 25`, re-applied and got `25 | 25` again. **95 `skipped_limit` rows say real users are hitting the 15 today**, so this is the one item in this batch with a live customer cost attached to the delay.
+**How to apply it, exactly.** Production has never been bootstrapped, and a bare `--bootstrap` would mark 0054 applied without running it (D-053). Use the explicit form:
+
+```bash
+python scripts/run_migrations.py --status
+#   expect: 55 files on disk, 0 applied, 55 pending
+
+python scripts/run_migrations.py --bootstrap --except 0054_growth_plan_report_limit.sql
+#   expect: 54 marked as applied without running
+#           1 file(s) were deliberately LEFT PENDING ... 0054_growth_plan_report_limit.sql
+
+python scripts/run_migrations.py
+#   expect: >>> Running migration: 0054_growth_plan_report_limit.sql
+```
+
+`--except` rather than `--through 0053_…`: `--through` splits on sorted order and `seed_demo_account.sql` sorts last, so a 0053 boundary would leave the demo seeder pending too and the normal run would insert a demo account into production. See D-053.
+
+Verified locally against a database seeded from `db/migrations/`: reproduced production's `15 | 15`, ran that exact three-command sequence, and the verification query returned `25 | 25`. Also verified the older path — apply 0054 directly, re-apply, still `25 | 25` (idempotent). **95 `skipped_limit` rows say real users are hitting the 15 today**, so this is the one item in this batch with a live customer cost attached to the delay.
 
 **Independent of the limit question, the naming is wrong three ways at once.** For `plan_slug='starter'`: the database says `plan_name='Growth'`; the API overrides it and returns **"Starter"** (`_PLAN_DISPLAY_NAMES` at `usage.py:32` wins over the DB value at `usage.py:139`); and every piece of user-facing copy says **"Growth"** (`apps/web/components/stripe-billing-actions.tsx:98`, `components/marketing/faq.tsx:35`, `.cursor/rules/skills/references/architecture.md:70-71`). A customer on Growth sees "Growth" on the marketing site and "Starter" in their own account page. The same collision exists for `pro`/`team` → "Pro" vs "Growth Plus".
 
@@ -1266,6 +1282,55 @@ The fix is one statement extending 0054's shape to the other rows, deliberately 
 Same class as D-050 (`components/v0/`), and the same specific hazard: it holds another copy of the footer whose Partners/Press/Support mailto entries M4-T1 removed, so an audit sweeping for those strings finds them again and re-opens a closed finding.
 
 Held for PR #27's dead-code removal alongside D-050, on the same reasoning: deleting 183 files is not a side effect of a copy ticket. **#27 is still unmerged**, and it should take D-050 and D-052 in with it.
+
+### D-053 — `--bootstrap` marks never-run migrations as applied: a silent no-op with a green result
+**Severity:** BROKEN · **Affects:** any deploy where a migration is authored before bootstrap runs
+**Status:** `fixed` — `chore/migration-bootstrap-guard`
+
+`--bootstrap` records files as applied **without executing them**, and it recorded *every* unrecorded file. Any migration in the tree that had never run anywhere would be marked applied and never execute — and nothing re-runs it afterwards, because the loop skips whatever is already recorded.
+
+The result reads as complete success:
+
+```
+--status      → Status: 0 applied, 55 pending.
+--bootstrap   → marked applied WITHOUT running: 0054_growth_plan_report_limit.sql
+                Bootstrap complete: 55 marked as applied without running.
+--status      → Status: 55 applied, 0 pending.
+normal apply  → All migrations applied. (0 newly applied, 55 already recorded)
+
+starter = 15 | 15          ← the migration's change was never made
+schema_migrations claims:  0054_growth_plan_report_limit.sql
+```
+
+**Not hypothetical.** The production bootstrap runbook for this repository was written twice with `0054` already in the tree. Reproduced end to end against a database shaped like production (schema present, `starter` at 15, no tracking table); the sequence completed cleanly and left the Growth limit unchanged.
+
+**Fixed** by making the boundary explicit in both runners — `scripts/run_migrations.py` and `scripts/migrate.sh` implement the same contract, so guarding only one would have left the hazard in place:
+
+| Invocation | Behaviour |
+|---|---|
+| `--bootstrap --through NAME` | records `NAME` and everything sorting before it; the rest stay genuinely pending |
+| `--bootstrap --except NAME` (repeatable) | records everything except the named files |
+| `--bootstrap` (bare) | still permitted, but now **warns**, lists every file it would mark, and requires confirmation — `--yes`, or an interactive answer. Non-interactive without `--yes` exits 3 having written nothing |
+
+Whatever is left pending is printed under the heading *"WILL EXECUTE on the next normal run"*, and an unknown filename in `--through`/`--except` is a hard error (exit 2) rather than a silent non-match — a typo in `--except` is precisely how a migration you meant to protect gets marked applied anyway.
+
+**A trap the naive version of this guard would have introduced.** `--through` splits on *sorted* order, and not every file here is numbered: `seed_demo_account.sql` sorts after every `NNNN_` migration. So `--bootstrap --through 0053_phase4_indexes_and_signup_tokens.sql` leaves **both** `0054` and the seeder pending, and the next normal run would execute the seeder — inserting a hardcoded "Demo Account" (`912014c3-…`, 1000-report limit) into production. The guard would have swapped one silent hazard for another. It is documented in both runners' headers, asserted in the tests, and printed at runtime; `--except` has no ordering surprise and is the correct invocation for the current production run.
+
+**Regression test:** `tests/test_migration_bootstrap_guard.py`, 19 cases, no database required — the defect lives entirely in *which files get selected*, never in the SQL, so the selection is a pure function and is tested as one. `run_migrations.py` now imports `psycopg` inside `main()` so the module is importable without a driver, which is what lets these run in CI (which has no Postgres service). **Verified load-bearing:** reverting `partition_bootstrap` to the old "mark everything" behaviour fails 10 of the 19, including `test_the_actual_regression`.
+
+### D-054 — four documented test suites have never been collected
+**Severity:** FRAGILE · **Affects:** template rendering, market metrics, SimplyRETS query building
+**Status:** `open`
+
+`tests/` at the repository root holds `test_market_templates.py`, `test_property_templates.py`, `test_new_metrics.py` and `test_simplyrets_query_builder.py`. `pytest.ini`'s `testpaths` listed only `apps/api/tests apps/worker/tests`, so **none of them has ever been collected** — by CI or by anyone running `pytest` from the repository root.
+
+They are not abandoned scratch files. `docs/architecture/modules/test-suite.md:9,25` documents `tests/test_property_templates.py` as part of the project's test suite and gives `pytest tests/test_property_templates.py -v` as the command; `.cursor/rules/market-report-templates-skill.md:335` describes `tests/test_market_templates.py` as a "Template test suite (57 tests)". The documentation and the runner disagree, and the runner wins silently.
+
+This is the fifth instance of the same class in this document (D-015, D-038, D-039, D-041, D-042): a suite that exists, is believed to run, and does not.
+
+**Measured:** collecting the directory adds **226 tests, of which 40 currently fail** — concentrated in `test_simplyrets_query_builder.py` (query-parameter and vendor-injection assertions) and `test_property_templates.py` (`None`-value handling across four themes).
+
+**Not fixed here, deliberately.** Widening `testpaths` to `tests` is a CI-scope decision that lands 40 new failures, and it is not a side effect of adding a guard test. This branch therefore lists the single guard file rather than the directory, with the reasoning recorded in `pytest.ini` itself so the next person to look does not have to rediscover it. Whether to land those 40 red is the same call already made for D-038 and D-041, and it is Jerry's.
 
 ---
 
