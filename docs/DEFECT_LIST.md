@@ -7,21 +7,21 @@
 
 ## Status
 
-**Last reconciled:** 2026-08-27, against `chore/migration-bootstrap-guard`, cut from `main` at `8528da6` (PRs #33–#39 all merged).
+**Last reconciled:** 2026-08-27, against `chore/collect-root-tests`, cut from `main` at `fde163f` (PRs #27 and #33–#43 all merged).
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 30 | Real, unfixed |
-| `fixed` | 21 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 29 | Real, unfixed |
+| `fixed` | 22 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **54** | D-001 … D-054, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 3 · WRONG 10 · FRAGILE 11 · ROUGH 6. (Sums to 30, the open total.)
+**Open by severity:** BROKEN 3 · WRONG 10 · FRAGILE 10 · ROUGH 6. (Sums to 29, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -1324,7 +1324,7 @@ Whatever is left pending is printed under the heading *"WILL EXECUTE on the next
 
 ### D-054 — four documented test suites have never been collected
 **Severity:** FRAGILE · **Affects:** template rendering, market metrics, SimplyRETS query building
-**Status:** `open`
+**Status:** `fixed` — `chore/collect-root-tests`
 
 `tests/` at the repository root holds `test_market_templates.py`, `test_property_templates.py`, `test_new_metrics.py` and `test_simplyrets_query_builder.py`. `pytest.ini`'s `testpaths` listed only `apps/api/tests apps/worker/tests`, so **none of them has ever been collected** — by CI or by anyone running `pytest` from the repository root.
 
@@ -1332,9 +1332,27 @@ They are not abandoned scratch files. `docs/architecture/modules/test-suite.md:9
 
 This is the fifth instance of the same class in this document (D-015, D-038, D-039, D-041, D-042): a suite that exists, is believed to run, and does not.
 
-**Measured:** collecting the directory adds **226 tests, of which 40 currently fail** — concentrated in `test_simplyrets_query_builder.py` (query-parameter and vendor-injection assertions) and `test_property_templates.py` (`None`-value handling across four themes).
+**FIXED — `testpaths` now collects the `tests` directory, and the pipeline is red.**
 
-**Not fixed here, deliberately.** Widening `testpaths` to `tests` is a CI-scope decision that lands 40 new failures, and it is not a side effect of adding a guard test. This branch therefore lists the single guard file rather than the directory, with the reasoning recorded in `pytest.ini` itself so the next person to look does not have to rediscover it. Whether to land those 40 red is the same call already made for D-038 and D-041, and it is Jerry's.
+Baseline at the moment of collection, measured per suite on `main` at `fde163f`:
+
+| Suite | Result |
+|---|---|
+| `test_market_templates.py` | 1 failed, 56 passed |
+| `test_property_templates.py` | 24 failed, 62 passed |
+| `test_new_metrics.py` | **36 passed** — fully green |
+| `test_simplyrets_query_builder.py` | 15 failed, 13 passed |
+| **Four suites combined** | **40 failed, 167 passed (207)** |
+
+Plus the 19 guard tests from D-053, which pass — 226 collected in `tests/` in total.
+
+**The 40 failures are pre-existing and were previously invisible, not new breakage.** They are concentrated in two places: `test_simplyrets_query_builder.py` (query-parameter construction and vendor injection — 15 of 28 failing, the worst ratio in the repository) and `test_property_templates.py` (`None`-value handling across four themes, 24). `test_new_metrics.py` passes completely, which is worth noting: at least one of these suites has been correct and unrun for its whole life.
+
+A detail that settles whether these are scratch files: `.cursor/rules/market-report-templates-skill.md:335` calls `test_market_templates.py` a "Template test suite (57 tests)". It has exactly 57. The documentation was accurate; only the runner ignored it.
+
+**Landed red on the same reasoning as D-038 and D-041** — narrowing `testpaths` to make the pipeline green would restore precisely the condition that hid these, and the note in `pytest.ini` says so, so a future editor does not quietly undo it. Clearing the 40 is separate work; the SimplyRETS query builder is the place to start, since query-parameter defects reach live MLS calls.
+
+**All three pipelines now report honestly rather than not at all** — backend (D-038/D-039), frontend (D-041/D-042), and these.
 
 ---
 
