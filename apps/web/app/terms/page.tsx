@@ -208,7 +208,16 @@ export default function TermsPage() {
                   support@trendyreports.io
                 </a>
               </p>
-              <p className="text-slate-600">Address: 123 Market Street, San Francisco, CA 94103</p>
+              {/* G3 / M4-T3: real registered address, supplied 2026-08-27.
+                  The placeholder it replaces ("123 Market Street, San
+                  Francisco, CA 94103") sat on the two pages a title company
+                  reads during vendor diligence.
+
+                  NO PHONE LINE. None was supplied, and per the ticket an
+                  omitted phone is neutral where a fake one is disqualifying —
+                  so the field is absent rather than filled with a placeholder.
+                  Add one here only when there is a real business number. */}
+              <p className="text-slate-600">Address: 440 Rte. 66, Glendora, CA 91740</p>
             </div>
           </div>
         </div>

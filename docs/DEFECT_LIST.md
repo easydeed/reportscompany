@@ -1235,7 +1235,11 @@ Chrome findings #7 and #8. A nav entry that opens a blank email client is a dead
 
 **Every remaining nav and footer entry was verified to resolve** — the eight anchors across both components all have matching section IDs on the landing page (`how-it-works.tsx:385`, `report-types.tsx:101`, `lead-capture.tsx:41`, `contact-management.tsx:123`, `pricing.tsx:59`, `faq.tsx:51`). This matters because M2 made these anchors root-relative, which fixed *where* they point without establishing that anything is *there*; a bare `#fragment` that resolves to nothing fails just as silently as one on the wrong route.
 
-**M4-T3 not done — G3 unanswered.** `/privacy:186` and `/terms:192` still carry "123 Market Street, San Francisco, CA 94103" and "(415) 555-1234", on the exact pages a title company reads during vendor diligence. Per the ticket, no substitute placeholder is to be shipped, and an omitted phone is neutral where a fake one is disqualifying.
+**M4-T3 — ANSWERED (G3) and done on `fix/m4-t3-business-address`.** The real registered address replaces the placeholder on both legal pages: `terms/page.tsx` and `privacy/page.tsx`.
+
+**The fake phone the ticket describes is not on any live page.** `git log -S "(415) 555-1234"` over `privacy`, `terms` and `security` returns nothing — it was never there. It lives at `_intake/real-estate-saas/components/footer.tsx:33`, the vendored second app that renders nowhere (D-052); the audit grepped the repository and attributed it to the legal pages. `123 Market Street` is in that file too (`:22`), alongside the live copies. So the placeholder pair the gate describes is really one live defect and one dead-code artefact, and the dead half is covered by issue #42 rather than here.
+
+**No phone line was added.** None was supplied, and per the ticket an omitted phone is neutral where a fake one is disqualifying — so the field is absent rather than filled. The reasoning is recorded at both sites so a future editor does not "complete" the block with a placeholder.
 
 ### D-050 — `components/v0/` is six files with no importers
 **Severity:** ROUGH · **Affects:** nobody at runtime — this is dead weight and a re-litigation risk
