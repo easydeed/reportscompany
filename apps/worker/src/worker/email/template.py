@@ -1532,7 +1532,34 @@ def _get_insight_paragraph(
     ctl_str = f"{ctl:.1f}%" if ctl else None
     ppsf_str = f"${avg_ppsf:,.0f}/sq ft" if avg_ppsf else None
 
+    # Inventory clauses for the `else` branches below.
+    #
+    # Those branches are reached precisely when `moi` is FALSY, and they used to
+    # format it anyway — `f"{moi:.1f}"` on None raises TypeError, which
+    # propagates through schedule_email_html() to send_schedule_email() and the
+    # email is never sent. See tests/test_insight_paragraph_missing_metrics.py.
+    #
+    # Guarded on `is not None` rather than truthiness (the metric-tile code at
+    # :1394 uses `if moi else "N/A"`). moi == 0 is a real figure — no active
+    # listings against some closed ones — and stating "0.0 months of inventory"
+    # is more useful than suppressing it. Only a genuinely absent value is
+    # dropped, and when it is dropped the sentence must not still assert what
+    # the number was going to support.
+    _has_moi = moi is not None
+    moi_with_clause = f" with {moi:.1f} months of inventory" if _has_moi else ""
+    moi_and_clause = f"and {moi:.1f} months of inventory " if _has_moi else ""
+
     if report_type == "market_snapshot":
+        # NOTE: these stay truthiness checks (`if moi`), deliberately. Routing
+        # moi == 0 to the seller's-market branch looks more correct in the
+        # abstract, but 0 is not a market reading here — it is a sentinel.
+        # build_inventory_result (report_builders.py:468) sets moi = 0.0 when
+        # there are NO closed sales, while build_market_snapshot_result:150
+        # uses 99.9 for the same condition, and 6 of the 8 sample report types
+        # (services/sample_report_data.py) ship moi = 0 as "not modelled".
+        # Sending any of those to "Inventory is tight — excellent time to list"
+        # would be confidently wrong. The sentinel disagreement is the real
+        # defect; it is recorded rather than papered over here.
         if moi and moi < 3:
             return (
                 f"Great news for sellers in {area}—the market is moving fast. "
@@ -1553,8 +1580,14 @@ def _get_insight_paragraph(
             return (
                 f"Healthy activity in {area} this month—{total_closed} families found their new home "
                 f"at a median price of {price_str}. "
-                f"Homes are averaging {dom_str} on market with {moi:.1f} months of inventory, "
-                f"suggesting a balanced environment for both buyers and sellers. "
+                f"Homes are averaging {dom_str} on market{moi_with_clause}, "
+                + (
+                    "suggesting a balanced environment for both buyers and sellers. "
+                    if _has_moi
+                    # Without an inventory figure there is nothing supporting a
+                    # "balanced" reading, so the claim goes with the number.
+                    else "which gives both buyers and sellers a clear read on current demand. "
+                ) +
                 f"Buyers have time to explore without the pressure of bidding wars, "
                 f"while sellers in this range are still seeing solid demand for well-prepared homes."
             )
@@ -1587,9 +1620,15 @@ def _get_insight_paragraph(
             )
         else:
             return (
-                f"The {area} market is well-balanced right now with {total_active} active listings "
-                f"and {moi:.1f} months of inventory at a median of {price_str}. "
-                f"Homes are averaging {dom_str} on market—neither rushed nor stagnant. "
+                (
+                    f"The {area} market is well-balanced right now with {total_active} active listings "
+                    if _has_moi
+                    # "well-balanced" is an inference from moi sitting between 3
+                    # and 6. With no figure, report the count without the verdict.
+                    else f"There are {total_active} active listings in {area} right now "
+                )
+                + f"{moi_and_clause}at a median of {price_str}. "
+                + f"Homes are averaging {dom_str} on market—neither rushed nor stagnant. "
                 f"Buyers can explore confidently without extreme competition, "
                 f"while sellers benefit from consistent demand that rewards well-priced, well-presented homes."
             )
