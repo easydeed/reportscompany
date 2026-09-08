@@ -7,19 +7,19 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-08, against `fix/insight-moi-guard`, cut from `main` at `3505144`.
+**Last reconciled:** 2026-09-08, against `docs/d056-severity`, cut from `main` at `ef5f51c`.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 30 | Real, unfixed |
+| `open` | 31 | Real, unfixed |
 | `fixed` | 23 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **56** | D-001 … D-056, contiguous, no duplicates |
+| **Total** | **57** | D-001 … D-057, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 3 · WRONG 11 · FRAGILE 10 · ROUGH 6. (Sums to 30, the open total.)
+**Open by severity:** BROKEN 3 · WRONG 12 · FRAGILE 10 · ROUGH 6. (Sums to 31, the open total.)
 
 `fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
@@ -1394,8 +1394,42 @@ Those are the only two production callers of `schedule_email_html`; the rest are
 **Regression test:** `apps/worker/tests/test_insight_paragraph_missing_metrics.py`, 44 cases — every report type × five degraded metrics shapes, plus direct exercises of the two branches. It renders through the real `schedule_email_html`, because the defect is a runtime format error invisible to any source-text assertion. **Verified load-bearing: 10 fail against the unfixed module, 44 pass with the fix**, full worker suite 56 pass with no regression.
 
 ### D-056 — `months_of_inventory = 0` means two different things, and the email reads it as a third
-**Severity:** WRONG · **Affects:** `inventory` emails for any period with no closed sales
+**Severity:** WRONG · **Affects:** **every** `inventory` email — see the severity confirmation below
 **Status:** `open`
+
+> **Severity confirmed 2026-09-08 — the blast radius is larger than first recorded.**
+> This was filed as reachable "on any inventory report over a period with no closings." It is
+> reachable on **every inventory report ever sent**. `build_inventory_by_zip`
+> (`query_builders.py:275`) pins `"status": "Active"`, so the vendor never returns a Closed
+> record; `closed` in `build_inventory_result` is therefore *always* empty and
+> `moi = ... if closed else 0.0` *always* takes the `else`. There is no market condition in
+> which an inventory report produces a non-zero MOI. The elastic-widening retry
+> (`tasks.py:1013`) re-queries through the same `build_params(report_type, ...)`, so it does not
+> introduce Closed data either.
+>
+> Proven by driving the real chain — `build_params('inventory', …)` → `build_inventory_result` →
+> `_build_email_payload` → `schedule_email_html` — against a deliberately **hot** market fixture
+> (40 Active listings, 5–11 day DOM, nothing balanced about it):
+>
+> ```
+> QUERY ISSUED: {'status': 'Active', 'mindate': '2026-08-09', 'maxdate': '2026-09-08'}
+> MOI FROM BUILDER: 0.0   COUNTS: {'Active': 27, 'Pending': 0, 'Closed': 0}
+> EMAIL METRICS  moi: 0.0 | total_active: 27 | total_closed: 0
+>
+> The La Verne market is well-balanced right now with 27 active listings and
+> 0.0 months of inventory at a median of varying prices. Homes are averaging
+> 8 days on market—neither rushed nor stagnant. Buyers can explore confidently
+> without extreme competition, while sellers benefit from consistent demand…
+> ```
+>
+> An 8-day-DOM market described as "neither rushed nor stagnant," "without extreme competition."
+> `inventory` is a first-class scheduled report type (`routes/schedules.py:83`), so the question
+> "has production rendered this?" reduces to "has any inventory schedule ever sent?" — no market
+> condition is required. **That last question needs the read-only production query to close;**
+> everything upstream of it is settled in code.
+>
+> The "at a median of **varying prices**" in the same sentence is a *separate* defect with a
+> different root cause — see D-057.
 
 Two builders use **opposite sentinels for the same condition**:
 
@@ -1410,11 +1444,43 @@ The email then reads `0` as neither. `if moi and moi < 3` treats `0` as falsy, s
 
 > "The La Verne market is **well-balanced** right now with 42 active listings and **0.0 months of inventory** at a median of $812K."
 
-A market with **zero closed sales**, described as balanced, in a sentence that contradicts its own figure. Reachable on any inventory report over a period with no closings.
+A market with **zero closed sales**, described as balanced, in a sentence that contradicts its own figure. Not merely reachable — this is the *only* copy an inventory email can produce, for the reason given in the severity confirmation above.
 
 **Deliberately not fixed, and one attempted fix was reverted.** Changing the branch conditions to `moi is not None and moi < 3` routes `0` to the seller's-market branch — *"Inventory is tight … well below the balanced threshold … an excellent time to list"* — which is confidently wrong for a market with no sales, and would fire on 6 of 8 branding-page test emails. The reading cannot be fixed in the email while `0` means three different things upstream. **The sentinel disagreement is the defect**; the email is downstream of it. Fix `report_builders.py` first, then revisit the routing.
 
 The rationale is recorded in the code at the branch conditions so the next reader does not "correct" them into the same trap.
+
+---
+
+### D-057 — every inventory email quotes a median price of "varying prices"
+**Severity:** WRONG · **Affects:** **every** `inventory` email
+**Status:** `open`
+
+`_get_insight_paragraph` (`email/template.py:1522`) sources the price from:
+
+```python
+median_price = metrics.get("median_close_price") or metrics.get("median_list_price")
+...
+price_str = _format_price_clean(median_price) if median_price else "varying prices"
+```
+
+`build_inventory_result` (`report_builders.py:489-493`) emits exactly three metrics —
+`median_dom`, `months_of_inventory`, `new_this_month` — and **neither price key**.
+`_build_email_payload` adds counts and aliases `median_dom → avg_dom`, but no price. So
+`median_price` is always `None` and every inventory email renders:
+
+> "…at a median of **varying prices**."
+
+A price clause with no price, in a report whose every listing carries a `list_price` the builder
+already reads (it sorts and medians on other fields from the same records). Observed in the same
+real-pipeline render that confirmed D-056 above.
+
+Distinct from D-056: D-056 is a sentinel disagreement upstream, this is a metric the builder
+never computes. They surface in the same sentence, which is why one render exposes both.
+
+**Fix belongs in `build_inventory_result`** — add `median_list_price` (`_median` over
+`l["list_price"]` for the active set, the way `build_new_listings_result:386` already does it) —
+not in the email. Guessing a price in the template would be inventing a figure.
 
 ---
 
