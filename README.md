@@ -114,7 +114,7 @@ TrendyReports enables real estate agents and industry affiliates (title companie
 │   ├── architecture/           # Architecture docs + module docs
 │   │   ├── SOURCE_OF_TRUTH.md  # Master architecture document
 │   │   └── modules/            # Per-module deep dives
-│   ├── plan/                   # Plans & playbooks
+│   ├── plans/                  # Execution plans (see docs/plans/README.md)
 │   └── design/                 # HTML design mockups
 │
 ├── packages/
@@ -173,6 +173,7 @@ See [LOCAL_SETUP_GUIDE.md](./LOCAL_SETUP_GUIDE.md) for detailed setup instructio
 | [docs/architecture/SOURCE_OF_TRUTH.md](./docs/architecture/SOURCE_OF_TRUTH.md) | Master architecture document (see audit for known-false claims) |
 | [docs/architecture/INDEX.md](./docs/architecture/INDEX.md) | Quick-reference source tree |
 | [docs/architecture/modules/](./docs/architecture/modules/) | Per-module deep dives (13 modules) |
+| [docs/plans/](./docs/plans/) | Execution plans — §0 Rules of Engagement, Rev A, marketing Phase M, delivery surfaces. Status of each file is in [docs/plans/README.md](./docs/plans/README.md). |
 | [LOCAL_SETUP_GUIDE.md](./LOCAL_SETUP_GUIDE.md) | Local development setup |
 
 ---
