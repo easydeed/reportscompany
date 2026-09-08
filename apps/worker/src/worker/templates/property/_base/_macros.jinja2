@@ -673,3 +673,36 @@
   </div>
 </div>
 {% endmacro %}
+
+{# -----------------------------------------------------------------------------
+   MAP UNAVAILABLE  (A2 / E4)
+   Labelled failure state for a map that could not be fetched.
+
+   The aerial map is a Google Static Maps URL built in property_builder.py:952-966
+   and is None unless latitude, longitude AND GOOGLE_MAPS_API_KEY are all present.
+   Before this macro existed, a None map rendered as whatever the theme's CSS
+   happened to put behind it — a flat grey box, or on teal the cover photograph —
+   and modern/teal drew their location pin on top regardless. A pin over a
+   photograph of somewhere else is worse than no map: it asserts a location.
+
+   A failed fetch must say so. Inline styles rather than per-theme CSS because the
+   five *_report.jinja2 templates are standalone, each with its own stylesheet and
+   no shared class namespace.
+
+   Usage: {{ macros.map_unavailable() }}  — inside the map container, guarded by
+          {% if not images.aerial_map %}
+   ----------------------------------------------------------------------------- #}
+{% macro map_unavailable(label="Map unavailable") %}
+<div style="position:absolute; inset:0; display:flex; flex-direction:column;
+            align-items:center; justify-content:center; gap:10px;
+            background:repeating-linear-gradient(45deg,#eceff1,#eceff1 10px,#e2e6e9 10px,#e2e6e9 20px);
+            color:#5c6b73; font-family:inherit;">
+  <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor"
+       stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+    <path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/>
+    <circle cx="12" cy="10" r="2.6"/>
+    <path d="M3 3l18 18"/>
+  </svg>
+  <div style="font-size:12px; letter-spacing:0.08em; text-transform:uppercase; font-weight:600;">{{ label }}</div>
+</div>
+{% endmacro %}
