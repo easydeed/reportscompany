@@ -7,21 +7,21 @@
 
 ## Status
 
-**Last reconciled:** 2026-08-27, against `chore/collect-root-tests`, cut from `main` at `fde163f` (PRs #27 and #33–#43 all merged).
+**Last reconciled:** 2026-09-08, against `fix/insight-moi-guard`, cut from `main` at `3505144`.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 29 | Real, unfixed |
-| `fixed` | 22 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 30 | Real, unfixed |
+| `fixed` | 23 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **54** | D-001 … D-054, contiguous, no duplicates |
+| **Total** | **56** | D-001 … D-056, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 3 · WRONG 10 · FRAGILE 10 · ROUGH 6. (Sums to 29, the open total.)
+**Open by severity:** BROKEN 3 · WRONG 11 · FRAGILE 10 · ROUGH 6. (Sums to 30, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -1353,6 +1353,68 @@ A detail that settles whether these are scratch files: `.cursor/rules/market-rep
 **Landed red on the same reasoning as D-038 and D-041** — narrowing `testpaths` to make the pipeline green would restore precisely the condition that hid these, and the note in `pytest.ini` says so, so a future editor does not quietly undo it. Clearing the 40 is separate work; the SimplyRETS query builder is the place to start, since query-parameter defects reach live MLS calls.
 
 **All three pipelines now report honestly rather than not at all** — backend (D-038/D-039), frontend (D-041/D-042), and these.
+
+---
+
+## Delivery Surfaces Phase 1
+
+### D-055 — The email insight paragraph formats a value it has just established is falsy
+**Severity:** FRAGILE · **Affects:** `market_snapshot` and `inventory` scheduled emails
+**Status:** `fixed` — `fix/insight-moi-guard`
+
+`_get_insight_paragraph()` in `apps/worker/src/worker/email/template.py` built its fallback prose with branches shaped like this:
+
+```python
+if moi and moi < 3:    ... f"{moi:.1f} months of inventory"
+elif moi and moi > 6:  ... f"{moi:.1f} months of inventory"
+else:                  ... f"{moi:.1f} months of inventory"   # moi is falsy HERE
+```
+
+The `else` branch is reached **precisely when `moi` is falsy**, and then formats it. On `None` that raises:
+
+```
+TypeError: unsupported format string passed to NoneType.__format__
+```
+
+Two sites, at what were `:1556` (market_snapshot) and `:1591` (inventory). Found by rendering an email during the B1 investigation, not by reading.
+
+**The blast radius if it fires.** The exception propagates `_get_insight_paragraph` → `schedule_email_html` (`:1930`) → `send_schedule_email` (`email/send.py:205`). The email is never sent, and the Celery task fails. Combined with **D-033** — schedule failure notifications do not fire when `RESEND_API_KEY` is unset — the visible result is *a schedule that silently stops delivering, with nobody notified.* That interaction is why this was chased rather than filed.
+
+**Severity is FRAGILE, not BROKEN, because the reachability trace came back negative.** Every producer that reaches this code supplies the key:
+
+| Path | Producer | Supplies `months_of_inventory`? |
+|---|---|---|
+| Scheduled + ad-hoc email (`tasks.py:1048` → `:1280`, `:1347`) | `build_result_json` → `build_market_snapshot_result:256` / `build_inventory_result:493` | **Always.** `moi` is `99.9` (`:150`) or `0.0` (`:468`) when there are no closed sales — never `None` |
+| Branding-page "Test Email" (`routes/branding_tools.py:877`) | `services/sample_report_data.py` | **Always** — every report type sets it |
+
+Those are the only two production callers of `schedule_email_html`; the rest are `scripts/` generators and tests. So the crash is **not currently reachable**. The guard is still wrong, it costs nothing to fix, and the next producer that omits the key would take delivery down silently.
+
+**Fixed** by computing the inventory clause once against `moi is not None` and omitting it when absent, rather than formatting unconditionally. Where the clause is dropped, the sentence that depended on it changes too — the old copy asserted a "balanced environment" and "well-balanced" market, which were inferences *from* the number and cannot stand without it.
+
+**Regression test:** `apps/worker/tests/test_insight_paragraph_missing_metrics.py`, 44 cases — every report type × five degraded metrics shapes, plus direct exercises of the two branches. It renders through the real `schedule_email_html`, because the defect is a runtime format error invisible to any source-text assertion. **Verified load-bearing: 10 fail against the unfixed module, 44 pass with the fix**, full worker suite 56 pass with no regression.
+
+### D-056 — `months_of_inventory = 0` means two different things, and the email reads it as a third
+**Severity:** WRONG · **Affects:** `inventory` emails for any period with no closed sales
+**Status:** `open`
+
+Two builders use **opposite sentinels for the same condition**:
+
+| Builder | No closed sales → | Meaning |
+|---|---|---|
+| `build_market_snapshot_result` (`report_builders.py:150`) | `moi = 99.9` | "very high — buyer's market indicator" |
+| `build_inventory_result` (`report_builders.py:468`) | `moi = 0.0` | same condition, opposite number |
+
+And a third convention: 6 of the 8 report types in `services/sample_report_data.py` ship `months_of_inventory: 0` simply meaning *not modelled*.
+
+The email then reads `0` as neither. `if moi and moi < 3` treats `0` as falsy, so it falls to the `else` branch and renders:
+
+> "The La Verne market is **well-balanced** right now with 42 active listings and **0.0 months of inventory** at a median of $812K."
+
+A market with **zero closed sales**, described as balanced, in a sentence that contradicts its own figure. Reachable on any inventory report over a period with no closings.
+
+**Deliberately not fixed, and one attempted fix was reverted.** Changing the branch conditions to `moi is not None and moi < 3` routes `0` to the seller's-market branch — *"Inventory is tight … well below the balanced threshold … an excellent time to list"* — which is confidently wrong for a market with no sales, and would fire on 6 of 8 branding-page test emails. The reading cannot be fixed in the email while `0` means three different things upstream. **The sentinel disagreement is the defect**; the email is downstream of it. Fix `report_builders.py` first, then revisit the routing.
+
+The rationale is recorded in the code at the branch conditions so the next reader does not "correct" them into the same trap.
 
 ---
 
