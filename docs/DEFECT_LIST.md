@@ -15,13 +15,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 35 | Real, unfixed |
-| `fixed` | 26 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 27 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **64** | D-001 … D-064, contiguous, no duplicates |
+| **Total** | **65** | D-001 … D-065, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 4 · WRONG 15 · FRAGILE 10 · ROUGH 6. (Sums to 35, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -768,7 +768,20 @@ Both are mine, from Phase 4, and neither was caught because 0053 was written aga
 
 ### D-035 — `starter` is enforced at 15 while marketing sells 25, and the cap is firing on real users
 **Severity:** WRONG · **Affects:** REGULAR (every paying agent on `starter`) · **Extends D-004**
-**Status:** `open`
+**Status:** `fixed` (`db/migrations/0054_growth_plan_report_limit.sql`, applied to production 2026-09-09)
+
+> **CLOSED 2026-09-09.** `0054` is applied: Growth is **25/25** in production — both
+> `market_reports_limit` and `monthly_report_limit`, so the enforced gate and the legacy column
+> agree and marketing's 25 is now the number the code uses. Fixed as a **data** migration, not a
+> copy change, per the G1a decision.
+>
+> **The bootstrap guard worked as designed on its first real use.** `--except` marked 54 files
+> applied without executing them, `seed_demo_account.sql` was *recorded rather than run* — the
+> sorted-order trap that made a bare `--bootstrap` dangerous — and only `0054` executed. That trap
+> is exactly what D-053 was filed for, and this is it functioning in production.
+>
+> The eleven `skipped_limit` runs on the review's own schedule between January and April were this
+> cap firing. They stop now.
 
 Reported production `plans`: `free`=3, `starter`("Growth")=15, `pro`("Growth Plus")=99999, `solo`("Solo Agent")=25, `trial`=3, `team`, `affiliate`=5000, `sponsored_free`=3. Marketing sells Growth at 25/month.
 
@@ -1906,6 +1919,37 @@ falling through a truthiness check.
 > hypothesis this entry originally named — see below — is **dead**. What remains is a real defect
 > in the guard, with an unexplained trigger that has not fired since. It returns to BROKEN the day
 > it recurs.
+>
+> ### ⚠️ THE LOSS COUNT MAY BE ZERO. READ THIS BEFORE CITING "20 REPORTS NEVER DELIVERED".
+>
+> The block runs `autocommit=False` (`tasks.py:1279`) and commits only at `:1308`. The
+> `INSERT INTO email_log` runs on **the same cursor, inside that same uncommitted transaction**.
+> A process that died between the SendGrid call and the commit loses **the record, not the
+> delivery** — the message was already handed to the provider.
+>
+> So *"20 reports never delivered"* may be *"20 runs whose bookkeeping was rolled back"*, and
+> those emails may have arrived normally. It also fits the batch shape better than anything else
+> proposed: one restart mid-pass loses every in-flight transaction at once, with no account
+> scoping required.
+>
+> **This is answerable from a mailbox, not a database.** Every one of the 20 went to
+> `gerardoh@gmail.com`. Market-snapshot emails on 2025-12-29, 2026-01-05, 2026-02-05 and
+> 2026-04-12 — 09:00 or 14:00 UTC, so 1am/6am Pacific. Present ⇒ the loss count is zero and this
+> is purely a bookkeeping defect. Absent ⇒ it is real.
+>
+> ### THE NAMED TRAP — third instance in this investigation
+>
+> **A missing row proves a missing WRITE, not a missing ACTION.**
+>
+> | # | The row that wasn't there | What it was read as | What it actually meant |
+> |---|---|---|---|
+> | 1 | `schedule_runs.started_at` NULL | "never picked up" | the column is **assigned by nothing** — the predicate matched every row that ever existed and read like a guard |
+> | 2 | no `failed` rows in eight months | "nothing has broken" | the failure path **cannot write** to that table (D-061) |
+> | 3 | no `email_log` row | "no email was sent" | the write is **inside an uncommitted transaction** and can be rolled back after the send |
+>
+> Each time, absence of evidence was read as evidence of absence, and each time the correction came
+> from asking *what writes this row, and when* rather than from looking harder at the rows. That
+> question is the check; run it before drawing a conclusion from a row that is not there.
 
 20 runs have a **completed generation with a PDF** and **no `email_log` row at all**, in four
 batches of exactly five: 2025-12-29, 2026-01-05, 2026-02-05, 2026-04-12. Three of the four start
@@ -2016,6 +2060,54 @@ low return. The guard itself is still wrong and worth fixing whenever this area 
 missing schedule row on a run that *has* a `schedule_id` is an error, not a no-op, and must be
 recorded and reported rather than `print()`ed. The two queries above stay on the entry as the
 first move if it recurs.
+
+---
+
+### D-065 — `email_log` cannot be trusted as a delivery record: its write is rollback-able after the send
+**Severity:** WRONG · **Affects:** every scheduled send · **Found during:** D-064
+**Status:** `open`
+
+The scheduled-email block opens `psycopg.connect(DATABASE_URL, autocommit=False)`
+(`tasks.py:1279`) and commits once, at `:1308`. Everything in between — the schedule lookup, the
+recipient resolution, the SendGrid call, and the `INSERT INTO email_log` that records its outcome
+(`tasks.py:634`) — shares that one transaction.
+
+**So the record of a send that really happened can be undone by a later failure in the same
+transaction, or by the process dying before the commit.** The email is already gone: SendGrid
+accepted it over the network, which no database rollback can retract. Only the evidence
+disappears.
+
+This is a defect independent of D-064's mystery, and it is the reason that mystery **cannot be
+settled from data at all**. A delivery log with this property answers "is there a record?" and
+never "was it delivered?" — and those are the same answer only when nothing goes wrong, which is
+precisely when nobody is asking.
+
+It also silently weakens two things built on top of it:
+
+- the D-064 backfill's own caution (`scripts/reconcile_stranded_schedule_runs.sql`) that "any of
+  the 27 with no `email_log` row is a report built and never sent" — which, given this, is not
+  sound either;
+- any future "did this account receive their reports?" question, which is the exact question a
+  customer complaint produces.
+
+**Fix — either, not both:**
+
+1. **Commit the delivery record separately.** Write `email_log` on its own short-lived connection
+   or commit it immediately after the provider returns, before the rest of the block continues.
+   The row then survives whatever happens next. This is the option that makes the table mean what
+   its name says.
+2. **Accept the limitation and say so** — rename or document `email_log` as an attempt log rather
+   than a delivery record, and stop treating its absence as evidence.
+
+Option 1 has a cost worth stating plainly: a committed row for a send that a later rollback
+"undoes" means the log can now record a send whose surrounding run was abandoned. That is the
+correct trade — the email really did go out, so a row saying so is true, and a run that was
+abandoned is D-061/D-062's problem to record. **The asymmetry matters: a false absence hides a
+delivery that happened; a false presence records one that also happened.** Only one of those
+misleads.
+
+Not fixed here: this was found while investigating D-064 and shipping it inside a
+"not reproducing" downgrade would bury a change that touches every scheduled send.
 
 ---
 
