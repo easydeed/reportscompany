@@ -1,5 +1,5 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Query, status, Response
-from pydantic import BaseModel, Field, constr
+from pydantic import BaseModel, Field, constr, field_validator
 from typing import Any, Dict, List, Optional
 import json
 import logging
@@ -76,6 +76,12 @@ def _check_and_notify_limit(account_id: str, info: dict):
 router = APIRouter(prefix="/v1")
 
 # ====== Schemas ======
+# Hex colour pattern, identical to routes/account.py:74. Per-request accent for
+# a report render; it reaches compute_color_roles the same way the stored brand
+# colours do, so it gets the same constraint (D-059, finishing what #50 started).
+HEX_COLOR = r'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$'
+
+
 class ReportCreate(BaseModel):
     report_type: constr(strip_whitespace=True, min_length=2)
     city: Optional[str] = None
@@ -85,9 +91,17 @@ class ReportCreate(BaseModel):
     filters: Optional[Dict[str, Any]] = None
     additional_params: Optional[dict] = None
     theme_id: Optional[str] = None
-    accent_color: Optional[str] = None
+    accent_color: Optional[constr(pattern=HEX_COLOR)] = None
     send_email: Optional[bool] = None
     recipients: Optional[list] = None
+
+    # An emptied field means "fall back to the account's colour", which the
+    # handler already implements (`if not accent_color:` below). Without this it
+    # would 422 instead of falling back.
+    @field_validator("accent_color", mode="before")
+    @classmethod
+    def _blank_color_is_unset(cls, v):
+        return None if isinstance(v, str) and not v.strip() else v
 
 
 class ReportRow(BaseModel):

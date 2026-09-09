@@ -21,7 +21,12 @@ from typing import Any, Dict
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from worker.property_builder import compute_color_roles, _darken, safe_url
+from worker.property_builder import (
+    compute_color_roles,
+    _darken,
+    safe_url,
+    sanitize_context_urls,
+)
 from worker.template_filters import (
     format_currency,
     format_currency_short,
@@ -409,7 +414,9 @@ class MarketReportBuilder:
 
         try:
             template = self.env.get_template(TEMPLATE_PATH)
-            html = template.render(**context)
+            # Every URL-shaped value is scheme-checked here, at the one place
+            # a context can become HTML. See sanitize_context_urls.
+            html = template.render(**sanitize_context_urls(context))
             logger.info("Rendered market report: html_len=%d", len(html))
             return html
         except Exception as e:
@@ -450,7 +457,7 @@ class MarketReportBuilder:
             "agent": self._build_agent_context(),
         }
         template = self.env.get_template("_base/page_header.jinja2")
-        return template.render(**context)
+        return template.render(**sanitize_context_urls(context))
 
     def render_page_footer_html(self) -> str:
         """Render the agent footer as a standalone HTML doc, repeated on every page."""
@@ -465,4 +472,4 @@ class MarketReportBuilder:
             "agent": self._build_agent_context(),
         }
         template = self.env.get_template("_base/page_footer.jinja2")
-        return template.render(**context)
+        return template.render(**sanitize_context_urls(context))

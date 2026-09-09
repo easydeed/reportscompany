@@ -7,19 +7,19 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-09, against `fix/template-escaping`, cut from `main` at `d3eeb8e`.
+**Last reconciled:** 2026-09-09, against `fix/url-boundary-completeness`, cut from `main` at `8662cd8`.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 32 | Real, unfixed |
+| `open` | 34 | Real, unfixed |
 | `fixed` | 25 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **60** | D-001 … D-060, contiguous, no duplicates |
+| **Total** | **62** | D-001 … D-062, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 3 · WRONG 13 · FRAGILE 10 · ROUGH 6. (Sums to 32, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 14 · FRAGILE 10 · ROUGH 6. (Sums to 34, the open total.)
 
 `fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
@@ -1450,6 +1450,23 @@ A market with **zero closed sales**, described as balanced, in a sentence that c
 
 The rationale is recorded in the code at the branch conditions so the next reader does not "correct" them into the same trap.
 
+**Production reach, answered 2026-09-09.** **Zero** schedules have `report_type = 'inventory'` —
+43 schedules exist, none of them inventory. The report type has run 12 times ad-hoc
+(`report_generations`, all with PDFs); **4 of those were emailed**, in January 2026, and the other
+8 are PDF-only from May 2026 with no `email_log` row.
+
+So the contradictory copy has reached four real recipients, nine months ago, through one-off
+sends — never on a recurring schedule and not since. **The §10 inventory decision is unhurried:
+fix it properly rather than fast.** That does not downgrade the severity — the copy is still
+wrong on every inventory report and still ships the moment anyone runs one — it changes only the
+scheduling.
+
+**Scope note from the same read, which bears on §10 more than this entry does.** Of 43 schedules,
+**3 are active**: two `market_snapshot` and one `new_listings_gallery`. That matches exactly the
+two report types Cursor found generating in production since July. Eight report types are
+specified; two have a live audience. Worth settling before Workstream C and D spread design effort
+evenly across all eight.
+
 ---
 
 ### D-057 — every inventory email quotes a median price of "varying prices"
@@ -1562,6 +1579,24 @@ lossless for real URLs and leaves a usable prefix.
 Tests: `apps/worker/tests/test_email_input_sanitization.py`, 41 cases across all three channels;
 27 fail against `52e3d76`.
 
+**Near-miss, recorded because the pattern has now happened twice.** The first version of this fix
+scheme-allowlisted `unsubscribe_url` along with every other href. The unsubscribe *sentinel*
+(`__TRENDYREPORTS_UNSUBSCRIBE_URL__`) is not a URL, so it was stripped; `send.py` would then have
+found nothing to substitute per recipient and aborted at its own guard (`send.py:233`) — **every
+send, not only a malicious one.** Caught by `test_unsubscribe_token_roundtrip.py`, whose stub
+module mirrors `template.py`'s interface.
+
+That is the second time on this project that a correct-looking security fix would have converted
+an injection into an **outage**, after D-059 (where passing a non-hex colour through to "let CSS
+decide" was the injection, and rejecting it by raising was the outage). Both were caught, both by
+running something rather than by reading. The general shape: **a guard that refuses input is a
+guard that can refuse legitimate input**, and on this codebase the legitimate-input path is often
+a sentinel or an empty-means-unset convention that no type signature records. Check what the
+guard rejects, not only what it accepts.
+
+The scope was also completed on `fix/url-boundary-completeness` — see D-061 for why the per-site
+URL guard was replaced with a render-boundary sweep.
+
 ---
 
 ### D-059 — a non-hex brand colour stopped every email on the account
@@ -1611,11 +1646,24 @@ path is the argument for fixing D-033.
 Plus the five request models now carry the `account.py` pattern, with a `mode="before"` validator
 mapping an emptied field to `None` so clearing a colour still means "unset" rather than 422.
 
-**Still unanswered: is this a fix or an incident?** Whether any production row currently holds a
-non-hex colour needs `SELECT id, primary_color, accent_color FROM affiliate_branding;` — the
-outstanding read-only query. If a row is bad, that account stopped delivering and nobody knows.
-The same query set should be checked for a `ValueError` from `compute_color_roles` among the 32
-failed `schedule_runs`.
+**Answered 2026-09-09: a fix, not an incident.** All 11 rows in `affiliate_branding` hold valid
+hex (9 share `#03374f`/`#ff6600`; two accounts diverge). No account has been silently unable to
+send. **Latent, and now closed before it fired.**
+
+Two schema corrections came back with that read and are worth carrying: `affiliate_branding` keys
+on `account_id` and has **no `id` column**, and `secondary_color` is not on that table — it lives
+on `accounts`. `accounts.secondary_color` was therefore checked separately rather than assumed
+from the table name: it is written only by `account.py:220-221`, guarded by `BrandingPatch`
+(`account.py:75`) which already carried the hex pattern, and by `invite_service.py:110-112`, which
+writes the hardcoded literals `#4F46E5`/`#1a1a1a`. Enumerated by grepping every
+`UPDATE accounts` / `INSERT INTO accounts` in the repo. **Covered.**
+
+`reports.py`'s per-request `ReportCreate.accent_color` was the one remaining unvalidated path
+reaching `compute_color_roles`; it now carries the same pattern
+(`fix/url-boundary-completeness`).
+
+The 32 failed `schedule_runs` carry no `ValueError` from `compute_color_roles` — but see **D-061**:
+that table cannot record this class of failure at all, so its silence is not evidence.
 
 Tests: `apps/worker/tests/test_brand_color_validation.py`, 53 cases; 41 fail against `52e3d76`.
 
@@ -1645,6 +1693,121 @@ decision. The gate is larger than the value:
 question first is "where would any address live." The slot stays dark until all three exist —
 `brand["postal_address"]` renders the line the moment anything populates it, and both states are
 covered by tests.
+
+---
+
+### D-061 — a crash in the email block leaves the schedule run stuck at `queued`
+**Severity:** WRONG · **Affects:** sends that raise inside the email block · **Found during:** the D-059 production read
+**Status:** `open`
+
+*(Filed as "D-061a" in the brief. Numbered plainly because the status parser and the contiguity
+check key on `D-\d{3}`; a letter suffix breaks both.)*
+
+`tasks.py` wraps the scheduled-email block in `try:` (1260) … `except Exception as email_error:`
+(1308). The handler writes an `email_log` row carrying the error. **It does not touch
+`schedule_runs`** — that `UPDATE` sits inside the try body (1289-1302), after the send. A raise
+skips it and the run stays `queued`. Confirmed by walking the function's AST:
+
+```
+try line 1260 .. except line 1308
+  handler writes schedule_runs : False
+  handler writes email_log     : True
+  TRY BODY writes schedule_runs: True
+```
+
+**Severity corrected down from BROKEN.** The first writeup implied crashes generally go
+unrecorded. They do not: `tasks.py:1395`, in the *outer* handler, writes
+`schedule_runs.status='failed'` keyed on `report_run_id`, so any crash outside the email block is
+recorded correctly. Only the email block swallows, because its own handler catches before the
+outer one sees anything. That is a narrower defect than first stated.
+
+**A second bug in the same statement, and this one explains the accumulation.** The three writers
+do not agree on how they find the row:
+
+| Writer | Keys on |
+|---|---|
+| `tasks.py:874` (`skipped_limit`) | `report_run_id` ✅ |
+| `tasks.py:1395` (`failed`) | `report_run_id` ✅ |
+| `tasks.py:1289` (`completed`/`failed_email`) | `schedule_id` + `status='queued'` + `ORDER BY created_at DESC LIMIT 1` ⚠️ |
+
+The third updates *the newest queued row for the schedule*, not the row for the run that is
+finishing. So once a row is stranded, no later run ever reclaims it — a subsequent success updates
+its own (newer) row and leaves the old one queued forever. **That is the "recovers and re-stalls"
+pattern**: the schedule works again, and the stranded rows simply accumulate.
+
+Fix: key the update on `report_run_id` like the other two, and set a terminal status in the
+handler.
+
+---
+
+### D-062 — schedule runs are stranded at `queued` in bursts, with no timeout and no record
+**Severity:** BROKEN · **Affects:** 58 scheduled reports across ten months, including a live schedule
+**Status:** `open`
+
+*(Filed as "D-061b" in the brief.)* 58 rows sit at `status='queued'` in five bursts — 26 in a
+single ticker pass on 2026-04-12 spanning 25 seconds, 17 across a week in Nov 2025, 5 each in Dec,
+Jan and Feb. Every row joins a real schedule. Zero are inventory, which independently confirms
+D-056 has never run on a schedule. **58 scheduled reports the system was told to send and did not.**
+
+**First, a correction to how this data has been read — by both of us.**
+`schedule_runs.started_at` is **never written anywhere in the codebase.** It is declared
+(`0006_schedules.sql:45`), read by the API (`schedules.py:734`), and used as a predicate
+(`tasks.py:1298`) — and never assigned, by the ticker, the worker or the API. Verified by grepping
+every `.py`, `.sql`, `.ts` and `.tsx` in the repo.
+
+So `WHERE status='queued' AND started_at IS NULL` selects on status alone; the second clause is
+true of every row that has ever existed. **"Enqueued and never picked up" is not established by
+this data.** What is established is narrower: 58 rows never advanced past `queued`. That is
+consistent with the consumer never draining the queue *and* with several outcomes where the task
+ran fine.
+
+**The four ways a row is stranded, and how to tell them apart.** The `schedule_runs` row carries
+`report_run_id`, a FK to `report_generations` (`schedules_tick.py:416`), and *that* table does get
+a real lifecycle — `processing` at `tasks.py:839`, `completed` at `:1253`, `failed` at `:1389`. One
+join separates every hypothesis, with no log retention required:
+
+| `report_generations.status` | What happened |
+|---|---|
+| `queued` | the worker never consumed the task — the consumer hypothesis |
+| `processing` | consumed, then killed mid-flight; no handler ran |
+| `completed`, `pdf_url` null | ran fine, but `if schedule_id and pdf_url:` (`:1259`) was false, so the **entire email block was skipped — no email, no error, no trace** |
+| `completed`, `pdf_url` set | reached the email block and it raised — D-061 |
+
+```sql
+SELECT r.status AS run_status, g.status AS gen_status,
+       (g.pdf_url IS NULL) AS no_pdf, COUNT(*), MIN(r.created_at), MAX(r.created_at)
+FROM schedule_runs r JOIN report_generations g ON g.id = r.report_run_id
+WHERE r.status = 'queued'
+GROUP BY 1,2,3 ORDER BY 4 DESC;
+```
+
+**The strongest hypothesis from config, not from logs.** `app.py:35-52` sets no
+`task_acks_late`, so Celery's default of **`acks_late=False`** applies: a task is acknowledged the
+moment a worker *receives* it, before it executes. With the default prefetch multiplier of 4, a
+worker holds up to 4×concurrency tasks already acked and not yet run. **A restart — a deploy, an
+OOM, a platform recycle — discards every one of them silently: no retry, no error, no record.**
+Twenty-six tasks lost in a single 25-second pass is precisely that shape, and it is not
+twenty-six independent crashes. `task_time_limit: 300` compounds it: a hard kill at five minutes
+leaves no handler to run, stranding `report_generations` at `processing`.
+
+This is **not** a broker-enqueue failure. `enqueue_report` commits `report_generations` and calls
+`send_task` *before* the caller inserts `schedule_runs` (`schedules_tick.py:410-419`), all inside
+the per-schedule `try`. A `send_task` raise would leave an orphan `report_generations` row and
+**no** `schedule_runs` row at all — so the existence of 58 stranded `schedule_runs` rows is
+evidence *against* tasks being lost at enqueue.
+
+**Whatever the cause, the missing safety net is the same and is worth building regardless:** a run
+enqueued and not terminal within a window must be marked `failed` with "never picked up".
+Indefinite silent `queued` is D-033's shape a third time — D-033 is "the notification does not
+fire", D-061 is "the failure is not written down", this is "nothing ever notices". Two further
+things belong with it: `started_at` should actually be set when the task begins, so the staleness
+sweep has something honest to measure and `started_at IS NULL` stops being a predicate that means
+nothing; and `acks_late` should be reconsidered, since a report task is idempotent enough to retry.
+
+**Investigation status:** cause narrowed from code and config; not confirmed. The join above is
+the decisive read and needs no log retention. Worker logs for 2026-04-12 09:00-09:01 UTC would
+confirm directly, but that is five months back and beyond any default retention — flagged rather
+than assumed.
 
 ---
 
