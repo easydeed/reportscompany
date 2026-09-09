@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-09, against `fix/brand-color-validation`, cut from `main` at `52e3d76`.
+**Last reconciled:** 2026-09-09, against `fix/template-escaping`, cut from `main` at `d3eeb8e`.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
@@ -1512,6 +1512,19 @@ Scoped out of P1-B deliberately — the fix is an escaping pass over ~100 interp
 file, which is its own ticket, not a rider on a links fix. One narrowing did land with B2: the
 phone `href` now goes through `_tel_uri`, whose output is digits and `+` only, so that particular
 attribute is no longer injectable regardless of what is typed into the field.
+
+**Scope, mapped 2026-09-09 on `fix/template-escaping`** — see the entry's full surface map in that
+branch's PR. Short version: the injectable channel is not "brand fields", it is *every untrusted
+string reaching the module* — brand (14 keys), listing fields from SimplyRETS (11 keys, external
+vendor data), and five top-level arguments (`account_name`, `city`, `preset_display_name`,
+`filter_description`, plus AI insight text). All confirmed live by render. Two adjacent findings
+came out of the same map and are filed separately: the colour crash on
+`fix/brand-color-validation`, and the postal-address schema gap with the fix on this branch.
+
+Also unguarded, same class: `website_url`, `logo_url`, `rep_photo_url` and the vendor's
+`hero_photo_url` are `str` with no scheme allowlist, so `javascript:` reaches `href` and `src`
+verbatim. Inert in a mail client, but the same brand columns feed the PDF renderer, which is a real
+browser.
 
 ---
 
