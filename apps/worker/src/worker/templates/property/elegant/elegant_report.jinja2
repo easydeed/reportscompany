@@ -1,3 +1,4 @@
+{%- import '_base/_macros.jinja2' as macros -%}
 <!doctype html>
 <html lang="en">
 <head>
@@ -81,7 +82,7 @@
     .aerial-header{padding:0.5in var(--pad) 0.3in; background:var(--charcoal);}
     .aerial-label{font-size:11px; letter-spacing:0.25em; text-transform:uppercase; color:var(--gold); margin-bottom:8px;}
     .aerial-title{font-family:'Playfair Display',serif; font-size:42px; color:#fff; font-weight:400;}
-    .aerial-map{flex:1; background:#3a3a3a; min-height:5in;}
+    .aerial-map{flex:1; background:#3a3a3a; min-height:5in; position:relative;} /* A2: anchors map_unavailable */
     .aerial-map img{width:100%; height:100%; object-fit:cover; opacity:0.9;}
     .aerial-info{padding:0.4in var(--pad); background:var(--burgundy);}
     .aerial-cards{display:flex; gap:20px;}
@@ -128,7 +129,7 @@
     .comp-stat-label{color:var(--slate); margin-bottom:3px;}
     .comp-stat-value{color:var(--charcoal); font-weight:600;}
     .range{background:var(--cream); padding:var(--pad);}
-    .range-map{height:4.2in; background:#ddd; border-radius:14px; overflow:hidden; margin:0.25in 0; border:1px solid rgba(201,169,98,0.3);}
+    .range-map{height:4.2in; background:#ddd; border-radius:14px; overflow:hidden; margin:0.25in 0; border:1px solid rgba(201,169,98,0.3); position:relative;} /* A2 */
     .range-map img{width:100%; height:100%; object-fit:cover;}
     .range-stats{display:grid; grid-template-columns:repeat(4,1fr); gap:15px; background:var(--burgundy); border-radius:14px; padding:28px 20px; margin-bottom:25px;}
     .range-stat{text-align:center; color:#fff; padding:8px 0;}
@@ -313,7 +314,7 @@
     <!-- PAGE 3: AERIAL -->
     <section class="page aerial">
       <div class="aerial-header"><div class="aerial-label">Location Overview</div><h2 class="aerial-title">Aerial View</h2></div>
-      <div class="aerial-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}>
+      <div class="aerial-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}>{% if not images.aerial_map %}{{ macros.map_unavailable() }}{% endif %}
         {% if images.aerial_map %}<img src="{{ images.aerial_map }}" alt="Aerial map" />{% endif %}
       </div>
       <div class="aerial-info">
@@ -331,13 +332,14 @@
     <section class="page property">
       <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
-      <div class="property-header"><div class="property-label">Property Overview</div><h2 class="property-title">Prospective Property</h2><div class="gold-rule"></div></div>
+      <div class="property-header"><div class="property-label">Property Overview</div><h2 class="property-title">Property Details</h2><div class="gold-rule"></div></div>
       <div class="property-section">
-        <div class="property-section-header"><span class="diamond"></span><div class="property-section-title">Owner & Legal Information</div></div>
+        {# A1/E1: Primary/Secondary Owner rows removed — see bold_report.jinja2
+           for the full rationale. Consumer-facing document; owner identity out,
+           property facts stay. #}
+        <div class="property-section-header"><span class="diamond"></span><div class="property-section-title">Address & Legal Information</div></div>
         <div class="property-grid">
           <table class="property-table">
-            <tr><td class="label">Primary Owner</td><td class="value">{{ property.owner_name | default('-') }}</td></tr>
-            <tr><td class="label">Secondary Owner</td><td class="value">{{ property.secondary_owner | default('-') }}</td></tr>
             <tr><td class="label">Site Address</td><td class="value">{{ property.full_address }}</td></tr>
             <tr><td class="label">Mailing Address</td><td class="value">{{ property.mailing_address | default(property.full_address) }}</td></tr>
           </table>
@@ -548,7 +550,7 @@
       <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="property-header"><div class="property-label">Valuation Summary</div><h2 class="property-title">Range of Sales</h2><div class="gold-rule"></div></div>
-      <div class="range-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}></div>
+      <div class="range-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}>{% if not images.aerial_map %}{{ macros.map_unavailable() }}{% endif %}</div>
       <div class="range-stats">
         <div class="range-stat"><div class="range-stat-num">{{ '%02d' | format(stats.total_comps | default(0)) }}</div><div class="range-stat-label">Total Comps</div></div>
         <div class="range-stat"><div class="range-stat-num">{{ stats.avg_sqft | default(0) | int }}</div><div class="range-stat-label">Avg. Sqft</div></div>
