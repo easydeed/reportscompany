@@ -67,11 +67,16 @@ def _install_stubs(sent):
     sendgrid.send_email = send_email
 
     template = types.ModuleType("worker.email.template")
-    # Mirrors template.py:2338 — the sole interpolation of unsubscribe_url.
+    # Mirrors the sole interpolation of unsubscribe_url in the real template.
     template.schedule_email_html = lambda **kw: (
         f'<html><body><a href="{kw["unsubscribe_url"]}">Unsubscribe</a></body></html>'
     )
     template.schedule_email_subject = lambda *a, **k: "Your Market Snapshot Report"
+    # The sentinel now lives in template.py, because its input sanitisation has
+    # to recognise the value to let it past scheme-allowlisting. send.py imports
+    # it from there, so the stub must carry it or send.py will not import at all
+    # — which is how this fixture caught the move.
+    template._UNSUB_URL_SENTINEL = "__TRENDYREPORTS_UNSUBSCRIBE_URL__"
 
     sys.modules["worker.email.providers.sendgrid"] = sendgrid
     sys.modules["worker.email.template"] = template

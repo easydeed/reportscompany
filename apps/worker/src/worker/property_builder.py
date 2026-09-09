@@ -71,6 +71,64 @@ def normalize_hex_color(value, fallback: str = _FALLBACK_HEX) -> str:
     return fallback
 
 
+# Schemes that may appear in an href or src we build from stored data. Anything
+# else — javascript:, data:, vbscript:, file: — is dropped.
+_SAFE_URL_SCHEMES = ("http://", "https://", "//", "/")
+
+
+def safe_url(value, fallback: str = "") -> str:
+    """
+    Allowlist the scheme of a URL that came from stored, user-supplied data.
+
+    This is deliberately NOT the same problem as HTML escaping, and it lives
+    here — beside `normalize_hex_color`, above all the render surfaces — rather
+    than in the email module, because escaping does not touch it:
+
+        html.escape("javascript:alert(1)")            -> unchanged
+        Jinja autoescape of the same, inside href=""  -> unchanged, still live
+
+    The PDF builders in this module and in market_builder.py run Jinja with
+    autoescape on, which handles their HTML injection. It does nothing for a
+    scheme, and a PDF is rendered by an actual browser — so for the URL fields
+    this allowlist is the whole of the defence, not a second layer of it.
+
+    Returns the fallback (empty by default, which collapses the surrounding
+    markup) when the scheme is not allowlisted.
+
+    A scheme check alone is NOT enough, and assuming it was is a mistake this
+    function was written with and a test caught: an allowlisted scheme still
+    lets the rest of the value break out of the attribute it lands in —
+
+        https://cdn.example.test/a.jpg" onerror="alert(1)
+
+    passes any scheme test and is a live event handler. So the value is also
+    truncated at the first character that cannot legally appear in a URI
+    (RFC 3986): quote, angle bracket, backtick, backslash, whitespace. That is
+    lossless for a real URL and leaves a usable prefix rather than a mangled
+    string. Truncation rather than deletion is deliberate — deleting the
+    offending characters would splice the payload onto the end of the path.
+
+    The result is NOT HTML-escaped, so this is safe to use in both the f-string
+    surfaces here and inside an autoescaping Jinja template without producing
+    `&amp;amp;` in a query string.
+    """
+    if not isinstance(value, str):
+        return fallback
+    candidate = value.strip()
+    if not candidate:
+        return fallback
+    # Control characters first: "java\tscript:alert(1)" is read as a scheme by
+    # some parsers, so they must go before the scheme is inspected.
+    candidate = "".join(c for c in candidate if ord(c) >= 0x20 and c != "\x7f")
+    for i, ch in enumerate(candidate):
+        if ch in '"\'<>`\\ \t':
+            candidate = candidate[:i]
+            break
+    if candidate.lower().startswith(_SAFE_URL_SCHEMES):
+        return candidate
+    return fallback
+
+
 def _hex_to_rgb(hex_color: str) -> tuple:
     """Convert '#RRGGBB' to (r, g, b) floats in 0-1. Never raises."""
     h = normalize_hex_color(hex_color).lstrip("#")
@@ -496,8 +554,8 @@ class PropertyReportBuilder:
             "state": agent_state,
             "zip_code": agent_zip,
             "address": agent_address,  # V0 template expects full address string
-            "photo_url": agent.get("photo_url"),
-            "logo_url": agent.get("logo_url") or branding.get("logo_url"),
+            "photo_url": safe_url(agent.get("photo_url")) or None,
+            "logo_url": safe_url(agent.get("logo_url") or branding.get("logo_url")) or None,
             # Standalone template fields (with safe defaults in templates)
             "company_short": agent.get("company_short") or (
                 (agent.get("company_name") or "TR")[:2].upper()
@@ -593,9 +651,9 @@ class PropertyReportBuilder:
                 "address": resolved_addr,
                 "latitude": latitude,
                 "longitude": longitude,
-                "image_url": image_url,
-                "photo_url": image_url,  # V0 template field (prefer property photo)
-                "map_image_url": map_image_url,  # Fallback satellite thumbnail
+                "image_url": safe_url(image_url) or None,
+                "photo_url": safe_url(image_url) or None,  # V0 template field (prefer property photo)
+                "map_image_url": safe_url(map_image_url) or None,  # Fallback satellite thumbnail
                 "price": self._format_price(raw_price),  # Formatted string
                 "sale_price": raw_price_num,  # V0 template (raw number for filter/arithmetic)
                 "list_price": float(comp.get("list_price") or 0),

@@ -21,7 +21,7 @@ from typing import Any, Dict
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from worker.property_builder import compute_color_roles, _darken
+from worker.property_builder import compute_color_roles, _darken, safe_url
 from worker.template_filters import (
     format_currency,
     format_currency_short,
@@ -250,7 +250,12 @@ class MarketReportBuilder:
                 "sqft": item.get("sqft") or item.get("living_area", 0),
                 "status": item.get("status", "Active"),
                 "days_on_market": item.get("days_on_market") or item.get("dom", 0),
-                "photo_url": item.get("hero_photo_url") or item.get("photo_url") or item.get("image_url"),
+                # safe_url: vendor photo URLs land in src="…" in a template
+                # Jinja autoescapes — which does nothing about the scheme, and
+                # a PDF is rendered by a real browser. See safe_url's docstring.
+                "photo_url": safe_url(
+                    item.get("hero_photo_url") or item.get("photo_url") or item.get("image_url")
+                ) or None,
                 "lat": item.get("lat") or item.get("latitude"),
                 "lng": item.get("lng") or item.get("longitude"),
                 "next_open_house": item.get("next_open_house"),
@@ -308,11 +313,13 @@ class MarketReportBuilder:
             "title": branding.get("agent_title", ""),
             "phone": branding.get("agent_phone", ""),
             "email": branding.get("agent_email", ""),
-            "photo_url": branding.get("agent_photo_url"),
+            "photo_url": safe_url(branding.get("agent_photo_url")) or None,
             "company_name": branding.get("company_name", ""),
-            "logo_url": branding.get("logo_url"),
+            "logo_url": safe_url(branding.get("logo_url")) or None,
             # Fall back to header logo if no dedicated dark-on-light footer logo.
-            "footer_logo_url": branding.get("footer_logo_url") or branding.get("logo_url"),
+            "footer_logo_url": safe_url(
+                branding.get("footer_logo_url") or branding.get("logo_url")
+            ) or None,
         }
 
     # ── render ────────────────────────────────────────────────────────────
