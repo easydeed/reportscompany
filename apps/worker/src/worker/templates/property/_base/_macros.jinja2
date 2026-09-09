@@ -67,7 +67,7 @@
     {% endif %}
     <div class="cover-agent-info">
       <h3 class="cover-agent-name">{{ agent.name }}</h3>
-      <p class="cover-agent-title">{{ agent.title | default('Realtor®') }}{% if agent.license %} · {{ agent.license }}{% endif %}</p>
+      <p class="cover-agent-title">{{ (agent.title or '') | trim | default('Real Estate Agent', true) }}{% if agent.license %} · {{ agent.license }}{% endif %}</p>
       {% if agent.phone or agent.email %}<p class="cover-agent-contact">{% if agent.phone %}{{ agent.phone }}{% endif %}{% if agent.phone and agent.email %} · {% endif %}{% if agent.email %}{{ agent.email }}{% endif %}</p>{% endif %}
     </div>
   </div>

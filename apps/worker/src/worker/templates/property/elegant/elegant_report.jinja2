@@ -276,7 +276,7 @@
           {% endif %}
           <div class="overview-footer-info">
             <div class="overview-footer-name">{{ agent.name }}</div>
-            <div>{{ agent.title | default('Realtor®') }} · {{ agent.company_name }}</div>
+            <div>{{ (agent.title or '') | trim | default('Real Estate Agent', true) }} · {{ agent.company_name }}</div>
             <div>{{ agent.phone }}{% if agent.email %} · {{ agent.email }}{% endif %}</div>
           </div>
         </div>

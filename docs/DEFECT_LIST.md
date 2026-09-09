@@ -7,21 +7,21 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-09, against `investigate/completed-not-emailed`, cut from `main` at `255ad1f`.
+**Last reconciled:** 2026-09-09, against `fix/realtor-mark-default`, cut from `main` at `0a29c3f`.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 35 | Real, unfixed |
-| `fixed` | 27 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 36 | Real, unfixed |
+| `fixed` | 28 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **65** | D-001 … D-065, contiguous, no duplicates |
+| **Total** | **67** | D-001 … D-067, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 15 · FRAGILE 10 · ROUGH 6. (Sums to 35, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 16 · FRAGILE 10 · ROUGH 6. (Sums to 36, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -2108,6 +2108,84 @@ misleads.
 
 Not fixed here: this was found while investigating D-064 and shipping it inside a
 "not reproducing" downgrade would bury a change that touches every scheduled send.
+
+---
+
+### D-066 — every property report asserted NAR membership on the agent's behalf
+**Severity:** WRONG · **Affects:** every property report by an agent who left their title blank
+**Status:** `fixed` (`fix/realtor-mark-default`)
+
+`{{ agent.title | default('Realtor®') }}` — and its Python equivalents — printed **Realtor®** on a
+report whenever an agent had not set a job title. REALTOR® is a registered collective membership
+mark owned by the National Association of REALTORS® and usable only by its members; roughly a
+third of licensed US agents are not members, and nothing in this product asks.
+
+So a licensee who skipped one optional field at signup had a claim of NAR membership printed on a
+document they hand to clients, under their own name and photo — **a trademark exposure created by
+a default value, not by anything they did.** `Real Estate Agent` is accurate for every licensee
+and asserts nothing; a member who wants the mark can type it, which is the only way it should ever
+appear.
+
+**Ticketed as one line. It was nine, and the first two greps found neither the important ones nor
+the last one:**
+
+| Site | Why the first pass missed it |
+|---|---|
+| `_base/_macros.jinja2:70` | the one that was ticketed |
+| 5 theme contact blocks | found by grepping `Realtor` |
+| **`property_builder.py:583`** | **Python, and load-bearing** — it supplies the string *before* the template runs, so the Jinja `default()` is dead code on that path. **A template-only fix would have changed nothing while looking like a fix.** |
+| `tasks.py:1797` | the CMA path, written `"Realtor\u00ae"` — invisible to a grep for `Realtor` |
+| `bold_report.jinja2:848` | found only when a **test** ran after the fix, because it defaults to `'Licensed Real Estate Agent'` — the right construct, a different string, so a grep keyed on the *symptom* could never see it |
+
+The last row is the lesson, and it is the third time on this project: **grep for the construct, not
+for the symptom.** The check that runs after the fix finds what the check before it missed.
+
+**A separate bug in the same expression, found by render.** Jinja's `default(x)` fires only on
+*undefined*. `agent.get("title", …)` returns `None` when the key exists holding a null, and
+`{{ None | default('…') }}` renders the literal string **"None"** onto a customer-facing PDF. The
+final form is `{{ (agent.title or '') | trim | default('Real Estate Agent', true) }}`:
+
+| input | plain `default(x)` | `default(x, true)` | final form |
+|---|---|---|---|
+| absent | fallback | fallback | fallback |
+| `None` | **"None"** | fallback | fallback |
+| `""` | `""` beside a bare ` · ` | fallback | fallback |
+| `"   "` | spaces | spaces | fallback |
+| `"Broker Associate"` | preserved | preserved | preserved |
+
+Filter order is load-bearing and not cosmetic: `trim` *before* `default` **reintroduces** the
+`None` leak, because `None | trim` stringifies to `"None"` first. Confirmed by rendering all three
+candidate expressions rather than reasoning about them.
+
+Tests: `apps/worker/tests/test_agent_title_default.py`, 10 cases, 9 failing against `main`.
+
+---
+
+### D-067 — the theme cover blocks leak the literal string "None" onto the PDF cover
+**Severity:** WRONG · **Affects:** any property report where `agent.title` is NULL rather than absent
+**Status:** `open`
+
+The same `default()` bug as D-066, in the *other* `agent.title` expression — the theme **cover**
+block, one per theme, each with its own copy:
+
+| Template | default |
+|---|---|
+| `classic_report.jinja2:557` | `'Licensed Real Estate Agent'` |
+| `bold_report.jinja2:848` | `'Licensed Real Estate Agent'` |
+| `elegant_report.jinja2:251` | `'Luxury Property Specialist'` |
+| `modern_report.jinja2:331` | `'Real Estate Specialist'` |
+| `teal_report.jinja2:1186` | **none at all** — `{{ agent.title }}` bare |
+
+All five use the plain `default()` form (or nothing), so a NULL title renders **"None"** in large
+type on the report cover. Teal is worst: no fallback whatsoever.
+
+**Deliberately not fixed with D-066.** None of these asserts the REALTOR® mark, so this is not the
+trademark problem — and the per-theme strings look like intentional design voice rather than
+accident. Flattening them all to one value inside a PR whose point was to make a *trademark* call
+visible would bury a design decision inside a legal one. **The mechanical part** — switching to
+`(agent.title or '') | trim | default(<the theme's own string>, true)`, keeping each theme's copy —
+is safe and should just be done. **Teal needs a decision**: it has no fallback, so what a
+title-less agent should see there is a design question.
 
 ---
 
