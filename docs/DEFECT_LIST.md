@@ -7,19 +7,19 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-08, against `docs/d056-severity`, cut from `main` at `ef5f51c`.
+**Last reconciled:** 2026-09-09, against `fix/p1b-email-links`, cut from `main` at `fad3d7b`.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 31 | Real, unfixed |
+| `open` | 32 | Real, unfixed |
 | `fixed` | 23 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **57** | D-001 … D-057, contiguous, no duplicates |
+| **Total** | **58** | D-001 … D-058, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 3 · WRONG 12 · FRAGILE 10 · ROUGH 6. (Sums to 31, the open total.)
+**Open by severity:** BROKEN 3 · WRONG 13 · FRAGILE 10 · ROUGH 6. (Sums to 32, the open total.)
 
 `fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
@@ -1481,6 +1481,37 @@ never computes. They surface in the same sentence, which is why one render expos
 **Fix belongs in `build_inventory_result`** — add `median_list_price` (`_median` over
 `l["list_price"]` for the active set, the way `build_new_listings_result:386` already does it) —
 not in the email. Guessing a price in the template would be inventing a figure.
+
+---
+
+### D-058 — brand fields are interpolated into email HTML with no escaping
+**Severity:** WRONG · **Affects:** every scheduled email · **Found during:** P1-B (B2/B4)
+**Status:** `open`
+
+`email/template.py` contains no `html.escape` and no autoescaping anywhere. Every brand value —
+`display_name`, `rep_name`, `rep_title`, `rep_phone`, `rep_email`, `contact_line1/2`, `city` — is
+f-string-interpolated straight into markup and into attribute values. All of them are
+user-editable (`users` columns via the profile page, `affiliate_branding` via branding settings).
+
+Reproduced through `schedule_email_html`, all four confirmed:
+
+| Field set to | Result in the sent email |
+|---|---|
+| `rep_name` = `Dana <b>Ortiz</b>` | renders as bold markup, not as text |
+| `rep_title` = `Broker</p><a href="https://evil.test">Claim your prize</a><p>` | **renders as a live anchor** |
+| `display_name` = `Acme" onmouseover="x` | breaks out of the `alt="…"` attribute |
+| `rep_email` = `d@e.test" style="display:none` | breaks out of the `mailto:` href and injects an attribute |
+
+**Not browser XSS** — mail clients strip `<script>`, and there is no session to steal. The real
+exposure is a live attacker-authored link inside an email that carries *someone else's* brand:
+`_resolve_email_brand` (`tasks.py:439-447`) inherits a parent company's branding into a sub-account's
+sends while letting the sub-account override `contact_line1/2`. So a rep under a title company can
+place markup into mail that reads as coming from the company.
+
+Scoped out of P1-B deliberately — the fix is an escaping pass over ~100 interpolation sites in one
+file, which is its own ticket, not a rider on a links fix. One narrowing did land with B2: the
+phone `href` now goes through `_tel_uri`, whose output is digits and `+` only, so that particular
+attribute is no longer injectable regardless of what is typed into the field.
 
 ---
 
