@@ -46,9 +46,10 @@ V3: Professional styling refresh with enhanced Market Snapshot data.
 - Mobile responsive (metrics stack on mobile)
 - Full white-label branding support
 """
+import html
 from typing import Dict, Optional, TypedDict, Tuple, List
 
-from worker.property_builder import compute_color_roles, normalize_hex_color
+from worker.property_builder import compute_color_roles, normalize_hex_color, safe_url
 
 
 def hex_to_rgba(hex_color: str, opacity: float) -> str:
@@ -189,6 +190,102 @@ def _format_percent(value: Optional[float]) -> str:
     if value is None:
         return "N/A"
     return f"{value:.1f}%"
+
+
+# Sentinel substituted per recipient by send.py after the body is rendered once.
+# It lives here rather than in send.py because the trust boundary below has to
+# recognise it: it is not a URL, so scheme-allowlisting it would strip it, the
+# per-recipient substitution would find nothing to replace, and send.py:229
+# would refuse to send at all.
+_UNSUB_URL_SENTINEL = "__TRENDYREPORTS_UNSUBSCRIBE_URL__"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Input sanitisation — see the TRUST BOUNDARY block in schedule_email_html()
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Brand keys carrying free text. Escaped.
+_BRAND_TEXT_KEYS = (
+    "display_name", "rep_name", "rep_title", "rep_phone", "rep_email",
+    "contact_line1", "contact_line2", "postal_address",
+)
+# Brand keys carrying a URL. Scheme-allowlisted, NOT escaped — escaping a URL
+# mangles its query string, and does nothing about the scheme, which is the
+# part that matters.
+_BRAND_URL_KEYS = (
+    "logo_url", "email_logo_url", "footer_logo_url", "email_footer_logo_url",
+    "rep_photo_url", "website_url",
+)
+# Brand keys parsed as hex before use. Guarded by normalize_hex_color at the
+# read site; listed here so the classification of every brand key is explicit
+# and a new key cannot be added without landing in one of the three buckets.
+_BRAND_COLOR_KEYS = ("primary_color", "accent_color")
+
+# Listing keys from the SimplyRETS feed. The numeric ones are deliberately not
+# escaped: they are formatted with numeric specs (f"{price:,.0f}"), which a str
+# would break, and a non-numeric value there is a builder bug, not an injection.
+_LISTING_TEXT_KEYS = ("street_address", "city", "status", "zip_code")
+_LISTING_URL_KEYS = ("hero_photo_url",)
+
+
+def _esc(value):
+    """
+    HTML-escape a value that will be interpolated into markup or an attribute.
+
+    `quote=True` matters as much as the tag escaping: most of the injection
+    sites in this module are inside `attr="…"`, where an unescaped double quote
+    is what breaks out. Non-strings pass through untouched so that numeric
+    format specs downstream keep working.
+    """
+    if not isinstance(value, str):
+        return value
+    return html.escape(value, quote=True)
+
+
+def _sanitize_brand(brand: Optional[Dict]) -> Dict:
+    """Classify and clean every brand key. Unknown keys are escaped."""
+    if not brand:
+        return {}
+    out = {}
+    for key, value in brand.items():
+        if key in _BRAND_URL_KEYS:
+            out[key] = safe_url(value) or None
+        elif key in _BRAND_COLOR_KEYS:
+            out[key] = value          # normalize_hex_color runs at the read
+        else:
+            # _BRAND_TEXT_KEYS and anything not yet classified. Defaulting an
+            # unrecognised key to "escape" is the safe direction: a new text
+            # field is protected the day it is added, and a new URL field
+            # renders visibly broken rather than silently injectable.
+            out[key] = _esc(value)
+    return out
+
+
+def _sanitize_listing(listing: Dict) -> Dict:
+    """Clean one listing from the vendor feed, leaving numerics alone."""
+    if not isinstance(listing, dict):
+        return listing
+    out = dict(listing)
+    for key in _LISTING_TEXT_KEYS:
+        if key in out:
+            out[key] = _esc(out[key])
+    for key in _LISTING_URL_KEYS:
+        if key in out:
+            out[key] = safe_url(out[key]) or None
+    return out
+
+
+def _sanitize_metrics(metrics: Optional[Dict]) -> Dict:
+    """
+    Escape string-valued metrics (band labels and similar).
+
+    A no-op for the numbers, which is all of them today. It is here so that a
+    builder which starts putting a city or a filter label into metrics does not
+    reopen the channel silently.
+    """
+    if not metrics:
+        return metrics or {}
+    return {k: (_esc(v) if isinstance(v, str) else v) for k, v in metrics.items()}
 
 
 # Extension markers people actually type into a free-text phone field.
@@ -1963,6 +2060,49 @@ def schedule_email_html(
     Returns:
         HTML string for the email body
     """
+    # ═══════════════════════════════════════════════════════════════════════
+    # TRUST BOUNDARY — everything below this block is safe by construction.
+    #
+    # DO NOT ADD PER-SITE ESCAPING BELOW. If you are reading this because you
+    # noticed ~460 raw `{…}` interpolations in an HTML string and no template
+    # engine, that instinct is right about the risk and wrong about the fix.
+    # Escaping at the sites requires a correct judgement at every one of them,
+    # and ~50 of them insert HTML fragments this module built (`*_html`,
+    # `_build_*` returns) — escaping those renders the markup as visible text.
+    # Sanitising the inputs once, here, makes that mistake structurally
+    # impossible: fragments are assembled from values that are already clean.
+    #
+    # The channels, all confirmed by render rather than by reading:
+    #   brand      — users.phone/job_title, affiliate_branding.*; user-editable
+    #   listings   — SimplyRETS. VENDOR data, so injection needs one bad MLS
+    #                record and no malicious account at all.
+    #   arguments  — account_name, city, preset/filter/audience labels
+    #   metrics    — string-valued entries (band labels and the like)
+    #
+    # URLs are a SEPARATE problem handled by safe_url(), not by escaping:
+    # html.escape("javascript:…") is a no-op and the value stays live in an
+    # href. See safe_url's docstring for why that matters more for the PDF
+    # surfaces than for this one.
+    # ═══════════════════════════════════════════════════════════════════════
+    brand = _sanitize_brand(brand)
+    account_name = _esc(account_name)
+    city = _esc(city)
+    zip_codes = [_esc(z) for z in zip_codes] if zip_codes else zip_codes
+    report_type = _esc(report_type)
+    preset_display_name = _esc(preset_display_name)
+    filter_description = _esc(filter_description)
+    audience_name = _esc(audience_name)
+    metrics = _sanitize_metrics(metrics)
+    listings = [_sanitize_listing(l) for l in listings] if listings else listings
+    pdf_url = safe_url(pdf_url)
+    # The unsubscribe URL is HMAC-built by send.py, never user data, and is
+    # substituted per recipient after this render — scheme-checked anyway so
+    # the rule holds for every href in the document without exception.
+    unsubscribe_url = (
+        unsubscribe_url if unsubscribe_url == _UNSUB_URL_SENTINEL
+        else safe_url(unsubscribe_url)
+    )
+
     # Extract brand values with defaults
     brand = brand or {}
     brand_name = brand.get("display_name") or account_name or "Market Reports"

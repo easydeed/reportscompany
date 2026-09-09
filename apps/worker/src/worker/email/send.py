@@ -36,12 +36,16 @@ if not EMAIL_UNSUB_SECRET:
     )
     EMAIL_UNSUB_SECRET = "dev-only-secret-do-not-use-in-production"
 
-# Sentinel substituted per recipient after the body is rendered once. The body
-# is rendered a single time on purpose: schedule_email_html() reaches OpenAI for
-# the insight paragraph (template.py:1494-1506), so rendering per recipient
-# would cost one AI call each AND give recipients of the same report different
-# copy. Render once, swap only the link.
-_UNSUB_URL_SENTINEL = "__TRENDYREPORTS_UNSUBSCRIBE_URL__"
+# Substituted per recipient after the body is rendered once. The body is
+# rendered a single time on purpose: schedule_email_html() reaches OpenAI for
+# the insight paragraph, so rendering per recipient would cost one AI call each
+# AND give recipients of the same report different copy. Render once, swap only
+# the link.
+#
+# Defined in template.py, which must recognise the sentinel to let it past its
+# input sanitisation. Imported rather than redeclared so the two cannot drift —
+# if they ever disagreed, every send would abort at the guard below.
+from .template import _UNSUB_URL_SENTINEL  # noqa: E402
 
 
 def generate_unsubscribe_token(account_id: str, email: str) -> str:

@@ -15,13 +15,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 32 | Real, unfixed |
-| `fixed` | 24 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 25 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **59** | D-001 … D-059, contiguous, no duplicates |
+| **Total** | **60** | D-001 … D-060, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 3 · WRONG 13 · FRAGILE 10 · ROUGH 6. (Sums to 32, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -1486,7 +1486,7 @@ not in the email. Guessing a price in the template would be inventing a figure.
 
 ### D-058 — brand fields are interpolated into email HTML with no escaping
 **Severity:** WRONG · **Affects:** every scheduled email · **Found during:** P1-B (B2/B4)
-**Status:** `open`
+**Status:** `fixed` (`fix/template-escaping`)
 
 `email/template.py` contains no `html.escape` and no autoescaping anywhere. Every brand value —
 `display_name`, `rep_name`, `rep_title`, `rep_phone`, `rep_email`, `contact_line1/2`, `city` — is
@@ -1525,6 +1525,42 @@ Also unguarded, same class: `website_url`, `logo_url`, `rep_photo_url` and the v
 `hero_photo_url` are `str` with no scheme allowlist, so `javascript:` reaches `href` and `src`
 verbatim. Inert in a mail client, but the same brand columns feed the PDF renderer, which is a real
 browser.
+
+**Fixed at the boundary, not at the sites.** A single sanitisation block at the top of
+`schedule_email_html` cleans the ~30 untrusted inputs; everything below it is safe by
+construction. Escaping at the ~460 interpolation sites would have meant ~460 correct judgements
+about which of two categories each site is in, and ~50 of them insert HTML fragments this module
+built — escaping those renders markup as visible text. The boundary makes that failure mode
+structurally impossible rather than avoided by care, and the block carries a comment saying so,
+because the next reader will see 460 raw interpolations and no engine and reach for per-site
+escaping.
+
+Brand keys are classified into three buckets — text (escaped), URL (scheme-allowlisted), colour
+(hex-normalised at the read). **An unrecognised key defaults to escaping**, so a text field added
+later is protected the day it appears, and a URL field added later renders visibly broken rather
+than silently injectable.
+
+**The PDF surfaces did not need escaping, and adding it would have broken them.** Both
+`property_builder.py:336` and `market_builder.py:180` already run Jinja with
+`autoescape=select_autoescape(['html','xml','jinja2'])`, the templates are `.jinja2` so it is
+active, and there are **zero** `|safe` filters anywhere under `templates/`. Verified by rendering
+the same payloads through that exact Environment config. Only the email module, which has no
+engine, needed HTML escaping.
+
+**What the PDF surfaces did need is the URL allowlist**, and that is the more serious half.
+Autoescape does nothing to a scheme — `href="javascript:…"` survives it intact, confirmed by
+render — and a PDF is produced by a real browser, so it is a genuine execution context rather than
+the inert one an email client provides. `safe_url()` therefore lives in `property_builder.py`
+above all three render surfaces and is applied at the PDF context sites
+(`market_builder.py:253,311-315`, `property_builder.py:557-558,654-656`) as well as in the email.
+
+A scheme check alone turned out to be insufficient, which a test caught rather than a review:
+`https://cdn.example.test/a.jpg" onerror="alert(1)` passes any scheme test and is a live event
+handler. `safe_url` truncates at the first character that cannot legally appear in a URI, which is
+lossless for real URLs and leaves a usable prefix.
+
+Tests: `apps/worker/tests/test_email_input_sanitization.py`, 41 cases across all three channels;
+27 fail against `52e3d76`.
 
 ---
 
@@ -1582,6 +1618,33 @@ The same query set should be checked for a `ValueError` from `compute_color_role
 failed `schedule_runs`.
 
 Tests: `apps/worker/tests/test_brand_color_validation.py`, 53 cases; 41 fail against `52e3d76`.
+
+---
+
+### D-060 — no postal-address column exists anywhere in the schema
+**Severity:** WRONG · **Affects:** every commercial email the product sends · **Found during:** P1-B (B5)
+**Status:** `open`
+
+CAN-SPAM (15 U.S.C. §7704(a)(5)) requires the sender's valid physical postal address in every
+commercial email. There is nowhere to put one: no address column on `accounts`, none on
+`affiliate_branding`, none anywhere in `db/migrations/`. Verified by grepping every migration for
+an address column — the only hits are `property_address` on report tables, which is the *subject*
+of a report, not the sender.
+
+B5 was ticketed as "add the postal address to the footer" and landed as a dark slot
+(`email/template.py`, `postal_address_html`, PR #49) because the value was gated on a business
+decision. The gate is larger than the value:
+
+1. **storage** — a column, a migration, and the resolver reading it into the brand dict.
+2. **per-account, not global.** Sends are white-labelled: `_resolve_email_brand` puts an
+   affiliate's or a company's identity on the message, so the address of record is *that sender's*.
+   A single constant would put the wrong company's address on most mail.
+3. **a settings surface** so accounts can enter and maintain their own.
+
+**This reframes open decision 09.** It was recorded as "what is Jerry's address"; the answerable
+question first is "where would any address live." The slot stays dark until all three exist —
+`brand["postal_address"]` renders the line the moment anything populates it, and both states are
+covered by tests.
 
 ---
 
