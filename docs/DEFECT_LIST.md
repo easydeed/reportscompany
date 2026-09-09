@@ -14,12 +14,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 33 | Real, unfixed |
+| `open` | 34 | Real, unfixed |
 | `fixed` | 25 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **61** | D-001 … D-061, contiguous, no duplicates |
+| **Total** | **62** | D-001 … D-062, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 13 · FRAGILE 10 · ROUGH 6. (Sums to 33, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 14 · FRAGILE 10 · ROUGH 6. (Sums to 34, the open total.)
 
 `fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
@@ -1696,17 +1696,17 @@ covered by tests.
 
 ---
 
-### D-061 — a crash in the send path leaves the schedule run stuck at `queued`, never `failed`
-**Severity:** BROKEN · **Affects:** every send that raises before delivery · **Found during:** the D-059 production read
+### D-061 — a crash in the email block leaves the schedule run stuck at `queued`
+**Severity:** WRONG · **Affects:** sends that raise inside the email block · **Found during:** the D-059 production read
 **Status:** `open`
 
-`tasks.py` wraps the scheduled-email block in `try:` (line 1260) … `except Exception as
-email_error:` (line 1308). The handler writes an `email_log` row carrying the error. **It does not
-touch `schedule_runs`.** The `UPDATE schedule_runs SET status = …` sits *inside* the try body
-(1286-1302), after `_send_and_log_report_email` returns — so when the send raises, that statement
-is skipped and the run stays at `status='queued'` forever. Not `failed`. Not `completed`.
+*(Filed as "D-061a" in the brief. Numbered plainly because the status parser and the contiguity
+check key on `D-\d{3}`; a letter suffix breaks both.)*
 
-Confirmed structurally by walking the AST of the function rather than by eye:
+`tasks.py` wraps the scheduled-email block in `try:` (1260) … `except Exception as email_error:`
+(1308). The handler writes an `email_log` row carrying the error. **It does not touch
+`schedule_runs`** — that `UPDATE` sits inside the try body (1289-1302), after the send. A raise
+skips it and the run stays `queued`. Confirmed by walking the function's AST:
 
 ```
 try line 1260 .. except line 1308
@@ -1715,33 +1715,99 @@ try line 1260 .. except line 1308
   TRY BODY writes schedule_runs: True
 ```
 
-**This is why the failed-runs query came back clean.** All 32 `failed` rows are from
-2025-11-25 → 2025-12-27 and are the old plans-join mismatch (`column p.slug does not exist`, then
-`column p.name does not exist` after the rename — the same schema drift the docs audit found in
-migration 0013). Nothing has failed in eight months. But **D-055 and D-059 both raise inside
-`schedule_email_html`, before the send returns a status code**, which is precisely the path that
-never records. Eight clean months is consistent with "nothing broke" *and* with "this table cannot
-see this class of failure". The query does not distinguish them.
+**Severity corrected down from BROKEN.** The first writeup implied crashes generally go
+unrecorded. They do not: `tasks.py:1395`, in the *outer* handler, writes
+`schedule_runs.status='failed'` keyed on `report_run_id`, so any crash outside the email block is
+recorded correctly. Only the email block swallows, because its own handler catches before the
+outer one sees anything. That is a narrower defect than first stated.
 
-**The query that would:**
+**A second bug in the same statement, and this one explains the accumulation.** The three writers
+do not agree on how they find the row:
+
+| Writer | Keys on |
+|---|---|
+| `tasks.py:874` (`skipped_limit`) | `report_run_id` ✅ |
+| `tasks.py:1395` (`failed`) | `report_run_id` ✅ |
+| `tasks.py:1289` (`completed`/`failed_email`) | `schedule_id` + `status='queued'` + `ORDER BY created_at DESC LIMIT 1` ⚠️ |
+
+The third updates *the newest queued row for the schedule*, not the row for the run that is
+finishing. So once a row is stranded, no later run ever reclaims it — a subsequent success updates
+its own (newer) row and leaves the old one queued forever. **That is the "recovers and re-stalls"
+pattern**: the schedule works again, and the stranded rows simply accumulate.
+
+Fix: key the update on `report_run_id` like the other two, and set a terminal status in the
+handler.
+
+---
+
+### D-062 — schedule runs are stranded at `queued` in bursts, with no timeout and no record
+**Severity:** BROKEN · **Affects:** 58 scheduled reports across ten months, including a live schedule
+**Status:** `open`
+
+*(Filed as "D-061b" in the brief.)* 58 rows sit at `status='queued'` in five bursts — 26 in a
+single ticker pass on 2026-04-12 spanning 25 seconds, 17 across a week in Nov 2025, 5 each in Dec,
+Jan and Feb. Every row joins a real schedule. Zero are inventory, which independently confirms
+D-056 has never run on a schedule. **58 scheduled reports the system was told to send and did not.**
+
+**First, a correction to how this data has been read — by both of us.**
+`schedule_runs.started_at` is **never written anywhere in the codebase.** It is declared
+(`0006_schedules.sql:45`), read by the API (`schedules.py:734`), and used as a predicate
+(`tasks.py:1298`) — and never assigned, by the ticker, the worker or the API. Verified by grepping
+every `.py`, `.sql`, `.ts` and `.tsx` in the repo.
+
+So `WHERE status='queued' AND started_at IS NULL` selects on status alone; the second clause is
+true of every row that has ever existed. **"Enqueued and never picked up" is not established by
+this data.** What is established is narrower: 58 rows never advanced past `queued`. That is
+consistent with the consumer never draining the queue *and* with several outcomes where the task
+ran fine.
+
+**The four ways a row is stranded, and how to tell them apart.** The `schedule_runs` row carries
+`report_run_id`, a FK to `report_generations` (`schedules_tick.py:416`), and *that* table does get
+a real lifecycle — `processing` at `tasks.py:839`, `completed` at `:1253`, `failed` at `:1389`. One
+join separates every hypothesis, with no log retention required:
+
+| `report_generations.status` | What happened |
+|---|---|
+| `queued` | the worker never consumed the task — the consumer hypothesis |
+| `processing` | consumed, then killed mid-flight; no handler ran |
+| `completed`, `pdf_url` null | ran fine, but `if schedule_id and pdf_url:` (`:1259`) was false, so the **entire email block was skipped — no email, no error, no trace** |
+| `completed`, `pdf_url` set | reached the email block and it raised — D-061 |
 
 ```sql
-SELECT id, schedule_id, created_at FROM schedule_runs
-WHERE status = 'queued' AND started_at IS NULL
-ORDER BY created_at DESC;
+SELECT r.status AS run_status, g.status AS gen_status,
+       (g.pdf_url IS NULL) AS no_pdf, COUNT(*), MIN(r.created_at), MAX(r.created_at)
+FROM schedule_runs r JOIN report_generations g ON g.id = r.report_run_id
+WHERE r.status = 'queued'
+GROUP BY 1,2,3 ORDER BY 4 DESC;
 ```
 
-A run stuck at `queued` with an `email_log` row carrying a traceback for the same schedule is a
-crash that happened and was never recorded.
+**The strongest hypothesis from config, not from logs.** `app.py:35-52` sets no
+`task_acks_late`, so Celery's default of **`acks_late=False`** applies: a task is acknowledged the
+moment a worker *receives* it, before it executes. With the default prefetch multiplier of 4, a
+worker holds up to 4×concurrency tasks already acked and not yet run. **A restart — a deploy, an
+OOM, a platform recycle — discards every one of them silently: no retry, no error, no record.**
+Twenty-six tasks lost in a single 25-second pass is precisely that shape, and it is not
+twenty-six independent crashes. `task_time_limit: 300` compounds it: a hard kill at five minutes
+leaves no handler to run, stranding `report_generations` at `processing`.
 
-**D-033's shape again**, one layer lower: D-033 is "the failure notification does not fire", this
-is "the failure is not even written down". Together they mean a send can fail with no notification
-*and* no status — the only trace is an `email_log` row nobody reads. Fixing this is small (set the
-run to `failed` in the handler, mirroring the `failed_email` write in the try body) and belongs on
-its own branch.
+This is **not** a broker-enqueue failure. `enqueue_report` commits `report_generations` and calls
+`send_task` *before* the caller inserts `schedule_runs` (`schedules_tick.py:410-419`), all inside
+the per-schedule `try`. A `send_task` raise would leave an orphan `report_generations` row and
+**no** `schedule_runs` row at all — so the existence of 58 stranded `schedule_runs` rows is
+evidence *against* tasks being lost at enqueue.
 
-The ad-hoc path (`try` line 1322) writes no `schedule_runs` status either, which is correct there —
-ad-hoc runs have no schedule row.
+**Whatever the cause, the missing safety net is the same and is worth building regardless:** a run
+enqueued and not terminal within a window must be marked `failed` with "never picked up".
+Indefinite silent `queued` is D-033's shape a third time — D-033 is "the notification does not
+fire", D-061 is "the failure is not written down", this is "nothing ever notices". Two further
+things belong with it: `started_at` should actually be set when the task begins, so the staleness
+sweep has something honest to measure and `started_at IS NULL` stops being a predicate that means
+nothing; and `acks_late` should be reconsidered, since a report task is idempotent enough to retry.
+
+**Investigation status:** cause narrowed from code and config; not confirmed. The join above is
+the decisive read and needs no log retention. Worker logs for 2026-04-12 09:00-09:01 UTC would
+confirm directly, but that is five months back and beyond any default retention — flagged rather
+than assumed.
 
 ---
 
