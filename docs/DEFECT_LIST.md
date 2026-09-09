@@ -7,21 +7,21 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-09, against `fix/realtor-mark-default`, cut from `main` at `0a29c3f`.
+**Last reconciled:** 2026-09-09, against `fix/email-log-commit`, cut from `main` at `6075879`.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 36 | Real, unfixed |
-| `fixed` | 28 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 35 | Real, unfixed |
+| `fixed` | 29 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **67** | D-001 … D-067, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 16 · FRAGILE 10 · ROUGH 6. (Sums to 36, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 15 · FRAGILE 10 · ROUGH 6. (Sums to 35, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -2065,7 +2065,7 @@ first move if it recurs.
 
 ### D-065 — `email_log` cannot be trusted as a delivery record: its write is rollback-able after the send
 **Severity:** WRONG · **Affects:** every scheduled send · **Found during:** D-064
-**Status:** `open`
+**Status:** `fixed` (`fix/email-log-commit`)
 
 The scheduled-email block opens `psycopg.connect(DATABASE_URL, autocommit=False)`
 (`tasks.py:1279`) and commits once, at `:1308`. Everything in between — the schedule lookup, the
@@ -2106,8 +2106,42 @@ abandoned is D-061/D-062's problem to record. **The asymmetry matters: a false a
 delivery that happened; a false presence records one that also happened.** Only one of those
 misleads.
 
-Not fixed here: this was found while investigating D-064 and shipping it inside a
-"not reproducing" downgrade would bury a change that touches every scheduled send.
+**Fixed — option 1, and the ordering is the decision.** A `'sending'` row is written and
+**committed before** the provider is called, then updated to `sent`/`suppressed`/`failed`
+afterwards. Both writes use their own short-lived autocommit connection, so nothing the caller
+does later can roll them back.
+
+Neither ordering is free, and the choice is which way to be wrong:
+
+| ordering | failure mode |
+|---|---|
+| log **after** the send, commit immediately | loses the record if the process dies between the provider returning and the commit — **fails towards silence**, the same failure with a smaller window |
+| log **before** the send, update after ✅ | can leave a row saying `'sending'` for an attempt that never reached the provider — **fails towards "we tried and do not know"** |
+
+A row stuck at `'sending'` is legible and actionable; silence is neither. That is the asymmetry
+the entry already argued, now applied.
+
+Three details that made this less trivial than it looks:
+
+- **Cardinality had to stay at one row per attempt.** `admin.py:113` and `:197` do `COUNT(*)` on
+  this table, so a second row per send would have silently inflated every email metric in the
+  admin dashboard. The row is created then *updated*, and the outer failure handler's INSERT is
+  now guarded with `WHERE NOT EXISTS (… report_id = …)` so it only fires when the failure happened
+  *before* an attempt row existed.
+- **A raise from the provider closes the row out before propagating**, so a known failure is
+  recorded as `failed` rather than left at `'sending'`.
+- `status` is plain `TEXT` with no CHECK (`0027`), so `'sending'` needed no migration — but
+  **`0027`'s `COMMENT ON COLUMN` still lists only sent/suppressed/failed/unknown and is now
+  incomplete.** Not worth a migration on its own; worth folding into the next one that touches
+  this table.
+
+Tests: `apps/worker/tests/test_email_log_durability.py`, 10 cases, 7 failing against `6075879`.
+Three of the ten do not read the source at all — they run a fake connection that models the one
+behaviour under test (uncommitted writes are invisible and lost on rollback) and demonstrate the
+old shape losing the row and the new shape surviving. Those three pass before and after by
+design: they establish the baseline the fix is measured against rather than asserting the fix.
+
+**This is what makes D-064 answerable from data next time** rather than from a mailbox.
 
 ---
 
@@ -2139,6 +2173,13 @@ the last one:**
 
 The last row is the lesson, and it is the third time on this project: **grep for the construct, not
 for the symptom.** The check that runs after the fix finds what the check before it missed.
+
+**And the `property_builder.py` row is a second, sharper method note.** The ticket specified a
+template change. That change was real, it edited the right-looking line, it would have produced a
+green diff and a closed ticket — and it would have fixed nothing, because the value is supplied
+upstream and the Jinja `default()` on that path is dead code. **A fix that edits the correct line
+can still be inert if something earlier supplies the value.** The only thing that distinguishes
+the two cases is rendering the result. Render to verify; do not read to verify.
 
 **A separate bug in the same expression, found by render.** Jinja's `default(x)` fires only on
 *undefined*. `agent.get("title", …)` returns `None` when the key exists holding a null, and

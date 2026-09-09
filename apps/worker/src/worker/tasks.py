@@ -595,6 +595,104 @@ def _build_email_payload(report_type, city, zips, lookback, result, pdf_url):
     return payload
 
 
+# ── email_log lifecycle (D-065) ─────────────────────────────────────────────
+#
+# THE ORDERING DECISION, AND WHY IT IS THIS ONE.
+#
+# The delivery record used to be a single INSERT after the send, on the caller's
+# cursor, inside the caller's transaction — which commits only at the very end
+# of the block. So a record of a send that really happened could be undone by a
+# later failure, or by the process dying before the commit. The email is already
+# gone: SendGrid accepted it over the network and no database rollback retracts
+# that. Only the evidence disappeared.
+#
+# Neither ordering is free, and the choice is between which way you want to be
+# wrong:
+#
+#   log AFTER the send, commit immediately
+#       loses the record if the process dies in the gap between the provider
+#       returning and the commit. FAILS TOWARDS SILENCE — the same failure this
+#       is meant to fix, just with a smaller window.
+#
+#   log BEFORE the send, commit immediately, update after   <-- CHOSEN
+#       can leave a row saying 'sending' for an attempt that never reached the
+#       provider. FAILS TOWARDS AN HONEST "we tried and do not know", which is
+#       legible to whoever reads the table and, unlike silence, is something a
+#       person can act on.
+#
+# The asymmetry is the whole argument: a false absence hides a delivery that
+# happened; a false 'sending' records an attempt that also happened. Only one of
+# those misleads.
+#
+# Both writes use their own short-lived autocommit connection, so neither can be
+# rolled back by anything the caller does afterwards. `status` is plain TEXT with
+# no CHECK constraint (0027), so 'sending' needs no migration — but 0027's
+# COMMENT still lists only sent/suppressed/failed/unknown and is now incomplete.
+#
+# Row cardinality is deliberately unchanged: one row per attempt, created then
+# updated. admin.py:113 and :197 COUNT(*) this table, and an extra row per send
+# would silently inflate every email metric in the admin dashboard.
+
+
+def _open_log_connection():
+    """Own connection, autocommit, RLS session var set."""
+    conn = psycopg.connect(DATABASE_URL, autocommit=True)
+    return conn
+
+
+def _log_email_attempt(account_id, run_id, schedule_id, recipients, subject):
+    """
+    Record that a send is about to be attempted. Committed before the provider
+    is called. Returns the row id, or None if even this failed — in which case
+    the send still proceeds, because losing the log is not a reason to withhold
+    a report.
+    """
+    try:
+        with _open_log_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT set_config('app.current_account_id', %s, false)",
+                    (str(account_id),),
+                )
+                cur.execute("""
+                    INSERT INTO email_log (
+                        account_id, schedule_id, report_id, provider,
+                        to_emails, subject, status
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, 'sending')
+                    RETURNING id::text
+                """, (account_id, schedule_id, run_id, 'sendgrid', recipients, subject))
+                return cur.fetchone()[0]
+    except Exception as e:
+        logger.warning(f"Could not record email attempt (proceeding with send): {e}")
+        return None
+
+
+def _finalise_email_log(log_id, account_id, status, status_code, error):
+    """
+    Close out the attempt row. Committed on its own connection so it cannot be
+    rolled back by the caller's transaction. A row left at 'sending' means the
+    process died between the provider call and here — which is exactly what it
+    should say.
+    """
+    if not log_id:
+        return
+    try:
+        with _open_log_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT set_config('app.current_account_id', %s, false)",
+                    (str(account_id),),
+                )
+                cur.execute("""
+                    UPDATE email_log
+                    SET status = %s, response_code = %s, error = %s
+                    WHERE id = %s::uuid
+                """, (status, status_code, (error or None), log_id))
+    except Exception as e:
+        logger.warning(f"Could not finalise email log {log_id} (non-critical): {e}")
+
+
 def _send_and_log_report_email(
     conn, cur, account_id, run_id, recipients,
     report_type, city, zips, lookback, result, pdf_url,
@@ -611,39 +709,39 @@ def _send_and_log_report_email(
 
     brand, acc_type = _resolve_email_brand(cur, account_id)
     email_payload = _build_email_payload(report_type, city, zips, lookback, result, pdf_url)
+    subject = f"Your {report_type.replace('_', ' ').title()} Report"
 
-    status_code, response_text = send_schedule_email(
-        account_id=account_id,
-        recipients=recipients,
-        payload=email_payload,
-        account_name=account_name,
-        db_conn=conn,
-        brand=brand,
-        account_type=acc_type,
-    )
+    # Committed BEFORE the provider is called — see the block above this
+    # function for why this ordering and not the other one.
+    log_id = _log_email_attempt(account_id, run_id, schedule_id, recipients, subject)
 
     try:
-        if status_code == 202:
-            email_status = 'sent'
-        elif status_code == 200 and 'suppressed' in response_text.lower():
-            email_status = 'suppressed'
-        else:
-            email_status = 'failed'
+        status_code, response_text = send_schedule_email(
+            account_id=account_id,
+            recipients=recipients,
+            payload=email_payload,
+            account_name=account_name,
+            db_conn=conn,
+            brand=brand,
+            account_type=acc_type,
+        )
+    except Exception as send_error:
+        # Close the row out before the exception leaves this function, so the
+        # record survives whatever the caller's transaction does next.
+        _finalise_email_log(log_id, account_id, 'failed', 500, str(send_error)[:2000])
+        raise
 
-        subject = f"Your {report_type.replace('_', ' ').title()} Report"
-        cur.execute("""
-            INSERT INTO email_log (
-                account_id, schedule_id, report_id, provider,
-                to_emails, subject, response_code, status, error
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (
-            account_id, schedule_id, run_id, 'sendgrid',
-            recipients, subject, status_code, email_status,
-            None if status_code in (200, 202) else response_text,
-        ))
-    except Exception as log_error:
-        logger.warning(f"Failed to log email send (non-critical): {log_error}")
+    if status_code == 202:
+        email_status = 'sent'
+    elif status_code == 200 and 'suppressed' in response_text.lower():
+        email_status = 'suppressed'
+    else:
+        email_status = 'failed'
+
+    _finalise_email_log(
+        log_id, account_id, email_status, status_code,
+        None if status_code in (200, 202) else response_text,
+    )
 
     print(f"✅ Email sent to {len(recipients)} recipient(s), status: {status_code}")
     return status_code, response_text
@@ -1327,12 +1425,23 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                 print(f"⚠️  Email send failed: {email_error}")
                 with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
                     with conn.cursor() as cur:
+                        # Only when no attempt row exists — i.e. the failure
+                        # happened BEFORE _send_and_log_report_email got as far
+                        # as recording one (the schedule lookup, the recipient
+                        # resolution). If it did record one, that row has
+                        # already been closed out as 'failed' on its own
+                        # connection, and inserting here would double-count:
+                        # admin.py:113 and :197 COUNT(*) this table.
                         cur.execute("""
-                            INSERT INTO email_log (account_id, schedule_id, report_id, provider, to_emails, subject, response_code, error)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                            INSERT INTO email_log (account_id, schedule_id, report_id, provider, to_emails, subject, response_code, status, error)
+                            SELECT %s, %s, %s, %s, %s, %s, %s, 'failed', %s
+                            WHERE NOT EXISTS (
+                                SELECT 1 FROM email_log WHERE report_id = %s::uuid
+                            )
                         """, (
                             account_id, schedule_id, run_id, 'sendgrid',
                             [], 'Failed to send', 500, str(email_error),
+                            run_id,
                         ))
                         # The run must reach a terminal state here. This handler
                         # catches before the outer one at the end of the task
