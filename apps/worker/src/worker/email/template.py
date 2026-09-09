@@ -191,6 +191,75 @@ def _format_percent(value: Optional[float]) -> str:
     return f"{value:.1f}%"
 
 
+# Extension markers people actually type into a free-text phone field.
+# Ordered longest-first so "extension" is not consumed by the "ext" rule.
+_PHONE_EXT_MARKERS = ("extension", "ext.", "ext", "x", "#")
+
+
+def _tel_uri(phone: Optional[str]) -> Optional[str]:
+    """
+    Build an RFC 3966 `tel:` URI from a free-text phone number.
+
+    `rep_phone` is `users.phone` (tasks.py:465) — an unvalidated free-text
+    column — so it arrives however the agent typed it: "(626) 555-0134",
+    "626.555.0134", "626-555-0134 x12". Interpolating that straight into
+    `href="tel:{rep_phone}"` produces a malformed URI: spaces and parentheses
+    are not valid URI characters, and the space in particular is where strict
+    parsers truncate or drop the link.
+
+    Returns a dialable URI, or None when the input cannot be made into one —
+    in which case the caller must render the number as plain text rather than
+    as a link that goes nowhere.
+
+    Extensions are emitted as RFC 3966 `;ext=` rather than folded into the
+    number. Folding them in is worse than not linking at all: "626-555-0134
+    x12" would otherwise yield a 12-digit string and dial a *different* number.
+    (`services/twilio_sms.py:format_phone_e164` has exactly that behaviour; it
+    is not reused here both because it lives in the API package, which the
+    worker does not import, and because of that bug.)
+    """
+    if not phone:
+        return None
+
+    # Case-folded throughout: the marker search and the slice indices must be
+    # taken against the same string, and only digits and a leading "+" are read
+    # out afterwards, neither of which case affects.
+    raw = phone.strip().lower()
+
+    # Split off an extension before touching the digits, so its digits are
+    # never mistaken for part of the subscriber number.
+    ext_digits = ""
+    for marker in _PHONE_EXT_MARKERS:
+        idx = raw.find(marker)
+        # A leading "#" or "x" is not an extension marker, it is a typo or a
+        # prefix — requiring a preceding digit avoids eating the whole string.
+        if idx > 0 and any(c.isdigit() for c in raw[:idx]):
+            ext_digits = "".join(c for c in raw[idx + len(marker):] if c.isdigit())
+            raw = raw[:idx]
+            break
+
+    has_plus = raw.startswith("+")
+    digits = "".join(c for c in raw if c.isdigit())
+    if not digits:
+        return None
+
+    if has_plus:
+        number = f"+{digits}"
+    elif len(digits) == 10:
+        # NANP national number. The default is deliberate and US-only, matching
+        # the rest of the product; a non-US number typed without a "+" cannot
+        # be distinguished from this and will be wrong either way.
+        number = f"+1{digits}"
+    elif len(digits) == 11 and digits.startswith("1"):
+        number = f"+{digits}"
+    else:
+        # 7-digit local numbers, truncated entries, "call me" — anything we
+        # cannot resolve to a dialable number. Refuse rather than guess.
+        return None
+
+    return f"tel:{number};ext={ext_digits}" if ext_digits else f"tel:{number}"
+
+
 # ============================================================================
 # V16: LAYOUT-BASED EMAIL ARCHITECTURE
 # Translated from V0 React designs in apps/web/app/email-templates/layouts/
@@ -1905,6 +1974,10 @@ def schedule_email_html(
     rep_title = brand.get("rep_title")
     rep_photo_url = brand.get("rep_photo_url")
     rep_phone = brand.get("rep_phone")
+    # The href and the label are not the same string: the href must be a valid
+    # tel: URI, the label stays as the agent typed it. None means the number
+    # could not be made dialable, and the pill renders as text with no link.
+    rep_phone_href = _tel_uri(rep_phone)
     rep_email = brand.get("rep_email")
     contact_line1 = brand.get("contact_line1") or rep_name
     contact_line2 = brand.get("contact_line2") or rep_title
@@ -2163,6 +2236,66 @@ def schedule_email_html(
                               {f'<p style="margin: 2px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 11px; color: #64748b;">{city or ""}</p>' if city else ""}
                             </td>'''
 
+    # ── Contact pills ───────────────────────────────────────────────────────
+    # Built once and reused by every footer branch below. They used to be
+    # inlined into the photo branch only, which meant an agent who had not
+    # uploaded a headshot sent reports carrying no phone number and no email
+    # address at all — the recipient had no way to reach them.
+    #
+    # The phone pill links only when the number resolves to a dialable tel:
+    # URI; otherwise it renders as plain text, because a pill styled like a
+    # link that goes nowhere is worse than one that never claimed to be
+    # tappable. The label is always the number as the agent entered it — only
+    # the href is normalised.
+    def _pill_style(margin_right: bool) -> str:
+        return (
+            "display: inline-block; font-family: -apple-system, BlinkMacSystemFont, sans-serif; "
+            f"font-size: 11px; color: {accent_color}; text-decoration: none; "
+            f"border: 1px solid {accent_color}; padding: 4px 10px; border-radius: 12px;"
+            + (" margin-right: 6px;" if margin_right else "")
+        )
+
+    if rep_phone and rep_phone_href:
+        phone_pill_html = f'<a href="{rep_phone_href}" style="{_pill_style(True)}">{rep_phone}</a>'
+    elif rep_phone:
+        phone_pill_html = f'<span style="{_pill_style(True)}">{rep_phone}</span>'
+    else:
+        phone_pill_html = ''
+
+    email_pill_html = (
+        f'<a href="mailto:{rep_email}" style="{_pill_style(False)}">Email</a>'
+        if rep_email else ''
+    )
+    contact_pills_html = (
+        f'<div style="margin-top: 8px;">{phone_pill_html}{email_pill_html}</div>'
+        if (phone_pill_html or email_pill_html) else ''
+    )
+
+    # ── Sender postal address (CAN-SPAM §7704(a)(5)) ────────────────────────
+    # TODO(B5) [JERRY]: no value is wired up yet, deliberately. Every commercial
+    # email this product sends currently ships without the physical postal
+    # address the statute requires, and closing that needs three things this
+    # ticket is gated on:
+    #   1. the address itself — a business decision, not a placeholder. Do NOT
+    #      fill this in with a guess; a wrong address is a worse compliance
+    #      posture than a missing one, because it is an affirmative false
+    #      statement rather than an omission.
+    #   2. somewhere to store it. There is no postal-address column anywhere in
+    #      the schema — not on `accounts`, not on `affiliate_branding`. For
+    #      white-labelled sends the address of record is the *sender's*, so this
+    #      likely needs to be per-account, not a single global constant.
+    #   3. a settings surface so accounts can enter their own.
+    # The slot below is the whole of what this ticket builds: the moment
+    # `brand["postal_address"]` is populated, the line renders. Until then it
+    # collapses to nothing and the footer is unchanged.
+    postal_address = brand.get("postal_address")
+    postal_address_html = (
+        '              <p style="margin: 0 0 4px 0; font-family: \'Outfit\', -apple-system, '
+        "'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #9ca3af;\">"
+        f"{brand_name} &bull; {postal_address}</p>\n"
+        if postal_address else ''
+    )
+
     if rep_photo_url and (contact_line1 or rep_name):
         agent_footer_html = f'''
               <!-- V0 AGENT FOOTER: photo | info+pills | company -->
@@ -2186,10 +2319,7 @@ def schedule_email_html(
                             {contact_line1 or rep_name}
                           </p>
                           {f'<p style="margin: 2px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 11px; color: #6b7280;">{contact_line2 or rep_title}</p>' if (contact_line2 or rep_title) else ''}
-                          <div style="margin-top: 8px;">
-                            {f'<a href="tel:{rep_phone}" style="display: inline-block; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 11px; color: {accent_color}; text-decoration: none; border: 1px solid {accent_color}; padding: 4px 10px; border-radius: 12px; margin-right: 6px;">{rep_phone}</a>' if rep_phone else ''}
-                            {f'<a href="mailto:{rep_email}" style="display: inline-block; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 11px; color: {accent_color}; text-decoration: none; border: 1px solid {accent_color}; padding: 4px 10px; border-radius: 12px;">Email</a>' if rep_email else ''}
-                          </div>
+                          {contact_pills_html}
                         </td>
                         {company_html}
                       </tr>
@@ -2208,6 +2338,7 @@ def schedule_email_html(
                           {f'<p style="margin: 0 0 2px 0; font-family: Outfit, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: bold; color: {primary_color};">{contact_line1}</p>' if contact_line1 else ''}
                           {f'<p style="margin: 0 0 6px 0; font-size: 12px; color: #64748b;">{contact_line2}</p>' if contact_line2 else ''}
                           {f'<p style="margin: 0; font-size: 12px;"><a href="{website_url}" style="color: {accent_color}; text-decoration: none;">{website_url.replace("https://", "").replace("http://", "")}</a></p>' if website_url else ''}
+                          {contact_pills_html}
                         </td>
                         {company_html}
                       </tr>
@@ -2221,6 +2352,7 @@ def schedule_email_html(
                 <tr>
                   <td style="padding: 24px;" align="center">
                     <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: bold; color: {primary_color};">{brand_name}</p>
+                    {contact_pills_html}
                   </td>
                 </tr>
               </table>'''
@@ -2373,9 +2505,8 @@ def schedule_email_html(
               <p style="margin: 0 0 4px 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #9ca3af;">
                 Powered by <span style="font-weight: 600; color: #6b7280;">TrendyReports</span>
               </p>
-              <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #9ca3af;">
+{postal_address_html}              <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #9ca3af;">
                 <a href="{unsubscribe_url}" style="color: #9ca3af; text-decoration: underline;">Unsubscribe</a>
-                &bull; <a href="#" style="color: #9ca3af; text-decoration: underline;">Update Preferences</a>
               </p>
             </td>
           </tr>
