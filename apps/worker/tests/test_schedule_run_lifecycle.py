@@ -162,20 +162,54 @@ def test_the_sweep_respects_a_staleness_window():
     )
 
 
-def test_the_staleness_window_clears_the_task_time_limit():
+def test_the_started_window_clears_the_task_time_limit():
     """
-    task_time_limit is 300s. A window shorter than that would mark a slow but
-    healthy render as lost, which converts a latency problem into a fake
-    failure — the same class of mistake as D-059.
+    A task cannot be alive past task_time_limit — Celery hard-kills it — so a
+    window above that ceiling is race-free by construction. Below it, the sweep
+    could mark a running task failed, which is the D-059 mistake again:
+    converting a latency problem into a fabricated failure.
 
     Read from source rather than imported: schedules_tick pulls in httpx, and
-    the rest of this file is deliberately dependency-free so it runs in any
-    interpreter that can parse the repo.
+    the rest of this file is deliberately dependency-free.
     """
-    window = int(re.search(r'STALE_RUN_MINUTES = int\(os\.getenv\("STALE_RUN_MINUTES", "(\d+)"\)\)', TICKER).group(1))
+    window = int(re.search(r'STALE_STARTED_MINUTES = int\(os\.getenv\("STALE_STARTED_MINUTES", "(\d+)"\)\)', TICKER).group(1))
     limit = int(re.search(r'"task_time_limit":\s*(\d+)', (WORKER_SRC / "app.py").read_text()).group(1))
     assert window * 60 > limit, (
-        f"staleness window {window}m does not clear task_time_limit ({limit}s)"
+        f"started-window {window}m does not clear task_time_limit ({limit}s)"
+    )
+
+
+def test_the_queued_window_is_wide_enough_for_a_burst_to_drain():
+    """
+    The never-started window is governed by QUEUE DEPTH, not render duration.
+    The ticker enqueues every due schedule in one pass — 26 in one pass on
+    2026-04-12 — and no --concurrency is configured, so a burst drains roughly
+    serially. At the observed p99 of 41s, 26 tasks is ~18 minutes before the
+    last one starts.
+
+    A window set from render timings alone (~2 minutes) would mark most of a
+    burst failed while the worker was working through it normally. This is the
+    assertion that catches that: fabricating failures during a backlog is worse
+    than reporting the loss a few minutes later.
+    """
+    window = int(re.search(r'STALE_QUEUED_MINUTES = int\(os\.getenv\("STALE_QUEUED_MINUTES", "(\d+)"\)\)', TICKER).group(1))
+    OBSERVED_P99_SECONDS = 41      # n=1067 completed runs
+    LARGEST_OBSERVED_BURST = 26    # 2026-04-12 ticker pass
+    assert window * 60 > OBSERVED_P99_SECONDS * LARGEST_OBSERVED_BURST, (
+        f"queued-window {window}m is shorter than a serial drain of the largest "
+        f"observed burst ({LARGEST_OBSERVED_BURST} x {OBSERVED_P99_SECONDS}s)"
+    )
+
+
+def test_the_started_window_is_measured_from_started_at_not_created_at():
+    """
+    A task that waited 20 minutes in a backlog and then ran for 40 seconds is
+    healthy. Measuring its window from created_at would condemn it for the wait
+    — which is the same fabricated-failure trap, arriving by a different route.
+    """
+    sql = _schedule_run_updates(TICKER)[0]
+    assert "started_at IS NOT NULL" in sql and "started_at < NOW()" in sql, (
+        "the started-window is not measured from started_at: " + sql
     )
 
 
