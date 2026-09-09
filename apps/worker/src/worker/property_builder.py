@@ -129,6 +129,43 @@ def safe_url(value, fallback: str = "") -> str:
     return fallback
 
 
+def sanitize_context_urls(value, _key: str = ""):
+    """
+    Sweep a Jinja render context and scheme-check every URL-shaped value.
+
+    THIS EXISTS TO INVERT THE GUARANTEE. Applying `safe_url()` at each site
+    that builds a context is only as complete as the search that found those
+    sites — "I checked the ones I could see". Sweeping the finished context at
+    the render boundary makes the property structural instead: an unchecked URL
+    cannot reach a template, whatever new code path put it there.
+
+    A key ending in `_url` is the trigger. That is the naming convention every
+    URL in these contexts already follows (agent_photo_url, logo_url,
+    map_image_url, hero_photo_url, chart_url, cover_image_url, …), and the
+    sweep is recursive, so URLs nested inside listing and comparable dicts are
+    covered too.
+
+    It SANITISES rather than raising. Raising would convert an injection into
+    an outage, which is the mistake D-059 was: a render that stops is worse for
+    the account than a logo that fails to load. A dropped value becomes None so
+    the surrounding markup collapses, and the drop is logged so it is visible.
+    """
+    if isinstance(value, dict):
+        return {k: sanitize_context_urls(v, k) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        cleaned = [sanitize_context_urls(v, _key) for v in value]
+        return type(value)(cleaned) if isinstance(value, tuple) else cleaned
+    if _key.endswith("_url") and isinstance(value, str) and value:
+        cleaned = safe_url(value)
+        if cleaned != value:
+            logger.warning(
+                "sanitize_context_urls: dropped disallowed URL in %r (%.60s…)",
+                _key, value,
+            )
+        return cleaned or None
+    return value
+
+
 def _hex_to_rgb(hex_color: str) -> tuple:
     """Convert '#RRGGBB' to (r, g, b) floats in 0-1. Never raises."""
     h = normalize_hex_color(hex_color).lstrip("#")
@@ -1268,7 +1305,9 @@ class PropertyReportBuilder:
                 logger.warning("[DIAGNOSTIC] Image %s: %s", key, str(val)[:100] if val else "NONE/EMPTY")
 
             template = self.env.get_template(template_path)
-            html = template.render(**context)
+            # Every URL-shaped value is scheme-checked here, at the one place
+            # a context can become HTML. See sanitize_context_urls.
+            html = template.render(**sanitize_context_urls(context))
             
             logger.warning(
                 "[DIAGNOSTIC] Rendered %s report: theme=%s (%s), pages=%s, html_len=%d",
