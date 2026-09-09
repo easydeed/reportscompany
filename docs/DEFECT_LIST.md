@@ -7,19 +7,19 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-09, against `fix/schedule-run-lifecycle`, stacked on `fix/url-boundary-completeness` (#52).
+**Last reconciled:** 2026-09-09, against `investigate/completed-not-emailed`, stacked on `fix/schedule-run-lifecycle` (#53).
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 34 | Real, unfixed |
+| `open` | 35 | Real, unfixed |
 | `fixed` | 26 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **63** | D-001 … D-063, contiguous, no duplicates |
+| **Total** | **64** | D-001 … D-064, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 14 · FRAGILE 10 · ROUGH 6. (Sums to 34, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 14 · FRAGILE 10 · ROUGH 6. (Sums to 35, the open total.)
 
 `fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
@@ -1893,6 +1893,92 @@ D-061's fix does not close this — the run now reaches a terminal status via th
 but a silently unsent report still reads as a healthy `completed` run. The fix is to make the
 missing PDF an explicit outcome: log it, and record the run as `failed` with a reason rather than
 falling through a truthiness check.
+
+---
+
+### D-064 — a schedule row invisible to RLS skips the send with no email, no error and no record
+**Severity:** BROKEN · **Affects:** 20 reports built and never delivered, in 4 batches over 4 months
+**Status:** `open` (investigated, not fixed — `investigate/completed-not-emailed`)
+
+20 runs have a **completed generation with a PDF** and **no `email_log` row at all**, in four
+batches of exactly five: 2025-12-29, 2026-01-05, 2026-02-05, 2026-04-12. Three of the four start
+at 14:00 or 09:00 on the hour; each spans under 20 seconds. Five consecutive schedules in one
+ticker pass, four separate times. **The report was built and nobody was sent it.**
+
+This is *not* the 2026-04-12 worker restart (that is D-062, and it produced no PDF). It recurs.
+
+**Proved to one line, by elimination rather than by guessing.** Only one path produces that exact
+signature — completed generation, `pdf_url` present, no `email_log` row, no status update:
+
+| Candidate path | Ruled out because |
+|---|---|
+| `if schedule_id and pdf_url:` false (`tasks.py:1275`) — this is D-063 | `schedule_id` is *always* present: `enqueue_report` puts it in `params` unconditionally (`schedules_tick.py`) and the task reads it from there. `pdf_url` is present in all 20 rows. **The guard passes.** |
+| the send returned any status at all | `_send_and_log_report_email` (`tasks.py:598-649`) has **one return, at the end**, and its `INSERT INTO email_log` at `:634` is unconditional — every early return inside `send_schedule_email` (no pdf_url, all recipients suppressed) still comes back through it. If it had been called, a row would exist. |
+| anything raised inside the block | `except email_error` (`:1326`) inserts an `email_log` row carrying the traceback. A row would exist. |
+
+⇒ `_send_and_log_report_email` was **never called** and nothing raised ⇒ **`schedule_row` was
+falsy at `tasks.py:1290`**, which does nothing but `print()` a warning and fall through. No email,
+no exception, no `email_log`, and — before D-061's fix — no status update either.
+
+**And the schedule was not deleted.** `schedule_runs.schedule_id` is
+`REFERENCES schedules(id) ON DELETE CASCADE` (`0006_schedules.sql:41`), so deleting a schedule
+takes its run rows with it. **These run rows exist, therefore the schedules existed.** The row was
+*invisible*, not absent.
+
+**Which leaves row-level security.** `schedules` has RLS enabled with
+
+```sql
+USING (account_id = current_setting('app.current_account_id', true)::uuid
+       OR current_setting('app.current_user_role', true) = 'ADMIN')
+```
+
+(`0025_admin_rls_bypass.sql:23`), and the block sets that GUC from the task's `account_id`
+argument one statement earlier (`tasks.py:1281`). When the setting is absent or does not match,
+`current_setting(..., true)` returns NULL, `account_id = NULL` evaluates to NULL rather than true,
+and **the row silently disappears from the result set.** No error is raised — that is the whole
+danger of RLS as a failure mode.
+
+**That also explains the batch shape, which was the lead.** Visibility here is a function of
+`account_id`, not of the individual schedule — so every schedule belonging to the same account in
+the same pass fails identically and together. Five consecutive rows is not five coincidences; it
+is one account's schedules in one ticker pass.
+
+**What is still unknown: what breaks the match.** Two reads settle it, and both are one query:
+
+```sql
+-- 1. Do the account ids agree? A mismatch proves the RLS hypothesis outright.
+SELECT r.id, r.created_at, s.account_id AS schedule_account, g.account_id AS run_account,
+       (s.account_id = g.account_id) AS ids_match, s.report_type, s.active
+FROM schedule_runs r
+JOIN report_generations g ON g.id = r.report_run_id
+JOIN schedules s         ON s.id = r.schedule_id
+LEFT JOIN email_log e    ON e.report_id = r.report_run_id
+WHERE g.status = 'completed' AND g.pdf_url IS NOT NULL AND e.id IS NULL
+ORDER BY r.created_at;
+
+-- 2. Do the 20 that failed differ structurally from the 7 that sent?
+SELECT (e.id IS NULL) AS never_emailed, s.report_type, g.account_id,
+       jsonb_array_length(COALESCE(s.recipients, '[]'::jsonb)) AS recipient_count,
+       a.plan_slug, a.account_type, COUNT(*)
+FROM schedule_runs r
+JOIN report_generations g ON g.id = r.report_run_id
+JOIN schedules s         ON s.id = r.schedule_id
+JOIN accounts a          ON a.id = g.account_id
+LEFT JOIN email_log e    ON e.report_id = r.report_run_id
+WHERE g.status = 'completed' AND g.pdf_url IS NOT NULL
+GROUP BY 1,2,3,4,5,6 ORDER BY 1 DESC, 7 DESC;
+```
+
+**Relationship to D-063.** D-063 stays latent: it is the `pdf_url`-falsy branch of the *same*
+`if`, and every one of these 20 rows has a PDF. This is a different silent skip on the very next
+line — which makes the count **five** instances of the shape, not four (D-033, D-061, D-062,
+D-063, D-064). Every record of what happened is written by code that only runs when things go
+right, and every guard that fails does so by falling through.
+
+**Not fixed, per instruction.** The shape of the fix is clear whatever the trigger turns out to
+be — a missing schedule row on a run that *has* a `schedule_id` is an error, not a no-op, and must
+be recorded and reported rather than printed — but the trigger should be understood before
+anything changes.
 
 ---
 
