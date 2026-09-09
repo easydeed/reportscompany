@@ -580,7 +580,10 @@ class PropertyReportBuilder:
         
         return {
             "name": agent.get("name", ""),
-            "title": agent.get("title", "Realtor®"),
+            # `or` rather than a .get() default: the key can exist holding None,
+            # which .get() happily returns and which rendered as the literal
+            # string "None" in the PDF. Not "Realtor®" — see D-066.
+            "title": agent.get("title") or "Real Estate Agent",
             "license_number": license_num,
             "license": license_display,  # V0 template naming (formatted)
             "phone": agent.get("phone", ""),

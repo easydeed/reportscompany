@@ -1794,7 +1794,7 @@ def process_consumer_report(self, report_id: str):
                         "comparables": comparables[:6],
                         "agent": {
                             "name": agent_name,
-                            "title": job_title or "Realtor\u00ae",
+                            "title": job_title or "Real Estate Agent",
                             "phone": agent_phone or "",
                             "email": agent_email_addr or "",
                             "license_number": license_number or "",
