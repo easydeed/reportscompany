@@ -48,7 +48,7 @@ V3: Professional styling refresh with enhanced Market Snapshot data.
 """
 from typing import Dict, Optional, TypedDict, Tuple, List
 
-from worker.property_builder import compute_color_roles
+from worker.property_builder import compute_color_roles, normalize_hex_color
 
 
 def hex_to_rgba(hex_color: str, opacity: float) -> str:
@@ -1968,8 +1968,13 @@ def schedule_email_html(
     brand_name = brand.get("display_name") or account_name or "Market Reports"
     logo_url = brand.get("logo_url")
     email_logo_url = brand.get("email_logo_url")  # Separate logo for email headers
-    primary_color = brand.get("primary_color") or "#6366f1"  # Indigo
-    accent_color = brand.get("accent_color") or "#8b5cf6"    # Purple
+    # Normalised, not just defaulted. `or` only catches an empty value; these
+    # columns accept any string on two of their three write paths, and the
+    # result is interpolated both into compute_color_roles (which parses it as
+    # hex) and directly into ~48 `style="…"` attributes below. An unparseable
+    # value used to raise ValueError out of this function and stop the send.
+    primary_color = normalize_hex_color(brand.get("primary_color"), "#6366f1")  # Indigo
+    accent_color = normalize_hex_color(brand.get("accent_color"), "#8b5cf6")    # Purple
     rep_name = brand.get("rep_name")
     rep_title = brand.get("rep_title")
     rep_photo_url = brand.get("rep_photo_url")

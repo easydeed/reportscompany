@@ -18,6 +18,7 @@ Usage:
 """
 
 import os
+import re
 import logging
 import colorsys
 from typing import Dict, Any, List, Optional
@@ -40,9 +41,39 @@ logger.warning("[DIAGNOSTIC] PropertyReportBuilder version: %s", _BUILDER_VERSIO
 # Color Utility Functions — compute derived roles from a single accent hex
 # =============================================================================
 
+_HEX_COLOR_RE = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
+
+# Neutral indigo, matching the email template's own default. Used only when a
+# stored colour cannot be parsed at all.
+_FALLBACK_HEX = "#6366f1"
+
+
+def normalize_hex_color(value, fallback: str = _FALLBACK_HEX) -> str:
+    """
+    Coerce a stored brand colour to a `#rrggbb` string that is safe to both
+    parse and interpolate.
+
+    Brand colours are user input. Two of the three write paths accept them as a
+    bare `str` with no pattern, so a value like "red" — which is the natural
+    thing for a person to type into a colour field — reaches this module. Before
+    this function existed, that value crashed every render that touched it:
+    `int("rr", 16)` raises ValueError, the exception propagated out of
+    `schedule_email_html` into `send_schedule_email`, and the email was never
+    sent. One settings save silently stopped all delivery on the account.
+
+    Anything that is not a 3- or 6-digit hex triple becomes the fallback. That
+    is deliberate over "pass it through and hope CSS understands it": these
+    values are also interpolated straight into `style="…"` attributes, so a
+    permissive path here would trade a crash for a CSS-injection.
+    """
+    if isinstance(value, str) and _HEX_COLOR_RE.match(value.strip()):
+        return value.strip()
+    return fallback
+
+
 def _hex_to_rgb(hex_color: str) -> tuple:
-    """Convert '#RRGGBB' to (r, g, b) floats in 0-1."""
-    h = hex_color.lstrip("#")
+    """Convert '#RRGGBB' to (r, g, b) floats in 0-1. Never raises."""
+    h = normalize_hex_color(hex_color).lstrip("#")
     if len(h) == 3:
         h = h[0]*2 + h[1]*2 + h[2]*2
     return tuple(int(h[i:i+2], 16) / 255.0 for i in (0, 2, 4))
@@ -160,7 +191,14 @@ def compute_color_roles(hex_color: str, dark_bg: str = "#18235c") -> Dict[str, s
       theme_color_on_dark  – guaranteed readable on dark backgrounds
       theme_color_on_light – guaranteed readable on light backgrounds
       theme_color_text     – white or dark text to overlay on the accent
+
+    Both arguments are normalised up front rather than relying on _hex_to_rgb's
+    own guard, so that `theme_color` agrees with the roles derived from it. If
+    only the derived values were coerced, a bad stored colour would echo back
+    unchanged in `theme_color` and land in a `style` attribute.
     """
+    hex_color = normalize_hex_color(hex_color)
+    dark_bg = normalize_hex_color(dark_bg, "#18235c")
     return {
         "theme_color":          hex_color,
         "theme_color_light":    _lighten(hex_color, 0.35),

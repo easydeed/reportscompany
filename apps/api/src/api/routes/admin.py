@@ -4,7 +4,7 @@ Provides system-wide metrics, schedules, reports, and email logs for platform op
 Requires ADMIN role.
 """
 from fastapi import APIRouter, HTTPException, Request, Query, Depends, BackgroundTasks
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, constr, field_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 import calendar as _calendar
@@ -857,6 +857,13 @@ def get_affiliate_detail(
         return affiliate
 
 
+# Hex colour pattern, identical to routes/account.py:74. These columns are read
+# by compute_color_roles(), which parses them as hex; an unvalidated value used
+# to raise ValueError out of schedule_email_html() and stop every send on the
+# account (D-060). Applies to all three models below that write a brand colour.
+HEX_COLOR = r'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$'
+
+
 class UpdateAffiliateBrandingRequest(BaseModel):
     """Request body for updating affiliate branding from admin."""
     brand_display_name: Optional[str] = None
@@ -864,12 +871,21 @@ class UpdateAffiliateBrandingRequest(BaseModel):
     footer_logo_url: Optional[str] = None
     email_logo_url: Optional[str] = None
     email_footer_logo_url: Optional[str] = None
-    primary_color: Optional[str] = None
-    accent_color: Optional[str] = None
+    primary_color: Optional[constr(pattern=HEX_COLOR)] = None
+    accent_color: Optional[constr(pattern=HEX_COLOR)] = None
     website_url: Optional[str] = None
     rep_photo_url: Optional[str] = None
     contact_line1: Optional[str] = None
     contact_line2: Optional[str] = None
+
+    # An emptied colour field means "unset", not "invalid". The admin affiliate
+    # form binds a free-text input to the same state as the colour picker
+    # (apps/web/app/admin/(dashboard)/affiliates/page.tsx:191) and posts it
+    # verbatim, so clearing it would otherwise 422 where it used to store "".
+    @field_validator("primary_color", "accent_color", mode="before")
+    @classmethod
+    def _blank_color_is_unset(cls, v):
+        return None if isinstance(v, str) and not v.strip() else v
 
 
 @router.patch("/affiliates/{affiliate_id}/branding")
@@ -956,9 +972,18 @@ class CreateAffiliateRequest(BaseModel):
     company_id: Optional[str] = None  # Link rep to a Title Company
     # Branding (optional)
     logo_url: Optional[str] = None
-    primary_color: Optional[str] = None
-    accent_color: Optional[str] = None
+    primary_color: Optional[constr(pattern=HEX_COLOR)] = None
+    accent_color: Optional[constr(pattern=HEX_COLOR)] = None
     website_url: Optional[str] = None
+
+    # An emptied colour field means "unset", not "invalid". The admin affiliate
+    # form binds a free-text input to the same state as the colour picker
+    # (apps/web/app/admin/(dashboard)/affiliates/page.tsx:191) and posts it
+    # verbatim, so clearing it would otherwise 422 where it used to store "".
+    @field_validator("primary_color", "accent_color", mode="before")
+    @classmethod
+    def _blank_color_is_unset(cls, v):
+        return None if isinstance(v, str) and not v.strip() else v
 
 
 @router.post("/affiliates")
@@ -1112,9 +1137,18 @@ class CreateCompanyRequest(BaseModel):
     admin_first_name: Optional[str] = None
     admin_last_name: Optional[str] = None
     logo_url: Optional[str] = None
-    primary_color: Optional[str] = None
-    accent_color: Optional[str] = None
+    primary_color: Optional[constr(pattern=HEX_COLOR)] = None
+    accent_color: Optional[constr(pattern=HEX_COLOR)] = None
     website_url: Optional[str] = None
+
+    # An emptied colour field means "unset", not "invalid". The admin affiliate
+    # form binds a free-text input to the same state as the colour picker
+    # (apps/web/app/admin/(dashboard)/affiliates/page.tsx:191) and posts it
+    # verbatim, so clearing it would otherwise 422 where it used to store "".
+    @field_validator("primary_color", "accent_color", mode="before")
+    @classmethod
+    def _blank_color_is_unset(cls, v):
+        return None if isinstance(v, str) and not v.strip() else v
 
 
 @router.post("/companies")
