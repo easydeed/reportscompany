@@ -839,6 +839,22 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                     SET status='processing', input_params=%s, source_vendor='simplyrets'
                     WHERE id=%s
                 """, (safe_json_dumps(params or {}), run_id))
+
+                # Mark the schedule run as actually started.
+                #
+                # schedule_runs.started_at existed since 0006 and was NEVER
+                # WRITTEN by anything — declared, read by the API, and used as
+                # a predicate at the old :1289 writer where it silently matched
+                # every row. Without this, "enqueued but never picked up" is
+                # indistinguishable from "picked up and stranded later", which
+                # is exactly the ambiguity that made 58 stranded rows hard to
+                # diagnose. The staleness sweep in schedules_tick.py depends on
+                # this being honest. See D-062.
+                cur.execute("""
+                    UPDATE schedule_runs
+                    SET status = 'processing', started_at = NOW()
+                    WHERE report_run_id = %s::uuid AND started_at IS NULL
+                """, (run_id,))
             conn.commit()
         print(f"✅ REPORT RUN {run_id}: persist_status complete")
         
@@ -1285,21 +1301,23 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
 
                             try:
                                 run_status = 'completed' if status_code in (200, 202) else 'failed_email'
+                                # Keyed on report_run_id, like the skipped_limit
+                                # writer above and the failed writer below.
+                                #
+                                # It used to select "the newest queued row for
+                                # this schedule", which is not the same row as
+                                # the run that is finishing. Once any row was
+                                # stranded, a later successful run updated its
+                                # own newer row and left the old one at 'queued'
+                                # forever — 35 of the 57 stranded rows in
+                                # production are that, over work that had
+                                # completed. See D-061.
                                 cur.execute("""
                                     UPDATE schedule_runs
                                     SET status = %s,
-                                        report_run_id = %s,
                                         finished_at = NOW()
-                                    WHERE id = (
-                                        SELECT id
-                                        FROM schedule_runs
-                                        WHERE schedule_id = %s
-                                          AND status = 'queued'
-                                          AND started_at IS NULL
-                                        ORDER BY created_at DESC
-                                        LIMIT 1
-                                    )
-                                """, (run_status, run_id, schedule_id))
+                                    WHERE report_run_id = %s::uuid
+                                """, (run_status, run_id))
                             except Exception as update_error:
                                 logger.warning(f"Failed to update schedule_run status (non-critical): {update_error}")
 
@@ -1316,6 +1334,19 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                             account_id, schedule_id, run_id, 'sendgrid',
                             [], 'Failed to send', 500, str(email_error),
                         ))
+                        # The run must reach a terminal state here. This handler
+                        # catches before the outer one at the end of the task
+                        # sees anything, so without this write the run sits at
+                        # 'queued' forever with the traceback only in email_log.
+                        # That is why a crash on the email path was invisible in
+                        # the failed-runs table. See D-061.
+                        cur.execute("""
+                            UPDATE schedule_runs
+                            SET status = 'failed_email',
+                                error = %s,
+                                finished_at = NOW()
+                            WHERE report_run_id = %s::uuid
+                        """, (str(email_error)[:2000], run_id))
 
         # 6b) Ad-hoc email delivery (wizard "Generate & Send")
         if not schedule_id and (params or {}).get("send_email") and (params or {}).get("recipients") and pdf_url:

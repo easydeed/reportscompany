@@ -456,6 +456,69 @@ def process_due_schedules():
         logger.error(f"Failed to query due schedules: {e}", exc_info=True)
 
 
+# A run enqueued this long ago that has not reached a terminal status is
+# treated as lost. 30 minutes is well clear of task_time_limit (300s) plus any
+# plausible queue wait, so a slow run is never mistaken for a lost one.
+STALE_RUN_MINUTES = int(os.getenv("STALE_RUN_MINUTES", "30"))
+
+
+def sweep_stale_runs():
+    """
+    Mark schedule runs that were enqueued and never finished as failed.
+
+    WHY THIS EXISTS
+    ---------------
+    58 runs sat at `status='queued'` in production across ten months, in
+    bursts, with no error, no notification and no timeout — the system was told
+    to send those reports and simply did not. Nothing ever noticed, because
+    every status write lives on a success path inside the worker: if the task
+    is never consumed, or is killed mid-flight (Celery acks a task on receipt
+    by default, so a restart discards prefetched work silently), no code runs
+    to record anything.
+
+    A sweep is the only thing that can catch that class, because by definition
+    the process that would have reported it is gone. See D-062.
+
+    Deliberately conservative:
+      - only touches rows past the staleness window, so an in-flight run is
+        never stolen from the worker;
+      - writes a terminal status and an explicit reason rather than deleting,
+        so the history stays auditable;
+      - distinguishes 'never picked up' from 'died while running' using
+        started_at, which is now actually written (tasks.py, persist_status).
+    """
+    try:
+        with psycopg.connect(DATABASE_URL) as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    UPDATE schedule_runs
+                    SET status = 'failed',
+                        error = CASE
+                            WHEN started_at IS NULL
+                                THEN 'never picked up: enqueued but no worker started it within '
+                                     || %s || ' minutes'
+                            ELSE 'died while running: started but never reached a terminal status'
+                        END,
+                        finished_at = NOW()
+                    WHERE status IN ('queued', 'processing')
+                      AND created_at < NOW() - (%s || ' minutes')::interval
+                    RETURNING id::text, schedule_id::text, (started_at IS NULL)
+                """, (STALE_RUN_MINUTES, STALE_RUN_MINUTES))
+                swept = cur.fetchall()
+            conn.commit()
+
+        if swept:
+            never_started = sum(1 for row in swept if row[2])
+            logger.error(
+                "Stale run sweep: marked %d run(s) failed (%d never picked up, "
+                "%d died while running). Schedules affected: %s",
+                len(swept), never_started, len(swept) - never_started,
+                sorted({row[1] for row in swept}),
+            )
+    except Exception as e:
+        logger.error(f"Stale run sweep failed: {e}", exc_info=True)
+
+
 def run_forever():
     """
     Main ticker loop: process due schedules every TICK_INTERVAL seconds.
@@ -472,6 +535,10 @@ def run_forever():
             
             logger.debug("Tick: Checking for due schedules...")
             process_due_schedules()
+
+            # Runs that were enqueued and never finished. Nothing inside the
+            # worker can report these — see sweep_stale_runs.
+            sweep_stale_runs()
         except Exception as e:
             logger.error(f"Ticker error: {e}", exc_info=True)
         
