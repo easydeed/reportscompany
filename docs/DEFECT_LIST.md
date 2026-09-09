@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-09, against `fix/p1b-email-links`, cut from `main` at `fad3d7b`.
+**Last reconciled:** 2026-09-09, against `fix/brand-color-validation`, cut from `main` at `52e3d76`.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
@@ -15,13 +15,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 32 | Real, unfixed |
-| `fixed` | 23 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 24 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **58** | D-001 … D-058, contiguous, no duplicates |
+| **Total** | **59** | D-001 … D-059, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 3 · WRONG 13 · FRAGILE 10 · ROUGH 6. (Sums to 32, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -1512,6 +1512,63 @@ Scoped out of P1-B deliberately — the fix is an escaping pass over ~100 interp
 file, which is its own ticket, not a rider on a links fix. One narrowing did land with B2: the
 phone `href` now goes through `_tel_uri`, whose output is digits and `+` only, so that particular
 attribute is no longer injectable regardless of what is typed into the field.
+
+---
+
+### D-059 — a non-hex brand colour stopped every email on the account
+**Severity:** BROKEN · **Affects:** any account whose stored brand colour is not a hex triple
+**Status:** `fixed` (`fix/brand-color-validation`)
+
+`schedule_email_html` called `compute_color_roles(accent_color, dark_bg=primary_color)`
+unconditionally, before producing any HTML. That reached `_hex_to_rgb` (`property_builder.py:43`),
+which does `int(h[i:i+2], 16)` and raised:
+
+```
+ValueError: invalid literal for int() with base 16: 'rr'
+```
+
+on the value `red`. The exception propagated out of `schedule_email_html` into
+`send_schedule_email` and **the email was never sent**.
+
+**Not an edge case — the most likely input.** `red` is what a person types into a field labelled
+"Brand Color". The admin affiliate form binds a *free-text* input to the same state as the colour
+picker (`apps/web/app/admin/(dashboard)/affiliates/page.tsx:191`) and posts it verbatim.
+
+**Reachable through five write paths, four of them unvalidated.** Only `account.py:74` had the
+pattern; `affiliates.py` (`BrandingInput`), `admin.py` (`UpdateAffiliateBrandingRequest`,
+`CreateAffiliateRequest`, `CreateCompanyRequest`) and `company.py` (`UpdateBrandingRequest`, which
+writes straight into `affiliate_branding`) all took the colours as a bare `str`. The initial scope
+said three paths; a sweep for the model definitions found five.
+
+**Interaction with D-055 and D-033.** This is the *second* defect found on the same failure path:
+raise inside `schedule_email_html` → propagate through `send_schedule_email` → email never sent,
+and with `RESEND_API_KEY` unset (D-033) no failure notification fires. The account silently and
+permanently stops delivering from one settings save, and the owner learns of it when a client asks
+why the reports stopped. That is a plausible churn mechanism, and the shape recurring twice on one
+path is the argument for fixing D-033.
+
+**Fixed in two layers**, because closing the write paths does not help a row that is already bad:
+
+1. `normalize_hex_color()` in `property_builder.py`, used by `_hex_to_rgb` and at the top of
+   `compute_color_roles`, so all four call sites (email, market PDF, property PDF) stop raising.
+   Both arguments are normalised so `theme_color` agrees with the roles derived from it — coercing
+   only the derived values would echo the bad input straight back into a `style` attribute.
+2. `email/template.py:1971-1972` normalises the two brand colours at the read, not merely defaults
+   them with `or`. These values are interpolated into ~48 `style="…"` attributes as well as being
+   parsed as hex, so a permissive guard would have traded the crash for a CSS-injection —
+   `red; background: url(https://evil.test/t.gif)` is a tracking pixel and `#fff" onload="…`
+   breaks out of the attribute entirely. Both are asserted absent from the output.
+
+Plus the five request models now carry the `account.py` pattern, with a `mode="before"` validator
+mapping an emptied field to `None` so clearing a colour still means "unset" rather than 422.
+
+**Still unanswered: is this a fix or an incident?** Whether any production row currently holds a
+non-hex colour needs `SELECT id, primary_color, accent_color FROM affiliate_branding;` — the
+outstanding read-only query. If a row is bad, that account stopped delivering and nobody knows.
+The same query set should be checked for a `ValueError` from `compute_color_roles` among the 32
+failed `schedule_runs`.
+
+Tests: `apps/worker/tests/test_brand_color_validation.py`, 53 cases; 41 fail against `52e3d76`.
 
 ---
 

@@ -6,7 +6,7 @@ and metrics for Title Company administrators.
 """
 
 from fastapi import APIRouter, HTTPException, Request, Depends, BackgroundTasks
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, constr, field_validator
 from typing import Optional
 import logging
 
@@ -43,18 +43,34 @@ class ResendRepInviteRequest(BaseModel):
     email: EmailStr
 
 
+# Hex colour pattern, identical to routes/account.py:74. Written straight into
+# affiliate_branding, read back by compute_color_roles(), which parses it as
+# hex; an unvalidated value used to raise ValueError out of
+# schedule_email_html() and stop every send on the account (D-060).
+HEX_COLOR = r'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$'
+
+
 class UpdateBrandingRequest(BaseModel):
     brand_display_name: Optional[str] = None
     logo_url: Optional[str] = None
     email_logo_url: Optional[str] = None
     footer_logo_url: Optional[str] = None
     email_footer_logo_url: Optional[str] = None
-    primary_color: Optional[str] = None
-    accent_color: Optional[str] = None
+    primary_color: Optional[constr(pattern=HEX_COLOR)] = None
+    accent_color: Optional[constr(pattern=HEX_COLOR)] = None
     rep_photo_url: Optional[str] = None
     contact_line1: Optional[str] = None
     contact_line2: Optional[str] = None
     website_url: Optional[str] = None
+
+    # An emptied colour field means "unset", not "invalid". The admin affiliate
+    # form binds a free-text input to the same state as the colour picker
+    # (apps/web/app/admin/(dashboard)/affiliates/page.tsx:191) and posts it
+    # verbatim, so clearing it would otherwise 422 where it used to store "".
+    @field_validator("primary_color", "accent_color", mode="before")
+    @classmethod
+    def _blank_color_is_unset(cls, v):
+        return None if isinstance(v, str) and not v.strip() else v
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────

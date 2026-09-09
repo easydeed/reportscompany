@@ -6,7 +6,7 @@ Performance: Duplicate routes removed, queries optimized
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks, UploadFile, File
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, constr, field_validator
 import csv
 import io
 import re
@@ -349,6 +349,14 @@ async def bulk_invite_agents(
 # Kept the most complete version (Phase 30's with all logo fields).
 # ============================================================================
 
+# Hex colour pattern, identical to routes/account.py:74. These columns are read
+# by compute_color_roles(), which parses them as hex; an unvalidated value used
+# to raise ValueError out of schedule_email_html() and stop every send on the
+# account (D-060). Kept as a literal in each module rather than shared, matching
+# how account.py already declares it.
+HEX_COLOR = r'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$'
+
+
 class BrandingInput(BaseModel):
     """Input model for branding configuration."""
     brand_display_name: str
@@ -359,13 +367,22 @@ class BrandingInput(BaseModel):
     email_logo_url: str | None = None        # Email header (gradient bg - light/white logo)
     email_footer_logo_url: str | None = None # Email footer (light bg - dark/colored logo)
     # Colors
-    primary_color: str | None = None
-    accent_color: str | None = None
+    primary_color: constr(pattern=HEX_COLOR) | None = None
+    accent_color: constr(pattern=HEX_COLOR) | None = None
     # Contact
     rep_photo_url: str | None = None
     contact_line1: str | None = None
     contact_line2: str | None = None
     website_url: str | None = None
+
+    # An emptied colour field means "unset", not "invalid". The admin affiliate
+    # form binds a free-text input to the same state as the colour picker
+    # (apps/web/app/admin/(dashboard)/affiliates/page.tsx:191) and posts it
+    # verbatim, so clearing it would otherwise 422 where it used to store "".
+    @field_validator("primary_color", "accent_color", mode="before")
+    @classmethod
+    def _blank_color_is_unset(cls, v):
+        return None if isinstance(v, str) and not v.strip() else v
 
 
 @router.get("/branding")
