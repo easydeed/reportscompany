@@ -456,6 +456,102 @@ def process_due_schedules():
         logger.error(f"Failed to query due schedules: {e}", exc_info=True)
 
 
+# Two windows, because the two failure modes have different safe margins and a
+# single number is wrong for one of them.
+#
+# STARTED BUT NEVER FINISHED — the task is running, or was. Celery's
+# task_time_limit is 300s, so a task CANNOT still be alive past that: the hard
+# kill guarantees it. 6 minutes clears the ceiling with margin and is race-free
+# by construction. Production timings corroborate the headroom: over n=1067
+# completed runs, p95 32s, p99 41s, max 80s — nothing is near the limit, which
+# is also what rules out "these were timeouts".
+STALE_STARTED_MINUTES = int(os.getenv("STALE_STARTED_MINUTES", "6"))
+
+# ENQUEUED AND NEVER STARTED — no task is running, so there is nothing to race;
+# the risk runs the other way, marking work that is legitimately still queued.
+# That is not governed by render duration but by QUEUE DEPTH. The ticker
+# enqueues every due schedule in one pass — 26 in a single pass on 2026-04-12 —
+# and the worker runs at Celery's default concurrency (no --concurrency flag is
+# set anywhere), so a burst drains roughly serially: 26 x ~41s is about 18
+# minutes before the last task even begins.
+#
+# A window derived from p99 render time alone would be ~2 minutes, and would
+# mark most of a burst failed while the worker was working through it normally
+# — turning a backlog into fabricated failures, in exactly the scenario this
+# sweep exists for. 30 minutes covers a full burst drain with margin.
+STALE_QUEUED_MINUTES = int(os.getenv("STALE_QUEUED_MINUTES", "30"))
+
+
+def sweep_stale_runs():
+    """
+    Mark schedule runs that were enqueued and never finished as failed.
+
+    WHY THIS EXISTS
+    ---------------
+    58 runs sat at `status='queued'` in production across ten months, in
+    bursts, with no error, no notification and no timeout — the system was told
+    to send those reports and simply did not. Nothing ever noticed, because
+    every status write lives on a success path inside the worker: if the task
+    is never consumed, or is killed mid-flight (Celery acks a task on receipt
+    by default, so a restart discards prefetched work silently), no code runs
+    to record anything.
+
+    A sweep is the only thing that can catch that class, because by definition
+    the process that would have reported it is gone. See D-062.
+
+    Deliberately conservative:
+      - two windows, and the started one is measured from started_at rather
+        than created_at, so a task that waited out a backlog and then ran
+        normally is never condemned for the wait;
+      - writes a terminal status and an explicit reason rather than deleting,
+        so the history stays auditable;
+      - distinguishes 'never picked up' from 'died while running' using
+        started_at, which is now actually written (tasks.py, persist_status).
+    """
+    try:
+        with psycopg.connect(DATABASE_URL) as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    UPDATE schedule_runs
+                    SET status = 'failed',
+                        error = CASE
+                            WHEN started_at IS NULL
+                                THEN 'never picked up: enqueued but no worker started it within '
+                                     || %s || ' minutes'
+                            ELSE 'died while running: started but never reached a terminal status'
+                        END,
+                        finished_at = NOW()
+                    WHERE status IN ('queued', 'processing')
+                      AND (
+                            -- never started: measured from enqueue, and wide
+                            -- enough to let a burst drain.
+                            (started_at IS NULL
+                             AND created_at < NOW() - (%s || ' minutes')::interval)
+                         OR
+                            -- started: measured from the START, not from
+                            -- enqueue. A task that waited 20 minutes in a
+                            -- backlog and then ran for 40s is healthy, and
+                            -- measuring from created_at would condemn it.
+                            (started_at IS NOT NULL
+                             AND started_at < NOW() - (%s || ' minutes')::interval)
+                      )
+                    RETURNING id::text, schedule_id::text, (started_at IS NULL)
+                """, (STALE_QUEUED_MINUTES, STALE_QUEUED_MINUTES, STALE_STARTED_MINUTES))
+                swept = cur.fetchall()
+            conn.commit()
+
+        if swept:
+            never_started = sum(1 for row in swept if row[2])
+            logger.error(
+                "Stale run sweep: marked %d run(s) failed (%d never picked up, "
+                "%d died while running). Schedules affected: %s",
+                len(swept), never_started, len(swept) - never_started,
+                sorted({row[1] for row in swept}),
+            )
+    except Exception as e:
+        logger.error(f"Stale run sweep failed: {e}", exc_info=True)
+
+
 def run_forever():
     """
     Main ticker loop: process due schedules every TICK_INTERVAL seconds.
@@ -472,6 +568,10 @@ def run_forever():
             
             logger.debug("Tick: Checking for due schedules...")
             process_due_schedules()
+
+            # Runs that were enqueued and never finished. Nothing inside the
+            # worker can report these — see sweep_stale_runs.
+            sweep_stale_runs()
         except Exception as e:
             logger.error(f"Ticker error: {e}", exc_info=True)
         

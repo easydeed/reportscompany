@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-09, against `fix/url-boundary-completeness`, cut from `main` at `8662cd8`.
+**Last reconciled:** 2026-09-09, against `fix/schedule-run-lifecycle`, stacked on `fix/url-boundary-completeness` (#52).
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
@@ -15,13 +15,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 34 | Real, unfixed |
-| `fixed` | 25 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 26 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **62** | D-001 … D-062, contiguous, no duplicates |
+| **Total** | **63** | D-001 … D-063, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 4 · WRONG 14 · FRAGILE 10 · ROUGH 6. (Sums to 34, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -1698,7 +1698,7 @@ covered by tests.
 
 ### D-061 — a crash in the email block leaves the schedule run stuck at `queued`
 **Severity:** WRONG · **Affects:** sends that raise inside the email block · **Found during:** the D-059 production read
-**Status:** `open`
+**Status:** `fixed` (`fix/schedule-run-lifecycle`)
 
 *(Filed as "D-061a" in the brief. Numbered plainly because the status parser and the contiguity
 check key on `D-\d{3}`; a letter suffix breaks both.)*
@@ -1735,8 +1735,11 @@ finishing. So once a row is stranded, no later run ever reclaims it — a subseq
 its own (newer) row and leaves the old one queued forever. **That is the "recovers and re-stalls"
 pattern**: the schedule works again, and the stranded rows simply accumulate.
 
-Fix: key the update on `report_run_id` like the other two, and set a terminal status in the
-handler.
+Fix: the `:1289` writer now keys on `report_run_id` like the other two, and the email handler
+writes `failed_email` with the error before returning. **Production confirms the accumulation
+mechanism was the larger half: 35 of the 57 stranded rows are this defect over work that had
+already completed** — 27 with a finished report and a PDF, 8 whose generation failed correctly and
+whose run status simply never followed.
 
 ---
 
@@ -1804,10 +1807,92 @@ things belong with it: `started_at` should actually be set when the task begins,
 sweep has something honest to measure and `started_at IS NULL` stops being a predicate that means
 nothing; and `acks_late` should be reconsidered, since a report task is idempotent enough to retry.
 
-**Investigation status:** cause narrowed from code and config; not confirmed. The join above is
-the decisive read and needs no log retention. Worker logs for 2026-04-12 09:00-09:01 UTC would
-confirm directly, but that is five months back and beyond any default retention — flagged rather
-than assumed.
+**Investigation resolved 2026-09-09 by the `report_generations` join. 57 rows, four causes:**
+
+| `report_generations` | rows | What happened |
+|---|---|---|
+| `completed` + pdf | **27** | work succeeded; only the status write was lost → **D-061**, not this |
+| `processing`, no pdf | **18** | consumed, killed mid-flight, no handler ran → **the real delivery loss** |
+| `failed`, no pdf | **8** | generation failed correctly; run status never followed → **D-061** |
+| `queued`, no pdf | **3** | never consumed |
+| *no generation row* | **1** | dangling `report_run_id` |
+
+**So 35 of 57 were a status-write bug over completed work, and 18 are genuine losses** — 18
+reports a schedule said to send that were never made. That reorders the severity: the alarming
+number is 18, not 58, and the accumulation is D-061's.
+
+**The dangling row does not weaken the enqueue argument.** `schedule_runs.report_run_id` has **no
+foreign key** — `0006_schedules.sql:42` declares it as a bare `UUID` with a comment pointing at
+`report_generations.id`. So a dangling value violates nothing, and the likeliest cause is that the
+generation row was deleted while the run row survived: `schedule_runs` cascades on `schedules`,
+not on `report_generations`. Adding the FK is worth doing; one row does not justify guessing
+further.
+
+**`acks_late` is now load-bearing rather than speculative, and must not be enabled yet.**
+`generate_report` is **not idempotent for email**: `run_report` sets `status='processing'`
+unconditionally (`tasks.py:837`) with no check for an already-completed run, so a retry
+re-renders and **re-sends**. Given 27 rows already show a completed generation with a PDF, a
+retry that regenerates and re-sends is worse than the loss it is meant to prevent. Usage counting
+is safe — `check_usage_limit` counts `report_generations` rows and excludes any with a
+`schedule_runs` row, and a retry reuses the same row — so the blocker is delivery only. **Enabling
+`acks_late` requires an idempotency guard first** (return early when the run is already
+`completed`, or check `email_log` for a `sent` row against this `report_run_id`).
+
+**Whether this is a timeout or a restart is answerable from data already stored, not from logs.**
+`report_generations.processing_time_ms` is written on every completed run (`tasks.py:1253`). If p99
+approaches `task_time_limit` (300 000 ms), these are timeouts — and `acks_late` would then retry
+into the same timeout forever, turning 18 losses into an infinite loop:
+
+```sql
+SELECT report_type, COUNT(*),
+       ROUND(AVG(processing_time_ms))                                            AS avg_ms,
+       PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY processing_time_ms)          AS p95_ms,
+       PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY processing_time_ms)          AS p99_ms,
+       MAX(processing_time_ms)                                                   AS max_ms
+FROM report_generations
+WHERE status = 'completed' AND processing_time_ms IS NOT NULL
+GROUP BY report_type ORDER BY p99_ms DESC;
+```
+
+**Fixed here — the safety net, which is worth building whichever cause it is:**
+`sweep_stale_runs()` runs on every ticker pass and marks any run past
+`STALE_RUN_MINUTES` (30, comfortably clear of the 300 s task limit) as `failed`, distinguishing
+"never picked up" from "died while running" via `started_at` — which is now **actually written**
+(`tasks.py`, persist_status). A sweep is the only thing that can catch this class, because by
+definition the process that would have reported it is gone.
+
+**Still open:** the cause of the 18. The timing query above and the `acks_late` decision both
+remain. Worker logs for 2026-04-12 09:00-09:01 UTC would confirm directly but are five months
+back, beyond default retention — flagged rather than assumed.
+
+**Backfill proposed, not run:** `scripts/reconcile_stranded_schedule_runs.sql`. It preserves real
+timestamps for the 27 (stamping `NOW()` would make ten months of history look like it finished on
+one day) and leaves the dangling row untouched. It also flags a trap inside the benign bucket:
+`completed` means the *report* completed, not that the email was delivered — any of the 27 with no
+`email_log` row is a report that was built and never sent.
+
+---
+
+### D-063 — a falsy `pdf_url` skips the whole email block silently
+**Severity:** WRONG · **Affects:** any scheduled run that completes without a PDF
+**Status:** `open`
+
+`tasks.py:1259` gates the entire scheduled-email block on `if schedule_id and pdf_url:`. When PDF
+generation returns nothing but the run otherwise completes, the block is skipped in its entirety:
+no email is sent, no exception is raised, nothing is logged, and — before D-061's fix — the run
+stayed at `queued` with no trace anywhere.
+
+**Latent, filed anyway.** It does not appear in the current distribution: all 27 `completed` rows
+carry a PDF. But it is reachable by construction, and it is the **fourth instance of this shape**
+on this path — D-033 (the notification does not fire), D-061 (the failure is not written down),
+D-062 (nothing ever notices), and now this (the work is skipped without anyone deciding to skip
+it). The pattern is a success-path-only design: every record of what happened is written by code
+that only runs when things go right.
+
+D-061's fix does not close this — the run now reaches a terminal status via the sweep at worst,
+but a silently unsent report still reads as a healthy `completed` run. The fix is to make the
+missing PDF an explicit outcome: log it, and record the run as `failed` with a reason rather than
+falling through a truthiness check.
 
 ---
 
