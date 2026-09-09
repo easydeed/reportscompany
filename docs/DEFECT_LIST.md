@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-09, against `investigate/completed-not-emailed`, stacked on `fix/schedule-run-lifecycle` (#53).
+**Last reconciled:** 2026-09-09, against `investigate/completed-not-emailed`, cut from `main` at `255ad1f`.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
@@ -19,7 +19,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **64** | D-001 … D-064, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 14 · FRAGILE 10 · ROUGH 6. (Sums to 35, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 15 · FRAGILE 10 · ROUGH 6. (Sums to 35, the open total.)
 
 `fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
@@ -1896,9 +1896,16 @@ falling through a truthiness check.
 
 ---
 
-### D-064 — a schedule row invisible to RLS skips the send with no email, no error and no record
-**Severity:** BROKEN · **Affects:** 20 reports built and never delivered, in 4 batches over 4 months
+### D-064 — a missing schedule row skips the send with no email, no error and no record
+**Severity:** WRONG · **Affects:** 20 runs, Dec 2025 – Apr 2026 · **NOT REPRODUCING SINCE 2026-04-20**
 **Status:** `open` (investigated, not fixed — `investigate/completed-not-emailed`)
+
+> **Downgraded from BROKEN, and the title corrected.** Two things changed the reading. The
+> schedule has run **21 consecutive Mondays, 2026-04-20 → 2026-09-07, all `completed` + PDF +
+> `email_log.status = sent`.** Nothing has failed on this path in five months. And the RLS
+> hypothesis this entry originally named — see below — is **dead**. What remains is a real defect
+> in the guard, with an unexplained trigger that has not fired since. It returns to BROKEN the day
+> it recurs.
 
 20 runs have a **completed generation with a PDF** and **no `email_log` row at all**, in four
 batches of exactly five: 2025-12-29, 2026-01-05, 2026-02-05, 2026-04-12. Three of the four start
@@ -1925,7 +1932,17 @@ no exception, no `email_log`, and — before D-061's fix — no status update ei
 takes its run rows with it. **These run rows exist, therefore the schedules existed.** The row was
 *invisible*, not absent.
 
-**Which leaves row-level security.** `schedules` has RLS enabled with
+**The RLS hypothesis was wrong. Recorded because it was tested and killed, not quietly dropped.**
+The account ids **match**, and the same account both succeeded and failed — so visibility was not
+gated on `app.current_account_id`. The schedule-state hypothesis is dead too: 12 of the 13
+schedules involved were deactivated in **May**, months *after* their failures, and the 13th was
+never deactivated at all. Neither explains the batches.
+
+The reasoning below is kept in full because the **elimination to `tasks.py:1290` is still sound**
+— it rules out paths by what they would have written, not by what caused them — and it is the map
+if this ever returns. Only the mechanism named at the end was wrong:
+
+**The hypothesis was row-level security.** `schedules` has RLS enabled with
 
 ```sql
 USING (account_id = current_setting('app.current_account_id', true)::uuid
@@ -1938,10 +1955,29 @@ argument one statement earlier (`tasks.py:1281`). When the setting is absent or 
 and **the row silently disappears from the result set.** No error is raised — that is the whole
 danger of RLS as a failure mode.
 
-**That also explains the batch shape, which was the lead.** Visibility here is a function of
-`account_id`, not of the individual schedule — so every schedule belonging to the same account in
-the same pass fails identically and together. Five consecutive rows is not five coincidences; it
-is one account's schedules in one ticker pass.
+That fit the batch shape, which is why it was persuasive: visibility would be a function of
+`account_id` rather than of the individual schedule, so five consecutive rows would be one
+account's schedules in one pass. **The data says otherwise.** The batch shape is real and still
+unexplained.
+
+**A correction to what these 20 rows prove — and it is the same mistake as `started_at`.**
+"No `email_log` row" does **not** establish "no email was sent". The `INSERT INTO email_log` runs
+on the *same cursor, inside the same uncommitted transaction* as everything else in that block
+(`autocommit=False` at `tasks.py:1279`, `conn.commit()` only at `:1308`). A process that died
+between the SendGrid call and that commit loses **the record**, not the delivery — the email was
+already handed to the provider. So a third explanation is live, and with RLS and deletion both
+dead it is now the strongest: these are runs whose *bookkeeping* was rolled back, some of which
+may have been delivered normally. That also fits the batch shape without needing anything
+account-scoped: one worker restart mid-pass loses every in-flight transaction at once.
+
+Settling it does not need code — it needs one of the recipients to say whether those reports
+arrived. Worth asking before treating 20 as a delivery-loss count.
+
+**No code change caused the recovery.** `git log` across the whole repository for
+2026-03-25 → 2026-05-01 returns **zero commits** — not to `tasks.py`, not to `email/`, not
+anywhere. `tasks.py` was untouched between 2026-05-15 and this remediation. Whatever changed
+around 2026-04-20 was environmental or data-driven, not a deploy. That is a stop condition, and
+the investigation stops here.
 
 **What is still unknown: what breaks the match.** Two reads settle it, and both are one query:
 
@@ -1975,10 +2011,11 @@ line — which makes the count **five** instances of the shape, not four (D-033,
 D-063, D-064). Every record of what happened is written by code that only runs when things go
 right, and every guard that fails does so by falling through.
 
-**Not fixed, per instruction.** The shape of the fix is clear whatever the trigger turns out to
-be — a missing schedule row on a run that *has* a `schedule_id` is an error, not a no-op, and must
-be recorded and reported rather than printed — but the trigger should be understood before
-anything changes.
+**Not fixed, and no longer urgent.** Five months clean means chasing a ten-month-old trigger has
+low return. The guard itself is still wrong and worth fixing whenever this area is next touched: a
+missing schedule row on a run that *has* a `schedule_id` is an error, not a no-op, and must be
+recorded and reported rather than `print()`ed. The two queries above stay on the entry as the
+first move if it recurs.
 
 ---
 
