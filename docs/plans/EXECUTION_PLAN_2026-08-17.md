@@ -109,6 +109,44 @@ Rules for the verdict:
   than assuming.
 - Never claim a test passed that you did not run.
 
+### 0.6 Verification requirements
+
+*Added 2026-09-10 from the Delivery Surfaces remediation. Every rule here was written
+after making the mistake it forbids.*
+
+- **No finding derived from a sample render counts until it is reproduced through the
+  production path.** Three instances in this project — the property report aerial, the
+  email placeholder links, and the inventory report's months-of-supply figure — where a
+  reviewed artefact did not reflect what production emits. A sample can show what the
+  code *can* produce; only production shows what it *does*.
+
+- **Ask what writes this row, and when, before reasoning about what its absence proves.**
+  Three instances where a missing row was read as a missing action:
+  `schedule_runs.started_at` (assigned by nothing, so a predicate on it matched every row
+  and read like a guard); the failed-runs table (structurally cannot record a crash that
+  happens before the send); and `email_log` (written inside a transaction that could roll
+  back after the email had already gone). **In each case the answer came from the writer,
+  not from the data.** A missing row proves a missing *write*. It does not prove a missing
+  *action*.
+
+- **Render to verify; do not read to verify.** A fix that edits the correct-looking line
+  can still be inert if the value is supplied upstream. The REALTOR® ticket specified a
+  template change that would have produced a green diff, a closed ticket, and no change in
+  behaviour, because `property_builder.py` supplies the string before the template runs
+  and the Jinja `default()` on that path is dead code.
+
+- **Grep for the construct, not for the symptom, and re-run the check after the fix.**
+  Three instances where the post-fix check found what the pre-fix survey missed: the third
+  unguarded map pin, `CreateCompanyRequest`, and `bold_report.jinja2:848` — the last found
+  only because a test ran after the change, since it used the right construct with a
+  different string.
+
+- **A guard that refuses input is a guard that can refuse legitimate input.** Check what
+  it rejects, not only what it accepts. Twice a correct-looking security fix would have
+  converted an injection into an outage: rejecting a non-hex colour by raising, and
+  scheme-allowlisting the unsubscribe URL — which would have stripped a sentinel that is
+  not a URL and aborted *every* send.
+
 ---
 
 ## Phase 0 — Security & Tooling
