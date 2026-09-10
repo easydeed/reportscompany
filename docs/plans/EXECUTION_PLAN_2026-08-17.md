@@ -147,6 +147,17 @@ after making the mistake it forbids.*
   scheme-allowlisting the unsubscribe URL — which would have stripped a sentinel that is
   not a URL and aborted *every* send.
 
+- **A statistic describing a comparison is not a prediction of an operation.**
+  `git diff --stat` between `chore/commit-planning-docs` and `main` showed ~3,200
+  deletions — every test file from this remediation, the reconcile script, 847 lines of
+  the defect list — and the branch sat unmerged for six turns because that read as
+  "merging this wipes six weeks of work". The actual three-way merge was **six additions
+  and zero deletions**: the branch predated the files it appeared to delete and never
+  touched them. **Test the operation; do not read the summary.**
+  (`git merge --no-commit` then `git diff --cached --diff-filter=D` answers this in
+  seconds.) Same shape as `started_at` above — a value that means one thing, read as
+  evidence of another.
+
 ---
 
 ## Phase 0 — Security & Tooling
