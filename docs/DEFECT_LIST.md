@@ -7,21 +7,21 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-09, against `fix/email-log-commit`, cut from `main` at `6075879`.
+**Last reconciled:** 2026-09-10, against `fix/pdf-missing-explicit`, cut from `main` at `4af9896`.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 35 | Real, unfixed |
-| `fixed` | 29 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 34 | Real, unfixed |
+| `fixed` | 30 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **67** | D-001 … D-067, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 15 · FRAGILE 10 · ROUGH 6. (Sums to 35, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 14 · FRAGILE 10 · ROUGH 6. (Sums to 34, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -1888,7 +1888,7 @@ one day) and leaves the dangling row untouched. It also flags a trap inside the 
 
 ### D-063 — a falsy `pdf_url` skips the whole email block silently
 **Severity:** WRONG · **Affects:** any scheduled run that completes without a PDF
-**Status:** `open`
+**Status:** `fixed` (`fix/pdf-missing-explicit`) — **guard added; the case was never reachable**
 
 `tasks.py:1259` gates the entire scheduled-email block on `if schedule_id and pdf_url:`. When PDF
 generation returns nothing but the run otherwise completes, the block is skipped in its entirety:
@@ -1906,6 +1906,26 @@ D-061's fix does not close this — the run now reaches a terminal status via th
 but a silently unsent report still reads as a healthy `completed` run. The fix is to make the
 missing PDF an explicit outcome: log it, and record the run as `failed` with a reason rather than
 falling through a truthiness check.
+
+**Fixed — and the reachability is narrower than this entry first claimed, which is worth stating
+plainly rather than letting the fix imply a live bug was closed.**
+
+`pdf_url` is bound in exactly two places inside `generate_report`: `None` at initialisation
+(`tasks.py:923`) and the result of `upload_to_r2` at `:1355`. That function
+(`utils/r2.py:29`) returns a public URL, a presigned URL, or a local dev stub, and **raises** on
+failure — it has **no path that returns `None` or `""`**. So if control reaches the guard,
+`pdf_url` is truthy; a failed upload raises instead, lands in the outer handler, and is recorded
+as `failed` correctly. **The case is not reachable today.**
+
+Per §0.5 — *do not fix a bug you cannot see* — the honest position is that this is a **latent
+trap, not a live defect**. It is guarded anyway because the distance to reachable is one plausible
+refactor: *"return None instead of raising so one bad upload doesn't kill the whole run"* is a
+change someone makes deliberately, and it would convert this into silent non-delivery the same
+day, with nothing in any table to show for it.
+
+The guard now logs at `error` and records the run as `failed` with a reason. **No behavioural C4
+differential is claimed** — the tests assert the guard exists and that the normal send path is
+still reachable, which is all that can honestly be asserted about an unreachable branch.
 
 ---
 
