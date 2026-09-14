@@ -95,13 +95,30 @@ def test_the_replacement_is_actually_present():
 OWNED = "'Real Estate Agent'"
 
 
-def _render_title(agent):
-    """Render the exact expression the contact-block templates use."""
-    src = next(
+def _contact_block_expressions():
+    """
+    Every contact-block title expression, deduplicated.
+
+    NOT `next(...)`, which took whichever matching line came first and would
+    have gone on passing if one of the six themes diverged — silently testing
+    five templates it did not cover. Collecting them and asserting they agree
+    is the same cost and says what it checks. See §0.6.
+    """
+    lines = [
         line for p in TEMPLATES for line in p.read_text().splitlines()
         if "agent.title" in line and OWNED in line
+    ]
+    assert lines, "no contact-block title expression found — did the markup change?"
+    exprs = {re.search(r"\{\{[^}]*agent\.title[^}]*\}\}", ln).group(0) for ln in lines}
+    assert len(exprs) == 1, (
+        f"the {len(lines)} contact blocks no longer share one expression: {sorted(exprs)}"
     )
-    expr = re.search(r"\{\{[^}]*agent\.title[^}]*\}\}", src).group(0)
+    return exprs.pop()
+
+
+def _render_title(agent):
+    """Render the exact expression the contact-block templates use."""
+    expr = _contact_block_expressions()
     env = Environment(loader=DictLoader({"t.jinja2": expr}),
                       autoescape=select_autoescape(["html", "xml", "jinja2"]))
     return env.get_template("t.jinja2").render(agent=agent)

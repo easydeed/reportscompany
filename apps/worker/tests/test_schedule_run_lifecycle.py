@@ -62,6 +62,24 @@ def _schedule_run_updates(source: str):
     return found
 
 
+def _sweep_update(source: str) -> str:
+    """
+    The sweep's UPDATE, selected by property and asserted unique.
+
+    NOT `_schedule_run_updates(TICKER)[0]`, which is what four tests here used
+    to do. There is exactly one `UPDATE schedule_runs` in the ticker today, so
+    taking the first element was correct by accident — and the moment anyone
+    adds a second (a second sweep, a skip marker), those four tests would have
+    gone on passing while asserting against the wrong statement. That failure
+    mode already happened once in this file with `handlers[0]`; see §0.6.
+    """
+    matches = [s for s in _schedule_run_updates(source) if "never picked up" in s]
+    assert len(matches) == 1, (
+        f"expected exactly one sweep UPDATE in the ticker, found {len(matches)}"
+    )
+    return matches[0]
+
+
 # ── D-061: every writer must address the run that is finishing ──────────────
 
 def test_every_schedule_run_writer_keys_on_report_run_id():
@@ -159,7 +177,7 @@ def test_the_sweep_only_touches_non_terminal_rows():
     It must never overwrite a run that already reached a real status —
     a sweep that rewrites history is worse than one that misses rows.
     """
-    sql = " ".join(_schedule_run_updates(TICKER)[0].split())
+    sql = " ".join(_sweep_update(TICKER).split())
     assert "status IN ('queued', 'processing')" in sql, (
         "the sweep does not restrict itself to non-terminal rows: " + sql
     )
@@ -167,7 +185,7 @@ def test_the_sweep_only_touches_non_terminal_rows():
 
 def test_the_sweep_respects_a_staleness_window():
     """Without the age condition it would steal runs from a live worker."""
-    sql = _schedule_run_updates(TICKER)[0]
+    sql = _sweep_update(TICKER)
     assert "created_at <" in sql and "interval" in sql, (
         "the sweep has no age condition and would mark in-flight runs failed"
     )
@@ -218,7 +236,7 @@ def test_the_started_window_is_measured_from_started_at_not_created_at():
     healthy. Measuring its window from created_at would condemn it for the wait
     — which is the same fabricated-failure trap, arriving by a different route.
     """
-    sql = _schedule_run_updates(TICKER)[0]
+    sql = _sweep_update(TICKER)
     assert "started_at IS NOT NULL" in sql and "started_at < NOW()" in sql, (
         "the started-window is not measured from started_at: " + sql
     )
@@ -230,14 +248,14 @@ def test_the_sweep_distinguishes_never_started_from_died_running():
     is a crash — so collapsing them into one error string loses the signal that
     took a production read to recover.
     """
-    sql = _schedule_run_updates(TICKER)[0]
+    sql = _sweep_update(TICKER)
     assert "started_at IS NULL" in sql
     assert "never picked up" in sql
     assert "died while running" in sql
 
 
 def test_the_sweep_writes_a_terminal_status_rather_than_deleting():
-    sql = _schedule_run_updates(TICKER)[0]
+    sql = _sweep_update(TICKER)
     assert "status = 'failed'" in sql
     assert "finished_at = NOW()" in sql
     assert "DELETE" not in sql.upper()
