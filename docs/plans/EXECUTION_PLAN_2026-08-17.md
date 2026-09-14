@@ -134,6 +134,15 @@ after making the mistake it forbids.*
   template change that would have produced a green diff, a closed ticket, and no change in
   behaviour, because `property_builder.py` supplies the string before the template runs
   and the Jinja `default()` on that path is dead code.
+  **This applies to third-party behaviour too, and that is the version that cost most.**
+  "Celery acknowledges a task on receipt, so a restart discards prefetched work" was
+  written into D-062, `schedules_tick.py`, `test_delivery_idempotency.py` and a PR body
+  without once being run. Running it — a worker, a real broker, `kill -9` mid-burst — took
+  under an hour and showed the claim is wrong: prefetched messages are unacknowledged in
+  both modes and come back either way; what the default loses is the task that is
+  *executing*. The conclusion survived, which is the dangerous part. **A claim repeated
+  across four files is not corroborated by being repeated.** Where the behaviour belongs
+  to a library, the experiment is the citation.
 
 - **Grep for the construct, not for the symptom, and re-run the check after the fix.**
   Three instances where the post-fix check found what the pre-fix survey missed: the third

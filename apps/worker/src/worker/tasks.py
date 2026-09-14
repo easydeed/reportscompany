@@ -784,13 +784,12 @@ def _record_refused_send(account_id, run_id, schedule_id, recipients, subject, r
     A log line is not enough — that lesson is D-064's: retention is short and
     logs are not queryable alongside the rows they explain.
 
-    CARDINALITY NOTE, flagged rather than acted on: this adds a row to
-    email_log, and admin.py:113 / :197 COUNT(*) that table for "emails in the
-    last 24 hours". A refusal is not an email, so those figures would include
-    something that was never delivered. The distortion is nil today — duplicates
-    require acks_late (off) or a manual re-run — and narrowing those two queries
-    to delivery statuses is a one-line change in a file this ticket does not
-    own. Reported, not widened.
+    CARDINALITY NOTE, now acted on: this adds a row to email_log, and the two
+    admin counters COUNT(*)ed that table for "emails in the last 24 hours". A
+    refusal is not an email. Those queries now filter on a delivery-status
+    allowlist — which matters from here, because enabling acks_late makes
+    redelivery (and therefore refusal) a routine event rather than a manual
+    re-run. See apps/api/src/api/routes/admin.py.
     """
     try:
         with _open_log_connection() as conn:

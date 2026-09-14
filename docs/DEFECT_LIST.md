@@ -7,21 +7,21 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-14, against `fix/delivery-idempotency`, cut from `main` at `53abeda`.
+**Last reconciled:** 2026-09-14, against `fix/acks-late`, cut from `main` at `25cef39`.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 34 | Real, unfixed |
-| `fixed` | 30 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 36 | Real, unfixed |
+| `fixed` | 31 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **67** | D-001 … D-067, contiguous, no duplicates |
+| **Total** | **70** | D-001 … D-070, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 14 · FRAGILE 10 · ROUGH 6. (Sums to 34, the open total.)
+**Open by severity:** BROKEN 3 · WRONG 16 · FRAGILE 11 · ROUGH 6. (Sums to 36, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -1758,7 +1758,7 @@ whose run status simply never followed.
 
 ### D-062 — schedule runs are stranded at `queued` in bursts, with no timeout and no record
 **Severity:** BROKEN · **Affects:** 58 scheduled reports across ten months, including a live schedule
-**Status:** `open`
+**Status:** `fixed` (`fix/acks-late`) — **right fix, wrong stated mechanism; residual gap is D-068**
 
 *(Filed as "D-061b" in the brief.)* 58 rows sit at `status='queued'` in five bursts — 26 in a
 single ticker pass on 2026-04-12 spanning 25 seconds, 17 across a week in Nov 2025, 5 each in Dec,
@@ -1799,12 +1799,28 @@ GROUP BY 1,2,3 ORDER BY 4 DESC;
 
 **The strongest hypothesis from config, not from logs.** `app.py:35-52` sets no
 `task_acks_late`, so Celery's default of **`acks_late=False`** applies: a task is acknowledged the
-moment a worker *receives* it, before it executes. With the default prefetch multiplier of 4, a
+moment a worker *receives* it, before it executes. ~~With the default prefetch multiplier of 4, a
 worker holds up to 4×concurrency tasks already acked and not yet run. **A restart — a deploy, an
 OOM, a platform recycle — discards every one of them silently: no retry, no error, no record.**
 Twenty-six tasks lost in a single 25-second pass is precisely that shape, and it is not
-twenty-six independent crashes. `task_time_limit: 300` compounds it: a hard kill at five minutes
+twenty-six independent crashes.~~ `task_time_limit: 300` compounds it: a hard kill at five minutes
 leaves no handler to run, stranding `report_generations` at `processing`.
+
+> **CORRECTION, 2026-09-14, by measurement.** The struck sentences are wrong, and the same claim
+> was repeated into `schedules_tick.py:496`, `test_delivery_idempotency.py` and PR #61. Celery's
+> default acknowledges a message when a pool child **starts executing** it, not when the worker
+> receives it. Messages sitting in the prefetch buffer are unacknowledged in **both** modes, and
+> Redis hands them back either way. Verified by running a worker against a real broker and killing
+> it mid-burst of six tasks: `acks_late` off, **five of six** completed; on, **six of six**. The
+> four prefetched ones came back in both runs. The single difference is the task that was
+> **running**.
+>
+> That does not change the fix — it makes it more precise. The stranded rows this entry is about
+> are the 18 at `report_generations.status='processing'`, i.e. tasks that were *executing* when
+> something killed the worker, which is exactly and only what `acks_late` recovers. It does change
+> the reading of "26 in one 25-second pass": that burst cannot be one restart discarding a prefetch
+> buffer, because a prefetch buffer is not discarded. The join already said as much — only **3** of
+> the 57 were never consumed — so the burst is 26 rows *enqueued* together, not 26 *lost* together.
 
 This is **not** a broker-enqueue failure. `enqueue_report` commits `report_generations` and calls
 `send_task` *before* the caller inserts `schedule_runs` (`schedules_tick.py:410-419`), all inside
@@ -1862,6 +1878,28 @@ duplicate.
 by the timing data (p99 41s against a 300s limit), which leaves worker restarts — and `acks_late`
 is the fix for exactly that. It can be enabled once someone accepts the trade it carries.
 
+**ENABLED 2026-09-14 (`fix/acks-late`).** `task_acks_late: True` in `app.py`, with the reasoning
+and the measurements in the comment beside it rather than only here. Four things were checked by
+running Celery 5.6 against a real Redis broker, not by reading its documentation:
+
+| Question | Measured |
+|---|---|
+| Does it recover lost work? | worker SIGKILLed mid-burst: **5/6** completed with acks eager, **6/6** with acks late |
+| Should `worker_prefetch_multiplier` change with it? | **No.** The worker held exactly 4 (= multiplier 4 × concurrency 1) in both modes, and all four came back in both. The batch-on-restart concern is not caused by this setting. Left unset. |
+| Does the 300s limit become a redelivery loop? | **No**, because `task_acks_on_failure_or_timeout` defaults to **True**, so a task killed at the limit is still acknowledged. With that default: **1** execution. With it flipped to False: **16 executions in 50 seconds.** |
+| Does it cover every way a task dies? | **No.** Kill the pool child alone and the surviving parent acknowledges the message: **0 of 1** completed even with acks late. → **D-068** |
+
+**The loop, if someone ever does flip that setting, would not be caught by the idempotency guard.**
+`generate_report` renders *before* it sends, so a task killed at 300s never reaches the send, never
+writes an `email_log` row, and `_already_delivered` has nothing to match on. It would spin and
+re-render, not duplicate. Two invariants in `apps/worker/tests/test_acks_late.py` guard that line
+and the guard's continued existence; neither asserts `task_acks_late is True`, which would only
+restate `app.py`.
+
+**Recovery is not immediate.** On a hard kill nothing restores the message; Redis returns it only
+after the broker visibility timeout, measured from delivery, and `broker_transport_options` is
+unset — kombu's default is 3600s. → **D-070**
+
 The original blocker, retained for the record:
 
 **`acks_late` is now load-bearing rather than speculative, and must not be enabled yet.**
@@ -1897,9 +1935,13 @@ GROUP BY report_type ORDER BY p99_ms DESC;
 (`tasks.py`, persist_status). A sweep is the only thing that can catch this class, because by
 definition the process that would have reported it is gone.
 
-**Still open:** the cause of the 18. The timing query above and the `acks_late` decision both
-remain. Worker logs for 2026-04-12 09:00-09:01 UTC would confirm directly but are five months
-back, beyond default retention — flagged rather than assumed.
+~~**Still open:** the cause of the 18. The timing query above and the `acks_late` decision both
+remain.~~ The timing query came back (p99 41s), which ruled out timeouts, and the `acks_late`
+decision was taken above. Worker logs for 2026-04-12 09:00-09:01 UTC would confirm the cause
+directly but are five months back, beyond default retention — so the cause of the 18 is
+**inferred from the `report_generations` join plus the timing data**, not observed. Flagged rather
+than assumed: the fix addresses the only mechanism left standing, which is not the same as having
+watched it happen.
 
 **Backfill proposed, not run:** `scripts/reconcile_stranded_schedule_runs.sql`. It preserves real
 timestamps for the 27 (stamping `NOW()` would make ten months of history look like it finished on
@@ -2270,6 +2312,82 @@ visible would bury a design decision inside a legal one. **The mechanical part**
 `(agent.title or '') | trim | default(<the theme's own string>, true)`, keeping each theme's copy —
 is safe and should just be done. **Teal needs a decision**: it has no fallback, so what a
 title-less agent should see there is a design question.
+
+---
+
+### D-068 — a task whose pool child is killed is still lost, even with `acks_late` on
+**Severity:** WRONG · **Affects:** any task the OOM killer reaps, one per occurrence
+**Status:** `open`
+
+`acks_late` recovers a task when the **whole worker** dies. It does not recover one when only the
+**pool child** dies and the parent survives — an OOM kill of a single child, which is the common
+shape on a memory-limited container, because rendering is the memory-hungry part.
+
+Measured against a real broker, `acks_late` already on, one task, child SIGKILLed while the parent
+lived: **1 start, 0 completions.** The parent catches `WorkerLostError`, treats it as a task
+failure, and acknowledges the message — because `task_acks_on_failure_or_timeout` defaults to
+True, the same default that keeps the 300s limit from looping (D-062). The one setting closes the
+hole the other opens.
+
+The remedy is `task_reject_on_worker_lost = True`. With it, the same experiment gives **2 starts,
+1 completion** — redelivered and finished.
+
+**Not enabled, because the trade is real and is not this ticket's to take.** A task that reliably
+exhausts memory redelivers forever rather than failing once, and the delivery guard would not
+contain it: an OOM during rendering dies before the send, so no `email_log` row exists for
+`_already_delivered` to match on — the same reason the time-limit loop would be uncatchable. A
+memory ceiling on the render, or a redelivery counter, should land first or alongside.
+
+Recorded here rather than left as a footnote on D-062 because it is a different mechanism with a
+different fix, and because D-062 now reads as closed — this is the part that is not.
+
+---
+
+### D-069 — `process_consumer_report` re-sends the SMS and re-spends the credit if it is redelivered
+**Severity:** WRONG · **Affects:** consumer lead reports, on any worker death mid-task
+**Status:** `open`
+
+`task_acks_late` is a **worker-wide** setting, so enabling it for D-062 changed the failure mode of
+every registered task, not just `generate_report`. Five are registered: `ping`, `keep_alive_ping`,
+`generate_property_report`, `generate_report` and `process_consumer_report`. The first three have no
+irreversible side effect. `generate_report` is guarded (`fix/delivery-idempotency`).
+`process_consumer_report` is not.
+
+It sends an SMS through Twilio and then decrements the account's SMS credits
+(`tasks.py`, the `delivery_method == 'sms'` branch), or sends through Resend on the email branch.
+It sets `consumer_reports.status='processing'` at the top with **no already-sent check**, so a
+redelivered run repeats the whole thing. If the worker dies after the provider call and before the
+task returns, the consumer gets a second text and the account pays for it twice.
+
+**Reported, not fixed, and not quietly excluded.** Two one-line remedies exist — `@celery.task(...,
+acks_late=False)` on this task alone, which restores today's behaviour for it and nothing else, or
+a `status='sent'` check before the provider call, which is the same shape as the delivery guard and
+is strictly better. Choosing between them is a product call: today this task silently loses the
+lead's report when a worker dies, and the choice is between losing it and occasionally duplicating
+it. That is the same trade D-062 took the other way, for a different audience.
+
+---
+
+### D-070 — no broker visibility timeout is configured, so recovery can take an hour
+**Severity:** FRAGILE · **Affects:** how late a recovered report arrives
+**Status:** `open`
+
+`acks_late` (D-062) makes a lost task recoverable. It does not make it prompt. On a graceful
+`SIGTERM` the worker restores its unacknowledged messages immediately, so a normal deploy is fine.
+On a **hard** kill nothing restores anything, and Redis returns the message only when the broker's
+**visibility timeout** elapses — measured from when the message was *delivered*, not from the
+crash.
+
+`app.py` sets no `broker_transport_options`, so that timeout is kombu's default of **3600
+seconds**. A daily report recovered this way can land an hour late, which for a morning market
+report is late enough to be a different product.
+
+**Not tuned here, because the number cuts both ways.** The visibility timeout is also the lease on
+a running task: set it below the longest legitimate render and a second worker picks up work the
+first worker is still doing, which is a duplicate execution rather than a slow one. p99 is 41s and
+the hard limit is 300s, so anything comfortably above 300s is safe on the timing evidence —
+600s would cut worst-case recovery by a factor of six with margin over the limit that already
+bounds every task. Left as a decision rather than assumed.
 
 ---
 

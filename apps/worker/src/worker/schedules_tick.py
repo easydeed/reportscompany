@@ -492,9 +492,13 @@ def sweep_stale_runs():
     bursts, with no error, no notification and no timeout — the system was told
     to send those reports and simply did not. Nothing ever noticed, because
     every status write lives on a success path inside the worker: if the task
-    is never consumed, or is killed mid-flight (Celery acks a task on receipt
-    by default, so a restart discards prefetched work silently), no code runs
-    to record anything.
+    is never consumed, or is killed mid-flight, no code runs to record
+    anything. (An earlier version of this comment said Celery acks on receipt
+    so a restart discards prefetched work. Measured, that is wrong: prefetched
+    messages are unacknowledged either way and come back. What the default
+    loses is the task that was RUNNING — which is what `task_acks_late`, now
+    enabled in app.py, recovers. The sweep is still needed, because D-068's
+    child-loss case is not recovered by it.)
 
     A sweep is the only thing that can catch that class, because by definition
     the process that would have reported it is gone. See D-062.

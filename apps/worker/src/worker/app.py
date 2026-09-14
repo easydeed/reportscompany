@@ -42,6 +42,60 @@ config_updates = {
         "ping": {"queue": "celery"},
     },
     "task_time_limit": 300,
+
+    # ── Acknowledge when the task finishes, not when it arrives (D-062) ──────
+    #
+    # Celery's default acknowledges a message as soon as a pool child STARTS
+    # executing it. If the worker process then dies — a deploy that outruns its
+    # grace period, an OOM, a host replacement — that task is gone. Nothing
+    # runs, so nothing writes a status: the schedule_runs row sits at 'queued'
+    # or 'processing' forever with no error. That is the signature of the 18
+    # reports D-062 traced to genuine delivery loss.
+    #
+    # With acks_late the message stays unacknowledged for the whole run, so a
+    # lost worker returns its in-flight task to the queue instead of dropping
+    # it. That is the entire point of the setting.
+    #
+    # PREFETCH — checked, and deliberately left alone. The worker holds
+    # `worker_prefetch_multiplier` x concurrency messages beyond the one it is
+    # running (default 4, unset here; measured: 4 held with concurrency 1).
+    # The intuition is that acks_late makes a restart hand back a large batch
+    # at once — but that is not what happens, because PREFETCHED-BUT-UNSTARTED
+    # messages are unacknowledged in BOTH modes. Killing a worker mid-burst of
+    # six tasks and restarting it: acks_late off, five of six completed; on,
+    # six of six. The four prefetched ones came back either way. The single
+    # difference is the task that was RUNNING. So prefetch does not need to
+    # change alongside this, and lowering it would buy nothing here.
+    #
+    # THE 300s TIME LIMIT does not become a redelivery loop. A task killed at
+    # the hard limit is still acknowledged, because `task_acks_on_failure_or
+    # _timeout` defaults to True — verified by running it: with the default, a
+    # task that blows the limit executes once; with that setting flipped to
+    # False it executed 16 times in 50 seconds. Do not flip it. The limit is
+    # not near firing anyway (p99 41s against 300s), but the loop is the
+    # failure mode if someone changes that line, and the delivery guard would
+    # NOT contain it — generate_report renders before it sends, so a task
+    # killed at 300s never reaches the send and leaves no email_log row for
+    # _already_delivered to match on. It would spin, not duplicate.
+    #
+    # WHAT THIS STILL DOES NOT COVER, measured the same way: if the POOL CHILD
+    # alone is killed (an OOM kill of the child, parent surviving), the parent
+    # acknowledges the message and the task is lost anyway — acks_late on, one
+    # start, zero completions. Closing that needs `task_reject_on_worker_lost`,
+    # which carries its own trade (a task that reliably OOMs redelivers
+    # forever). Not enabled here; recorded as D-068.
+    #
+    # HOW FAST THE RECOVERY ARRIVES is a separate question, and the answer is
+    # "slowly". On a hard kill nothing restores the message; Redis hands it
+    # back only when the broker's visibility timeout elapses, measured from
+    # DELIVERY. `broker_transport_options` is unset, so that is kombu's default
+    # of 3600s — a recovered daily report can land an hour late. A graceful
+    # SIGTERM shutdown restores immediately, so this only bites on SIGKILL and
+    # OOM. Recorded as D-070 rather than tuned here, because a shorter timeout
+    # also shortens how long a legitimately slow task may run before a second
+    # worker picks it up as well.
+    "task_acks_late": True,
+
     # Celery Beat schedule for periodic tasks
     "beat_schedule": {
         "keep-alive-ping": {
