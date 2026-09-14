@@ -158,6 +158,19 @@ after making the mistake it forbids.*
   seconds.) Same shape as `started_at` above — a value that means one thing, read as
   evidence of another.
 
+- **A selector that is unique by accident retargets silently when it stops being unique.**
+  `handlers[0]` picked one of *two* exception handlers sharing a name and passed only
+  because `ast.walk` happened to reach the intended one first; restructuring an unrelated
+  `if` changed the nesting and the test began asserting against the other handler while
+  still looking like it tested the first. The general form covers `[0]`, `next(...)`,
+  `.first()` without an `ORDER BY`, `grep | head -1`, and any CSS or XPath selector:
+  **if the thing you are naming could ever have a sibling, name it by a property and
+  assert the match is unique.** An audit of this remediation's own tests found five more
+  live instances — four taking `[0]` of a list that happens to hold one element today —
+  each of which would have gone on passing while checking the wrong thing. A test that
+  can quietly point somewhere else is worse than no test, because it reports success
+  either way.
+
 ---
 
 ## Phase 0 — Security & Tooling
