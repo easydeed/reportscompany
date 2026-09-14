@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-10, against `fix/pdf-missing-explicit`, cut from `main` at `4af9896`.
+**Last reconciled:** 2026-09-14, against `fix/delivery-idempotency`, cut from `main` at `53abeda`.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
@@ -1840,6 +1840,29 @@ foreign key** — `0006_schedules.sql:42` declares it as a bare `UUID` with a co
 generation row was deleted while the run row survived: `schedule_runs` cascades on `schedules`,
 not on `report_generations`. Adding the FK is worth doing; one row does not justify guessing
 further.
+
+**THE `acks_late` BLOCKER IS NOW CLEARED** (`fix/delivery-idempotency`, 2026-09-14). A delivery
+idempotency guard sits at `_send_and_log_report_email`: a send is refused when `email_log` already
+holds a `sent` row for the `report_run_id`, or a `sending` row inside a 10-minute window. The
+refusal is recorded as its own `email_log` row (`status='duplicate_suppressed'`) rather than only
+logged — a silent refusal would have been the seventh instance of this project's recurring shape.
+
+Scoped to **delivery, not the task**: rendering twice is wasteful and harmless (same R2 key, same
+`report_generations` row, and `check_usage_limit` excludes scheduled runs), while sending twice
+cannot be taken back. A test asserts the guard did not leak into `generate_report`.
+
+Deliberately does **not** block on `failed` (a retry is exactly what that is for), on `suppressed`
+(nothing was delivered), or on a `sending` row older than the window — the last because blocking
+forever on debris from a crashed process would mean one crash permanently barred an account's
+reports, which is §0.6's guard trap. The check also **fails open**: if it cannot run, the send
+proceeds, because withholding a scheduled report on a database hiccup is worse than a rare
+duplicate.
+
+**So the remaining question for the 18 is now a decision, not a blocker.** Timeouts were ruled out
+by the timing data (p99 41s against a 300s limit), which leaves worker restarts — and `acks_late`
+is the fix for exactly that. It can be enabled once someone accepts the trade it carries.
+
+The original blocker, retained for the record:
 
 **`acks_late` is now load-bearing rather than speculative, and must not be enabled yet.**
 `generate_report` is **not idempotent for email**: `run_report` sets `status='processing'`
