@@ -110,17 +110,28 @@ def test_the_email_handler_records_a_terminal_status():
     which is why a crash on the email path was invisible in the failed-runs
     table.
     """
-    handlers = [
-        h for node in ast.walk(ast.parse(TASKS))
+    # Selected by PROPERTY, not by position. There are two handlers named
+    # `email_error` — the scheduled path's and the ad-hoc path's — and the
+    # ad-hoc one correctly writes neither table, because an ad-hoc run has no
+    # schedule row. This test originally took handlers[0] and passed only
+    # because ast.walk happened to reach the scheduled one first; adding the
+    # D-063 branch changed the nesting and it silently began asserting against
+    # the wrong handler. Picking the one that writes email_log is stable under
+    # that kind of edit.
+    bodies = [
+        ast.get_source_segment(TASKS, h) or ""
+        for node in ast.walk(ast.parse(TASKS))
         if isinstance(node, ast.Try) for h in node.handlers
         if h.name == "email_error"
     ]
-    assert handlers, "the email exception handler is gone — did the block move?"
-    body = ast.get_source_segment(TASKS, handlers[0]) or ""
-    assert "UPDATE schedule_runs" in body, (
+    assert bodies, "the email exception handler is gone — did the block move?"
+    scheduled = [b for b in bodies if "email_log" in b]
+    assert len(scheduled) == 1, (
+        f"expected exactly one email_error handler that logs to email_log, found {len(scheduled)}"
+    )
+    assert "UPDATE schedule_runs" in scheduled[0], (
         "the email handler still writes only email_log; a crash there leaves the run queued"
     )
-    assert "email_log" in body, "the handler stopped recording the error itself"
 
 
 # ── D-062: the sweep ────────────────────────────────────────────────────────
@@ -257,3 +268,52 @@ def test_the_backfill_preserves_real_timestamps_for_completed_runs():
     """
     sql = BACKFILL.read_text()
     assert "finished_at = g.generated_at" in sql
+
+# ── D-063: a missing PDF must be an outcome, not a fall-through ─────────────
+
+def test_a_missing_pdf_url_is_recorded_rather_than_skipped():
+    """
+    The whole email block used to sit behind `if schedule_id and pdf_url:`, so a
+    falsy pdf_url skipped the send entirely — no email, no exception, nothing
+    logged, and (before D-061) no status update. A scheduled report would read
+    as `completed` while the recipient got nothing.
+
+    NOT CURRENTLY REACHABLE, and this test does not pretend otherwise: it
+    asserts the guard exists, not that the bug fires. `upload_to_r2` returns a
+    public URL, a presigned URL, or a dev stub and raises on failure — it has no
+    path returning None or "". The guard is defence against one plausible
+    refactor of that function, and the value of pinning it is that the refactor
+    would otherwise reintroduce silent non-delivery with nothing in any table to
+    show for it.
+    """
+    fn = next(
+        n for n in ast.walk(ast.parse(TASKS))
+        if isinstance(n, ast.FunctionDef) and n.name == "generate_report"
+    )
+    src = ast.get_source_segment(TASKS, fn) or ""
+    assert "if schedule_id and not pdf_url:" in src, (
+        "the missing-PDF case is not handled explicitly — it falls through the "
+        "combined `if schedule_id and pdf_url:` guard and sends nothing, silently"
+    )
+    branch = src[src.index("if schedule_id and not pdf_url:"):]
+    branch = branch[:branch.index("elif schedule_id and pdf_url:")]
+    assert "UPDATE schedule_runs" in branch, "the missing-PDF case records no status"
+    assert "'failed'" in branch, "the missing-PDF case does not record a failure"
+    assert "logger.error" in branch, "the missing-PDF case is not logged"
+
+
+def test_the_send_path_is_still_reached_when_a_pdf_exists():
+    """
+    The guard must not have turned the normal case off. Restructuring a
+    condition into if/elif is exactly the kind of edit that can drop a branch.
+    """
+    src = ast.get_source_segment(
+        TASKS,
+        next(n for n in ast.walk(ast.parse(TASKS))
+             if isinstance(n, ast.FunctionDef) and n.name == "generate_report"),
+    ) or ""
+    assert "elif schedule_id and pdf_url:" in src
+    after = src[src.index("elif schedule_id and pdf_url:"):]
+    assert "_send_and_log_report_email" in after, (
+        "the send is no longer reachable from the pdf_url branch"
+    )

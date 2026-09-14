@@ -1370,7 +1370,51 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
         print(f"✅ REPORT RUN {run_id}: mark_completed SUCCESS")
 
         # 6) Send email if this was triggered by a schedule
-        if schedule_id and pdf_url:
+        #
+        # D-063. This used to read `if schedule_id and pdf_url:` — a single
+        # condition guarding the entire email block, so a falsy pdf_url skipped
+        # the send in its entirety: no email, no exception, nothing logged, and
+        # (before D-061) no status update either. A scheduled report would be
+        # marked `completed`, the recipient would get nothing, and the only
+        # trace anywhere would be a NULL pdf_url on a row nobody queries.
+        #
+        # NOT CURRENTLY REACHABLE, and this is written down rather than
+        # implied: `upload_to_r2` (utils/r2.py:29) returns a public URL, a
+        # presigned URL, or a dev stub, and raises on failure — it has no path
+        # that returns None or "". `pdf_url` is bound only at :1355 from that
+        # call, so if control reaches here it is truthy. A raise instead lands
+        # in the outer handler, which records `failed` correctly.
+        #
+        # It is guarded anyway because the distance to reachable is one
+        # plausible refactor of upload_to_r2 — "return None instead of raising
+        # so one bad upload doesn't kill the run" is a change someone makes on
+        # purpose, and it would turn this into silent non-delivery the same
+        # day, with nothing in any table to show for it.
+        if schedule_id and not pdf_url:
+            logger.error(
+                "REPORT RUN %s: report completed but no PDF URL — schedule %s "
+                "will not be emailed. Recording as failed rather than skipping "
+                "silently.",
+                run_id, schedule_id,
+            )
+            try:
+                with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            "SELECT set_config('app.current_account_id', %s, false)",
+                            (str(account_id),),
+                        )
+                        cur.execute("""
+                            UPDATE schedule_runs
+                            SET status = 'failed',
+                                error = 'report completed without a PDF URL; nothing was sent',
+                                finished_at = NOW()
+                            WHERE report_run_id = %s::uuid
+                        """, (run_id,))
+            except Exception as e:
+                logger.warning(f"Could not record the missing-PDF failure: {e}")
+
+        elif schedule_id and pdf_url:
             try:
                 print(f"📧 Sending schedule email for schedule_id={schedule_id}")
 
