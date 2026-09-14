@@ -1,3 +1,4 @@
+{%- import '_base/_macros.jinja2' as macros -%}
 <!doctype html>
 <html lang="en">
 <head>
@@ -571,6 +572,7 @@
     /* RANGE */
     .range { background: var(--warm-white); padding: var(--pad); }
     .range-map {
+      position: relative;   /* A2: anchors the map_unavailable overlay */
       height: 3.8in;
       background: var(--border);
       border: 2px solid var(--navy);
@@ -917,7 +919,7 @@
         <div class="page-header-label">Location Overview</div>
         <h2 class="page-header-title">Aerial View</h2>
       </div>
-      <div class="aerial-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}>
+      <div class="aerial-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}>{% if not images.aerial_map %}{{ macros.map_unavailable() }}{% endif %}
         <div class="aerial-overlay">
           <div class="aerial-cards">
             <div class="aerial-card">
@@ -940,15 +942,21 @@
     <section class="page property">
       <div class="page-header">
         <div class="page-header-label">Property Overview</div>
-        <h2 class="page-header-title">Prospective Property</h2>
+        <h2 class="page-header-title">Property Details</h2>
       </div>
       <div class="property-two-col">
         <div>
           <div class="property-section">
-            <div class="property-section-header">Owner Information</div>
+            {# A1/E1: the Primary Owner and Secondary Owner rows were removed.
+               This report is delivered to consumer leads through the CMA capture
+               funnel with no agent in the loop (apps/api/src/api/routes/
+               lead_pages.py:231,304), so it was disclosing the current owner's
+               legal name — sourced from SiteX (services/sitex.py:478-479) — to a
+               stranger, under a heading that told them they were a prospect.
+               APN, county, legal description, tax and assessment stay: those are
+               property facts, not personal identity. #}
+            <div class="property-section-header">Address</div>
             <table class="property-table">
-              <tr><td>Primary Owner</td><td>{{ property.owner_name | default('-') }}</td></tr>
-              <tr><td>Secondary Owner</td><td>{{ property.secondary_owner | default('-') }}</td></tr>
               <tr><td>Site Address</td><td>{{ property.full_address }}</td></tr>
               <tr><td>Mailing Address</td><td>{{ property.mailing_address | default(property.full_address) }}</td></tr>
             </table>
@@ -1170,7 +1178,7 @@
         <div class="page-header-label">Valuation Summary</div>
         <h2 class="page-header-title">Range of Sales</h2>
       </div>
-      <div class="range-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}></div>
+      <div class="range-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}>{% if not images.aerial_map %}{{ macros.map_unavailable() }}{% endif %}</div>
       <div class="range-stats">
         <div class="range-stat"><div class="range-stat-num">{{ '%02d' | format(stats.total_comps | default(0)) }}</div><div class="range-stat-label">Total Comps</div></div>
         <div class="range-stat"><div class="range-stat-num">{{ stats.avg_sqft | default(0) | int }}</div><div class="range-stat-label">Avg. Sq.Ft.</div></div>

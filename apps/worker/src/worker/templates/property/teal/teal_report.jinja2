@@ -1,3 +1,4 @@
+{%- import '_base/_macros.jinja2' as macros -%}
 <!doctype html>
 <html lang="en">
 <head>
@@ -493,6 +494,7 @@
       box-shadow: 0 18px 40px rgba(0,0,0,.25);
     }
     .map-placeholder{
+      position:relative;   /* A2: anchors the map_unavailable overlay */
       width:100%;
       height:100%;
       background:
@@ -902,6 +904,7 @@
 
     /* ===== RANGE PAGE ===== */
     .range-map{
+      position: relative;   /* A2: anchors the map_unavailable overlay */
       margin-top: 14px;
       height: 5.1in;
       border-radius: 12px;
@@ -1319,8 +1322,10 @@
       <div class="hero-pad">
         <h2 class="h">AERIAL VIEW</h2>
         <p class="p">
-          This is an aerial view of the neighborhood in which your prospective property is located.
-          This will give you the opportunity to get a birds eye view of any local parks, major streets, &amp; highways.
+          {# A1/E1 item 3: this read "your prospective property", which told the
+             recipient the report treats them as a prospect for a home they own. #}
+          This is an aerial view of your neighborhood. It gives you a bird's-eye view of the
+          local parks, major streets and highways around your property.
         </p>
 
         <h2 class="h" style="margin-top: 8px;">WHY A 1/4-MILE RADIUS</h2>
@@ -1330,8 +1335,9 @@
       </div>
 
       <div class="map-card">
-        <div class="map-placeholder" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}>
-          <div class="pin-big" aria-hidden="true"></div>
+        <div class="map-placeholder" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}>{% if not images.aerial_map %}{{ macros.map_unavailable() }}{% endif %}
+          {# A2/E4: pin only when there is a map under it — see modern_report. #}
+          {% if images.aerial_map %}<div class="pin-big" aria-hidden="true"></div>{% endif %}
         </div>
       </div>
       <div class="page-footer" style="background:transparent; border:none; color:#fff;">
@@ -1349,7 +1355,7 @@
       <div class="topline">
         <div>
           <h2 class="section-title" style="font-size:28px;">
-            PROSPECTIVE PROPERTY
+            PROPERTY DETAILS
             <span class="mini-bars"><span></span><span></span></span>
           </h2>
           <div class="subtitle">OVERVIEW OF YOUR PROPERTY</div>
@@ -1357,10 +1363,12 @@
       </div>
 
       <div class="block">
-        <div class="block-head">OWNER &amp; ADDRESS</div>
+        {# A1/E1: the Primary Owner row was removed — see bold_report.jinja2 for
+           the full rationale. Consumer-facing document; owner identity out,
+           property facts stay. #}
+        <div class="block-head">ADDRESS</div>
         <div class="grid-2">
           <table class="kv-table">
-            <tr><td class="key">Primary Owner:</td><td class="val">{{ property.owner_name | default('-') }}</td></tr>
             <tr><td class="key">Site Address:</td><td class="val">{{ property.full_address }}</td></tr>
             <tr><td class="key">APN:</td><td class="val">{{ property.apn | default('-') }}</td></tr>
           </table>
@@ -1673,8 +1681,9 @@
       </div>
       <div class="subtitle">BASED ON RECENT COMPARABLE SALES.</div>
 
-      <div class="range-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}>
-        <div class="pin-big" aria-hidden="true" style="top:52%;"></div>
+      <div class="range-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}>{% if not images.aerial_map %}{{ macros.map_unavailable() }}{% endif %}
+        {# A2/E4: same as the aerial pin — no map, no marker. #}
+        {% if images.aerial_map %}<div class="pin-big" aria-hidden="true" style="top:52%;"></div>{% endif %}
       </div>
 
       <div class="range-metrics">
