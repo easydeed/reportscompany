@@ -86,14 +86,21 @@ config_updates = {
     # forever). Not enabled here; recorded as D-068.
     #
     # HOW FAST THE RECOVERY ARRIVES is a separate question, and the answer is
-    # "slowly". On a hard kill nothing restores the message; Redis hands it
-    # back only when the broker's visibility timeout elapses, measured from
-    # DELIVERY. `broker_transport_options` is unset, so that is kombu's default
-    # of 3600s — a recovered daily report can land an hour late. A graceful
-    # SIGTERM shutdown restores immediately, so this only bites on SIGKILL and
-    # OOM. Recorded as D-070 rather than tuned here, because a shorter timeout
-    # also shortens how long a legitimately slow task may run before a second
-    # worker picks it up as well.
+    # "at some later worker start". Redis hands a message back only once the
+    # visibility timeout has elapsed since DELIVERY, and only when a worker
+    # happens to check; `broker_transport_options` is unset, so that timeout is
+    # kombu's default of 3600s. Measured, a 40-second worker lifetime spanning
+    # the boundary did not restore, and a subsequent start did. So the gap
+    # between enqueue and send is bounded by nothing in particular.
+    #
+    # THIS IS NOT INTRODUCED BY THE LINE BELOW, which is the important part.
+    # Prefetched-but-unstarted messages are unacknowledged in BOTH modes, so
+    # they already strand this way today — and that is the only mechanism found
+    # that can put a report in an inbox on a different day from its run, which
+    # is what D-064's mailbox check turned up. Enabling late acks extends an
+    # existing behaviour to the running task; it does not create a new one.
+    # Tuning the timeout is D-070 and now bounds a delay that is already
+    # happening.
     "task_acks_late": True,
 
     # Celery Beat schedule for periodic tasks

@@ -7,21 +7,21 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-14, against `fix/acks-late`, cut from `main` at `25cef39`.
+**Last reconciled:** 2026-09-14, against `fix/acks-late`, cut from `main` at `25cef39`. D-073 is reserved for `fix/theme-cover-title`, which is stacked on this branch.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 36 | Real, unfixed |
-| `fixed` | 31 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 37 | Real, unfixed |
+| `fixed` | 32 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **70** | D-001 … D-070, contiguous, no duplicates |
+| **Total** | **72** | D-001 … D-072, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 3 · WRONG 16 · FRAGILE 11 · ROUGH 6. (Sums to 36, the open total.)
+**Open by severity:** BROKEN 3 · WRONG 18 · FRAGILE 10 · ROUGH 6. (Sums to 37, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -1995,9 +1995,38 @@ still reachable, which is all that can honestly be asserted about an unreachable
 ---
 
 ### D-064 — a missing schedule row skips the send with no email, no error and no record
-**Severity:** WRONG · **Affects:** 20 runs, Dec 2025 – Apr 2026 · **NOT REPRODUCING SINCE 2026-04-20**
-**Status:** `open` (investigated, not fixed — `investigate/completed-not-emailed`)
+**Severity:** WRONG · **Affects:** bookkeeping for 20 runs, Dec 2025 – Apr 2026 · **LOSS COUNT: ZERO**
+**Status:** `fixed` (`fix/email-log-commit`, D-065) — **all 20 emails arrived; the proof below is refuted by the mailbox**
 
+> ## ANSWERED 2026-09-14 FROM THE MAILBOX. THE LOSS COUNT IS ZERO.
+>
+> **All 20 were delivered.** Jerry checked `gerardoh@gmail.com`: twenty reports, present. The
+> transaction theory in the warning box below is confirmed — the send succeeded and the
+> `email_log` write was rolled back. This was never twenty undelivered reports; it was twenty
+> runs whose bookkeeping was lost.
+>
+> **And that refutes the proof by elimination further down this entry, not just its severity.**
+> That table concluded `_send_and_log_report_email` was *never called*, on the strength of one
+> premise: *"if it had been called, a row would exist."* The emails exist. So it was called, the
+> row was written, and the transaction that held it rolled back. The premise was itself an
+> inference from a missing row — **the named trap, a fourth time, inside the very entry that
+> names it.** The elimination table is left standing below with this correction attached rather
+> than deleted, because the reasoning is the artefact worth keeping.
+>
+> `schedule_row` being falsy at `tasks.py:1290` is therefore **not** established. It remains a
+> real hole in the guard — a `print()` and a fall-through — but nothing now says it ever fired.
+>
+> **Fixed by D-065**, which is what closes the mechanism: an `email_log` row is written and
+> committed on its own connection *before* the provider call, so a process that dies between the
+> send and the commit now leaves evidence instead of a gap. Nothing further is needed here.
+>
+> **One thing the answer opened, which is not this defect.** The emails arrived on **different
+> dates** from the runs that produced them, and timezone does not explain it: these runs are
+> 09:00 and 14:00 UTC, which are 01:00 and 06:00 Pacific on the *same* calendar day. A real gap
+> between enqueue and delivery has a mechanism, it is live today, and it is **D-070** — prefetched
+> messages stranded in Redis's `unacked` hash until an arbitrary later worker start. The query
+> that measures it is on that entry.
+>
 > **Downgraded from BROKEN, and the title corrected.** Two things changed the reading. The
 > schedule has run **21 consecutive Mondays, 2026-04-20 → 2026-09-07, all `completed` + PDF +
 > `email_log.status = sent`.** Nothing has failed on this path in five months. And the RLS
@@ -2005,7 +2034,7 @@ still reachable, which is all that can honestly be asserted about an unreachable
 > in the guard, with an unexplained trigger that has not fired since. It returns to BROKEN the day
 > it recurs.
 >
-> ### ⚠️ THE LOSS COUNT MAY BE ZERO. READ THIS BEFORE CITING "20 REPORTS NEVER DELIVERED".
+> ### ⚠️ THE LOSS COUNT IS ZERO — CONFIRMED. This box called it before the mailbox did.
 >
 > The block runs `autocommit=False` (`tasks.py:1279`) and commits only at `:1308`. The
 > `INSERT INTO email_log` runs on **the same cursor, inside that same uncommitted transaction**.
@@ -2017,10 +2046,12 @@ still reachable, which is all that can honestly be asserted about an unreachable
 > proposed: one restart mid-pass loses every in-flight transaction at once, with no account
 > scoping required.
 >
-> **This is answerable from a mailbox, not a database.** Every one of the 20 went to
-> `gerardoh@gmail.com`. Market-snapshot emails on 2025-12-29, 2026-01-05, 2026-02-05 and
-> 2026-04-12 — 09:00 or 14:00 UTC, so 1am/6am Pacific. Present ⇒ the loss count is zero and this
-> is purely a bookkeeping defect. Absent ⇒ it is real.
+> ~~**This is answerable from a mailbox, not a database.**~~ **It was, and it was answered.**
+> Every one of the 20 went to `gerardoh@gmail.com` — market-snapshot emails on 2025-12-29,
+> 2026-01-05, 2026-02-05 and 2026-04-12, at 09:00 or 14:00 UTC. **All twenty present.** Purely a
+> bookkeeping defect, as this box predicted. The test was cheap, decisive, and answerable by
+> nothing in the repository — worth remembering the next time a question looks like it needs more
+> code reading.
 >
 > ### THE NAMED TRAP — third instance in this investigation
 >
@@ -2031,6 +2062,7 @@ still reachable, which is all that can honestly be asserted about an unreachable
 > | 1 | `schedule_runs.started_at` NULL | "never picked up" | the column is **assigned by nothing** — the predicate matched every row that ever existed and read like a guard |
 > | 2 | no `failed` rows in eight months | "nothing has broken" | the failure path **cannot write** to that table (D-061) |
 > | 3 | no `email_log` row | "no email was sent" | the write is **inside an uncommitted transaction** and can be rolled back after the send |
+> | 4 | no `email_log` row | "the send function was never called" (the elimination table below) | same write, same rollback — **this entry fell into its own trap while documenting it** |
 >
 > Each time, absence of evidence was read as evidence of absence, and each time the correction came
 > from asking *what writes this row, and when* rather than from looking harder at the rows. That
@@ -2368,8 +2400,8 @@ it. That is the same trade D-062 took the other way, for a different audience.
 
 ---
 
-### D-070 — no broker visibility timeout is configured, so recovery can take an hour
-**Severity:** FRAGILE · **Affects:** how late a recovered report arrives
+### D-070 — no broker visibility timeout is configured, so a stranded report lands at an arbitrary later time
+**Severity:** WRONG · **Affects:** how late a delayed report arrives — **and this is live today, not a consequence of `acks_late`**
 **Status:** `open`
 
 `acks_late` (D-062) makes a lost task recoverable. It does not make it prompt. On a graceful
@@ -2389,7 +2421,135 @@ the hard limit is 300s, so anything comfortably above 300s is safe on the timing
 600s would cut worst-case recovery by a factor of six with margin over the limit that already
 bounds every task. Left as a decision rather than assumed.
 
+> **UPGRADED 2026-09-14 from FRAGILE to WRONG, and the title corrected.** This was filed as a
+> property of the recovery `acks_late` introduces. It is not. **The same mechanism is live right
+> now, with `acks_late` off**, and it is the only mechanism found that can put a report in
+> someone's inbox on a different day from the run that produced it — which is exactly what Jerry's
+> mailbox check turned up for D-064.
+>
+> **Why it does not need `acks_late`.** Celery acknowledges a message when a pool child *starts*
+> executing it, so everything a worker has **prefetched but not started** is unacknowledged in
+> both modes — measured, 4 held at the default multiplier with concurrency 1. When that worker
+> dies, those messages are not lost and they are not returned promptly. They sit in Redis's
+> `unacked` hash, invisible to the queue, until some later worker start restores them — and only
+> once the visibility timeout has elapsed **since delivery**.
+>
+> **Restoration is opportunistic, which is the part that makes it arbitrary.** Four runs against a
+> real broker, visibility timeout set to 45s so the window is observable:
+>
+> | Restart | Result |
+> |---|---|
+> | ~13s after delivery, timeout 10s | restored, ran |
+> | inside the window | not restored — correct, the window had not elapsed |
+> | a 40s worker lifetime *spanning* the boundary | **not restored** |
+> | a later start, messages 92s old | restored immediately, all ran |
+>
+> So it is not "returned after the timeout". It is "returned at the first worker start that
+> happens to check after the timeout". With the production default of **3600s** and a worker that
+> restarts on deploys, the gap between a report being enqueued and being sent is bounded by
+> nothing in particular. **Days is possible.**
+>
+> **A prediction this makes, checkable without a mailbox.** `schedule_runs.created_at` and
+> `report_generations` are both written by the ticker at *enqueue* time, while the send happens
+> when the task finally runs. So a stranded task leaves a measurable gap:
+>
+> ```sql
+> SELECT r.id, r.created_at AS enqueued_at, g.generated_at, g.status,
+>        g.processing_time_ms,
+>        g.generated_at - r.created_at AS lag
+> FROM schedule_runs r
+> JOIN report_generations g ON g.id = r.report_run_id
+> WHERE r.created_at >= '2025-12-01'
+> ORDER BY lag DESC NULLS LAST
+> LIMIT 40;
+> ```
+>
+> A lag of seconds is the normal case. A lag of hours or days, with a *normal*
+> `processing_time_ms`, is this defect — the task ran fine, just much later than it was asked to.
+> That distinction matters: a long `processing_time_ms` would be a slow render, which is a
+> different problem.
+>
+> **What this means for `acks_late`.** It makes enabling it a **smaller** change than it looked,
+> not a riskier one. Redelivery is not a new behaviour being introduced; it is an existing one
+> being extended from prefetched messages to the running task. Both are governed by this same
+> timeout. **Tuning this is now more valuable than it was when it was filed**, because it bounds a
+> delay that is already happening rather than one that might.
+
 ---
+### D-071 — `generate_report`'s retry policy is unreachable, except through its own failure handler, where it re-sends
+
+**Severity:** WRONG · **Affects:** every scheduled and on-demand market report
+**Status:** `open`
+
+`generate_report` is decorated `autoretry_for=(Exception,)`, `retry_backoff=True`,
+`retry_backoff_max=600`, `max_retries=3` (`tasks.py:1046-1052`). It reads as a resilient task.
+
+**It never retries.** The body is one `try` covering everything, and its `except Exception`
+handler **returns a dict** rather than re-raising (`tasks.py:1697-1755`). Nothing escapes, so
+`autoretry_for` has nothing to catch. Every failure this task can have is swallowed and reported
+as `{"ok": False}`. Three retries with exponential backoff are configured and have, as far as the
+code allows, never once happened.
+
+**Except by one route, and that route re-sends.** The handler is not itself guarded: it opens a
+new database connection and runs four `UPDATE`s with no `try` around them
+(`tasks.py:1699` onward). If that connection fails — which is *likely* precisely when something
+has already gone wrong enough to reach the handler — the exception escapes, `autoretry_for`
+catches it, and **the entire task re-runs from the top: re-render, re-upload, re-send.**
+
+So the only reachable retry path is the one where the first attempt may already have emailed the
+recipient. Since #61 the duplicate-send guard covers it, which is the second thing that guard
+turned out to be for.
+
+**This cannot explain a report arriving on a different day** (three retries, backoff capped at
+600s — under half an hour end to end). It is a separate defect, found while checking whether one
+could. See D-070 for the mechanism that can.
+
+**Two decisions, not one.** Whether the task should retry at all is a real question — a re-render
+is cheap and a re-send is now guarded, so retries are safer than they were. But "it retries" and
+"it does not retry" are both defensible, and "it retries only when its own error handler breaks"
+is not. Either make failures propagate or drop the decorator; do not leave it describing
+behaviour the code prevents.
+
+---
+
+### D-072 — the ticker dispatches the Celery task before the transaction that records it commits
+
+**Severity:** WRONG · **Affects:** every schedule, on any ticker interruption
+**Status:** `open`
+
+In `schedules_tick.py`, the per-schedule block runs in this order:
+
+1. `enqueue_report(...)` — inserts `report_generations` **and calls Celery `send_task`**
+2. `INSERT INTO schedule_runs (...)`
+3. `UPDATE schedules SET last_run_at, next_run_at, processing_locked_at = NULL`
+4. `conn.commit()`
+
+**The task is dispatched at step 1 and the work is recorded at step 4.** Anything that interrupts
+steps 2-4 — a failed insert, a lost connection, the ticker process dying — rolls the transaction
+back. The Celery message is already in Redis and is not rolled back with it.
+
+Two consequences, both matching shapes this project has already seen:
+
+- **A report is generated and emailed with no `schedule_runs` row at all.** Which is one of the
+  signatures D-064 was filed for, arrived at from the other direction.
+- **`next_run_at` is not advanced, so the schedule is still due**, and the next tick 60 seconds
+  later enqueues it again. Two reports, two emails, one scheduled send. Since #61 the second is
+  refused and recorded rather than delivered — but the refusal is a symptom being caught, not the
+  cause being fixed.
+
+D-062 reasoned about this ordering already, as *evidence* that tasks were not being lost at
+enqueue: "a `send_task` raise would leave an orphan `report_generations` row and no `schedule_runs`
+row at all." That is correct and the conclusion stands. What it did not say is that the same
+ordering is a defect in its own right, in the other direction — the dispatch surviving a rollback
+is as much a problem as the rollback surviving a dispatch.
+
+**The fix is the ordering, not a guard:** commit the bookkeeping first, dispatch second. That
+inverts the failure mode to a run row with no task — which the stale-run sweep already catches and
+reports, rather than a duplicate email nobody asked for. Worth doing with D-071, since both are
+about this task's boundaries rather than its contents.
+
+---
+
 
 ## BLOCKED-NEEDS-DEPLOYED-ACCESS (Phase 2B)
 

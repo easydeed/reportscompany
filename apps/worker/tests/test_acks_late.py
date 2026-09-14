@@ -15,6 +15,12 @@ against a real broker rather than by reading the docs:
                                                 acks_on_failure_or_timeout
                                                 off            ran 16x in 50s
     pool CHILD killed, parent surviving         acks_late on   0/1 completed
+    healthy worker, prefetch held past the      acks_late off  no duplicates —
+      visibility timeout                                       restore is not
+                                                               on a timer
+    stranded prefetch, several restarts         acks_late off  returned at a
+                                                               LATER start, not
+                                                               at the timeout
 
 What a test in this repo *can* protect is the two couplings between files that
 nothing at runtime enforces, that are invisible at a glance, and that turn a
