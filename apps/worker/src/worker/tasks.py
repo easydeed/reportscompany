@@ -693,6 +693,124 @@ def _finalise_email_log(log_id, account_id, status, status_code, error):
         logger.warning(f"Could not finalise email log {log_id} (non-critical): {e}")
 
 
+# Window within which an unfinished 'sending' row is treated as a live attempt
+# by another worker rather than as debris from a dead one. Comfortably past
+# task_time_limit (300s), so a send that is genuinely in flight is never
+# mistaken for a stuck row — and short enough that a row stranded by a crash
+# stops blocking legitimate retries within the hour.
+DUPLICATE_SEND_WINDOW_MINUTES = int(os.getenv("DUPLICATE_SEND_WINDOW_MINUTES", "10"))
+
+
+def _already_delivered(account_id, run_id):
+    """
+    Has this report already been sent, or is a send in flight right now?
+
+    THE QUESTION THIS ANSWERS: if generate_report runs twice for the same
+    report_run_id, what must not happen twice? Rendering is wasteful but
+    harmless — it overwrites its own R2 object and reuses the same
+    report_generations row, and check_usage_limit excludes scheduled runs, so
+    nothing double-counts. Sending is the one step that cannot be taken back:
+    the recipient has the email. So the guard is scoped to delivery, not to the
+    task.
+
+    Returns a reason string when the send should be refused, else None.
+
+    WHAT IT BLOCKS ON, AND WHAT IT DELIBERATELY DOES NOT:
+
+      'sent'       blocks unconditionally and forever. The email exists in
+                   someone's inbox; no elapsed time makes it safe to send again.
+
+      'sending'    blocks only inside DUPLICATE_SEND_WINDOW_MINUTES. A recent
+                   one means another worker is mid-send and this is a genuine
+                   concurrent duplicate. An OLD one is debris from a process
+                   that died between the provider call and the finalise (D-065
+                   documents that window) — and blocking on it forever would
+                   mean one crash permanently barred an account's reports.
+                   That is the §0.6 trap: a guard that refuses input is a guard
+                   that can refuse LEGITIMATE input.
+
+      'failed'     never blocks. A failed send is exactly what a retry is for.
+
+      'suppressed' never blocks. Nothing was delivered, and re-running simply
+                   suppresses again — harmless, and blocking would hide a
+                   later re-subscription.
+    """
+    try:
+        with _open_log_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT set_config('app.current_account_id', %s, false)",
+                    (str(account_id),),
+                )
+                cur.execute("""
+                    SELECT status, created_at
+                    FROM email_log
+                    WHERE report_id = %s::uuid
+                      AND (
+                            status = 'sent'
+                         OR (status = 'sending'
+                             AND created_at > NOW() - (%s || ' minutes')::interval)
+                      )
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                """, (run_id, DUPLICATE_SEND_WINDOW_MINUTES))
+                row = cur.fetchone()
+    except Exception as e:
+        # Failing open is deliberate. If the check itself cannot run we do not
+        # know whether the report was sent, and withholding a scheduled report
+        # on a database hiccup is a worse outcome than a rare duplicate — the
+        # product's whole promise is that reports go out.
+        logger.warning(f"Duplicate-send check failed, proceeding with send: {e}")
+        return None
+
+    if not row:
+        return None
+    status, when = row
+    if status == 'sent':
+        return f"already sent at {when.isoformat()}"
+    return f"another send is in flight (started {when.isoformat()})"
+
+
+def _record_refused_send(account_id, run_id, schedule_id, recipients, subject, reason):
+    """
+    A refusal is an event. Record it.
+
+    Without this the guard would be the SEVENTH instance of the shape this
+    project keeps finding: correct behaviour, silently. A retry that is refused
+    leaves no trace, and the next person asking "why did this run not send?"
+    finds a completed report, no email_log row for the retry, and nothing to
+    explain the gap.
+
+    A log line is not enough — that lesson is D-064's: retention is short and
+    logs are not queryable alongside the rows they explain.
+
+    CARDINALITY NOTE, flagged rather than acted on: this adds a row to
+    email_log, and admin.py:113 / :197 COUNT(*) that table for "emails in the
+    last 24 hours". A refusal is not an email, so those figures would include
+    something that was never delivered. The distortion is nil today — duplicates
+    require acks_late (off) or a manual re-run — and narrowing those two queries
+    to delivery statuses is a one-line change in a file this ticket does not
+    own. Reported, not widened.
+    """
+    try:
+        with _open_log_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT set_config('app.current_account_id', %s, false)",
+                    (str(account_id),),
+                )
+                cur.execute("""
+                    INSERT INTO email_log (
+                        account_id, schedule_id, report_id, provider,
+                        to_emails, subject, status, error
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, 'duplicate_suppressed', %s)
+                """, (account_id, schedule_id, run_id, 'sendgrid',
+                      recipients, subject, f"send refused: {reason}"))
+    except Exception as e:
+        logger.warning(f"Could not record the refused send (non-critical): {e}")
+
+
 def _send_and_log_report_email(
     conn, cur, account_id, run_id, recipients,
     report_type, city, zips, lookback, result, pdf_url,
@@ -710,6 +828,21 @@ def _send_and_log_report_email(
     brand, acc_type = _resolve_email_brand(cur, account_id)
     email_payload = _build_email_payload(report_type, city, zips, lookback, result, pdf_url)
     subject = f"Your {report_type.replace('_', ' ').title()} Report"
+
+    # Delivery idempotency. Scoped to the send, not to the task: a second
+    # render is wasteful, a second send is not retractable.
+    refusal = _already_delivered(account_id, run_id)
+    if refusal:
+        logger.error(
+            "REPORT RUN %s: refusing duplicate send for schedule %s — %s",
+            run_id, schedule_id, refusal,
+        )
+        _record_refused_send(account_id, run_id, schedule_id, recipients, subject, refusal)
+        # 200 rather than an error: from the caller's point of view the report
+        # has been delivered, and returning a failure would make the run record
+        # itself as failed_email for a report that is sitting in the recipient's
+        # inbox.
+        return (200, f"duplicate send refused: {refusal}")
 
     # Committed BEFORE the provider is called — see the block above this
     # function for why this ordering and not the other one.

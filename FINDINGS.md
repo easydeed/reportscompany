@@ -37,3 +37,24 @@ ticket's scope and awaits its own ticket.
    `DATABASE_URL`. Anyone running it without arguments writes to production.
    Same class as the `.env.example` leak fixed in T0.2 — belongs in a security
    ticket, not a cleanup one.
+
+## From the Delivery Surfaces remediation (method, not code)
+
+6. **"Merged" in a message is not repo state.** Three times this session — #58,
+   #59 and #60 — a message stated a PR was merged while the GitHub API reported
+   `state: open, merged: false`, and `main` was unchanged. Each time the branch
+   I was told to build on did not exist yet. Verified via
+   `pull_request_read` rather than working around an apparently stale checkout,
+   which is what §0.6's "test the operation, don't read the summary" asks for
+   applied to branch state. **Check the PR state before cutting a branch that
+   depends on it**; the check is one call and the alternative is building on a
+   base that is not there.
+
+   Related, and worth knowing before the next CI-red alarm: **`main`'s Backend
+   Tests job has `conclusion: failure` on every run for at least the last six
+   merges**, including runs predating any of this remediation's branches. That
+   is the deliberately-landed-red tickets (D-038, D-041, D-054) plus
+   `test_simplyrets_query_builder.py`, `test_billing_checkout.py` and
+   `test_me_endpoint.py`. A red PR check is therefore not evidence about the PR
+   until the failing test names are compared against the files it touches.
+
