@@ -7,21 +7,21 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-14, against `fix/acks-late`, cut from `main` at `25cef39`. D-073 is reserved for `fix/theme-cover-title`, which is stacked on this branch.
+**Last reconciled:** 2026-09-15, against `fix/enqueue-after-commit`, cut from `main` at `4548df9`. D-073 is reserved for `fix/theme-cover-title` (PR #63), which is open against `main` and carries its own count.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 37 | Real, unfixed |
-| `fixed` | 32 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 36 | Real, unfixed |
+| `fixed` | 33 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **72** | D-001 … D-072, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 3 · WRONG 18 · FRAGILE 10 · ROUGH 6. (Sums to 37, the open total.)
+**Open by severity:** BROKEN 3 · WRONG 17 · FRAGILE 10 · ROUGH 6. (Sums to 36, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -2475,6 +2475,38 @@ bounds every task. Left as a decision rather than assumed.
 > timeout. **Tuning this is now more valuable than it was when it was filed**, because it bounds a
 > delay that is already happening rather than one that might.
 
+**RECOMMENDED VALUE: `visibility_timeout = 900` (15 minutes). Not applied** — this is a number
+someone should agree to, and the reasoning is short enough to check.
+
+The timeout is two things at once, which is why 3600s is wrong in both directions:
+
+| As a… | Shorter is | Because |
+|---|---|---|
+| recovery delay | **better** | it is the floor on how late a stranded report can arrive |
+| lease on a running task | **worse** | drop below the longest legitimate run and a second worker picks up work the first is still doing — a duplicate execution, not a slow one |
+
+**The lease side has a hard floor and we know it exactly.** No task can outlive
+`task_time_limit = 300s`; the hard kill guarantees it. So any value comfortably above 300s cannot
+hand live work to a second worker, whatever the p99 does. 900s is 3× that ceiling — the same kind
+of margin `STALE_STARTED_MINUTES = 6` already takes against the same limit, and consistent with it.
+
+**The recovery side is no longer symmetric with it, which is what changed.** Before #61, shortening
+this traded delay for duplicate-send risk, and that was a real trade. The idempotency guard now
+covers the duplicate side: a redelivery of an already-sent report is refused and recorded rather
+than delivered. What the guard cannot reach is a task killed *before* the send — it leaves no
+`email_log` row to match on — and that case simply re-renders. Re-rendering is wasteful and
+harmless, which is the finding the guard's scoping already rested on.
+
+**Why not 600s, which is what this entry said when it was filed.** 900s is preferred on second look
+only because the margin is free: the difference between a 10- and a 15-minute worst-case recovery
+does not decide whether a daily report is usable, while the extra headroom is real protection
+against the one failure here that cannot be undone. **Below 300s would be a mistake at any point**
+— that is not tuning, it is removing the guarantee the time limit provides.
+
+```python
+"broker_transport_options": {"visibility_timeout": 900},
+```
+
 ---
 ### D-071 — `generate_report`'s retry policy is unreachable, except through its own failure handler, where it re-sends
 
@@ -2513,9 +2545,8 @@ behaviour the code prevents.
 ---
 
 ### D-072 — the ticker dispatches the Celery task before the transaction that records it commits
-
 **Severity:** WRONG · **Affects:** every schedule, on any ticker interruption
-**Status:** `open`
+**Status:** `fixed` (`fix/enqueue-after-commit`)
 
 In `schedules_tick.py`, the per-schedule block runs in this order:
 
@@ -2547,6 +2578,36 @@ is as much a problem as the rollback surviving a dispatch.
 inverts the failure mode to a run row with no task — which the stale-run sweep already catches and
 reports, rather than a duplicate email nobody asked for. Worth doing with D-071, since both are
 about this task's boundaries rather than its contents.
+
+**FIXED 2026-09-15 by the ordering, as described.** `enqueue_report` is split in two:
+
+| | |
+|---|---|
+| `create_report_generation(cur, …)` | takes the **caller's cursor**, so the generation row lives in the same transaction as `schedule_runs` and the `next_run_at` advance. It dispatches nothing. |
+| `dispatch_report(run_id, …)` | hands the task to Celery and touches no database. Called only after `conn.commit()`. |
+
+The split matters as much as the order. The old function committed the generation row **on a
+connection of its own**, so it survived the caller's rollback independently of the dispatch — two
+separate ways for one tick's work to come apart.
+
+**The residual failure mode is inverted into the one that is already handled.** If the process dies
+between the commit and the dispatch, the rows are durable at `'queued'` with no task, and
+`sweep_stale_runs` marks that `failed` with "never picked up" — the sweep doing exactly the job it
+was built for. A dispatch failure is therefore logged loudly and **not raised**: the run is already
+committed, and an exception would misreport it as a tick that did nothing.
+
+**One line hardened while moving it.** The old code interpolated `account_id` into
+`SET LOCAL app.current_account_id TO '<id>'` as SQL text. Nothing could be smuggled through a uuid
+column today, but the parameterised `set_config(…, true)` form costs nothing and does not rely on
+that staying true. Same call the delivery guard uses.
+
+**A test of mine failed this defect's own lesson, and it is worth recording.** The first ordering
+assertion was *"some `conn.commit()` precedes the dispatch"*. The ticker loop has another commit
+several branches earlier, on the usage-limit skip path — so moving the dispatch back above the real
+commit left that test **passing**. §0.6 rule seven, in a test written just after rule seven was
+written. It was caught by applying the regression and re-running, not by rereading the assertion,
+which is the other half of rule four. The assertion now requires a commit *between* recording the
+run and dispatching it.
 
 ---
 

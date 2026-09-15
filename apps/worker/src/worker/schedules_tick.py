@@ -247,7 +247,31 @@ def compute_next_run(
         raise ValueError(f"Unknown cadence: {cadence}")
 
 
-def enqueue_report(
+# ── enqueue, split in two on purpose (D-072) ────────────────────────────────
+#
+# These were one function, `enqueue_report`, which wrote the generation row AND
+# handed the task to Celery. The caller then inserted `schedule_runs`, advanced
+# `next_run_at`, and committed — so the task was DISPATCHED AT STEP 1 AND THE
+# WORK WAS RECORDED AT STEP 4.
+#
+# A rollback of steps 2-4 does not recall a Celery message. It is already in
+# Redis, and the worker runs it and sends the email. What is left behind is a
+# report in someone's inbox with no `schedule_runs` row, and a `next_run_at`
+# that was never advanced — so the next tick, sixty seconds later, enqueues the
+# same send again. Both halves of that are shapes this project has chased:
+# the missing row is one of D-064's signatures, and the duplicate is what the
+# #61 guard now refuses.
+#
+# Split so the ordering can be the fix, rather than another guard on top of it:
+# record everything in ONE transaction, commit, and only then dispatch. The
+# residual failure mode is inverted into the harmless one — rows committed at
+# 'queued' with no task — which `sweep_stale_runs` already catches and reports
+# as "never picked up". That is a sweep doing the job it was built for, rather
+# than an email nobody can recall.
+
+
+def create_report_generation(
+    cur,
     schedule_id: str,
     account_id: str,
     report_type: str,
@@ -255,14 +279,17 @@ def enqueue_report(
     zip_codes: Optional[list],
     lookback_days: int,
     filters: Optional[Dict[str, Any]] = None
-) -> tuple[str, str]:
+) -> tuple[str, Dict[str, Any]]:
     """
-    Enqueue a report generation task to Celery.
-    
-    Returns:
-        Tuple of (report_generation_id, celery_task_id)
+    Write the `report_generations` row INSIDE THE CALLER'S TRANSACTION.
+
+    Takes a cursor rather than opening its own connection, which is the whole
+    point: this row must commit or roll back together with the `schedule_runs`
+    row and the `next_run_at` advance. Previously it committed on a connection
+    of its own and could survive a rollback of both.
+
+    Dispatches nothing. See `dispatch_report`.
     """
-    # Build params dict matching the format expected by generate_report task
     params = {
         "city": city,
         "zips": zip_codes,
@@ -270,41 +297,72 @@ def enqueue_report(
         "filters": filters or {},
         "schedule_id": schedule_id  # Link back to schedule for audit
     }
-    
-    # Resolve theme and accent from account defaults
-    with psycopg.connect(DATABASE_URL) as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT COALESCE(default_theme_id, 1), secondary_color
-                FROM accounts
-                WHERE id = %s::uuid
-            """, (account_id,))
-            acct = cur.fetchone()
-            theme_id = acct[0] if acct else 1
-            accent_color = acct[1] if acct else None
 
-    # Create report_generation record first (worker expects run_id)
-    with psycopg.connect(DATABASE_URL) as conn:
-        with conn.cursor() as cur:
-            cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
-            cur.execute("""
-                INSERT INTO report_generations
-                  (account_id, report_type, input_params, status, theme_id, accent_color)
-                VALUES (%s::uuid, %s, %s::jsonb, 'queued', %s, %s)
-                RETURNING id::text
-            """, (account_id, report_type, safe_json_dumps(params), theme_id, accent_color))
-            run_id = cur.fetchone()[0]
-        conn.commit()
-    
-    # Send task to Celery with all 4 required arguments
-    task = celery.send_task(
-        "generate_report",
-        args=[run_id, account_id, report_type, params],
-        queue="celery"
+    # `set_config(..., is_local => true)` rather than `SET LOCAL app.… TO
+    # '<id>'`: the old form interpolated account_id straight into SQL text.
+    # The value comes from a uuid column so nothing could be smuggled through
+    # it today, but a parameterised form costs nothing and does not depend on
+    # that staying true. Same call the delivery guard uses.
+    cur.execute(
+        "SELECT set_config('app.current_account_id', %s, true)",
+        (str(account_id),),
     )
-    
+
+    cur.execute("""
+        SELECT COALESCE(default_theme_id, 1), secondary_color
+        FROM accounts
+        WHERE id = %s::uuid
+    """, (account_id,))
+    acct = cur.fetchone()
+    theme_id = acct[0] if acct else 1
+    accent_color = acct[1] if acct else None
+
+    cur.execute("""
+        INSERT INTO report_generations
+          (account_id, report_type, input_params, status, theme_id, accent_color)
+        VALUES (%s::uuid, %s, %s::jsonb, 'queued', %s, %s)
+        RETURNING id::text
+    """, (account_id, report_type, safe_json_dumps(params), theme_id, accent_color))
+    return cur.fetchone()[0], params
+
+
+def dispatch_report(
+    run_id: str,
+    account_id: str,
+    report_type: str,
+    params: Dict[str, Any],
+    schedule_id: str,
+) -> Optional[str]:
+    """
+    Hand the task to Celery. **Call this only after the caller has committed.**
+
+    Touches no database. That is enforced by nothing but this function's
+    contents, so keep it that way: the moment it writes, the ordering this
+    split exists to create is gone.
+
+    Returns the Celery task id, or None if the dispatch failed. A failure is
+    not raised, because by the time it can happen the run is already committed
+    and the exception would only obscure that: the row sits at 'queued' with no
+    task, which `sweep_stale_runs` marks failed with "never picked up" — the
+    outcome that class of failure should have.
+    """
+    try:
+        task = celery.send_task(
+            "generate_report",
+            args=[run_id, account_id, report_type, params],
+            queue="celery"
+        )
+    except Exception as e:
+        logger.error(
+            "DISPATCH FAILED after commit for schedule %s, run_id=%s: %s — "
+            "the run is recorded as 'queued' and the stale sweep will mark it "
+            "failed; no report was generated and nothing was sent",
+            schedule_id, run_id, e, exc_info=True,
+        )
+        return None
+
     logger.info(f"Enqueued report for schedule {schedule_id}, run_id={run_id}, task_id={task.id}")
-    return run_id, task.id
+    return task.id
 
 
 def process_due_schedules():
@@ -403,15 +461,23 @@ def process_due_schedules():
                             send_hour, send_minute, timezone
                         )
                         
-                        # Enqueue report generation (creates report_generations record + Celery task)
-                        # Pass filters to worker for preset-based filtering
-                        report_gen_id, task_id = enqueue_report(
+                        # RECORD EVERYTHING FIRST, DISPATCH AFTER THE COMMIT.
+                        # The order of these four steps is the fix for D-072
+                        # and is the only thing keeping a rolled-back tick from
+                        # leaving a report in someone's inbox. Do not move the
+                        # dispatch back above the commit.
+
+                        # 1. generation row — now on THIS cursor, so it rolls
+                        #    back with everything else rather than surviving on
+                        #    a connection of its own
+                        report_gen_id, task_params = create_report_generation(
+                            cur,
                             schedule_id, account_id, report_type,
                             city, zip_codes, lookback_days,
-                            filters=filters  # NEW: pass filters
+                            filters=filters
                         )
-                        
-                        # Create schedule_runs audit record linked to report_generation
+
+                        # 2. schedule_runs audit record linked to the generation
                         cur.execute("""
                             INSERT INTO schedule_runs (schedule_id, report_run_id, status, created_at)
                             VALUES (%s::uuid, %s::uuid, 'queued', NOW())
@@ -420,7 +486,7 @@ def process_due_schedules():
                         
                         schedule_run_id = cur.fetchone()[0]
                         
-                        # Update schedule with last_run_at, next_run_at, and clear lock
+                        # 3. last_run_at, next_run_at, and clear the lock
                         cur.execute("""
                             UPDATE schedules
                             SET last_run_at = NOW(),
@@ -429,7 +495,15 @@ def process_due_schedules():
                             WHERE id = %s::uuid
                         """, (next_run_at, schedule_id))
                         
+                        # 4. commit — everything above is now durable, and any
+                        #    failure up to this point has left no task behind
                         conn.commit()
+
+                        # 5. and only now, the dispatch
+                        task_id = dispatch_report(
+                            report_gen_id, account_id, report_type,
+                            task_params, schedule_id,
+                        )
                         
                         logger.info(
                             f"Processed schedule '{name}' (ID: {schedule_id}): "
