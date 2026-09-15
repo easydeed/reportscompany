@@ -248,7 +248,7 @@
         <div class="cover-agent-photo">{% if agent.photo_url %}<img src="{{ agent.photo_url }}" alt="{{ agent.name }}" />{% endif %}</div>
         <div class="cover-agent-info">
           <div class="cover-agent-name">{{ agent.name }}</div>
-          <div class="cover-agent-title">{{ agent.title | default('Luxury Property Specialist') }}</div>
+          <div class="cover-agent-title">{{ (agent.title or '') | trim | default('Luxury Property Specialist', true) }}</div>
           <div class="cover-agent-contact"><span>☎ {{ agent.phone | default('(000) 000-0000') }}</span><span>✉ {{ agent.email | default('agent@example.com') }}</span></div>
         </div>
         <div class="cover-logo">{{ agent.company_short | default('Luxe') }}</div>

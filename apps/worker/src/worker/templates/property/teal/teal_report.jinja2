@@ -1183,7 +1183,8 @@
 
         <div class="agent-meta">
           <div class="agent-name">{{ agent.name }}</div>
-          <div class="agent-role">{{ agent.title }}</div>
+          {# No per-theme fallback string exists for teal and one is not invented here — see D-067. The slot renders only when there is something to put in it. #}
+          {% if (agent.title or '') | trim %}<div class="agent-role">{{ agent.title | trim }}</div>{% endif %}
           <div class="agent-line"></div>
           <div class="contact"><span class="ico">☎</span><span>{{ agent.phone }}</span></div>
           <div class="contact"><span class="ico">✉</span><span>{{ agent.email }}</span></div>

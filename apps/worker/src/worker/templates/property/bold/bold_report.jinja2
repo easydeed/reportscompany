@@ -845,7 +845,7 @@
         </div>
         <div class="cover-agent-info">
           <div class="cover-agent-name">{{ agent.name }}</div>
-          <div class="cover-agent-title">{{ agent.title | default('Licensed Real Estate Agent') }} • {{ agent.license | default('') }}</div>
+          <div class="cover-agent-title">{{ (agent.title or '') | trim | default('Licensed Real Estate Agent', true) }}{% if (agent.license or '') | trim %} • {{ agent.license }}{% endif %}</div>
           <div class="cover-agent-details">
             <span>☎ {{ agent.phone | default('(000) 000-0000') }}</span>
             <span>✉ {{ agent.email | default('agent@example.com') }}</span>

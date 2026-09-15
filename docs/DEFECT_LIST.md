@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-14, against `fix/acks-late`, cut from `main` at `25cef39`. D-073 is reserved for `fix/theme-cover-title`, which is stacked on this branch.
+**Last reconciled:** 2026-09-15, against `fix/theme-cover-title`, rebased onto `main` at `4548df9` after #62 was squash-merged. The rebase was verified by tree comparison, not by inspection: the rebased tree is byte-identical to the pre-rebase tip, so nothing from #62 is re-applied and nothing from this branch is lost.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
@@ -15,13 +15,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 37 | Real, unfixed |
-| `fixed` | 32 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 33 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **72** | D-001 … D-072, contiguous, no duplicates |
+| **Total** | **73** | D-001 … D-073, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 3 · WRONG 18 · FRAGILE 10 · ROUGH 6. (Sums to 37, the open total.)
+**Open by severity:** BROKEN 3 · WRONG 17 · FRAGILE 10 · ROUGH 7. (Sums to 37, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-067 (`fix/theme-cover-title`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -2320,8 +2320,8 @@ Tests: `apps/worker/tests/test_agent_title_default.py`, 10 cases, 9 failing agai
 ---
 
 ### D-067 — the theme cover blocks leak the literal string "None" onto the PDF cover
-**Severity:** WRONG · **Affects:** any property report where `agent.title` is NULL rather than absent
-**Status:** `open`
+**Severity:** WRONG · **Affects:** *(as filed)* any property report where `agent.title` is NULL rather than absent
+**Status:** `fixed` (`fix/theme-cover-title`) — **the filed defect is unreachable; two others on the same lines were not**
 
 The same `default()` bug as D-066, in the *other* `agent.title` expression — the theme **cover**
 block, one per theme, each with its own copy:
@@ -2344,6 +2344,41 @@ visible would bury a design decision inside a legal one. **The mechanical part**
 `(agent.title or '') | trim | default(<the theme's own string>, true)`, keeping each theme's copy —
 is safe and should just be done. **Teal needs a decision**: it has no fallback, so what a
 title-less agent should see there is a design question.
+
+> **RESOLVED 2026-09-14 BY RENDERING IT, AND THE HEADLINE IS WRONG.** The templates do say what is
+> written above. It cannot happen. `PropertyReportBuilder._build_agent_context` substitutes the
+> title **before** the template runs, using `or` — which catches None — so a NULL title arrives at
+> the cover as `'Real Estate Agent'`, and the five per-theme `default()` calls are dead code.
+>
+> This entry was written by reading five template lines. D-066 nearly shipped an inert fix by
+> editing only the template; this nearly filed an impossible bug by reading only the template.
+> Same trap, opposite direction. §0.6: **render to verify, do not read to verify.**
+>
+> **Two defects on those same lines were real, and neither is what was filed:**
+>
+> - **A whitespace-only title renders a blank line in cover-sized type.** `"   "` is truthy, so it
+>   passes the `or` untouched. All five themes. Fixed at the load-bearing site:
+>   `property_builder.py` now strips before the fallback.
+> - **`classic` and `bold` print a dangling separator.** The line is `{{ title }} • {{ license }}`
+>   with the bullet outside any condition, and `license` is `""` for any agent with no licence
+>   number on file. Those covers read **"Real Estate Agent • "** with nothing after the bullet —
+>   not an edge case but the default state of a new account. Fixed by moving the bullet inside an
+>   `{% if %}`.
+>
+>   That one also **masked** the first: the stray bullet made the whitespace case render non-empty,
+>   so a "the cover is not blank" assertion passed on classic and bold for the wrong reason.
+>
+> **Teal is given no invented value.** It has no fallback string of its own and choosing one is a
+> design decision; its slot now renders only when there is something to put in it.
+>
+> **The same construct was hardened in `market_builder.py:318`**, called out rather than done
+> quietly: `branding.get("agent_title", "")` returns None on a NULL column. The market templates
+> guard with `{% if agent.title %}`, so nothing ever leaked there, but whitespace rendered a blank
+> styled footer line. One line, identical shape, and §0.6 rule 4 says to follow the construct
+> rather than the symptom.
+>
+> **What remains is a decision, filed as D-073:** because the Python default wins, every theme
+> prints "Real Estate Agent" and the designed per-theme voice has never once rendered.
 
 ---
 
@@ -2547,6 +2582,30 @@ is as much a problem as the rollback surviving a dispatch.
 inverts the failure mode to a run row with no task — which the stale-run sweep already catches and
 reports, rather than a duplicate email nobody asked for. Worth doing with D-071, since both are
 about this task's boundaries rather than its contents.
+### D-073 — the per-theme cover titles were designed, and have never rendered
+**Severity:** ROUGH · **Affects:** all five property report themes
+**Status:** `open` — **needs a design decision, not a fix**
+
+Each theme's cover carries its own fallback for an agent with no title —
+`'Luxury Property Specialist'` (elegant), `'Real Estate Specialist'` (modern),
+`'Licensed Real Estate Agent'` (classic and bold) — and teal has none. Distinct copy per theme is
+plainly deliberate; it is the same kind of voice difference as the typography.
+
+**None of it has ever appeared on a report.** `property_builder.py` substitutes
+`'Real Estate Agent'` before the template is reached, so all five themes print the same words.
+Established by rendering the production path rather than reading the templates — see D-067.
+
+Two coherent answers, and they are not interchangeable:
+
+1. **The themes should differ.** Move the fallback out of Python so each theme's string reaches the
+   page, and decide what teal says. More work, and it means one agent's report reads differently
+   depending on the theme they picked — which may or may not be wanted.
+2. **The themes should not differ.** Delete the four dead strings so the templates stop describing
+   behaviour that does not exist. Cheap, and it removes a trap for the next reader.
+
+`apps/worker/tests/test_theme_cover_title.py` pins the current state: if the per-theme copy ever
+becomes reachable, that test fails and points at this decision instead of letting it land quietly.
+**Not decided here** — §0.2, this is a product voice call.
 
 ---
 

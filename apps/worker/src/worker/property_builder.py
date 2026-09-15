@@ -583,7 +583,13 @@ class PropertyReportBuilder:
             # `or` rather than a .get() default: the key can exist holding None,
             # which .get() happily returns and which rendered as the literal
             # string "None" in the PDF. Not "Realtor®" — see D-066.
-            "title": agent.get("title") or "Real Estate Agent",
+            #
+            # `.strip()` before the `or`, because a whitespace-only title is
+            # truthy and sailed straight through: every theme rendered a blank
+            # line in cover-sized type where the agent's role belongs. That was
+            # the one part of D-067 that turned out to be reachable — the "None"
+            # leak it was filed for is not, because this line runs first.
+            "title": (agent.get("title") or "").strip() or "Real Estate Agent",
             "license_number": license_num,
             "license": license_display,  # V0 template naming (formatted)
             "phone": agent.get("phone", ""),

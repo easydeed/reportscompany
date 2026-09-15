@@ -143,6 +143,15 @@ after making the mistake it forbids.*
   *executing*. The conclusion survived, which is the dangerous part. **A claim repeated
   across four files is not corroborated by being repeated.** Where the behaviour belongs
   to a library, the experiment is the citation.
+  **It also runs in reverse, and that version wastes a whole ticket.** D-067 was filed off
+  five template lines that use Jinja's plain `default()` — "a NULL title renders the string
+  None on the cover". Rendering it showed the leak is impossible: `property_builder.py`
+  substitutes the title first, so all five fallbacks are dead code. Same file, same
+  reasoning error as D-066, opposite sign: one nearly shipped an inert fix, the other
+  nearly fixed an impossible bug. **Render before filing, not only before fixing** — and
+  render through the path production uses, because that is where the substitution was.
+  Rendering it also turned up the two defects that *were* live on those lines and that
+  reading them had missed.
 
 - **Grep for the construct, not for the symptom, and re-run the check after the fix.**
   Three instances where the post-fix check found what the pre-fix survey missed: the third
