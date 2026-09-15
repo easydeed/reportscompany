@@ -5,10 +5,20 @@ WHY THIS EXISTS (the acks_late blocker)
 ---------------------------------------
 `generate_report` sets `report_generations.status='processing'` unconditionally
 with no already-completed check, so a second run of the same task re-renders and
-**re-sends**. That is why `acks_late` cannot be turned on: Celery acks a task on
-receipt, so a worker restart silently discards prefetched work (D-062's 18 lost
-reports), and the obvious fix — acknowledge late so lost tasks are redelivered —
-would turn every redelivery into a duplicate email.
+**re-sends**. That is why `acks_late` could not be turned on: a worker that dies
+mid-task loses that task (D-062's 18 lost reports), and the obvious fix —
+acknowledge late so lost tasks are redelivered — would have turned every
+redelivery into a duplicate email.
+
+`acks_late` is on as of `fix/acks-late`, so this guard is now load-bearing
+rather than preparatory. Its precondition is asserted in `test_acks_late.py`:
+remove `_already_delivered` and that file fails.
+
+(This docstring previously said Celery acks on receipt and that a restart
+discards prefetched work. Measured against a real broker, that is wrong —
+prefetched messages are unacknowledged in both modes and are redelivered either
+way. The default loses only the task that was executing. The conclusion held;
+the stated reason did not.)
 
 SCOPE: DELIVERY, NOT THE TASK
 -----------------------------

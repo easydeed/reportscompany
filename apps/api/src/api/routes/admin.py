@@ -109,9 +109,23 @@ def get_admin_metrics(_admin: dict = Depends(get_admin_user)):
         schedules_total = cur.fetchone()[0] or 0
 
         # Emails in last 24h
+        #
+        # Counted by status, not COUNT(*). `email_log` stopped being a log of
+        # emails once it started recording non-deliveries: 'suppressed' means
+        # every recipient was on the suppression list and nothing was sent, and
+        # 'duplicate_suppressed' is a send REFUSED because the report had
+        # already gone out. Neither is an email, and COUNT(*) reported both as
+        # one.
+        #
+        # An allowlist rather than a NOT IN, deliberately. A status added later
+        # that is not an email would silently inflate a denylist; with an
+        # allowlist it undercounts instead, and an undercount shows up as a dip
+        # someone notices. 'sending' is in flight and is UPDATEd in place to
+        # 'sent' or 'failed', so it never double-counts.
         cur.execute("""
             SELECT COUNT(*) FROM email_log
             WHERE created_at >= NOW() - INTERVAL '24 hours'
+              AND status IN ('sent', 'sending', 'failed')
         """)
         emails_24h = cur.fetchone()[0] or 0
 
@@ -189,13 +203,16 @@ def get_admin_timeseries(
             for row in cur.fetchall()
         ]
         
-        # Emails by day
+        # Emails by day — same status allowlist as emails_24h above; see the
+        # comment there for why COUNT(*) over this table is no longer a count
+        # of emails.
         cur.execute("""
-            SELECT 
+            SELECT
                 DATE(created_at) as day,
                 COUNT(*) as count
             FROM email_log
             WHERE created_at >= NOW() - INTERVAL '%s days'
+              AND status IN ('sent', 'sending', 'failed')
             GROUP BY DATE(created_at)
             ORDER BY day DESC
         """, (days,))
