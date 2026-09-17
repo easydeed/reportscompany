@@ -7,21 +7,21 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-17, against `fix/retry-policy-honest`, rebased onto `main` at `25f6357` after #65 was squash-merged.
+**Last reconciled:** 2026-09-17, against `fix/vendor-query-idioms`, cut from `main` at `c003d7d`.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 34 | Real, unfixed |
-| `fixed` | 36 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 36 | Real, unfixed |
+| `fixed` | 37 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **73** | D-001 … D-073, contiguous, no duplicates |
+| **Total** | **76** | D-001 … D-076, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 3 · WRONG 14 · FRAGILE 10 · ROUGH 7. (Sums to 34, the open total.)
+**Open by severity:** BROKEN 3 · WRONG 15 · FRAGILE 11 · ROUGH 7. (Sums to 36, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-070 (`chore/agreed-followups`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-070 (`chore/agreed-followups`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -2726,6 +2726,137 @@ commit left that test **passing**. §0.6 rule seven, in a test written just afte
 written. It was caught by applying the regression and re-running, not by rereading the assertion,
 which is the other half of rule four. The assertion now requires a commit *between* recording the
 run and dispatching it.
+
+---
+
+### D-074 — the Market Trends gauge may be printing an inflated months-of-supply figure
+
+**Severity:** WRONG · **Affects:** every property report's Market Trends page — **shipping today**
+**Status:** `open` — **pending the production feed probe; see "what would change this" below**
+
+`market_trends.py` computes months of supply as `active_count / (closed_in_90_days × 30.437/90)`.
+The numerator is right. **The denominator may be missing sales.**
+
+To collect closed sales it fetches with `minlistdate = now − 210 days` and then splits client-side
+on `close_date`, under this comment:
+
+> *"the critical rule: minlistdate ≠ closeDate. We fetch a wide window and split client-side so
+> both periods use the same fetched dataset."*
+
+The premise is that SimplyRETS has no close-date filter. **It does.** Measured against
+`api.simplyrets.com`:
+
+| Query | Rows |
+|---|---|
+| `status=Closed` | 13 |
+| `status=Closed&minclosedate=2000-01-01` | 7 |
+| `status=Closed&minclosedate=2030-01-01` | **0** |
+
+A filter that returns nothing for a future date and a subset for a past one is a filter that works.
+
+**The consequence, and it runs one way.** A property listed more than 210 days ago and sold last
+month is **excluded** from the closed count. Long-DOM listings are exactly the ones that take more
+than seven months to sell, so the exclusion is not random — it removes real, recent sales from the
+denominator. A smaller denominator means a smaller monthly sales rate, and MOI is inventory divided
+by that rate. **MOI comes out too high, never too low.**
+
+**What that means to the person holding the report.** High months-of-supply reads as a slow market:
+`_classify_market_condition` turns it into a "buyer's market" badge and narrative copy about
+homes taking longer to sell. A seller deciding how to price is being shown a market slower than
+the one they are in. This is the page described as the strongest in the product.
+
+**WHAT WOULD CHANGE THIS, and why it is not filed as confirmed.** Every measurement above is
+against the **public demo feed** (`simplyrets:simplyrets`), and this repository already knows the
+demo and production feeds differ — `IS_DEMO`, `ALLOW_CITY_SEARCH` and `ALLOW_SORTING` exist for
+precisely that reason (§0.6 rule 1: a sample shows what the code *can* do, not what it *does*).
+Three outcomes from the production probe:
+
+- **`minclosedate` works in production** → this is live, severity holds, and the fix is a one-line
+  swap of the filter plus deleting the client-side split.
+- **`minclosedate` is rejected or ignored in production** → the 210-day workaround is the right
+  design, and what remains is the *size* of the window. 210 days truncates the tail either way, so
+  the question becomes what it should be, not whether to keep it.
+- **Long-DOM sales turn out to be rare in the covered markets** → the defect is real and the
+  magnitude is small. Worth knowing before spending anything on it.
+
+**Do not fix this before the probe returns.** The workaround is currently load-bearing.
+
+---
+
+### D-075 — `mindate` / `maxdate` appear to do nothing, and the code half-knew
+
+**Severity:** FRAGILE · **Affects:** most query builders; impact currently absorbed client-side
+**Status:** `open` — **pending the production feed probe**
+
+`mindate=2030-01-01` returned **all 13** closed listings on the demo feed. Not an error, not an
+empty set — the parameter was accepted and ignored. `build_inventory_by_zip` and most of
+`query_builders.py` pass `mindate`/`maxdate` as their date window.
+
+`build_inventory_result` already compensates:
+
+> *"The SimplyRETS API's mindate/maxdate may not filter Active listings as expected. We must filter
+> by list_date client-side."*
+
+So the reports are probably correct today. **"May not" is now "did not, silently"**, which is a
+different thing to know.
+
+**Filed even though the impact may be nil,** because a filter that silently does nothing is a trap
+for the next person who trusts it — and the next person is whoever adds a query without noticing
+that every existing builder quietly re-filters afterwards. The client-side compensation is
+invisible from the query builder, which is where someone reasons about what the query returns.
+
+Also a cost: the query fetches rows it is going to discard, so `limit: 1000` is spent on a
+superset. That is wasted paging, not a wrong answer.
+
+**Same caveat as D-074:** demo feed. If production honours these parameters, this is a
+demo-only quirk and closes as `closed-not-live`. The probe settles it.
+
+---
+
+### D-076 — a comma-separated multi-value parameter silently returns only the first value
+
+**Severity:** WRONG · **Affects:** the documented vendor idiom; reached today only by two scripts
+**Status:** `fixed` (`fix/vendor-query-idioms`)
+
+SimplyRETS takes repeated parameters for multiple values. Given a comma-packed string it answers
+**HTTP 200 and discards everything after the first value.** Measured:
+
+| Query | Rows | Statuses returned |
+|---|---|---|
+| `status=Active` | 42 | Active |
+| `status=Closed` | 13 | Closed |
+| **`status=Active,Closed`** | **42** | **Active only** |
+| `status=Active&status=Closed` | 55 | Active, Closed |
+| `status=Active&status=Pending&status=Closed` | 78 | all three |
+
+No error and no warning — just a smaller answer than the one asked for.
+
+**Confirmed end to end through the client this repo actually uses**, not inferred:
+`httpx.Request(..., params={"status": "Active,Pending,Closed"})` encodes to
+`status=Active%2CPending%2CClosed`, while `params={"status": ["Active","Pending","Closed"]}`
+encodes to `status=Active&status=Pending&status=Closed`. The first is the form the live API
+answered with one status.
+
+**Why this silence is worse than most.** Anyone asking for several statuses is computing something
+*across* them — a ratio, a split, a rate. Lose the second status and the denominator is zero.
+`calc.py:snapshot_metrics` does exactly this: it splits rows by status and computes
+`moi = active/closed`, returning the sentinel **999.0** when closed is empty. That is **D-056's
+failure mode arriving through the transport layer** rather than the query builder.
+
+**Not live.** `vendors/simplyrets.py:build_market_snapshot_params` is the only comma-form caller
+and is reached only by `apps/worker/test_pipeline.py` and `test_simplyrets.py`. Production's
+`query_builders.py` asks for one status per query throughout.
+
+**Fixed anyway, and this is the reason:** it was the idiom the module *documented*, in
+`fetch_properties`'s own docstring, as the worked example of a multi-value parameter. The next
+multi-status query would have copied it — and the next multi-status query is the inventory Closed
+work this was found while scoping. A test now searches for the construct (a comma-packed value
+under a multi-value key) rather than for the literal that was wrong, and separately checks that no
+docstring still teaches it.
+
+**This one does not need the production probe.** Repeated parameters are the standard encoding for
+multi-value query strings and are what the API answered correctly; the comma form is proven wrong
+on at least one feed and proven right on none.
 
 ---
 
