@@ -303,6 +303,13 @@ class MarketReportBuilder:
             "median_close_price": metrics.get("median_close_price") or metrics.get("median_sold_price"),
             "avg_dom": metrics.get("avg_dom") or metrics.get("median_dom"),
             "months_of_inventory": metrics.get("months_of_inventory"),
+            # The window months-of-supply is measured over is a choice, and a
+            # reader cannot check a number whose basis is not stated (§0.6
+            # rule 6). Sourced from compute/moi.py so every surface that shows
+            # the figure quotes the same window.
+            "months_of_inventory_pace": (
+                (metrics.get("months_of_inventory_display") or {}).get("pace_label")
+            ),
             "price_per_sqft": metrics.get("price_per_sqft") or metrics.get("avg_price_per_sqft"),
             "list_to_sale_ratio": metrics.get("list_to_sale_ratio") or metrics.get("close_to_list_ratio") or metrics.get("sale_to_list_ratio"),
             "active_count": counts.get("Active", 0),

@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-17, against `fix/vendor-query-idioms`, cut from `main` at `c003d7d`.
+**Last reconciled:** 2026-09-17, against `fix/inventory-moi`, cut from `main` at `b148d7b`.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
@@ -15,13 +15,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 36 | Real, unfixed |
-| `fixed` | 37 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 38 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **76** | D-001 … D-076, contiguous, no duplicates |
+| **Total** | **77** | D-001 … D-077, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 3 · WRONG 15 · FRAGILE 11 · ROUGH 7. (Sums to 36, the open total.)
+**Open by severity:** BROKEN 3 · WRONG 14 · FRAGILE 11 · ROUGH 8. (Sums to 36, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-070 (`chore/agreed-followups`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-056 (`fix/inventory-moi`); D-070 (`chore/agreed-followups`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -1408,7 +1408,35 @@ Those are the only two production callers of `schedule_email_html`; the rest are
 
 ### D-056 — `months_of_inventory = 0` means two different things, and the email reads it as a third
 **Severity:** WRONG · **Affects:** **every** `inventory` email — see the severity confirmation below
-**Status:** `open`
+**Status:** `fixed` (`fix/inventory-moi`) — **the Closed query exists, the numerator is inventory, and there is no sentinel left**
+
+> **FIXED 2026-09-17.** Three changes, and all three are required; any one on its own still
+> produces a wrong number:
+>
+> 1. **A Closed query exists.** `build_inventory_closed` fetches sales in the rate window, in
+>    parallel with the Active query. `closed` was always empty because the query pinned
+>    `status=Active`, so MOI was always the `else` branch.
+> 2. **The numerator is total inventory.** `build_inventory_active` sends no date window.
+>    Adding the Closed query alone would have divided *"listed in the last 30 days and still
+>    active"* by a full 90-day sales rate — a wrong number, more convincingly.
+>    `market_trends.py:98` already carried the comment that says why.
+> 3. **The sentinel is gone.** Below three closings the metric returns `None` and the page says
+>    *"Not enough recent sales to estimate"*. There is no 0.0 and no 999.0 anywhere.
+>
+> **Six implementations, not two.** The survey found two formulas. Re-running it after fixing
+> them found four sites, then a fifth in `market_trends.py`, then a sixth in `compute/calc.py` —
+> which used a **third** formula, a bare `active/closed` with no monthly rate at all, and its own
+> `999.0`. That one is imported by `tasks.py` and never called; it is fixed rather than deleted
+> because a function named `snapshot_metrics` in a module named `calc` is the most
+> canonical-looking of the six and would have been the next one copied. Deleting it is a
+> judgement for someone else.
+>
+> All six now call `compute/moi.py`. A test searches for the construct — a monthly sales rate
+> computed outside that module — rather than for the literals that were wrong.
+>
+> **What a reader sees.** Every surface that prints the figure now prints
+> *"at the last 90 days' sales pace"* beside it, because the window is a choice and a number
+> whose basis is not stated cannot be checked (§0.6 rule 6, which was written about this metric).
 
 > **Severity confirmed 2026-09-08 — the blast radius is larger than first recorded.**
 > This was filed as reachable "on any inventory report over a period with no closings." It is
@@ -2857,6 +2885,39 @@ docstring still teaches it.
 **This one does not need the production probe.** Repeated parameters are the standard encoding for
 multi-value query strings and are what the API answered correctly; the comma form is proven wrong
 on at least one feed and proven right on none.
+
+---
+
+### D-077 — the inventory report's "Active" count and its months-of-supply numerator are different populations
+
+**Severity:** ROUGH · **Affects:** the inventory report's headline count and its PDF section copy
+**Status:** `open` — **needs a product decision, not a fix**
+
+The listings table shows active listings that came to market inside the lookback window; that is
+deliberate and documented (*"Per user request: only show listings that were listed within the
+selected date range"*). Months of supply divides **total** inventory by the sales rate, which is
+the only correct numerator.
+
+So after `fix/inventory-moi` the report can say **"Active 20"** beside **"8.9 months of supply"**,
+and a reader who divides one by the other gets a sales rate that does not exist. Both figures are
+right. Together they imply a third that is not.
+
+`metrics.total_active` is published alongside, so nothing has to be inferred — but "published in
+the JSON" is not "visible on the page".
+
+**Two coherent answers, and they are not interchangeable:**
+
+1. **`Active` means inventory.** The tile shows total active and the table keeps its window, with
+   its own count. Consistent, and it changes a headline number this report has always shown.
+2. **`Active` means the table.** Label it as such — "New this period" — and show total inventory
+   beside the supply figure. Smaller change, more words on the page.
+
+**A second, older instance of the same mismatch, found while checking this.** `PDF_CONFIG`'s
+inventory copy reads *"All {total} active listings in {city}"* where `{total}` is the windowed
+subset. That sentence has been describing a fraction of inventory as if it were all of it since
+before this ticket. It is the same decision, so it belongs with it.
+
+**Not decided here** — §0.2, this is a product voice call about a headline figure.
 
 ---
 

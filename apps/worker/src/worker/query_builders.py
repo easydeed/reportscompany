@@ -284,6 +284,73 @@ def build_inventory_by_zip(params: dict) -> Dict:
     q |= _filters(params.get("filters"))
     return q
 
+def build_inventory_active(params: dict) -> Dict:
+    """
+    Inventory (Active): ALL current active listings. NO DATE WINDOW.
+
+    This is the months-of-supply numerator, and the absence of the date filter
+    is the point. `build_inventory_by_zip` above carries a `listDate` window
+    because the report's LISTINGS TABLE shows recently-listed homes — but MOI
+    divides total inventory by a sales rate, and "listed in the last 30 days
+    and still active" is a fraction of inventory. Feeding that to a 90-day
+    sales rate produces a number that is wrong and looks reasonable.
+
+    `market_trends.py` already had the comment: "NO date filter — we want total
+    current inventory for MOI calculation". This is the same reasoning, one
+    report over.
+
+    The table is served from this same result, filtered by `list_date`
+    client-side — which `build_inventory_result` already did anyway, because
+    `mindate`/`maxdate` were never reliable (D-075). So this is one query, not
+    two, and the table's behaviour is unchanged.
+    """
+    q = {
+        **_common_params(),
+        "status": "Active",
+        "limit": 1000,
+        "offset": 0,
+    }
+    if ALLOW_SORTING:
+        q["sort"] = "daysOnMarket"
+    q |= _location(params)
+    q |= _filters(params.get("filters"))
+    return q
+
+
+def build_inventory_closed(params: dict) -> Dict:
+    """
+    Inventory (Closed): sales inside the months-of-supply window.
+
+    Filtered on CLOSE date via `minclosedate`, which was measured working:
+    `minclosedate=2030-01-01` returns nothing, `2000-01-01` returns a subset.
+
+    BUT THE CALLER FILTERS AGAIN CLIENT-SIDE, and must keep doing so. Those
+    measurements are against the public demo feed, the production probe has not
+    come back, and `mindate` was measured being accepted and ignored — silently
+    (D-075). Sending the parameter costs nothing if it is ignored; relying on
+    it would cost correctness. See `compute.moi.closed_in_window`.
+
+    A `listDate` window is deliberately NOT sent. That is the mistake D-074
+    records in `market_trends.py`: a listing put on the market ten months ago
+    and sold last month is a sale in this window, and a list-date filter drops
+    it. Long-DOM listings are exactly the ones that take that long, so the
+    exclusion is not random — it removes real sales from the denominator and
+    pushes months-of-supply up.
+    """
+    from .compute.moi import SALES_RATE_WINDOW_DAYS, closed_since
+
+    q = {
+        **_common_params(),
+        "status": "Closed",
+        "minclosedate": closed_since(SALES_RATE_WINDOW_DAYS),
+        "limit": 1000,
+        "offset": 0,
+    }
+    q |= _location(params)
+    q |= _filters(params.get("filters"))
+    return q
+
+
 def build_open_houses(params: dict) -> Dict:
     """
     Open Houses: Active listings with upcoming open houses.

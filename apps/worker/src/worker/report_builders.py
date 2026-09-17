@@ -17,6 +17,14 @@ from datetime import datetime, timedelta, date
 # Gallery/featured listing photos are proxied to R2 at runtime in `tasks.generate_report`
 # so cloud renderers (PDFShift) load images from our domain rather than MLS/CDN URLs.
 
+from worker.compute.moi import (
+    months_of_supply,
+    describe as describe_moi,
+    closed_in_window as closed_in_moi_window,
+    PACE_LABEL as MOI_PACE_LABEL,
+)
+
+
 def _format_currency(val: float | None) -> str:
     """Format as $XXX,XXX"""
     if val is None or val == 0:
@@ -78,7 +86,6 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
     
     # Constants for MOI calculation
     # 30.437 = average days per month (365.25 / 12)
-    AVG_DAYS_PER_MONTH = 30.437
     
     # Calculate date cutoff for filtering
     # Use timezone-naive datetime for comparison (extract.py strips timezone in _iso)
@@ -139,15 +146,17 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
     # Avg DOM: Use closed listings (days from list to close)
     avg_dom = _average([l["days_on_market"] for l in closed if l.get("days_on_market")])
     
-    # MOI: Active inventory / Closed sales per month
-    # Per market_worker.py reference:
-    # MOI = Active Listings ÷ Monthly Sales Rate
-    # Monthly Sales Rate = (Closings in period) × (30.437 / period_days)
-    if closed:
-        monthly_sales_rate = len(closed) * (AVG_DAYS_PER_MONTH / lookback_days)
-        moi = len(active) / monthly_sales_rate if monthly_sales_rate > 0 else 99.9
-    else:
-        moi = 99.9  # Very high if no closed sales (buyer's market indicator)
+    # MOI: one implementation, in compute/moi.py. This used to be the formula
+    # itself, with a 99.9 sentinel for "no closed sales" — which is D-056's
+    # exact shape: a number that reads as a measurement and is not. The shared
+    # function returns None instead, and `describe()` turns that into words.
+    #
+    # The window here is the report's own `lookback_days`, not MOI's default
+    # 90: this builder's `closed` list was already filtered to that window
+    # above, so the rate must be measured over the same period it was counted
+    # in. Passing it explicitly is the point of the parameter.
+    moi = months_of_supply(len(active), len(closed), window_days=lookback_days)
+    moi_display = describe_moi(moi)
     
     # Close-to-list ratio (from closed sales)
     ctl_ratios = [l["close_to_list_ratio"] for l in closed if l.get("close_to_list_ratio")]
@@ -211,20 +220,23 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
                 tier_active = [l for l in active if min_price <= l.get("list_price", 0) < max_price]
                 
                 if tier_closed or tier_active:
-                    # MOI per tier: Active / Monthly Sales Rate
-                    # Per market_worker.py: Monthly Sales Rate = Closed × (30.437 / lookback)
-                    if tier_closed:
-                        tier_monthly_rate = len(tier_closed) * (AVG_DAYS_PER_MONTH / lookback_days)
-                        tier_moi = len(tier_active) / tier_monthly_rate if tier_monthly_rate > 0 else 99.9
-                    else:
-                        tier_moi = 99.9  # No closed sales in tier
-                    
+                    # The FOURTH copy of this formula, found by re-running the
+                    # survey after fixing the first three (§0.6 rule 4 — grep
+                    # for the construct, then check again). Per-tier MOI had
+                    # its own inline rate and its own 99.9 sentinel, and a
+                    # single tier holds far fewer sales than the whole market,
+                    # so it is the site where "not enough closings to estimate"
+                    # is the NORMAL answer rather than the edge case.
+                    tier_moi = months_of_supply(
+                        len(tier_active), len(tier_closed), window_days=lookback_days
+                    )
                     price_tiers.append({
                         "label": label,
                         "count": len(tier_closed),  # Closed sales in period
                         "active_count": len(tier_active),  # Current active inventory
                         "median_price": _median([l["close_price"] for l in tier_closed if l.get("close_price")]) if tier_closed else 0,
-                        "moi": round(tier_moi, 1)
+                        "moi": tier_moi,
+                        "moi_display": describe_moi(tier_moi),
                     })
         else:
             price_tiers = []
@@ -253,7 +265,8 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
             "avg_dom": round(avg_dom, 1) if avg_dom else 0,
             "avg_ppsf": round(_average([l.get("price_per_sqft") for l in active if l.get("price_per_sqft")]) or 0, 0),
             "close_to_list_ratio": round(ctl, 1),
-            "months_of_inventory": round(moi, 1),
+            "months_of_inventory": moi,
+            "months_of_inventory_display": moi_display,
             "new_listings_count": len(new_listings),  # For core indicators
         },
         
@@ -463,9 +476,43 @@ def build_inventory_result(listings: List[Dict], context: Dict) -> Dict:
     month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     new_this_month = [l for l in active if l.get("list_date") and l["list_date"] >= month_start]
     
-    # Closed for MOI calculation
-    closed = [l for l in listings if l.get("status") == "Closed"]
-    moi = (len(active) / len(closed)) * (lookback_days / 30) if closed else 0.0
+    # ── Months of supply ────────────────────────────────────────────────────
+    #
+    # THE SECOND FORMULA IS GONE. This line used to read
+    #
+    #     moi = (len(active) / len(closed)) * (lookback_days / 30) if closed else 0.0
+    #
+    # which is a different quantity from the one every other surface computed,
+    # and `closed` was always empty because the query pinned status=Active — so
+    # it was always the `else`, always 0.0, and 0.0 rendered as a balanced
+    # market. That is D-056.
+    #
+    # Three things changed, and all three are needed; any one alone still
+    # produces a wrong number:
+    #
+    #   1. a Closed query exists at all (tasks.py fetches it alongside Active)
+    #   2. the numerator is TOTAL active, not active-listed-in-the-window —
+    #      see build_inventory_active
+    #   3. the formula is the shared one, over a 90-day sales rate
+    #
+    # `active_total` is deliberately NOT the date-filtered `active` used by the
+    # listings table below. Same fetch, two different populations, and mixing
+    # them up is what made the old number wrong in a way that looked fine.
+    active_total = [l for l in listings if l.get("status") == "Active"]
+    closed_in_rate_window = closed_in_moi_window(
+        [l for l in listings if l.get("status") == "Closed"]
+    )
+    moi = months_of_supply(
+        len(active_total),
+        len(closed_in_rate_window),
+        active_was_truncated=bool(context.get("active_was_truncated"))
+        or bool(context.get("closed_was_truncated")),
+    )
+    moi_display = describe_moi(moi)
+    print(
+        f"📊 INVENTORY DEBUG: MOI inputs — {len(active_total)} total active, "
+        f"{len(closed_in_rate_window)} closed in the rate window -> {moi_display['formatted_current']}"
+    )
     
     # Sort by DOM descending (longest on market first)
     active_sorted = sorted(active, key=lambda x: x.get("days_on_market") or 0, reverse=True)
@@ -481,16 +528,43 @@ def build_inventory_result(listings: List[Dict], context: Dict) -> Dict:
         "report_date": datetime.now().strftime("%B %d, %Y"),
         
         # Counts
+        #
+        # `Active` is the LISTINGS TABLE's population — active listings that
+        # came to market inside the lookback window, which is what this report
+        # has always shown and what the table below contains. It is NOT the
+        # months-of-supply numerator; that is `metrics.total_active`, and the
+        # two differ on purpose. Both are published so neither has to be
+        # inferred from the other.
+        #
+        # FLAGGED, NOT CHANGED: a reader seeing "Active 20" beside "8.9 months
+        # of supply" can divide them and get a sales rate that does not exist.
+        # Making `Active` mean total inventory would fix that and would change
+        # a headline figure this report has always shown — a product call, not
+        # this ticket's. Same question for PDF_CONFIG's inventory copy, "All
+        # {total} active listings in {city}", which was already describing a
+        # windowed subset as if it were everything.
+        #
+        # `Closed` was hard-coded to 0 and is now the real count. Zero was
+        # true only because the query never asked for closed listings — the
+        # same absence that made months of supply 0.0. A count that is zero
+        # because nothing was fetched is not a count of zero.
         "counts": {
             "Active": len(active),
             "Pending": 0,
-            "Closed": 0,
+            "Closed": len(closed_in_rate_window),
         },
         
         # Metrics
         "metrics": {
             "median_dom": round(median_dom, 1),
-            "months_of_inventory": round(moi, 1),
+            # None when there is not enough to estimate from. The market
+            # templates guard on truthiness, so the tile hides rather than
+            # printing a sentinel; `months_of_inventory_display` carries the
+            # words and the pace label for surfaces that want to say why.
+            "months_of_inventory": moi,
+            "months_of_inventory_display": moi_display,
+            "total_active": len(active_total),
+            "closed_in_rate_window": len(closed_in_rate_window),
             "new_this_month": len(new_this_month),
         },
         
