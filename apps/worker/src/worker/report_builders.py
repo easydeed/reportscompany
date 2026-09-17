@@ -498,19 +498,32 @@ def build_inventory_result(listings: List[Dict], context: Dict) -> Dict:
     # `active_total` is deliberately NOT the date-filtered `active` used by the
     # listings table below. Same fetch, two different populations, and mixing
     # them up is what made the old number wrong in a way that looked fine.
-    active_total = [l for l in listings if l.get("status") == "Active"]
+    # D-081: prefer the feed's own count over counting the rows we were given.
+    # The rows are capped (the table only needs 200); the count is exact at any
+    # size. `active_total` is None when the feed did not return the header, and
+    # the row count — a floor — is the fallback, with the truncation flag still
+    # refusing to publish if that floor was hit.
+    #
+    # `is not None` rather than a truthiness check: a genuine zero active
+    # listings is a real answer and must not fall back to counting rows.
+    authoritative_active = context.get("active_total")
+    active_rows = [l for l in listings if l.get("status") == "Active"]
+    active_total_count = (
+        authoritative_active if authoritative_active is not None else len(active_rows)
+    )
     closed_in_rate_window = closed_in_moi_window(
         [l for l in listings if l.get("status") == "Closed"]
     )
     moi = months_of_supply(
-        len(active_total),
+        active_total_count,
         len(closed_in_rate_window),
         active_was_truncated=bool(context.get("active_was_truncated"))
         or bool(context.get("closed_was_truncated")),
     )
     moi_display = describe_moi(moi)
     print(
-        f"📊 INVENTORY DEBUG: MOI inputs — {len(active_total)} total active, "
+        f"📊 INVENTORY DEBUG: MOI inputs — {active_total_count} total active "
+        f"({'authoritative count' if authoritative_active is not None else 'row count, a floor'}), "
         f"{len(closed_in_rate_window)} closed in the rate window -> {moi_display['formatted_current']}"
     )
     
@@ -563,7 +576,7 @@ def build_inventory_result(listings: List[Dict], context: Dict) -> Dict:
             # words and the pace label for surfaces that want to say why.
             "months_of_inventory": moi,
             "months_of_inventory_display": moi_display,
-            "total_active": len(active_total),
+            "total_active": active_total_count,
             "closed_in_rate_window": len(closed_in_rate_window),
             "new_this_month": len(new_this_month),
         },

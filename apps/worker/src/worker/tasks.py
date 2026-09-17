@@ -1332,6 +1332,7 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                 # two with three.
                 from concurrent.futures import ThreadPoolExecutor
                 from .query_builders import build_inventory_active, build_inventory_closed
+                from .vendors.simplyrets import count_properties
 
                 active_query = build_inventory_active(_params)
                 closed_query = build_inventory_closed(_params)
@@ -1339,9 +1340,22 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                 print(f"🔍 REPORT RUN {run_id}: inventory closed_query={closed_query}")
 
                 INVENTORY_FETCH_LIMIT = 1000
-                with ThreadPoolExecutor(max_workers=2) as pool:
+                with ThreadPoolExecutor(max_workers=3) as pool:
+                    # THE NUMERATOR IS A COUNT, NOT A LIST (D-081). Months of
+                    # supply divides total inventory by a sales rate; it never
+                    # needed the listings. One `count=true` request answers it
+                    # exactly at any size, so the 1000-row ceiling that made
+                    # large markets read as "not enough recent sales" (D-078)
+                    # stops existing rather than moving.
+                    fut_count = pool.submit(count_properties, active_query)
+                    # The listings are still fetched, for the TABLE — which
+                    # shows recently-listed actives and filters client-side,
+                    # because `mindate` does nothing (D-075, confirmed in
+                    # production). Truncation here costs table rows, not a
+                    # wrong metric, and the PDF caps the table at 200 anyway.
                     fut_active = pool.submit(fetch_properties, active_query, INVENTORY_FETCH_LIMIT)
                     fut_closed = pool.submit(fetch_properties, closed_query, INVENTORY_FETCH_LIMIT)
+                    active_total = fut_count.result(timeout=90)
                     active_raw = fut_active.result(timeout=90)
                     closed_raw = fut_closed.result(timeout=90)
 
@@ -1351,14 +1365,34 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                 # the flags travel with the data and moi refuses. See D-056 —
                 # the failure this whole line of work exists to stop is a
                 # number that looks like a measurement and is not.
+                # THE DENOMINATOR STILL COMES FROM THE LISTINGS, deliberately.
+                # It could be a count too — `status=Closed&minclosedate=…` with
+                # `count=true` — but that would make the sales rate depend
+                # entirely on `minclosedate` being honoured, and the production
+                # probe has confirmed only that the parameter FILTERS, not that
+                # it filters correctly at a real date (D-074). The listings are
+                # fetched and re-filtered on `close_date` client-side, which is
+                # right under either answer. Switch this to a count when D-074's
+                # 90-day corroboration lands, and not before.
+                #
+                # The numerator no longer needs a truncation flag at all: a
+                # count cannot be truncated. `active_was_truncated` is kept for
+                # the case where the feed does not return the header, in which
+                # case `count_properties` returns None and the row count is a
+                # floor again.
                 _params = {
                     **_params,
-                    "active_was_truncated": len(active_raw) >= INVENTORY_FETCH_LIMIT,
+                    "active_total": active_total,
+                    "active_was_truncated": (
+                        active_total is None
+                        and len(active_raw) >= INVENTORY_FETCH_LIMIT
+                    ),
                     "closed_was_truncated": len(closed_raw) >= INVENTORY_FETCH_LIMIT,
                 }
                 print(
-                    f"🔍 REPORT RUN {run_id}: inventory fetched {len(active_raw)} Active, "
-                    f"{len(closed_raw)} Closed "
+                    f"🔍 REPORT RUN {run_id}: inventory active_total={active_total} "
+                    f"(authoritative count), fetched {len(active_raw)} Active listings "
+                    f"for the table, {len(closed_raw)} Closed "
                     f"(truncated: active={_params['active_was_truncated']}, "
                     f"closed={_params['closed_was_truncated']})"
                 )
@@ -1432,6 +1466,10 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                 # on one — the builder passes these straight to compute.moi.
                 "active_was_truncated": _params.get("active_was_truncated", False),
                 "closed_was_truncated": _params.get("closed_was_truncated", False),
+                # The authoritative active count (D-081), or None when the feed
+                # did not return one — in which case the builder falls back to
+                # counting the rows it was given.
+                "active_total": _params.get("active_total"),
             }
             
             # Add market-adaptive metadata for PDF/email rendering

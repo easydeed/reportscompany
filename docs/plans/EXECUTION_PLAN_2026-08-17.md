@@ -130,6 +130,15 @@ it.**
   reviewed artefact did not reflect what production emits. A sample can show what the
   code *can* produce; only production shows what it *does*.
 
+- **A number in a tool's output is a property of the tool until you check.** The probe printed
+  `500 rows` for the active query and that was read as SimplyRETS' page ceiling. It was the
+  probe's own `limit=500`. The conclusion that followed — "D-078 fires on every city with 500+
+  active listings" — was wrong in the threshold (it is 1000, ours) and wrong in kind (it is not an
+  API property at all). **Fourth instance of the missing-row trap and the first from the reviewing
+  side rather than the implementing one**, which is the useful part: the trap is not a property of
+  who is writing the code. Before treating a measurement as a fact about the system, ask which
+  layer produced the number. The probe now says so in its own output.
+
 - **Ask what writes this row, and when, before reasoning about what its absence proves.**
   Three instances where a missing row was read as a missing action:
   `schedule_runs.started_at` (assigned by nothing, so a predicate on it matched every row
