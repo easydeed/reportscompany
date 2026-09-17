@@ -7,19 +7,19 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-17, against `fix/inventory-moi`, cut from `main` at `b148d7b`.
+**Last reconciled:** 2026-09-17, against `chore/simplyrets-probe`, cut from `main` at `5f2b6cd`.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 36 | Real, unfixed |
+| `open` | 37 | Real, unfixed |
 | `fixed` | 38 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **77** | D-001 … D-077, contiguous, no duplicates |
+| **Total** | **78** | D-001 … D-078, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 3 · WRONG 14 · FRAGILE 11 · ROUGH 8. (Sums to 36, the open total.)
+**Open by severity:** BROKEN 3 · WRONG 14 · FRAGILE 11 · ROUGH 9. (Sums to 37, the open total.)
 
 `fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-056 (`fix/inventory-moi`); D-070 (`chore/agreed-followups`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
@@ -2809,6 +2809,11 @@ Three outcomes from the production probe:
 
 **Do not fix this before the probe returns.** The workaround is currently load-bearing.
 
+**The probe is `scripts/probe_simplyrets_behaviour.py`** — six read-only GETs, one command, and it
+prints the verdict wording for this entry rather than raw rows. It refuses to run against the demo
+credentials without `--allow-demo`, because a demo answer pasted into a production discussion is
+the mistake this entry exists to avoid.
+
 ---
 
 ### D-075 — `mindate` / `maxdate` appear to do nothing, and the code half-knew
@@ -2838,6 +2843,11 @@ superset. That is wasted paging, not a wrong answer.
 
 **Same caveat as D-074:** demo feed. If production honours these parameters, this is a
 demo-only quirk and closes as `closed-not-live`. The probe settles it.
+
+**The probe is `scripts/probe_simplyrets_behaviour.py`** — six read-only GETs, one command, and it
+prints the verdict wording for this entry rather than raw rows. It refuses to run against the demo
+credentials without `--allow-demo`, because a demo answer pasted into a production discussion is
+the mistake this entry exists to avoid.
 
 ---
 
@@ -2918,6 +2928,40 @@ subset. That sentence has been describing a fraction of inventory as if it were 
 before this ticket. It is the same decision, so it belongs with it.
 
 **Not decided here** — §0.2, this is a product voice call about a headline figure.
+
+---
+
+### D-078 — "not enough recent sales" is also what a too-large market is told
+
+**Severity:** ROUGH · **Affects:** the inventory report in markets above the fetch limit
+**Status:** `open` — **filed rather than fixed, per the one-line threshold**
+
+`compute.moi.months_of_supply` returns `None` for two unrelated reasons, and the page renders the
+same sentence for both:
+
+| Cause | What the reader sees | What is actually true |
+|---|---|---|
+| fewer than 3 closings in the window | *"Not enough recent sales to estimate"* | correct |
+| the Active fetch hit its 1000-row limit | *"Not enough recent sales to estimate"* | **there were plenty of sales; there was too much inventory to count** |
+
+The second is the opposite situation wearing the first one's words. A busy market — the one most
+likely to have both many sales and more than a thousand active listings — is told it has too few
+sales. Someone will report that as a bug, and the report will have told them the wrong thing about
+why.
+
+**Refusing to publish is still right.** A truncated fetch makes the numerator a floor, which makes
+months-of-supply too LOW, which reads as a hotter market and would push a seller to underprice
+(D-056's direction, inverted). The number should not be printed. Only the explanation is wrong.
+
+**Not a one-line change, which is why it is filed.** `months_of_supply` returns a bare float-or-
+None, so the reason does not survive the return. The shape that fixes it is a sibling — say
+`estimate(active, closed, window, truncated) -> {"value", "reason", "formatted"}` — with
+`months_of_supply` kept as the thin numeric API for callers that only want the figure. Roughly
+25 lines in `compute/moi.py` plus two call sites and two strings of copy. Small, contained, and
+more than the threshold the ticket set.
+
+**Worth doing with D-077**, since both are about what the inventory report says rather than what it
+computes, and both change page copy.
 
 ---
 
