@@ -8,6 +8,7 @@ from ..services import evaluate_report_limit, log_limit_decision, LimitDecision,
 from ..services.email import send_limit_warning_email, send_limit_reached_email
 from ..cache import get_redis
 from ..crmls_cities import VALID_CITY_NAMES
+from ..verification import block_unverified_send, manual_emails
 
 _logger = logging.getLogger(__name__)
 
@@ -165,7 +166,33 @@ def create_report(
     limit_info = None
     with db_conn() as (conn, cur):
         set_rls(cur, account_id)
-        
+
+        # D-019, AND THE REASON THIS GATE IS NOT A `Depends`.
+        #
+        # Build and send are the same endpoint here, told apart only by the
+        # payload: `send_email` / `recipients` are what turn "generate a report
+        # I will look at" into "generate a report and mail it to these people"
+        # (they are handed straight to the worker at :161-162). A route-level
+        # dependency would block both, and the decision was explicitly that an
+        # unverified account keeps building and previewing.
+        #
+        # So the condition is the payload, not the path.
+        #
+        # `or`, where the worker's own ad-hoc send path uses `and`
+        # (tasks.py:1826 requires send_email AND recipients AND a pdf_url).
+        # That is deliberate and it is the looser of the two on purpose: this
+        # is a refusal, and refusing a request that names recipients but omits
+        # the flag costs an unverified account nothing it is entitled to, while
+        # matching the worker's `and` would mean any future loosening there
+        # silently opens a hole here. The gate should not be the tighter of the
+        # two conditions.
+        if payload.send_email or payload.recipients:
+            block_unverified_send(
+                cur, account_id,
+                action="send this report",
+                to_emails=manual_emails(payload.recipients),
+            )
+
         # ===== PRICING-002: CHECK MARKET REPORT LIMIT =====
         plan_usage     = get_full_plan_usage(cur, account_id)
         market_status  = plan_usage["limits"]["market_reports"]

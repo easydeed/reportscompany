@@ -8,6 +8,7 @@ from ..db import db_conn, set_rls, fetchone_dict, fetchall_dicts
 from ..crmls_cities import VALID_CITY_NAMES
 from ..services import get_full_plan_usage
 from ..services.schedule_utils import compute_next_run as _compute_next_run
+from ..verification import block_unverified_send, manual_emails
 
 
 # ====== Filter Schema ======
@@ -315,7 +316,18 @@ def create_schedule(
     try:
         with db_conn() as (conn, cur):
             set_rls(conn, account_id)
-            
+
+            # D-019. A schedule is a standing instruction to email people, so
+            # it is gated on the same fact a send is. Checked before the plan
+            # limit because it is the more fundamental refusal: an account that
+            # cannot send at all does not need to be told about its quota
+            # first.
+            block_unverified_send(
+                cur, account_id,
+                action="create a schedule",
+                to_emails=manual_emails(payload.recipients),
+            )
+
             # Enforce per-plan schedule limit
             plan_usage = get_full_plan_usage(cur, account_id)
             schedule_status = plan_usage["limits"]["schedules"]
@@ -609,7 +621,25 @@ def update_schedule(
     
     with db_conn() as (conn, cur):
         set_rls(conn, account_id)
-        
+
+        # D-019, on the two edits that arm or re-aim a sending schedule:
+        # switching it on, and changing who it goes to. Everything else about a
+        # schedule — its name, its area, its cadence, and in particular
+        # `active = false` — stays editable while unverified. Pausing a
+        # schedule is the direction we want to be frictionless, and blocking a
+        # rename would be enforcement for its own sake.
+        if payload.active is True or recipients_to_update is not None:
+            block_unverified_send(
+                cur, account_id,
+                action=(
+                    "turn this schedule on"
+                    if payload.active is True
+                    else "change who this schedule sends to"
+                ),
+                to_emails=manual_emails(recipients_to_update),
+                schedule_id=schedule_id,
+            )
+
         # Handle recipients separately to validate ownership
         if recipients_to_update is not None:
             encoded_recipients = encode_recipients(recipients_to_update, cur=cur, account_id=account_id)

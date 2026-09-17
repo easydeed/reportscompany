@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { SharedEmailPreview, PREVIEW_DEFAULT_PRIMARY, PREVIEW_DEFAULT_ACCENT } from "@/components/shared/email-preview"
 import { SharedPDFPreview } from "@/components/shared/pdf-preview"
+import { VerificationRequired } from "@/components/shared/verification-required"
+import { readVerificationRefusal, type VerificationRefusal } from "@/lib/verification"
 import { StepStory } from "./step-story"
 import { StepAudience } from "./step-audience"
 import { StepWhereWhen } from "./step-where-when"
@@ -38,7 +40,12 @@ const REPORT_TYPE_LABELS: Record<string, string> = {
   new_listings: "New Listings Analytics",
 }
 
-type GenerationState = "idle" | "creating" | "polling" | "complete" | "error" | "limit_reached"
+type GenerationState =
+  | "idle" | "creating" | "polling" | "complete" | "error" | "limit_reached"
+  // D-019. A distinct state rather than folding into "error": this is a
+  // refusal with a specific remedy, and "Try Again" — which is what the
+  // error card offers — is the one action that cannot possibly help.
+  | "verification_required"
 
 // Cycling waiting-screen stages while we poll the report status. The labels
 // mirror what the worker actually does (apps/worker/src/worker/...). Backend
@@ -82,6 +89,7 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
   const [generatedReportId, setGeneratedReportId] = useState<string | null>(null)
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
   const [generationError, setGenerationError] = useState<string | null>(null)
+  const [verificationRefusal, setVerificationRefusal] = useState<VerificationRefusal | null>(null)
   const [limitInfo, setLimitInfo] = useState<{ product: string; used: number; limit: number } | null>(null)
   const [pollingStage, setPollingStage] = useState(0)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -287,6 +295,17 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
           }),
         })
         if (!res.ok) {
+          // D-019, checked before the 429 branch because the two are not
+          // alternatives: a 403 here never carries limit fields, and reading it
+          // as a generic error is what would turn "confirm your email" into
+          // "Something went wrong" with a Try Again button.
+          const refusal = readVerificationRefusal(await res.clone().json().catch(() => ({})))
+          if (refusal) {
+            setVerificationRefusal(refusal)
+            setGenerationState("verification_required")
+            setIsSubmitting(false)
+            return
+          }
           if (res.status === 429) {
             const errData = await res.json().catch(() => ({}))
             const productLabels: Record<string, string> = {
@@ -340,6 +359,17 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
           }),
         })
         if (!res.ok) {
+          // D-019, checked before the 429 branch because the two are not
+          // alternatives: a 403 here never carries limit fields, and reading it
+          // as a generic error is what would turn "confirm your email" into
+          // "Something went wrong" with a Try Again button.
+          const refusal = readVerificationRefusal(await res.clone().json().catch(() => ({})))
+          if (refusal) {
+            setVerificationRefusal(refusal)
+            setGenerationState("verification_required")
+            setIsSubmitting(false)
+            return
+          }
           if (res.status === 429) {
             const errData = await res.json().catch(() => ({}))
             const productLabels: Record<string, string> = {
@@ -605,6 +635,18 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
                         </Button>
                       </div>
                     </>
+                  )}
+
+                  {generationState === "verification_required" && verificationRefusal && (
+                    <VerificationRequired
+                      refusal={verificationRefusal}
+                      onBack={() => {
+                        setGenerationState("idle")
+                        setVerificationRefusal(null)
+                        setGenerationError(null)
+                        setIsSubmitting(false)
+                      }}
+                    />
                   )}
 
                   {generationState === "error" && (
