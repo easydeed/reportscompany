@@ -188,6 +188,15 @@ after making the mistake it forbids.*
   each of which would have gone on passing while checking the wrong thing. A test that
   can quietly point somewhere else is worse than no test, because it reports success
   either way.
+  **And the way you check a selector is to make it wrong and confirm it fails.** Not
+  rereading the assertion — applying the regression it claims to catch, and running it.
+  D-072's first ordering test asserted *"some `conn.commit()` precedes the dispatch"*; the
+  ticker loop has an unrelated commit on the usage-limit skip path, so moving the dispatch
+  back above the real commit left the test **passing**. That was written by someone who
+  had just written this rule, one file away, and rereading it would not have found it. The
+  fix — requiring a commit *between* the two calls — was obvious the moment the regression
+  was applied and invisible before. **A test you have not seen fail is a test you have not
+  seen.**
 
 ---
 

@@ -7,21 +7,21 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-17, against `fix/enqueue-after-commit`, rebased onto `main` at `e4c324b` after #63 was squash-merged. Counts below are the union of both branches, re-derived by parsing rather than by adding the two together.
+**Last reconciled:** 2026-09-17, against `chore/agreed-followups`, cut from `main` at `84c61ae`.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 36 | Real, unfixed |
-| `fixed` | 34 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 35 | Real, unfixed |
+| `fixed` | 35 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **73** | D-001 … D-073, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 3 · WRONG 16 · FRAGILE 10 · ROUGH 7. (Sums to 36, the open total.)
+**Open by severity:** BROKEN 3 · WRONG 15 · FRAGILE 10 · ROUGH 7. (Sums to 35, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-070 (`chore/agreed-followups`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -2437,7 +2437,7 @@ it. That is the same trade D-062 took the other way, for a different audience.
 
 ### D-070 — no broker visibility timeout is configured, so a stranded report lands at an arbitrary later time
 **Severity:** WRONG · **Affects:** how late a delayed report arrives — **and this is live today, not a consequence of `acks_late`**
-**Status:** `open`
+**Status:** `fixed` (`chore/agreed-followups`) — **`visibility_timeout = 900`**
 
 `acks_late` (D-062) makes a lost task recoverable. It does not make it prompt. On a graceful
 `SIGTERM` the worker restores its unacknowledged messages immediately, so a normal deploy is fine.
@@ -2541,6 +2541,15 @@ against the one failure here that cannot be undone. **Below 300s would be a mist
 ```python
 "broker_transport_options": {"visibility_timeout": 900},
 ```
+
+**APPLIED 2026-09-17 (`chore/agreed-followups`).** Set on the worker's Celery app, which is the
+consumer — the ticker's separate Celery instance only produces and never holds an unacknowledged
+message, so it does not need the option and has not been given it.
+
+`apps/worker/tests/test_acks_late.py` asserts the *relationship* rather than the value: the
+visibility timeout must exceed `task_time_limit`. Each number looks reasonable alone and nothing
+else connects them, so that is the assertion worth having. Verified against both ways of breaking
+it — lowered below the limit, and removed so kombu's 3600s default returns.
 
 ---
 ### D-071 — `generate_report`'s retry policy is unreachable, except through its own failure handler, where it re-sends

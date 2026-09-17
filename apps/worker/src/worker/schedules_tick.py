@@ -303,6 +303,16 @@ def create_report_generation(
     # The value comes from a uuid column so nothing could be smuggled through
     # it today, but a parameterised form costs nothing and does not depend on
     # that staying true. Same call the delivery guard uses.
+    #
+    # SCOPE CHANGED WITH THAT MOVE, AND IT MATTERS IF THIS IS REUSED. The old
+    # call ran on a connection this function opened and closed, so the RLS
+    # context died with it. This one runs on the CALLER'S transaction, so
+    # `app.current_account_id` stays set for everything the caller does after
+    # this returns — in the ticker that is the `schedule_runs` insert and the
+    # `schedules` update, both on the same account, which is why it is fine
+    # here. A caller that goes on to touch a DIFFERENT account in the same
+    # transaction would be reading rows under this account's RLS context.
+    # Set it again for that account, or use a separate transaction.
     cur.execute(
         "SELECT set_config('app.current_account_id', %s, true)",
         (str(account_id),),

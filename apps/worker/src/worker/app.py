@@ -85,13 +85,12 @@ config_updates = {
     # which carries its own trade (a task that reliably OOMs redelivers
     # forever). Not enabled here; recorded as D-068.
     #
-    # HOW FAST THE RECOVERY ARRIVES is a separate question, and the answer is
-    # "at some later worker start". Redis hands a message back only once the
-    # visibility timeout has elapsed since DELIVERY, and only when a worker
-    # happens to check; `broker_transport_options` is unset, so that timeout is
-    # kombu's default of 3600s. Measured, a 40-second worker lifetime spanning
-    # the boundary did not restore, and a subsequent start did. So the gap
-    # between enqueue and send is bounded by nothing in particular.
+    # HOW FAST THE RECOVERY ARRIVES is a separate question, answered below by
+    # `visibility_timeout`. Redis hands a message back only once that timeout
+    # has elapsed since DELIVERY, and only when a worker happens to check.
+    # Measured: a 40-second worker lifetime spanning the boundary did not
+    # restore, and a subsequent start did. Restoration is opportunistic, not
+    # timely — so the timeout is a floor on the delay, not the delay itself.
     #
     # THIS IS NOT INTRODUCED BY THE LINE BELOW, which is the important part.
     # Prefetched-but-unstarted messages are unacknowledged in BOTH modes, so
@@ -99,9 +98,37 @@ config_updates = {
     # that can put a report in an inbox on a different day from its run, which
     # is what D-064's mailbox check turned up. Enabling late acks extends an
     # existing behaviour to the running task; it does not create a new one.
-    # Tuning the timeout is D-070 and now bounds a delay that is already
-    # happening.
     "task_acks_late": True,
+
+    # ── How long Redis waits before handing a message back (D-070) ──────────
+    #
+    # Was unset, so kombu's default of 3600s applied: a stranded report could
+    # not reappear for at least an hour, and in practice not until whichever
+    # worker start first looked after that hour — which is deploy-driven, so
+    # days were possible. That is the mechanism behind D-064's reports arriving
+    # on a different date from their runs.
+    #
+    # This number is two things at once, which is why the default was wrong in
+    # both directions:
+    #
+    #   as a RECOVERY DELAY   shorter is better — it floors how late a
+    #                         stranded report can arrive
+    #   as a LEASE on a task  shorter is worse — go below the longest
+    #                         legitimate run and a SECOND worker picks up work
+    #                         the first is still doing: a duplicate execution,
+    #                         not a slow one
+    #
+    # THE LEASE SIDE HAS A HARD FLOOR AND WE KNOW IT EXACTLY. No task can
+    # outlive `task_time_limit` above; the hard kill guarantees it. So any
+    # value comfortably over 300s cannot hand live work to a second worker,
+    # whatever the p99 does. That is a guarantee rather than a percentile,
+    # which is why it is the right basis. 900s is 3x the ceiling — the same
+    # margin STALE_STARTED_MINUTES (6 min) already takes against the same
+    # limit, so the two agree rather than each guessing separately.
+    #
+    # NEVER SET THIS BELOW 300s. That is not tuning; it discards the guarantee
+    # the time limit provides, and the failure it buys is the unrecallable one.
+    "broker_transport_options": {"visibility_timeout": 900},
 
     # Celery Beat schedule for periodic tasks
     "beat_schedule": {
