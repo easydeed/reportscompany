@@ -7,21 +7,21 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-17, against `chore/agreed-followups`, cut from `main` at `84c61ae`.
+**Last reconciled:** 2026-09-17, against `fix/retry-policy-honest`, rebased onto `main` at `25f6357` after #65 was squash-merged.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 35 | Real, unfixed |
-| `fixed` | 35 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 34 | Real, unfixed |
+| `fixed` | 36 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **73** | D-001 … D-073, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 3 · WRONG 15 · FRAGILE 10 · ROUGH 7. (Sums to 35, the open total.)
+**Open by severity:** BROKEN 3 · WRONG 14 · FRAGILE 10 · ROUGH 7. (Sums to 34, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-070 (`chore/agreed-followups`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-070 (`chore/agreed-followups`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -2553,9 +2553,8 @@ it — lowered below the limit, and removed so kombu's 3600s default returns.
 
 ---
 ### D-071 — `generate_report`'s retry policy is unreachable, except through its own failure handler, where it re-sends
-
 **Severity:** WRONG · **Affects:** every scheduled and on-demand market report
-**Status:** `open`
+**Status:** `fixed` (`fix/retry-policy-honest`) — **decorator removed, perverse path closed; real retries scoped separately**
 
 `generate_report` is decorated `autoretry_for=(Exception,)`, `retry_backoff=True`,
 `retry_backoff_max=600`, `max_retries=3` (`tasks.py:1046-1052`). It reads as a resilient task.
@@ -2585,6 +2584,57 @@ is cheap and a re-send is now guarded, so retries are safer than they were. But 
 "it does not retry" are both defensible, and "it retries only when its own error handler breaks"
 is not. Either make failures propagate or drop the decorator; do not leave it describing
 behaviour the code prevents.
+
+**THE SHAPE, named.** A retry path that opens only when the error handler itself fails is **a
+guard that arms exactly when everything else has already gone wrong.** That is the inverse of the
+shape this remediation keeps finding. The recurring one is *silent when it works* — correct
+behaviour with no trace. This is *active only when nothing else is*: dormant through every
+ordinary failure, and live precisely in the conditions least able to survive it.
+
+**FIXED 2026-09-17 (`fix/retry-policy-honest`), taking the "drop the decorator" branch.** Two
+changes:
+
+1. **The handler is guarded**, so the perverse route is closed whatever the decorator says. The
+   bookkeeping is lifted into `_record_generation_failure` and called inside a `try`; the failure
+   notification is guarded at the call site as well. A guard that discarded its exception silently
+   would be the same shape again, so each one logs the bookkeeping error *beside the original*.
+2. **The retry configuration is removed**, and the reason it is not simply switched on is written
+   where the decorator used to be.
+
+**Why "make failures propagate" is not the one-line half of that choice.** The failure bookkeeping
+runs on **every attempt**, and it:
+
+| It does this | Under retries that becomes |
+|---|---|
+| increments `schedules.consecutive_failures`, **auto-pausing at 3** | four attempts at one transient failure pause the schedule |
+| writes terminal status to `report_generations` and `schedule_runs` | a run that failed twice and then succeeded is recorded as **failed** |
+
+Both are false negatives in the exact tables D-061 and D-062 exist to make trustworthy. Real
+retries want the bookkeeping to distinguish *"this attempt failed"* from *"the task failed"*, and
+that is a behaviour change with its own review. **It is worth doing** — a transient SimplyRETS or
+PDFShift blip currently costs that day's report outright — and it is not this ticket.
+
+`apps/worker/tests/test_retry_policy.py` carries the coupling: **if `autoretry_for` goes back on
+while `_record_generation_failure` still runs unconditionally, the suite fails** and says why.
+Verified against that exact regression, not assumed.
+
+**`generate_property_report` is the control.** Same decorator, and its handler ends with a bare
+`raise` and the comment "Re-raise to trigger Celery retry". It does retry. One statement of
+difference decided which of two tasks got the resilience it advertised — and the one that missed
+out is the one that sends email. A test now checks the whole worker package for that disagreement
+rather than these two functions, per §0.6 rule 4.
+
+**One line hardened in passing, same construct as #64:** the lifted bookkeeping interpolated
+`account_id` into `SET LOCAL app.current_account_id TO '<id>'`. Now `set_config`. Note it passes
+`is_local => false` here, unlike the ticker: this connection is `autocommit`, so scoping the
+setting to a transaction that does not exist would silently do nothing.
+
+**A test in this file caught its own author.** It exempted `_send_failure_notification` from the
+"nothing in the handler may raise" check as self-guarding, and a companion test written to
+*verify* that exemption rather than trust it found the function's first three statements sitting
+outside its own `try`. The exemption was deleted and the call site guarded instead — cheaper than
+being right about another function's internals, and it removes the coupling rather than
+documenting it.
 
 ---
 
