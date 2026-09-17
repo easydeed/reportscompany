@@ -1257,6 +1257,56 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                 # Combine for extraction (mark each with status for metrics)
                 raw = active_raw + closed_raw + pending_raw
                 print(f"🔍 REPORT RUN {run_id}: combined {len(raw)} total properties")
+            elif rt_normalized == "inventory":
+                # INVENTORY: total Active + recent Closed, IN PARALLEL.
+                #
+                # Two queries because months of supply needs two different
+                # windows and one request cannot carry both: the numerator is
+                # ALL current inventory (no date filter) and the denominator is
+                # closings in the last 90 days. They are fetched concurrently
+                # rather than back-to-back, so the added wall-clock is
+                # max(0, closed - active) rather than the sum — the same
+                # ThreadPoolExecutor shape market_trends.py already uses for
+                # the property report's gauge.
+                #
+                # The listings TABLE is served from the Active result, filtered
+                # by list_date client-side in build_inventory_result, which is
+                # what it already did. So this replaces one query with two, not
+                # two with three.
+                from concurrent.futures import ThreadPoolExecutor
+                from .query_builders import build_inventory_active, build_inventory_closed
+
+                active_query = build_inventory_active(_params)
+                closed_query = build_inventory_closed(_params)
+                print(f"🔍 REPORT RUN {run_id}: inventory active_query={active_query}")
+                print(f"🔍 REPORT RUN {run_id}: inventory closed_query={closed_query}")
+
+                INVENTORY_FETCH_LIMIT = 1000
+                with ThreadPoolExecutor(max_workers=2) as pool:
+                    fut_active = pool.submit(fetch_properties, active_query, INVENTORY_FETCH_LIMIT)
+                    fut_closed = pool.submit(fetch_properties, closed_query, INVENTORY_FETCH_LIMIT)
+                    active_raw = fut_active.result(timeout=90)
+                    closed_raw = fut_closed.result(timeout=90)
+
+                # A fetch that hit its limit returns a FLOOR, not a count, and
+                # months of supply divides by one and multiplies by the other.
+                # Rather than publishing a number built on a truncated input,
+                # the flags travel with the data and moi refuses. See D-056 —
+                # the failure this whole line of work exists to stop is a
+                # number that looks like a measurement and is not.
+                _params = {
+                    **_params,
+                    "active_was_truncated": len(active_raw) >= INVENTORY_FETCH_LIMIT,
+                    "closed_was_truncated": len(closed_raw) >= INVENTORY_FETCH_LIMIT,
+                }
+                print(
+                    f"🔍 REPORT RUN {run_id}: inventory fetched {len(active_raw)} Active, "
+                    f"{len(closed_raw)} Closed "
+                    f"(truncated: active={_params['active_was_truncated']}, "
+                    f"closed={_params['closed_was_truncated']})"
+                )
+                raw = active_raw + closed_raw
+
             else:
                 # Standard single query for other report types
                 q = build_params(report_type, _params)
@@ -1320,6 +1370,11 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                 "lookback_days": lookback,
                 "generated_at": int(time.time()),
                 "filters": resolved_filters or filters,  # Pass resolved filters
+                # Set by the inventory branch above. A truncated fetch is a
+                # floor, not a count, and months of supply must not be built
+                # on one — the builder passes these straight to compute.moi.
+                "active_was_truncated": _params.get("active_was_truncated", False),
+                "closed_was_truncated": _params.get("closed_was_truncated", False),
             }
             
             # Add market-adaptive metadata for PDF/email rendering

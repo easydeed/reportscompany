@@ -28,12 +28,24 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
+from worker.compute.moi import (
+    months_of_supply,
+    describe as describe_moi,
+    MIN_CLOSED_FOR_MOI,
+    PACE_LABEL as MOI_PACE_LABEL,
+)
+
 logger = logging.getLogger(__name__)
 
 # ─── Constants ───────────────────────────────────────────────────────────────
 
-AVG_DAYS_PER_MONTH = 30.437    # 365.25 / 12 — exact match with report_builders.py
-MIN_CLOSED_TO_RENDER = 3       # Fewer than this → page is silently dropped
+# AVG_DAYS_PER_MONTH moved to compute/moi.py. It was declared here AND in
+# report_builders.py, each with a comment claiming to match the other — which
+# was true of the constant and not of the formula around it.
+# Kept as an alias so this module's own guard and the shared metric agree by
+# construction rather than by both happening to say 3. The page is dropped
+# below this; compute.moi refuses a number below the same line.
+MIN_CLOSED_TO_RENDER = MIN_CLOSED_FOR_MOI   # Fewer than this → page is dropped
 MIN_PRIOR_FOR_TRENDS = 5       # Fewer than this → no trend arrows shown
 
 
@@ -272,13 +284,10 @@ def _compute_trends(
     avg_active_price = round(sum(active_prices) / len(active_prices)) if active_prices else None
 
     # ── Months of Inventory (MOI) ─────────────────────────────────────────────
-    # Formula (same as report_builders.py):
-    #   monthly_sales_rate = closed_in_90_days * (30.437 / 90)
-    #   MOI = active_count / monthly_sales_rate
-    monthly_sales_rate = len(current_closed) * (AVG_DAYS_PER_MONTH / 90)
-    moi: Optional[float] = None
-    if monthly_sales_rate > 0 and active_count >= 0:
-        moi = round(active_count / monthly_sales_rate, 1)
+    # The formula lives in compute/moi.py now — this was one of FIVE copies,
+    # and one of them computed a different quantity. "Same as
+    # report_builders.py" was true of two of the four it pointed at.
+    moi: Optional[float] = months_of_supply(active_count, len(current_closed))
 
     # ── Market condition ──────────────────────────────────────────────────────
     condition_info = _classify_market_condition(
@@ -288,13 +297,6 @@ def _compute_trends(
         pending_count=pending_count,
         avg_ctl=current_avg_ctl,
     )
-
-    # ── Gauge position (capped 0-12 months for display) ───────────────────────
-    # We store the raw MOI and let the template calculate position
-    # A 0-12 month scale means: position % = min(MOI/12*100, 98)
-    gauge_pct: Optional[int] = None
-    if moi is not None:
-        gauge_pct = min(int(moi / 12 * 100), 98)
 
     # ── B1-B3: Optional extended metrics ─────────────────────────────────────
     # These helpers are not yet implemented in report_builders.py.
@@ -372,12 +374,12 @@ def _compute_trends(
             "formatted_avg_price": _fmt_currency(avg_active_price) if avg_active_price else "N/A",
         },
 
-        # Months of inventory
-        "months_of_inventory": {
-            "current": moi,
-            "gauge_pct": gauge_pct,
-            "formatted_current": f"{moi} months" if moi is not None else "N/A",
-        },
+        # Months of inventory. Shape comes from compute/moi.describe(), so the
+        # gauge and the market report cannot disagree about what "no estimate"
+        # looks like — which is how D-056 got a 0.0 in one place and a 999.0 in
+        # another. The templates already guard on `current is not none`, and
+        # `pace_label` is what the page says the number is measured against.
+        "months_of_inventory": describe_moi(moi),
 
         # Market condition badge
         "market_condition": condition_info,
@@ -554,11 +556,10 @@ SAMPLE_MARKET_TRENDS: Dict[str, Any] = {
         "count": 156, "avg_price": 745000,
         "formatted_count": "156", "formatted_avg_price": "$745,000",
     },
-    "months_of_inventory": {
-        "current": 2.8,
-        "gauge_pct": 23,
-        "formatted_current": "2.8 months",
-    },
+    # Built by the same function production uses, so a sample render cannot
+    # drift from a real one — §0.6 rule 1, applied to the fixture rather than
+    # learned from it again.
+    "months_of_inventory": describe_moi(2.8),
     "market_condition": {
         "indicator": "sellers",
         "label": "Seller's Market",

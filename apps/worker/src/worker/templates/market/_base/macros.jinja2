@@ -118,7 +118,7 @@
   {% endif %}
   {% if stats.months_of_inventory %}
   <div class="stats-bar-row">
-    <span class="stats-bar-label">Months of Inventory</span>
+    <span class="stats-bar-label">Months of Inventory{% if stats.months_of_inventory_pace %} <span class="stats-note">({{ stats.months_of_inventory_pace }})</span>{% endif %}</span>
     <span class="stats-bar-value">{{ stats.months_of_inventory }}</span>
   </div>
   {% endif %}
@@ -190,7 +190,7 @@
     {% if stats.months_of_inventory %}
     <div class="mini-stat">
       <div class="mini-stat-value">{{ stats.months_of_inventory }}</div>
-      <div class="mini-stat-label">Mo. Supply</div>
+      <div class="mini-stat-label">Mo. Supply{% if stats.months_of_inventory_pace %}<br><span class="stats-note">{{ stats.months_of_inventory_pace }}</span>{% endif %}</div>
     </div>
     {% endif %}
     {% if stats.price_per_sqft %}
@@ -290,7 +290,7 @@
   {% if stats.months_of_inventory %}
   <div class="stat-block">
     <div class="stat-block-value">{{ stats.months_of_inventory }}</div>
-    <div class="stat-block-label">Months Supply</div>
+    <div class="stat-block-label">Months Supply{% if stats.months_of_inventory_pace %}<br><span class="stats-note">{{ stats.months_of_inventory_pace }}</span>{% endif %}</div>
   </div>
   {% endif %}
   {% endif %}
@@ -381,7 +381,7 @@
     {% if stats.months_of_inventory %}
     <div class="stat-card">
       <div class="stat-card-value">{{ stats.months_of_inventory }}</div>
-      <div class="stat-card-label">Months Supply</div>
+      <div class="stat-card-label">Months Supply{% if stats.months_of_inventory_pace %}<br><span class="stats-note">{{ stats.months_of_inventory_pace }}</span>{% endif %}</div>
     </div>
     {% endif %}
     {% endif %}

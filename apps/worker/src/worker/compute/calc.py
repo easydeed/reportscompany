@@ -2,6 +2,8 @@ import statistics
 from typing import List, Dict
 from datetime import datetime, timedelta, timezone
 
+from worker.compute.moi import months_of_supply
+
 def snapshot_metrics(rows: List[Dict]) -> Dict:
     active  = [r for r in rows if r["status"]=="Active"]
     pending = [r for r in rows if r["status"]=="Pending"]
@@ -18,7 +20,22 @@ def snapshot_metrics(rows: List[Dict]) -> Dict:
             if d >= now - timedelta(days=7):
                 new7.append(r)
 
-    moi  = round(len(active)/len(closed),2) if len(closed)>0 else 999.0
+    # SIXTH copy of this metric, and a THIRD distinct formula: this one is a
+    # bare ratio with no monthly rate at all, so its "months" are not months.
+    # Routed through compute/moi.py so there is one implementation, and the
+    # 999.0 sentinel is gone — None means "not enough sales", which is what
+    # 999 was always trying to say (D-056).
+    #
+    # NOTE: `snapshot_metrics` is imported by tasks.py and NEVER CALLED. It is
+    # dead as of this writing. It is fixed rather than deleted because deleting
+    # it is a judgement someone else should make, and left wrong it is the most
+    # canonical-LOOKING of the six — a function called `snapshot_metrics` in a
+    # module called `calc` is exactly what the next person would copy.
+    #
+    # The window is the caller's to choose and this function is not given one,
+    # so it uses the shared default. If it is ever revived, pass the window the
+    # rows were actually counted over.
+    moi  = months_of_supply(len(active), len(closed))
     ctl  = avg([r["close_to_list_ratio"] for r in closed if r.get("close_to_list_ratio")])
 
     return {
