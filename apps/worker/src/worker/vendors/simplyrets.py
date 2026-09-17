@@ -79,9 +79,24 @@ def _request_with_retries(c: httpx.Client, path: str, params: Dict, max_retries:
 def fetch_properties(params: Dict, limit: Optional[int] = None) -> List[Dict]:
     """
     GET /properties with paging.
-    - params: SimplyRETS query params (e.g., {'q':'San Diego','status':'Active,Pending,Closed',...})
+    - params: SimplyRETS query params (e.g., {'q':'San Diego','status':['Active','Pending','Closed'],...})
     - limit: safety limit across pages (defaults to SIMPLYRETS_MAX_RESULTS)
     Returns a list of property dicts.
+
+    MULTI-VALUE PARAMETERS MUST BE LISTS, NOT COMMA-SEPARATED STRINGS (D-076).
+    This docstring used to show the comma form, and it does not work:
+
+        status='Active,Closed'      -> status=Active%2CClosed  -> 42 rows, Active ONLY
+        status=['Active','Closed']  -> status=Active&status=Closed -> 55 rows, both
+
+    Measured against api.simplyrets.com. The comma form returns HTTP 200 and
+    silently discards everything after the first value — no error, no warning,
+    just a smaller answer than the one asked for. A caller computing a ratio
+    across statuses gets a denominator of zero and no indication why. That is
+    D-056's failure mode arriving through the transport layer.
+
+    httpx expands a list value into repeated parameters, which is what the API
+    wants. Anything passing several values here must pass a list.
     """
     out: List[Dict] = []
     offset = 0
@@ -107,16 +122,34 @@ def fetch_properties(params: Dict, limit: Optional[int] = None) -> List[Dict]:
 
 # Convenience: a tiny helper for Market Snapshot queries
 def build_market_snapshot_params(city: str, lookback_days: int = 30) -> Dict:
-    # docs: /properties with q=<city>, status Active,Pending,Closed, mindate/maxdate, sort -listDate
+    """
+    Reached only by two ad-hoc scripts (`apps/worker/test_pipeline.py`,
+    `test_simplyrets.py`), not by the production path — `query_builders.py`
+    builds its own, one status at a time. Fixed anyway, because it was the
+    documented idiom and the next multi-status query would have copied it.
+
+    Two corrections, both measured rather than read (D-075, D-076):
+
+      status  a list, so httpx emits `status=Active&status=Pending&...`.
+              The comma string it used before came back with Active only.
+
+      dates   `mindate`/`maxdate` did nothing at all — `mindate=2030-01-01`
+              returned every row. Callers must filter client-side, which the
+              production report builders already do. Left in place rather than
+              removed, because whether they work is a property of the feed and
+              the production probe has not come back; the comment is the
+              warning.
+    """
+    # docs: /properties with q=<city>, status Active/Pending/Closed, sort -listDate
     # dates leave as YYYY-MM-DD
     from datetime import datetime, timedelta
     end = datetime.utcnow().date()
     start = end - timedelta(days=lookback_days)
     return {
         "q": city,
-        "status": "Active,Pending,Closed",
-        "mindate": start.isoformat(),
-        "maxdate": end.isoformat(),
+        "status": ["Active", "Pending", "Closed"],
+        "mindate": start.isoformat(),   # see D-075 — may be ignored by the feed
+        "maxdate": end.isoformat(),     # see D-075 — may be ignored by the feed
         "sort": "-listDate",
     }
 
