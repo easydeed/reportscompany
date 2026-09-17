@@ -203,6 +203,74 @@ def test_the_environment_can_override_it_but_a_blank_variable_cannot_empty_it():
         importlib.reload(tpl)
 
 
+# ── clearly and conspicuously ───────────────────────────────────────────────
+
+def _contrast_ratio(fg: str, bg: str) -> float:
+    """WCAG 2.1 relative-luminance contrast ratio for two #rrggbb colours."""
+    def luminance(colour: str) -> float:
+        r, g, b = (int(colour[i:i + 2], 16) / 255 for i in (1, 3, 5))
+        adjust = lambda c: c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+        return 0.2126 * adjust(r) + 0.7152 * adjust(g) + 0.0722 * adjust(b)
+    a, b = luminance(fg), luminance(bg)
+    hi, lo = max(a, b), min(a, b)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def test_the_contrast_helper_agrees_with_known_values():
+    """
+    A helper that computes the thing under test has to be checked itself, or
+    the assertion below is circular. Black on white is 21:1 and white on white
+    is 1:1, by definition.
+    """
+    assert round(_contrast_ratio("#000000", "#ffffff"), 1) == 21.0
+    assert round(_contrast_ratio("#ffffff", "#ffffff"), 1) == 1.0
+
+
+def test_the_postal_line_meets_wcag_aa_against_the_footer():
+    """
+    CAN-SPAM's own wording is "clearly and conspicuously". The line originally
+    inherited the styling of the decoration around it — 10px #9ca3af, the same
+    as the unsubscribe link — which is **2.41:1** on the #f8f9fa footer and
+    fails AA for normal text (4.5:1) and even for large text (3.0:1).
+
+    Present in the HTML and unreadable in the client satisfies the letter and
+    not the point. Measured here so a future restyle cannot quietly undo it.
+    """
+    html = _render("market_snapshot", {"display_name": ACCOUNT_BRAND})
+    line = next(
+        ln for ln in html.splitlines()
+        if PLATFORM_POSTAL_ADDRESS in ln and "font-size" in ln
+    )
+    colour = re.search(r"color:\s*(#[0-9a-fA-F]{6})", line).group(1)
+    size = int(re.search(r"font-size:\s*(\d+)px", line).group(1))
+
+    FOOTER_BACKGROUND = "#f8f9fa"
+    ratio = _contrast_ratio(colour, FOOTER_BACKGROUND)
+    assert ratio >= 4.5, (
+        f"the postal address renders at {colour} on {FOOTER_BACKGROUND} — "
+        f"{ratio:.2f}:1, below WCAG AA's 4.5:1 for normal text. A compliance "
+        f"line styled as decoration reads as decoration."
+    )
+    assert size >= 11, f"the postal address renders at {size}px"
+
+
+def test_the_postal_line_is_not_styled_identically_to_the_unsubscribe_link():
+    """
+    The specific failure: it was visually indistinguishable from the two
+    decorative lines it sits between. Different weight of statement, different
+    treatment — otherwise nothing marks it as the one line that is there for a
+    legal reason.
+    """
+    html = _render("market_snapshot", {"display_name": ACCOUNT_BRAND})
+    postal = next(ln for ln in html.splitlines() if PLATFORM_POSTAL_ADDRESS in ln)
+    unsubscribe = next(ln for ln in html.splitlines() if "Unsubscribe</a>" in ln or "unsubscribe" in ln.lower() and "font-size" in ln)
+    postal_style = re.search(r"font-size:\s*\d+px;\s*color:\s*#[0-9a-fA-F]{6}", postal)
+    assert postal_style, "could not read the postal line's styling"
+    assert postal_style.group(0) not in unsubscribe, (
+        "the postal address is styled identically to the unsubscribe link"
+    )
+
+
 # ── one address, three surfaces ─────────────────────────────────────────────
 
 @pytest.mark.parametrize("page", ["terms", "privacy"])
