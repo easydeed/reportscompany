@@ -7,22 +7,44 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-17, against `fix/postal-conspicuous`, cut from `main` at `acb74d1`.
+**Last reconciled:** 2026-09-17, against `fix/consumer-delivery-truth`, cut from `main` at `081d47e`.
+
+> ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
+>
+> **Every account in the production database is test data. There are no real customers yet.**
+> Recorded here once rather than on each entry, because it changes the same thing everywhere.
+>
+> **What it changes:** nothing currently open is a live incident. No disclosure is owed, no
+> customer is being harmed today, and there is time to fix a family properly rather than patch its
+> symptom.
+>
+> **What it does not change: severity.** A defect that sends a stranger's report nowhere is BROKEN
+> whether or not a stranger has arrived yet — it ships the moment one does, and the fix is the same
+> size either way. Severities on this board are properties of the code, not of the customer list.
+> The word to use is **latent**, not *"not a real problem"*.
+>
+> **What it closes:** D-021 (`closed-not-live` — "Demo Title Company" is test data; its account
+> type is cosmetic, not a tenancy defect). It also removes the migration and grandfathering
+> questions from anything that changes user-facing behaviour, which is why D-019 could be decided
+> for free.
+>
+> Two entries still describe live customer harm in the present tense because they were written
+> before this was known — D-031 and D-074. Both are corrected in place.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 37 | Real, unfixed |
-| `fixed` | 39 | Corrected in code, with the branch or PR named on the entry |
-| `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
+| `open` | 32 | Real, unfixed |
+| `fixed` | 43 | Corrected in code, with the branch or PR named on the entry |
+| `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **79** | D-001 … D-079, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 3 · WRONG 13 · FRAGILE 11 · ROUGH 10. (Sums to 37, the open total.)
+**Open by severity:** BROKEN 2 · WRONG 10 · FRAGILE 10 · ROUGH 10. (Sums to 32, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-070 (`chore/agreed-followups`).
-`closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`).
+`closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
 
@@ -323,7 +345,11 @@ Not a leak — verified during the F5 audit — but the inconsistency means a ca
 
 ### D-021 — "Demo Title Company" sponsors agents while not being typed `TITLE_COMPANY`
 **Severity:** WRONG · **Affects:** TITLE_COMPANY, SPONSORED · **Source: Jerry's query against the deployed database, not reproduced locally**
-**Status:** `open`
+**Status:** `closed-not-live` — **the whole production database is test data (Jerry, 2026-09-17)**
+
+> "Demo Title Company" sponsoring three agents while typed as something other than `TITLE_COMPANY`
+> is not a tenancy defect, because there is no tenant. Its account type is cosmetic: clean it up or
+> leave it. Closed on the evidence named above rather than on a code change.
 
 An account named "Demo Title Company" sponsors 3 agents but does not carry `account_type = 'TITLE_COMPANY'`. Consistent with `db/seed_demo_accounts_v2.sql:105-120`, which creates that account as `INDUSTRY_AFFILIATE` — the file predates `db/migrations/0048_title_company_hierarchy.sql`, which introduced the type.
 
@@ -612,7 +638,7 @@ Note that the two providers are split by flow, not by environment: scheduled/ad-
 
 ### D-031 — A consumer report is recorded as delivered when no email was sent
 **Severity:** BROKEN · **Affects:** REGULAR, SPONSORED (lead capture / consumer CMA delivery) · **Conditional on `RESEND_API_KEY` on the worker**
-**Status:** `open`
+**Status:** `fixed` (`fix/consumer-delivery-truth`) — **the four branches that claimed a delivery are now three failures and one send**
 
 `process_consumer_report` (`tasks.py:1441`), email delivery branch, `:1894-1901`:
 
@@ -634,9 +660,38 @@ It then gets worse. `delivered = True` falls through to `:2027-2052`, which SMSe
 
 This is not recoverable after the fact by fixing the key: you cannot tell, from the database, which `sent` rows were real. The only distinguishing evidence is the `logger.warning` in the worker logs.
 
+> **FIXED 2026-09-17, and the survey missed one.** Four branches of this dispatch wrote
+> `status='sent'`; exactly one of them had sent something:
+>
+> | Branch | Attempted? | Was |
+> |---|---|---|
+> | `RESEND_API_KEY` unset | never attempted | `sent` — **D-031** |
+> | provider rejected it | attempted, refused | `sent` — **not filed, found here** |
+> | no usable delivery method | could not be attempted | `sent` — **D-032** |
+> | genuine success | yes | `sent` — correct |
+>
+> The second is the most direct instance of this project's shape anywhere in the codebase: the code
+> logs *"CMA email delivery failed"* and the **very next statement** records success, with a
+> timestamp. Found by re-running the survey after fixing D-031 two branches up — §0.6 rule 4.
+>
+> All three now call `_record_consumer_delivery_failure`, which writes `failed` **and the specific
+> reason**. Not a new status: #56 added `sending` to `email_log` because it needed a state that did
+> not exist; here the state exists and the adjacent path already uses it. What was missing was the
+> reason, and that belongs on the row rather than in a log line that rotates (D-064).
+>
+> **A second bug was hiding behind the first.** The failure return read `sms_result`, which is bound
+> only inside the SMS branch — so on the email and no-method paths it raised `NameError`, the outer
+> handler caught it, and the real reason was replaced with a generic message. And the tail
+> overwrote every specific reason with the string `'Delivery failed'`, the one fact everybody
+> already had. Both fixed.
+>
+> **Latent, not live** — production is test data (see the note at the top of this file). The
+> paragraph above describing an agent chasing a lead who received nothing is what happens the day a
+> real lead arrives, not what has happened.
+
 ### D-032 — An unrecognised delivery method is also recorded as sent
 **Severity:** WRONG · **Affects:** REGULAR, SPONSORED
-**Status:** `open`
+**Status:** `fixed` (`fix/consumer-delivery-truth`) — **records `failed` with the method that could not be used**
 
 `tasks.py:2020-2025`, the `else` arm of the same dispatch:
 
@@ -650,7 +705,7 @@ Same failure shape as D-031, different trigger: a report with no usable delivery
 
 ### D-033 — Failure notifications are the one alert that tells an agent their scheduled report broke, and they are skipped silently
 **Severity:** FRAGILE · **Affects:** every persona with a schedule · **Conditional on `RESEND_API_KEY` on the worker**
-**Status:** `open`
+**Status:** `fixed` (`fix/consumer-delivery-truth`) — **the suppression is recorded in `email_log`, not only logged**
 
 `_send_failure_notification` (`tasks.py:654`), at `:668-671`:
 
@@ -2497,7 +2552,7 @@ different fix, and because D-062 now reads as closed — this is the part that i
 
 ### D-069 — `process_consumer_report` re-sends the SMS and re-spends the credit if it is redelivered
 **Severity:** WRONG · **Affects:** consumer lead reports, on any worker death mid-task
-**Status:** `open`
+**Status:** `fixed` (`fix/consumer-delivery-truth`) — **a redelivery is refused before any provider is called**
 
 `task_acks_late` is a **worker-wide** setting, so enabling it for D-062 changed the failure mode of
 every registered task, not just `generate_report`. Five are registered: `ping`, `keep_alive_ping`,

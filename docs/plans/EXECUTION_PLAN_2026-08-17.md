@@ -114,6 +114,16 @@ Rules for the verdict:
 *Added 2026-09-10 from the Delivery Surfaces remediation. Every rule here was written
 after making the mistake it forbids.*
 
+**And several were written after making it again, in the fix.** The rule-seven test that missed
+its own regression was written one file from rule seven. The postal-address line added to close a
+CAN-SPAM omission was itself unreadable — 2.41:1, failing the standard — so the shape landed on the
+line whose only purpose was to be conspicuous. Three separate tests have now matched their own
+comments explaining the defect they were searching for, because a fix that documents the bug in
+place puts the symptom string in the region the test searches; the fix is to assert against the
+code rather than the file. **Treat each of these as evidence the rule is live rather than
+historical: the pattern that produced the defect is the one you are working in while you remove
+it.**
+
 - **No finding derived from a sample render counts until it is reproduced through the
   production path.** Three instances in this project — the property report aerial, the
   email placeholder links, and the inventory report's months-of-supply figure — where a
