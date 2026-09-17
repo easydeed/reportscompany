@@ -11,6 +11,7 @@ from typing import Optional
 import logging
 
 from ..db import db_conn, set_rls, fetchall_dicts, fetchone_dict
+from ..verification import block_unverified_send
 from ..deps.company import get_company_admin
 from ..services.email import send_role_invite_email
 from ..services.usage import get_full_plan_usage
@@ -675,6 +676,13 @@ def invite_rep(
     try:
         with db_conn() as (conn, cur):
             set_rls(cur, company_id)
+            # D-019. An invite is an email to a stranger, sent in this
+            # company's name.
+            block_unverified_send(
+                cur, company_id,
+                action="invite a rep",
+                to_emails=[body.email] if body.email else None,
+            )
             result = create_invited_user(
                 cur,
                 role="title_rep",
@@ -735,6 +743,12 @@ def resend_rep_invite(
     try:
         with db_conn() as (conn, cur):
             set_rls(cur, company_id)
+            # D-019. Same as invite-rep: this puts mail in someone's inbox.
+            block_unverified_send(
+                cur, company_id,
+                action="resend a rep invite",
+                to_emails=[body.email] if body.email else None,
+            )
             user = find_user_for_resend(
                 cur,
                 email=body.email,

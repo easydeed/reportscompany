@@ -19,6 +19,8 @@ import type {
   AudienceFilter
 } from "./types"
 import { AUDIENCE_FILTER_PRESETS, getAreaDisplay, getEmailSubject } from "./types"
+import { VerificationRequiredBanner } from "@/components/shared/verification-required"
+import { readVerificationRefusal, type VerificationRefusal } from "@/lib/verification"
 
 const DEFAULT_STATE: ScheduleBuilderState = {
   name: "",
@@ -64,6 +66,8 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
   const [branding, setBranding] = useState<BrandingContext>(DEFAULT_BRANDING)
   const [profile, setProfile] = useState<ProfileContext>(DEFAULT_PROFILE)
   const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [verificationRefusal, setVerificationRefusal] = useState<VerificationRefusal | null>(null)
   const [isLoading, setIsLoading] = useState(!!scheduleId)
   const [scrolled, setScrolled] = useState(false)
   
@@ -195,6 +199,8 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
   const handleSave = async () => {
     if (!canSave) return
     setIsSaving(true)
+    setSaveError(null)
+    setVerificationRefusal(null)
 
     try {
       const filters = state.audienceFilter && state.audienceFilter !== "all" 
@@ -233,11 +239,32 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
         body: JSON.stringify(payload),
       })
 
-      if (!res.ok) throw new Error("Failed to save schedule")
-      
+      if (!res.ok) {
+        // D-019. The refusal has to reach the person who triggered it.
+        const body = await res.json().catch(() => ({}))
+        const refusal = readVerificationRefusal(body)
+        if (refusal) {
+          setVerificationRefusal(refusal)
+          return
+        }
+        // AND EVERY OTHER FAILURE TOO. This branch used to `throw` into a catch
+        // whose entire body was `console.error`, so a rejected save left the
+        // button springing back to "Create Schedule" and NOTHING else — the
+        // user's only evidence that it had not worked was the page not
+        // navigating. A 403 handled correctly on top of that would still have
+        // been invisible for any other status. See D-082 for the same shape
+        // elsewhere in this app.
+        throw new Error(
+          (typeof body?.detail === "string" && body.detail) ||
+          body?.message ||
+          "Failed to save schedule"
+        )
+      }
+
       router.push("/app/schedules")
     } catch (error) {
       console.error("Save error:", error)
+      setSaveError(error instanceof Error ? error.message : "Failed to save schedule")
     } finally {
       setIsSaving(false)
     }
@@ -316,6 +343,16 @@ export function ScheduleBuilder({ scheduleId }: ScheduleBuilderProps) {
 
       {/* Main Content - 400px config / flexible preview */}
       <main className="px-8 py-6">
+        {verificationRefusal && (
+          <div className="mb-6">
+            <VerificationRequiredBanner refusal={verificationRefusal} />
+          </div>
+        )}
+        {saveError && !verificationRefusal && (
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {saveError}
+          </div>
+        )}
         <div className="grid grid-cols-[400px_1fr] gap-8">
           {/* Left: Config Panel (fixed 400px) */}
           <div className="relative">

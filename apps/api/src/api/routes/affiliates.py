@@ -13,6 +13,7 @@ import re
 import logging
 from typing import Any
 from ..db import db_conn
+from ..verification import block_unverified_send
 from ..services.affiliates import (
     get_affiliate_overview,
     get_sponsored_accounts,
@@ -130,6 +131,14 @@ def invite_agent(
                     detail="Only industry affiliates can invite agents"
                 )
 
+            # D-019. An invite is an email to a stranger, sent in this
+            # affiliate's name.
+            block_unverified_send(
+                cur, account_id,
+                action="invite an agent",
+                to_emails=[body.email] if body.email else None,
+            )
+
             parts = body.name.strip().split(None, 1)
             first_name = parts[0] if parts else body.name.strip()
             last_name = parts[1] if len(parts) > 1 else ""
@@ -191,6 +200,13 @@ def resend_invite(
         with db_conn() as (conn, cur):
             if not verify_affiliate_account(cur, account_id):
                 raise HTTPException(status_code=403, detail="Not an affiliate account")
+
+            # D-019. Same as invite-agent: this puts mail in someone's inbox.
+            block_unverified_send(
+                cur, account_id,
+                action="resend an agent invite",
+                to_emails=[body.email] if body.email else None,
+            )
 
             user = find_user_for_resend(
                 cur, email=body.email, sponsor_account_id=account_id
@@ -260,6 +276,11 @@ async def bulk_invite_agents(
                 status_code=403,
                 detail="Only industry affiliates can invite agents",
             )
+
+        # D-019, and this is the one where it matters most: a CSV is an
+        # arbitrary number of strangers in one request. Checked before the file
+        # is read, so a refused bulk invite has not parsed a single row.
+        block_unverified_send(cur, account_id, action="bulk-invite agents")
 
         inviter_name, company_name = _get_inviter_info(cur, account_id, request)
 

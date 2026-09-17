@@ -9,6 +9,9 @@ import { Calendar, Plus, Pause } from 'lucide-react'
 import { PageHeader } from "@/components/page-header"
 import { MetricCard } from "@/components/metric-card"
 import { EmptyState } from "@/components/empty-state"
+import { useState } from "react"
+import { VerificationRequiredBanner } from "@/components/shared/verification-required"
+import { readVerificationRefusal, type VerificationRefusal } from "@/lib/verification"
 
 export type SchedulesListShellProps = {
   schedules: any[]
@@ -18,6 +21,10 @@ export function SchedulesListShell(props: SchedulesListShellProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const list = Array.isArray(props.schedules) ? props.schedules : []
+  // D-019. Switching a schedule ON is a gated action, so this surface has to be
+  // able to say why it was refused. Without it the toggle springs back and the
+  // only explanation is in the browser console.
+  const [verificationRefusal, setVerificationRefusal] = useState<VerificationRefusal | null>(null)
 
   const handleEdit = (id: string) => {
     router.push(`/app/schedules/${id}/edit`)
@@ -36,8 +43,13 @@ export function SchedulesListShell(props: SchedulesListShellProps) {
         body: JSON.stringify({ active }),
       })
       if (res.ok) {
+        setVerificationRefusal(null)
         queryClient.invalidateQueries({ queryKey: ["schedules"] })
+        return
       }
+      setVerificationRefusal(
+        readVerificationRefusal(await res.json().catch(() => ({})))
+      )
     } catch (e) {
       console.error("Failed to toggle schedule:", e)
     }
@@ -64,6 +76,9 @@ export function SchedulesListShell(props: SchedulesListShellProps) {
 
   return (
     <div className="space-y-5">
+      {verificationRefusal && (
+        <VerificationRequiredBanner refusal={verificationRefusal} />
+      )}
       <PageHeader
         title="Scheduled Reports"
         description="Automated report generation and delivery"

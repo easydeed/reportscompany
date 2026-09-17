@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-17, against `fix/pagination-by-count`, cut from `main` at `57d946f`.
+**Last reconciled:** 2026-09-17, against `fix/d019-verified-sending`, cut from `main` at `9a1b309`.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -26,7 +26,7 @@
 > **What it closes:** D-021 (`closed-not-live` — "Demo Title Company" is test data; its account
 > type is cosmetic, not a tenancy defect). It also removes the migration and grandfathering
 > questions from anything that changes user-facing behaviour, which is why D-019 could be decided
-> for free.
+> for free — and, now that it is fixed, shipped without a migration or a grandfathering pass.
 >
 > Two entries still describe live customer harm in the present tense because they were written
 > before this was known — D-031 and D-074. Both are corrected in place.
@@ -36,14 +36,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 32 | Real, unfixed |
-| `fixed` | 45 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 33 | Real, unfixed |
+| `fixed` | 46 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **81** | D-001 … D-081, contiguous, no duplicates |
+| **Total** | **83** | D-001 … D-083, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 2 · WRONG 10 · FRAGILE 10 · ROUGH 10. (Sums to 32, the open total.)
+**Open by severity:** BROKEN 2 · WRONG 10 · FRAGILE 10 · ROUGH 11. (Sums to 33, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -198,13 +198,84 @@ TypeError: 'PlanCatalog' object is not subscriptable
 
 ### D-019 — Email verification is not enforced anywhere
 **Severity:** WRONG · **Affects:** REGULAR (and any self-registered account)
-**Status:** `open`
+**Status:** `fixed` — `fix/d019-verified-sending`
 
 `POST /v1/auth/register` creates the user with `email_verified = false` (confirmed in the database) and returns `{"ok":true,"email_verified":false}`. Logging in immediately afterwards with the same credentials **succeeds**, and every authenticated surface then works normally — `/v1/onboarding`, `/v1/me`, `/v1/account/plan-usage`, `/v1/reports`, `/v1/schedules`, `/v1/contacts` all returned 200 for the unverified account.
 
 So the verification email is decorative: nothing gates on `users.email_verified`. Whether that is intended is a product decision, but it should be a decision — as written, the flow implies a gate that does not exist, and an address typo produces a working account nobody can reach.
 
 Minor, same endpoint: the docstring for `register` (`apps/api/src/api/routes/auth.py:229-238`) claims it "Returns auth session (JWT + cookie)". It does not — the response carries no token.
+
+> **DECIDED AND FIXED (Jerry, 2026-09-17): enforce on SENDING, not on login.**
+>
+> An unverified account logs in, builds and previews as before. It cannot send, and it cannot
+> set up something that will send later. That is the narrow rule that matches the harm: gating
+> login punishes the typo victim by locking them out of the account they just made, while gating
+> sending is what stops the platform putting mail in strangers' inboxes over a return address
+> nobody has confirmed. It also keeps the product usable in the minute between signing up and
+> clicking the link, which is when most people look around.
+>
+> **The gate is account-level, not caller-level**, and that is forced rather than chosen.
+> `AuthContextMiddleware` resolves `request.state.user` only on the JWT path
+> (`authn.py:145`) — API-key callers and the `X-Demo-Account` fallback set `account_id` and no
+> user at all. A per-user rule has to invent an answer for those and both answers are wrong:
+> deny and API keys stop working, allow and the gate is bypassable by authenticating
+> differently. So the question asked is *does this account have any active user with a
+> confirmed address*. For a self-registered account the two readings coincide exactly —
+> `register` (`auth.py:270-290`) creates a fresh account holding exactly one user.
+>
+> **`POST /v1/reports` could not be gated at the route.** Build and send are the same endpoint,
+> told apart only by `send_email` / `recipients` in the payload, which are handed straight to
+> the worker. A `Depends` would have blocked previewing, which is the half the decision
+> explicitly preserves. So the condition is the payload — and it is `or` where the worker's own
+> ad-hoc send path uses `and` (`tasks.py:1826`), deliberately the looser of the two: a refusal
+> that over-refuses costs an unverified account nothing it is entitled to, while matching the
+> worker's `and` would mean any future loosening there silently opens a hole here.
+>
+> **The API gate alone would not have been enforcement.** It refuses to *create* a sending
+> schedule; it cannot refuse one that already exists, and the API is not what sends. Sixty
+> seconds after a schedule comes due, `process_due_schedules` picks the row up having consulted
+> nothing but `active` and `next_run_at`. The check is therefore repeated in
+> `schedules_tick.py`, in the same shape as the usage-limit pre-check beside it — skip, record,
+> advance `next_run_at`. Not DRY and it cannot be: the API and the worker are separately
+> deployed services that do not import each other, which is why `check_usage_limit` already
+> exists in one package alongside `get_full_plan_usage` in the other. **The duplication is the
+> deployment boundary.** Both sites name each other.
+>
+> **Every refusal is recorded** — `email_log`, `status = 'blocked_unverified'`, with the reason
+> and the action. #61's rule: a send that does not happen leaves something behind saying why,
+> or the only difference between "we refused" and "it silently vanished" is a log line nobody
+> reads at the time it matters. The status is deliberately outside `admin.py`'s email-count
+> allowlist (`sent`, `sending`, `failed`), which that file's comment already explains: a status
+> added later can only undercount, never inflate.
+>
+> **§0.6 rule 3, in the design rather than in the postmortem.** `db_conn()` commits only on a
+> clean exit (`db.py:56-61`) and the gate raises on the line after it writes — so a refusal
+> recorded on the caller's cursor would be rolled away *by the refusal it documents*. Present
+> in the code, absent from the database, discoverable only in production. That is exactly
+> D-065's shape. The record therefore goes in a transaction of its own, with its own explicit
+> commit.
+>
+> Gated surfaces: `POST /v1/schedules`; `PATCH /v1/schedules/{id}` when it sets `active: true`
+> or changes recipients (a rename or a **pause** stays allowed — stopping a schedule should
+> never need verification); `POST /v1/reports` when it names recipients; `POST
+> /v1/branding/test-email`; `POST /v1/company/invite-rep` and `/resend-rep-invite`; `POST
+> /v1/affiliates/invite-agent`, `/resend-invite` and `/bulk-invite` — checked before the CSV is
+> read, so a refused bulk invite has not parsed a row.
+>
+> Tests: `apps/api/tests/test_verified_sending.py` (13 cases, 10 fail against `main`) and
+> `apps/worker/tests/test_ticker_unverified.py` (5 cases). Both behavioural — requests through
+> the real app, and the real ticker loop against a fake feed — with the database double
+> **raising on any statement past the gate**, so a gate placed after the write would fail them.
+> A test that grepped the routes for `block_unverified_send` would not.
+>
+> **No migration and no grandfathering**, because production is test data (see the board note).
+> `email_log.status` is `TEXT` with no `CHECK`, so the new value needs no DDL. The one thing
+> that does need checking on real data is whether any existing account would be locked out of
+> sending on merge — the query is in the PR, and it is Jerry's to run.
+>
+> The `register` docstring is left as it was: it is a doc defect on an endpoint this ticket
+> does not touch, and folding it in would put an unrelated edit in this diff.
 
 ### D-001 — A fresh database cannot be built by `scripts/migrate.sh`
 **Severity:** BROKEN · **Affects:** all (dev onboarding, CI, disaster recovery)
@@ -3240,6 +3311,74 @@ corroboration lands, and not before.**
 reading "the feed did not say" as "there are none" would compute months of supply from a zero it
 invented — D-056's failure with a new cause. When it returns `None` the builder falls back to
 counting rows, and the truncation flag still refuses to publish.
+
+### D-082 — seventeen mutating actions in the web app fail with no visible sign
+
+**Severity:** WRONG · **Affects:** every authenticated surface, and D-019's enforcement
+**Status:** `open` — two instances fixed in `fix/d019-verified-sending`, the rest unfixed
+
+The shape is one line:
+
+```ts
+    } catch (error) {
+      console.error("Save error:", error)
+    }
+```
+
+A handler POSTs, PATCHes or DELETEs, the request is rejected, the failure is thrown or the
+`!res.ok` branch is taken, and the **only** thing that happens is a line in a console nobody has
+open. The button springs back to its resting state. The user's sole evidence that their action did
+not work is the absence of the thing they expected, which for a toggle is indistinguishable from a
+slow refresh.
+
+Found by grepping for the construct rather than the symptom (§0.6 rule 5): a `catch` whose entire
+body is a `console.*` call, filtered to those wrapping a non-GET request. **17 instances.** The
+full list is in the branch's PR; the ones that matter most are the two schedule toggles, because
+they are exactly what D-019 now refuses:
+
+- `apps/web/app/app/schedules/[id]/schedule-detail-shell.tsx:11` — did not read the response at
+  all. It `await`ed the fetch and then called `router.refresh()` unconditionally, so a **403 was
+  processed identically to a 200**.
+- `apps/web/components/v0-styling/SchedulesListShell.tsx:31` — checks `res.ok` and does nothing
+  on the other branch.
+- `apps/web/components/schedule-builder/index.tsx:236` — `if (!res.ok) throw new Error(...)` into
+  a catch whose body was `console.error`.
+
+**This is why it is filed rather than left for later.** D-019's third requirement is that the
+blocked action explains why and offers a resend. A 403 the UI discards is not enforcement anyone
+can act on — it is the same dead end as an unreachable account, arriving one step later. The three
+call sites above are fixed on `fix/d019-verified-sending` because that branch's gate makes them
+reachable; **the other fourteen are untouched and still silent**, and most of them are admin
+surfaces where the same rejection could be a permissions failure, a stale row, or a validation
+error.
+
+Not a new observation about any one file — it is a house style, which is why it wants one
+deliberate pass (a shared error surface) rather than fourteen separate edits.
+
+### D-083 — `email_log.status`'s COMMENT documents four of its six values
+
+**Severity:** ROUGH · **Affects:** anyone reading the schema to find out what the column means
+**Status:** `open`
+
+`db/migrations/0027_fix_email_log_and_schedule_indexes.sql:16` says:
+
+```sql
+COMMENT ON COLUMN email_log.status IS 'Email send status: sent, suppressed, failed, unknown';
+```
+
+Since then the code has written `sending` (#56, a state that did not exist and was needed),
+`duplicate_suppressed` (#61, a send refused because the report had already gone), and now
+`blocked_unverified` (D-019). Six values, four documented, and the two undocumented ones are both
+*non-deliveries* — which is the distinction the comment would be consulted for in the first place.
+
+Cosmetic in the sense that nothing reads a COMMENT at runtime, and precisely not cosmetic in the
+sense that this column stopped meaning "an email" some time ago and the schema still says it does.
+`admin.py:113` already carries that correction as a code comment, which is the wrong place for it
+to live alone.
+
+Fixing it is one `COMMENT ON COLUMN` in a new migration. Not folded into D-019's branch because it
+would add a second unapplied migration to the pile Jerry is already holding (0055), for no
+behavioural gain, and a DDL file in a diff invites the assumption that the fix needs it.
 
 ---
 

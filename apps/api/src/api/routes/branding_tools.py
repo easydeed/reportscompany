@@ -18,6 +18,7 @@ import sys
 
 from .reports import require_account_id
 from ..db import db_conn
+from ..verification import block_unverified_send
 from ..services.affiliates import verify_affiliate_account
 from ..services.brand_resolver import resolve_brand
 from ..services.sample_report_data import (
@@ -602,6 +603,14 @@ async def send_test_email(
     # Verify affiliate account and get branding
     with db_conn() as (conn, cur):
         verify_affiliate_account(cur, account_id)
+        # D-019. A test email is a real email — it leaves the platform and
+        # lands in whatever inbox `body.email` names, which need not be the
+        # sender's own.
+        block_unverified_send(
+            cur, account_id,
+            action="send a test email",
+            to_emails=[body.email] if body.email else None,
+        )
         branding = get_branding_for_account(cur, account_id)
     
     brand_name = branding.get("brand_display_name") or "Your Brand"
