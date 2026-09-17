@@ -389,7 +389,12 @@ def _fetch_affiliate_branding(cur, account_id: str) -> dict | None:
                primary_color, accent_color, rep_photo_url,
                contact_line1, contact_line2, website_url,
                footer_logo_url, email_footer_logo_url,
-               COALESCE(branding_override, false) AS branding_override
+               COALESCE(branding_override, false) AS branding_override,
+               -- D-060. NULL means this account has not set its own, and the
+               -- render path falls back to the platform address attributed to
+               -- TrendyReports rather than to this brand. Selected last so the
+               -- positional indices above are untouched.
+               postal_address
         FROM affiliate_branding
         WHERE account_id = %s::uuid
     """, (account_id,))
@@ -404,6 +409,7 @@ def _fetch_affiliate_branding(cur, account_id: str) -> dict | None:
         "website_url": row[8],
         "footer_logo_url": row[9], "email_footer_logo_url": row[10],
         "branding_override": row[11],
+        "postal_address": row[12],   # D-060
     }
 
 

@@ -47,6 +47,7 @@ V3: Professional styling refresh with enhanced Market Snapshot data.
 - Full white-label branding support
 """
 import html
+import os
 from typing import Dict, Optional, TypedDict, Tuple, List
 
 from worker.property_builder import compute_color_roles, normalize_hex_color, safe_url
@@ -203,6 +204,34 @@ _UNSUB_URL_SENTINEL = "__TRENDYREPORTS_UNSUBSCRIBE_URL__"
 # ═══════════════════════════════════════════════════════════════════════════
 # Input sanitisation — see the TRUST BOUNDARY block in schedule_email_html()
 # ═══════════════════════════════════════════════════════════════════════════
+
+# ── The platform's own postal address (CAN-SPAM §7704(a)(5), D-060) ─────────
+#
+# TrendyReports' registered business address, used when an account has not set
+# its own. It is a real address supplied as a business decision — the original
+# slot's TODO was explicit that a guess or a placeholder here would be worse
+# than the omission it replaced, because a wrong address is an affirmative
+# false statement rather than a missing one.
+#
+# It is deliberately NOT written into `affiliate_branding.postal_address` as a
+# column default (see 0055). A row holding this address under an affiliate's
+# brand would say that affiliate is located here. The fallback lives in the
+# render path instead, where PLATFORM_SENDER_LABEL can say whose address it is.
+#
+# Overridable by environment for staging and for the day the office moves,
+# without a deploy. A blank or unset variable falls back to the constant rather
+# than to nothing: an empty postal address is the non-compliant state this
+# whole entry exists to end, and a typo in a config value must not reintroduce
+# it silently.
+PLATFORM_POSTAL_ADDRESS = (
+    os.getenv("PLATFORM_POSTAL_ADDRESS", "").strip()
+    or "440 Rte. 66, Glendora, CA 91740"
+)
+PLATFORM_SENDER_LABEL = (
+    os.getenv("PLATFORM_SENDER_LABEL", "").strip()
+    or "Sent by TrendyReports"
+)
+
 
 # Brand keys carrying free text. Escaped.
 _BRAND_TEXT_KEYS = (
@@ -2417,28 +2446,40 @@ def schedule_email_html(
     )
 
     # ── Sender postal address (CAN-SPAM §7704(a)(5)) ────────────────────────
-    # TODO(B5) [JERRY]: no value is wired up yet, deliberately. Every commercial
-    # email this product sends currently ships without the physical postal
-    # address the statute requires, and closing that needs three things this
-    # ticket is gated on:
-    #   1. the address itself — a business decision, not a placeholder. Do NOT
-    #      fill this in with a guess; a wrong address is a worse compliance
-    #      posture than a missing one, because it is an affirmative false
-    #      statement rather than an omission.
-    #   2. somewhere to store it. There is no postal-address column anywhere in
-    #      the schema — not on `accounts`, not on `affiliate_branding`. For
-    #      white-labelled sends the address of record is the *sender's*, so this
-    #      likely needs to be per-account, not a single global constant.
-    #   3. a settings surface so accounts can enter their own.
-    # The slot below is the whole of what this ticket builds: the moment
-    # `brand["postal_address"]` is populated, the line renders. Until then it
-    # collapses to nothing and the footer is unchanged.
-    postal_address = brand.get("postal_address")
+    #
+    # The slot built in #49 is now wired. All three things it was gated on have
+    # arrived: the address (a business decision, supplied — never guessed), a
+    # column to store per-account overrides in (0055), and the resolution rule
+    # below.
+    #
+    # THE ATTRIBUTION IS THE WHOLE DESIGN HERE, and it is why this is not a
+    # one-line `or`. The footer line reads "<name> • <address>", so falling
+    # back naively would print the AFFILIATE'S brand beside TRENDYREPORTS'
+    # address — an affirmative statement that this business is located at an
+    # address that is not theirs. That is exactly the failure the original TODO
+    # warned about, arriving through the fallback instead of through a guess:
+    # a wrong address is a worse compliance posture than a missing one.
+    #
+    # So the label travels with the value:
+    #
+    #   account set its own   "<their brand> • <their address>"
+    #   falling back          "Sent by TrendyReports • <platform address>"
+    #
+    # Both satisfy the statute, which requires the valid physical postal address
+    # of the sender or of the person who initiated the message — and on the
+    # fallback path the initiator is TrendyReports, which is what the line then
+    # says. Neither line claims an address for a business that does not have it.
+    postal_address = (brand.get("postal_address") or "").strip()
+    if postal_address:
+        postal_sender_label = brand_name
+    else:
+        postal_address = PLATFORM_POSTAL_ADDRESS
+        postal_sender_label = PLATFORM_SENDER_LABEL
+
     postal_address_html = (
         '              <p style="margin: 0 0 4px 0; font-family: \'Outfit\', -apple-system, '
         "'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #9ca3af;\">"
-        f"{brand_name} &bull; {postal_address}</p>\n"
-        if postal_address else ''
+        f"{postal_sender_label} &bull; {postal_address}</p>\n"
     )
 
     if rep_photo_url and (contact_line1 or rep_name):
