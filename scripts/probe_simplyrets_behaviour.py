@@ -38,6 +38,7 @@ import json
 import os
 import sys
 import time
+from datetime import datetime, timedelta
 import urllib.error
 import urllib.request
 from collections import Counter
@@ -48,7 +49,7 @@ TIMEOUT = 30
 
 
 def _get(auth, query, label):
-    """One GET. Returns (rows, status_counts, seconds) or None on failure."""
+    """One GET. Returns (rows, status_counts, seconds, headers) or None."""
     url = f"{BASE}/properties?{query}"
     req = urllib.request.Request(
         url, headers={"Authorization": auth, "Accept": "application/json"}
@@ -57,6 +58,7 @@ def _get(auth, query, label):
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
             body = json.loads(resp.read())
+            headers = dict(resp.headers)
     except urllib.error.HTTPError as exc:
         detail = exc.read()[:120].decode("utf-8", "replace")
         print(f"  {label:44s} HTTP {exc.code}  {detail}")
@@ -66,8 +68,10 @@ def _get(auth, query, label):
         return None
     elapsed = time.time() - started
     counts = Counter((row.get("mls") or {}).get("status") for row in body)
-    print(f"  {label:44s} {len(body):5d} rows  {elapsed:5.2f}s  {dict(counts)}")
-    return body, counts, elapsed
+    total = headers.get("X-Total-Count")
+    print(f"  {label:44s} {len(body):5d} rows  {elapsed:5.2f}s  {dict(counts)}"
+          + (f"  X-Total-Count={total}" if total else ""))
+    return body, counts, elapsed, headers
 
 
 def main():
@@ -154,6 +158,95 @@ def main():
             )
     print()
 
+    # ── 2b. minclosedate, a date INSIDE the range (D-074) ───────────────────
+    #
+    # ADDED after the first production run came back AMBIGUOUS: a future
+    # minclosedate returned 1 of 500 rows — not 0, not 500. A single check
+    # against a far-future date cannot tell "filters, with a null-handling
+    # leak" from "ignored". The ambiguity was a gap in this probe, not only in
+    # the answer, so the probe now asks a second question whose answer
+    # separates them.
+    print("2b. …and does it filter at a date inside the real range?")
+    ninety = (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d")
+    closed_90 = _get(auth, f"status=Closed&minclosedate={ninety}&limit=500",
+                     f"  + minclosedate={ninety} (90d)")
+    if closed_all and closed_90 and closed_future:
+        n_all, n_90, n_future = len(closed_all[0]), len(closed_90[0]), len(closed_future[0])
+
+        # THE DECIDING COMPARISON IS `future < all`, not `future == 0`.
+        # The first version of this asked whether a future date returned
+        # nothing, which cannot distinguish "ignored" from "filters, with a few
+        # null closeDates leaking through" — and production returned 1 of 500,
+        # landing in exactly that gap. A parameter that returns FEWER rows than
+        # no parameter at all is filtering; everything after that is about how
+        # well.
+        filters_at_all = n_future < n_all
+
+        # Any row that survives a far-future cutoff is evidence about HOW it
+        # leaks. Printed rather than described, so nobody has to go and fetch
+        # it by hand.
+        if n_future:
+            print(f"  {n_future} row(s) survived a 2030 cutoff — their closeDate:")
+            for row in closed_future[0][:5]:
+                mls = row.get("mls") or {}
+                print(f"      mlsId={row.get('mlsId')}  "
+                      f"closeDate={mls.get('closeDate', row.get('closeDate', '<absent>'))!r}  "
+                      f"listDate={row.get('listDate', '<absent>')!r}")
+
+        if not filters_at_all:
+            verdicts["D-074"] = (
+                f"NOT CONFIRMED — a future minclosedate returned all {n_all} "
+                f"rows, so the parameter is accepted and ignored. The 210-day "
+                f"workaround is the right design, and what remains is whether "
+                f"210 days is the right window."
+            )
+        elif n_90 > 0:
+            verdicts["D-074"] = (
+                f"CONFIRMED — minclosedate filters. A 90-day window returned "
+                f"{n_90} of {n_all} (a real subset) and a future date returned "
+                f"{n_future}"
+                + (" — see the closeDate values printed above; a null or "
+                   "malformed date leaking through is not a failure to filter."
+                   if n_future else ".")
+                + " market_trends.py's 210-day listDate workaround is "
+                  "unnecessary AND lossy: it drops long-DOM recent sales, "
+                  "deflating the sales rate and inflating months of supply. "
+                  "Remove minlistdate and filter on close date."
+            )
+        else:
+            verdicts["D-074"] = (
+                f"CONFIRMED that it filters (future={n_future} < all={n_all}), "
+                f"but this feed has NO closed sales in the last 90 days, so the "
+                f"90-day check returned 0 and cannot corroborate the window. "
+                f"The workaround is still removable; confirm on a feed with "
+                f"recent sales before relying on the numerator."
+            )
+    print()
+
+    # ── 4. the exact total, without paging (D-081) ──────────────────────────
+    print("4. Does count=true return X-Total-Count? (D-081 — the months-of-supply numerator)")
+    for query, label in (
+        ("status=Active&limit=1", "  status=Active&limit=1           "),
+        ("status=Active&limit=1&count=true", "  status=Active&limit=1&count=true"),
+    ):
+        result = _get(auth, query, label)
+        if result and "count=true" in query:
+            total = result[3].get("X-Total-Count")
+            if total:
+                verdicts["D-081"] = (
+                    f"CONFIRMED — count=true returns X-Total-Count ({total} active "
+                    f"listings). The months-of-supply numerator can be one cheap "
+                    f"request instead of paging, which removes D-078's ceiling "
+                    f"rather than raising it."
+                )
+            else:
+                verdicts["D-081"] = (
+                    "NOT CONFIRMED — count=true returned no X-Total-Count header "
+                    "on this feed. The numerator has to be paged; D-078's copy "
+                    "fix is then the whole answer and the limit needs raising."
+                )
+    print()
+
     # ── 3. mindate (D-075) ──────────────────────────────────────────────────
     print("3. Does mindate do anything?")
     mindate_future = _get(auth, "status=Closed&mindate=2030-01-01&limit=500",
@@ -175,17 +268,17 @@ def main():
 
     # ── verdicts ────────────────────────────────────────────────────────────
     print("=" * 72)
-    for defect in ("D-074", "D-075", "D-076"):
+    for defect in ("D-074", "D-075", "D-076", "D-081"):
         print(f"\n{defect}: {verdicts.get(defect, 'INCONCLUSIVE — a request failed above')}")
     print("\n" + "=" * 72)
     print("Paste this whole output back. The wording of each verdict is what "
           "goes on the defect entry.")
     if active:
         print(f"\nIncidentally: {len(active[0])} active listings came back in "
-              f"{active[2]:.2f}s. If that number is at the 500 page limit, say "
-              f"so — the inventory report's months-of-supply numerator now "
-              f"needs a city's WHOLE active inventory and refuses to publish a "
-              f"figure when its fetch truncates (see D-056).")
+              f"{active[2]:.2f}s on a single request with limit=500. That 500 is "
+              f"THIS SCRIPT'S limit, not an API ceiling — fetch_properties pages "
+              f"at 500 up to 1000. Read it as 'at least 500 exist', not as a cap "
+              f"(see D-078, D-081).")
 
 
 if __name__ == "__main__":

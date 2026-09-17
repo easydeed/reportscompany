@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-17, against `fix/consumer-delivery-truth`, cut from `main` at `081d47e`.
+**Last reconciled:** 2026-09-17, against `investigate/simplyrets-ceiling`, rebased onto `main` at `a1025e1` after #72 was squash-merged.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -36,12 +36,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 32 | Real, unfixed |
+| `open` | 34 | Real, unfixed |
 | `fixed` | 43 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **79** | D-001 … D-079, contiguous, no duplicates |
+| **Total** | **81** | D-001 … D-081, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 2 · WRONG 10 · FRAGILE 10 · ROUGH 10. (Sums to 32, the open total.)
+**Open by severity:** BROKEN 2 · WRONG 11 · FRAGILE 10 · ROUGH 11. (Sums to 34, the open total.)
 
 `fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
@@ -2931,7 +2931,18 @@ the mistake this entry exists to avoid.
 ### D-075 — `mindate` / `maxdate` appear to do nothing, and the code half-knew
 
 **Severity:** FRAGILE · **Affects:** most query builders; impact currently absorbed client-side
-**Status:** `open` — **pending the production feed probe**
+**Status:** `open` — **CONFIRMED against the production feed 2026-09-17**
+
+> **Production verdict, as the probe printed it:**
+>
+> > CONFIRMED — `mindate` is accepted and ignored, silently. The report builders' client-side
+> > filtering is load-bearing, not belt-and-braces. Impact is nil today; the trap is for whoever
+> > trusts the parameter next.
+>
+> Stays `open` because nothing has been changed — the client-side filtering that absorbs it is
+> correct and still there. What has changed is that "may not filter" is now "does not filter, in
+> production", so a future query builder that omits the client-side pass is broken rather than
+> merely unlucky.
 
 `mindate=2030-01-01` returned **all 13** closed listings on the demo feed. Not an error, not an
 empty set — the parameter was accepted and ignored. `build_inventory_by_zip` and most of
@@ -2966,7 +2977,14 @@ the mistake this entry exists to avoid.
 ### D-076 — a comma-separated multi-value parameter silently returns only the first value
 
 **Severity:** WRONG · **Affects:** the documented vendor idiom; reached today only by two scripts
-**Status:** `fixed` (`fix/vendor-query-idioms`)
+**Status:** `fixed` (`fix/vendor-query-idioms`) — **CONFIRMED against the production feed 2026-09-17**
+
+> **Production verdict, as the probe printed it:**
+>
+> > CONFIRMED — the comma form silently drops values (comma returned `['Active']`, repeated
+> > returned `['Active', 'Closed']`). The fix already shipped is correct.
+>
+> Not a demo-feed quirk. The shipped fix stands, and this entry needs nothing further.
 
 SimplyRETS takes repeated parameters for multiple values. Given a comma-packed string it answers
 **HTTP 200 and discards everything after the first value.** Measured:
@@ -3075,6 +3093,21 @@ more than the threshold the ticket set.
 **Worth doing with D-077**, since both are about what the inventory report says rather than what it
 computes, and both change page copy.
 
+> **THE THRESHOLD IS 1000, NOT 500 — and the ceiling may not need raising at all.**
+>
+> The production probe reported 500 rows on the active query and that was read as a page ceiling.
+> It is not: **500 was the probe's own `limit` on a single GET.** `fetch_properties` paginates at
+> 500 per page up to `INVENTORY_FETCH_LIMIT`, which this session set to 1000. So D-078 fires above
+> **1000** active listings, not 500 — still reachable in a large market, and still worth fixing,
+> but double the stated figure and not an API property at all.
+>
+> **And the right fix is not to page further.** `?count=true` returns the exact total in
+> `X-Total-Count` in a single `limit=1` request (D-081). Months of supply needs a count, not the
+> listings. That removes the ceiling instead of raising it, and costs fewer calls than today.
+>
+> So this entry's copy fix — distinguishing "not enough sales" from "too much inventory to count" —
+> may end up describing a state that can no longer occur. **Take D-081 first and see what is left.**
+
 ---
 
 ### D-079 — no settings surface for an account's own postal address
@@ -3104,6 +3137,77 @@ it. Every account therefore sends with the platform address, correctly attribute
    platform address", not "send nothing" — the render path already handles blank and
    whitespace-only, and the API must not 422 an emptied field. Same shape as the colour validator
    in D-059, which nearly shipped that exact regression.
+
+---
+
+### D-080 — `fetch_properties` raises when the result count is an exact multiple of the page size
+
+**Severity:** WRONG · **Affects:** every report, in any market whose matching set lands on a page boundary
+**Status:** `open` — **reproduced end to end against the live feed**
+
+`fetch_properties` pages with `offset`, and stops when a page comes back **shorter** than it asked
+for. When the total is an exact multiple of the page size, no page is ever short: the loop
+increments `offset` past the end and asks for one more.
+
+SimplyRETS answers that with **HTTP 400**, not an empty list:
+
+```
+{"error":"InvalidArguments","errors":["offset too high"]}
+```
+
+`_request_with_retries` re-raises `httpx.HTTPError` for 4xx, so the exception propagates out of the
+fetch and fails the whole generation. Not a truncated report — no report.
+
+**Reproduced by replaying the loop's own arithmetic against the live feed** (65 properties, page
+size 65):
+
+```
+GET limit=65 offset=0    -> 65 rows, 65 == page_size -> continue, offset now 65
+GET limit=65 offset=65   -> HTTP 400 "offset too high"
+```
+
+**How often.** The page size is 500, so this needs a market with exactly 500, 1000, 1500 … matching
+listings. Rare per report, certain across enough of them — and it presents as an unexplained
+failure rather than as a wrong number, so it would be chased as a transient.
+
+**The fix is the stop condition, not a try/except.** Stopping on `len(batch) < page_size` is
+inferring the end from a page's size; the loop should also stop when it has fetched everything the
+API says exists. `X-Total-Count` gives that directly — see D-078. A `try/except` around the extra
+request would also work and would be worse: it would treat a real argument error as a normal end
+of data.
+
+**Found while investigating the 500-row ceiling** (D-078), not by the survey — the two share a
+cause, which is that this module infers pagination state instead of reading it.
+
+---
+
+### D-081 — the active count for months-of-supply is fetched by paging when the API will just say
+
+**Severity:** ROUGH · **Affects:** inventory report latency, and D-078's ceiling
+**Status:** `open` — **the answer to D-078's ceiling, and cheaper than the current fetch**
+
+Months of supply needs a **count** of active inventory, not the listings themselves. The inventory
+report currently pages up to `INVENTORY_FETCH_LIMIT = 1000` listings to get it, and refuses to
+publish a figure when that limit is hit (D-078).
+
+SimplyRETS returns the exact total in a header, on request:
+
+```
+GET /properties?status=Active&cities=…&limit=1&count=true
+X-Total-Count: 65
+```
+
+One request, `limit=1`, and the true count regardless of size. `X-Total-Count` is listed in the
+feed's `Access-Control-Expose-Headers` and is returned **only when `count=true` is passed** —
+measured: absent on four other query shapes, present with that parameter.
+
+That removes the ceiling rather than raising it, and it is *fewer* calls than today, not more. The
+listings table still needs the listings, but it is served from the date-windowed set it always
+was; only the MOI numerator needs a total, and a total is what this returns.
+
+**Not implemented yet** — D-078's copy fix and this share one change, and the measurement above is
+against the demo feed. The production probe should confirm `count=true` there before the numerator
+depends on it. `scripts/probe_simplyrets_behaviour.py` now checks it.
 
 ---
 
