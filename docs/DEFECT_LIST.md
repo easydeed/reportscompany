@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-17, against `investigate/simplyrets-ceiling`, rebased onto `main` at `a1025e1` after #72 was squash-merged.
+**Last reconciled:** 2026-09-17, against `fix/pagination-by-count`, cut from `main` at `57d946f`.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -36,14 +36,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 34 | Real, unfixed |
-| `fixed` | 43 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 32 | Real, unfixed |
+| `fixed` | 45 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **81** | D-001 … D-081, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 2 · WRONG 11 · FRAGILE 10 · ROUGH 11. (Sums to 34, the open total.)
+**Open by severity:** BROKEN 2 · WRONG 10 · FRAGILE 10 · ROUGH 10. (Sums to 32, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -3108,6 +3108,25 @@ computes, and both change page copy.
 > So this entry's copy fix — distinguishing "not enough sales" from "too much inventory to count" —
 > may end up describing a state that can no longer occur. **Take D-081 first and see what is left.**
 
+> **D-081 IS DONE, AND THIS IS NARROWED RATHER THAN CLOSED.** Asked directly — does the truncation
+> case still occur? Measured, with the builder, four ways:
+>
+> | Case | Renders |
+> |---|---|
+> | 12,000 active, count available | **88.7 months** — the ceiling is gone |
+> | 12,000 active, feed returns no header | "Not enough recent sales" — falls back to a row floor |
+> | 12,000 active, **the CLOSED fetch truncated** | **"Not enough recent sales"** ← still wrong |
+> | 50 active, 2 sales | "Not enough recent sales" — true |
+>
+> The **numerator** half is gone: a count cannot be truncated. The **denominator** half survives —
+> a market with more than 1,000 closed sales in the 90-day window is still told it has too few, and
+> that is the same misleading sentence from the opposite input. It cannot be fixed the same way
+> until D-074 is corroborated, because switching the denominator to a count means trusting
+> `minclosedate` outright.
+>
+> So this stays open, halved, and **the copy is worth writing** — the remaining branch is reachable,
+> not hypothetical. Still bundled with D-077.
+
 ---
 
 ### D-079 — no settings surface for an account's own postal address
@@ -3143,7 +3162,7 @@ it. Every account therefore sends with the platform address, correctly attribute
 ### D-080 — `fetch_properties` raises when the result count is an exact multiple of the page size
 
 **Severity:** WRONG · **Affects:** every report, in any market whose matching set lands on a page boundary
-**Status:** `open` — **reproduced end to end against the live feed**
+**Status:** `fixed` (`fix/pagination-by-count`) — **stops on the feed's own total, not on a page's size**
 
 `fetch_properties` pages with `offset`, and stops when a page comes back **shorter** than it asked
 for. When the total is an exact multiple of the page size, no page is ever short: the loop
@@ -3184,7 +3203,7 @@ cause, which is that this module infers pagination state instead of reading it.
 ### D-081 — the active count for months-of-supply is fetched by paging when the API will just say
 
 **Severity:** ROUGH · **Affects:** inventory report latency, and D-078's ceiling
-**Status:** `open` — **the answer to D-078's ceiling, and cheaper than the current fetch**
+**Status:** `fixed` (`fix/pagination-by-count`) — **the numerator is a count; the denominator waits on D-074**
 
 Months of supply needs a **count** of active inventory, not the listings themselves. The inventory
 report currently pages up to `INVENTORY_FETCH_LIMIT = 1000` listings to get it, and refuses to
@@ -3205,9 +3224,22 @@ That removes the ceiling rather than raising it, and it is *fewer* calls than to
 listings table still needs the listings, but it is served from the date-windowed set it always
 was; only the MOI numerator needs a total, and a total is what this returns.
 
-**Not implemented yet** — D-078's copy fix and this share one change, and the measurement above is
-against the demo feed. The production probe should confirm `count=true` there before the numerator
-depends on it. `scripts/probe_simplyrets_behaviour.py` now checks it.
+**IMPLEMENTED 2026-09-17.** `count_properties()` does one `limit=1&count=true` request and reads
+`X-Total-Count`; the inventory numerator uses it. Measured end to end: a market with 12,000 active
+listings and 400 sales in the window now yields **88.7 months**, where it previously said *"not
+enough recent sales to estimate"* because the fetch stopped at 1000.
+
+**The denominator deliberately does NOT switch.** It could — `status=Closed&minclosedate=…` with
+`count=true` — but that would make the sales rate depend entirely on `minclosedate` being honoured,
+and the production probe has confirmed only that the parameter **filters**, not that it filters
+correctly at a real date (D-074). The closed listings are still fetched and re-filtered on
+`close_date` client-side, which is right under either answer. **Switch it when D-074's 90-day
+corroboration lands, and not before.**
+
+**Returns `None`, not `0`, when the feed does not say.** Those are different facts, and a caller
+reading "the feed did not say" as "there are none" would compute months of supply from a zero it
+invented — D-056's failure with a new cause. When it returns `None` the builder falls back to
+counting rows, and the truncation flag still refuses to publish.
 
 ---
 
