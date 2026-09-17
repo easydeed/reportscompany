@@ -315,7 +315,13 @@ class MarketReportBuilder:
         branding = self.report_data.get("branding") or {}
         return {
             "name": branding.get("agent_name", ""),
-            "title": branding.get("agent_title", ""),
+            # Same construct as property_builder's agent title, hardened the
+            # same way (D-067, §0.6: grep for the construct, not the symptom).
+            # `.get(k, "")` returns None when the column exists holding NULL;
+            # the market templates guard with `{% if agent.title %}` so that
+            # never leaked the string "None", but a whitespace-only value is
+            # truthy and rendered a blank styled line in the page footer.
+            "title": (branding.get("agent_title") or "").strip(),
             "phone": branding.get("agent_phone", ""),
             "email": branding.get("agent_email", ""),
             "photo_url": safe_url(branding.get("agent_photo_url")) or None,
