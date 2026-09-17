@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-17, against `fix/postal-address`, cut from `main` at `aefa251`.
+**Last reconciled:** 2026-09-17, against `fix/postal-conspicuous`, cut from `main` at `acb74d1`.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
@@ -1755,6 +1755,21 @@ Tests: `apps/worker/tests/test_brand_color_validation.py`, 53 cases; 41 fail aga
 >
 > **Not built: the settings surface.** Filed as **D-079**. The default alone makes every send
 > compliant, which was the urgent half.
+>
+> **FOLLOW-UP, same day (`fix/postal-conspicuous`): the line was legible only in principle.** It
+> inherited the styling of the decoration it sits between — 10px `#9ca3af`, identical to the
+> unsubscribe link. Measured against the `#f8f9fa` footer that is a contrast ratio of **2.41:1**;
+> WCAG AA asks 4.5:1 for normal text and 3.0:1 even for large text, and 10px is not large text. It
+> failed both.
+>
+> The statute's own wording is *"clearly and conspicuously"*. Present in the HTML and unreadable in
+> the client satisfies the letter and not the point — which is this project's recurring shape
+> arriving one more time, on the line added to fix an instance of it. Now `#6b7280` (4.59:1, and
+> already the wordmark colour in that same block, so not a new colour) at 11px. Still smaller than
+> body text; no longer the smallest thing on the page.
+>
+> The contrast ratio is asserted in the test, with the helper checked against known values so the
+> assertion is not circular. Restoring the old styling fails exactly one test.
 
 CAN-SPAM (15 U.S.C. §7704(a)(5)) requires the sender's valid physical postal address in every
 commercial email. There is nowhere to put one: no address column on `accounts`, none on

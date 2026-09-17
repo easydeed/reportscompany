@@ -2476,9 +2476,26 @@ def schedule_email_html(
         postal_address = PLATFORM_POSTAL_ADDRESS
         postal_sender_label = PLATFORM_SENDER_LABEL
 
+    # "CLEARLY AND CONSPICUOUSLY" IS THE STATUTE'S OWN WORDING, and the line
+    # inherited the styling of the decoration around it: 10px #9ca3af, the same
+    # as "Powered by TrendyReports" and the unsubscribe link.
+    #
+    # Measured rather than argued: #9ca3af on the #f8f9fa footer is a contrast
+    # ratio of **2.41:1**. WCAG AA asks 4.5:1 for normal text and 3.0:1 even
+    # for large text, and 10px is not large text. It fails both. #6b7280 —
+    # already used in this same block for the "TrendyReports" wordmark, so not
+    # a new colour — is 4.59:1 and passes.
+    #
+    # A compliance statement rendered identically to the decoration beside it
+    # reads as decoration. Present in the HTML and unreadable in the client
+    # satisfies the letter and not the point, which is the same shape as every
+    # other finding here: technically correct, practically absent.
+    #
+    # 11px rather than 10 for the same reason. Still smaller than body text —
+    # this is not meant to shout — but no longer the smallest thing on the page.
     postal_address_html = (
-        '              <p style="margin: 0 0 4px 0; font-family: \'Outfit\', -apple-system, '
-        "'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #9ca3af;\">"
+        '              <p style="margin: 0 0 6px 0; font-family: \'Outfit\', -apple-system, '
+        "'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 11px; color: #6b7280;\">"
         f"{postal_sender_label} &bull; {postal_address}</p>\n"
     )
 
