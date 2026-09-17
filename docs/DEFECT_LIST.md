@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-17, against `chore/simplyrets-probe`, cut from `main` at `5f2b6cd`.
+**Last reconciled:** 2026-09-17, against `fix/postal-address`, cut from `main` at `aefa251`.
 
 Every defect carries its own `**Status:**` line. **That line is the source of truth.** Everything in this section is derived from it by parsing the document — do not edit these counts by hand, and do not record a status here that is not also on the entry. A summary that can drift from the entries is how a defect list stops being trusted, and an untrusted list stops being read.
 
@@ -15,13 +15,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 37 | Real, unfixed |
-| `fixed` | 38 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 39 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 3 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **78** | D-001 … D-078, contiguous, no duplicates |
+| **Total** | **79** | D-001 … D-079, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 3 · WRONG 14 · FRAGILE 11 · ROUGH 9. (Sums to 37, the open total.)
+**Open by severity:** BROKEN 3 · WRONG 13 · FRAGILE 11 · ROUGH 10. (Sums to 37, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-056 (`fix/inventory-moi`); D-070 (`chore/agreed-followups`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-070 (`chore/agreed-followups`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -1437,6 +1437,11 @@ Those are the only two production callers of `schedule_email_html`; the rest are
 > **What a reader sees.** Every surface that prints the figure now prints
 > *"at the last 90 days' sales pace"* beside it, because the window is a choice and a number
 > whose basis is not stated cannot be checked (§0.6 rule 6, which was written about this metric).
+>
+> **The cost question is closed: SimplyRETS is not metered.** Confirmed by Jerry 2026-09-17 — the
+> plan is flat, so the second query per inventory generation is free. Recorded here so it is not
+> re-litigated: the only remaining cost of the Closed query is latency, and it is fetched in
+> parallel so the added wall-clock is `max(0, closed − active)` rather than the sum.
 
 > **Severity confirmed 2026-09-08 — the blast radius is larger than first recorded.**
 > This was filed as reachable "on any inventory report over a period with no closings." It is
@@ -1712,7 +1717,44 @@ Tests: `apps/worker/tests/test_brand_color_validation.py`, 53 cases; 41 fail aga
 
 ### D-060 — no postal-address column exists anywhere in the schema
 **Severity:** WRONG · **Affects:** every commercial email the product sends · **Found during:** P1-B (B5)
-**Status:** `open`
+**Status:** `fixed` (`fix/postal-address`) — **every send is compliant on merge; the migration adds the per-account override**
+
+> **CLOSED 2026-09-17.** All three things this was gated on arrived: the address (supplied, never
+> guessed), somewhere to store per-account overrides (`0055`), and the resolution rule.
+>
+> **The attribution is the design, and it is why this was not a one-line `or`.** The footer line
+> reads `<name> • <address>`, so a naive fallback prints the AFFILIATE'S brand beside
+> TRENDYREPORTS' address — an affirmative statement that their business is somewhere it is not.
+> That is exactly what the original slot's TODO warned about, arriving through the fallback
+> instead of through a guess. So the label travels with the value:
+>
+> | | |
+> |---|---|
+> | account set its own | `<their brand> • <their address>` |
+> | falling back | `Sent by TrendyReports • <platform address>` |
+>
+> Both satisfy the statute, which requires the address of the sender **or of the person who
+> initiated the message** — and on the fallback path the initiator is TrendyReports, which is what
+> the line then says. Neither claims an address for a business that does not have it.
+>
+> **Compliant before the migration runs, not after.** No account has an override today and nothing
+> writes the column yet, so every email takes the fallback path — which needs no schema at all.
+> `0055` adds the ability to override, which is the non-urgent half. Jerry applies it; nothing in
+> CI or the worker runs migrations.
+>
+> **Verified by rendering all eight report emails**, twice each — with an override and without —
+> checking four things per type: the address is present, the account's own one wins when set, the
+> platform address never wears the account's brand, and an override does not print both. The
+> naive-`or` regression was applied deliberately and is caught.
+>
+> **The value was already in the repository.** G3 put `440 Rte. 66, Glendora, CA 91740` on the
+> terms and privacy pages on **2026-08-27**, while this entry sat blocked on "the address itself".
+> Nothing needed doing for G3, and a test now asserts all three surfaces agree — they are edited by
+> different people at different times, and two of them disagreeing is what a title company finds
+> during vendor diligence.
+>
+> **Not built: the settings surface.** Filed as **D-079**. The default alone makes every send
+> compliant, which was the urgent half.
 
 CAN-SPAM (15 U.S.C. §7704(a)(5)) requires the sender's valid physical postal address in every
 commercial email. There is nowhere to put one: no address column on `accounts`, none on
@@ -2962,6 +3004,36 @@ more than the threshold the ticket set.
 
 **Worth doing with D-077**, since both are about what the inventory report says rather than what it
 computes, and both change page copy.
+
+---
+
+### D-079 — no settings surface for an account's own postal address
+
+**Severity:** ROUGH · **Affects:** accounts that want their own address on their white-labelled email
+**Status:** `open` — **the non-urgent half of D-060**
+
+`affiliate_branding.postal_address` exists (`0055`) and the render path uses it, but nothing writes
+it. Every account therefore sends with the platform address, correctly attributed to TrendyReports
+— compliant, and not what a white-label customer wants on their own mail.
+
+**Filed rather than built, per the ticket's own threshold.** It is larger than it sounds:
+
+| | |
+|---|---|
+| `routes/affiliates.py` | ~11 touch points — the request model, two INSERTs, two SELECTs, two response dicts, the UPDATE |
+| `settings/branding/page.tsx` | 846 lines, and it does not currently expose **any** contact field — `contact_line1` appears zero times. So this is not "add an input beside the others"; it means deciding where a contact section lives on that page. |
+
+**Two things to settle when it is taken:**
+
+1. **Regular accounts have nowhere to put one.** The column is on `affiliate_branding`, which
+   white-label accounts have and regular accounts do not. A regular account that wants its own
+   address on its mail needs either a row created for it or a second column on `accounts` — and
+   the second option splits the sender's identity across two tables, which is the reason `0055`
+   chose `affiliate_branding` in the first place.
+2. **A validation question that must not become a guard trap.** An empty save has to mean "use the
+   platform address", not "send nothing" — the render path already handles blank and
+   whitespace-only, and the API must not 422 an emptied field. Same shape as the colour validator
+   in D-059, which nearly shipped that exact regression.
 
 ---
 
