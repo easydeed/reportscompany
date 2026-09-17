@@ -1042,13 +1042,52 @@ def _send_failure_notification(
         logger.warning(f"Failed to send failure notification (non-critical): {notify_err}")
 
 
+# THIS TASK DOES NOT RETRY, AND NOW SAYS SO (D-071).
+#
+# It used to be decorated `autoretry_for=(Exception,)`, `retry_backoff=True`,
+# `retry_backoff_max=600`, `retry_kwargs={"max_retries": 3}` — and it had never
+# retried, not once. The body is a single `try` whose handler RETURNS a dict
+# instead of raising, so nothing ever escaped for `autoretry_for` to catch.
+# Four lines of resilience config describing behaviour the code prevented.
+#
+# Compare `generate_property_report`, which carries the same decorator and ends
+# its handler with a bare `raise` and the comment "Re-raise to trigger Celery
+# retry". Same intent, one letter of difference in outcome. That task does
+# retry. This one is the one that sends email.
+#
+# THE ONE ROUTE THAT DID REACH IT WAS THE WORST POSSIBLE ONE. The failure
+# handler below was itself unguarded: it opens a database connection and runs
+# four UPDATEs. If that raised — and a database it cannot reach is exactly the
+# sort of thing that put it in the handler to begin with — the exception
+# escaped, autoretry fired, and the whole task re-ran from the top: re-render,
+# re-upload, RE-SEND. A retry path that opens only when the error handler
+# itself fails is a guard that arms exactly when everything else has already
+# gone wrong. That is the inverse of the shape this project keeps finding: not
+# "silent when it works", but "active only when nothing else is".
+#
+# The handler is now guarded, so that route is closed regardless. The decorator
+# is removed rather than made to work, because making retries real here is NOT
+# the one-line change it looks like:
+#
+#   - The handler increments `schedules.consecutive_failures` and AUTO-PAUSES
+#     the schedule at 3. It runs on every attempt, so four attempts would be
+#     four increments — one transient failure would pause the schedule.
+#   - It writes terminal status to `report_generations` and `schedule_runs` on
+#     every attempt too, so a run that failed twice and then succeeded would
+#     have been recorded as failed — a false negative in the tables D-061 and
+#     D-062 exist to make trustworthy.
+#
+# Real retries want the handler to distinguish "attempt failed" from "task
+# failed", writing terminal state only on the last attempt. Worth doing — a
+# transient SimplyRETS or PDFShift blip currently costs that day's report
+# outright — but it is a behaviour change with its own review, not a decorator.
+#
+# `bind=True` is kept deliberately: `self` is unused today, but it is what a
+# retry implementation needs, and removing it would change the signature for no
+# benefit.
 @celery.task(
     name="generate_report",
     bind=True,
-    autoretry_for=(Exception,),
-    retry_backoff=True,
-    retry_backoff_max=600,  # Max 10 minutes between retries
-    retry_kwargs={"max_retries": 3},
 )
 def generate_report(self, run_id: str, account_id: str, report_type: str, params: dict):
     started = time.perf_counter()
@@ -1696,62 +1735,123 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
     except Exception as e:
         # PASS S3: Track failures and auto-pause after threshold
         error_msg = str(e)[:2000]  # Truncate to 2KB
-        
-        with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
-            with conn.cursor() as cur:
-                cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
-                
-                # Update report_generations
-                cur.execute("UPDATE report_generations SET status='failed', error=%s WHERE id=%s", (error_msg, run_id))
-                
-                # Update schedule_runs if this was a scheduled report
-                if schedule_id:
-                    try:
-                        cur.execute("""
-                            UPDATE schedule_runs
-                            SET status = 'failed',
-                                error = %s,
-                                finished_at = NOW()
-                            WHERE report_run_id = %s::uuid
-                        """, (error_msg, run_id))
-                    except Exception:
-                        pass  # Non-critical
-                
-                # PASS S3: Increment consecutive failures and check threshold
-                if schedule_id:
-                    cur.execute("""
-                        UPDATE schedules
-                        SET consecutive_failures = consecutive_failures + 1,
-                            last_error = %s,
-                            last_error_at = NOW()
-                        WHERE id = %s::uuid
-                        RETURNING consecutive_failures
-                    """, (error_msg, schedule_id))
-                    
-                    result = cur.fetchone()
-                    if result:
-                        consecutive_failures = result[0]
-                        print(f"⚠️  Schedule {schedule_id} failure count: {consecutive_failures}")
-                        
-                        # Auto-pause after 3 consecutive failures
-                        if consecutive_failures >= 3:
-                            cur.execute("""
-                                UPDATE schedules
-                                SET active = false
-                                WHERE id = %s::uuid
-                            """, (schedule_id,))
-                            print(f"🛑 Auto-paused schedule {schedule_id} after {consecutive_failures} consecutive failures")
 
-        # Send failure notification email to account owner (24h dedup built in)
-        _send_failure_notification(
-            account_id=account_id,
-            schedule_id=schedule_id,
-            report_type=report_type,
-            city=(params or {}).get("city"),
-            error_msg=error_msg,
-        )
+        # GUARDED, because an exception raised in here escapes the task (D-071).
+        # Everything below is bookkeeping about a failure that has already
+        # happened; none of it can undo that failure, and none of it is worth
+        # losing the `return` at the end of this handler for. Before this guard
+        # the connection attempt was the one route that reached the retry
+        # decorator, and it reached it by re-running the send.
+        #
+        # A failure to record the failure is itself worth seeing, so it is
+        # logged with the original error beside it — a bare `except: pass` here
+        # would mean a run that failed twice over, visibly neither time.
+        try:
+            _record_generation_failure(run_id, account_id, schedule_id, error_msg)
+        except Exception as bookkeeping_error:
+            logger.error(
+                "REPORT RUN %s: failed to RECORD the failure — the run may be "
+                "left mid-flight for the stale sweep to catch. Original error: "
+                "%s. Bookkeeping error: %s",
+                run_id, error_msg, bookkeeping_error, exc_info=True,
+            )
+
+        # Guarded here as well, in its own block so a bookkeeping failure does
+        # not also cost the owner their notification.
+        #
+        # This function does guard itself internally — but its first three
+        # statements sit OUTSIDE that guard, and a test written to exempt it
+        # caught that rather than taking the exemption on trust. Depending on
+        # another function's internal shape for this handler's safety is the
+        # implicit coupling this project keeps getting caught by. Three lines
+        # here removes the dependency instead of documenting it.
+        try:
+            _send_failure_notification(
+                account_id=account_id,
+                schedule_id=schedule_id,
+                report_type=report_type,
+                city=(params or {}).get("city"),
+                error_msg=error_msg,
+            )
+        except Exception as notify_error:
+            logger.error(
+                "REPORT RUN %s: failure notification raised. Original error: "
+                "%s. Notification error: %s",
+                run_id, error_msg, notify_error, exc_info=True,
+            )
 
         return {"ok": False, "error": error_msg}
+
+
+def _record_generation_failure(run_id, account_id, schedule_id, error_msg):
+    """
+    Write the terminal failure state for a run, and count it against the
+    schedule's auto-pause threshold.
+
+    Lifted out of `generate_report`'s handler unchanged, so that the handler
+    can guard it. See D-071: inline, this code's own failure escaped the task
+    and triggered a retry that re-sent the report.
+
+    NOTE for whoever makes retries real: this runs on every attempt. Called
+    from a retrying task it would increment `consecutive_failures` once per
+    attempt — auto-pausing a schedule after a single transient failure — and
+    would mark `schedule_runs` failed for a run that later succeeded. It needs
+    to become last-attempt-only before `autoretry_for` goes back on.
+    """
+    with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
+        with conn.cursor() as cur:
+            # Parameterised rather than interpolated into SQL text — the
+            # same construct hardened in the ticker in #64, found by
+            # grepping for it rather than for its symptom (§0.6 rule 4).
+            # Note this connection is autocommit, so `is_local => true`
+            # would scope the setting to a transaction that does not exist;
+            # false is correct here, and the connection closes with the
+            # `with` block.
+            cur.execute(
+                "SELECT set_config('app.current_account_id', %s, false)",
+                (str(account_id),),
+            )
+
+            # Update report_generations
+            cur.execute("UPDATE report_generations SET status='failed', error=%s WHERE id=%s", (error_msg, run_id))
+            
+            # Update schedule_runs if this was a scheduled report
+            if schedule_id:
+                try:
+                    cur.execute("""
+                        UPDATE schedule_runs
+                        SET status = 'failed',
+                            error = %s,
+                            finished_at = NOW()
+                        WHERE report_run_id = %s::uuid
+                    """, (error_msg, run_id))
+                except Exception:
+                    pass  # Non-critical
+            
+            # PASS S3: Increment consecutive failures and check threshold
+            if schedule_id:
+                cur.execute("""
+                    UPDATE schedules
+                    SET consecutive_failures = consecutive_failures + 1,
+                        last_error = %s,
+                        last_error_at = NOW()
+                    WHERE id = %s::uuid
+                    RETURNING consecutive_failures
+                """, (error_msg, schedule_id))
+                
+                result = cur.fetchone()
+                if result:
+                    consecutive_failures = result[0]
+                    print(f"⚠️  Schedule {schedule_id} failure count: {consecutive_failures}")
+                    
+                    # Auto-pause after 3 consecutive failures
+                    if consecutive_failures >= 3:
+                        cur.execute("""
+                            UPDATE schedules
+                            SET active = false
+                            WHERE id = %s::uuid
+                        """, (schedule_id,))
+                        print(f"🛑 Auto-paused schedule {schedule_id} after {consecutive_failures} consecutive failures")
 
 
 @celery.task(name="process_consumer_report", bind=True, max_retries=3)
