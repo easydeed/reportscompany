@@ -102,6 +102,36 @@ def test_a_task_killed_at_the_time_limit_is_still_acknowledged():
     )
 
 
+def test_the_visibility_timeout_clears_the_hard_time_limit():
+    """
+    THE ONE NUMBER THAT MUST NOT BE LOWERED CARELESSLY (D-070).
+
+    The broker's visibility timeout is a lease as well as a recovery delay.
+    Below `task_time_limit` it stops being a recovery mechanism and becomes a
+    duplicate-execution mechanism: Redis hands the message to a second worker
+    while the first is still running it.
+
+    Asserted as a RELATIONSHIP between two values that live in different
+    dictionaries, because that is what nothing else enforces — each looks
+    reasonable alone. The margin is deliberately generous (3x) to match
+    STALE_STARTED_MINUTES, which takes the same margin against the same limit.
+    """
+    if not _acks_late_enabled():
+        return
+    vis = re.search(r'"visibility_timeout":\s*(\d+)', APP)
+    assert vis, (
+        "broker_transport_options no longer sets visibility_timeout, so kombu's "
+        "3600s default applies and a stranded report can wait an hour or more "
+        "before any worker can see it again — D-070"
+    )
+    limit = int(re.search(r'"task_time_limit":\s*(\d+)', APP).group(1))
+    assert int(vis.group(1)) > limit, (
+        f"visibility_timeout {vis.group(1)}s does not clear task_time_limit "
+        f"({limit}s): a running task's message would be handed to a second "
+        f"worker while the first is still executing it"
+    )
+
+
 def test_the_time_limit_still_exists_to_bound_a_redelivered_task():
     """
     With late acks, an unbounded task is an unbounded lease. Removing the hard
