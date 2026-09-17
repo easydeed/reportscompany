@@ -897,13 +897,64 @@ def _send_failure_notification(
     """
     Send a branded email to the account owner when a scheduled report fails.
     Deduplicates: skips if the same schedule already got a notification in the last 24h.
+
+    D-033. Returning early when the key is missing is the right SHAPE — unlike
+    D-031 it never claimed to have sent anything. What was wrong is that the
+    skip left nothing behind but a `logger.warning`, and this is the only
+    mechanism that tells an account owner a scheduled report failed. A schedule
+    can then break every week and the customer's first signal is a recipient
+    asking where the report went.
+
+    Worse in combination: the same missing key that disables this alert is what
+    D-031 needed the alert for. Fix the reporting and the cause together or the
+    fix is unverifiable — you cannot tell from production whether it worked,
+    because the thing that would tell you is the thing that is off.
+
+    So the suppression is now RECORDED, in the same table the notification
+    would have been logged in. D-064's lesson: a log line is not a record.
+    "Was the owner told?" has to be answerable from `email_log` beside the rows
+    it explains, not from worker logs that have rotated.
     """
     if not schedule_id:
         return
 
     resend_key = os.environ.get("RESEND_API_KEY", "")
     if not resend_key:
-        logger.warning("RESEND_API_KEY not set — skipping failure notification")
+        logger.error(
+            "FAILURE NOTIFICATION SUPPRESSED for schedule %s: RESEND_API_KEY is "
+            "not configured on the worker. The account owner has NOT been told "
+            "their scheduled report failed. Original error: %s",
+            schedule_id, error_msg,
+        )
+        # Recorded on its own connection so it survives whatever the caller
+        # does next — same reasoning as D-065, which is why `email_log` is
+        # trustworthy enough to be worth writing to at all.
+        try:
+            with _open_log_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT set_config('app.current_account_id', %s, false)",
+                        (str(account_id),),
+                    )
+                    cur.execute("""
+                        INSERT INTO email_log (
+                            account_id, schedule_id, provider, to_emails,
+                            subject, response_code, status, error
+                        ) VALUES (
+                            %s::uuid, %s::uuid, 'resend', %s,
+                            %s, NULL, 'suppressed', %s
+                        )
+                    """, (
+                        account_id, schedule_id, [],
+                        f"[not sent] {report_type} report failed",
+                        "RESEND_API_KEY not configured — failure notification "
+                        f"suppressed. Underlying failure: {str(error_msg)[:400]}",
+                    ))
+        except Exception as record_error:
+            logger.error(
+                "Could not even record the suppressed failure notification for "
+                "schedule %s: %s", schedule_id, record_error, exc_info=True,
+            )
         return
 
     try:
@@ -1915,6 +1966,72 @@ def _record_generation_failure(run_id, account_id, schedule_id, error_msg):
                         print(f"🛑 Auto-paused schedule {schedule_id} after {consecutive_failures} consecutive failures")
 
 
+def _consumer_already_delivered(cur, report_id: str):
+    """
+    Has this consumer report already gone out? Returns a reason, or None.
+
+    D-069. `task_acks_late` is worker-wide, so a worker that dies mid-task
+    hands this one back too — and it sets `status='processing'` at the top with
+    no already-sent check, so a redelivery repeats the whole thing: a second
+    text to the consumer, a second SMS credit spent, and a second "you have a
+    new lead" to the agent.
+
+    Same shape as `_already_delivered` for scheduled reports (#61), and the
+    same reasoning about what it must NOT block on: `failed` never blocks,
+    because a retry is exactly what that state is for.
+
+    Reads the timestamps rather than only the status, because they are the
+    columns that record an irreversible act. A row whose status was later
+    changed but which carries `consumer_sms_sent_at` has still had a text sent.
+    """
+    cur.execute("""
+        SELECT status, consumer_sms_sent_at, consumer_email_sent_at
+        FROM consumer_reports
+        WHERE id = %s::uuid
+    """, (report_id,))
+    row = cur.fetchone()
+    if not row:
+        return None
+    status, sms_at, email_at = row
+    if sms_at:
+        return f"an SMS was already sent at {sms_at.isoformat()}"
+    if email_at:
+        return f"an email was already sent at {email_at.isoformat()}"
+    if status == 'sent':
+        return "the report is already marked sent"
+    return None
+
+
+def _record_consumer_delivery_failure(cur, report_id: str, reason: str):
+    """
+    Record that delivery did NOT happen, and why.
+
+    D-031/D-032. Four separate branches used to write `status='sent'` for an
+    email that was never attempted, an email the provider rejected, and a
+    report with no usable delivery method at all. `sent` is not a hopeful
+    default; it is a claim, and `consumer_sms_sent_at` / `consumer_email_sent_at`
+    are the evidence for it.
+
+    Uses the EXISTING `failed` status rather than inventing a value. That is
+    #56's answer applied: `email_log` gained `sending` because it needed to
+    express a state that did not exist — an attempt in flight. Here the state
+    does exist and is already used on the adjacent path (`Delivery failed`),
+    so a new value would only be a status no UI has ever seen, which is the
+    note #56 and #61 both had to write about themselves.
+
+    The reason is stored, not just logged. D-064's lesson: a log line is not a
+    record — retention is short and logs cannot be queried beside the rows they
+    explain. "Why did this lead never get their report?" has to be answerable
+    from the table.
+    """
+    cur.execute("""
+        UPDATE consumer_reports
+        SET status = 'failed', error = %s
+        WHERE id = %s::uuid
+    """, (reason[:500], report_id))
+    logger.error("CONSUMER REPORT %s: not delivered — %s", report_id, reason)
+
+
 @celery.task(name="process_consumer_report", bind=True, max_retries=3)
 def process_consumer_report(self, report_id: str):
     """
@@ -2319,6 +2436,27 @@ def process_consumer_report(self, report_id: str):
                 # =============================================
                 # DELIVER REPORT (SMS or Email)
                 # =============================================
+                #
+                # D-069: refuse a redelivery before any provider is called.
+                # Everything below this line is irreversible — a text to a
+                # member of the public, a credit spent, an agent told they have
+                # a lead. `acks_late` means a worker that dies mid-task hands
+                # this one back, and the task sets `status='processing'` at the
+                # top with nothing to stop it running the whole thing again.
+                #
+                # Returns ok=True. From the caller's point of view the report
+                # HAS been delivered, and reporting failure for something
+                # sitting in someone's inbox is the false negative the rest of
+                # this branch exists to remove.
+                already = _consumer_already_delivered(cur, report_id)
+                if already:
+                    logger.error(
+                        "CONSUMER REPORT %s: refusing redelivery — %s",
+                        report_id, already,
+                    )
+                    return {"ok": True, "report_id": report_id,
+                            "note": f"redelivery refused: {already}"}
+
                 delivered = False
 
                 if delivery_method == "sms" and consumer_phone:
@@ -2370,13 +2508,17 @@ def process_consumer_report(self, report_id: str):
                     logger.info(f"Email delivery via Resend to {consumer_email} (report URL: {report_url})")
                     resend_key = os.environ.get("RESEND_API_KEY", "")
                     if not resend_key:
-                        logger.warning("RESEND_API_KEY not set — marking as sent without email")
-                        cur.execute("""
-                            UPDATE consumer_reports
-                            SET status = 'sent', consumer_email_sent_at = NOW()
-                            WHERE id = %s::uuid
-                        """, (report_id,))
-                        delivered = True
+                        # D-031. This wrote status='sent' AND a
+                        # consumer_email_sent_at timestamp for an email it had
+                        # just decided not to attempt — and then fell through
+                        # to SMS the agent that they had a new lead. The agent
+                        # chased someone who had received nothing, and no row
+                        # anywhere contradicted the claim.
+                        _record_consumer_delivery_failure(
+                            cur, report_id,
+                            "RESEND_API_KEY is not configured on the worker, so no "
+                            "email was attempted",
+                        )
                     else:
                         lead_name = (property_data.get("owner_name") or "").split()[0] if property_data.get("owner_name") else ""
                         greeting = f"Hi {lead_name}," if lead_name else "Hi,"
@@ -2486,20 +2628,33 @@ def process_consumer_report(self, report_id: str):
                             delivered = True
                             logger.info(f"CMA report email sent to {consumer_email}")
                         else:
-                            logger.warning(f"CMA email delivery failed for {consumer_email}, status={getattr(resp, 'status_code', 'N/A')}")
-                            cur.execute("""
-                                UPDATE consumer_reports
-                                SET status = 'sent', consumer_email_sent_at = NOW()
-                                WHERE id = %s::uuid
-                            """, (report_id,))
-                            delivered = True
+                            # NOT IN THE ORIGINAL SURVEY, and the most direct
+                            # instance of the shape in this file: the code logs
+                            # "delivery failed" and the very next statement
+                            # records success. Resend rejected the message, or
+                            # the call raised — and the row said sent, with a
+                            # timestamp, and the agent got their lead
+                            # notification. Found while fixing D-031 two
+                            # branches up; §0.6 rule 4, re-run the survey after
+                            # the fix.
+                            _record_consumer_delivery_failure(
+                                cur, report_id,
+                                f"the email provider did not accept the message "
+                                f"(status {getattr(resp, 'status_code', 'no response')})",
+                            )
 
                 else:
-                    logger.warning(f"No valid delivery method for report {report_id}: method={delivery_method}")
-                    cur.execute("""
-                        UPDATE consumer_reports SET status = 'sent' WHERE id = %s::uuid
-                    """, (report_id,))
-                    delivered = True
+                    # D-032. Same claim, third trigger: no phone for SMS, no
+                    # address for email, or a delivery_method this dispatch
+                    # does not recognise. Nothing was sent and nothing could
+                    # have been. The reason names the method, because "failed"
+                    # without it sends whoever investigates back to the logs.
+                    _record_consumer_delivery_failure(
+                        cur, report_id,
+                        f"no usable delivery method: delivery_method={delivery_method!r}, "
+                        f"phone={'present' if consumer_phone else 'missing'}, "
+                        f"email={'present' if consumer_email else 'missing'}",
+                    )
 
                 if delivered:
                     # Notify agent via SMS (free — no credit decrement)
@@ -2529,19 +2684,36 @@ def process_consumer_report(self, report_id: str):
                     logger.info(f"Consumer report processed successfully: {report_id}")
                     return {"ok": True, "report_id": report_id}
                 else:
+                    # The branches above have already written status='failed'
+                    # with the SPECIFIC reason. This used to overwrite all of
+                    # them with the string 'Delivery failed', which is the one
+                    # fact everybody already had — so the reason survives now
+                    # and only a branch that somehow reached here without
+                    # recording anything gets the generic text.
                     cur.execute("""
-                        UPDATE consumer_reports 
+                        UPDATE consumer_reports
                         SET status = 'failed',
-                            error = %s
+                            error = COALESCE(NULLIF(error, ''), %s)
                         WHERE id = %s::uuid
                     """, ('Delivery failed', report_id))
-                    
+
                     logger.error(f"Failed to deliver report {report_id}")
-                    
+
                     if self.request.retries < self.max_retries:
                         raise self.retry(countdown=60 * (self.request.retries + 1))
-                    
-                    return {"ok": False, "error": sms_result.get('error')}
+
+                    # `sms_result` is bound only inside the SMS branch. On the
+                    # email and no-method paths this raised NameError, which
+                    # the outer handler caught and rewrote as a generic failure
+                    # — hiding the real reason behind a second, unrelated bug.
+                    # Read the reason back from the row instead, which is now
+                    # where it lives.
+                    cur.execute(
+                        "SELECT error FROM consumer_reports WHERE id = %s::uuid",
+                        (report_id,),
+                    )
+                    row = cur.fetchone()
+                    return {"ok": False, "error": (row[0] if row else None) or "Delivery failed"}
                     
     except Exception as e:
         logger.exception(f"Error processing consumer report {report_id}: {e}")
