@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-21, against `test/ticker-skip-advances`, cut from `main` at `15e6cdc`.
+**Last reconciled:** 2026-09-21, against `investigate/schedule-cadence-validity`, cut from `main` at `9da5f43`.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -50,7 +50,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 **How to re-derive:** parse `^### (D-\d{3}) —` for entries and the following `**Status:**` / `**Severity:**` lines. A count computed any other way — including by adding up what changed on each branch — is a hypothesis. The previous version of this table was produced that way and was wrong by three: it dropped D-035, D-036 and D-037 entirely.
 
-Plus 4 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 2 UNVERIFIED. Those are open questions, not defects, and are counted separately.
+Plus 5 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 2 UNVERIFIED. Those are open questions, not defects, and are counted separately.
 
 D-001 through D-024 are grouped by severity below. D-025 through D-034 are grouped in the **P2B — Configuration trace** section, D-035 through D-037 in the **Production evidence reconciliation** section, and D-041 through D-054 in the **Phase M — Marketing / UX** section, because each is only readable alongside the trace that produced it.
 
@@ -3395,6 +3395,34 @@ behavioural gain, and a DDL file in a diff invites the assumption that the fix n
 
 
 ## BLOCKED-NEEDS-DEPLOYED-ACCESS (Phase 2B)
+
+- **Can any existing schedule make `compute_next_run` raise?** Deliberately NOT filed as a
+  defect, because nothing establishes it is reachable. If it is, the consequence is a
+  permanent loop: the ticker's skip paths — the D-019 verification skip and the usage-limit
+  skip — call `compute_next_run` before advancing `next_run_at`, and a raise sends the
+  per-schedule handler into `conn.rollback()`, discarding the advance. The schedule is due
+  again 60 seconds later, forever, logging a traceback and never sending. The auto-pause that
+  would normally catch a repeatedly-failing schedule cannot help: it lives in the Celery task's
+  failure handler (`tasks.py:1985`), and this failure happens in the ticker, before any task
+  exists, so `consecutive_failures` is never incremented.
+  **Why it is a query and not a code read.** The tempting answer is "the API validates cadence
+  on create". That covers rows written after the validator existed; `schedules` dates to
+  migration 0006 and `timezone` to 0015 (November 2025), and much of this codebase's validation
+  is weeks old. The `CHECK (cadence IN ('weekly','monthly'))` has the same hole — `ADD
+  CONSTRAINT ... NOT VALID` enforces new rows and skips old ones, and leaves no trace in the
+  table definition — which is why the query reads `pg_constraint.convalidated` rather than
+  trusting the schema. See §0.6, *a validator on the write path proves what gets written from
+  now on, not what is already there*.
+  **The query:** `scripts/check_schedule_cadence_validity.sql` (read only, four SELECTs). Nine
+  raising cases, each measured against the function rather than reasoned about, and the
+  predicate cross-checked against `compute_next_run` row by row on a scratch Postgres — 19
+  cases, 0 disagreements, both directions. `apps/worker/tests/test_cadence_hazard_query.py`
+  reads the CASE expression out of the `.sql` file so the query and the code cannot drift; both
+  regressions (weakening the predicate, editing only the second copy) were applied and seen to
+  fail.
+  **Zero rows in sections 1 and 2** → close as unreachable, with the query as the evidence.
+  **Any rows** → file it, and the fix is both sides: a guard in the ticker that marks the
+  schedule failed rather than spinning, and cleanup of the rows.
 
 - **Is production's DB role a superuser?** D-005/D-006's real-world severity depends on it. If production also connects as owner/superuser, D-005 is live exactly as reproduced. If production uses a restricted role, D-005 is contained but D-006 means the portal is showing zeros.
 - **Production env values** (T2.9/T2.10). Partially answered by the P2B trace above for the API service; the worker and Vercel sets are still outstanding — see "What I still need" above for exactly which variables settle which defect.
