@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-21, against `chore/query-version-caveat`, cut from `main` at `968aecc`.
+**Last reconciled:** 2026-09-21, against `fix/d037-bridge-durability`, cut from `main` at `afd0f89`.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -36,14 +36,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 33 | Real, unfixed |
-| `fixed` | 46 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 32 | Real, unfixed |
+| `fixed` | 47 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **83** | D-001 … D-083, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 2 · WRONG 10 · FRAGILE 10 · ROUGH 11. (Sums to 33, the open total.)
+**Open by severity:** BROKEN 2 · WRONG 9 · FRAGILE 10 · ROUGH 11. (Sums to 32, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -1003,7 +1003,7 @@ So the cost of the two transient package-download 502s today was: nothing, if no
 
 ### D-037 — The bridge pops a job off the queue and then drops it permanently on any unexpected error
 **Severity:** WRONG · **Affects:** REGULAR, SPONSORED, INDUSTRY_AFFILIATE, COMPANY_REP (manual reports)
-**Status:** `open`
+**Status:** `fixed` — `fix/d037-bridge-durability`
 
 `tasks.py:2116` pops with `blpop` — destructive — then parses and dispatches. The catch-all at `:2154-2157` logs and continues:
 
@@ -1017,6 +1017,58 @@ except Exception as e:
 The item is already gone from the list. It is not re-queued, not written anywhere, not retried. Any exception between the pop and the `.delay()` — a malformed payload, a missing key, a broker publish failure — **destroys that job permanently**. The `report_generations` row stays `pending` forever and the only trace is one line of stdout.
 
 This is the same user-visible symptom as D-036 (a report stuck at pending) with the opposite recovery property: an outage self-heals when the bridge returns, this does not. Distinguishing them in production means reading bridge logs; there is no state anywhere that separates "queued and waiting" from "silently destroyed".
+
+> **FIXED as a reliable queue, not as a bigger `try`.**
+>
+> `blpop` removes the item. Wrapping the window in a handler cannot help, because the
+> handler's problem is not that it lacks a `try` — it is that by the time it runs, the only
+> copy of the job is a local variable, and a `SIGKILL` does not run handlers at all. The take
+> itself had to stop being destructive:
+>
+> ```python
+> payload = r.blmove(QUEUE_KEY, PROCESSING_KEY, 5, "LEFT", "RIGHT")
+> ```
+>
+> One atomic step, same blocking wait, and `LEFT`/`RIGHT` preserves FIFO against the
+> producer's `rpush` (`api/worker_client.py:15`). The item now survives anything that happens
+> next, including the process dying mid-window; `_recover_processing` returns stranded items
+> to the head of the queue at startup and after every reconnect, in their original order.
+>
+> **Three outcomes, because the failure modes are not alike.** A malformed payload is not
+> retryable — re-queueing it is a poison-message loop, since it will fail to parse just as
+> reliably next time — so it is dead-lettered. A dispatch failure usually *is* transient, so it
+> is re-queued with an attempt counter carried in the payload, up to
+> `BRIDGE_MAX_DISPATCH_ATTEMPTS` (3); an unbounded retry is the same hot loop in slower motion.
+> After that the job is given up on **loudly**: `report_generations` is marked `failed` with
+> the reason, and the payload goes to the dead-letter list.
+>
+> **Marking the row is the part that makes this visible.** Nothing sweeps `report_generations`
+> — the stale sweep in `schedules_tick.py` covers `schedule_runs`, which a manual report does
+> not have — so a destroyed job's row sat at `pending` forever and `/admin/health:2984`
+> counted it as `idle_with_pending`, a number that goes up and never comes down. The
+> dead-letter list is the payload archive; the row is the signal.
+>
+> **The catch-all at the bottom of the loop is still a catch-all**, and that is deliberate. It
+> was never the bug. The bug was that it ran after the only copy of the job had already been
+> destroyed. It can keep logging and carrying on now that doing so costs nobody a report.
+>
+> Tests: `apps/worker/tests/test_bridge_durability.py`, 12 cases, **against a real Redis**
+> (7.0.15) — the fix is a claim about Redis semantics, and a fake implementing `blmove` would
+> implement my belief about it and agree with the code for exactly the reasons the code might
+> be wrong. Three regressions applied and seen to fail: reverting to `blpop`, replacing the
+> dead-letter with a silent drop, and removing the startup recovery.
+>
+> **The first attempt at the end-to-end test did not catch `blpop`** — reverting the take left
+> all 11 tests green, because the unit tests did their own atomic take in a helper and the
+> drain test only observed the loop after it had finished, when a destructive take and a safe
+> one look identical. Fifth instance of §0.6's "a test you have not seen fail". The test that
+> does catch it parks the loop *inside* the window by blocking `delay`, and asserts the job is
+> findable in Redis while it is held.
+>
+> **This does not touch D-036.** Whether the bridge runs in production at all is still open,
+> and a durable queue in a process nobody starts is durable in the same way an unread log is
+> informative. `BLMOVE` needs Redis 6.2+, so the bridge now prints the server version at
+> startup rather than assuming it.
 
 ### Still open after this reconciliation
 

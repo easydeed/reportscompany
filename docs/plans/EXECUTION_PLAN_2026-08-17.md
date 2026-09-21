@@ -228,6 +228,18 @@ it.**
   fix — requiring a commit *between* the two calls — was obvious the moment the regression
   was applied and invisible before. **A test you have not seen fail is a test you have not
   seen.**
+  **Fifth instance, and the one that names the general shape: a test can be end-to-end and
+  still not observe the thing it claims to.** D-037's bridge test ran the real consumer loop,
+  against a real Redis, and drained a real queue — and reverting the fix's atomic `blmove`
+  back to the destructive `blpop` left all eleven tests GREEN. Two reasons, both worth
+  recognising elsewhere: the unit tests performed the atomic take themselves in a helper, so
+  they were exercising Redis rather than the bridge; and the end-to-end test only observed the
+  loop *after* it finished, where a destructive take and a safe one produce identical state.
+  **The defect lives in a window, so the test has to be inside the window** — the fix was to
+  block `delay` and assert the job is findable in Redis while the loop is holding it.
+  Generally: when what you are testing is what happens during a failure, arrange to be
+  observing during it, not after.
+
   **Fourth instance, same shape, in D-019's ticker gate.** `test_the_skip_advances_next_run_at`
   asserted that an `UPDATE` to `schedules` had happened. Deleting the `compute_next_run` call
   and the `next_run_at = %s` assignment leaves the lock-clearing
