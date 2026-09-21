@@ -217,6 +217,17 @@ it.**
   was applied and invisible before. **A test you have not seen fail is a test you have not
   seen.**
 
+- **`str()` of a query object gives you a repr, not the query.** A test double for a database
+  cursor matched statements with `str(query).startswith("SET LOCAL")`. `psycopg`'s `sql.Composed`
+  stringifies to `Composed([SQL('SET LOCAL app.current_account_id TO '), Literal('…')])`, so the
+  prefix never matched, RLS scoping fell through to the "unexpected statement" branch, and **ten
+  tests failed in a way that read as the feature not working.** Twenty minutes went into the code
+  under test, which was fine. The general form is wider than psycopg: any double that pattern-
+  matches on a stringified input is asserting against a `__repr__` it did not write and may not
+  own. **Print what your double actually received before believing what it tells you about the
+  code** — and when a whole suite fails at once, suspect the harness before the change, because a
+  real regression rarely breaks everything and a broken fixture always does.
+
 ---
 
 ## Phase 0 — Security & Tooling

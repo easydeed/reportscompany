@@ -375,6 +375,105 @@ def dispatch_report(
     return task.id
 
 
+# ── D-019, at the point where the send actually happens ─────────────────────
+#
+# The API gate (api/verification.py) stops an unverified account SETTING UP a
+# send. It cannot stop one that is already set up: a schedule created before
+# this shipped, or by an account that was verified and then had the flag
+# cleared, is a row in `schedules` that the ticker will pick up sixty seconds
+# later and mail to whoever it names. Enforcement that lives only in the API is
+# enforcement of the request, not of the rule.
+#
+# So the check is repeated here, against the same column, in the same shape as
+# the usage-limit pre-check immediately below it — skip, record, advance
+# `next_run_at`, move on. Not DRY, and it cannot be: the API and the worker are
+# separately deployed services that do not import each other, which is why
+# `check_usage_limit` already exists in this package alongside
+# `get_full_plan_usage` in the other one. The duplication is the deployment
+# boundary, not carelessness. If the rule changes, both change — the two places
+# name each other so that is findable.
+
+
+# `email_log.status` for a scheduled send refused because the account is
+# unverified. Must stay the same string as `BLOCKED_STATUS` in
+# apps/api/src/api/verification.py — one vocabulary, two services. Named here
+# rather than inlined in the SQL so both the value and the fact that it is
+# shared are visible at the top of the change.
+BLOCKED_STATUS = "blocked_unverified"
+
+
+def account_can_send(cur, account_id: str) -> bool:
+    """
+    Does this account have any active user with a confirmed email address?
+
+    Must stay identical in meaning to `sender_verification` in
+    apps/api/src/api/verification.py — see the note above for why there are two.
+    Raises on a database error rather than guessing; the caller's handler
+    already treats an exception as "do not send this tick".
+    """
+    cur.execute(
+        """
+        SELECT COALESCE(bool_or(COALESCE(email_verified, FALSE)), FALSE)
+        FROM users
+        WHERE account_id = %s::uuid
+          AND COALESCE(is_active, TRUE) = TRUE
+        """,
+        (account_id,),
+    )
+    row = cur.fetchone()
+    return bool(row and row[0])
+
+
+def record_unverified_skip(cur, account_id: str, schedule_id: str, recipients) -> None:
+    """
+    Leave the refusal in `email_log`, same as the API gate does.
+
+    A skipped tick is otherwise indistinguishable from a tick that never came
+    due: `next_run_at` advances either way and `schedule_runs` gets no row,
+    because no run was created. Without this the owner's evidence that their
+    schedule is not sending is a gap in a table — which is D-064's shape, and
+    the reason #61's `duplicate_suppressed` exists.
+
+    Non-fatal on its own failure. The skip stands regardless.
+    """
+    try:
+        cur.execute(
+            """
+            SELECT set_config('app.current_account_id', %s, true)
+            """,
+            (str(account_id),),
+        )
+        cur.execute(
+            """
+            INSERT INTO email_log
+                (account_id, schedule_id, report_id, provider,
+                 to_emails, subject, response_code, error, status)
+            VALUES
+                (%s::uuid, %s::uuid, NULL, NULL,
+                 %s, %s, NULL, %s, %s)
+            """,
+            (
+                account_id,
+                schedule_id,
+                # The stored recipients are JSON-encoded typed references, not
+                # addresses — resolving them would mean loading contacts for a
+                # send that is not happening. Recorded as the strings they are,
+                # which is what `schedules.recipients` holds.
+                [str(r) for r in (recipients or [])] or None,
+                "[refused] scheduled send",
+                "no user on this account has confirmed their email address "
+                "(users.email_verified is false for all of them)",
+                BLOCKED_STATUS,
+            ),
+        )
+    except Exception as e:
+        logger.error(
+            "Could not record the unverified skip for schedule %s: %s — "
+            "the send was still skipped",
+            schedule_id, e, exc_info=True,
+        )
+
+
 def process_due_schedules():
     """
     Find all due schedules and enqueue them.
@@ -444,6 +543,32 @@ def process_due_schedules():
                     filters = row[15]  # NEW: Smart Preset filters (JSONB → dict or None)
                     
                     try:
+                        # Pre-check: D-019. An unverified account does not send,
+                        # including from a schedule that already exists. First,
+                        # because it is the more fundamental refusal and the
+                        # cheapest — one aggregate against `users`.
+                        if not account_can_send(cur, account_id):
+                            logger.warning(
+                                "Skipping schedule %s — account %s has no user "
+                                "with a confirmed email address; recorded in "
+                                "email_log as blocked_unverified",
+                                schedule_id, account_id,
+                            )
+                            record_unverified_skip(
+                                cur, account_id, schedule_id, recipients
+                            )
+                            next_run_at = compute_next_run(
+                                cadence, weekly_dow, monthly_dom,
+                                send_hour, send_minute, timezone
+                            )
+                            cur.execute("""
+                                UPDATE schedules
+                                SET next_run_at = %s, processing_locked_at = NULL
+                                WHERE id = %s::uuid
+                            """, (next_run_at, schedule_id))
+                            conn.commit()
+                            continue
+
                         # Pre-check: skip if account is at market report limit (DB-backed, per-plan)
                         limit_result = check_usage_limit(account_id, product="market_reports")
                         if not limit_result["can_proceed"]:
