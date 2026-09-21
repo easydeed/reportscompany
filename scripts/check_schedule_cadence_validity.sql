@@ -60,6 +60,20 @@
 --   timezone NULL or unknown   falls back to UTC with a logged warning, so the
 --                              report lands at the wrong local hour
 --
+-- WHICH POSTGRES THIS WAS VALIDATED ON
+-- -------------------------------------
+-- **Postgres 16.13, on a scratch database. Production is documented as
+-- PostgreSQL 15 (Render).** `docs/architecture/SOURCE_OF_TRUTH.md:168` and
+-- `docs/architecture/INDEX.md:172` both say 15; neither is a live reading, and
+-- this project has already found documentation that was wrong about
+-- production.
+--
+-- Nothing here is expected to care. `pg_constraint.convalidated`, `FILTER
+-- (WHERE ...)`, `CASE`, and `WITH` all exist in 15 and behave identically. But
+-- "tested" should not be read as "tested on production's version", so section 0
+-- prints the server version it is actually running on — a measured line in
+-- Jerry's own output beats a claim in this header, and beats the docs.
+
 -- HOW TO READ THE RESULT
 -- ----------------------
 --   Sections 1 and 2 empty  → the loop is unreachable. Close it with this
@@ -72,7 +86,12 @@
 --                             cadence' arm of section 1 is load-bearing rather
 --                             than belt-and-braces.
 
-\echo '=== 0. Is the cadence CHECK actually there, and is it VALID? ==='
+\echo '=== 0. Which server is this, and is the cadence CHECK there AND valid? ==='
+-- The version is printed rather than assumed: this query was validated on 16
+-- and production is documented as 15. If that line comes back as something
+-- neither of us expected, that is worth more than the rest of this file.
+SELECT version() AS server_version;
+
 -- convalidated = false means the constraint was added NOT VALID: it enforces
 -- new rows and was never checked against the existing ones. That is precisely
 -- the gap this whole query is about.

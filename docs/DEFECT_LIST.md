@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-21, against `investigate/schedule-cadence-validity`, cut from `main` at `9da5f43`.
+**Last reconciled:** 2026-09-21, against `chore/query-version-caveat`, cut from `main` at `968aecc`.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -283,7 +283,12 @@ Minor, same endpoint: the docstring for `register` (`apps/api/src/api/routes/aut
 > **No migration and no grandfathering**, because production is test data (see the board note).
 > `email_log.status` is `TEXT` with no `CHECK`, so the new value needs no DDL. The one thing
 > that does need checking on real data is whether any existing account would be locked out of
-> sending on merge — the query is in the PR, and it is Jerry's to run.
+> sending on merge — `scripts/check_unverified_senders.sql`, read only, Jerry's to run. That
+> query is itself checked against `sender_verification()` rather than trusted
+> (`apps/api/tests/test_sender_query_matches_code.py`, 6 accounts, 0 disagreements, both
+> directions), because a diagnostic query that has drifted from its code does not fail — it
+> returns the answer everybody is hoping for. Validated on Postgres 16; production is
+> documented as 15, so the query prints the server version it actually ran on.
 >
 > The `register` docstring is left as it was: it is a doc defect on an endpoint this ticket
 > does not touch, and folding it in would put an unrelated edit in this diff.

@@ -238,6 +238,16 @@ it.**
   separate test, its **consequence**: the schedule is no longer in the due set on the next
   tick. "A write happened" and "the write works" are different claims and only the second one
   answers the question anybody actually has.
+  **The same failure, one layer out: a diagnostic query that drifts does not fail — it
+  reassures.** `check_schedule_cadence_validity.sql` asks whether any stored schedule can make
+  `compute_next_run` raise. Let its predicate fall behind the function and it returns zero
+  rows, which is indistinguishable from the answer everyone is hoping for, so nobody questions
+  it. A test is at least expected to be able to fail; a query is read as a report. Anything
+  that encodes a claim about code somewhere the code cannot see it — a diagnostic query, a
+  runbook, a dashboard threshold, an alert rule — needs to be executed against the code it
+  describes, in both directions. Ours reads its `CASE` expression out of the `.sql` file and
+  runs it against the function case by case, including the healthy cases: a predicate that
+  flags everything never misses a hazard and tells you nothing.
 
 - **`str()` of a query object gives you a repr, not the query.** A test double for a database
   cursor matched statements with `str(query).startswith("SET LOCAL")`. `psycopg`'s `sql.Composed`
