@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-21, against `chore/bridge-broker-identity`, cut from `main` at `3748779`.
+**Last reconciled:** 2026-09-21, against `chore/inventory-0055-correction`, cut from `main` at `3ce5f2c`.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -52,7 +52,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 Plus 5 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 2 UNVERIFIED. Those are open questions, not defects, and are counted separately.
 
-**Which of this remediation's scripts have actually been run:** `docs/SCRIPT_EXECUTION_INVENTORY.md`. Three have never been executed against anything — `0055`, and the two live-database `.sql` proposals — all three deliberately. The probe has been run, but not the version in the repository. Worth reading before pointing any of them at production.
+**Which of this remediation's scripts have actually been run:** `docs/SCRIPT_EXECUTION_INVENTORY.md`. **Nothing is now unexecuted.** Getting there found six defects in the two live-database `.sql` proposals — none caught by review or by their text-assertion tests, two of which would have written false data into production. Worth reading before pointing anything at production.
 
 D-001 through D-024 are grouped by severity below. D-025 through D-034 are grouped in the **P2B — Configuration trace** section, D-035 through D-037 in the **Production evidence reconciliation** section, and D-041 through D-054 in the **Phase M — Marketing / UX** section, because each is only readable alongside the trace that produced it.
 
@@ -1955,7 +1955,7 @@ Tests: `apps/worker/tests/test_brand_color_validation.py`, 53 cases; 41 fail aga
 >
 > **Compliant before the migration runs, not after.** No account has an override today and nothing
 > writes the column yet, so every email takes the fallback path — which needs no schema at all.
-> `0055` adds the ability to override, which is the non-urgent half. Jerry applies it; nothing in
+> `0055` adds the ability to override, which is the non-urgent half. **Applied to production 2026-09-21** (56 applied / 0 pending; `information_schema` confirms `text`, nullable, no default). Nothing in
 > CI or the worker runs migrations.
 >
 > **Verified by rendering all eight report emails**, twice each — with an override and without —
@@ -3467,7 +3467,7 @@ sense that this column stopped meaning "an email" some time ago and the schema s
 to live alone.
 
 Fixing it is one `COMMENT ON COLUMN` in a new migration. Not folded into D-019's branch because it
-would add a second unapplied migration to the pile Jerry is already holding (0055), for no
+would have added a second unapplied migration to the pile Jerry was then holding (0055, since applied), for no
 behavioural gain, and a DDL file in a diff invites the assumption that the fix needs it.
 
 ---
