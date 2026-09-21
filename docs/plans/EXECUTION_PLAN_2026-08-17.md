@@ -139,6 +139,18 @@ it.**
   who is writing the code. Before treating a measurement as a fact about the system, ask which
   layer produced the number. The probe now says so in its own output.
 
+- **A validator on the write path proves what gets written from now on, not what is already
+  there.** Same family as the missing-row rule below, and the same error one level up: reading
+  a property of the code as a property of the data. "The API validates cadence on create, so no
+  schedule can be in that state" covers every row written after the validator existed and says
+  nothing about the ones written before it — and this project's tables predate most of its
+  validation, `schedules` by ten months. The database-level version has the same hole with a
+  sharper edge: `ADD CONSTRAINT ... NOT VALID` installs a CHECK that enforces new rows and
+  skips existing ones, and a constraint dropped and re-added leaves no mark on the table
+  definition, so reading the schema cannot tell you either. **The only thing that answers "is
+  any row like this" is a query for rows like this**, plus `pg_constraint.convalidated` to know
+  whether the constraint was ever checked against what was already stored.
+
 - **Ask what writes this row, and when, before reasoning about what its absence proves.**
   Three instances where a missing row was read as a missing action:
   `schedule_runs.started_at` (assigned by nothing, so a predicate on it matched every row
