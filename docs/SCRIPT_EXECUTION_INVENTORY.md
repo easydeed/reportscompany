@@ -34,19 +34,60 @@ since the remediation began (`5fb9cd5`).
 | `scripts/check_schedule_cadence_validity.sql` | **yes** | Scratch Postgres 16.13, 19 cases, cross-checked against `compute_next_run` — 0 disagreements (`apps/worker/tests/test_cadence_hazard_query.py`, which reads the CASE out of the `.sql`). |
 | `scripts/probe_simplyrets_behaviour.py` | **yes, but not this version** | Jerry ran it against the production SimplyRETS feed — **twice, both times the pre-#73 six-GET build**. The merged nine-GET version, with the corrected verdict logic, section 2b and the `count=true` check, has never run. That is the one D-074 and #74's MOI numerator are waiting on. |
 | `scripts/deactivate_live_schedules.sql` | **NO** | Nothing. Written on D-062's branch; by design a proposal for a live database. Four statements, one of them an `UPDATE`. |
-| `scripts/reconcile_stranded_schedule_runs.sql` | **NO** | Nothing. Header says "NOT APPLIED … a proposal for review", which is right about production. `apps/worker/tests/test_schedule_run_lifecycle.py` reads it as **text** and asserts on substrings; it never executes it. Seven statements. |
+| `scripts/reconcile_stranded_schedule_runs.sql` | **yes — since 2026-09-21** | Scratch Postgres 16.13, through `psql`, seeded to its own documented distribution (27/8/18/3/1) plus a live mid-flight run as a control. It parses and all seven statements execute. **Running it found three defects** — see below. `apps/worker/tests/test_reconcile_backfill.py`, 8 cases, keeps it that way. Still NOT applied to production, which remains correct. |
 | 14 scripts in `648c56a` (`check_*.py`, `run_migration_*.py`, `seed_*.py`, `test_affiliates.py`) | **NO, not since the change** | Nothing. The change was mechanical — removing a hardcoded production `DATABASE_URL` default from each — but it removes a default, so any of them invoked without `DATABASE_URL` set now behaves differently than it did. None was re-run afterwards. |
+
+## What running the backfill found
+
+`reconcile_stranded_schedule_runs.sql` was the one gap worth closing, and
+closing it was not a formality. Three defects, none of which reading it had
+found, and none of which its text-assertion test could see:
+
+1. **Section 3's `schedule_runs` UPDATE had no age guard.** A run created
+   seconds earlier, generation legitimately `processing`, was marked
+   `failed — consumed then killed mid-flight; report never produced`. A
+   backfill that can fabricate a failure for work still in progress. 22 rows
+   updated where 21 were stranded.
+
+2. **Section 3's `report_generations` UPDATE was guarded on `g.generated_at`,
+   which is NULL for exactly the rows it needed to reach.** A generation that
+   was never consumed has no timestamp — the API's INSERT writes status and
+   nothing else — and `NULL < ...` is NULL, not true. The three never-picked-up
+   rows were silently skipped and left at `queued` forever. 18 rows updated
+   where 21 were stranded.
+
+3. **The VERIFY said "should return zero rows" and could not.** Section 4
+   deliberately leaves the dangling row, and the verify counted it. A correct
+   run reported failure.
+
+1 and 2 are opposite errors from one missing idea: the population belongs to
+the RUN's age, which always exists, not the generation's timestamp, which may
+be NULL or may be recent. Together they produced four rows whose
+`schedule_runs` said `failed` while their `report_generations` still said
+`processing` or `queued` — the exact inconsistency the file exists to remove,
+created by the file.
+
+All three are fixed, and all three regressions were applied and seen to fail.
+
+One more thing surfaced, in the test rather than the file: the first version of
+the harness split the SQL on `;` and broke on a semicolon **inside a quoted
+literal**. The fix was to stop re-implementing SQL lexing and invoke `psql`
+instead — which is how the file will actually be run, so the test now exercises
+the real path including `\echo` and `ON_ERROR_STOP`.
 
 ## What that leaves
 
-Three files have **never been executed against anything**, and all three are
-deliberate: `0055` waits on Jerry, and the two `.sql` proposals are written for
-a live database on purpose. The inventory does not change that — it changes
+Two files have **never been executed against anything**, both deliberately:
+`0055` waits on Jerry, and `deactivate_live_schedules.sql` is written for a
+live database on purpose. The inventory does not change that — it changes
 whether anyone running them believes they have been tried.
 
-The one worth acting on is `probe_simplyrets_behaviour.py`: it has been run, but
-not the version in the repository, and the difference between the two builds is
-exactly the two checks that are still open.
+`deactivate_live_schedules.sql` is now the only untested `.sql` proposal, and
+after what the backfill turned up it is the obvious next candidate: four
+statements, one of them an `UPDATE` across every active schedule.
+
+The probe has been run against the repository version at last (2026-09-21), and
+four of its five verdicts are settled. One overclaims — see D-074.
 
 The 14 credential-sweep scripts are the weakest link by count. The edit was one
 line each and almost certainly harmless, but "almost certainly harmless × 14,
