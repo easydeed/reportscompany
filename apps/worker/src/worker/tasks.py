@@ -245,6 +245,34 @@ def resolve_recipients_to_emails(cur, account_id: str, recipients_raw: list) -> 
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 QUEUE_KEY = os.getenv("MR_REPORT_ENQUEUE_KEY", "mr:enqueue:reports")
+
+# D-037. Two more lists, derived from the queue name so they follow it if it is
+# ever renamed by env var.
+#
+#   PROCESSING — where an item lives between being taken off the queue and
+#                being successfully handed to Celery. This is the whole fix:
+#                `blpop` is destructive, so every failure between the pop and
+#                the `.delay()` used to destroy the job. `blmove` makes the
+#                same step ATOMIC and non-destructive, so a crash anywhere in
+#                the window leaves the item recoverable rather than gone.
+#
+#   DEAD       — where an item goes when retrying it cannot help: a payload
+#                that will not parse, or one that has exhausted its attempts.
+#                A dead-letter list is not a nicety here. Re-queueing a
+#                malformed payload forever is a poison-message loop, and
+#                dropping it is the defect. It has to go somewhere a person
+#                can look.
+PROCESSING_KEY = f"{QUEUE_KEY}:processing"
+DEAD_LETTER_KEY = f"{QUEUE_KEY}:dead"
+
+# How many times a dispatch may fail before the job is given up on. Dispatch
+# failures are usually a broker blip, which is exactly what a retry fixes;
+# anything still failing on the third attempt is not transient.
+MAX_DISPATCH_ATTEMPTS = int(os.getenv("BRIDGE_MAX_DISPATCH_ATTEMPTS", "3"))
+
+# The key the attempt counter is carried under, inside the payload. Prefixed so
+# it cannot collide with a field the producer owns.
+ATTEMPTS_FIELD = "_bridge_attempts"
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/market_reports")
 DEV_BASE = os.getenv("PRINT_BASE", "http://localhost:3000")
 PDF_DIR = "/tmp/mr_reports"
@@ -2771,6 +2799,190 @@ def process_consumer_report(self, report_id: str):
         raise
 
 
+def _mark_run_failed(run_id: str, reason: str) -> bool:
+    """
+    Write the loss to `report_generations` so it stops being invisible.
+
+    THE ROW IS THE ONLY PLACE ANYONE LOOKS. A destroyed job left its row at
+    `pending` forever, and `/admin/health` counts that as `idle_with_pending`
+    (admin.py:2984) — a number that goes up and never comes down, indicating
+    nothing in particular. Nothing sweeps `report_generations`: the stale sweep
+    in `schedules_tick.py` covers `schedule_runs`, which a manual report does
+    not have. So if this function does not write it, nothing does.
+
+    Returns whether the write landed. Never raises: this is called on the path
+    where something has already gone wrong, and a bookkeeping failure must not
+    become the reason the loop dies.
+    """
+    try:
+        with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE report_generations
+                    SET status = 'failed', error = %s
+                    WHERE id = %s::uuid
+                      AND status IN ('pending', 'queued')
+                    """,
+                    (reason[:500], run_id),
+                )
+                return cur.rowcount > 0
+    except Exception as e:
+        print(f"❌ Could not record the bridge failure for run {run_id}: {e}")
+        return False
+
+
+def _dead_letter(r, payload, reason: str, run_id=None) -> None:
+    """
+    Move an item out of PROCESSING and into DEAD, and say why.
+
+    `LREM ... 1` removes one occurrence, which is correct even if two identical
+    payloads are in flight: each pass removes the one it put there.
+
+    Order matters. The push happens BEFORE the removal, so a crash between them
+    duplicates the item rather than losing it. Duplicating into a list nobody
+    drains automatically is harmless; losing it is the defect being fixed.
+    """
+    try:
+        r.rpush(DEAD_LETTER_KEY, payload)
+        r.lrem(PROCESSING_KEY, 1, payload)
+    except Exception as e:
+        print(f"❌ Could not dead-letter a job: {e} — it stays in {PROCESSING_KEY}")
+        return
+    print(
+        f"☠️  Dead-lettered a job ({reason}). run_id={run_id or 'unknown'}. "
+        f"It is in {DEAD_LETTER_KEY}, not lost."
+    )
+
+
+def _recover_processing(r) -> int:
+    """
+    Return anything stranded in PROCESSING to the head of the queue.
+
+    Called at startup and after every reconnect, because those are exactly the
+    moments something might have been stranded: a SIGKILL, an OOM, a deploy, or
+    a connection that dropped mid-window. Without this the reliable-queue
+    pattern moves the leak rather than closing it — items would accumulate in
+    PROCESSING and never be seen again.
+
+    `LMOVE src dst RIGHT LEFT` takes from the END of PROCESSING and puts it at
+    the HEAD of the queue, which restores the original order for a batch of
+    stranded items rather than reversing it.
+
+    Bounded by what is in the list when it starts, so it cannot spin if
+    something is re-adding concurrently.
+    """
+    recovered = 0
+    try:
+        stranded = r.llen(PROCESSING_KEY)
+        if not stranded:
+            return 0
+        print(f"♻️  {stranded} job(s) stranded in {PROCESSING_KEY} — returning them to the queue")
+        for _ in range(stranded):
+            if r.lmove(PROCESSING_KEY, QUEUE_KEY, "RIGHT", "LEFT") is None:
+                break
+            recovered += 1
+        print(f"♻️  Recovered {recovered} job(s)")
+    except Exception as e:
+        print(f"⚠️  Could not recover stranded jobs: {e}")
+    return recovered
+
+
+def _log_broker_identity(r) -> None:
+    """
+    Say once, at startup, what this is actually talking to.
+
+    `BLMOVE` needs Redis 6.2. Everything here is built on it, and a server that
+    does not have it would fail on the first poll with an unhelpful
+    `ResponseError`. Printing the version means the deployment log answers
+    "does the fix apply here" without anyone having to reproduce it — the same
+    reason the SQL diagnostics print `version()` rather than asserting one in a
+    comment.
+    """
+    try:
+        info = r.info("server")
+        version = info.get("redis_version", "unknown")
+        print(f"🔎 Redis server {version} (BLMOVE needs 6.2+; the bridge is built on it)")
+    except Exception as e:
+        print(f"⚠️  Could not read the Redis server version: {e}")
+
+
+def _handle_payload(r, payload) -> str:
+    """
+    Everything that happens to one item between coming off the queue and being
+    safe to forget. Returns what became of it: "dispatched", "unreadable",
+    "requeued" or "given_up".
+
+    EXTRACTED SO IT CAN BE RUN ONCE. The behaviour this function implements is
+    the whole of D-037, and inside a `while True:` the only ways to test it are
+    to assert on its source — which this suite has been caught doing wrong four
+    times — or to race a thread. A function that takes a connection and a
+    payload can simply be called, against a real Redis, and the lists inspected
+    afterwards.
+
+    ON ENTRY the item is already in PROCESSING, put there atomically by
+    `blmove`. Every path out of here either removes it (handled, or
+    dead-lettered) or leaves it there deliberately for `_recover_processing`.
+    Leaving it is safe; that is the point of the list.
+    """
+    run_id = None
+    try:
+        data = json.loads(payload)
+        run_id = data["run_id"]
+        account_id = data["account_id"]
+        report_type = data["report_type"]
+    except (ValueError, TypeError, KeyError) as e:
+        # Not retryable. Re-queueing this would be a poison-message loop: the
+        # payload will fail to parse just as reliably next time. If it named a
+        # run we can reach, the row is marked so the failure is visible
+        # somewhere other than this log line.
+        if run_id:
+            _mark_run_failed(run_id, f"bridge could not read the job: {e}")
+        _dead_letter(r, payload, f"unreadable payload: {e}", run_id)
+        return "unreadable"
+
+    attempts = int(data.get(ATTEMPTS_FIELD) or 0)
+
+    try:
+        print(f"📥 Received job: run_id={run_id}, type={report_type}")
+        generate_report.delay(run_id, account_id, report_type, data.get("params") or {})
+    except Exception as e:
+        # Retryable, up to a point. A broker publish failure is usually a blip,
+        # and a blip is exactly what a retry is for — but it is not always, and
+        # an unbounded retry is the same hot loop in slower motion.
+        attempts += 1
+        if attempts < MAX_DISPATCH_ATTEMPTS:
+            data[ATTEMPTS_FIELD] = attempts
+            requeued = json.dumps(data)
+            # Push the new payload BEFORE removing the old one, so a crash
+            # between them duplicates rather than loses. To the TAIL, so a job
+            # that keeps failing does not monopolise the head of the queue ahead
+            # of jobs that would succeed.
+            r.rpush(QUEUE_KEY, requeued)
+            r.lrem(PROCESSING_KEY, 1, payload)
+            print(
+                f"🔁 Dispatch failed for run {run_id} ({e}); re-queued, "
+                f"attempt {attempts}/{MAX_DISPATCH_ATTEMPTS}"
+            )
+            return "requeued"
+
+        recorded = _mark_run_failed(
+            run_id,
+            f"the bridge could not hand this job to the worker after "
+            f"{attempts} attempts: {e}",
+        )
+        _dead_letter(
+            r, payload,
+            f"dispatch failed {attempts}x, row marked failed={recorded}",
+            run_id,
+        )
+        return "given_up"
+
+    # Dispatched. Only now is it safe to forget.
+    r.lrem(PROCESSING_KEY, 1, payload)
+    return "dispatched"
+
+
 def run_redis_consumer_forever():
     """
     Redis consumer bridge - polls Redis queue and dispatches to Celery worker.
@@ -2797,19 +3009,40 @@ def run_redis_consumer_forever():
             if r is None:
                 r = create_redis_connection(REDIS_URL)
                 print(f"✅ Redis connected")
+                _log_broker_identity(r)
+                # Anything left in PROCESSING belongs to a previous life of this
+                # loop — a crash, a deploy, a dropped connection. Put it back
+                # before polling for new work.
+                _recover_processing(r)
                 backoff = 1  # Reset backoff on successful connection
                 consecutive_errors = 0
-            
-            item = r.blpop(QUEUE_KEY, timeout=5)
-            
-            if not item:
+
+            # D-037. THIS LINE IS THE FIX.
+            #
+            # It was `r.blpop(QUEUE_KEY, timeout=5)`, which REMOVES the item.
+            # Everything after it — the `json.loads`, the three subscripts, the
+            # `.delay()` — ran with the job existing nowhere but in a local
+            # variable, and the catch-all at the bottom of this loop logged one
+            # line and continued. A malformed payload, a missing key, a broker
+            # publish failure: the job was destroyed, the `report_generations`
+            # row stayed `pending` forever, and the only trace was stdout.
+            #
+            # `blmove` does the same wait atomically INTO another list, so the
+            # item survives anything that happens next, including SIGKILL.
+            # LEFT/RIGHT preserves FIFO against the producer's `rpush`
+            # (api/worker_client.py:15).
+            payload = r.blmove(QUEUE_KEY, PROCESSING_KEY, 5, "LEFT", "RIGHT")
+
+            if not payload:
                 continue
-            
-            _, payload = item
-            data = json.loads(payload)
-            print(f"📥 Received job: run_id={data['run_id']}, type={data['report_type']}")
-            generate_report.delay(data["run_id"], data["account_id"], data["report_type"], data.get("params") or {})
-            
+
+            outcome = _handle_payload(r, payload)
+            if outcome != "dispatched":
+                # Parsed-and-failed paths have already recorded themselves.
+                consecutive_errors += 1
+                time.sleep(min(5, backoff))
+                continue
+
             # Reset backoff on successful operation
             backoff = 1
             consecutive_errors = 0
@@ -2839,6 +3072,13 @@ def run_redis_consumer_forever():
             r = None  # Force reconnection
             
         except Exception as e:
+            # STILL A CATCH-ALL, AND NO LONGER A SHREDDER. Before D-037 this
+            # was the line that lost the job: whatever went wrong, the item had
+            # already been removed by `blpop` and nothing put it back. Now
+            # anything reaching here either never left the queue or is sitting
+            # in PROCESSING, and `_recover_processing` returns it on the next
+            # reconnect. The loop keeps its "log and carry on" behaviour without
+            # that behaviour costing anybody a report.
             consecutive_errors += 1
             print(f"❌ Unexpected error in consumer (#{consecutive_errors}): {e}")
             time.sleep(min(5, backoff))

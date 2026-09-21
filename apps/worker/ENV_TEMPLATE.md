@@ -146,7 +146,12 @@ Listed for completeness. All are read by worker code; none need to be set.
 ```bash
 TICK_INTERVAL=60                  # schedules_tick.py — seconds between schedule checks
 KEEP_ALIVE_INTERVAL=...           # schedules_tick.py
-MR_REPORT_ENQUEUE_KEY=mr:enqueue:reports   # tasks.py:247 — must match the API's value
+MR_REPORT_ENQUEUE_KEY=mr:enqueue:reports   # tasks.py — must match the API's value.
+                                  # The bridge derives two more lists from it:
+                                  #   <key>:processing — in-flight, recovered at startup
+                                  #   <key>:dead       — jobs it gave up on (D-037)
+BRIDGE_MAX_DISPATCH_ATTEMPTS=3    # tasks.py — dispatch retries before a job is
+                                  # marked failed and dead-lettered
 PDF_DIR=/tmp/mr_reports           # pdf_engine.py:34
 SOCIAL_DIR=/tmp/mr_social         # social_engine.py:30
 PDFSHIFT_API_URL=...              # pdf_engine.py:32
