@@ -33,7 +33,7 @@ since the remediation began (`5fb9cd5`).
 | `scripts/check_unverified_senders.sql` | **yes** | Scratch Postgres 16.13, six shaped accounts, cross-checked against `sender_verification()` — 6 accounts, 0 disagreements, both directions (`apps/api/tests/test_sender_query_matches_code.py`). **Shipped in #75 unrun; validated retrospectively in #78.** |
 | `scripts/check_schedule_cadence_validity.sql` | **yes** | Scratch Postgres 16.13, 19 cases, cross-checked against `compute_next_run` — 0 disagreements (`apps/worker/tests/test_cadence_hazard_query.py`, which reads the CASE out of the `.sql`). |
 | `scripts/probe_simplyrets_behaviour.py` | **yes, but not this version** | Jerry ran it against the production SimplyRETS feed — **twice, both times the pre-#73 six-GET build**. The merged nine-GET version, with the corrected verdict logic, section 2b and the `count=true` check, has never run. That is the one D-074 and #74's MOI numerator are waiting on. |
-| `scripts/deactivate_live_schedules.sql` | **NO** | Nothing. Written on D-062's branch; by design a proposal for a live database. Four statements, one of them an `UPDATE`. |
+| `scripts/deactivate_live_schedules.sql` | **yes — since 2026-09-21** | Scratch Postgres 16.13, through `psql`, seeded to 43 schedules (3 active), 1,067 `schedule_runs` rows and a paused schedule held as a control. **Its data handling was already correct**; what was wrong was the part around the write — see below. `apps/worker/tests/test_deactivate_schedules.py`, 8 cases. Still NOT applied to production. **Now requires `-v expected_active=<n>`.** |
 | `scripts/reconcile_stranded_schedule_runs.sql` | **yes — since 2026-09-21** | Scratch Postgres 16.13, through `psql`, seeded to its own documented distribution (27/8/18/3/1) plus a live mid-flight run as a control. It parses and all seven statements execute. **Running it found three defects** — see below. `apps/worker/tests/test_reconcile_backfill.py`, 8 cases, keeps it that way. Still NOT applied to production, which remains correct. |
 | 14 scripts in `648c56a` (`check_*.py`, `run_migration_*.py`, `seed_*.py`, `test_affiliates.py`) | **NO, not since the change** | Nothing. The change was mechanical — removing a hardcoded production `DATABASE_URL` default from each — but it removes a default, so any of them invoked without `DATABASE_URL` set now behaves differently than it did. None was re-run afterwards. |
 
@@ -75,16 +75,61 @@ literal**. The fix was to stop re-implementing SQL lexing and invoke `psql`
 instead — which is how the file will actually be run, so the test now exercises
 the real path including `\echo` and `ON_ERROR_STOP`.
 
+## What running the deactivate proposal found
+
+Different from the backfill, and worth separating: **the data handling was
+already right.** On a seeded world it changed exactly the three intended rows,
+preserved `next_run_at` on each, left the control schedule byte-identical
+(hashed before and after), and retained all 1,067 runs. `UPDATE` does not
+cascade; the history survived exactly as the header promises.
+
+What was wrong was everything around the write.
+
+1. **"Look before you write" could not be followed.** The SELECT and the UPDATE
+   sat in one transaction in one file. Run as a file — the only way anyone runs
+   it — psql does both in one pass, and the operator reads the list of what they
+   were about to change *after* it has already changed. An instruction that
+   cannot be followed is not a safeguard.
+
+2. **"This must return the same count as before" had no before.** The file never
+   captured a baseline, so the number it printed was unverifiable against
+   anything.
+
+3. **"Expect 3 rows (43 schedules exist, 3 are active)" was a snapshot of
+   2026-09-09 with nothing enforcing it.** Confirmed by adding a fourth active
+   schedule and re-running: silently deactivated, no mention in the output.
+
+All three are now one mechanism. `expected_active` is a **required** psql
+variable — omit it and psql fails on the uninterpolated `:expected_active`
+before reaching the UPDATE; get it wrong and the scope guard aborts and says by
+how much. Both post-write checks are assertions instead of printed numbers.
+
+**The history assertion has teeth, not just tidiness.** Slipping a `DELETE` in
+place of the `UPDATE`, as a test:
+
+```
+old structure → committed. 1,067 schedule_runs destroyed, and it printed
+                "schedule_runs_retained" as part of a successful-looking run.
+new file      → ERROR: STOP - schedule_runs went from 1067 to 0
+                transaction rolled back. All 1,067 survive.
+```
+
+Implementation note, measured rather than assumed: psql does **not** interpolate
+`:variables` inside dollar-quoted blocks, so a `DO $$ ... :expected_active ... $$`
+guard is a syntax error. The guard is plain SQL, and the abort is a cast of a
+non-numeric string to `INT` — Postgres has no `ASSERT` outside plpgsql, and the
+string becomes the error message.
+
 ## What that leaves
 
-Two files have **never been executed against anything**, both deliberately:
-`0055` waits on Jerry, and `deactivate_live_schedules.sql` is written for a
-live database on purpose. The inventory does not change that — it changes
-whether anyone running them believes they have been tried.
+**One file has never been executed against anything: `0055`**, which waits on
+Jerry and is a two-line `ADD COLUMN`. Every `.sql` proposal in this repository
+has now been run somewhere.
 
-`deactivate_live_schedules.sql` is now the only untested `.sql` proposal, and
-after what the backfill turned up it is the obvious next candidate: four
-statements, one of them an `UPDATE` across every active schedule.
+Between them the two proposals carried six defects, none of which their reviews
+or their text-assertion tests had found, and two of which would have written
+false data into production. Neither file was careless; both were read carefully
+by the person who wrote them. That is the point.
 
 The probe has been run against the repository version at last (2026-09-21), and
 four of its five verdicts are settled. One overclaims — see D-074.
