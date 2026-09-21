@@ -14,6 +14,33 @@
 -- (api/verification.py::sender_verification and
 --  worker/schedules_tick.py::account_can_send). If you change one, change all
 -- three.
+--
+-- AND THAT SAMENESS IS CHECKED, not asserted. It appears here in three shapes —
+-- a `HAVING bool_or(...)` in section 1, a `NOT EXISTS` in section 2, a
+-- subquery in section 3 — because the three sections need different SQL, not
+-- because the rule differs. `apps/api/tests/test_sender_query_matches_code.py`
+-- seeds a world covering every shape of account (verified owner; unverified;
+-- no users at all; one verified and one not; a verified user who is INACTIVE)
+-- and asserts all three formulations pick the same set, and that the set
+-- matches `sender_verification()`. 6 accounts, 0 disagreements, both
+-- directions.
+--
+-- The reason that test exists rather than a comment saying "keep these in
+-- sync": a diagnostic query that has drifted from the code does not fail. It
+-- returns zero rows, which is the answer everybody is hoping for, so nobody
+-- questions it. See §0.6.
+--
+-- VALIDATED ON POSTGRES 16.13, on a scratch database. **Production is
+-- documented as PostgreSQL 15** (`docs/architecture/SOURCE_OF_TRUTH.md:168`),
+-- which is documentation rather than a live reading. Nothing used here —
+-- `bool_or`, `FILTER (WHERE ...)`, `STRING_AGG`, `ARRAY_LENGTH` — behaves
+-- differently across those versions, but "tested" should not be read as
+-- "tested on production's version", so section 0 prints the server version
+-- this is actually running on.
+
+\echo '=== 0. Which server is this? ==='
+SELECT version() AS server_version;
+\echo ''
 
 \echo '=== 1. Accounts that would be blocked from sending ==='
 SELECT
