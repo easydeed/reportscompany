@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-17, against `fix/d019-verified-sending`, cut from `main` at `9a1b309`.
+**Last reconciled:** 2026-09-21, against `test/ticker-skip-advances`, cut from `main` at `15e6cdc`.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -263,8 +263,19 @@ Minor, same endpoint: the docstring for `register` (`apps/api/src/api/routes/aut
 > /v1/affiliates/invite-agent`, `/resend-invite` and `/bulk-invite` — checked before the CSV is
 > read, so a refused bulk invite has not parsed a row.
 >
+> **Does a refused schedule advance `next_run_at`? Yes — confirmed by behaviour, not by
+> reading.** If it did not, the schedule would stay due and write a `blocked_unverified` row
+> every 60 seconds, per schedule, indefinitely — 1,440 a day into the table D-061 through
+> D-065 spent five branches making trustworthy. The skip calls `compute_next_run` and commits
+> the new value on the same path as the record, before `continue`. Proved in
+> `test/ticker-skip-advances` by ticking a blocked schedule twice against a fake that honours
+> `next_run_at`, and getting one row. **The test that was supposed to already cover this
+> passed against the regression** — it asserted that an `UPDATE` to `schedules` had happened,
+> and the lock-clearing `UPDATE` on the same path satisfied that. Fourth instance of §0.6's
+> "a test you have not seen fail". Now asserts the column and, separately, the consequence.
+>
 > Tests: `apps/api/tests/test_verified_sending.py` (13 cases, 10 fail against `main`) and
-> `apps/worker/tests/test_ticker_unverified.py` (5 cases). Both behavioural — requests through
+> `apps/worker/tests/test_ticker_unverified.py` (9 cases). Both behavioural — requests through
 > the real app, and the real ticker loop against a fake feed — with the database double
 > **raising on any statement past the gate**, so a gate placed after the write would fail them.
 > A test that grepped the routes for `block_unverified_send` would not.

@@ -216,6 +216,16 @@ it.**
   fix — requiring a commit *between* the two calls — was obvious the moment the regression
   was applied and invisible before. **A test you have not seen fail is a test you have not
   seen.**
+  **Fourth instance, same shape, in D-019's ticker gate.** `test_the_skip_advances_next_run_at`
+  asserted that an `UPDATE` to `schedules` had happened. Deleting the `compute_next_run` call
+  and the `next_run_at = %s` assignment leaves the lock-clearing
+  `UPDATE schedules SET processing_locked_at = NULL` on the same path — so the regression the
+  test is *named after* left it green, while the thing it was guarding (a refusal row written
+  every 60 seconds, forever, into the table five branches had just made trustworthy) went
+  unguarded. The correction, again, is to assert the **content** of the write and then, in a
+  separate test, its **consequence**: the schedule is no longer in the due set on the next
+  tick. "A write happened" and "the write works" are different claims and only the second one
+  answers the question anybody actually has.
 
 - **`str()` of a query object gives you a repr, not the query.** A test double for a database
   cursor matched statements with `str(query).startswith("SET LOCAL")`. `psycopg`'s `sql.Composed`
