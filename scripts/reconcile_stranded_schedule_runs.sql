@@ -1,8 +1,17 @@
 -- Reconcile the 57 stranded schedule_runs rows.
 --
--- NOT APPLIED. This is a proposal for review. Nothing in the repo runs it, it
--- is not a numbered migration, and it must not become one — it is a one-off
--- correction of historical rows, not a schema change.
+-- NOT APPLIED TO PRODUCTION. This is a proposal for review. It is not a
+-- numbered migration and must not become one — it is a one-off correction of
+-- historical rows, not a schema change.
+--
+-- IT HAS, HOWEVER, BEEN RUN. 2026-09-21, scratch Postgres 16.13, against the
+-- real table shapes (0006 + the columns the statements touch), seeded to the
+-- distribution below plus a live mid-flight run as a control. It parses and all
+-- seven statements execute. Doing that found three defects in it — two that
+-- would have corrupted data and one that made its own success criterion
+-- unreachable — none of which reading it had found, and none of which the
+-- text-assertion test in apps/worker/tests/test_schedule_run_lifecycle.py
+-- could see. See the comments at sections 3 and VERIFY.
 --
 -- ─────────────────────────────────────────────────────────────────────────────
 -- WHAT STRANDED THESE ROWS
@@ -105,6 +114,32 @@ WHERE g.id = r.report_run_id
 -- rows, but leaving a decade of phantom 'processing' rows in the table is how
 -- the next person's usage query goes wrong.
 
+-- BOTH STATEMENTS ARE GUARDED ON r.created_at, AND THAT IS THE FIX FOR TWO
+-- OPPOSITE ERRORS FOUND BY RUNNING THIS FILE (2026-09-21, scratch Postgres
+-- 16.13, seeded to the distribution above).
+--
+--   The runs UPDATE had NO age guard. A run created seconds earlier, whose
+--   generation was legitimately 'processing' RIGHT NOW, was marked
+--   'failed — consumed then killed mid-flight; report never produced'. This
+--   file is a backfill: it must not be able to fabricate a failure for work
+--   that is still running. 22 rows updated where 21 were stranded.
+--
+--   The generations UPDATE was guarded on `g.generated_at`, which is NULL for
+--   a generation that was NEVER CONSUMED — the API's INSERT writes status and
+--   no timestamp (reports.py:247). `NULL < ...` is NULL, not true, so the
+--   three never-picked-up rows were silently skipped and left at 'queued'
+--   forever. 18 rows updated where 21 were stranded.
+--
+-- Together those two produced the exact inconsistency this file exists to
+-- remove: four rows whose schedule_runs said 'failed' while their
+-- report_generations still said 'processing' or 'queued'.
+--
+-- `schedule_runs.created_at` has DEFAULT now() (0006_schedules.sql:47) and is
+-- the enqueue time, so it is always present and always the right clock for
+-- "has this been stranded long enough to be sure". Seven days is inherited
+-- from the original guard; it is far outside STALE_QUEUED_MINUTES (30), so a
+-- burst draining normally is never caught.
+
 UPDATE schedule_runs r
 SET status      = 'failed',
     finished_at = NOW(),
@@ -115,14 +150,18 @@ SET status      = 'failed',
 FROM report_generations g
 WHERE g.id = r.report_run_id
   AND r.status = 'queued'
-  AND g.status IN ('processing', 'queued');
+  AND g.status IN ('processing', 'queued')
+  AND r.created_at < NOW() - interval '7 days';
 
 UPDATE report_generations g
 SET status = 'failed',
     error  = COALESCE(g.error, 'backfilled: task killed mid-flight, no handler ran (D-062)')
 WHERE g.status IN ('processing', 'queued')
-  AND EXISTS (SELECT 1 FROM schedule_runs r WHERE r.report_run_id = g.id)
-  AND g.generated_at < NOW() - interval '7 days';
+  AND EXISTS (
+        SELECT 1 FROM schedule_runs r
+        WHERE r.report_run_id = g.id
+          AND r.created_at < NOW() - interval '7 days'
+      );
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 4. The 1 row with no matching generation.
@@ -141,9 +180,24 @@ LEFT JOIN report_generations g ON g.id = r.report_run_id
 WHERE r.status = 'queued' AND g.id IS NULL;
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- VERIFY. Should return zero rows.
+-- VERIFY.
+--
+-- This used to say "should return zero rows", and it COULD NOT — section 4
+-- deliberately leaves the dangling row alone, and that row is old and still
+-- 'queued', so it is counted. A correct run reported failure. Found by running
+-- the file rather than reading it.
+--
+-- Two numbers instead, so the expectation is stated rather than implied:
+-- everything reconcilable must be gone, and what remains must be exactly the
+-- rows section 4 left on purpose.
 
-SELECT COUNT(*) AS still_stranded
-FROM schedule_runs
-WHERE status = 'queued'
-  AND created_at < NOW() - interval '1 day';
+SELECT
+    COUNT(*) FILTER (
+        WHERE EXISTS (SELECT 1 FROM report_generations g WHERE g.id = r.report_run_id)
+    )                                          AS still_stranded_must_be_zero,
+    COUNT(*) FILTER (
+        WHERE NOT EXISTS (SELECT 1 FROM report_generations g WHERE g.id = r.report_run_id)
+    )                                          AS dangling_left_on_purpose
+FROM schedule_runs r
+WHERE r.status = 'queued'
+  AND r.created_at < NOW() - interval '7 days';
