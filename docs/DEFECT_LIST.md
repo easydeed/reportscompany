@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-21, against `fix/d037-bridge-durability`, cut from `main` at `afd0f89`.
+**Last reconciled:** 2026-09-21, against `chore/bridge-broker-identity`, cut from `main` at `3748779`.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -51,6 +51,8 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 **How to re-derive:** parse `^### (D-\d{3}) —` for entries and the following `**Status:**` / `**Severity:**` lines. A count computed any other way — including by adding up what changed on each branch — is a hypothesis. The previous version of this table was produced that way and was wrong by three: it dropped D-035, D-036 and D-037 entirely.
 
 Plus 5 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 2 UNVERIFIED. Those are open questions, not defects, and are counted separately.
+
+**Which of this remediation's scripts have actually been run:** `docs/SCRIPT_EXECUTION_INVENTORY.md`. Three have never been executed against anything — `0055`, and the two live-database `.sql` proposals — all three deliberately. The probe has been run, but not the version in the repository. Worth reading before pointing any of them at production.
 
 D-001 through D-024 are grouped by severity below. D-025 through D-034 are grouped in the **P2B — Configuration trace** section, D-035 through D-037 in the **Production evidence reconciliation** section, and D-041 through D-054 in the **Phase M — Marketing / UX** section, because each is only readable alongside the trace that produced it.
 
@@ -1067,8 +1069,28 @@ This is the same user-visible symptom as D-036 (a report stuck at pending) with 
 >
 > **This does not touch D-036.** Whether the bridge runs in production at all is still open,
 > and a durable queue in a process nobody starts is durable in the same way an unread log is
-> informative. `BLMOVE` needs Redis 6.2+, so the bridge now prints the server version at
-> startup rather than assuming it.
+> informative.
+>
+> **`BLMOVE` confirmed on production Upstash, 2026-09-21** — `nil` returned after 1.476s on an
+> empty list (correct blocking behaviour, not an error), `PING` true. Host tested:
+> **`massive-caiman-34610.upstash.io`**. Recorded here so the next person can compare it
+> against the bridge service's `REDIS_URL` in Render directly, rather than re-deriving it.
+>
+> **That confirmation carries one caveat, and it is recorded rather than smoothed over.** The
+> check ran from a laptop against whichever `REDIS_URL` a local `.env` yielded, and that file
+> contains **more than one** `REDIS_URL` line — so which value won depended on the dotenv
+> parser's precedence rather than on anything anyone chose. The bridge in production reads
+> Render's environment, not that file. One Upstash host is the likely answer for both, but
+> "likely" is what this board exists to replace.
+>
+> So the bridge now prints the broker host AND the Redis version at startup, credentials
+> stripped (`REDIS_URL.split('@')[-1]`, the idiom already used for `DATABASE_URL` at
+> `schedules_tick.py:774`). Whatever that line says in Render's log **is** the broker the
+> bridge uses — no comparison needed, and no dependence on a file that is not deployed.
+>
+> The duplicate `.env` line still wants deleting. It is not in this repository (`.gitignore:14`
+> excludes `.env`; only `.env.example` is committed, and it has one `REDIS_URL`), so it cannot
+> be fixed from here — it is on whichever machine ran the check.
 
 ### Still open after this reconciliation
 

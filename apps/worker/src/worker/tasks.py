@@ -2890,15 +2890,31 @@ def _recover_processing(r) -> int:
 
 def _log_broker_identity(r) -> None:
     """
-    Say once, at startup, what this is actually talking to.
+    Say once, at startup, WHICH broker this is and WHAT version it runs.
 
     `BLMOVE` needs Redis 6.2. Everything here is built on it, and a server that
     does not have it would fail on the first poll with an unhelpful
     `ResponseError`. Printing the version means the deployment log answers
-    "does the fix apply here" without anyone having to reproduce it — the same
-    reason the SQL diagnostics print `version()` rather than asserting one in a
+    "does the fix apply here" without anyone reproducing it — the same reason
+    the SQL diagnostics print `version()` rather than asserting one in a
     comment.
+
+    THE HOST IS PRINTED FOR A SPECIFIC REASON. `BLMOVE` was confirmed against
+    production Upstash by running it from a laptop, against whichever
+    `REDIS_URL` a local `.env` happened to yield — and that file turned out to
+    contain more than one, so which value won depended on the dotenv parser.
+    The bridge in production reads Render's environment, not that file, so the
+    confirmation was only ever as good as the match between the two. A host
+    printed by the bridge itself, in Render's own log, removes the question:
+    whatever it says IS the broker the bridge uses.
+
+    Credentials are stripped by splitting on `@` and keeping the tail, which is
+    the idiom already used for `DATABASE_URL` at schedules_tick.py:774.
     """
+    try:
+        print(f"🔎 Broker host: {REDIS_URL.split('@')[-1]}")
+    except Exception:
+        pass
     try:
         info = r.info("server")
         version = info.get("redis_version", "unknown")
