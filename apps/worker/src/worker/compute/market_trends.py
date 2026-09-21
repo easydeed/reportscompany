@@ -8,7 +8,9 @@ Market Trends page on seller property reports.
 Architecture rules (from cursor-market-trends-v2.md):
   - Everything is synchronous — no async/await
   - City search uses cities=city (production) or q=city (demo fallback); client-side _filter_by_city() cleans fuzzy results
-  - Date filtering for closed sales is client-side by sales.closeDate (NOT minlistdate)
+  - Closed sales are narrowed by `minclosedate` at the API AND split client-side
+    by sales.closeDate (D-074). Never by minlistdate: a list-date cutoff drops
+    long-DOM recent sales and inflates months of supply.
   - ThreadPoolExecutor for 3 parallel API calls (Closed, Active, Pending)
   - Minimum 3 closed sales required; < 5 prior closed → no trend comparisons
 
@@ -81,10 +83,29 @@ def fetch_and_compute_market_trends(
     three_months_ago = now - timedelta(days=90)
     six_months_ago = now - timedelta(days=180)
 
-    # SimplyRETS minlistdate format: YYYY-MM-DD
-    # Use 7-month window (slightly wider than 6) to capture listings that were
-    # active before the 6-month mark but closed within it.
-    minlistdate_str = (now - timedelta(days=210)).strftime("%Y-%m-%d")
+    # D-074. THIS USED TO BE `minlistdate`, 210 DAYS, AND IT WAS LOSSY.
+    #
+    # The belief was that SimplyRETS has no close-date filter, so closed sales
+    # were narrowed by LIST date with a window "slightly wider than 6 months to
+    # capture listings that were active before the 6-month mark but closed
+    # within it". 210 days is wider than 180 — and it is still a cutoff on the
+    # wrong column. A home listed 300 days ago and sold last week is a closed
+    # sale inside the window by every measure that matters, and the API
+    # excluded it.
+    #
+    # The loss is not random. Long days-on-market listings are exactly the ones
+    # that take more than seven months to sell, so the rows dropped were
+    # systematically the slow ones: the sales rate came out too LOW and months
+    # of supply too HIGH, never the other way. High supply flips the
+    # market-condition badge to buyer's-market and generates copy about homes
+    # taking longer to sell. A seller reading that page prices lower than the
+    # market warrants.
+    #
+    # `minclosedate` exists and filters — confirmed against the production feed
+    # (probe section 2, a future cutoff returns fewer rows than no cutoff).
+    # 180 days, because the client-side split below uses 0-90 as the current
+    # period and 90-180 as the prior one; nothing beyond 180 is ever read.
+    minclosedate_str = six_months_ago.strftime("%Y-%m-%d")
 
     # ── Parallel API calls ────────────────────────────────────────────────────
     raw_closed: List[Dict] = []
@@ -101,7 +122,15 @@ def fetch_and_compute_market_trends(
         params = {
             "status": "Closed",
             _city_key: city,
-            "minlistdate": minlistdate_str,
+            # BOTH, deliberately. The API filter is the fix; the client-side
+            # split below stays because the corroborating half of D-074 is not
+            # settled — the production probe has shown that `minclosedate`
+            # filters, not yet that it filters correctly at an in-range date.
+            # Under either answer the numbers are right: if the parameter is
+            # honoured the client-side pass is a no-op, and if it is not, the
+            # client-side pass is what makes the window true. Do not remove it
+            # until the probe's 90-day corroboration lands.
+            "minclosedate": minclosedate_str,
         }
         logger.debug("market_trends: fetching closed listings for city=%s (param=%s)", city, _city_key)
         return fetch_properties(params, limit=500)
@@ -161,8 +190,17 @@ def fetch_and_compute_market_trends(
     cleaned_active = _exclude_rentals(cleaned_active)
 
     # ── Split closed by actual close date ─────────────────────────────────────
-    # This is the critical rule: minlistdate ≠ closeDate. We fetch a wide window
-    # and split client-side so both periods use the same fetched dataset.
+    # Both periods come from the same fetched dataset, split here rather than
+    # re-fetched. This is also the defensive half of D-074's fix: the API is now
+    # asked for `minclosedate` as well, and this pass makes the window true
+    # regardless of whether it honoured it.
+    #
+    # `cd is None` is skipped, and that matters more than it looks. The
+    # production probe found a Closed record with NO closeDate at all
+    # (mlsId=206984498) — it leaks through the API's own filter. Such a row is
+    # not a sale that happened in this window; it is a sale whose date is
+    # unknown. Counting it would inflate the sales rate and deflate months of
+    # supply, which is the D-074 error with the sign flipped.
     current_closed: List[Dict] = []
     prior_closed: List[Dict] = []
 
