@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-22, against `chore/simplyrets-param-survey`, cut from `main` at `3e1787c`.
+**Last reconciled:** 2026-09-22, against `chore/d084-allowlist-scope`, cut from `main` at `8f48640`.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -3548,6 +3548,17 @@ runs the probe. A real guard would be an allowlist in `query_builders.py` — ev
 checked against the set of parameters known to work — which is a small change and a real one, and
 is not in this branch because the survey had to come first: an allowlist built from a guess at the
 vocabulary is worse than none.
+
+**AND THE SURVEY IT IS BUILT FROM MUST BE THE PRODUCTION ONE, NOT THE DEMO RUN ABOVE.** The table
+here is from the demo feed, and this very survey has already shown the two feeds disagree about
+which parameters work: `cities` narrowed 8 of 42 on demo, while `query_builders.py:_location`
+carries a comment saying the demo ignores city params and `q` is the fallback for that reason. One
+of those is wrong, and an allowlist measured on the wrong feed encodes the wrong feed — which
+would be worse than no allowlist in the specific way this defect is about, because it would look
+authoritative.
+
+So D-084 stays open until Jerry's production run lands, and the allowlist is built from those
+verdicts. The demo results are the shape of the answer, not the answer.
 
 This is filed FRAGILE rather than WRONG because every name the client currently sends is spelled
 correctly. The defect is that nothing would tell you if that stopped being true.
