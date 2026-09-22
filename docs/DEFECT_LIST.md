@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-22, against `fix/api-suite-drift`, cut from `main` at `b1ca9ef`.
+**Last reconciled:** 2026-09-22, against `fix/d093-d094-redis-and-free-plan`, cut from `main` at `922f838`.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -43,7 +43,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 **Open by severity:** BROKEN 2 · WRONG 7 · FRAGILE 12 · ROUGH 13. (Sums to 34, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-093, D-094 (`fix/d093-d094-redis-and-free-plan`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -4080,53 +4080,91 @@ Found by D-091's triage: the test asserting it had been failing inside an unpack
 so the assertion never ran. `default=100` is preserved verbatim — it is a business number, and
 changing it is D-093's question, not this fix's.
 
-### D-093 — what limit an account with no plan should get
+### D-093 — three numbers each claimed to be the free allowance
 
 **Severity:** ROUGH · **Affects:** accounts with a NULL `plan_slug`
-**Status:** `open` · **[JERRY]**
+**Status:** `fixed` — `fix/d093-d094-redis-and-free-plan`
 
-An account with no `plan_slug` falls through to `plan_slug = "free"` with no plans row, so
-`effective_limit` lands on the hard-coded `default=100`. `test_resolve_plan_free_default_limit`
-asserts 50. The repository does not settle it: `0012_seed_plans.sql` seeds `solo` (25) and
-`affiliate` (5000) and **no `free` row at all**, so there is nothing to read the free allowance off.
+`resolve_plan_for_account` sent an account with no `plan_slug` to `plan_slug = "free"` and stopped,
+leaving every limit NULL, so it fell through to hard-coded defaults. Four sources disagreed about
+what "free" means:
 
-Both numbers are defensible and picking one is a business decision — §0.2 says those are [JERRY]'s
-and the rule is to stop and ask rather than guess. Changing the product to 50 to make a test pass
-would be choosing a price out of deference to a test written in 2025.
+| | |
+|---|---|
+| `100` | `usage.py`'s `default=` |
+| `50` | what `test_plans_limits` asserted |
+| `3` | what the `plans` row in **production** says |
+| *(absent)* | what `0012_seed_plans.sql` seeds — `solo` and `affiliate`, and no free row at all |
 
-**XFAILS THIS DEFECT GATES** (§0.6: two-way link, or an xfail is a skip with better manners).
-In `apps/api/tests/test_plans_limits.py`, `xfail(strict=True)` with `D-093` named in the reason.
-**Strict**, so whichever way it is decided, the marker has to come off.
+**Fixed by reading the table rather than choosing a number.** The `plans` table is what every
+*assigned* plan is read from, and an unassigned account is not a different kind of account — it is
+one whose plan nobody wrote down. So it now runs the same query against the same row.
 
-| test |
-|---|
-| `test_resolve_plan_no_plan_slug_defaults_to_free` |
+**The test needed no change.** It had always supplied a free-plan row as its second fake answer —
+the query the product had simply stopped asking for. Restoring the lookup made an assertion written
+in 2025 correct again, which is the clearest evidence available that the removal was the
+regression and not the test.
 
-### D-094 — a Redis outage takes down every authenticated request
+**`0056_seed_free_plan.sql`** adds the missing row so a fresh database matches production. Its
+values are not invented: `0051` already assigns `free` its per-product limits (3 / 1 / 1) with an
+`UPDATE`, which touches rows that exist and creates none. `monthly_report_limit = 3` matches both
+that table and the production row. `ON CONFLICT DO NOTHING`, and no `UPDATE`, so it is inert on
+production and cannot overwrite a limit set deliberately there.
+
+**0012 is not edited.** It has been applied, and an applied migration that gains a statement is a
+file whose name no longer describes what ran.
+
+### D-094 — a Redis outage took down every authenticated request
 
 **Severity:** BROKEN · **Affects:** the entire API whenever Upstash is unreachable
-**Status:** `open`
+**Status:** `fixed` — `fix/d093-d094-redis-and-free-plan`
 
-`RateLimitMiddleware.dispatch` calls Redis four times — `get`, `setex`, `incr`, `expire`
-(`middleware/authn.py:215, 233, 239, 241`) — **with no exception handling at all**. The DB call
-sitting between them IS guarded, with the comment *"Use default 60 if DB fails"*. So the author
-thought about degradation for the database and not for the cache.
+`RateLimitMiddleware.dispatch` called Redis four times — `get`, `setex`, `incr`, `expire` — **with
+no exception handling at all**, while the database call sitting between them WAS guarded (*"Use
+default 60 if DB fails"*). Degradation had been considered for the database and not for the cache.
 
-With Redis unreachable, `redis.exceptions.ConnectionError` propagates out of the middleware and
-every authenticated request returns 500, before any route runs. Reproduced here simply by having no
-Redis: every endpoint test 500'd until a fake store was installed. Redis is Upstash — a hosted
-third party — so this is not a hypothetical failure mode.
+With Redis unreachable, `redis.exceptions.ConnectionError` propagated out of the middleware and
+every authenticated request returned 500 **before any route ran** — over a component whose entire
+job is throttling. Redis is Upstash, a hosted third party, so this is an ordinary event.
 
-**NOT FIXED, on purpose.** The obvious repair is to fail open: log and skip rate limiting when the
-store is down. That is a security-adjacent posture decision, and this file already makes the
-opposite call deliberately elsewhere — the token blacklist check is commented *"fails CLOSED — deny
-on DB error"*. A rate limit is capacity and a blacklist is authorisation, so failing open for the
-former looks consistent with the file's own reasoning, **but choosing it is not a test-suite
-repair's to make.** Filed for that decision.
+> ### THE SAME OUTAGE, REPORTED THREE TIMES, WEARING THREE FACES
+>
+> **D-009 and D-013 are this defect seen from Phase 2A** — auth failures with `/health` still
+> green. That combination looked inexplicable and is now obvious: `/health` is exempted at the top
+> of `dispatch` and never touches Redis, so **the one endpoint anybody checks was the one endpoint
+> that could not see the problem.** A health check that does not exercise the dependency it shares
+> with every other route is a health check for the process, not the service.
+>
+> Worth reading those two entries with this in hand rather than re-diagnosing them.
 
-The trade, stated so it can be decided rather than inherited: fail open means no rate limiting
-during a Redis outage; fail closed means total outage during a Redis outage. Today it is the
-second, by omission rather than by choice.
+**FIXED BY FAILING OPEN — and the middleware above it still fails CLOSED, which is correct.**
+The two are different kinds of control and the file is right to answer differently:
+
+| | | |
+|---|---|---|
+| `_is_token_blacklisted` | **authorisation** | if we cannot check whether a token was revoked, refusing is the only safe answer. Fails CLOSED, and says so |
+| `RateLimitMiddleware` | **abuse protection** | if we cannot count requests, refusing converts a Redis outage into a TOTAL OUTAGE — strictly worse than what it protects against. Fails OPEN |
+
+Every Redis call now goes through one `_redis()` helper, so being guarded is a property of the
+class rather than of whoever last edited `dispatch` — the previous version had four call sites and
+zero guards, which is what happens when each one is somebody's individual responsibility. A test
+asserts against the source that no bare `self.r.…` call remains, because the behaviour tests would
+all still pass with a fifth unguarded call on a path they do not exercise.
+
+**The cost is stated, not implied: during a Redis outage there is no rate limiting.** With no real
+customers that currently costs nothing, and with customers it still costs less than being down.
+Every fallback is logged with the defect ID and the operation, and `REDIS_FALLBACK_COUNT` climbs
+for as long as the outage lasts, so the loss is visible while it happens rather than inferred
+afterwards.
+
+**The response does not claim a count it does not have.** A failed `INCR` means the count is
+unknown, and 0 is a count — publishing `X-RateLimit-Remaining: 60` from a store that answered
+nothing is D-086 and D-090's mistake in an HTTP header, a fiction a client would throttle itself
+against. The header is omitted and `X-RateLimit-Degraded: 1` is set instead.
+
+Tests: `apps/api/tests/test_rate_limiter_degrades.py`, 6 cases, four regressions applied and seen
+to fail — including one on the `/health` exemption, pinned so the asymmetry that hid D-009 and
+D-013 stays written down where someone debugging an outage will find it.
 
 
 ---

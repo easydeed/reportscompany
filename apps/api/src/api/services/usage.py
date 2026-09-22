@@ -122,8 +122,46 @@ def resolve_plan_for_account(cur, account_id: str) -> Dict[str, Any]:
                 mkt_plan_limit, sched_plan_limit, prop_plan_limit = new_plan[4:]
 
     # ── Default if no plan assigned ───────────────────────────────────────────
+    #
+    # D-093 — READ THE FREE PLAN, DO NOT INVENT IT.
+    #
+    # This used to set `plan_slug = "free"` and stop, leaving every limit NULL,
+    # so the account fell through to hard-coded defaults further down. Three
+    # numbers claimed to be the free allowance and none agreed:
+    #
+    #     100   this module's `default=`
+    #      50   what test_plans_limits asserted
+    #       3   what the `plans` row in PRODUCTION actually says
+    #    (none) what 0012_seed_plans.sql seeds — it seeds `solo` and
+    #           `affiliate` and no free row at all
+    #
+    # The plans table is the authority — it is what every assigned plan is read
+    # from, and an unassigned account is not a different KIND of account, it is
+    # one whose plan nobody wrote down. So read the same row, the same way.
+    # `0012` now seeds it too, idempotently, so a fresh database matches
+    # production instead of falling through to whatever the code happens to say.
+    #
+    # If the row is missing the hard-coded defaults still apply, which is the
+    # honest behaviour for a database that has not been migrated — but it is now
+    # a fallback nobody is expected to hit, rather than the primary path.
     if not plan_slug:
         plan_slug = "free"
+        cur.execute(
+            """
+            SELECT plan_name, monthly_report_limit, allow_overage, overage_price_cents,
+                   market_reports_limit, schedules_limit, property_reports_per_month
+            FROM plans WHERE plan_slug = %s
+            """,
+            (plan_slug,),
+        )
+        free_plan = cur.fetchone()
+        if free_plan:
+            plan_name, plan_limit, allow_overage, overage_price_cents = free_plan[:4]
+            # A plans row may predate the per-product columns, in which case the
+            # driver returns a shorter tuple; the slice below is empty then and
+            # the existing plan-level values stand.
+            if len(free_plan) >= 7:
+                mkt_plan_limit, sched_plan_limit, prop_plan_limit = free_plan[4:7]
 
     # ── Effective limits ──────────────────────────────────────────────────────
     # Use explicit None checks so that override = 0 (freeze account) is honoured.

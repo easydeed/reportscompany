@@ -36,27 +36,6 @@ def plan_row(**columns):
     return row_for(_resolve_plan_fn, **columns)
 
 
-# D-093 IS A NUMBER SOMEBODY HAS TO CHOOSE, NOT A BUG I CAN FIX.
-#
-# An account with no `plan_slug` falls through to `plan_slug = "free"` with no
-# plan row, so `effective_limit` lands on the hard-coded `default=100`. This
-# test asserts 50. Both are defensible and the repository does not settle it:
-# `0012_seed_plans.sql` seeds `solo` (25) and `affiliate` (5000) and no `free`
-# row at all, so there is nothing to read the free allowance off.
-#
-# §0.2: a business decision — a price, a limit, a claim about customers — is
-# [JERRY]'s, and the rule is to stop and ask rather than guess or placeholder.
-# Changing the product to 50 to make a test pass would be picking a number for
-# the business out of deference to a test written in 2025.
-#
-# strict=True, so whichever way it is decided, this fails until the marker goes.
-_D093_GATED = pytest.mark.xfail(
-    strict=True,
-    reason="D-093: the default report limit for an account with no plan is a "
-           "business decision (code says 100, this test says 50) and is "
-           "[JERRY]'s to make.",
-)
-
 
 class TestResolvePlan:
     """Tests for resolve_plan_for_account"""
@@ -87,9 +66,21 @@ class TestResolvePlan:
         assert result['has_override'] is True
         assert result['overage_price_cents'] == 200
     
-    @_D093_GATED
     def test_resolve_plan_no_plan_slug_defaults_to_free(self):
-        """Account with no plan_slug should default to free"""
+        """
+        An account with no plan_slug resolves to the `free` row in `plans` —
+        READ, not hard-coded (D-093).
+
+        This test was gated on D-093 while the code chose a number instead of
+        looking one up. It needed no change when the code was fixed: the second
+        row it has always supplied is the free-plan query's answer, which the
+        product had simply stopped asking for. Restoring the lookup made an
+        assertion written in 2025 correct again.
+
+        50 here is the fixture's own value, not a claim about the product. The
+        real allowance lives in the plans table — 3 in production, and now in
+        `0056_seed_free_plan.sql` so a fresh database agrees.
+        """
         cursor = Mock()
         # First call: main query returns no plan_slug
         # Second call: fallback free plan query

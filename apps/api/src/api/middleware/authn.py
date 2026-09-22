@@ -190,17 +190,76 @@ def _is_token_blacklisted(token: str) -> bool:
         return True  # Fail CLOSED — deny on error
 
 
+# D-094 — how often the rate limiter has fallen back because Redis was
+# unreachable, since this process started. Module-level and deliberately not
+# reset: a sustained outage should be a number that keeps climbing, not a flag
+# that flickers. Read it from a shell or a debug endpoint; the log line below is
+# the primary signal and this is the one that survives log sampling.
+REDIS_FALLBACK_COUNT = 0
+
+
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
     Per-account rate limiter using Redis.
 
     FIX (H2): Account rate limit is cached in Redis (5 min TTL)
     instead of querying the database on every request.
+
+    D-094 — THIS MIDDLEWARE FAILS **OPEN**, AND THE ONE ABOVE IT FAILS CLOSED.
+    That is not an inconsistency; it is the distinction between the two kinds of
+    control, and the file makes both calls on purpose:
+
+      `_is_token_blacklisted`  AUTHORISATION. If we cannot check whether a token
+                               was revoked, the only safe answer is to refuse.
+                               Fails CLOSED, and says so at :190.
+
+      this class               ABUSE PROTECTION. If we cannot count requests,
+                               refusing turns a Redis outage into a TOTAL
+                               APPLICATION OUTAGE — every authenticated request
+                               500s over a component whose entire job is
+                               throttling. Fails OPEN.
+
+    Before this, all four Redis calls were unguarded while the DB call between
+    them was wrapped ("Use default 60 if DB fails") — so degradation had been
+    considered for the database and not for the cache. With Redis unreachable
+    every authenticated request raised `ConnectionError` out of the middleware
+    and 500'd before any route ran.
+
+    **The same outage has now been reported three times wearing three faces**:
+    D-009 and D-013 filed it in Phase 2A as auth failures with `/health` still
+    green — because `/health` is exempted at the top of `dispatch` and never
+    touches Redis, so the one endpoint anybody checks was the one endpoint that
+    could not see the problem.
+
+    The cost of failing open is stated rather than implied: during a Redis
+    outage there is no rate limiting. Every fallback is logged and counted, so
+    the loss is visible while it is happening instead of inferred afterwards.
     """
 
     def __init__(self, app):
         super().__init__(app)
         self.r = redis.from_url(settings.REDIS_URL)
+
+    def _redis(self, op, *args, default=None):
+        """
+        Run one Redis call, or give up on it and say so.
+
+        Every call goes through here, so "guarded" is a property of the class
+        rather than of whoever last edited `dispatch` — the previous version had
+        four call sites and zero guards, which is what happens when each one is
+        somebody's individual responsibility.
+        """
+        global REDIS_FALLBACK_COUNT
+        try:
+            return getattr(self.r, op)(*args)
+        except Exception as exc:
+            REDIS_FALLBACK_COUNT += 1
+            logger.warning(
+                "D-094: rate limiter degraded — Redis %s failed (%s: %s). "
+                "Request ALLOWED without throttling. Fallbacks since start: %d",
+                op, type(exc).__name__, exc, REDIS_FALLBACK_COUNT,
+            )
+            return default
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
@@ -213,7 +272,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         # ── Get rate limit from Redis cache (not DB) ─────────────────────
         limit_key = f"ratelimit_config:{acct}"
-        cached_limit = self.r.get(limit_key)
+        cached_limit = self._redis("get", limit_key)
 
         if cached_limit is not None:
             limit = int(cached_limit)
@@ -231,18 +290,32 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                         limit = int(row[0])
             except Exception:
                 pass  # Use default 60 if DB fails
-            self.r.setex(limit_key, 300, str(limit))  # Cache 5 min
+            self._redis("setex", limit_key, 300, str(limit))  # Cache 5 min
 
         # ── Token bucket check ───────────────────────────────────────────
         now = int(time.time())
         minute = now - (now % 60)
         key = f"ratelimit:{acct}:{minute}"
-        count = self.r.incr(key)
+        # `default=None` rather than 0: a failed INCR means we do not know the
+        # count, and 0 is a count. The branch below reads None as "not
+        # throttling this request" and leaves the headers honest about it.
+        count = self._redis("incr", key)
         if count == 1:
-            self.r.expire(key, 60)
+            self._redis("expire", key, 60)
+
+        reset = 60 - (now - minute)
+
+        if count is None:
+            # Redis is down. Serve the request and do not pretend to a count we
+            # do not have — no Remaining header rather than a made-up number,
+            # because a client that trusts it would throttle itself on fiction.
+            response = await call_next(request)
+            response.headers["X-RateLimit-Limit"] = str(limit)
+            response.headers["X-RateLimit-Reset"] = str(reset)
+            response.headers["X-RateLimit-Degraded"] = "1"
+            return response
 
         remaining = max(0, limit - count)
-        reset = 60 - (now - minute)
 
         response = await call_next(request)
         response.headers["X-RateLimit-Limit"] = str(limit)
