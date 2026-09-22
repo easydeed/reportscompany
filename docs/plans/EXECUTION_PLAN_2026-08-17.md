@@ -190,6 +190,19 @@ it.**
   only because a test ran after the change, since it used the right construct with a
   different string.
 
+- **A check that reports damage after committing it is decoration. A guard refuses to
+  commit.** `deactivate_live_schedules.sql` ended with `SELECT COUNT(*) AS
+  schedule_runs_retained` — a number printed after the transaction's work was done, with
+  nothing to compare it against and no power to stop anything. Substituting a `DELETE` for
+  its `UPDATE`, as a test: the old file **committed**, destroyed all 1,067 runs, and printed
+  that count as part of a successful-looking run. The same file with the count turned into an
+  assertion against a captured baseline aborts and rolls back, and every row survives. The
+  test is whether the check can *fail the operation* — if the worst it can do is appear in
+  output nobody diffs, it is documentation with a query attached. Same family as the two
+  rules above: an instruction that cannot be followed (`"Look before you write"` above a
+  SELECT with the UPDATE directly beneath it, in one file, run in one pass) and an expectation
+  with no baseline are both checks that cannot fail.
+
 - **A guard that refuses input is a guard that can refuse legitimate input.** Check what
   it rejects, not only what it accepts. Twice a correct-looking security fix would have
   converted an injection into an outage: rejecting a non-hex colour by raising, and
