@@ -187,7 +187,11 @@ def build_market_snapshot_pending(params: dict) -> Dict:
     
     Parameters:
     - status: Pending
-    - mindate/maxdate: lookback window (uses listDate/modifiedDate)
+    - mindate/maxdate: SENT AND IGNORED. Measured against the live feed
+      (D-075, D-084): both are accepted with no error and change nothing.
+      The window that actually applies is the client-side `close_date` filter
+      in `report_builders.py`. Kept because removing them changes nothing
+      either, and their presence documents what the caller intended.
     - type/subtype: optional property type filters
     - limit: 1000
     """
@@ -265,7 +269,8 @@ def build_inventory_by_zip(params: dict) -> Dict:
     
     Parameters:
     - status: Active
-    - mindate/maxdate: lookback window (filters by listDate)
+    - mindate/maxdate: SENT AND IGNORED — see D-075/D-084. The real window is
+      the client-side `close_date` filter in `report_builders.py`.
     - sort: daysOnMarket (lowest DOM first = freshest) - only in production
     - limit: 1000
     """

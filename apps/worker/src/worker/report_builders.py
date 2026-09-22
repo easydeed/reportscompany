@@ -594,8 +594,11 @@ def build_closed_result(listings: List[Dict], context: Dict) -> Dict:
     - Hero KPIs: total_closed, median_price, avg_dom, ctl
     - listings array sorted by close_date desc
     
-    IMPORTANT: SimplyRETS mindate/maxdate filter by listDate, NOT closeDate!
-    We must filter by close_date client-side to ensure accurate counts.
+    IMPORTANT: SimplyRETS mindate/maxdate DO NOTHING AT ALL. This comment used
+    to say they filter by listDate rather than closeDate; measured against the
+    live feed they are accepted with no error and change nothing (D-075, and
+    D-084 for `maxdate`). The client-side close_date filter below is therefore
+    not a correction to the API's window — it IS the window.
     """
     city = context.get("city", "Market")
     lookback_days = context.get("lookback_days", 30)
@@ -607,7 +610,7 @@ def build_closed_result(listings: List[Dict], context: Dict) -> Dict:
     cutoff_date = datetime.now() - timedelta(days=lookback_days)
     
     # Filter closed listings by close_date within lookback period
-    # API's mindate/maxdate filter by listDate, so we must filter by closeDate here
+    # mindate/maxdate do nothing (D-075, D-084) — this filter is the window
     closed = []
     for l in listings:
         if l.get("status") != "Closed":

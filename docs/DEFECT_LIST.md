@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-22, against `fix/d074-close-date-window`, cut from `main` at `0634af0`.
+**Last reconciled:** 2026-09-22, against `chore/simplyrets-param-survey`, cut from `main` at `3e1787c`.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -36,12 +36,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 31 | Real, unfixed |
+| `open` | 32 | Real, unfixed |
 | `fixed` | 48 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **83** | D-001 … D-083, contiguous, no duplicates |
+| **Total** | **84** | D-001 … D-084, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 2 · WRONG 8 · FRAGILE 10 · ROUGH 11. (Sums to 31, the open total.)
+**Open by severity:** BROKEN 2 · WRONG 8 · FRAGILE 11 · ROUGH 11. (Sums to 32, the open total.)
 
 `fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
@@ -3069,6 +3069,20 @@ run and dispatching it.
 > Now tested rather than read: `test_market_trends_close_window.py`, 7 cases, three regressions
 > applied and seen to fail (restore `minlistdate`; count undated closes as in-window; drop the
 > client-side split).
+>
+> **THE SURVEY IS DONE AND `market_trends.py` WAS THE ONLY ONE.** Grepped for the construct
+> — every place a list-date-bounded window feeds a closed-sales or sales-rate figure — not
+> for the string. Three other Closed queries exist:
+>
+> | builder | window sent | what actually bounds it |
+> |---|---|---|
+> | `build_inventory_closed` | `minclosedate` | the API filter, plus a client-side `close_date` pass |
+> | `build_market_snapshot_closed` | `mindate`/`maxdate` — **inert** | the client-side `close_date` filter |
+> | `build_closed` | `mindate`/`maxdate` — **inert** | the client-side `close_date` filter |
+>
+> None of them was bounded by list date. `build_inventory_closed` already carries a comment
+> naming D-074 as the mistake it is avoiding. **D-074 is complete**, and this is the evidence
+> rather than an assumption that one grep was enough.
 
 `market_trends.py` computes months of supply as `active_count / (closed_in_90_days × 30.437/90)`.
 The numerator is right. **The denominator may be missing sales.**
@@ -3128,6 +3142,16 @@ the mistake this entry exists to avoid.
 
 **Severity:** FRAGILE · **Affects:** most query builders; impact currently absorbed client-side
 **Status:** `open` — **CONFIRMED against the production feed 2026-09-21** (verbatim: "mindate is accepted and ignored, silently. The report builders' client-side filtering is load-bearing, not belt-and-braces. Impact is nil today; the trap is for whoever trusts the parameter next.")
+
+> **`maxdate` is the same, and was not named.** The parameter canary survey (see D-084) sent
+> `maxdate=<ten years ago>` against Active and got the whole feed back — accepted, ignored,
+> no error. Both halves of the window that `build_market_snapshot_closed` and `build_closed`
+> send are inert.
+>
+> Impact is still nil, for the reason this entry already gives: both builders filter
+> client-side on `close_date`. But three comments described the parameters as *"filter by
+> listDate, NOT closeDate"* — a specific wrong belief rather than a vague one, and the kind
+> that gets acted on. Corrected in `query_builders.py` (twice) and `report_builders.py`.
 
 > **Production verdict, as the probe printed it:**
 >
@@ -3479,6 +3503,54 @@ error.
 
 Not a new observation about any one file — it is a house style, which is why it wants one
 deliberate pass (a shared error surface) rather than fourteen separate edits.
+
+### D-084 — a misspelled SimplyRETS parameter widens the query silently, and nothing notices
+
+**Severity:** FRAGILE · **Affects:** every report that filters — market snapshot, closed, inventory, new listings, price bands, market trends
+**Status:** `open` — the probe now detects it; nothing at runtime does
+
+D-075 recorded that `mindate` is accepted and ignored. That is not a property of `mindate`. It is
+a property of **every** parameter name SimplyRETS does not recognise.
+
+Found by making the mistake. The D-081 filtered-count check sent `postalcodes` — lowercase — and
+reported *"the header IGNORES the filter: BROKEN"*. The feed was fine; the spelling was not:
+
+```
+postalCodes=77018  ->  X-Total-Count=5
+postalcodes=77018  ->  X-Total-Count=42   (the whole feed)
+postalcode=77018   ->  X-Total-Count=42
+(no filter)        ->  X-Total-Count=42
+```
+
+**A typo does not fail. It widens.** No 4xx, no warning, no unknown-parameter error — the query
+simply stops being narrowed. And the consequence scales with what the query feeds: on a listing
+page a widened result is visibly wrong; on a `count=true` request it is one number that reads as a
+big market. `count_properties` is the months-of-supply numerator, so a misspelled `postalCodes`
+there would put the entire MLS over one city's sales rate.
+
+**The survey.** Every filtering parameter this client sends, each with a deliberately misspelled
+twin, compared on `X-Total-Count` against an unfiltered baseline — probe section 5. Twelve
+parameters; values derived from the feed's own sample so each one must bite. Result on the demo
+feed:
+
+| | |
+|---|---|
+| filters correctly | `postalCodes`, `type`, `subtype`, `minprice`, `maxprice`, `minbeds`, `minbaths`, `cities`, `q`, `minclosedate` |
+| **accepted and ignored** | `mindate`, `maxdate` (see D-075) |
+| not canaried | `limit`, `offset`, `sort`, `count`, `vendor` — they change the shape of the answer, not which rows are in it |
+
+**All twelve misspellings were ignored**, which is what makes the canary meaningful: the feed is
+spelling-strict, so "correct narrows and wrong does not" is a real signal rather than a
+coincidence.
+
+**What is NOT fixed.** Nothing at runtime detects a misspelling. The probe catches it when someone
+runs the probe. A real guard would be an allowlist in `query_builders.py` — every key it emits
+checked against the set of parameters known to work — which is a small change and a real one, and
+is not in this branch because the survey had to come first: an allowlist built from a guess at the
+vocabulary is worse than none.
+
+This is filed FRAGILE rather than WRONG because every name the client currently sends is spelled
+correctly. The defect is that nothing would tell you if that stopped being true.
 
 ### D-083 — `email_log.status`'s COMMENT documents four of its six values
 

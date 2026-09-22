@@ -103,6 +103,132 @@ def _get(auth, query, label):
     return body, counts, elapsed, headers
 
 
+# Parameters that are NOT filters — they change the shape of the answer, not
+# which rows are in it — so a canary says nothing about them. Listed explicitly
+# rather than omitted, so the next person can see the survey considered them.
+NON_FILTERING = ("limit", "offset", "sort", "count", "vendor")
+
+
+def _canary_name(param):
+    """
+    A deliberately wrong spelling of a real parameter.
+
+    Lowercasing is the realistic typo for the camelCase ones and is exactly the
+    mistake this section was written after making. For names that are already
+    lowercase, a transposition — still a name the API has never heard of, which
+    is the only property that matters.
+    """
+    lowered = param.lower()
+    if lowered != param:
+        return lowered
+    return param[:-2] + param[-1] + param[-2] if len(param) > 2 else param + "x"
+
+
+def _param_canaries(auth, active, verdicts):
+    """
+    One correct/incorrect pair per filtering parameter, compared on
+    X-Total-Count against an unfiltered baseline.
+    """
+    if not active or not active[0]:
+        print("  (no active sample — cannot derive values that must bite)")
+        return
+
+    rows = active[0]
+
+    def _field(path, default=None):
+        """First non-null value of a dotted path across the sample."""
+        for row in rows:
+            cur = row
+            for part in path.split("."):
+                cur = (cur or {}).get(part) if isinstance(cur, dict) else None
+            if cur not in (None, ""):
+                return cur
+        return default
+
+    prices = sorted(r["listPrice"] for r in rows if r.get("listPrice"))
+    median = prices[len(prices) // 2] if prices else None
+    beds = sorted(b for b in ((r.get("property") or {}).get("bedrooms") for r in rows) if b)
+    baths = sorted(b for b in ((r.get("property") or {}).get("bathsFull") for r in rows) if b)
+
+    # (parameter, value, why this value must narrow)
+    candidates = [
+        ("postalCodes", _field("address.postalCode"), "one ZIP out of several"),
+        ("type", _field("property.type"), "one property type"),
+        ("subtype", _field("property.subType") or _field("property.subTypeText"),
+         "one property subtype"),
+        ("minprice", median, "at least the median list price"),
+        ("maxprice", median, "at most the median list price"),
+        ("minbeds", beds[len(beds) // 2] if beds else None, "at least the median bedrooms"),
+        ("minbaths", baths[len(baths) // 2] if baths else None, "at least the median bathrooms"),
+        ("cities", _field("address.city"), "one city — `cities` is the production location param"),
+        ("q", _field("address.city"), "fuzzy search on one city — the demo/fallback location param"),
+        ("minclosedate", (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d"),
+         "the last 90 days — on Active this should narrow to nothing or be inert; "
+         "its real test is section 2b"),
+        ("mindate", (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d"),
+         "the last 30 days — D-075 says this one is ignored"),
+        ("maxdate", (datetime.now() - timedelta(days=3650)).strftime("%Y-%m-%d"),
+         "ten years ago — should exclude almost everything"),
+    ]
+
+    baseline = _get(auth, "status=Active&limit=1&count=true", "  baseline: status=Active")
+    try:
+        unfiltered = int(baseline[3].get("X-Total-Count"))
+    except (TypeError, ValueError, IndexError):
+        print("  (no X-Total-Count on the baseline — cannot compare)")
+        return
+
+    ignored, working, untestable = [], [], []
+
+    for param, value, why in candidates:
+        if value in (None, ""):
+            untestable.append(f"{param} (no value in the sample to narrow with)")
+            continue
+        wrong = _canary_name(param)
+        right_r = _get(auth, f"status=Active&{param}={value}&limit=1&count=true",
+                       f"  {param}={value}")
+        wrong_r = _get(auth, f"status=Active&{wrong}={value}&limit=1&count=true",
+                       f"  canary {wrong}={value}")
+
+        def _t(r):
+            try:
+                return int(r[3].get("X-Total-Count"))
+            except (TypeError, ValueError, IndexError):
+                return None
+
+        right, wrong_total = _t(right_r), _t(wrong_r)
+        if right is None:
+            untestable.append(f"{param} (no count header on the filtered query)")
+        elif right >= unfiltered:
+            ignored.append(f"{param}={value} returned {right} of {unfiltered} ({why})")
+        elif wrong_total is not None and wrong_total < unfiltered:
+            # The misspelling ALSO narrowed, so this feed is not spelling-strict
+            # and the canary proves nothing either way.
+            working.append(f"{param} filters ({right} of {unfiltered}), but the "
+                           f"canary `{wrong}` narrowed too — this feed is not "
+                           f"spelling-strict, so a typo here would NOT widen")
+        else:
+            working.append(f"{param} filters ({right} of {unfiltered}); "
+                           f"`{wrong}` returned {wrong_total} — ignored, as expected")
+
+    verdicts["D-085"] = (
+        ("SILENTLY IGNORED: " + "; ".join(ignored) + ". "
+         if ignored else "No parameter was silently ignored. ")
+        + f"Working: {len(working)}. "
+        + (f"Not testable on this feed: {', '.join(untestable)}. " if untestable else "")
+        + "A parameter listed as ignored is accepted with no error and widens "
+          "the query to the whole feed — on a count that reads as a big market, "
+          "not as a bug. Parameters that change shape rather than membership "
+          f"({', '.join(NON_FILTERING)}) are not canaried."
+    )
+    for line in working:
+        print(f"      ok: {line}")
+    for line in ignored:
+        print(f"      IGNORED: {line}")
+    for line in untestable:
+        print(f"      untestable: {line}")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -434,6 +560,35 @@ def main():
         )
     print()
 
+    # ── 5. every filtering parameter, with a canary (D-085) ─────────────────
+    #
+    # D-075 GENERALISED FROM ONE PARAMETER TO ALL OF THEM.
+    #
+    # `mindate` is accepted and ignored. So is `postalcodes` — the lowercase
+    # spelling of a parameter that works — which is how this section came to
+    # exist: the D-081 check above reported "the header IGNORES the filter" and
+    # the feed was fine. Measured:
+    #
+    #     postalCodes=77018  ->  5        postalcodes=77018  ->  42 (everything)
+    #
+    # SimplyRETS accepts an unrecognised parameter and ignores it, with no
+    # error. A misspelling anywhere in this client silently WIDENS the query,
+    # and on a count that does not look wrong — it looks like a big market.
+    #
+    # So: every filtering parameter the client sends, each with a deliberately
+    # misspelled twin. Correct returning FEWER than unfiltered proves the filter
+    # bites. Wrong returning the SAME as unfiltered proves names are
+    # case/spelling sensitive and the canary is meaningful.
+    #
+    # EVERY VALUE IS TAKEN FROM THE FEED, for the reason the hardcoded ZIP
+    # taught: a filter whose value matches nothing narrows to zero, and a
+    # filter whose value matches everything narrows to nothing, and neither
+    # distinguishes "works" from "ignored". Values are picked from the sample in
+    # section 1 so each one MUST bite.
+    print("5. Does every filtering parameter actually filter? (canary pairs)")
+    _param_canaries(auth, active, verdicts)
+    print()
+
     # ── 3. mindate (D-075) ──────────────────────────────────────────────────
     print("3. Does mindate do anything?")
     mindate_future = _get(auth, "status=Closed&mindate=2030-01-01&limit=500",
@@ -455,7 +610,7 @@ def main():
 
     # ── verdicts ────────────────────────────────────────────────────────────
     print("=" * 72)
-    for defect in ("D-074", "D-075", "D-076", "D-081"):
+    for defect in ("D-074", "D-075", "D-076", "D-081", "D-085"):
         print(f"\n{defect}: {verdicts.get(defect, 'INCONCLUSIVE — a request failed above')}")
     print("\n" + "=" * 72)
     print(f"{REQUESTS['sent']} GET request(s) sent"
