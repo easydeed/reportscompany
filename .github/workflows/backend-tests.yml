@@ -1,16 +1,30 @@
 name: Backend Tests
+# `tests/**` IS IN THESE FILTERS AND WAS NOT (D-089). `pytest.ini`'s testpaths
+# have listed `tests` since 2026-09-03, so this workflow RUNS that suite — but
+# nothing here fired when it changed. A suite you can edit without triggering
+# the job that runs it is a suite whose breakage surfaces on someone else's
+# unrelated PR, which is how its 40 failures became "the known-red baseline"
+# instead of a thing anybody owned.
+#
+# `db/**` for the same reason, one step further out: a migration changes the
+# schema these suites assert against and did not trigger them either.
 on:
   push:
     paths:
       - "apps/api/**"
       - "apps/worker/**"
+      - "tests/**"
+      - "db/**"
       - "pytest.ini"
       - ".github/workflows/backend-tests.yml"
   pull_request:
     paths:
       - "apps/api/**"
       - "apps/worker/**"
+      - "tests/**"
+      - "db/**"
       - "pytest.ini"
+      - ".github/workflows/backend-tests.yml"
 jobs:
   test:
     runs-on: ubuntu-latest

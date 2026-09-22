@@ -213,9 +213,30 @@ class TestContentRendering:
         assert "Irvine" in html, "City name not rendered"
 
     def test_agent_name_rendered(self, full_data):
+        """
+        THE AGENT BLOCK IS NOT IN THE BODY ANY MORE, AND THAT IS NOT A DEFECT.
+
+        This asserted against `render_html()` alone and failed, which read as
+        "the market report lost the agent's name". It did not. The agent footer
+        moved out of `base.jinja2` into PDFShift's `footer` parameter so it
+        repeats on EVERY page instead of only the last — rendered by
+        `render_page_footer_html()`, which `tasks.py:1650` passes to
+        `render_pdf` alongside the body.
+
+        So the test now looks where production puts it. Both documents are
+        checked because "in one of them" is the real contract: the name must
+        appear in the PDF, and the PDF is body + header + footer.
+
+        (`render_pdf_playwright` discards the footer — that is D-026, already on
+        the board as closed-not-live, and it is a property of the renderer, not
+        of this template.)
+        """
         builder = MarketReportBuilder(full_data)
-        html = builder.render_html()
-        assert "Jennifer Martinez" in html, "Agent name not rendered"
+        body = builder.render_html()
+        footer = builder.render_page_footer_html()
+        assert "Jennifer Martinez" in body + footer, (
+            "Agent name is in neither the report body nor the repeating footer"
+        )
 
     def test_listing_prices_rendered(self, full_data):
         builder = MarketReportBuilder(full_data)

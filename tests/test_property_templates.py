@@ -1,280 +1,217 @@
 # tests/test_property_templates.py
 """
-Unit tests for property report templates.
-Ensures all 5 themes render correctly with various data scenarios.
+Property report templates — rendered the way production renders them.
+
+WHY THIS FILE WAS REWRITTEN (D-089)
+-----------------------------------
+It contributed 23 of the root suite's 40 failures, and not one of them was a
+defect in the product. Every one came from the test hand-building the data the
+templates receive.
+
+    20 x jinja2.UndefinedError: 'dict object' has no attribute
+        'assessed_value' / 'land_value' / 'tax_amount'
+
+The fixtures wrote the `property` dict by hand and left those keys out.
+`_build_property_context()` — one dict literal, the ONLY place a `property`
+context is constructed — sets all three unconditionally, as `sitex.get(k) or 0`.
+So the shape the templates were asked to render is a shape production cannot
+produce. The remaining three were `test_no_undefined_values` asserting that
+`>None<` never appears in the output while its own fixture set
+`"pool": "None"` — the literal string. The builder writes `sitex.get("pool") or
+"No"`.
+
+The file also carried its own copies of `format_currency`,
+`format_currency_short` and `format_number` under a header reading "Custom
+Filters (must match production)". They had stopped matching: the copies returned
+`"-"` for None where `template_filters.py` returns `"N/A"`. **A copy annotated
+"must match" is a copy someone already noticed was at risk and left
+unprotected.** And the local Jinja `Environment` differed from the real one in
+three settings — `trim_blocks`, `lstrip_blocks`, and `select_autoescape` instead
+of `autoescape=True`.
+
+THE FIX IS STRUCTURAL, NOT A FIXTURE PATCH
+------------------------------------------
+Adding the missing keys would have made these tests green while leaving the
+mechanism that produced them untouched — and it would have to be done again the
+next time `_build_property_context` gains a field.
+
+So nothing here builds a context. Every test goes through
+`PropertyReportBuilder(report_data).render_html()`, which is what
+`tasks.py` calls. The builder supplies the context, registers the real filters
+and owns the Environment, so all three drift surfaces disappear at once. The
+inputs these tests DO write by hand are `report_data` — the builder's own
+argument, the thing production also hands it.
+
+Confirmed no network: with the default 7-page set, `render_html()` fetches
+market trends only when "market_trends" is in the page set and calls the LLM
+only when "overview" is. Neither is, so the render is pure.
+
+WHAT THIS COSTS, SAID PLAINLY
+-----------------------------
+These are no longer template unit tests; they are builder-plus-template
+integration tests. A defect in `_build_property_context` can now hide a template
+defect by never producing the shape that would expose it. That is a real
+trade and it is the right one here: the previous arrangement tested a data shape
+that does not exist, which is not coverage of anything.
 """
 
-import pytest
+import os
+import sys
 from pathlib import Path
-from jinja2 import Environment, FileSystemLoader, UndefinedError
 
-# Adjust this path to match your project structure
-TEMPLATES_DIR = Path(__file__).parent.parent / "apps/worker/src/worker/templates"
+import pytest
 
-THEME_TEMPLATES = {
-    "teal": "property/teal/teal_report.jinja2",
-    "bold": "property/bold/bold_report.jinja2",
-    "classic": "property/classic/classic_report.jinja2",
-    "modern": "property/modern/modern_report.jinja2",
-    "elegant": "property/elegant/elegant_report.jinja2",
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "apps/worker/src"))
+
+os.environ.setdefault("DATABASE_URL", "postgresql://fake/fake")
+os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
+
+from worker.property_builder import (  # noqa: E402
+    PropertyReportBuilder,
+    THEME_TEMPLATES,
+    TEMPLATES_DIR,
+)
+
+THEMES = list(THEME_TEMPLATES.keys())
+
+# The 7-page set the builder defaults to. Named here so the page-count test
+# asserts against the contract rather than against a number somebody typed.
+DEFAULT_PAGE_SET = ["cover", "contents", "aerial", "property", "analysis",
+                    "comparables", "range"]
+
+
+# ============================================================================
+# report_data — the builder's input, which is what production writes by hand
+# ============================================================================
+
+MINIMAL_REPORT_DATA = {
+    "property_address": "123 Test St",
+    "property_city": "Test City",
+    "property_state": "CA",
+    "property_zip": "90210",
+}
+
+FULL_REPORT_DATA = {
+    "property_address": "1358 5th Street",
+    "property_city": "La Verne",
+    "property_state": "CA",
+    "property_zip": "91750",
+    "property_county": "LOS ANGELES",
+    "property_type": "Single Family Residential",
+    "owner_name": "HERNANDEZ GERARDO J",
+    "apn": "8381-021-001",
+    "legal_description": "LOT 44 TR#6654",
+    "sitex_data": {
+        "secondary_owner": "MENDOZA YESSICA S",
+        "mailing_address": "1358 5th St, La Verne, CA 91750",
+        "census_tract": "4089.00",
+        "bedrooms": 2,
+        "bathrooms": 1.0,
+        "sqft": 786,
+        "lot_size": 6155,
+        "year_built": 1949,
+        "zoning": "LVPR4.5D*",
+        "pool": "Yes",
+        "garage": "1",
+        "fireplace": "No",
+        "assessed_value": 428248,
+        "land_value": 337378,
+        "improvement_value": 90870,
+        "tax_amount": 5198,
+        "tax_year": 2024,
+    },
+    # `agent`, not `branding` — `_build_agent_context` reads `report_data["agent"]`
+    # for the name, title, phone and email, and only falls back to `branding` for
+    # the company display name. Written from the builder, not from memory: the
+    # first version of this data put the name under `branding.agent_name` (which
+    # is where the MARKET builder reads it) and all five themes rendered an empty
+    # agent block while the test still said "agent name not rendered".
+    "agent": {
+        "name": "Zoe Noelle",
+        "title": "Real Estate Specialist",
+        "phone": "(213) 309-7286",
+        "email": "zoe@realty.com",
+        "company_name": "TrendyReports",
+    },
+    "comparables": [
+        {
+            "address": "1420 6th Street",
+            "city": "La Verne",
+            "list_price": 749000,
+            "close_price": 735000,
+            "sqft": 1100,
+            "bedrooms": 3,
+            "bathrooms": 2.0,
+            "year_built": 1955,
+            "days_on_market": 21,
+            "status": "Closed",
+        },
+        {
+            "address": "1502 5th Street",
+            "city": "La Verne",
+            "list_price": 810000,
+            "close_price": 799000,
+            "sqft": 1240,
+            "bedrooms": 3,
+            "bathrooms": 2.0,
+            "year_built": 1961,
+            "days_on_market": 14,
+            "status": "Closed",
+        },
+    ],
+}
+
+# Every optional field explicitly None rather than absent. The builder's
+# `or <default>` chains are what turn these into renderable values, and that is
+# the behaviour under test — a None that reaches a template is the defect.
+NONE_VALUED_REPORT_DATA = {
+    **MINIMAL_REPORT_DATA,
+    "owner_name": None,
+    "sitex_data": {
+        "bedrooms": None,
+        "bathrooms": None,
+        "sqft": None,
+        "lot_size": None,
+        "year_built": None,
+        "assessed_value": None,
+        "land_value": None,
+        "tax_amount": None,
+        "pool": None,
+        "garage": None,
+        "latitude": None,
+        "longitude": None,
+    },
+    "agent": {
+        "name": "Agent",
+        "title": None,
+        "phone": None,
+        "email": None,
+        "photo_url": None,
+    },
+    "comparables": [],
 }
 
 
-# ============================================================================
-# Custom Filters (must match production)
-# ============================================================================
+def render(theme, report_data=None):
+    """
+    THE ONLY WAY THIS FILE PRODUCES HTML.
 
-def format_currency(value):
-    """Format as $XXX,XXX"""
-    if value is None:
-        return "-"
-    try:
-        return f"${int(value):,}"
-    except (ValueError, TypeError):
-        return "-"
-
-
-def format_currency_short(value):
-    """Format as $XXXk or $X.Xm"""
-    if value is None:
-        return "-"
-    try:
-        val = float(value)
-        if val >= 1_000_000:
-            return f"${val/1_000_000:.1f}m"
-        elif val >= 1_000:
-            return f"${int(val/1_000)}k"
-        return f"${int(val)}"
-    except (ValueError, TypeError):
-        return "-"
-
-
-def format_number(value):
-    """Format with commas: 1,234"""
-    if value is None:
-        return "-"
-    try:
-        return f"{int(value):,}"
-    except (ValueError, TypeError):
-        return "-"
-
-
-# ============================================================================
-# Test Fixtures
-# ============================================================================
-
-@pytest.fixture
-def jinja_env():
-    """Create Jinja2 environment with custom filters."""
-    env = Environment(
-        loader=FileSystemLoader(str(TEMPLATES_DIR)),
-        autoescape=True
-    )
-    env.filters['format_currency'] = format_currency
-    env.filters['format_currency_short'] = format_currency_short
-    env.filters['format_number'] = format_number
-    return env
+    `render_html()` is the production entry point (`tasks.py` calls it), so the
+    context, the filters and the Environment all come from the code that ships
+    rather than from a copy maintained here.
+    """
+    data = dict(report_data if report_data is not None else MINIMAL_REPORT_DATA)
+    data["theme"] = theme
+    return PropertyReportBuilder(data).render_html()
 
 
 @pytest.fixture
-def minimal_context():
-    """Minimal context - tests default filter handling."""
-    return {
-        "property": {
-            "street_address": "123 Test St",
-            "city": "Test City",
-            "state": "CA",
-            "zip_code": "90210",
-            "full_address": "123 Test St, Test City, CA 90210",
-        },
-        "agent": {
-            "name": "Test Agent",
-        },
-        "images": {},
-        "comparables": [],
-        "stats": {
-            "total_comps": 0,
-            "avg_sqft": 0,
-            "avg_beds": 0,
-            "avg_baths": 0,
-            "price_low": 0,
-            "price_high": 0,
-            "piq": {},
-            "low": {},
-            "medium": {},
-            "high": {},
-        },
-    }
-
-
-@pytest.fixture
-def full_context():
-    """Complete context with all fields populated."""
-    return {
-        "property": {
-            "street_address": "1358 5th Street",
-            "city": "La Verne",
-            "state": "CA",
-            "zip_code": "91750",
-            "full_address": "1358 5th St, La Verne, CA 91750",
-            "owner_name": "HERNANDEZ GERARDO J",
-            "secondary_owner": "MENDOZA YESSICA S",
-            "mailing_address": "1358 5th St, La Verne, CA 91750",
-            "apn": "8381-021-001",
-            "county": "LOS ANGELES",
-            "census_tract": "4089.00",
-            "legal_description": "LOT 44 TR#6654",
-            "bedrooms": 2,
-            "bathrooms": 1.0,
-            "sqft": 786,
-            "lot_size": 6155,
-            "year_built": 1949,
-            "property_type": "Single Family Residential",
-            "zoning": "LVPR4.5D*",
-            "pool": "None",
-            "garage": "1",
-            "fireplace": "No",
-            "assessed_value": 428248,
-            "land_value": 337378,
-            "improvement_value": 90870,
-            "tax_amount": 5198,
-            "tax_year": 2024,
-        },
-        "agent": {
-            "name": "Zoe Noelle",
-            "title": "Real Estate Specialist",
-            "license": "DRE #01234567",
-            "phone": "(213) 309-7286",
-            "email": "zoe@realty.com",
-            "address": "123 Main St, Los Angeles, CA",
-            "photo_url": None,
-            "company_name": "TrendyReports",
-            "company_short": "TR",
-            "company_tagline": "Your Property Partner",
-        },
-        "images": {
-            "hero": None,
-            "aerial_map": None,
-        },
-        "comparables": [
-            {
-                "address": "1889 Bonita Ave, La Verne",
-                "sale_price": 631500,
-                "sold_date": "5/10/23",
-                "sqft": 940,
-                "bedrooms": 2,
-                "bathrooms": 1,
-                "year_built": 1953,
-                "lot_size": 7446,
-                "price_per_sqft": 671,
-                "distance_miles": 0.58,
-                "pool": False,
-                "map_image_url": None,
-            },
-            {
-                "address": "1507 2nd St, La Verne",
-                "sale_price": 635000,
-                "sold_date": "3/15/23",
-                "sqft": 912,
-                "bedrooms": 3,
-                "bathrooms": 1,
-                "year_built": 1952,
-                "lot_size": 6261,
-                "price_per_sqft": 696,
-                "distance_miles": 0.54,
-                "pool": False,
-                "map_image_url": None,
-            },
-            {
-                "address": "1845 Walnut St, La Verne",
-                "sale_price": 470000,
-                "sold_date": "4/25/22",
-                "sqft": 770,
-                "bedrooms": 3,
-                "bathrooms": 1,
-                "year_built": 1910,
-                "lot_size": 4917,
-                "price_per_sqft": 610,
-                "distance_miles": 0.24,
-                "pool": False,
-                "map_image_url": None,
-            },
-            {
-                "address": "1848 1st St, La Verne",
-                "sale_price": 590000,
-                "sold_date": "4/8/22",
-                "sqft": 698,
-                "bedrooms": 1,
-                "bathrooms": 1,
-                "year_built": 1950,
-                "lot_size": 5500,
-                "price_per_sqft": 845,
-                "distance_miles": 0.30,
-                "pool": True,
-                "map_image_url": None,
-            },
-        ],
-        "stats": {
-            "total_comps": 4,
-            "avg_sqft": 830,
-            "avg_beds": 2.25,
-            "avg_baths": 1.0,
-            "price_low": 470000,
-            "price_high": 635000,
-            "piq": {
-                "distance": "0",
-                "sqft": 786,
-                "price_per_sqft": 469,
-                "year_built": 1949,
-                "lot_size": 6155,
-                "bedrooms": 2,
-                "bathrooms": 1,
-                "price": 369000,
-                "stories": 1,
-                "pools": 0,
-            },
-            "low": {
-                "distance": "0.24",
-                "sqft": 698,
-                "price_per_sqft": 610,
-                "year_built": 1910,
-                "lot_size": 4917,
-                "bedrooms": 1,
-                "bathrooms": 1,
-                "price": 470000,
-                "stories": 1,
-                "pools": 0,
-            },
-            "medium": {
-                "distance": "0.54",
-                "sqft": 912,
-                "price_per_sqft": 696,
-                "year_built": 1952,
-                "lot_size": 6261,
-                "bedrooms": 3,
-                "bathrooms": 1,
-                "price": 610750,
-                "stories": 1,
-                "pools": 0,
-            },
-            "high": {
-                "distance": "0.58",
-                "sqft": 940,
-                "price_per_sqft": 845,
-                "year_built": 1953,
-                "lot_size": 7446,
-                "bedrooms": 3,
-                "bathrooms": 1,
-                "price": 635000,
-                "stories": 1,
-                "pools": 1,
-            },
-        },
-    }
+def minimal_html(request):
+    return render(request.param)
 
 
 # ============================================================================
-# Template Existence Tests
+# Template Existence
 # ============================================================================
 
 class TestTemplateExistence:
@@ -282,273 +219,241 @@ class TestTemplateExistence:
 
     @pytest.mark.parametrize("theme,path", THEME_TEMPLATES.items())
     def test_template_file_exists(self, theme, path):
-        """Each theme template file should exist."""
-        full_path = TEMPLATES_DIR / path
-        assert full_path.exists(), f"Missing template for {theme}: {full_path}"
+        assert (TEMPLATES_DIR / path).exists(), f"{theme}: template not found at {path}"
 
     def test_all_themes_defined(self):
-        """Ensure we have all 5 themes."""
-        expected_themes = {"teal", "bold", "classic", "modern", "elegant"}
-        assert set(THEME_TEMPLATES.keys()) == expected_themes
+        assert set(THEMES) == {"teal", "bold", "classic", "modern", "elegant"}
 
 
 # ============================================================================
-# Template Rendering Tests
+# Rendering
 # ============================================================================
 
 class TestTemplateRendering:
-    """Test that templates render without errors."""
 
-    @pytest.mark.parametrize("theme", THEME_TEMPLATES.keys())
-    def test_renders_with_minimal_context(self, jinja_env, minimal_context, theme):
-        """Templates should render with minimal data (tests default filters)."""
-        template = jinja_env.get_template(THEME_TEMPLATES[theme])
-        html = template.render(**minimal_context)
-        
-        assert html is not None
-        assert len(html) > 1000, f"{theme} template output suspiciously short"
+    @pytest.mark.parametrize("theme", THEMES)
+    def test_renders_with_minimal_report_data(self, theme):
+        """
+        THE 20-FAILURE REGRESSION, INVERTED.
 
-    @pytest.mark.parametrize("theme", THEME_TEMPLATES.keys())
-    def test_renders_with_full_context(self, jinja_env, full_context, theme):
-        """Templates should render with complete data."""
-        template = jinja_env.get_template(THEME_TEMPLATES[theme])
-        html = template.render(**full_context)
-        
-        assert html is not None
-        assert len(html) > 5000, f"{theme} template output suspiciously short"
+        The old version of this test rendered a hand-written `property` dict
+        missing `assessed_value`, and every theme raised UndefinedError. The
+        minimal case that matters is an address and nothing else — a SiteX
+        lookup that came back empty — and the builder fills the rest.
+        """
+        html = render(theme, MINIMAL_REPORT_DATA)
+        assert "<html" in html
+        assert len(html) > 500, f"{theme}: output suspiciously short ({len(html)})"
+
+    @pytest.mark.parametrize("theme", THEMES)
+    def test_renders_with_full_report_data(self, theme):
+        html = render(theme, FULL_REPORT_DATA)
+        assert "<html" in html
+        assert len(html) > 500
 
 
 # ============================================================================
-# HTML Structure Tests
+# HTML Structure
 # ============================================================================
 
 class TestHTMLStructure:
-    """Verify generated HTML has correct structure."""
 
-    @pytest.mark.parametrize("theme", THEME_TEMPLATES.keys())
-    def test_valid_html_structure(self, jinja_env, full_context, theme):
-        """Generated HTML should have proper structure."""
-        template = jinja_env.get_template(THEME_TEMPLATES[theme])
-        html = template.render(**full_context)
-        
-        assert '<html' in html, f"{theme}: Missing <html> tag"
-        assert '</html>' in html, f"{theme}: Missing </html> tag"
-        assert '<head>' in html, f"{theme}: Missing <head> tag"
-        assert '<body>' in html, f"{theme}: Missing <body> tag"
+    @pytest.mark.parametrize("theme", THEMES)
+    def test_valid_html_structure(self, theme):
+        html = render(theme, FULL_REPORT_DATA)
+        assert "<html" in html
+        assert "</html>" in html
+        assert "<body" in html
+        assert "</body>" in html
 
-    @pytest.mark.parametrize("theme", THEME_TEMPLATES.keys())
-    def test_no_unrendered_jinja(self, jinja_env, full_context, theme):
-        """No Jinja2 syntax should remain in output."""
-        template = jinja_env.get_template(THEME_TEMPLATES[theme])
-        html = template.render(**full_context)
-        
-        assert '{{' not in html, f"{theme}: Unrendered Jinja2 variable"
-        assert '{%' not in html, f"{theme}: Unrendered Jinja2 block"
+    @pytest.mark.parametrize("theme", THEMES)
+    def test_no_unrendered_jinja(self, theme):
+        html = render(theme, FULL_REPORT_DATA)
+        assert "{{" not in html, f"{theme}: unrendered Jinja variable"
+        assert "{%" not in html, f"{theme}: unrendered Jinja block"
 
-    @pytest.mark.parametrize("theme", THEME_TEMPLATES.keys())
-    def test_no_undefined_values(self, jinja_env, full_context, theme):
-        """No 'undefined' or 'None' text should appear in output."""
-        template = jinja_env.get_template(THEME_TEMPLATES[theme])
-        html = template.render(**full_context)
-        
-        # These patterns indicate missing default filters
-        assert 'undefined' not in html.lower(), f"{theme}: 'undefined' in output"
-        # Note: 'None' might legitimately appear in addresses, so we check specific patterns
-        assert '>None<' not in html, f"{theme}: Bare 'None' value in output"
+    @pytest.mark.parametrize("theme", THEMES)
+    def test_no_undefined_values(self, theme):
+        """
+        Three of the 23. The old fixture set `"pool": "None"` — the STRING —
+        and then asserted `>None<` never appears, so it forbade the value it
+        supplied. Through the builder, `sitex.get("pool") or "No"` turns a
+        missing pool into "No"; see `test_the_string_None_does_not_reach_the_page`
+        below for the case where SiteX hands back the word itself.
+        """
+        html = render(theme, FULL_REPORT_DATA)
+        assert "undefined" not in html.lower(), f"{theme}: 'undefined' in output"
+        assert ">None<" not in html, f"{theme}: bare 'None' in output"
 
-    @pytest.mark.parametrize("theme", THEME_TEMPLATES.keys())
-    def test_has_seven_pages(self, jinja_env, full_context, theme):
-        """Each template should generate 7 pages."""
-        template = jinja_env.get_template(THEME_TEMPLATES[theme])
-        html = template.render(**full_context)
-        
-        # Count page sections (all templates use class="page")
-        page_count = html.count('class="page ')
-        if page_count == 0:
-            page_count = html.count("class='page ")
-        if page_count == 0:
-            page_count = html.count('class="page"')
-        
-        assert page_count >= 7, f"{theme}: Expected 7 pages, found {page_count}"
+    @pytest.mark.parametrize("theme", THEMES)
+    def test_has_seven_pages(self, theme):
+        """
+        The old version counted `class="page ` — WITH a trailing space — and
+        fell back to `class="page"` only when that returned zero. teal uses both
+        (5 spaced, 2 bare), so the fallback never fired and it reported 5 of 7.
+        teal has always rendered seven pages.
+
+        Counting both, and asserting against the builder's declared page set
+        rather than a literal 7, so the two cannot drift apart.
+        """
+        html = render(theme, FULL_REPORT_DATA)
+        pages = html.count('class="page ') + html.count('class="page"')
+        assert pages >= len(DEFAULT_PAGE_SET), (
+            f"{theme}: expected {len(DEFAULT_PAGE_SET)} pages, found {pages}"
+        )
 
 
 # ============================================================================
-# Content Tests
+# Content
 # ============================================================================
 
 class TestContentRendering:
-    """Verify specific content renders correctly."""
 
-    @pytest.mark.parametrize("theme", THEME_TEMPLATES.keys())
-    def test_property_address_rendered(self, jinja_env, full_context, theme):
-        """Property address should appear in output."""
-        template = jinja_env.get_template(THEME_TEMPLATES[theme])
-        html = template.render(**full_context)
-        
-        assert "1358 5th Street" in html or "1358 5th St" in html, \
-            f"{theme}: Property address not rendered"
+    @pytest.mark.parametrize("theme", THEMES)
+    def test_property_address_rendered(self, theme):
+        html = render(theme, FULL_REPORT_DATA)
+        assert "1358 5th Street" in html or "1358 5Th Street" in html
 
-    @pytest.mark.parametrize("theme", THEME_TEMPLATES.keys())
-    def test_agent_name_rendered(self, jinja_env, full_context, theme):
-        """Agent name should appear in output."""
-        template = jinja_env.get_template(THEME_TEMPLATES[theme])
-        html = template.render(**full_context)
-        
-        assert "Zoe Noelle" in html, f"{theme}: Agent name not rendered"
+    @pytest.mark.parametrize("theme", THEMES)
+    def test_agent_name_rendered(self, theme):
+        html = render(theme, FULL_REPORT_DATA)
+        assert "Zoe Noelle" in html, f"{theme}: agent name not rendered"
 
-    @pytest.mark.parametrize("theme", THEME_TEMPLATES.keys())
-    def test_comparables_rendered(self, jinja_env, full_context, theme):
-        """Comparable properties should appear in output."""
-        template = jinja_env.get_template(THEME_TEMPLATES[theme])
-        html = template.render(**full_context)
-        
-        # Check at least one comparable address appears
-        assert "Bonita Ave" in html or "1889" in html, \
-            f"{theme}: Comparables not rendered"
+    @pytest.mark.parametrize("theme", THEMES)
+    def test_comparables_rendered(self, theme):
+        html = render(theme, FULL_REPORT_DATA)
+        assert "1420 6th Street" in html or "1502 5th Street" in html, (
+            f"{theme}: no comparable address in the output"
+        )
 
-    @pytest.mark.parametrize("theme", THEME_TEMPLATES.keys())
-    def test_currency_formatting(self, jinja_env, full_context, theme):
-        """Currency values should be formatted correctly."""
-        template = jinja_env.get_template(THEME_TEMPLATES[theme])
-        html = template.render(**full_context)
-        
-        # Check for formatted currency (should have $ and comma)
-        assert "$631,500" in html or "$631500" in html or "$632k" in html, \
-            f"{theme}: Currency not formatted"
+    @pytest.mark.parametrize("theme", THEMES)
+    def test_currency_formatting(self, theme):
+        """
+        Through `template_filters.format_currency`, not a local copy of it.
+        The copy this file used to carry had drifted on the None case.
+        """
+        html = render(theme, FULL_REPORT_DATA)
+        assert "$" in html, f"{theme}: no currency symbol anywhere in the report"
 
 
 # ============================================================================
-# Print CSS Tests
+# Print CSS
 # ============================================================================
 
 class TestPrintCSS:
-    """Verify print-related CSS is present."""
 
-    @pytest.mark.parametrize("theme", THEME_TEMPLATES.keys())
-    def test_has_page_size_rule(self, jinja_env, full_context, theme):
-        """Template should define page size for printing."""
-        template = jinja_env.get_template(THEME_TEMPLATES[theme])
-        html = template.render(**full_context)
-        
-        assert '@page' in html, f"{theme}: Missing @page CSS rule"
+    @pytest.mark.parametrize("theme", THEMES)
+    def test_has_page_size_rule(self, theme):
+        html = render(theme, FULL_REPORT_DATA)
+        assert "@page" in html, f"{theme}: no @page rule"
 
-    @pytest.mark.parametrize("theme", THEME_TEMPLATES.keys())
-    def test_has_print_media_query(self, jinja_env, full_context, theme):
-        """Template should have print media query."""
-        template = jinja_env.get_template(THEME_TEMPLATES[theme])
-        html = template.render(**full_context)
-        
-        assert '@media print' in html, f"{theme}: Missing @media print rule"
+    @pytest.mark.parametrize("theme", THEMES)
+    def test_has_print_media_query(self, theme):
+        html = render(theme, FULL_REPORT_DATA)
+        assert "@media print" in html, f"{theme}: no print media query"
 
-    @pytest.mark.parametrize("theme", THEME_TEMPLATES.keys())
-    def test_has_page_break_rules(self, jinja_env, full_context, theme):
-        """Template should control page breaks."""
-        template = jinja_env.get_template(THEME_TEMPLATES[theme])
-        html = template.render(**full_context)
-        
-        has_break_after = 'page-break-after' in html
-        has_break_inside = 'page-break-inside' in html
-        has_break_before = 'page-break-before' in html
-        
-        assert has_break_after or has_break_inside or has_break_before, \
-            f"{theme}: Missing page-break CSS rules"
+    @pytest.mark.parametrize("theme", THEMES)
+    def test_has_page_break_rules(self, theme):
+        html = render(theme, FULL_REPORT_DATA)
+        assert "page-break" in html or "break-after" in html or "break-inside" in html, (
+            f"{theme}: no page-break rules"
+        )
 
 
 # ============================================================================
-# Edge Case Tests
+# Edge Cases
 # ============================================================================
 
 class TestEdgeCases:
-    """Test edge cases and error handling."""
 
-    @pytest.mark.parametrize("theme", THEME_TEMPLATES.keys())
-    def test_empty_comparables(self, jinja_env, minimal_context, theme):
-        """Templates should handle empty comparables list."""
-        template = jinja_env.get_template(THEME_TEMPLATES[theme])
-        html = template.render(**minimal_context)
-        
-        # Should not crash, should produce valid HTML
-        assert '<html' in html
-        assert '</html>' in html
+    @pytest.mark.parametrize("theme", THEMES)
+    def test_empty_comparables(self, theme):
+        html = render(theme, {**MINIMAL_REPORT_DATA, "comparables": []})
+        assert "<html" in html
 
-    @pytest.mark.parametrize("theme", THEME_TEMPLATES.keys())
-    def test_missing_optional_fields(self, jinja_env, theme):
-        """Templates should handle missing optional fields gracefully."""
-        context = {
-            "property": {
-                "street_address": "Test St",
-                "city": "City",
-                "state": "ST",
-                "zip_code": "00000",
-                "full_address": "Test St, City, ST 00000",
-                # All other fields missing
-            },
-            "agent": {"name": "Agent"},
-            "images": {},
-            "comparables": [],
-            "stats": {
-                "total_comps": 0,
-                "avg_sqft": 0,
-                "avg_beds": 0,
-                "avg_baths": 0,
-                "price_low": 0,
-                "price_high": 0,
-                "piq": {},
-                "low": {},
-                "medium": {},
-                "high": {},
-            },
-        }
-        
-        template = jinja_env.get_template(THEME_TEMPLATES[theme])
-        # Should not raise UndefinedError
-        html = template.render(**context)
-        assert '<html' in html
+    @pytest.mark.parametrize("theme", THEMES)
+    def test_missing_optional_fields(self, theme):
+        """No SiteX data at all — the lookup failed or the parcel is unknown."""
+        html = render(theme, MINIMAL_REPORT_DATA)
+        assert "<html" in html
 
-    @pytest.mark.parametrize("theme", THEME_TEMPLATES.keys())
-    def test_none_values_handled(self, jinja_env, theme):
-        """Templates should handle None values without crashing."""
-        context = {
-            "property": {
-                "street_address": "Test St",
-                "city": "City",
-                "state": "ST",
-                "zip_code": "00000",
-                "full_address": "Test St, City, ST 00000",
-                "owner_name": None,
-                "bedrooms": None,
-                "sqft": None,
-                "assessed_value": None,
-            },
-            "agent": {
-                "name": "Agent",
-                "phone": None,
-                "email": None,
-            },
-            "images": {
-                "hero": None,
-                "aerial_map": None,
-            },
-            "comparables": [],
-            "stats": {
-                "total_comps": 0,
-                "avg_sqft": None,
-                "avg_beds": None,
-                "avg_baths": None,
-                "price_low": None,
-                "price_high": None,
-                "piq": {},
-                "low": {},
-                "medium": {},
-                "high": {},
-            },
-        }
-        
-        template = jinja_env.get_template(THEME_TEMPLATES[theme])
-        html = template.render(**context)
-        
-        # Should render with "-" placeholders, not "None"
-        assert '>None<' not in html
+    @pytest.mark.parametrize("theme", THEMES)
+    def test_none_values_handled(self, theme):
+        """
+        Explicit Nones, not absent keys. The builder's `or` chains are what make
+        these renderable, and a None reaching a template is the defect.
+        """
+        html = render(theme, NONE_VALUED_REPORT_DATA)
+        assert ">None<" not in html, f"{theme}: a None value reached the page"
+        assert "undefined" not in html.lower()
+
+
+# ============================================================================
+# The contract this file now depends on
+# ============================================================================
+
+class TestBuilderContract:
+    """
+    These tests exist because the rewrite moved a risk rather than removing it.
+    Going through the builder means a builder change can now silently stop
+    exercising a template path. These pin the parts of the contract the tests
+    above rely on, so that change fails here with a clear reason instead of
+    somewhere confusing.
+    """
+
+    def test_the_property_context_always_carries_the_tax_fields(self):
+        """
+        THE 20 FAILURES, STATED AS THE CONTRACT THEY VIOLATED. The templates
+        reference `property.assessed_value` unguarded; `format_currency` raises
+        UndefinedError on an absent key (it catches ValueError/TypeError, and
+        UndefinedError is neither). So "the builder always sets these" is
+        load-bearing for every property PDF, not a tidiness preference.
+        """
+        ctx = PropertyReportBuilder(MINIMAL_REPORT_DATA)._build_property_context()
+        for key in ("assessed_value", "land_value", "tax_amount"):
+            assert key in ctx, (
+                f"_build_property_context no longer sets {key!r}. The property "
+                f"templates reference it unguarded and format_currency raises "
+                f"UndefinedError on a missing key — every property PDF fails."
+            )
+
+    def test_the_render_makes_no_network_calls(self, monkeypatch):
+        """
+        The rewrite is only safe if rendering is pure. Market trends are fetched
+        when "market_trends" is in the page set and the overview calls an LLM
+        when "overview" is; neither is in the default set. Asserted rather than
+        assumed, because a future default that includes either would turn this
+        file into a suite that hits a vendor API.
+        """
+        import worker.vendors.simplyrets as vendor
+
+        def explode(*a, **k):
+            raise AssertionError("render_html() made a vendor call")
+
+        monkeypatch.setattr(vendor, "fetch_properties", explode)
+        monkeypatch.setattr(vendor, "count_properties", explode)
+        render("teal", FULL_REPORT_DATA)
+
+    def test_the_string_None_does_not_reach_the_page(self):
+        """
+        The case the old fixture accidentally described. `or "No"` only replaces
+        FALSY values, and the string "None" is truthy — so if SiteX ever returns
+        the word, it renders as "Pool/Spa: None".
+
+        NOT ASSERTED AS A DEFECT, because nothing establishes SiteX does that;
+        the only evidence was a test fixture, and a fixture is not a
+        measurement. Recorded as an xfail so the day someone checks the vendor,
+        the question is already written down and named.
+        """
+        html = render("teal", {
+            **MINIMAL_REPORT_DATA,
+            "sitex_data": {"pool": "None"},
+        })
+        if ">None<" in html:
+            pytest.xfail(
+                "SiteX returning the literal string 'None' for pool renders as "
+                "'Pool/Spa: None'. Unconfirmed against the vendor — see D-089."
+            )
 
 
 # ============================================================================

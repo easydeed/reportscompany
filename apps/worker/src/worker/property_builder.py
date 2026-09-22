@@ -494,10 +494,15 @@ class PropertyReportBuilder:
         """
         sitex_data = self.report_data.get("sitex_data") or {}
         
-        street = self.report_data.get("property_address", "")
-        city = self.report_data.get("property_city", "")
-        state = self.report_data.get("property_state", "")
-        zip_code = self.report_data.get("property_zip", "")
+        # D-090. `or ""`, not `.get(k, "")`: these four are interpolated into
+        # `full_address` below, so a NULL column does not stay invisible — it
+        # becomes the string "None" in the middle of the address on the cover
+        # of every theme. Measured: with `property_address=None`, all five
+        # render "None, Test City, CA 90210".
+        street = self.report_data.get("property_address") or ""
+        city = self.report_data.get("property_city") or ""
+        state = self.report_data.get("property_state") or ""
+        zip_code = self.report_data.get("property_zip") or ""
         
         # Build full address string
         full_address = f"{street}, {city}, {state} {zip_code}".strip(", ")
@@ -516,10 +521,13 @@ class PropertyReportBuilder:
             "longitude": sitex_data.get("longitude") or sitex_data.get("lng"),
             
             # Owner info
-            "owner_name": self.report_data.get("owner_name", "") or sitex_data.get("owner_name", ""),
+            # D-090: the trailing `.get(k, "")` in each of these `or` chains is
+            # the last term, so when it returns None — key present, value NULL —
+            # None is the result of the whole expression.
+            "owner_name": self.report_data.get("owner_name") or sitex_data.get("owner_name") or "",
             "secondary_owner": sitex_data.get("secondary_owner") or "-",
-            "county": self.report_data.get("property_county", "") or sitex_data.get("county", ""),
-            "apn": self.report_data.get("apn", "") or sitex_data.get("apn", ""),
+            "county": self.report_data.get("property_county") or sitex_data.get("county") or "",
+            "apn": self.report_data.get("apn") or sitex_data.get("apn") or "",
             
             # Property details (numeric fields default to 0 for safe template arithmetic)
             "bedrooms": sitex_data.get("bedrooms") or 0,
@@ -534,7 +542,7 @@ class PropertyReportBuilder:
             "num_units": sitex_data.get("num_units") or "-",
             "units": sitex_data.get("num_units") or "-",  # V0 template naming
             "zoning": sitex_data.get("zoning") or "-",
-            "property_type": self.report_data.get("property_type", "") or sitex_data.get("property_type", ""),
+            "property_type": self.report_data.get("property_type") or sitex_data.get("property_type") or "",
             "use_code": sitex_data.get("use_code") or "-",
             
             # Tax/Assessment
@@ -549,7 +557,7 @@ class PropertyReportBuilder:
             "tax_year": sitex_data.get("tax_year") or "-",
             
             # Legal
-            "legal_description": self.report_data.get("legal_description", "") or sitex_data.get("legal_description", ""),
+            "legal_description": self.report_data.get("legal_description") or sitex_data.get("legal_description") or "",
             "mailing_address": sitex_data.get("mailing_address") or "",
             "census_tract": sitex_data.get("census_tract") or "-",
             "housing_tract": sitex_data.get("housing_tract") or "-",
@@ -578,8 +586,28 @@ class PropertyReportBuilder:
         license_num = agent.get("license_number")
         license_display = f"CA BRE#{license_num}" if license_num else ""
         
+        # D-090 — THE SAME CONSTRUCT THE COMMENT BELOW DESCRIBES, ON FIVE LINES
+        # THAT DID NOT GET IT.
+        #
+        # `agent.get(k, "")` returns None when the key EXISTS holding None,
+        # because the default only applies to a missing key. These values come
+        # from a database row, where a nullable column with no value is exactly
+        # that case. `title` was hardened for it (D-066/D-067) and the lines
+        # around it were left alone, so with a NULL phone the teal, classic and
+        # modern reports rendered
+        #
+        #     ☎ None     ✉ None
+        #
+        # in the agent block of a customer-facing PDF. §0.6 says to grep for the
+        # CONSTRUCT rather than the symptom and re-run the check after the fix;
+        # this is what that rule is for, found two tickets later by a test that
+        # passed None instead of omitting the key.
+        #
+        # `or ""` rather than `.get(k, "")` throughout: it collapses missing,
+        # None and empty-string to one renderable value, which is what every
+        # template's `{% if agent.phone %}` already assumes.
         return {
-            "name": agent.get("name", ""),
+            "name": agent.get("name") or "",
             # `or` rather than a .get() default: the key can exist holding None,
             # which .get() happily returns and which rendered as the literal
             # string "None" in the PDF. Not "Realtor®" — see D-066.
@@ -592,9 +620,9 @@ class PropertyReportBuilder:
             "title": (agent.get("title") or "").strip() or "Real Estate Agent",
             "license_number": license_num,
             "license": license_display,  # V0 template naming (formatted)
-            "phone": agent.get("phone", ""),
-            "email": agent.get("email", ""),
-            "company_name": agent.get("company_name") or branding.get("display_name", ""),
+            "phone": agent.get("phone") or "",
+            "email": agent.get("email") or "",
+            "company_name": agent.get("company_name") or branding.get("display_name") or "",
             "street": agent_street,
             "city": agent_city,
             "state": agent_state,
@@ -606,7 +634,7 @@ class PropertyReportBuilder:
             "company_short": agent.get("company_short") or (
                 (agent.get("company_name") or "TR")[:2].upper()
             ),
-            "company_tagline": agent.get("company_tagline", ""),
+            "company_tagline": agent.get("company_tagline") or "",
         }
     
     def _build_comparables_context(self) -> List[Dict[str, Any]]:

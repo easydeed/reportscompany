@@ -338,6 +338,31 @@ it.**
   the tool until the tool is shown to have run.** Same class as "a number in a tool's output is a
   property of the tool" — one rule up, one layer down.
 
+- **A check that cannot be fixed yet belongs in `xfail(strict=True)` with its defect named — not
+  in a permanently red build, and never in a `skip`.** Unfixable red is not honesty, it is the
+  mechanism that hid D-038 and D-041: a check nobody can act on trains everyone to ignore the
+  check, and the next *real* failure lands inside the noise unseen. The root suite proved it at
+  scale — 40 failures left as "the known-red baseline" for 19 days, during which every Backend
+  Tests run on `main` and on every reviewed PR reported failure and nobody looked.
+
+  `xfail(strict=True)` keeps the assertion executing, keeps a NEW failure in the same file
+  visible, and **breaks the build the day the product catches up** — because a strict xfail that
+  passes is an error, which forces the marker off. A plain `skip` does none of that; it stops
+  running and goes quiet forever.
+
+  **The condition, without which this is just a skip with better manners: the link goes both
+  ways.** Every `xfail` reason names its defect ID, and that defect's entry lists the tests it
+  gates. One direction alone rots — a reason pointing at a defect nobody cross-references is an
+  excuse, and a defect that does not name its xfails cannot tell you what to delete when it is
+  fixed. Generate the list from the source rather than typing it (`@_Dxxx_GATED` → the `def` on
+  the next line), and assert the link in a test, for the same reason every other rule here is a
+  test: a documented invariant that nothing checks is a comment.
+
+  **Mark methods, not classes.** Applied at class level the first time, the marker covered two
+  tests that were already passing; they xpassed, strict turned that into a failure, and the
+  mistake surfaced in one run. That is the mechanism working — but it works only if `strict` is
+  on, which is the other half of why `strict` is not optional here.
+
 ---
 
 ## Phase 0 — Security & Tooling
