@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-22, against `fix/q-city-contamination`, cut from `main` at `8f48640`.
+**Last reconciled:** 2026-09-22, against `fix/q-city-contamination`, merged with `main` at `797304a`.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -36,22 +36,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 32 | Real, unfixed |
-| `fixed` | 50 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 33 | Real, unfixed |
+| `fixed` | 51 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **86** | D-001 … D-088, with **085 and 086 reserved** — see below |
+| **Total** | **88** | D-001 … D-088, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 2 · WRONG 8 · FRAGILE 11 · ROUGH 11. (Sums to 32, the open total.)
+**Open by severity:** BROKEN 2 · WRONG 7 · FRAGILE 12 · ROUGH 12. (Sums to 33, the open total.)
 
-> **The contiguity invariant is temporarily suspended, and by how much is stated rather than
-> smoothed over.** D-085 and D-086 are filed on `fix/d057-inventory-median-price` (PR #86), which
-> is still open. This branch takes D-087 and D-088 rather than reusing those numbers, because
-> renumbering would invalidate #86's entries, its commit message and its PR body — three places
-> that already name them. **When #86 merges the gap closes by itself** and the total becomes 88.
-> Until then a parse of this file reports `missing [85, 86]`, which is correct and expected; treat
-> it as unexpected again the moment #86 lands.
-
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-087, D-088 (`fix/q-city-contamination`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -1741,7 +1732,7 @@ evenly across all eight.
 
 ### D-057 — every inventory email quotes a median price of "varying prices"
 **Severity:** WRONG · **Affects:** **every** `inventory` email
-**Status:** `open`
+**Status:** `fixed` — `fix/d057-inventory-median-price`
 
 `_get_insight_paragraph` (`email/template.py:1522`) sources the price from:
 
@@ -1768,6 +1759,36 @@ never computes. They surface in the same sentence, which is why one render expos
 **Fix belongs in `build_inventory_result`** — add `median_list_price` (`_median` over
 `l["list_price"]` for the active set, the way `build_new_listings_result:386` already does it) —
 not in the email. Guessing a price in the template would be inventing a figure.
+
+> **FIXED as prescribed, and the prescription was right — which I nearly talked myself out of.**
+>
+> Grepping `price_str` in the template finds five sentences, three of which say *"homes **sold**
+> at a median of…"*. Read on their own they say the fix should be a CLOSE price, and that the
+> entry's prescription would print asking prices as sale prices. They belong to the
+> **market_snapshot** branch. The **inventory** branch says *"{n} **active listings** at a median
+> of…"* — an asking price, exactly as prescribed. Reading the branch structure rather than the
+> grep hits is what separated them.
+>
+> **Two things the fix had to get right that the entry does not mention.**
+>
+> *The population.* The sentence pairs the median with `total_active`, which the email payload
+> fills from `counts["Active"]` — `len(active)`, the **date-filtered** set the listings table
+> shows, not the months-of-supply numerator. The median is over that same set. A median of one
+> population beside a count of another is D-056's mistake with different numbers.
+>
+> *No `median_close_price`, though this report now has the closed listings to compute one.*
+> `_get_insight_paragraph` picks the price by precedence — close, else list — and applies it to
+> sentences that disagree about which kind they want. Adding a correct close price here would
+> silently turn this report's asking sentence into a sale price. Filed as **D-085**, and pinned
+> by a test that fails if the metric is ever added.
+>
+> **`_median` returns `0.0` for an empty list**, so the first version of this fix published a
+> median asking price of zero whenever nothing was priced — D-056's sentinel with a new name.
+> Found by the test asserting `is None`. Now `None`, and only `None`, means nothing to report.
+> The same expression at `:144` has the same sentinel and is **not** changed here: filed as
+> **D-086** rather than widened into silently.
+>
+> Tests: `apps/worker/tests/test_inventory_median_price.py`, 8 cases.
 
 ---
 
@@ -3512,6 +3533,74 @@ error.
 Not a new observation about any one file — it is a house style, which is why it wants one
 deliberate pass (a shared error surface) rather than fourteen separate edits.
 
+### D-085 — the email picks which KIND of price to quote by precedence, not by what the sentence says
+
+**Severity:** FRAGILE · **Affects:** every report type's insight paragraph
+**Status:** `open`
+
+`_get_insight_paragraph` (`email/template.py:1717`) resolves one variable:
+
+```python
+median_price = metrics.get("median_close_price") or metrics.get("median_list_price")
+```
+
+and spends it on sentences that want different things:
+
+| report type | the sentence | the price it needs |
+|---|---|---|
+| `market_snapshot` | "{n} homes **sold** at a median of {price}" | close |
+| `market_snapshot` | "The median **sale** price sits at {price}" | close |
+| `inventory` | "{n} **active listings** at a median of {price}" | list |
+| `new_listings` | "with a median **asking** price of {price}" | list |
+
+**Every one of them renders correctly today, and none of them is guaranteed to.** The precedence
+happens to match because of which metrics each builder emits: `market_snapshot` emits both, so
+close wins and its sale sentences are right; `new_listings` and `price_bands` emit only a list
+price, so their asking sentences are right. Correct by coincidence, across two files, with nothing
+stating the dependency.
+
+Found while fixing D-057: `build_inventory_result` now has closed listings and could compute a
+close price. Adding one — an obviously correct metric, in a builder, reviewed on its own terms —
+would turn *"active listings at a median of $450,000"* into a figure describing homes that already
+sold. Nothing would fail. The email would just quietly start saying something else.
+
+**The fix is to stop making the template guess.** Each sentence should name the metric it means —
+`median_close_price` in the sale clauses, `median_list_price` in the asking ones — and fall back to
+its own wording when that one is absent, rather than to the other kind of price. Not done here
+because it touches shared prose for four report types and D-057's branch is about one builder.
+
+The absence is pinned in the meantime: `test_the_inventory_builder_does_not_emit_a_close_price`
+fails with the reason if anyone adds it.
+
+### D-086 — `_median` and `_average` publish `0.0` as a price
+
+**Severity:** ROUGH · **Affects:** market snapshot, price bands, property reports, and anything reading a metric rather than testing it
+**Status:** `open`
+
+```python
+def _median(vals): return statistics.median(vals) if vals else 0.0
+def _average(vals): return (sum(vals) / len(vals)) if vals else 0.0
+```
+
+`0.0` is a price. It is a claim that the median asking price in this market is zero, and it is
+emitted whenever the input list is empty — which is exactly when there is nothing to claim. Several
+call sites go further and write `else 0` explicitly (`:237`, `:799`, `:800`, `:801`).
+
+Impact today is limited because the email template guards on truthiness, so `0.0` renders as
+"varying prices" or "typical time" rather than "$0". That is the template being lucky, not the
+metric being right: **any surface that formats the number instead of testing it prints `$0`**, and
+the PDF templates and the API's report JSON both read these fields.
+
+This is D-056's sentinel, which the months-of-supply work settled — `None` when there is nothing to
+estimate from, never a number that looks like an answer — applied to one function and not to its
+neighbours. `build_inventory_result`'s `median_list_price` was fixed to `None` in
+`fix/d057-inventory-median-price`; **at least eight other published metrics still carry the
+sentinel**, including the identical expression at `report_builders.py:144`.
+
+Not fixed alongside D-057 because each one publishes a field other surfaces read, and changing
+eight metrics' empty-case type inside a ticket about one email sentence is how a scoped fix becomes
+an unreviewed one.
+
 ### D-084 — a misspelled SimplyRETS parameter widens the query silently, and nothing notices
 
 **Severity:** FRAGILE · **Affects:** every report that filters — market snapshot, closed, inventory, new listings, price bands, market trends
@@ -3578,6 +3667,17 @@ runs the probe. A real guard would be an allowlist in `query_builders.py` — ev
 checked against the set of parameters known to work — which is a small change and a real one, and
 is not in this branch because the survey had to come first: an allowlist built from a guess at the
 vocabulary is worse than none.
+
+**AND THE SURVEY IT IS BUILT FROM MUST BE THE PRODUCTION ONE, NOT THE DEMO RUN ABOVE.** The table
+here is from the demo feed, and this very survey has already shown the two feeds disagree about
+which parameters work: `cities` narrowed 8 of 42 on demo, while `query_builders.py:_location`
+carries a comment saying the demo ignores city params and `q` is the fallback for that reason. One
+of those is wrong, and an allowlist measured on the wrong feed encodes the wrong feed — which
+would be worse than no allowlist in the specific way this defect is about, because it would look
+authoritative.
+
+So D-084 stays open until Jerry's production run lands, and the allowlist is built from those
+verdicts. The demo results are the shape of the answer, not the answer.
 
 This is filed FRAGILE rather than WRONG because every name the client currently sends is spelled
 correctly. The defect is that nothing would tell you if that stopped being true.

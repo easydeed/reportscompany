@@ -211,7 +211,7 @@ def _param_canaries(auth, active, verdicts):
             working.append(f"{param} filters ({right} of {unfiltered}); "
                            f"`{wrong}` returned {wrong_total} — ignored, as expected")
 
-    verdicts["D-085"] = (
+    verdicts["D-084"] = (
         ("SILENTLY IGNORED: " + "; ".join(ignored) + ". "
          if ignored else "No parameter was silently ignored. ")
         + f"Working: {len(working)}. "
@@ -560,7 +560,7 @@ def main():
         )
     print()
 
-    # ── 5. every filtering parameter, with a canary (D-085) ─────────────────
+    # ── 5. every filtering parameter, with a canary (D-084) ─────────────────
     #
     # D-075 GENERALISED FROM ONE PARAMETER TO ALL OF THEM.
     #
@@ -610,7 +610,7 @@ def main():
 
     # ── verdicts ────────────────────────────────────────────────────────────
     print("=" * 72)
-    for defect in ("D-074", "D-075", "D-076", "D-081", "D-085"):
+    for defect in ("D-074", "D-075", "D-076", "D-081", "D-084"):
         print(f"\n{defect}: {verdicts.get(defect, 'INCONCLUSIVE — a request failed above')}")
     print("\n" + "=" * 72)
     print(f"{REQUESTS['sent']} GET request(s) sent"
