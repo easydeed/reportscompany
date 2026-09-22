@@ -285,6 +285,84 @@ it.**
   code** — and when a whole suite fails at once, suspect the harness before the change, because a
   real regression rarely breaks everything and a broken fixture always does.
 
+- **A fixture should be built by the production builder, not hand-copied from it.** Twenty-three
+  of the root suite's forty failures are one mistake repeated: `tests/test_property_templates.py`
+  hand-writes the `property` dict the templates receive, and omits keys that
+  `_build_property_context()` — a single dict literal, the only construction site — sets
+  unconditionally. The templates then raise `UndefinedError` on a shape production never produces.
+  The same file duplicates `format_currency`, `format_currency_short` and `format_number` under a
+  header reading *"Custom Filters (must match production)"*, and they no longer do: the copies
+  return `"-"` where `template_filters.py` returns `"N/A"`. **A copy annotated "must match" is a
+  copy that has already been noticed to be at risk and left unprotected anyway.** A fixture that
+  the production builder produces cannot drift from it; one that a human transcribes drifts the
+  first time either side changes, and — this is the part that costs — **it drifts silently in both
+  directions**, so the suite reports failures the product does not have and misses failures it
+  does. Where a builder cannot be called in a test, derive the fixture from its output once and
+  assert the derivation, rather than retyping the result.
+
+- **A regression that did not take effect looks exactly like a test that is too weak.** Four
+  regressions were applied to D-087's suite; the fourth — replacing `_filter_by_city`'s equality
+  test with a substring test — came back **green**, which reads as "this test does not cover that".
+  The mutation had applied to the file. It had not reached the interpreter.
+
+  **The mechanism, reproduced in isolation rather than inferred from the symptom.** A `.pyc`
+  records the source's mtime **truncated to whole seconds** and its size, and reuses itself when
+  both still match. `if listing_city == city_lower:` and `if city_lower in listing_city:` are the
+  same length, and the write landed in the same second as the restore before it — so the header
+  matched and the old bytecode ran. Instrumented: `pyc mtime=1790091276 size=35`,
+  `src mtime=1790091276 size=35`, header match `True`, source on disk reading `return a in b`, and
+  the process printing the result of `==`. **Same-size edits inside one second are exactly what a
+  scripted regression harness produces**, so this is the normal case for the tool, not a
+  coincidence. (The first attempt to reproduce it *failed* — `os.utime` was passed float times,
+  which round, which bumps the mtime, which invalidates the cache and hides the effect. Restoring
+  the timestamp with `ns=` reproduces it every time. A failed reproduction is not a disproof; it is
+  a reproduction with a bug in it.)
+
+  **Remedies, each measured against that reproduction rather than assumed:**
+
+  | | result |
+  |---|---|
+  | **delete the `.pyc`** (`rm -rf __pycache__`, or unlink the one file) | **works, every time — use this** |
+  | `touch`/`os.utime` the source forward | **0 of 12** when the touch lands in the same second; works only if it happens to cross a boundary. Unreliable exactly when the harness is fast, which is always |
+  | `-B` / `PYTHONDONTWRITEBYTECODE` | **no effect.** They stop Python *writing* bytecode; they do not stop it *reading* what is already there |
+  | `--check-hash-based-pycs always` | **no effect.** Runtime-written `.pyc`s are timestamp-based; the flag governs hash-based ones |
+
+  Note the second and third rows: both are the obvious-sounding fix, and neither works. `-B` was in
+  the command that finally showed the regression failing, which made it look like part of the
+  remedy; the purge in the same command was doing all of the work. **A fix that was present when
+  the symptom cleared is not thereby the fix.**
+
+  Two habits close this off: `assert mutated != original` before running anything, which separately
+  catches a `str.replace` that matched nothing, and delete bytecode between runs. And the general
+  form, which is why it belongs here: **a negative result from a verification tool is a claim about
+  the tool until the tool is shown to have run.** Same class as "a number in a tool's output is a
+  property of the tool" — one rule up, one layer down.
+
+- **A check that cannot be fixed yet belongs in `xfail(strict=True)` with its defect named — not
+  in a permanently red build, and never in a `skip`.** Unfixable red is not honesty, it is the
+  mechanism that hid D-038 and D-041: a check nobody can act on trains everyone to ignore the
+  check, and the next *real* failure lands inside the noise unseen. The root suite proved it at
+  scale — 40 failures left as "the known-red baseline" for 19 days, during which every Backend
+  Tests run on `main` and on every reviewed PR reported failure and nobody looked.
+
+  `xfail(strict=True)` keeps the assertion executing, keeps a NEW failure in the same file
+  visible, and **breaks the build the day the product catches up** — because a strict xfail that
+  passes is an error, which forces the marker off. A plain `skip` does none of that; it stops
+  running and goes quiet forever.
+
+  **The condition, without which this is just a skip with better manners: the link goes both
+  ways.** Every `xfail` reason names its defect ID, and that defect's entry lists the tests it
+  gates. One direction alone rots — a reason pointing at a defect nobody cross-references is an
+  excuse, and a defect that does not name its xfails cannot tell you what to delete when it is
+  fixed. Generate the list from the source rather than typing it (`@_Dxxx_GATED` → the `def` on
+  the next line), and assert the link in a test, for the same reason every other rule here is a
+  test: a documented invariant that nothing checks is a comment.
+
+  **Mark methods, not classes.** Applied at class level the first time, the marker covered two
+  tests that were already passing; they xpassed, strict turned that into a failure, and the
+  mistake surfaced in one run. That is the mechanism working — but it works only if `strict` is
+  on, which is the other half of why `strict` is not optional here.
+
 ---
 
 ## Phase 0 — Security & Tooling

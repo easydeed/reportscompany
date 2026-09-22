@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-22, against `fix/root-suite-mode`, cut from `main` at `8f48640`.
+**Last reconciled:** 2026-09-22, against `fix/root-suite-mode`, merged with `main` at `a59406a`.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -37,21 +37,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 33 | Real, unfixed |
-| `fixed` | 50 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 53 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **87** | D-001 … D-091, with **085–088 reserved** — see below |
+| **Total** | **91** | D-001 … D-091, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 2 · WRONG 8 · FRAGILE 11 · ROUGH 12. (Sums to 33, the open total.)
+**Open by severity:** BROKEN 2 · WRONG 7 · FRAGILE 12 · ROUGH 13. (Sums to 34, the open total.)
 
-> **Four numbers are reserved, not missing, and this note says by whom.** D-085 and D-086 are
-> filed on `fix/d057-inventory-median-price` (PR #86); D-087 and D-088 on
-> `fix/q-city-contamination` (PR #88). Both are open. This branch took D-089–D-091 rather than
-> reusing those numbers, because renumbering would invalidate entries, commit messages and PR
-> bodies that already name them. **A parse of this file currently reports `missing [85, 86, 87,
-> 88]`, which is correct and expected**; the gaps close as those PRs merge, and the total becomes
-> 91. Treat a gap as unexpected again once both have landed.
-
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-089, D-090 (`fix/root-suite-mode`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -1741,7 +1733,7 @@ evenly across all eight.
 
 ### D-057 — every inventory email quotes a median price of "varying prices"
 **Severity:** WRONG · **Affects:** **every** `inventory` email
-**Status:** `open`
+**Status:** `fixed` — `fix/d057-inventory-median-price`
 
 `_get_insight_paragraph` (`email/template.py:1522`) sources the price from:
 
@@ -1768,6 +1760,36 @@ never computes. They surface in the same sentence, which is why one render expos
 **Fix belongs in `build_inventory_result`** — add `median_list_price` (`_median` over
 `l["list_price"]` for the active set, the way `build_new_listings_result:386` already does it) —
 not in the email. Guessing a price in the template would be inventing a figure.
+
+> **FIXED as prescribed, and the prescription was right — which I nearly talked myself out of.**
+>
+> Grepping `price_str` in the template finds five sentences, three of which say *"homes **sold**
+> at a median of…"*. Read on their own they say the fix should be a CLOSE price, and that the
+> entry's prescription would print asking prices as sale prices. They belong to the
+> **market_snapshot** branch. The **inventory** branch says *"{n} **active listings** at a median
+> of…"* — an asking price, exactly as prescribed. Reading the branch structure rather than the
+> grep hits is what separated them.
+>
+> **Two things the fix had to get right that the entry does not mention.**
+>
+> *The population.* The sentence pairs the median with `total_active`, which the email payload
+> fills from `counts["Active"]` — `len(active)`, the **date-filtered** set the listings table
+> shows, not the months-of-supply numerator. The median is over that same set. A median of one
+> population beside a count of another is D-056's mistake with different numbers.
+>
+> *No `median_close_price`, though this report now has the closed listings to compute one.*
+> `_get_insight_paragraph` picks the price by precedence — close, else list — and applies it to
+> sentences that disagree about which kind they want. Adding a correct close price here would
+> silently turn this report's asking sentence into a sale price. Filed as **D-085**, and pinned
+> by a test that fails if the metric is ever added.
+>
+> **`_median` returns `0.0` for an empty list**, so the first version of this fix published a
+> median asking price of zero whenever nothing was priced — D-056's sentinel with a new name.
+> Found by the test asserting `is None`. Now `None`, and only `None`, means nothing to report.
+> The same expression at `:144` has the same sentinel and is **not** changed here: filed as
+> **D-086** rather than widened into silently.
+>
+> Tests: `apps/worker/tests/test_inventory_median_price.py`, 8 cases.
 
 ---
 
@@ -3512,6 +3534,74 @@ error.
 Not a new observation about any one file — it is a house style, which is why it wants one
 deliberate pass (a shared error surface) rather than fourteen separate edits.
 
+### D-085 — the email picks which KIND of price to quote by precedence, not by what the sentence says
+
+**Severity:** FRAGILE · **Affects:** every report type's insight paragraph
+**Status:** `open`
+
+`_get_insight_paragraph` (`email/template.py:1717`) resolves one variable:
+
+```python
+median_price = metrics.get("median_close_price") or metrics.get("median_list_price")
+```
+
+and spends it on sentences that want different things:
+
+| report type | the sentence | the price it needs |
+|---|---|---|
+| `market_snapshot` | "{n} homes **sold** at a median of {price}" | close |
+| `market_snapshot` | "The median **sale** price sits at {price}" | close |
+| `inventory` | "{n} **active listings** at a median of {price}" | list |
+| `new_listings` | "with a median **asking** price of {price}" | list |
+
+**Every one of them renders correctly today, and none of them is guaranteed to.** The precedence
+happens to match because of which metrics each builder emits: `market_snapshot` emits both, so
+close wins and its sale sentences are right; `new_listings` and `price_bands` emit only a list
+price, so their asking sentences are right. Correct by coincidence, across two files, with nothing
+stating the dependency.
+
+Found while fixing D-057: `build_inventory_result` now has closed listings and could compute a
+close price. Adding one — an obviously correct metric, in a builder, reviewed on its own terms —
+would turn *"active listings at a median of $450,000"* into a figure describing homes that already
+sold. Nothing would fail. The email would just quietly start saying something else.
+
+**The fix is to stop making the template guess.** Each sentence should name the metric it means —
+`median_close_price` in the sale clauses, `median_list_price` in the asking ones — and fall back to
+its own wording when that one is absent, rather than to the other kind of price. Not done here
+because it touches shared prose for four report types and D-057's branch is about one builder.
+
+The absence is pinned in the meantime: `test_the_inventory_builder_does_not_emit_a_close_price`
+fails with the reason if anyone adds it.
+
+### D-086 — `_median` and `_average` publish `0.0` as a price
+
+**Severity:** ROUGH · **Affects:** market snapshot, price bands, property reports, and anything reading a metric rather than testing it
+**Status:** `open`
+
+```python
+def _median(vals): return statistics.median(vals) if vals else 0.0
+def _average(vals): return (sum(vals) / len(vals)) if vals else 0.0
+```
+
+`0.0` is a price. It is a claim that the median asking price in this market is zero, and it is
+emitted whenever the input list is empty — which is exactly when there is nothing to claim. Several
+call sites go further and write `else 0` explicitly (`:237`, `:799`, `:800`, `:801`).
+
+Impact today is limited because the email template guards on truthiness, so `0.0` renders as
+"varying prices" or "typical time" rather than "$0". That is the template being lucky, not the
+metric being right: **any surface that formats the number instead of testing it prints `$0`**, and
+the PDF templates and the API's report JSON both read these fields.
+
+This is D-056's sentinel, which the months-of-supply work settled — `None` when there is nothing to
+estimate from, never a number that looks like an answer — applied to one function and not to its
+neighbours. `build_inventory_result`'s `median_list_price` was fixed to `None` in
+`fix/d057-inventory-median-price`; **at least eight other published metrics still carry the
+sentinel**, including the identical expression at `report_builders.py:144`.
+
+Not fixed alongside D-057 because each one publishes a field other surfaces read, and changing
+eight metrics' empty-case type inside a ticket about one email sentence is how a scoped fix becomes
+an unreviewed one.
+
 ### D-084 — a misspelled SimplyRETS parameter widens the query silently, and nothing notices
 
 **Severity:** FRAGILE · **Affects:** every report that filters — market snapshot, closed, inventory, new listings, price bands, market trends
@@ -3543,7 +3633,8 @@ feed:
 
 | | |
 |---|---|
-| filters correctly | `postalCodes`, `type`, `subtype`, `minprice`, `maxprice`, `minbeds`, `minbaths`, `cities`, `q`, `minclosedate` |
+| filters correctly | `postalCodes`, `type`, `subtype`, `minprice`, `maxprice`, `minbeds`, `minbaths`, `cities`, `minclosedate` |
+| **filters, but FUZZILY** | `q` — narrows, and to the wrong set (see below, and D-087) |
 | **accepted and ignored** | `mindate`, `maxdate` (see D-075) |
 | not canaried | `limit`, `offset`, `sort`, `count`, `vendor` — they change the shape of the answer, not which rows are in it |
 
@@ -3551,11 +3642,43 @@ feed:
 spelling-strict, so "correct narrows and wrong does not" is a real signal rather than a
 coincidence.
 
+> **CORRECTION, 2026-09-22 — `q` was listed as "filters correctly" and does not.** The canary only
+> asks *did the result narrow?* `q` narrows, so it passed. It does not ask *did it narrow to the
+> right rows*, and `q` is free-text over MLS number, address, city and ZIP:
+>
+> ```
+> cities=Houston  ->  X-Total-Count 12, every row in Houston
+> q=Houston       ->  X-Total-Count 13, twelve Houston + one TOMBALL
+> ```
+>
+> A canary that compares a filtered count against an unfiltered one can only distinguish *narrowed*
+> from *ignored*. "Narrowed to the correct set" is a third state it is structurally blind to, and
+> `q` is the parameter that lives there. The row-level check — do the returned rows actually satisfy
+> the filter? — is what separates them, and only `type` (whose returned rows carry their own type
+> field) has ever been checked that way. **Any parameter in the "filters correctly" row could in
+> principle be in the fuzzy row**; what is established for them is that they narrow.
+>
+> This matters for the allowlist, which is the whole point of D-084: an allowlist built from this
+> table would have declared `q` sound. The allowlist answers "is this name recognised", which is a
+> genuinely different question from "does this name do what we think", and it should be described
+> as the former when it lands.
+
 **What is NOT fixed.** Nothing at runtime detects a misspelling. The probe catches it when someone
 runs the probe. A real guard would be an allowlist in `query_builders.py` — every key it emits
 checked against the set of parameters known to work — which is a small change and a real one, and
 is not in this branch because the survey had to come first: an allowlist built from a guess at the
 vocabulary is worse than none.
+
+**AND THE SURVEY IT IS BUILT FROM MUST BE THE PRODUCTION ONE, NOT THE DEMO RUN ABOVE.** The table
+here is from the demo feed, and this very survey has already shown the two feeds disagree about
+which parameters work: `cities` narrowed 8 of 42 on demo, while `query_builders.py:_location`
+carries a comment saying the demo ignores city params and `q` is the fallback for that reason. One
+of those is wrong, and an allowlist measured on the wrong feed encodes the wrong feed — which
+would be worse than no allowlist in the specific way this defect is about, because it would look
+authoritative.
+
+So D-084 stays open until Jerry's production run lands, and the allowlist is built from those
+verdicts. The demo results are the shape of the answer, not the answer.
 
 This is filed FRAGILE rather than WRONG because every name the client currently sends is spelled
 correctly. The defect is that nothing would tell you if that stopped being true.
@@ -3584,6 +3707,164 @@ to live alone.
 Fixing it is one `COMMENT ON COLUMN` in a new migration. Not folded into D-019's branch because it
 would have added a second unapplied migration to the pile Jerry was then holding (0055, since applied), for no
 behavioural gain, and a DDL file in a diff invites the assumption that the fix needs it.
+
+### D-087 — the months-of-supply numerator counts listings from other cities
+
+**Severity:** WRONG · **Affects:** the `inventory` report's hero KPI and months of supply, on every
+city-based run (ZIP-based runs are unaffected)
+**Status:** `fixed` — `fix/q-city-contamination`
+
+`_location` (`query_builders.py`) sends `q=<city>`, SimplyRETS' free-text search over MLS number,
+address, city and ZIP. Measured against the demo feed:
+
+```
+cities=Houston  ->  X-Total-Count 12, every row in Houston
+q=Houston       ->  X-Total-Count 13, twelve Houston + one listing in TOMBALL
+Cities=Houston  ->  X-Total-Count 65, the whole feed  (D-084: names are case-sensitive)
+```
+
+**The rows were never the problem, and saying otherwise would be the interesting-sounding version
+of this defect rather than the true one.** `_filter_by_city` (`report_builders.py:285`) exists
+precisely for this, is applied at the top of all eight builders and twice in `market_trends.py`,
+and matches on equality rather than substring — so the Tomball row has never reached a listings
+table, a median, a DOM or `counts["Active"]`. That defence long predates this entry.
+
+**What it cannot reach is a count.** `count_properties` asks with `count=true` and the feed answers
+with `X-Total-Count`: one number covering everything the API matched. There are no rows to filter.
+So on a city report:
+
+| figure | source | population |
+|---|---|---|
+| `counts["Active"]`, the table, every median | fetched rows, city-filtered | the requested city |
+| `metrics["total_active"]` (hero KPI) | `X-Total-Count` | the city **plus fuzzy matches** |
+| months-of-supply NUMERATOR | `X-Total-Count` | the city **plus fuzzy matches** |
+
+Two populations, one report. **That is D-056 exactly, arriving by a different route** — and worse
+than D-056 in one respect: the hero KPI reading 13 above a table of 12 is at least visible, while
+the same 13 inside months of supply is not. The error is one-directional (`q` can only match more,
+never fewer), so inventory is overstated and months of supply is overstated, which pushes the
+market-condition badge toward buyer's-market — the same direction D-074 pushed it.
+
+Size unknown in production and not extrapolated from 13-vs-12: `q` is full-text, so a city whose
+name appears in street names, subdivision names or agent remarks matches far more of the feed than
+one whose name does not. One city, one feed, one day is not a rate.
+
+> **FIXED, AND NOT BY SWITCHING TO `cities`.** The precise-looking fix is the dangerous one.
+> The code's own comment says some accounts may not support `cities`, and D-084 measured what
+> SimplyRETS does with a name it does not recognise: accepts it, ignores it, returns the whole feed
+> with a 200. On an unsupporting production account the swap turns one stray Tomball listing into
+> **every listing in the MLS** — a city report computed over ~70,000 homes, silently. Being wrong by
+> one row and being wrong by the entire feed are not the same bet.
+>
+> So: keep `q`, keep cleaning the rows, and **stop counting**. `count_properties_if_exact`
+> (`vendors/simplyrets.py`) returns `None` when the query's location filter is fuzzy, and sends no
+> request at all — a call saved, not spent. `None` is not a new code path: it is the existing "the
+> feed did not return the header" case, which already falls back to the **city-filtered** row count
+> with `active_was_truncated` set if the fetch hit its ceiling.
+>
+> **The cost is real and stated rather than buried.** D-081 removed the 1000-row ceiling from this
+> figure; this puts it back for city-based reports. A city with more than 1000 active listings now
+> *declines to state* months of supply instead of stating a contaminated one — D-078's flag doing
+> its job. ZIP reports keep the exact count, because `postalCodes` was measured exact.
+> `location_is_exact` already lists `cities`, so the day Jerry's probe confirms production honours
+> it, the ceiling comes off again with a one-line change in `_location` and nothing else.
+>
+**XFAILS THIS DEFECT GATES** (§0.6: two-way link, or an xfail is a skip with better manners).
+All in `tests/test_simplyrets_query_builder.py`, marked `xfail(strict=True)` with `D-087` named
+in the reason. **Strict**, so the day this is fixed they PASS, the unexpected pass FAILS THE BUILD,
+and the markers have to come off — which is how this list stops being a lie.
+
+| test |
+|---|
+| `test_production_uses_cities_param` |
+| `test_production_city_value_preserved` |
+
+> ### THIS FIX IS EXPECTED TO BE TEMPORARY, AND THE PROBE IS WHAT ENDS IT
+>
+> **Do not read the entry above as settled engineering.** Refusing to count is the correct thing to
+> do *while the question is open*; it is not the destination. The destination is `cities`, which
+> measured exact on the demo feed — an exact count, no ceiling, no contamination, for every city
+> report. What stands between here and there is one verdict from
+> `scripts/probe_simplyrets_behaviour.py` section 5, whose canary already covers `cities` on the
+> production feed.
+>
+> | probe says `cities` filters on production | then |
+> |---|---|
+> | **yes** | `_location` returns `{"cities": city}` instead of `{"q": city}`. `location_is_exact` already lists it, so counts come back exact for city reports and the 1000-row ceiling goes away again. One line. This entry becomes history. |
+> | **no** | the guard stays, permanently, and the ceiling is the price of not publishing a contaminated numerator. Worth then asking whether a *paged* exact count is affordable for the >1000 case. |
+>
+> **The probe now gates three things, and this is the third:** the parameter allowlist (D-084),
+> D-074's remaining 90-day corroboration, and whether city reports get exact counts back. The cost
+> of this fix is the reason its priority went up, not a reason to route around it.
+>
+> A note for whoever reads this after the probe lands: if the answer is yes, the one-line change is
+> **not** the whole job. `_filter_by_city` stays — an exact API filter does not make a client-side
+> equality check redundant, it makes it a cheap no-op, and D-074's posture is the precedent. Remove
+> it and the next time a location parameter is quietly dropped, nothing catches it.
+
+Tests: `apps/worker/tests/test_city_contamination.py`, 11 cases, four regressions applied and seen
+to fail on the right tests — including one on `_filter_by_city` itself, because a fix that replaced
+one fuzzy match with another (a substring test would readmit "South Houston") would be no fix.
+
+### D-088 — two of the six documented SimplyRETS property types are silently ignored
+
+**Severity:** FRAGILE · **Affects:** nothing today; any future query that asks for multi-family or
+commercial inventory by the documented code
+**Status:** `fixed` — `fix/q-city-contamination`
+
+`query_builders.py:_filters` documented the `type` vocabulary as
+*"RES=Residential, CND=Condo, MUL=Multi-family, LND=Land, COM=Commercial, RNT=Rental"*. Each value
+sent to the demo feed with `count=true`, and the returned rows' own `property.type` inspected:
+
+| sent | count | rows returned | |
+|---|---|---|---|
+| `residential` / `RES` | 45 | all RES | |
+| `condominium` / `CND` | 33 | RES + CND | |
+| `land` / `LND` | 6 | all LND | |
+| `rental` / `RNT` | 10 | all RNT | |
+| `multifamily` | 7 | all MLF | |
+| **`MUL`** | **45** | **all RES** | ← ignored |
+| `commercial` | 5 | all CRE | |
+| **`COM`** | **45** | **all RES** | ← ignored |
+| `farm` | 4 | all FRM | |
+| `ZZZNONSENSE`, `` (empty) | 45 | all RES | the fallback |
+
+**An unrecognised VALUE does not 400 and is not dropped — it falls back to residential.** So a
+query asking for multi-family or commercial by the documented code comes back with houses, at 200,
+and every downstream median is a median of the wrong property class. This is D-084's silent-widening
+finding one level down: that one is about parameter *names*, this one is about their *values*, and
+the failure mode is the same shape — accepted, ignored, no error.
+
+Nothing sends `MUL` or `COM` today (grepped across `apps/`), which is why this is FRAGILE and not
+WRONG. The fix is the corrected table, so that the next person writing a commercial report copies a
+value that works.
+
+**`RES` is left alone and cannot be adjudicated from outside.** It produces exactly the residential
+set — but so does `ZZZNONSENSE`, because the fallback *is* residential. Whether `RES` is recognised
+or merely lands on the default is not observable through the API, and the root suite's
+`test_resolver_type_is_residential` asserts it is invalid on grounds nothing here can establish.
+The docstring now says to prefer the long names, which are unambiguous either way. Values are
+case-insensitive (`Residential`, `RESIDENTIAL` both return 45); parameter *names* are not (D-084).
+
+**XFAILS THIS DEFECT GATES** (§0.6: two-way link, or an xfail is a skip with better manners).
+All in `tests/test_simplyrets_query_builder.py`, marked `xfail(strict=True)` with `D-088` named
+in the reason. **Strict**, so the day this is fixed they PASS, the unexpected pass FAILS THE BUILD,
+and the markers have to come off — which is how this list stops being a lie.
+
+| test |
+|---|
+| `test_default_type_is_not_RES` |
+| `test_default_type_is_residential` |
+| `test_RES_alias_normalized_to_residential` |
+| `test_MUL_alias_normalized_to_multifamily` |
+| `test_LND_alias_normalized_to_land` |
+| `test_RNT_alias_normalized_to_rental` |
+| `test_market_snapshot_query_has_no_RES` |
+| `test_resolver_type_is_not_RES` |
+| `test_resolver_type_is_residential` |
+| `test_no_report_type_produces_RES` |
+| `test_valid_types_only` |
+
 
 ### D-089 — the root suite's 40 failures were the suite describing a system that had moved
 
