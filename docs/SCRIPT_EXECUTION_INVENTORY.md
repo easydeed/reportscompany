@@ -27,7 +27,7 @@ since the remediation began (`5fb9cd5`).
 | `db/migrations/0012_seed_plans.sql` (mod) | **yes** | Same run as 0011. |
 | `db/migrations/0053_phase4_indexes_and_signup_tokens.sql` | **yes** | A local database built without it; applying it turned two failing endpoints into 200 (DEFECT_LIST:503). Confirms the D-016 fix end to end on a second database. |
 | `db/migrations/0054_growth_plan_report_limit.sql` | **yes — in production** | Applied by Jerry, 2026-09-09. The only file here applied to the real database. |
-| `db/migrations/0055_affiliate_branding_postal_address.sql` | **NO** | Nothing. Written for D-060, never executed anywhere. Still pending with Jerry. |
+| `db/migrations/0055_affiliate_branding_postal_address.sql` | **yes — in production** | Applied via the migration runner; `--status` reported **56 applied / 0 pending**, and `information_schema` confirmed `affiliate_branding.postal_address` as `text`, nullable, no default. Reported by the operator, not observed from here. |
 | `scripts/migrate.sh` (mod) | **yes** | Local Postgres 16.13, as above. Note: the *shell script itself* has no test; the `--bootstrap` selection logic that `tests/test_migration_bootstrap_guard.py` covers lives in `run_migrations.py`, which is a different runner. |
 | `scripts/run_migrations.py` (mod) | **partly** | `tests/test_migration_bootstrap_guard.py` imports and calls the real `partition_bootstrap` and `parse_args` — 19 cases, verified load-bearing (reverting the fix fails 10 of 19). Its *SQL-applying* path has not been run. |
 | `scripts/check_unverified_senders.sql` | **yes** | Scratch Postgres 16.13, six shaped accounts, cross-checked against `sender_verification()` — 6 accounts, 0 disagreements, both directions (`apps/api/tests/test_sender_query_matches_code.py`). **Shipped in #75 unrun; validated retrospectively in #78.** |
@@ -122,9 +122,11 @@ string becomes the error message.
 
 ## What that leaves
 
-**One file has never been executed against anything: `0055`**, which waits on
-Jerry and is a two-line `ADD COLUMN`. Every `.sql` proposal in this repository
-has now been run somewhere.
+**Nothing in this repository is now unexecuted.** The last candidate, `0055`,
+turns out to have been applied to production while this inventory was being
+written — which is its own small lesson about inventories: the row said "NO"
+because nobody had told the board, not because nothing had happened. A snapshot
+of what has been run is only as fresh as its last report.
 
 Between them the two proposals carried six defects, none of which their reviews
 or their text-assertion tests had found, and two of which would have written
