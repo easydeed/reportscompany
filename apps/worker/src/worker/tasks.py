@@ -1360,7 +1360,7 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                 # two with three.
                 from concurrent.futures import ThreadPoolExecutor
                 from .query_builders import build_inventory_active, build_inventory_closed
-                from .vendors.simplyrets import count_properties
+                from .vendors.simplyrets import count_properties_if_exact
 
                 active_query = build_inventory_active(_params)
                 closed_query = build_inventory_closed(_params)
@@ -1368,6 +1368,40 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                 print(f"🔍 REPORT RUN {run_id}: inventory closed_query={closed_query}")
 
                 INVENTORY_FETCH_LIMIT = 1000
+
+                # THE COUNT IS ONLY A COUNT OF THIS CITY IF THE QUERY WAS (D-087).
+                #
+                # `_location` sends `q=<city>`, a free-text search. Measured on
+                # the demo feed: `q=Houston` matches 13 where `cities=Houston`
+                # matches 12 — the extra is a Tomball listing whose text
+                # mentions Houston. Every builder passes its ROWS through
+                # `_filter_by_city`, so the table, the medians and
+                # `counts["Active"]` are clean. `count=true` answers with a
+                # header, and a header cannot be filtered.
+                #
+                # So on a city query the count and the rows describe different
+                # populations, and the count is the months-of-supply NUMERATOR.
+                # Publishing it would put a slightly-too-big inventory over this
+                # city's sales rate — the same class of error as D-056, arriving
+                # by a different route.
+                #
+                # When the location is fuzzy we do not ask for the count at all
+                # (one fewer request, not one more), and `active_total` stays
+                # None. That is not a new code path: it is the one that already
+                # handles "the feed did not return the header", and it falls
+                # back to the CITY-FILTERED row count with `active_was_truncated`
+                # set if the fetch hit its ceiling — a floor that announces
+                # itself, which `months_of_supply` refuses to publish from.
+                #
+                # THE COST IS REAL AND IT IS THE RIGHT TRADE. D-081 removed the
+                # 1000-row ceiling for this figure; this puts it back for
+                # city-based reports, where a market with more than 1000 active
+                # listings now declines to state months of supply instead of
+                # stating a contaminated one. ZIP-based reports keep the exact
+                # count, because `postalCodes` is exact. The ceiling comes off
+                # again the moment the probe confirms production honours
+                # `cities` — `location_is_exact` already lists it, so that is a
+                # one-line change in `_location` and nothing here.
                 with ThreadPoolExecutor(max_workers=3) as pool:
                     # THE NUMERATOR IS A COUNT, NOT A LIST (D-081). Months of
                     # supply divides total inventory by a sales rate; it never
@@ -1375,7 +1409,7 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                     # exactly at any size, so the 1000-row ceiling that made
                     # large markets read as "not enough recent sales" (D-078)
                     # stops existing rather than moving.
-                    fut_count = pool.submit(count_properties, active_query)
+                    fut_count = pool.submit(count_properties_if_exact, active_query)
                     # The listings are still fetched, for the TABLE — which
                     # shows recently-listed actives and filters client-side,
                     # because `mindate` does nothing (D-075, confirmed in

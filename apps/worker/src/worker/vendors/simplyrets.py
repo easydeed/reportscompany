@@ -211,6 +211,33 @@ def count_properties(params: Dict) -> Optional[int]:
         resp = _request_with_retries(c, "/properties", q)
         return _total_count(resp)
 
+
+def count_properties_if_exact(params: Dict) -> Optional[int]:
+    """
+    `count_properties`, but only when counting the query answers the question.
+
+    D-087. `count=true` replies with `X-Total-Count` — one number covering
+    everything the API matched. Rows from a fuzzy query get cleaned afterwards
+    by `_filter_by_city`; a number cannot be. So when the location filter is
+    `q=<city>` (free-text: measured, `q=Houston` matches 13 where
+    `cities=Houston` matches 12, the extra being a Tomball listing), the count
+    is a count of a DIFFERENT population than the rows beside it.
+
+    Returning None here is not a failure signal and not a fallback to zero — it
+    is the same "the feed did not say" that the missing-header case already
+    produces, and callers already handle it by falling back to the city-filtered
+    row count with a truncation flag. A floor that announces itself beats an
+    exact count of the wrong thing.
+
+    No request is sent in the fuzzy case, so this costs a call rather than
+    adding one.
+    """
+    from ..query_builders import location_is_exact
+
+    if not location_is_exact(params):
+        return None
+    return count_properties(params)
+
 # Convenience: a tiny helper for Market Snapshot queries
 def build_market_snapshot_params(city: str, lookback_days: int = 30) -> Dict:
     """

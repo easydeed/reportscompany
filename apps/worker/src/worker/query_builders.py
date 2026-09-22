@@ -62,11 +62,33 @@ def _location(params: dict) -> Dict:
     
     NOTE: Some SimplyRETS accounts may not support `cities` parameter.
     We use `q` as a fallback which performs fuzzy search.
-    
+
     Priority:
     1. If zips present: use postalCodes=comma-separated list
     2. Else if city present (PRODUCTION mode): use q=<city> (fuzzy search)
     3. Else (DEMO mode): return empty (Houston-only data by default)
+
+    D-087 — HOW FUZZY `q` ACTUALLY IS, MEASURED AGAINST THE DEMO FEED:
+
+        cities=Houston  ->  X-Total-Count 12, every row in Houston
+        q=Houston       ->  X-Total-Count 13, twelve Houston + one TOMBALL
+        Cities=Houston  ->  X-Total-Count 65, the whole feed (D-084: names
+                            are case-sensitive and an unrecognised one is
+                            silently ignored)
+
+    `q` is a free-text search over MLS number, address, city and ZIP, so a
+    listing on "Houston Street" in another town matches a Houston query. Every
+    builder passes its rows through `_filter_by_city` (report_builders.py:285),
+    which removes them — so the listings, medians and `counts` are clean. What
+    cannot be cleaned that way is a `count=true` request, because the answer is
+    a header and not rows. See `location_is_exact` below.
+
+    `cities` IS NOT SUBSTITUTED HERE, deliberately. The note above says some
+    accounts may not support it, and D-084 measured what SimplyRETS does with a
+    name it does not recognise: it accepts it, ignores it, and returns the whole
+    feed. On an unsupporting account the "precise" swap turns one stray listing
+    into every listing in the MLS, with a 200 and no warning. The probe canaries
+    `cities` against production; the swap waits for that verdict.
     """
     zips = params.get("zips") or []
     city = (params.get("city") or "").strip()
@@ -83,13 +105,70 @@ def _location(params: dict) -> Dict:
     # Demo mode: no location filter (Houston-only data by default)
     return {}
 
+
+# Location parameters that return EXACTLY the rows asked for, so a count of
+# them is a count of the requested place. `postalCodes` was measured against
+# the demo feed: `postalCodes=77018` -> 5 rows, all in that ZIP.
+EXACT_LOCATION_PARAMS = ("postalCodes", "cities")
+
+# Location parameters that match MORE than the requested place. `q` is
+# free-text; see `_location`'s docstring for the Tomball measurement.
+FUZZY_LOCATION_PARAMS = ("q",)
+
+
+def location_is_exact(query: Dict) -> bool:
+    """
+    Is this query's location filter one whose COUNT can be trusted? (D-087)
+
+    Rows from a fuzzy query are cleaned by `_filter_by_city`. A count cannot be:
+    `count=true` answers with `X-Total-Count`, a single number covering whatever
+    the API matched, and there is nothing to filter. So a count taken from a `q`
+    query is a count of a different population than the rows beside it — which
+    is D-056's mistake with a new source, a numerator over one set and a listings
+    table over another.
+
+    A query with NO location filter is not exact either. That is demo mode,
+    where the feed is one metro and the absence is deliberate — but "the whole
+    feed" is still not "the requested city", and a count of it would be wrong in
+    the same direction, only larger.
+
+    `cities` is listed as exact because it measured exact. Nothing sends it yet;
+    it is here so that the day the probe confirms production supports it,
+    `_location` is the only thing that has to change.
+    """
+    return any(query.get(p) for p in EXACT_LOCATION_PARAMS)
+
+
 def _filters(filters: Optional[dict], default_type: str = "RES") -> Dict:
     """
     Map optional filters to SimplyRETS params.
     
     Supported inputs (optional):
       - minprice, maxprice: Price range
-      - type: Property type (RES=Residential, CND=Condo, MUL=Multi-family, LND=Land, COM=Commercial, RNT=Rental)
+      - type: Property type. MEASURED VOCABULARY, NOT THE ONE THIS LINE USED TO
+        CLAIM (D-088). Each value below was sent to the demo feed with
+        `count=true` and the returned rows' own `property.type` inspected:
+
+            residential   45 rows, all RES     RES  45 rows, all RES
+            condominium   33 rows, RES+CND     CND  33 rows, RES+CND
+            land           6 rows, all LND     LND   6 rows, all LND
+            rental        10 rows, all RNT     RNT  10 rows, all RNT
+            multifamily    7 rows, all MLF     MUL  45 rows, all RES  ← ignored
+            commercial     5 rows, all CRE     COM  45 rows, all RES  ← ignored
+            farm           4 rows, all FRM
+
+        `MUL` and `COM` were documented here as valid and are not. An
+        unrecognised VALUE does not 400 and is not dropped — it falls back to
+        residential, exactly as `type=ZZZNONSENSE` and `type=` do (both 45 rows,
+        all RES). So a query asking for multi-family or commercial by the old
+        codes silently comes back with houses. Nothing sends them today
+        (grepped); this table is corrected so nothing starts.
+
+        `RES` produces exactly the residential set, but whether it is recognised
+        or merely falls back is NOT distinguishable from outside, because the
+        fallback IS residential. Prefer the long names, which are unambiguous.
+        Values are case-insensitive (`Residential`, `RESIDENTIAL` both work) —
+        unlike parameter NAMES, which are case-sensitive (D-084).
       - subtype: Property subtype (SingleFamilyResidence, Condominium, Townhouse, ManufacturedHome, Duplex)
       - minbeds/beds, minbaths/baths: Minimum bedrooms/bathrooms (supports both naming conventions)
     

@@ -285,6 +285,36 @@ it.**
   code** — and when a whole suite fails at once, suspect the harness before the change, because a
   real regression rarely breaks everything and a broken fixture always does.
 
+- **A fixture should be built by the production builder, not hand-copied from it.** Twenty-three
+  of the root suite's forty failures are one mistake repeated: `tests/test_property_templates.py`
+  hand-writes the `property` dict the templates receive, and omits keys that
+  `_build_property_context()` — a single dict literal, the only construction site — sets
+  unconditionally. The templates then raise `UndefinedError` on a shape production never produces.
+  The same file duplicates `format_currency`, `format_currency_short` and `format_number` under a
+  header reading *"Custom Filters (must match production)"*, and they no longer do: the copies
+  return `"-"` where `template_filters.py` returns `"N/A"`. **A copy annotated "must match" is a
+  copy that has already been noticed to be at risk and left unprotected anyway.** A fixture that
+  the production builder produces cannot drift from it; one that a human transcribes drifts the
+  first time either side changes, and — this is the part that costs — **it drifts silently in both
+  directions**, so the suite reports failures the product does not have and misses failures it
+  does. Where a builder cannot be called in a test, derive the fixture from its output once and
+  assert the derivation, rather than retyping the result.
+
+- **A regression that did not take effect looks exactly like a test that is too weak.** Four
+  regressions were applied to D-087's suite; the fourth — replacing `_filter_by_city`'s equality
+  test with a substring test — came back **green**, which reads as "this test does not cover that".
+  The mutation had applied to the file. It had not reached the interpreter: `if listing_city ==
+  city_lower:` and `if city_lower in listing_city:` are the same length, the write landed in the
+  same filesystem second as the restore before it, and CPython's bytecode cache validates on
+  (mtime, size) — so a stale `.pyc` ran. With `__pycache__` purged and `-B`, the test fails as it
+  should. **Same-size edits inside one second are exactly what a scripted regression harness
+  produces**, so this is not a rare coincidence; it is the normal case for the tool. Two habits
+  close it: assert that the mutation actually changed the file (`assert mutated != original`),
+  which catches a `str.replace` that matched nothing, and purge bytecode between runs. And the
+  general form, which is the reason it belongs here: **a negative result from a verification tool
+  is a claim about the tool until the tool is shown to have run.** The same class as "a number in a
+  tool's output is a property of the tool" — one rule up, one layer down.
+
 ---
 
 ## Phase 0 — Security & Tooling
