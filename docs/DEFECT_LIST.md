@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-21, against `chore/inventory-0055-correction`, cut from `main` at `3ce5f2c`.
+**Last reconciled:** 2026-09-22, against `fix/d074-close-date-window`, cut from `main` at `0634af0`.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -36,14 +36,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 32 | Real, unfixed |
-| `fixed` | 47 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 31 | Real, unfixed |
+| `fixed` | 48 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **83** | D-001 … D-083, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 2 · WRONG 9 · FRAGILE 10 · ROUGH 11. (Sums to 32, the open total.)
+**Open by severity:** BROKEN 2 · WRONG 8 · FRAGILE 10 · ROUGH 11. (Sums to 31, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -3033,7 +3033,42 @@ run and dispatching it.
 ### D-074 — the Market Trends gauge may be printing an inflated months-of-supply figure
 
 **Severity:** WRONG · **Affects:** every property report's Market Trends page — **shipping today**
-**Status:** `open` — **pending the production feed probe; see "what would change this" below**
+**Status:** `fixed` — `fix/d074-close-date-window`, and **HALF CONFIRMED** against the production feed; see the verdict below
+
+> **THE VERDICT IS HALF CONFIRMED, AND THE PROBE OVERCLAIMED IT.**
+>
+> What the production run settles: a future `minclosedate` returned **1 of 500** rows where no
+> cutoff returned 500. The parameter filters. The one survivor has `closeDate='<absent>'` — a
+> Closed record with no close date, leaking through the feed's own filter, which is a
+> null-handling leak and not a failure to filter.
+>
+> What it does **not** settle, and what the probe claimed anyway: section 2b reported *"a 90-day
+> window returned 500 of 500 (a real subset)"*. Both numbers are the probe's own `limit=500`.
+> **500 of 500 with both sides capped is indistinguishable from the parameter being ignored** —
+> and the script's closing paragraph warns about exactly that reading, two sections below where
+> its own logic committed it. Fifth instance of the named trap, in the file that names it.
+>
+> Fixed in the probe: now that `count=true` is confirmed in production, 2b compares
+> `X-Total-Count` for the baseline against the 90-day query instead of capped page counts.
+> That is the corroboration, and it has not been run yet.
+>
+> **The fix ships anyway, because it is safe under either answer.** `market_trends.py` now
+> sends `minclosedate` (180 days — the window the client-side split actually reads) AND keeps
+> the client-side `close_date` split. If the parameter is honoured the second pass is a no-op;
+> if it is not, the second pass is what makes the window true. What stays blocked on the
+> corroboration is **dropping the client-side filter** or **switching the denominator to a
+> count** — hold both.
+>
+> `minlistdate` is gone. It was a cutoff on the wrong column: a home listed 300 days ago and
+> sold last week is a closed sale by every measure that matters, and 210 days excluded it. The
+> loss was not random — long-DOM listings are exactly the ones that take that long — so the
+> sales rate came out too LOW and months of supply too HIGH, never the other way.
+>
+> **The absent `closeDate` is handled, and it was already handled.** The split skips
+> `cd is None`, so such a row is counted in neither window and does not crash the comparison.
+> Now tested rather than read: `test_market_trends_close_window.py`, 7 cases, three regressions
+> applied and seen to fail (restore `minlistdate`; count undated closes as in-window; drop the
+> client-side split).
 
 `market_trends.py` computes months of supply as `active_count / (closed_in_90_days × 30.437/90)`.
 The numerator is right. **The denominator may be missing sales.**
@@ -3092,7 +3127,7 @@ the mistake this entry exists to avoid.
 ### D-075 — `mindate` / `maxdate` appear to do nothing, and the code half-knew
 
 **Severity:** FRAGILE · **Affects:** most query builders; impact currently absorbed client-side
-**Status:** `open` — **CONFIRMED against the production feed 2026-09-17**
+**Status:** `open` — **CONFIRMED against the production feed 2026-09-21** (verbatim: "mindate is accepted and ignored, silently. The report builders' client-side filtering is load-bearing, not belt-and-braces. Impact is nil today; the trap is for whoever trusts the parameter next.")
 
 > **Production verdict, as the probe printed it:**
 >
@@ -3138,7 +3173,7 @@ the mistake this entry exists to avoid.
 ### D-076 — a comma-separated multi-value parameter silently returns only the first value
 
 **Severity:** WRONG · **Affects:** the documented vendor idiom; reached today only by two scripts
-**Status:** `fixed` (`fix/vendor-query-idioms`) — **CONFIRMED against the production feed 2026-09-17**
+**Status:** `fixed` (`fix/vendor-query-idioms`) — **CONFIRMED against the production feed 2026-09-21** (verbatim: "the comma form silently drops values (comma returned ['Active'], repeated returned ['Active', 'Closed']). The fix already shipped is correct.")
 
 > **Production verdict, as the probe printed it:**
 >
@@ -3364,7 +3399,7 @@ cause, which is that this module infers pagination state instead of reading it.
 ### D-081 — the active count for months-of-supply is fetched by paging when the API will just say
 
 **Severity:** ROUGH · **Affects:** inventory report latency, and D-078's ceiling
-**Status:** `fixed` (`fix/pagination-by-count`) — **the numerator is a count; the denominator waits on D-074**
+**Status:** `fixed` (`fix/pagination-by-count`) — **numerator CONFIRMED in production 2026-09-21 (`X-Total-Count=70760`); the denominator still waits on D-074**
 
 Months of supply needs a **count** of active inventory, not the listings themselves. The inventory
 report currently pages up to `INVENTORY_FETCH_LIMIT = 1000` listings to get it, and refuses to
