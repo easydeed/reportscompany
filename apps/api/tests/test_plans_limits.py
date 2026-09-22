@@ -14,21 +14,57 @@ from api.services.usage import (
 )
 
 
+from _query_rows import row_for
+from api.services.usage import resolve_plan_for_account as _resolve_plan_fn
+
+
+def plan_row(**columns):
+    """
+    One row of `resolve_plan_for_account`'s account+plan query, built FROM that
+    query (D-091).
+
+    The tuples this replaces were transcribed by hand and listed 7 columns. The
+    query selects 15 — it gained `plan_downgrade_at/to` and the six per-product
+    limit and override columns — so every test in this file died inside
+    `usage.py:90` with "not enough values to unpack (expected 15, got 7)",
+    which reads like a product bug and is not.
+
+    Naming the columns rather than ordering them means the next column added to
+    that SELECT widens these rows automatically, and a column REMOVED from it
+    fails here, on the name, instead of at the unpack.
+    """
+    return row_for(_resolve_plan_fn, **columns)
+
+
+# D-093 IS A NUMBER SOMEBODY HAS TO CHOOSE, NOT A BUG I CAN FIX.
+#
+# An account with no `plan_slug` falls through to `plan_slug = "free"` with no
+# plan row, so `effective_limit` lands on the hard-coded `default=100`. This
+# test asserts 50. Both are defensible and the repository does not settle it:
+# `0012_seed_plans.sql` seeds `solo` (25) and `affiliate` (5000) and no `free`
+# row at all, so there is nothing to read the free allowance off.
+#
+# §0.2: a business decision — a price, a limit, a claim about customers — is
+# [JERRY]'s, and the rule is to stop and ask rather than guess or placeholder.
+# Changing the product to 50 to make a test pass would be picking a number for
+# the business out of deference to a test written in 2025.
+#
+# strict=True, so whichever way it is decided, this fails until the marker goes.
+_D093_GATED = pytest.mark.xfail(
+    strict=True,
+    reason="D-093: the default report limit for an account with no plan is a "
+           "business decision (code says 100, this test says 50) and is "
+           "[JERRY]'s to make.",
+)
+
+
 class TestResolvePlan:
     """Tests for resolve_plan_for_account"""
     
     def test_resolve_plan_free_default_limit(self):
         """Free plan should return correct default limit"""
         cursor = Mock()
-        cursor.fetchone.return_value = (
-            'free',       # plan_slug
-            None,         # monthly_report_limit_override
-            'REGULAR',    # account_type
-            'Free',       # plan_name
-            50,           # plan_limit
-            False,        # allow_overage
-            0             # overage_price_cents
-        )
+        cursor.fetchone.return_value = plan_row(plan_slug='free', monthly_report_limit_override=None, account_type='REGULAR', plan_name='Free', plan_limit=50, allow_overage=False, overage_price_cents=0)
         
         result = resolve_plan_for_account(cursor, 'test-account-id')
         
@@ -41,15 +77,7 @@ class TestResolvePlan:
     def test_resolve_plan_with_override(self):
         """Plan with override should use override value"""
         cursor = Mock()
-        cursor.fetchone.return_value = (
-            'pro',        # plan_slug
-            250,          # monthly_report_limit_override (custom)
-            'REGULAR',    # account_type
-            'Pro',        # plan_name
-            300,          # plan_limit (default)
-            True,         # allow_overage
-            200           # overage_price_cents ($2.00)
-        )
+        cursor.fetchone.return_value = plan_row(plan_slug='pro', monthly_report_limit_override=250, account_type='REGULAR', plan_name='Pro', plan_limit=300, allow_overage=True, overage_price_cents=200)
         
         result = resolve_plan_for_account(cursor, 'test-account-id')
         
@@ -59,13 +87,14 @@ class TestResolvePlan:
         assert result['has_override'] is True
         assert result['overage_price_cents'] == 200
     
+    @_D093_GATED
     def test_resolve_plan_no_plan_slug_defaults_to_free(self):
         """Account with no plan_slug should default to free"""
         cursor = Mock()
         # First call: main query returns no plan_slug
         # Second call: fallback free plan query
         cursor.fetchone.side_effect = [
-            (None, None, 'REGULAR', None, None, None, None),  # Account row
+            plan_row(plan_slug=None, monthly_report_limit_override=None, account_type='REGULAR', plan_name=None, plan_limit=None, allow_overage=None, overage_price_cents=None),  # Account row
             ('Free', 50, False, 0)  # Free plan fallback
         ]
         
@@ -143,7 +172,7 @@ class TestEvaluateReportLimit:
         cursor.fetchone.side_effect = [
             (30,),  # usage
             (0,),   # schedule runs
-            ('free', None, 'REGULAR', 'Free', 50, False, 0)  # plan
+            plan_row(plan_slug='free', monthly_report_limit_override=None, account_type='REGULAR', plan_name='Free', plan_limit=50, allow_overage=False, overage_price_cents=0)  # plan
         ]
         
         decision, info = evaluate_report_limit(cursor, 'test-account-id')
@@ -160,7 +189,7 @@ class TestEvaluateReportLimit:
         cursor.fetchone.side_effect = [
             (45,),  # usage
             (0,),
-            ('free', None, 'REGULAR', 'Free', 50, False, 0)
+            plan_row(plan_slug='free', monthly_report_limit_override=None, account_type='REGULAR', plan_name='Free', plan_limit=50, allow_overage=False, overage_price_cents=0)
         ]
         
         decision, info = evaluate_report_limit(cursor, 'test-account-id')
@@ -177,7 +206,7 @@ class TestEvaluateReportLimit:
         cursor.fetchone.side_effect = [
             (52,),  # usage
             (0,),
-            ('free', None, 'REGULAR', 'Free', 50, False, 0)
+            plan_row(plan_slug='free', monthly_report_limit_override=None, account_type='REGULAR', plan_name='Free', plan_limit=50, allow_overage=False, overage_price_cents=0)
         ]
         
         decision, info = evaluate_report_limit(cursor, 'test-account-id')
@@ -194,7 +223,7 @@ class TestEvaluateReportLimit:
         cursor.fetchone.side_effect = [
             (60,),  # usage
             (0,),
-            ('free', None, 'REGULAR', 'Free', 50, False, 0)
+            plan_row(plan_slug='free', monthly_report_limit_override=None, account_type='REGULAR', plan_name='Free', plan_limit=50, allow_overage=False, overage_price_cents=0)
         ]
         
         decision, info = evaluate_report_limit(cursor, 'test-account-id')
@@ -212,7 +241,7 @@ class TestEvaluateReportLimit:
         cursor.fetchone.side_effect = [
             (350,),  # usage
             (0,),
-            ('pro', None, 'REGULAR', 'Pro', 300, True, 200)  # $2/report overage
+            plan_row(plan_slug='pro', monthly_report_limit_override=None, account_type='REGULAR', plan_name='Pro', plan_limit=300, allow_overage=True, overage_price_cents=200)  # $2/report overage
         ]
         
         decision, info = evaluate_report_limit(cursor, 'test-account-id')
@@ -231,7 +260,7 @@ class TestEvaluateReportLimit:
         cursor.fetchone.side_effect = [
             (500,),  # High usage
             (0,),
-            ('enterprise', None, 'REGULAR', 'Enterprise', 0, False, 0)
+            plan_row(plan_slug='enterprise', monthly_report_limit_override=None, account_type='REGULAR', plan_name='Enterprise', plan_limit=0, allow_overage=False, overage_price_cents=0)
         ]
         
         decision, info = evaluate_report_limit(cursor, 'test-account-id')
@@ -248,7 +277,7 @@ class TestEvaluateReportLimit:
         cursor.fetchone.side_effect = [
             (500,),
             (0,),
-            ('enterprise', None, 'REGULAR', 'Enterprise', 50000, False, 0)
+            plan_row(plan_slug='enterprise', monthly_report_limit_override=None, account_type='REGULAR', plan_name='Enterprise', plan_limit=50000, allow_overage=False, overage_price_cents=0)
         ]
         
         decision, info = evaluate_report_limit(cursor, 'test-account-id')
@@ -268,7 +297,7 @@ class TestPlanLimitIntegration:
         cursor.fetchone.side_effect = [
             (40,),  # usage
             (0,),
-            ('sponsored_free', 75, 'REGULAR', 'Sponsored Free', 50, False, 0)
+            plan_row(plan_slug='sponsored_free', monthly_report_limit_override=75, account_type='REGULAR', plan_name='Sponsored Free', plan_limit=50, allow_overage=False, overage_price_cents=0)
         ]
         
         decision, info = evaluate_report_limit(cursor, 'sponsored-account')
@@ -285,7 +314,7 @@ class TestPlanLimitIntegration:
         cursor.fetchone.side_effect = [
             (150,),
             (0,),
-            ('team', None, 'REGULAR', 'Team', 200, True, 150)
+            plan_row(plan_slug='team', monthly_report_limit_override=None, account_type='REGULAR', plan_name='Team', plan_limit=200, allow_overage=True, overage_price_cents=150)
         ]
         
         decision, info = evaluate_report_limit(cursor, 'team-account')

@@ -4,6 +4,9 @@ Tests for the invite acceptance flow.
 Phase T1.3: Backend tests for /v1/auth/accept-invite endpoint (Phase 29C).
 """
 import pytest
+from _query_rows import row_for
+from api.routes.auth import accept_invite
+
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, MagicMock
 from fastapi.testclient import TestClient
@@ -36,7 +39,15 @@ class TestAcceptInviteSuccess:
             # Token validation query
             ('user-123', 'account-456', future_expiry, None),
             # User lookup query
-            ('user-123', 'agent@example.com', True)
+            ('user-123', 'agent@example.com', True),
+            # Role/account-type query — ADDED TO THE ROUTE AFTER THESE TESTS
+            # WERE WRITTEN, and its absence is why every one of them raised
+            # StopIteration: two rows supplied, three fetchone() calls. Built
+            # from the query (index 2) rather than typed, so the next column
+            # added to it widens this automatically (D-091).
+            row_for(accept_invite, index=2, role='USER',
+                    account_type='REGULAR', is_platform_admin=False,
+                    is_sponsored=False, parent_account_id=None)
         ]
         
         response = api_client.post(
@@ -59,13 +70,20 @@ class TestAcceptInviteSuccess:
         assert data['user']['primary_account_id'] == 'account-456'
         
         # Verify database operations
-        mock_cursor.execute.assert_any_call(
-            pytest.approx("UPDATE users", abs=50),  # Flexible match
-            pytest.approx(2)  # password_hash, user_id
+        # `pytest.approx("UPDATE users", abs=50)` was never a flexible match.
+        # approx() on a string falls back to equality, so this demanded the SQL
+        # be the literal five characters "UPDATE users" — it could only ever
+        # fail. It never reported that, because the test died earlier on
+        # StopIteration; fixing the row count is what let this finally run and
+        # show itself. (D-091, and §0.6's "a test you have not seen fail".)
+        executed_sql = " ".join(
+            str(call.args[0]) for call in mock_cursor.execute.call_args_list
         )
-        mock_cursor.execute.assert_any_call(
-            pytest.approx("UPDATE signup_tokens", abs=50),
-            pytest.approx(1)  # token
+        assert "UPDATE users" in executed_sql, (
+            "the route never updated the users row"
+        )
+        assert "UPDATE signup_tokens" in executed_sql, (
+            "the route never marked the signup token used"
         )
         mock_conn.commit.assert_called_once()
     
@@ -76,7 +94,10 @@ class TestAcceptInviteSuccess:
         future_expiry = datetime.now() + timedelta(days=7)
         mock_cursor.fetchone.side_effect = [
             ('user-123', 'account-456', future_expiry, None),
-            ('user-123', 'agent@example.com', True)
+            ('user-123', 'agent@example.com', True),
+            row_for(accept_invite, index=2, role='USER',
+                    account_type='REGULAR', is_platform_admin=False,
+                    is_sponsored=False, parent_account_id=None)
         ]
         
         response = api_client.post(
@@ -183,7 +204,10 @@ class TestAcceptInvitePasswordValidation:
         future_expiry = datetime.now() + timedelta(days=7)
         mock_cursor.fetchone.side_effect = [
             ('user-123', 'account-456', future_expiry, None),
-            ('user-123', 'agent@example.com', True)
+            ('user-123', 'agent@example.com', True),
+            row_for(accept_invite, index=2, role='USER',
+                    account_type='REGULAR', is_platform_admin=False,
+                    is_sponsored=False, parent_account_id=None)
         ]
         
         response = api_client.post(
@@ -249,7 +273,10 @@ class TestAcceptInviteTransactionality:
         future_expiry = datetime.now() + timedelta(days=7)
         mock_cursor.fetchone.side_effect = [
             ('user-123', 'account-456', future_expiry, None),
-            ('user-123', 'agent@example.com', True)
+            ('user-123', 'agent@example.com', True),
+            row_for(accept_invite, index=2, role='USER',
+                    account_type='REGULAR', is_platform_admin=False,
+                    is_sponsored=False, parent_account_id=None)
         ]
         
         # Simulate error during UPDATE
@@ -275,7 +302,10 @@ class TestAcceptInviteTransactionality:
         future_expiry = datetime.now() + timedelta(days=7)
         mock_cursor.fetchone.side_effect = [
             ('user-123', 'account-456', future_expiry, None),
-            ('user-123', 'agent@example.com', True)
+            ('user-123', 'agent@example.com', True),
+            row_for(accept_invite, index=2, role='USER',
+                    account_type='REGULAR', is_platform_admin=False,
+                    is_sponsored=False, parent_account_id=None)
         ]
         
         response = api_client.post(
@@ -311,7 +341,10 @@ class TestAcceptInviteIntegration:
         future_expiry = datetime.now() + timedelta(days=30)
         mock_cursor.fetchone.side_effect = [
             ('agent-user-id', 'sponsor-account-id', future_expiry, None),
-            ('agent-user-id', email, True)
+            ('agent-user-id', email, True),
+            row_for(accept_invite, index=2, role='USER',
+                    account_type='REGULAR', is_platform_admin=False,
+                    is_sponsored=True, parent_account_id=None),
         ]
         
         response = api_client.post(
@@ -336,7 +369,10 @@ class TestAcceptInviteIntegration:
         future_expiry = datetime.now() + timedelta(days=7)
         mock_cursor.fetchone.side_effect = [
             ('user-123', 'account-456', future_expiry, None),
-            ('user-123', 'agent@example.com', True)
+            ('user-123', 'agent@example.com', True),
+            row_for(accept_invite, index=2, role='USER',
+                    account_type='REGULAR', is_platform_admin=False,
+                    is_sponsored=False, parent_account_id=None)
         ]
         
         # Token with whitespace
