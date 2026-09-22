@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-22, against `fix/root-suite-mode`, merged with `main` at `a59406a`.
+**Last reconciled:** 2026-09-22, against `fix/api-suite-drift`, cut from `main` at `b1ca9ef`.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -43,7 +43,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 **Open by severity:** BROKEN 2 · WRONG 7 · FRAGILE 12 · ROUGH 13. (Sums to 34, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -3984,7 +3984,7 @@ Tests: `apps/worker/tests/test_null_columns_render.py`, 31 cases.
 ### D-091 — `apps/api/tests` is red too, and was never part of the 40
 
 **Severity:** ROUGH · **Affects:** CI
-**Status:** `open`
+**Status:** `fixed` — `fix/api-suite-drift`
 
 Running the exact CI command (`pytest` from the repo root, Python 3.12, both Poetry projects
 installed into one venv) gives **34 failed, 5 errors** in `apps/api/tests` — confirmed pre-existing
@@ -4007,6 +4007,127 @@ and CI is not yet"*.
 
 The unpack mismatch is worth noting for its own sake: it is D-089's lesson in `apps/api`, and the
 same remedy applies — a double built from the real query rather than transcribed from it.
+
+> **FIXED, and the triage held: not one of the 39 was a defect this suite had caught.** Six groups,
+> all of them the harness failing to REACH the product:
+>
+> | n | file | signature | what it was |
+> |---|---|---|---|
+> | 12 | `test_plans_limits` | fake row 7 cols, query selects 15 | the query GAINED per-product limits |
+> | 11 | `test_affiliate_branding` | fake row 4 cols, query selects 3 | the query LOST the sponsor column |
+> | 6 | `test_accept_invite` | `StopIteration`, 2 rows for 3 `fetchone`s | the route gained a third query |
+> | 4 | `test_schedules_report_types` | 401, then 422, then 500 | three seams, peeled one at a time |
+> | 4 | `test_billing_checkout` | patched a name the route never imports | the price moved to the plans table |
+> | 2 | `test_me_endpoint` | `fixture 'db_session' not found` | a fixture that was never committed |
+>
+> **The remedy is `apps/api/tests/_query_rows.py`:** `row_for(func, index, **columns)` reads the
+> function's own SQL with `inspect.getsource`, extracts the SELECT list, and builds a tuple of that
+> width from named columns. A test now says what it means and the ARITY comes from the query, so
+> the next column added widens every row automatically and a column removed fails on the NAME, in
+> the test, instead of at an unpack inside the production module. It catches arity and order drift
+> and nothing else — no types, no column existence, no database — which is exactly what broke here
+> and is worth saying so nobody reads more into it.
+>
+> **Three seams, discovered in order, each hidden behind the last.** `patch('...require_account_id')`
+> cannot reach a `Depends` FastAPI captured at import — 401. `app.dependency_overrides` can, and
+> still returns 401, because `AuthContextMiddleware` answers before any dependency. The
+> `X-Demo-Account` header is the app's own seam and gets through, leaving the real middleware in
+> place. Then 422 (the CRMLS city allowlist, added after these tests: "Atlanta" is not a
+> California city), then 500 (D-019's verification gate, a query the double predated).
+>
+> **Seven tests now declare that they need a database** rather than pretending otherwise. The
+> schedule and billing routes reach a POOLED connection the fixtures do not patch, so without one
+> the request spends ~40s in connection timeouts and 500s. Faking that means faking the data layer
+> to assert a URL path, and every query added to the route breaks it again — the treadmill this
+> whole ticket is about. They use the `db_session` fixture (added to `conftest.py`, which never had
+> it) and skip cleanly. **The coverage they were NAMED for did not need a database at all** and is
+> now asserted directly against the schema in `test_every_report_type_is_accepted_by_the_schema`,
+> which runs in CI.
+>
+> **Two assertions turned out to have never been able to pass.**
+> `pytest.approx("UPDATE users", abs=50)` is not a flexible match: `approx` on a string falls back
+> to equality, so it demanded the SQL be exactly those twelve characters. It had never reported
+> that, because the test died earlier on `StopIteration` — fixing the row count is what let it run
+> and show itself. §0.6's "a test you have not seen fail", from the other direction.
+>
+> **CI IS GREEN.** The exact workflow command on Python 3.12, both Poetry projects into one venv:
+> **785 passed, 55 skipped, 15 xfailed, 0 failed.**
+
+### D-092 — an unlimited plan was silently capped at 100 reports and blocked at 110
+
+**Severity:** WRONG · **Affects:** any account on a plan whose `monthly_report_limit` is 0
+**Status:** `fixed` — `fix/api-suite-drift`
+
+`evaluate_report_limit` treats `limit <= 0` as unlimited and says so
+(`usage.py:327`, *"Unlimited plan - no restrictions"*). `resolve_plan_for_account` computed that
+limit as:
+
+```python
+effective_limit = limit_override if limit_override is not None else (plan_limit or 100)
+```
+
+`0 or 100` is `100`. **A plan row meaning "no cap" became a cap of 100**, the unlimited branch could
+never fire for a plan-sourced zero, and the account was BLOCKED at 110 reports with a message
+quoting a limit nobody had set.
+
+**The file already had the right tool and the right explanation, three lines above.**
+`_first_not_none` exists precisely for this, and the comment over `market_limit` says so: explicit
+None checks *"so that 0 (freeze-account override) is honoured instead of being skipped by a falsy
+`or` chain"*. The same sentence, unapplied one expression later — the D-090 shape exactly, and the
+`_median`-returns-0.0 family from D-086 in a third place.
+
+Found by D-091's triage: the test asserting it had been failing inside an unpack error for months,
+so the assertion never ran. `default=100` is preserved verbatim — it is a business number, and
+changing it is D-093's question, not this fix's.
+
+### D-093 — what limit an account with no plan should get
+
+**Severity:** ROUGH · **Affects:** accounts with a NULL `plan_slug`
+**Status:** `open` · **[JERRY]**
+
+An account with no `plan_slug` falls through to `plan_slug = "free"` with no plans row, so
+`effective_limit` lands on the hard-coded `default=100`. `test_resolve_plan_free_default_limit`
+asserts 50. The repository does not settle it: `0012_seed_plans.sql` seeds `solo` (25) and
+`affiliate` (5000) and **no `free` row at all**, so there is nothing to read the free allowance off.
+
+Both numbers are defensible and picking one is a business decision — §0.2 says those are [JERRY]'s
+and the rule is to stop and ask rather than guess. Changing the product to 50 to make a test pass
+would be choosing a price out of deference to a test written in 2025.
+
+**XFAILS THIS DEFECT GATES** (§0.6: two-way link, or an xfail is a skip with better manners).
+In `apps/api/tests/test_plans_limits.py`, `xfail(strict=True)` with `D-093` named in the reason.
+**Strict**, so whichever way it is decided, the marker has to come off.
+
+| test |
+|---|
+| `test_resolve_plan_no_plan_slug_defaults_to_free` |
+
+### D-094 — a Redis outage takes down every authenticated request
+
+**Severity:** BROKEN · **Affects:** the entire API whenever Upstash is unreachable
+**Status:** `open`
+
+`RateLimitMiddleware.dispatch` calls Redis four times — `get`, `setex`, `incr`, `expire`
+(`middleware/authn.py:215, 233, 239, 241`) — **with no exception handling at all**. The DB call
+sitting between them IS guarded, with the comment *"Use default 60 if DB fails"*. So the author
+thought about degradation for the database and not for the cache.
+
+With Redis unreachable, `redis.exceptions.ConnectionError` propagates out of the middleware and
+every authenticated request returns 500, before any route runs. Reproduced here simply by having no
+Redis: every endpoint test 500'd until a fake store was installed. Redis is Upstash — a hosted
+third party — so this is not a hypothetical failure mode.
+
+**NOT FIXED, on purpose.** The obvious repair is to fail open: log and skip rate limiting when the
+store is down. That is a security-adjacent posture decision, and this file already makes the
+opposite call deliberately elsewhere — the token blacklist check is commented *"fails CLOSED — deny
+on DB error"*. A rate limit is capacity and a blacklist is authorisation, so failing open for the
+former looks consistent with the file's own reasoning, **but choosing it is not a test-suite
+repair's to make.** Filed for that decision.
+
+The trade, stated so it can be decided rather than inherited: fail open means no rate limiting
+during a Redis outage; fail closed means total outage during a Redis outage. Today it is the
+second, by omission rather than by choice.
+
 
 ---
 

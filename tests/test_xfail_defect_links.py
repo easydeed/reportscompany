@@ -36,7 +36,10 @@ DEFECT_LIST = REPO / "docs/DEFECT_LIST.md"
 # Files that may contain gated xfails. A new one has to be added here, which is
 # deliberate: the alternative is walking the tree and silently covering nothing
 # when the walk is wrong.
-SOURCES = [REPO / "tests/test_simplyrets_query_builder.py"]
+SOURCES = [
+    REPO / "tests/test_simplyrets_query_builder.py",
+    REPO / "apps/api/tests/test_plans_limits.py",
+]
 
 MARKER_DEF = re.compile(r"^_D(\d{3})_GATED\s*=\s*pytest\.mark\.xfail", re.M)
 MARKER_USE = re.compile(r"^\s*@_D(\d{3})_GATED\s*$")

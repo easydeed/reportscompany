@@ -133,7 +133,25 @@ def resolve_plan_for_account(cur, account_id: str) -> Dict[str, Any]:
     property_limit  = _first_not_none(prop_override, prop_plan_limit, default=1)
 
     # Legacy single limit (backward compat for evaluate_report_limit)
-    effective_limit = limit_override if limit_override is not None else (plan_limit or 100)
+    #
+    # D-092 — `plan_limit or 100` ATE THE UNLIMITED SENTINEL, three lines below
+    # the comment explaining why `_first_not_none` exists.
+    #
+    # `evaluate_report_limit` treats `limit <= 0` as unlimited ("Unlimited plan
+    # - no restrictions", :327). So a plan row with `monthly_report_limit = 0`
+    # means NO CAP — and `0 or 100` is 100, so that plan never reached the
+    # unlimited branch. An unlimited account was silently capped at 100 reports
+    # and BLOCKED at 110, with a message quoting a limit nobody set.
+    #
+    # `_first_not_none` is the tool the file already has for exactly this, and
+    # the comment above `market_limit` says so: explicit None checks "so that
+    # 0 (freeze-account override) is honoured instead of being skipped by a
+    # falsy `or` chain". The same sentence, unapplied one expression later.
+    #
+    # The `default=100` is preserved verbatim rather than corrected: it is what
+    # an account with no plan row gets today, it is a business number, and
+    # changing it is not this fix's to make. See D-093.
+    effective_limit = _first_not_none(limit_override, plan_limit, default=100)
     has_override    = limit_override is not None
 
     display_name = _PLAN_DISPLAY_NAMES.get(plan_slug, plan_name) or "Free"
