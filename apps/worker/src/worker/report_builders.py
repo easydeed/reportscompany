@@ -532,6 +532,52 @@ def build_inventory_result(listings: List[Dict], context: Dict) -> Dict:
     
     # Median DOM
     median_dom = _median([l["days_on_market"] for l in active if l.get("days_on_market")])
+
+    # ── Median asking price (D-057) ─────────────────────────────────────────
+    #
+    # Every inventory email said "…at a median of VARYING PRICES", because this
+    # builder emitted three metrics and no price at all, while the email's
+    # insight paragraph reads `median_close_price or median_list_price` and got
+    # None from both. A price clause with no price, in a report where every
+    # listing carries a `list_price` this builder already reads.
+    #
+    # OVER `active`, NOT `active_rows` OR `active_total_count`. The sentence it
+    # feeds is "{total_active} active listings at a median of {price}", and
+    # `total_active` in the email payload is `counts["Active"]`, which is
+    # `len(active)` — the date-filtered population the listings table shows.
+    # A median over a different set than the count it sits beside is the
+    # mistake D-056 was: two populations, one sentence, no way for a reader to
+    # tell.
+    #
+    # `_median` returns 0.0 for an empty list (report_builders.py:44), and 0.0
+    # is a PRICE — a claim that the median asking price is zero. That is
+    # D-056's sentinel with a different name. The template happens to guard on
+    # truthiness so it renders "varying prices" either way, but any surface
+    # that formats the number instead of testing it prints "$0". The moi work
+    # settled this for months-of-supply and it settles the same way here:
+    # None means "nothing to report", and only None means that.
+    #
+    # THE SAME EXPRESSION APPEARS AT :144 in build_market_snapshot_result and
+    # carries the same sentinel. Not changed here — it publishes a metric
+    # other surfaces read, and widening this ticket to cover it silently is
+    # how a scoped fix becomes an unreviewed one. Filed as D-086.
+    _priced = [l["list_price"] for l in active if l.get("list_price")]
+    median_list_price = _median(_priced) if _priced else None
+
+    # AND DELIBERATELY NO `median_close_price`, THOUGH THIS REPORT NOW HAS THE
+    # CLOSED LISTINGS TO COMPUTE ONE.
+    #
+    # `_get_insight_paragraph` picks the price with
+    # `metrics.get("median_close_price") or metrics.get("median_list_price")` —
+    # a precedence rule, applied to sentences that disagree about which KIND of
+    # price they want. The market-snapshot branch says "homes SOLD at a median
+    # of…" and needs the close price; the inventory branch says "active
+    # listings at a median of…" and needs the asking price. Today every report
+    # renders correctly only because of which metrics each builder happens to
+    # emit. Adding `median_close_price` here would silently turn this report's
+    # ASKING sentence into a sale price — a correct-looking metric changing the
+    # meaning of prose in another file. Filed as D-085; see the test that pins
+    # this absence.
     
     return {
         "report_type": "inventory",
@@ -570,6 +616,10 @@ def build_inventory_result(listings: List[Dict], context: Dict) -> Dict:
         # Metrics
         "metrics": {
             "median_dom": round(median_dom, 1),
+            # The asking price of the listings this report is about. None when
+            # no active listing carries a price, which the template renders as
+            # "varying prices" — honest, and now only when it is true.
+            "median_list_price": median_list_price,
             # None when there is not enough to estimate from. The market
             # templates guard on truthiness, so the tile hides rather than
             # printing a sentinel; `months_of_inventory_display` carries the
