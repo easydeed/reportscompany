@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-22, against `chore/simplyrets-param-survey`, cut from `main` at `3e1787c`.
+**Last reconciled:** 2026-09-22, against `fix/root-suite-mode`, cut from `main` at `8f48640`.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -36,14 +36,22 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 32 | Real, unfixed |
-| `fixed` | 48 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 33 | Real, unfixed |
+| `fixed` | 50 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **84** | D-001 … D-084, contiguous, no duplicates |
+| **Total** | **87** | D-001 … D-091, with **085–088 reserved** — see below |
 
-**Open by severity:** BROKEN 2 · WRONG 8 · FRAGILE 11 · ROUGH 11. (Sums to 32, the open total.)
+**Open by severity:** BROKEN 2 · WRONG 8 · FRAGILE 11 · ROUGH 12. (Sums to 33, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`).
+> **Four numbers are reserved, not missing, and this note says by whom.** D-085 and D-086 are
+> filed on `fix/d057-inventory-median-price` (PR #86); D-087 and D-088 on
+> `fix/q-city-contamination` (PR #88). Both are open. This branch took D-089–D-091 rather than
+> reusing those numbers, because renumbering would invalidate entries, commit messages and PR
+> bodies that already name them. **A parse of this file currently reports `missing [85, 86, 87,
+> 88]`, which is correct and expected**; the gaps close as those PRs merge, and the total becomes
+> 91. Treat a gap as unexpected again once both have landed.
+
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-089, D-090 (`fix/root-suite-mode`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -3576,6 +3584,148 @@ to live alone.
 Fixing it is one `COMMENT ON COLUMN` in a new migration. Not folded into D-019's branch because it
 would have added a second unapplied migration to the pile Jerry was then holding (0055, since applied), for no
 behavioural gain, and a DDL file in a diff invites the assumption that the fix needs it.
+
+### D-089 — the root suite's 40 failures were the suite describing a system that had moved
+
+**Severity:** ROUGH · **Affects:** CI, continuously since 2026-09-03
+**Status:** `fixed` — `fix/root-suite-mode`
+
+D-054 added `tests` to `pytest.ini`'s `testpaths` and recorded that 40 of 207 failed,
+pre-existing and previously invisible. That was correct and it was left as "the known-red
+baseline" for **19 days**, during which every Backend Tests run — on `main` and on every PR,
+including ones that were reviewed and merged — reported failure. Checked: the last ten runs
+before this entry, all `conclusion: failure`.
+
+**A baseline nobody can act on is not a baseline, it is a disabled check.** That is D-038 and
+D-041 exactly, which this repository has now hit three times.
+
+**The triage.** All 40 fail in BOTH credential modes — an earlier claim that they were
+mode-dependent was wrong, and is corrected in this entry rather than quietly dropped: it came
+from reading a `Mode: DEMO` banner next to a `'RES' != 'residential'` assertion and inferring
+causation from adjacency. Flipping `SIMPLYRETS_USERNAME` and confirming the constants changed
+produces the identical 40.
+
+| | | |
+|---|---|---|
+| **23** | the fixture contradicts the real payload contract | fixed |
+| **4** | the product moved and the test did not | fixed |
+| **13** | the test is right and the product change is gated | `xfail(strict=True)` |
+
+**None of the 40 was a product defect this suite had caught.** Worth saying plainly, because the
+case for keeping a red suite is that it might be telling you something, and here it was not.
+
+**The 23.** `test_property_templates.py` hand-wrote the `property` dict and omitted
+`assessed_value`, `land_value` and `tax_amount` — keys `_build_property_context()`, the only
+construction site, sets unconditionally. Production's own `format_currency` raises
+`UndefinedError` on an absent key (it catches `ValueError`/`TypeError`, and `UndefinedError` is
+neither), so the templates were being asked to render a shape production cannot produce. The
+file also carried copies of three filters under a header reading *"must match production"* which
+no longer did (`"-"` vs `"N/A"` for None), and a local Jinja `Environment` differing from the
+real one in three settings. Three more asserted `>None<` never appears while the same fixture
+set `"pool": "None"` — the literal string.
+
+Rewritten so that **nothing in the file builds a context**: every test goes through
+`PropertyReportBuilder(report_data).render_html()`, the call `tasks.py` makes. The hand-written
+inputs are now `report_data`, which is the builder's own argument — the thing production also
+writes by hand. That is §0.6's new rule, and this file is its evidence.
+
+**The 4.** Two tested `vendors/simplyrets._inject_vendor`, deleted when vendor injection moved
+into `_common_params()` — rewritten against a real built query rather than a helper.
+`test_agent_name_rendered` asserted against `render_html()` after the agent footer moved into
+PDFShift's `footer` param; `render_page_footer_html()` contains the name and `tasks.py:1650`
+passes it to `render_pdf`. `test_has_seven_pages[teal]` counted `class="page ` *with a trailing
+space* and fell back to `class="page"` only when that returned zero — teal uses both (5 + 2), so
+the fallback never fired and it reported 5 of 7. teal has always rendered seven.
+
+**The 13, and why `xfail` rather than a fix or a deletion.** They demand two product changes that
+are deliberately gated: `_location` sending `cities` (D-087, waiting on the production probe,
+where switching on demo evidence risks returning the entire feed) and the `type` vocabulary
+(D-088, which changes every SimplyRETS query the product sends and belongs in its own diff).
+`strict=True` is load-bearing: the day either lands these PASS, and a strict xfail that passes
+**fails the build**, which is the prompt to remove the marker. A plain skip would go quiet
+forever, which is the failure this entry is about.
+
+> **The marker caught its own misuse immediately.** Applied at class level first, it covered two
+> tests that were already green; they xpassed, strict turned that into a failure, and the mistake
+> surfaced in one run. Moved to the thirteen methods.
+
+**Also fixed: `tests/**` was not in the workflow's `paths` filter**, so editing this suite did not
+trigger the job that runs it. Its breakage could only ever surface on somebody else's unrelated
+PR. `db/**` added for the same reason.
+
+**CI is still red, and this entry does not claim otherwise** — see D-091.
+
+### D-090 — a NULL database column renders as the word "None" in customer PDFs
+
+**Severity:** WRONG · **Affects:** property reports whose agent or parcel data has NULL columns
+**Status:** `fixed` — `fix/root-suite-mode`
+
+`d.get(k, "")` returns the default only when the key is **missing**. When the key exists holding
+None — a nullable column, a `LEFT JOIN`, a JSON null — it returns None, and Jinja prints `None`.
+
+Three of five themes rendered, in the agent block of a customer-facing report:
+
+```
+☎ None      ✉ None
+```
+
+**`_build_agent_context` already carried a comment explaining this exact trap**, above `title`,
+which was hardened for D-066/D-067. `phone`, `email`, `name`, `company_name` and
+`company_tagline` — the lines immediately below it — were not. §0.6 says to grep for the
+**construct** rather than the symptom and re-run the check after the fix; this is what the second
+half of that rule costs when it is skipped.
+
+Surveying the construct rather than the two symptoms found a worse instance in
+`_build_property_context`: `street`, `city` and `state` are interpolated into `full_address`, so a
+NULL there is not a blank on a detail line — it is
+
+```
+None, La Verne, CA 91750
+```
+
+on the cover of **all five themes**, measured. Plus `owner_name`, `county`, `apn`,
+`property_type` and `legal_description`, each written `a.get(k, "") or b.get(k, "")`, where the
+last term's None becomes the value of the whole expression — a chain that looks guarded and is not.
+
+**Found by the D-089 rewrite, not by looking for it.** One rewritten case passes optional fields
+as explicit `None` rather than omitting them, because that is what a nullable column looks like by
+the time it arrives. The old hand-built fixtures omitted keys instead, which is the one shape that
+cannot expose this.
+
+**Deliberately not changed: `latitude`/`longitude` stay None-able.** There None is a real value
+meaning "no coordinates", and `_build_images_context` branches on it to skip the aerial map. The
+defect is not that None exists in the context — it is that None reaches a template that prints it.
+A blanket sweep would have broken the aerial page; `test_coordinates_are_still_allowed_to_be_none`
+pins that.
+
+Tests: `apps/worker/tests/test_null_columns_render.py`, 31 cases.
+
+### D-091 — `apps/api/tests` is red too, and was never part of the 40
+
+**Severity:** ROUGH · **Affects:** CI
+**Status:** `open`
+
+Running the exact CI command (`pytest` from the repo root, Python 3.12, both Poetry projects
+installed into one venv) gives **34 failed, 5 errors** in `apps/api/tests` — confirmed pre-existing
+by stashing this branch and re-running, identical either way.
+
+These were never in D-054's count, which covered root `tests/` only. **So "the 40" was never the
+whole of CI's red**, and fixing them does not turn the pipeline green.
+
+Two causes, both the same family as D-089:
+
+| | |
+|---|---|
+| `ValueError: not enough values to unpack (expected 15, got 7)` at `services/usage.py:90` | a fake cursor returning a 7-tuple where the code unpacks 15 — a hand-written stand-in that fell behind the query it doubles (23 failures across `test_plans_limits.py` and `test_affiliate_branding.py`) |
+| `fixture 'db_session' not found` | 5 errors, a fixture that no longer exists |
+
+**Not fixed in `fix/root-suite-mode`, on purpose.** That branch's ticket is the root suite; folding
+in a second suite would double an already large diff and mix two reviews. Filed so it is owned
+rather than rediscovered, and because the honest status of this work is *"the root suite is green
+and CI is not yet"*.
+
+The unpack mismatch is worth noting for its own sake: it is D-089's lesson in `apps/api`, and the
+same remedy applies — a double built from the real query rather than transcribed from it.
 
 ---
 
