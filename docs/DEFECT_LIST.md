@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-22, against `fix/d093-d094-redis-and-free-plan`, cut from `main` at `922f838`.
+**Last reconciled:** 2026-09-22, against `chore/stale-defect-sweep`, cut from `main` at `8ff082a`. **Every open entry was re-checked against current code in that sweep** — see §0.6, *a defect list needs a read path*.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -43,7 +43,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 **Open by severity:** BROKEN 2 · WRONG 7 · FRAGILE 12 · ROUGH 13. (Sums to 34, the open total.)
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded.
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -108,7 +108,21 @@ The `rep_id` values needed are UUIDs, but they are not secret: they are returned
 
 ### D-006 — No route in the company portal sets RLS context; enforcing RLS would blank the portal
 **Severity:** BROKEN (latent) · **Affects:** all company-portal users
-**Status:** `open`
+**Status:** `fixed` — `00df801` *"fix(security): set RLS context in all company portal handlers"*
+
+> **STALE SINCE `00df801`, FOUND BY THE 2026-09-22 SWEEP.** Every claim below is now false:
+> `set_rls` **is** imported (`company.py:13`), and all six named handlers call it —
+> `get_overview` :96, `list_reps` :354, `list_agents` :430, `get_company_reports` :504,
+> `get_company_schedules` :587, `get_metrics` :989 — ten call sites across the module.
+>
+> **Severity left at BROKEN (latent) rather than retconned.** The original triage was right and
+> should stay legible.
+>
+> This is the second entry the sweep closed and the more uncomfortable one: a BROKEN defect was
+> fixed and the board never heard about it, so the number at the top of this file has been
+> overstating the risk for as long as that commit has been in. **A stale `open` is not a harmless
+> bookkeeping error — it is the mirror image of D-009.** One made real risk invisible; this made
+> imaginary risk visible, and both corrupt the same count.
 
 `apps/api/src/api/routes/company.py:13` imports `db_conn, fetchall_dicts, fetchone_dict` — **`set_rls` is not imported**, and none of the 10 handlers call it. The contract in `apps/api/src/api/db.py:48-51` states the required pattern (`with db_conn() as (conn, cur): set_rls(cur, account_id); ...`); 14 other route modules follow it (e.g. `apps/api/src/api/routes/reports.py:152-153`).
 
@@ -342,7 +356,12 @@ After a full local migration the `plans` table holds: `affiliate`(5000), `free`(
 
 ### D-003 — API source requires Python 3.12+ while `pyproject.toml` declares `^3.11`
 **Severity:** FRAGILE · **Affects:** all (runtime/deploy)
-**Status:** `open`
+**Status:** `fixed` — `cd94e27` *"fix(ci): restore backend CI — Poetry instead of a requirements.txt that never existed, Python 3.12 instead of 3.11"*
+
+> **STALE, found by the 2026-09-22 sweep.** `apps/api/pyproject.toml:10` now declares
+> `python = "^3.12"`, matching both the source (which does not compile on 3.11 — see the f-string
+> at `services/email.py:729`) and the CI pin. Closed against the commit that did it, which fixed
+> this incidentally while restoring the backend workflow and never said so.
 
 `apps/api/src/api/services/email.py:729` contains an f-string whose expression part includes a backslash — legal only from Python 3.12. On 3.11 the app fails at **import**:
 ```
@@ -442,7 +461,22 @@ Fixed on `fix/p4-broken-defects`: 0012 now supplies the column, with the values 
 
 `db/migrations/0050_pct_to_title_company.sql:8-13` promotes accounts to `TITLE_COMPANY` by matching `name ILIKE '%pacific coast%' OR slug ILIKE '%pacific-coast%'`. An account's type — which decides whether it gets the company portal or the affiliate surface, and which `apps/api/src/api/deps/company.py:24-31` enforces on every company endpoint — is therefore a consequence of how someone typed a display name.
 
-Renaming that customer, or onboarding any other company whose name happens to contain those words, changes tenancy behaviour. Related to D-021, which is the same class of mismatch observed from the other direction.
+Related to D-021, which is the same class of mismatch observed from the other direction.
+
+> **CORRECTED BY THE 2026-09-22 SWEEP — this entry overstated the live risk.** It said *"renaming
+> that customer, or onboarding any other company whose name happens to contain those words, changes
+> tenancy behaviour."* **That is not true and cannot be.** `0050` is a migration: it ran once, and
+> the runner will not run it again. A rename today changes nothing, and a new company whose name
+> contains "pacific coast" gets whatever `account_type` it is created with.
+>
+> What remains true is narrower and worth keeping: the `account_type` values that exist **were
+> assigned by a name match**, so their provenance is a string someone typed rather than a decision
+> anybody recorded. That is a data-lineage concern, not a live trigger. Kept `open` at FRAGILE on
+> that basis; it would be `closed-not-live` if the assignment were ever verified against intent.
+>
+> Recorded rather than quietly reworded, because the difference between "this will fire again" and
+> "this fired once and left residue" is the difference between a defect and a footnote — and the
+> original wording would have sent somebody looking for a trigger that does not exist.
 
 ### D-024 — `/v1/affiliate/all-reports` is gated differently from every sibling endpoint
 **Severity:** ROUGH · **Affects:** REGULAR
@@ -698,6 +732,18 @@ This is a Phase 5 deletion candidate under the prove-death standard in `docs/DEA
 If `PDF_API_KEY` is unset, both endpoints fail closed with a 503 before doing any work: `:335-339` (`POST /v1/branding/sample-pdf`) and `:428-432` (`POST /v1/branding/sample-jpg`), both returning *"PDF generation service not configured. Please contact support."* Both are mounted (`apps/api/src/api/main.py:29,112`) and both are reachable from the UI through `apps/web/app/api/proxy/v1/branding/sample-pdf` and `.../sample-jpg`.
 
 **To settle it:** check whether `PDF_API_KEY` is also set on the API service. If it is, this is latent, not live — but two names for one secret is still the defect.
+
+
+> **STILL REPRODUCES, AND IS NOW BETTER CAMOUFLAGED (2026-09-22 sweep).** `branding_tools.py:120`
+> reads:
+>
+> ```python
+> PDFSHIFT_API_KEY = os.getenv("PDF_API_KEY", "")
+> ```
+>
+> The local variable has been renamed to match the rest of the codebase while the env var it reads
+> has not. Someone grepping for `PDFSHIFT_API_KEY` now finds this line and moves on satisfied. The
+> defect is unchanged; only its visibility got worse.
 
 ### D-029 — `PRINT_BASE` on the worker is persisted as the user-visible "view in browser" link, and defaults to localhost
 **Severity:** WRONG · **Affects:** every persona · **CLOSED 2026-08-18 — NOT LIVE**
@@ -1022,6 +1068,17 @@ The consumer bridge is a separate Render service running `run_redis_consumer_for
 So the cost of the two transient package-download 502s today was: nothing, if no manual report was submitted in the window; a delayed report, if one was. Deploy failures leave the *old* process running, so the bridge was never actually down — which is the one piece of good news in it running stale code.
 
 **The staleness is low-risk but not zero, and one question decides it.** The bridge has run commit `6d1e100d` since 2026-05-21 and has not picked up any Phase 4 or Phase 5 merge. That is fine *if* its start command is the consumer loop only, because the loop's entire contract is four dict keys (`run_id`, `account_id`, `report_type`, `params` — `tasks.py:2124`) and the actual report generation happens in the **worker** service on current code. **But if that service's start command also runs `celery -A worker.app.celery worker`, then three-month-old task code is executing today's jobs**, and every fix merged since May is absent from whatever it picks up. Confirm the start command before trusting the deploy failures as harmless.
+
+
+> **PARTIALLY ADDRESSED BY D-037, AND THE REMAINING HALF IS THE ONE THIS ENTRY IS ABOUT
+> (2026-09-22 sweep).** The bridge now takes work with `BLMOVE` onto a processing list,
+> dead-letters what it cannot dispatch, and marks the run `failed` — so a payload that FAILS is no
+> longer silent.
+>
+> A bridge that is **DOWN** is untouched: `rpush` still succeeds, the item waits in the list, and
+> the report sits at `pending` with no error and no alert until the bridge returns. Kept open at
+> FRAGILE for exactly that. The fix is an alert on queue depth or age, not more durability inside a
+> process that is not running.
 
 ### D-037 — The bridge pops a job off the queue and then drops it permanently on any unexpected error
 **Severity:** WRONG · **Affects:** REGULAR, SPONSORED, INDUSTRY_AFFILIATE, COMPANY_REP (manual reports)
@@ -3398,6 +3455,18 @@ computes, and both change page copy.
 > not hypothetical. Still bundled with D-077.
 
 ---
+
+
+> **D-087 MADE THIS MORE REACHABLE, NOT LESS (2026-09-22 sweep).** D-081 removed the 1000-row
+> ceiling from the months-of-supply numerator, which was most of this defect's trigger. D-087 put
+> that ceiling back **for city-based reports**, because the exact count it relied on counts other
+> cities. So a large city market can once again hit `active_was_truncated` → `moi is None` →
+> `"Not enough recent sales to estimate"` — a sentence about SALES, shown because there were too
+> many ACTIVE listings.
+>
+> That is this entry's exact complaint, restored by a fix that was right for its own reasons. The
+> cost of D-087 is named on its own entry; this is where it lands. **It goes away again when the
+> probe settles `cities`** — the same verdict D-087 is waiting on.
 
 ### D-079 — no settings surface for an account's own postal address
 
