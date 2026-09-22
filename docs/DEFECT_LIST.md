@@ -3667,6 +3667,29 @@ one whose name does not. One city, one feed, one day is not a rate.
 > its job. ZIP reports keep the exact count, because `postalCodes` was measured exact.
 > `location_is_exact` already lists `cities`, so the day Jerry's probe confirms production honours
 > it, the ceiling comes off again with a one-line change in `_location` and nothing else.
+>
+> ### THIS FIX IS EXPECTED TO BE TEMPORARY, AND THE PROBE IS WHAT ENDS IT
+>
+> **Do not read the entry above as settled engineering.** Refusing to count is the correct thing to
+> do *while the question is open*; it is not the destination. The destination is `cities`, which
+> measured exact on the demo feed — an exact count, no ceiling, no contamination, for every city
+> report. What stands between here and there is one verdict from
+> `scripts/probe_simplyrets_behaviour.py` section 5, whose canary already covers `cities` on the
+> production feed.
+>
+> | probe says `cities` filters on production | then |
+> |---|---|
+> | **yes** | `_location` returns `{"cities": city}` instead of `{"q": city}`. `location_is_exact` already lists it, so counts come back exact for city reports and the 1000-row ceiling goes away again. One line. This entry becomes history. |
+> | **no** | the guard stays, permanently, and the ceiling is the price of not publishing a contaminated numerator. Worth then asking whether a *paged* exact count is affordable for the >1000 case. |
+>
+> **The probe now gates three things, and this is the third:** the parameter allowlist (D-084),
+> D-074's remaining 90-day corroboration, and whether city reports get exact counts back. The cost
+> of this fix is the reason its priority went up, not a reason to route around it.
+>
+> A note for whoever reads this after the probe lands: if the answer is yes, the one-line change is
+> **not** the whole job. `_filter_by_city` stays — an exact API filter does not make a client-side
+> equality check redundant, it makes it a cheap no-op, and D-074's posture is the precedent. Remove
+> it and the next time a location parameter is quietly dropped, nothing catches it.
 
 Tests: `apps/worker/tests/test_city_contamination.py`, 11 cases, four regressions applied and seen
 to fail on the right tests — including one on `_filter_by_city` itself, because a fix that replaced

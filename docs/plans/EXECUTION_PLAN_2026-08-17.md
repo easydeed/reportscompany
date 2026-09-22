@@ -303,17 +303,40 @@ it.**
 - **A regression that did not take effect looks exactly like a test that is too weak.** Four
   regressions were applied to D-087's suite; the fourth — replacing `_filter_by_city`'s equality
   test with a substring test — came back **green**, which reads as "this test does not cover that".
-  The mutation had applied to the file. It had not reached the interpreter: `if listing_city ==
-  city_lower:` and `if city_lower in listing_city:` are the same length, the write landed in the
-  same filesystem second as the restore before it, and CPython's bytecode cache validates on
-  (mtime, size) — so a stale `.pyc` ran. With `__pycache__` purged and `-B`, the test fails as it
-  should. **Same-size edits inside one second are exactly what a scripted regression harness
-  produces**, so this is not a rare coincidence; it is the normal case for the tool. Two habits
-  close it: assert that the mutation actually changed the file (`assert mutated != original`),
-  which catches a `str.replace` that matched nothing, and purge bytecode between runs. And the
-  general form, which is the reason it belongs here: **a negative result from a verification tool
-  is a claim about the tool until the tool is shown to have run.** The same class as "a number in a
-  tool's output is a property of the tool" — one rule up, one layer down.
+  The mutation had applied to the file. It had not reached the interpreter.
+
+  **The mechanism, reproduced in isolation rather than inferred from the symptom.** A `.pyc`
+  records the source's mtime **truncated to whole seconds** and its size, and reuses itself when
+  both still match. `if listing_city == city_lower:` and `if city_lower in listing_city:` are the
+  same length, and the write landed in the same second as the restore before it — so the header
+  matched and the old bytecode ran. Instrumented: `pyc mtime=1790091276 size=35`,
+  `src mtime=1790091276 size=35`, header match `True`, source on disk reading `return a in b`, and
+  the process printing the result of `==`. **Same-size edits inside one second are exactly what a
+  scripted regression harness produces**, so this is the normal case for the tool, not a
+  coincidence. (The first attempt to reproduce it *failed* — `os.utime` was passed float times,
+  which round, which bumps the mtime, which invalidates the cache and hides the effect. Restoring
+  the timestamp with `ns=` reproduces it every time. A failed reproduction is not a disproof; it is
+  a reproduction with a bug in it.)
+
+  **Remedies, each measured against that reproduction rather than assumed:**
+
+  | | result |
+  |---|---|
+  | **delete the `.pyc`** (`rm -rf __pycache__`, or unlink the one file) | **works, every time — use this** |
+  | `touch`/`os.utime` the source forward | **0 of 12** when the touch lands in the same second; works only if it happens to cross a boundary. Unreliable exactly when the harness is fast, which is always |
+  | `-B` / `PYTHONDONTWRITEBYTECODE` | **no effect.** They stop Python *writing* bytecode; they do not stop it *reading* what is already there |
+  | `--check-hash-based-pycs always` | **no effect.** Runtime-written `.pyc`s are timestamp-based; the flag governs hash-based ones |
+
+  Note the second and third rows: both are the obvious-sounding fix, and neither works. `-B` was in
+  the command that finally showed the regression failing, which made it look like part of the
+  remedy; the purge in the same command was doing all of the work. **A fix that was present when
+  the symptom cleared is not thereby the fix.**
+
+  Two habits close this off: `assert mutated != original` before running anything, which separately
+  catches a `str.replace` that matched nothing, and delete bytecode between runs. And the general
+  form, which is why it belongs here: **a negative result from a verification tool is a claim about
+  the tool until the tool is shown to have run.** Same class as "a number in a tool's output is a
+  property of the tool" — one rule up, one layer down.
 
 ---
 
