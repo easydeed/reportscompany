@@ -1,0 +1,23 @@
+{#-
+  BLOCK: spec_list — §06's `spec_list`. The four-across metric strip.
+
+  Moved verbatim from `_build_stacked_stats`, including the per-cell zebra and
+  the border that is omitted on the last cell. The loop replaces a Python one
+  that concatenated the same string; `loop.index0` stands in for `enumerate`.
+
+  `class="metric-card"` is B4 and is not decoration. That rule was defined in the
+  document's <style> block and attached to ZERO elements, so the media query that
+  stacks this strip on a phone could never fire and 10px labels wrapped to three
+  lines at 320px. `test_no_responsive_rule_is_defined_and_unused` keeps every such
+  rule attached to something.
+-#}
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  {% for label, value in stats -%}
+                    <td width="25%" class="metric-card" style="background-color: {{ '#f8fafc' if loop.index0 % 2 == 0 else '#f1f5f9' }}; padding: 16px 12px; text-align: center; {{ 'border-right: 1px solid #e2e8f0;' if not loop.last else '' }}">
+                      <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 700; color: {{ ink }};">{{ value }}</p>
+                      <p style="margin: 4px 0 0 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: 0.3px;">{{ label }}</p>
+                    </td>
+                  {%- endfor %}
+                </tr>
+              </table>

@@ -1,0 +1,29 @@
+{#-
+  BLOCK: cta — §06's `cta`. The "View Full PDF" button, above the signature.
+
+  The HTML is byte-for-byte what `_build_pdf_cta` emitted as an f-string; only
+  the interpolation syntax changed. That is the whole intent of the
+  consolidation — a restructure, not a redesign — and
+  tests/test_email_render_diff.py holds it to that.
+
+  VML first for Outlook, then the anchor for everyone else, both inside
+  conditional comments. Outlook renders no CSS-styled anchor as a button, so the
+  `v:roundrect` is not belt-and-braces; it is the only button Outlook shows.
+-#}
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 24px auto;">
+              <tr>
+                <td style="border-radius: 8px; background-color: {{ primary_color }};">
+                  <!--[if mso]>
+                  <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{ pdf_url }}" style="height:48px;v-text-anchor:middle;width:260px;" arcsize="17%" stroke="f" fillcolor="{{ primary_color }}">
+                    <w:anchorlock/>
+                    <center style="color:{{ on_fill }};font-family:Arial,sans-serif;font-size:14px;font-weight:bold;">📄 View Full PDF</center>
+                  </v:roundrect>
+                  <![endif]-->
+                  <!--[if !mso]><!-->
+                  <a href="{{ pdf_url }}" style="display: inline-block; padding: 14px 28px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; color: {{ on_fill }}; text-decoration: none; border-radius: 8px;">
+                    📄 View Full PDF
+                  </a>
+                  <!--<![endif]-->
+                </td>
+              </tr>
+            </table>

@@ -48,6 +48,9 @@ V3: Professional styling refresh with enhanced Market Snapshot data.
 """
 import html
 import os
+from pathlib import Path
+
+from jinja2 import Environment, FileSystemLoader
 from typing import Dict, Optional, TypedDict, Tuple, List
 
 from worker.property_builder import compute_color_roles, normalize_hex_color, safe_url
@@ -230,6 +233,46 @@ _UNSUB_URL_SENTINEL = "__TRENDYREPORTS_UNSUBSCRIBE_URL__"
 #: surface through twelve builders, where the failure mode is a builder that
 #: names the wrong one and is off by 0.07 with nothing to show it.
 DARKEST_LIGHT_SURFACE = "#f1f5f9"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# The block environment — Workstream C's consolidation
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# §06 replaces eight per-report-type layouts assembled in Python with ONE set of
+# named blocks selected per type. The blocks live in templates/email/blocks/ and
+# are moved across verbatim: same HTML, different interpolation syntax. Whether
+# that holds is not a matter of care — `tests/test_email_render_diff.py` compares
+# what each of ten documents MEANS, before and after, and an empty diff is the
+# acceptance criterion.
+#
+# AUTOESCAPE IS OFF, DELIBERATELY, AND THIS IS THE ONE THING TO UNDERSTAND
+# BEFORE EDITING A BLOCK.
+#
+# This module sanitises at a single trust boundary near the top of
+# `schedule_email_html` — read the comment there, it explains why. Everything
+# reaching a block is already escaped. Turning autoescape ON would escape it a
+# second time (`&amp;amp;`) and, worse, would render the ~50 HTML fragments this
+# module builds as visible markup — which is exactly the failure the boundary
+# comment warns against and exactly why per-site escaping was rejected.
+#
+# So the blocks have the same trust model as the f-strings they replace: safe
+# because the inputs were cleaned once, not because the templating escapes. The
+# migration is neutral on security, not an improvement, and that is worth saying
+# plainly because a reader who sees `.jinja2` will reasonably assume otherwise.
+# `test_the_block_environment_does_not_escape` pins it.
+_BLOCK_ENV = Environment(
+    loader=FileSystemLoader(str(Path(__file__).resolve().parents[1] / "templates" / "email")),
+    autoescape=False,          # see above — NOT an oversight
+    trim_blocks=True,
+    lstrip_blocks=False,
+    keep_trailing_newline=False,
+)
+
+
+def render_block(name: str, **context) -> str:
+    """Render one §06 block. `name` is the stem, e.g. "cta"."""
+    return _BLOCK_ENV.get_template(f"blocks/{name}.jinja2").render(**context)
 
 
 def _ink(brand_hex: str, on: str = DARKEST_LIGHT_SURFACE) -> str:
@@ -495,22 +538,17 @@ def _tel_uri(phone: Optional[str]) -> Optional[str]:
 
 def _build_ai_narrative(insight_text: str, accent_color: str = "#0d9488",
                         accent_on_light: str = "#0d7c72") -> str:
-    """Accent-bordered callout with MARKET INSIGHT label. Ref: V0 email designs."""
+    """§06 block `read`, insight variant. Markup in blocks/read.jinja2."""
     if not insight_text:
         return ""
-    bg_tint = hex_to_rgba(accent_color, 0.06)
-    border_tint = hex_to_rgba(accent_color, 0.4)
-    return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
-                <tr>
-                  <td style="background-color: {bg_tint}; border-left: 3px solid {border_tint}; border-radius: 0 6px 6px 0; padding: 16px 20px;">
-                    <p style="margin: 0 0 8px 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {accent_on_light}; text-transform: uppercase; letter-spacing: 0.5px;">Market Insight</p>
-                    <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #1f2937;">
-                      {insight_text}
-                    </p>
-                  </td>
-                </tr>
-              </table>'''
+    return render_block(
+        "read",
+        variant="insight",
+        text=insight_text,
+        bg_tint=hex_to_rgba(accent_color, 0.06),
+        border_tint=hex_to_rgba(accent_color, 0.4),
+        ink=accent_on_light,
+    )
 
 
 def _build_hero_stat(value: str, label: str, primary_color: str,
@@ -563,40 +601,25 @@ def _build_gallery_count(count: int, label: str, primary_color: str) -> str:
 
 def _build_quick_take(text: str, accent_color: str, primary_color: str = "#18235c") -> str:
     """
-    Callout panel painted in the affiliate's primary colour.
+    §06 block `read`, panel variant. Markup in blocks/read.jinja2.
 
-    THIS FUNCTION WAS THE WORST CONTRAST DEFECT IN THE PRODUCT. It took the
-    label colour (`accent_color`) and the panel colour (`primary_color`) as two
-    independent arguments with nothing relating them, and painted one brand
-    colour directly on the other:
-
-        #8b5cf6 on #0d9488   1.13:1
-        #dc2626 on #dc2626   1.00:1   <- an account that sets ONE colour
-                                         rather than two gets invisible text
-
-    The master plan recorded this as B3 at 1.4:1 from a sample render. Measured
-    across the six live themes the label runs 1.13–2.14:1, and the body text
-    below it — hardcoded `#ffffff` — runs 1.98:1 on lime and 2.15:1 on amber.
-
-    `accent_color` is now IGNORED for the label. Both text colours derive from
-    the panel, which is the only thing they can be readable against. The
-    parameter is kept so the six call sites need no change and so that anyone
-    reading a call site sees why it no longer matters.
+    THIS WAS THE WORST CONTRAST DEFECT IN THE PRODUCT. The label colour and the
+    panel colour arrived as two independent arguments with nothing relating
+    them, so an account that set ONE brand colour rather than two rendered
+    `#dc2626` on `#dc2626` — invisible. `accent_color` is kept in the signature
+    so the six call sites need no change, and is deliberately unused: both text
+    colours derive from the panel, which is the only thing they can be readable
+    against.
     """
     if not text:
         return ""
-    on_panel = _on(primary_color)
-    return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
-                <tr>
-                  <td style="background-color: {primary_color}; padding: 16px 20px; border-radius: 6px;">
-                    <p style="margin: 0 0 6px 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {on_panel}; text-transform: uppercase; letter-spacing: 1px; opacity: 0.85;">Quick Take</p>
-                    <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: {on_panel};">
-                      {text}
-                    </p>
-                  </td>
-                </tr>
-              </table>'''
+    return render_block(
+        "read",
+        variant="panel",
+        text=text,
+        panel_color=primary_color,
+        on_panel=_on(primary_color),
+    )
 
 
 def _build_cta(pdf_url: str, accent_color: str, cta_text: str = "View Full Report") -> str:
@@ -660,33 +683,19 @@ def _build_filter_blurb(filter_text: str, primary_color: str) -> str:
 
 def _build_stacked_stats(stats: List[Tuple[str, str]], primary_color: str = "#18235c") -> str:
     """
-    4-column stats row with Outfit values. Ref: V0 email designs.
+    §06 block `spec_list` — the four-across metric strip. Markup in
+    blocks/spec_list.jinja2.
 
-    B4: the `.metric-card` rule that makes these stack on a phone was defined in
-    the document's <style> block and applied to **zero elements** — along with
-    `.mobile-stack` and `.band-row`. The media query was correct and unreachable,
-    so a four-across strip stayed four-across at 320px and its 10px labels wrapped
-    to three lines. The register called it the highest-impact single fix given the
-    mobile open share, and it is one attribute.
+    Capped at four here rather than in the template: the cap is a layout fact
+    (four 25% cells fill a row) and the block should not have to know it.
     """
-    _role_ink = _ink(primary_color)   # text on a light card, not the raw brand value
     if not stats:
         return ""
-    cells = ""
-    for i, (label, value) in enumerate(stats[:4]):
-        bg = "#f8fafc" if i % 2 == 0 else "#f1f5f9"
-        border = "border-right: 1px solid #e2e8f0;" if i < min(len(stats), 4) - 1 else ""
-        cells += f'''
-                    <td width="25%" class="metric-card" style="background-color: {bg}; padding: 16px 12px; text-align: center; {border}">
-                      <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 700; color: {_role_ink};">{value}</p>
-                      <p style="margin: 4px 0 0 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: 0.3px;">{label}</p>
-                    </td>'''
-    return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
-                <tr>
-                  {cells}
-                </tr>
-              </table>'''
+    return render_block(
+        "spec_list",
+        stats=stats[:4],
+        ink=_ink(primary_color),   # text on a light card, not the raw brand value
+    )
 
 
 def _build_trend_stats(stats: List[Tuple[str, str, str, bool]], primary_color: str) -> str:
@@ -982,60 +991,62 @@ def _build_property_row(listing: Dict, accent_color: str, is_last: bool = False)
                       </table>'''
 
 
+#: §3.3 status colours for the row badge. Literals, deliberately — a status
+#: colour is reserved and never drawn from the brand — and these values rather
+#: than the brighter pair because white on #16a34a is 3.30:1 and on #f59e0b is
+#: 2.15:1. Both replacements already appear in the PDF templates.
+_ROW_BADGE_COLOURS = {"sold": "#dc2626", "active": "#15803d", "pending": "#b45309"}
+
+
+def _sales_table_row(listing: Dict, index: int, last: bool) -> Dict[str, str]:
+    """
+    One row's values, formatted. Shaped here rather than in the template so that
+    `_format_price_clean`, the badge palette and the "N/A" fallbacks stay
+    testable in Python — a template is a bad place to hide any of them.
+    """
+    beds = listing.get("bedrooms") or ""
+    baths = listing.get("bathrooms") or ""
+    sqft = listing.get("sqft")
+    price = listing.get("close_price") or listing.get("list_price")
+    status = listing.get("status") or ""
+    badge = _ROW_BADGE_COLOURS.get(status.lower(), "")
+    return {
+        "address": listing.get("street_address") or "N/A",
+        "specs": f"{beds}/{baths}" if beds and baths else "",
+        "sqft": f"{sqft:,}" if sqft else "",
+        "price": _format_price_clean(price) if price else "N/A",
+        "dom": listing.get("days_on_market") or "",
+        "bg": "#ffffff" if index % 2 == 0 else "#f9fafb",
+        "border": "" if last else "border-bottom: 1px solid #f1f5f9;",
+        "badge_html": (
+            f' <span style="display: inline-block; background: {badge}; color: #ffffff;'
+            f' font-size: 8px; font-weight: 700; padding: 2px 6px; border-radius: 3px;'
+            f' margin-left: 6px; text-transform: uppercase;">{status}</span>'
+            if status and badge else ""
+        ),
+    }
+
+
 def _build_sales_table(listings: List[Dict], primary_color: str,
                        accent_color: str = "#0d9488") -> str:
     """
-    5-column data table with a brand-coloured header. Ref: V0
-    email-sales-inventory.html.
+    §06 block `table` — the five-column listings table. Markup in
+    blocks/table.jinja2.
 
-    Two roles, two derivations: the header cells sit ON the brand fill, and the
-    price column is brand-coloured text on a white or near-white row. Hardcoding
-    `#ffffff` for the first and the raw accent for the second put five header
-    labels at 1.98:1 on lime and every price at 3.74:1 on Luxury Estates.
+    The old version also computed an `hdr_style` local that nothing used: the
+    five header cells inlined the same style themselves. Dropped in the move,
+    which the render diff confirms changes nothing.
     """
-    _role_on_header = _on(primary_color)
-    _role_price_ink = _ink(accent_color)
     if not listings:
         return ""
-    rows = ""
-    for i, listing in enumerate(listings):
-        addr = listing.get("street_address") or "N/A"
-        beds = listing.get("bedrooms") or ""
-        baths = listing.get("bathrooms") or ""
-        sqft = listing.get("sqft")
-        sqft_str = f"{sqft:,}" if sqft else ""
-        price = listing.get("close_price") or listing.get("list_price")
-        dom = listing.get("days_on_market") or ""
-        price_str = _format_price_clean(price) if price else "N/A"
-        specs = f"{beds}/{baths}" if beds and baths else ""
-        bg = "#ffffff" if i % 2 == 0 else "#f9fafb"
-        status = listing.get("status") or ""
-        status_lower = status.lower() if status else ""
-        # See the note on `badge_bg` above: white on #16a34a is 3.30:1 and on
-        # #f59e0b is 2.15:1.
-        badge_color = "#dc2626" if status_lower == "sold" else "#15803d" if status_lower == "active" else "#b45309" if status_lower == "pending" else ""
-        badge_html = f' <span style="display: inline-block; background: {badge_color}; color: #ffffff; font-size: 8px; font-weight: 700; padding: 2px 6px; border-radius: 3px; margin-left: 6px; text-transform: uppercase;">{status}</span>' if status and badge_color else ""
-        border = "border-bottom: 1px solid #f1f5f9;" if i < len(listings) - 1 else ""
-        rows += f'''
-                        <tr>
-                          <td style="background: {bg}; padding: 12px 14px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; color: #334155; {border}">{addr}{badge_html}</td>
-                          <td style="background: {bg}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; color: #475569; text-align: center; {border}">{specs}</td>
-                          <td style="background: {bg}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; color: #475569; text-align: right; {border}">{sqft_str}</td>
-                          <td style="background: {bg}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 600; color: {_role_price_ink}; text-align: right; {border}">{price_str}</td>
-                          <td style="background: {bg}; padding: 12px 14px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; color: #475569; text-align: center; {border}">{dom}</td>
-                        </tr>'''
-    hdr_style = f"background: {primary_color}; padding: 12px {{pad}}; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {_on(primary_color)}; text-transform: uppercase; letter-spacing: 0.5px;"
-    return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden;">
-                <tr>
-                  <td style="background: {primary_color}; padding: 12px 14px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {_role_on_header}; text-transform: uppercase; letter-spacing: 0.5px;">Address</td>
-                  <td style="background: {primary_color}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {_role_on_header}; text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">Bd/Ba</td>
-                  <td style="background: {primary_color}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {_role_on_header}; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Sq Ft</td>
-                  <td style="background: {primary_color}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {_role_on_header}; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Price</td>
-                  <td style="background: {primary_color}; padding: 12px 14px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {_role_on_header}; text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">DOM</td>
-                </tr>
-                {rows}
-              </table>'''
+    return render_block(
+        "table",
+        rows=[_sales_table_row(l, i, i == len(listings) - 1)
+              for i, l in enumerate(listings)],
+        primary_color=primary_color,
+        on_header=_on(primary_color),     # text ON the brand fill
+        price_ink=_ink(accent_color),     # brand text on a light row
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1416,29 +1427,23 @@ def _build_truncation_note(
 
 
 def _build_pdf_cta(pdf_url: Optional[str], primary_color: str) -> str:
-    """Big branded "View Full PDF" button rendered just above the
-    agent footer on every email."""
+    """
+    §06 block `cta` — the "View Full PDF" button above the agent footer.
+
+    The markup now lives in templates/email/blocks/cta.jinja2. This function
+    stays as the seam: it decides whether the block renders at all and derives
+    the one colour role the block needs, which keeps that judgement in Python
+    where it is testable rather than in a template where it would be an `{% if %}`
+    nobody reads.
+    """
     if not pdf_url:
         return ""
-    _role_on = _on(primary_color)   # the button is a brand fill
-    return f'''
-            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 24px auto;">
-              <tr>
-                <td style="border-radius: 8px; background-color: {primary_color};">
-                  <!--[if mso]>
-                  <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{pdf_url}" style="height:48px;v-text-anchor:middle;width:260px;" arcsize="17%" stroke="f" fillcolor="{primary_color}">
-                    <w:anchorlock/>
-                    <center style="color:{_role_on};font-family:Arial,sans-serif;font-size:14px;font-weight:bold;">📄 View Full PDF</center>
-                  </v:roundrect>
-                  <![endif]-->
-                  <!--[if !mso]><!-->
-                  <a href="{pdf_url}" style="display: inline-block; padding: 14px 28px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; color: {_role_on}; text-decoration: none; border-radius: 8px;">
-                    📄 View Full PDF
-                  </a>
-                  <!--<![endif]-->
-                </td>
-              </tr>
-            </table>'''
+    return render_block(
+        "cta",
+        pdf_url=pdf_url,
+        primary_color=primary_color,
+        on_fill=_on(primary_color),   # the button is a brand fill
+    )
 
 
 # ---------------------------------------------------------------------------
