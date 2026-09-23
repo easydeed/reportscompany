@@ -452,6 +452,43 @@ it.**
   schema check, a permission test — anything whose normal output is *nothing*. **Absence of a
   finding is evidence only from an instrument you have watched find something.**
 
+- **A revert during recovery is a second change, not a way back. Commit the working state before
+  attempting recovery from a bad edit.**
+
+  *Added 2026-09-23 from Workstream C.* A span replacement silently swallowed two functions that sat
+  between the one being replaced and the next named one, which surfaced as `NameError` across
+  twenty-one tests. The reflex — `git checkout -- <file>` — fixed the NameError and **discarded two
+  migrations that had already passed their gate**, because they had not been committed yet.
+
+  `checkout` does not undo the last edit. It returns the file to the last COMMIT, which may be
+  several verified steps back. In a session that makes many small verified changes, that distance
+  is invisible at the moment you need it most: you are already dealing with one failure, and the
+  command that looks like an undo is a larger change than the one you are undoing.
+
+  Concretely: **commit each step that passes its gate**, and when an edit goes wrong prefer a
+  targeted inverse edit over a file-level revert. If a revert is genuinely the right move, first
+  establish what it will take with you.
+
+- **A behavioural test suite cannot verify a behaviour-preserving migration. Structural claims need
+  structural assertions.**
+
+  *Added 2026-09-23, same incident, and it is the more general half.* After that revert the
+  repository held two orphaned template files that nothing rendered — and **the whole suite was
+  green**, correctly. The inline markup those templates were meant to replace had come back with the
+  revert, so behaviour was genuinely unchanged. The green was accurate about behaviour and silent
+  about structure.
+
+  That silence is not a gap in the tests; it is what the tests are for. A restructure's entire
+  premise is that output does not change, which means **every output-shaped assertion is guaranteed
+  to pass whether or not the restructure happened.** The render diff, the contrast audit, the golden
+  files — all of them would report success on a migration that had been entirely undone.
+
+  So a migration needs a gate of a different kind, asserting the SHAPE of the code rather than the
+  content of its output: that every extracted file has a caller, that no path still does the thing
+  the extraction was meant to remove, that the counts agree. Behavioural and structural gates answer
+  different questions and neither substitutes for the other — which is worth knowing before writing
+  the third behavioural test in a row and feeling covered.
+
 ---
 
 ## Phase 0 — Security & Tooling

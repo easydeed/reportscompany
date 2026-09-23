@@ -11,6 +11,18 @@
   lines at 320px. `test_no_responsive_rule_is_defined_and_unused` keeps every such
   rule attached to something.
 -#}
+{% if variant == 'supporting' %}
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+                <tr>
+                  {% for label, value in stats -%}
+                    <td width="{{ cell_width }}" style="padding: 16px 12px; text-align: center; background-color: #f8fafc;">
+                      <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 700; color: {{ ink }};">{{ value }}</p>
+                      <p style="margin: 4px 0 0; font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: 0.3px;">{{ label }}</p>
+                    </td>
+                  {%- endfor %}
+                </tr>
+              </table>
+{% else %}
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
                   {% for label, value in stats -%}
@@ -21,3 +33,4 @@
                   {%- endfor %}
                 </tr>
               </table>
+{% endif %}

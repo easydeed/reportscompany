@@ -643,6 +643,7 @@ def _build_stacked_stats(stats: List[Tuple[str, str]], primary_color: str = "#18
         return ""
     return render_block(
         "spec_list",
+        variant="strip",
         stats=stats[:4],
         ink=_ink(primary_color),   # text on a light card, not the raw brand value
     )
@@ -980,20 +981,7 @@ def _build_gallery_3x2_body(
     body = _build_filter_blurb(filter_description, primary_color)
     body += _build_ai_narrative(insight_text, accent_color, accent_on_light)
     body += _build_gallery_count(len(listings), gallery_label, primary_color)
-    cards = [_build_gallery_card_compact(l, accent_color) for l in listings[:9]]
-    rows = ""
-    for r in range(0, len(cards), 3):
-        cells = ""
-        for c in range(3):
-            idx = r + c
-            pad = "padding: 0 3px 6px 0;" if c == 0 else ("padding: 0 0 6px 3px;" if c == 2 else "padding: 0 3px 6px 3px;")
-            card = cards[idx] if idx < len(cards) else ""
-            cells += f'<td width="33%" class="mobile-stack" style="{pad} vertical-align: top;">{card}</td>'
-        rows += f'<tr>{cells}</tr>'
-    body += f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
-                {rows}
-              </table>'''
+    body += _card_grid([_build_gallery_card_compact(l, accent_color) for l in listings[:9]], 3)
     if not insight_text:
         body += _build_quick_take(quick_take, accent_color, primary_color)
     return body
@@ -1049,20 +1037,12 @@ def _build_closed_sales_body(
         show = listings[:4]
         label = "Notable Sales" if any(l.get("close_price") for l in show) else "Featured Properties"
         body += _build_gallery_count(len(show), label, primary_color)
-        cards = [_build_photo_card_with_badge(l, primary_color, accent_color, "Sold" if l.get("close_price") else "Active") for l in show]
-        rows = ""
-        for r in range(0, len(cards), 2):
-            c1 = cards[r] if r < len(cards) else ""
-            c2 = cards[r + 1] if r + 1 < len(cards) else ""
-            rows += f'''
-                <tr>
-                  <td width="50%" class="mobile-stack" style="padding: 0 4px 8px 0; vertical-align: top;">{c1}</td>
-                  <td width="50%" class="mobile-stack" style="padding: 0 0 8px 4px; vertical-align: top;">{c2}</td>
-                </tr>'''
-        body += f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
-                {rows}
-              </table>'''
+        body += _card_grid([
+            _build_photo_card_with_badge(
+                l, primary_color, accent_color,
+                "Sold" if l.get("close_price") else "Active")
+            for l in show
+        ], 2)
     body += _build_sales_table(listings or [], primary_color, accent_color)
     body += _build_stacked_stats(stats, primary_color)
     if not insight_text:
@@ -1144,20 +1124,15 @@ def _build_analytics_body(
 
     if supporting_metrics:
         n = len(supporting_metrics)
-        pct = f"{100 // n}%" if n else "33%"
-        cells = ""
-        for sm_label, sm_value in supporting_metrics[:3]:
-            cells += f'''
-                    <td width="{pct}" style="padding: 16px 12px; text-align: center; background-color: #f8fafc;">
-                      <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 700; color: {_ink(primary_color, '#f1f5f9')};">{sm_value}</p>
-                      <p style="margin: 4px 0 0; font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: 0.3px;">{sm_label}</p>
-                    </td>'''
-        body += f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
-                <tr>
-                  {cells}
-                </tr>
-              </table>'''
+        body += render_block(
+            "spec_list", variant="supporting",
+            stats=supporting_metrics[:3],
+            cell_width=f"{100 // n}%" if n else "33%",
+            # #f1f5f9 rather than the cell's own #f8fafc: `_ink` targets the
+            # darkest light surface in the document so one value is safe on all
+            # of them. See DARKEST_LIGHT_SURFACE.
+            ink=_ink(primary_color, "#f1f5f9"),
+        )
 
     # EMAIL-DEPTH-PASS1: render example listings beneath the band
     # aggregates so the email tells the full story (was: PDF-only).

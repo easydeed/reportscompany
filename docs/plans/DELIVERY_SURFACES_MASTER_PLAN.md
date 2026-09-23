@@ -129,6 +129,35 @@ no restrictions.
 **3.2 Fixed neutrals** — canvas, card, panel, ink, body, muted, quiet, rule. Not themeable.
 Identical across all three surfaces.
 
+> ### A background that varies cannot be made accessible by choosing a foreground
+>
+> **A design constraint, reached independently from two directions, and it binds Workstreams D and
+> E harder than it binds C.**
+>
+> Contrast is a relation between two colours. Every derivation in §3.1 works by moving one of them
+> until the ratio clears — which requires the other one to be known and fixed. Where it is not,
+> there is nothing to derive against, and no choice of text colour is correct.
+>
+> Two surfaces in this product already fail that way:
+>
+> - **The market report's header band** runs `linear-gradient(135deg, header-bg → primary-color)`.
+>   No single text colour clears 4.5:1 against both ends; the label measures 9.90:1 where it starts
+>   and 2.53:1 where the brand takes over. `_ensure_readable_on_dark` now returns the best worst
+>   case and logs that it fell short, which is the honest answer and not a fix.
+> - **The teal cover overlay** composites a three-stop alpha gradient over whichever photo the
+>   listing carries. The effective backdrop differs from the top of the panel to the bottom and
+>   again for every property. There is no value to compute a ratio from at all.
+>
+> The remedies are structural, never chromatic: a **scrim** (a fixed layer between image and text,
+> which then IS a surface and can be guaranteed against), a **solid plate** behind the text block,
+> or **text off the image**. Picking a different colour is not among them.
+>
+> **Why this matters most for D and E.** Photo-backed covers are the norm on the PDF surfaces, and
+> §7 and §9 assume text over imagery in several places. Any such composition needs its scrim
+> specified as part of the design, not discovered when the contrast audit reports a ratio it cannot
+> compute. Treat "text over a photograph" as requiring a named opaque surface, the same way §3.2
+> treats the neutrals — because that is exactly what it is.
+
 **3.3 Status colors** — reserved, never drawn from the brand palette, always paired with a text
 label. Note "Closed" is currently rendered red, which reads as an error.
 
