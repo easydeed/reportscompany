@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-23, against `fix/d095-d096-cache-key-and-limiter`, cut from `main` at `9e79fb1`. **Every open entry was re-checked against current code in that sweep** — see §0.6, *a defect list needs a read path*.
+**Last reconciled:** 2026-09-23, against `feat/workstream-a-token-layer`, cut from `main` at `2b4ac3b`. **Every open entry was re-checked against current code in that sweep** — see §0.6, *a defect list needs a read path*.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -36,12 +36,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 31 | Real, unfixed |
+| `open` | 33 | Real, unfixed |
 | `fixed` | 61 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **96** | D-001 … D-096, contiguous, no duplicates |
+| **Total** | **98** | D-001 … D-098, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 1 · WRONG 7 · FRAGILE 11 · ROUGH 12. (Sums to 31, the open total.)
+**Open by severity:** BROKEN 1 · WRONG 8 · FRAGILE 11 · ROUGH 13. (Sums to 33, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -4378,6 +4378,108 @@ volume, which has not been checked either.
 > arithmetic cannot reach. Not itself a defect: the effective limit is the stricter of the two, which
 > is the safe direction. But `BURST` and `SIMPLYRETS_BURST` are configuration that does nothing, and
 > a knob that does nothing is worse than no knob — somebody will turn it.
+
+
+---
+
+### D-097 — five of the seven brand/text pairs the templates ship fail WCAG AA, and no template derives any of them
+
+**Severity:** WRONG · **Affects:** every PDF, every email and every social card, on five of six themes
+**Status:** `open`
+
+The master plan recorded one instance of this: Luxury Estates renders its price in `#0D9488`, which
+is **3.74:1** on white. Building the token layer (Workstream A) required measuring the rest, and the
+rest is worse.
+
+**Measured, from the values the templates hardcode today:**
+
+| theme | fill | text on the fill | ratio | brand text on white | ratio |
+|---|---|---|---|---|---|
+| property/teal | `#34D1C3` | `#1a1a1a` | 9.16 ok | `#1abaae` | **2.42 FAIL** |
+| property/bold | `#0F1629` | `#ffffff` | 17.99 ok | `#15216E` | 14.24 ok |
+| property/classic | `#1B365D` | `#ffffff` | 12.12 ok | `#1B365D` | 12.12 ok |
+| property/modern | `#FF6B5B` | `#ffffff` | **2.80 FAIL** | `#d94e3f` | **4.11 FAIL** |
+| property/elegant | `#1A1A1A` | `#ffffff` | 17.40 ok | `#1a1a1a` | 17.40 ok |
+| market (theme default) | `#0d9488` | `#ffffff` | **3.74 FAIL** | `#0f766e` | 5.47 ok |
+| market (base fallback) | `#0d9488` | `#ffffff` | **3.74 FAIL** | `#0d7268` | 5.79 ok |
+
+`#1abaae` at **2.42:1** is the worst value on the board and it is the teal theme's designated
+"brand colour on a light surface" — the slot whose entire job is to be readable. The market
+surface repeats the Luxury Estates defect in a different slot: white label text on the teal fill,
+also 3.74:1, because `--accent-text` defaults to `#ffffff` regardless of what the fill is.
+
+**Why every one of these is a hardcoded literal.** Nothing derives a readable value from the
+affiliate's colour, because until now there was nothing to derive it with. `apps/worker/src/worker/
+themes.py` (`derive_theme`, Workstream A) now does; **no template consumes it yet**, which is why
+this entry is open rather than fixed.
+
+**Scale of the literals, measured rather than estimated.** `scripts/lint_template_colors.py`
+reports **111 brand hex literals across 26 of 30 template files** — 92 of them sitting directly in
+a brand-role custom property (`--primary-color`, `--color-accent`, `--pct-blue`, or a
+`default('#…')` fallback for one). Recorded in `scripts/template_color_baseline.txt` as a ratchet:
+CI fails on a new one, and retiring them is the migration that closes this entry.
+
+> **The derivation is done and deliberately not wired.** Substituting the tokens changes what
+> ships: 12 of 17 brand-role values move by more than ΔE 2.3 (the just-noticeable threshold), and
+> two move by ΔE 93 — `--coral-text` and `--accent-text` go from white to `#14151a`, because white
+> on coral is 2.80:1 and white on teal is 3.74:1 and near-black is the readable choice on both.
+> Those moves **are the fix**, not a side effect of it, but Workstream A was specified to ship
+> invisibly and it cannot. Reported rather than absorbed.
+
+**Two smaller things found in the same measurement, recorded here rather than filed separately:**
+
+- **The bold theme declares two different primaries.** `bold.jinja2:21` defaults `theme_color` to
+  `#0F1629`; `bold_report.jinja2:13` defaults the same variable to `#15216E`. Whichever is right,
+  the two files disagree about what the theme is when branding is absent.
+- **The market surface disagrees with itself about its own fallback.** `_base/base.jinja2:28` has
+  `--accent-on-light: #0d7268`; `market.jinja2:12` has `#0f766e`. Both are teal, neither is
+  derived, and which one renders depends on whether the theme block is reached.
+
+**The five-token set does not cover every role the templates use.** `primary`, `primary_dark`,
+`primary_ink`, `on_primary` and `tint` have no counterpart for `--color-primary-light` /
+`--*-light` / `--accent-on-dark`, which appear in four themes. The migration needs either a sixth
+token or a decision that those roles collapse into `tint` and `primary_dark`. **[JERRY]** — it is a
+design-system question, not an implementation one.
+
+
+---
+
+### D-098 — `on_primary` cannot reach 4.5:1 against every fill, and the spec asks it to
+
+**Severity:** ROUGH · **Affects:** label text on a brand fill, for roughly 5% of pickable colours
+**Status:** `open`
+
+Master plan §3.1 defines `on_primary` as *"whichever of white or `#14151A` scores higher against
+primary"*. §4.2 then requires `contrast(on_primary, primary) >= 4.5` for every input. **The first
+cannot deliver the second, and the arithmetic says so without needing an experiment.**
+
+Both candidates are fixed. Their contrast against a fill of luminance *L* is `1.05 / (L + 0.05)`
+for white and `(L + 0.05) / 0.0576` for `#14151A`. The two curves cross at *L* = 0.196, where each
+scores **4.27:1** — so that is the best any binary choice between them can do, for the worst fill.
+
+**Measured:** 1,056 of 20,000 random sRGB colours (**5.3%**) fall under 4.5:1. Worst observed
+`#9158f5` at 4.27:1. Two of the six live themes are close to the band but clear it (Demo Title and
+Violet at 4.83 and 5.70); nothing shipping is currently affected.
+
+This is a finding about the spec, not a bug in the code. `themes.py` implements §3.1 exactly.
+
+**XFAILS THIS DEFECT GATES** (§0.6: two-way link, or an xfail is a skip with better manners).
+
+- `apps/worker/tests/test_themes.py::test_on_primary_clears_aa_against_the_fill_for_5000_random_colours`
+
+Strict, so it breaks the build the day the derivation can satisfy it. The achievable bound is
+asserted live alongside it by `test_on_primary_always_reaches_the_achievable_ceiling`, so a change
+that makes `on_primary` *worse* still fails today.
+
+**Remedies, recorded without choosing one** — the choice is a design decision, **[JERRY]**:
+
+| option | cost | note |
+|---|---|---|
+| **Let `on_primary` adjust the fill** — lighten or darken `primary` until the pair clears 4.5 | the fill is no longer exactly the affiliate's colour | guarantees the property; `primary_ink` already does this in the other direction, and white on `primary_ink` always clears 4.5 by symmetry |
+| **Accept 3:1 for this pair** | none | WCAG AA asks 3:1 for large text and UI components, and `on_primary` mostly carries badge and button labels; needs the type sizes checked, not assumed |
+| **Restrict the picker** | affiliates lose ~5% of the colour space | §3.1 explicitly promises the opposite: *"the picker needs no restrictions"* |
+| **Accept 4.27 and say so** | the shortfall is undocumented outside this entry | cheapest; the measurement is already here |
+
 
 
 ---

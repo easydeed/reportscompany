@@ -129,6 +129,61 @@ directory. Existing sends render within a perceptible-difference threshold.
 
 **Effort: S.** One file, one test module.
 
+### 04.1 · Built — and two findings that change what A is
+
+*2026-09-23, `feat/workstream-a-token-layer`.*
+
+`apps/worker/src/worker/themes.py` implements §3.1 exactly: `derive_theme()` returns the five
+tokens, pure and `lru_cache`d on the colour. `apps/worker/tests/test_themes.py` carries the four
+required test classes plus the guards that a degenerate implementation fails, and
+`apps/worker/tests/golden/themes.json` locks the six themes. `scripts/lint_template_colors.py`
+carries the acceptance criterion.
+
+**It does not consume `compute_color_roles`, and it does not replace it yet.** The live six-role
+derivation in `property_builder.py` stays exactly where it is; the two modules coexist with a test
+asserting their shared luminance agrees, so they cannot diverge silently. Replacing it is the
+migration, not this.
+
+**Finding 1 — A cannot ship invisibly. The current colours are worse than §02 recorded.**
+
+§02 measured the six *picker presets*. The values the *templates* ship are a different set, and
+five of the seven brand/text pairs fail AA:
+
+| surface | fill | text on fill | brand text on white |
+|---|---|---|---|
+| property/teal | `#34D1C3` | `#1a1a1a` 9.16 | `#1abaae` **2.42 FAIL** |
+| property/bold | `#0F1629` | `#ffffff` 17.99 | `#15216E` 14.24 |
+| property/classic | `#1B365D` | `#ffffff` 12.12 | `#1B365D` 12.12 |
+| property/modern | `#FF6B5B` | `#ffffff` **2.80 FAIL** | `#d94e3f` **4.11 FAIL** |
+| property/elegant | `#1A1A1A` | `#ffffff` 17.40 | `#1a1a1a` 17.40 |
+| market | `#0d9488` | `#ffffff` **3.74 FAIL** | `#0f766e` 5.47 |
+
+`#1abaae` at **2.42:1** is worse than the 3.74 that motivated the workstream, and it sits in the
+slot whose only job is to be readable on a light surface.
+
+Substituting the tokens therefore moves 12 of 17 brand-role values past ΔE 2.3, two of them by
+ΔE 93 — `--coral-text` and `--accent-text` flip from white to `#14151a` because white on those
+fills is unreadable. **Those moves are the fix.** But "ships behind existing templates with no
+visual change" is not available, and the migration needs to be reviewed as a visible change per
+surface. Filed as **D-097**.
+
+**Finding 2 — §4.2 asks for a property §3.1 cannot deliver.**
+
+`contrast(on_primary, primary) >= 4.5` is unachievable for ~5% of sRGB. White and `#14151A` are
+fixed; their curves cross at *L* = 0.196 where both score **4.27:1**. Measured: 1,056 of 20,000
+random colours fall short, worst `#9158f5` at 4.27. Nothing shipping is affected. Left as a strict
+xfail rather than quietly relaxed; remedies and the **[JERRY]** decision are on **D-098**.
+
+**Also unresolved: the five tokens do not cover every role the templates use.** There is no
+counterpart for `--color-primary-light` / `--*-light` / `--accent-on-dark`, which four themes
+declare. Either a sixth token or a decision that those collapse. On D-097.
+
+**Acceptance status.** The lint exists and is wired into CI. It reports **111 brand hex literals
+across 26 of 30 template files** — run against `main` before anything was touched, because a rule
+that has never been seen to fire is indistinguishable from one that matches nothing. The 111 are
+baselined in `scripts/template_color_baseline.txt`; CI fails on a new one and the file may only
+shrink. The criterion is met when it is empty.
+
 ---
 
 ## 05 · Workstream B · Bug register

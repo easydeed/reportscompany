@@ -39,6 +39,7 @@ DEFECT_LIST = REPO / "docs/DEFECT_LIST.md"
 SOURCES = [
     REPO / "tests/test_simplyrets_query_builder.py",
     REPO / "apps/api/tests/test_plans_limits.py",
+    REPO / "apps/worker/tests/test_themes.py",
 ]
 
 MARKER_DEF = re.compile(r"^_D(\d{3})_GATED\s*=\s*pytest\.mark\.xfail", re.M)

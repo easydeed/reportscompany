@@ -16,6 +16,14 @@ on:
       - "tests/**"
       - "db/**"
       - "pytest.ini"
+      - "scripts/**"
+      # apps/web is a frontend project, but its seven trendy-*.html templates
+      # are a live render path (apps/web/lib/templates.ts's header explains how)
+      # and the colour lint below is the only thing checking them. Without this
+      # line a web template could gain a brand literal and the ratchet would not
+      # fire until something else touched the backend — the same "edit a file
+      # without triggering the job that checks it" gap D-089 was.
+      - "apps/web/templates/**"
       - ".github/workflows/backend-tests.yml"
   pull_request:
     paths:
@@ -24,6 +32,14 @@ on:
       - "tests/**"
       - "db/**"
       - "pytest.ini"
+      - "scripts/**"
+      # apps/web is a frontend project, but its seven trendy-*.html templates
+      # are a live render path (apps/web/lib/templates.ts's header explains how)
+      # and the colour lint below is the only thing checking them. Without this
+      # line a web template could gain a brand literal and the ratchet would not
+      # fire until something else touched the backend — the same "edit a file
+      # without triggering the job that checks it" gap D-089 was.
+      - "apps/web/templates/**"
       - ".github/workflows/backend-tests.yml"
 jobs:
   test:
@@ -84,3 +100,15 @@ jobs:
       # it imports.
       - name: Run tests
         run: .venv/bin/pytest
+
+      # Workstream A's acceptance criterion: no brand hex literal in a template.
+      # A ratchet, not a gate — there are 111 today and removing them changes
+      # what ships, so they are baselined in scripts/template_color_baseline.txt
+      # and only a NEW one fails the build.
+      #
+      # This runs on the standard library alone and does not need the venv. It
+      # is a separate step from pytest so the failure says which thing broke;
+      # tests/test_template_color_lint.py covers the rule's own behaviour,
+      # including the positive control that proves it still matches anything.
+      - name: Lint template colours
+        run: python3 scripts/lint_template_colors.py --check-baseline
