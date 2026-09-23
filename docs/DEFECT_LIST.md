@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-23, against `chore/decision-01-history-probe`, cut from `main` at `4373a9d`. **Every open entry was re-checked against current code in that sweep** — see §0.6, *a defect list needs a read path*.
+**Last reconciled:** 2026-09-23, against `chore/rate-limit-headroom`, cut from `main` at `fb5fa7f`. **Every open entry was re-checked against current code in that sweep** — see §0.6, *a defect list needs a read path*.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -36,12 +36,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 30 | Real, unfixed |
+| `open` | 31 | Real, unfixed |
 | `fixed` | 60 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **94** | D-001 … D-094, contiguous, no duplicates |
+| **Total** | **95** | D-001 … D-095, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 1 · WRONG 7 · FRAGILE 10 · ROUGH 12. (Sums to 30, the open total.)
+**Open by severity:** BROKEN 1 · WRONG 7 · FRAGILE 11 · ROUGH 12. (Sums to 31, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -4284,6 +4284,39 @@ against. The header is omitted and `X-RateLimit-Degraded: 1` is set instead.
 Tests: `apps/api/tests/test_rate_limiter_degrades.py`, 6 cases, four regressions applied and seen
 to fail — including one on the `/health` exemption, pinned so the asymmetry that hid D-009 and
 D-013 stays written down where someone debugging an outage will find it.
+
+
+### D-095 — two identical cache lookups miss each other if the keys were typed in a different order
+
+**Severity:** FRAGILE · **Affects:** anything caching on a payload built at more than one call site
+**Status:** `open`
+
+`cache._key` hashes `json.dumps(payload)` with **no `sort_keys=True`**. Python preserves insertion
+order, so the same logical payload written two ways produces two different cache keys:
+
+```python
+_key("closed_buckets", {"city": "Glendora", "month": "2026-09"})
+_key("closed_buckets", {"month": "2026-09", "city": "Glendora"})
+# -> different keys.  Measured, not reasoned about.
+```
+
+The consequence is a **silent 100% miss rate** between the two call sites — no error, no warning,
+just a cache that never hits and a vendor bill that looks like the cache was never there. Same
+shape as every other defect on this board that returns a plausible answer instead of an error.
+
+**Harmless today**, which is why it is FRAGILE and not WRONG: the only live cache payload
+(`{"type": report_type, "params": params}`, `tasks.py:1311`) is constructed in exactly one place,
+so both sides always agree.
+
+**It stops being harmless the moment anything caches from two places**, and the rate-limit analysis
+for §7.3 recommends precisely that — caching 12-month bucket counts on *(city, month)* so twelve
+report types share thirteen requests instead of making 156. Found while reading the cache for that
+analysis rather than by hitting it.
+
+Fix is one argument: `json.dumps(payload, sort_keys=True)`. Not applied here because it **changes
+every existing key** and would blank the report cache on deploy — harmless in effect (a cold cache
+refills) but it is a deliberate choice rather than a drive-by, and it belongs with whoever adds the
+second call site.
 
 
 ---
