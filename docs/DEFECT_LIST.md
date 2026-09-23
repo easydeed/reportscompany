@@ -4435,11 +4435,70 @@ CI fails on a new one, and retiring them is the migration that closes this entry
   `--accent-on-light: #0d7268`; `market.jinja2:12` has `#0f766e`. Both are teal, neither is
   derived, and which one renders depends on whether the theme block is reached.
 
-**The five-token set does not cover every role the templates use.** `primary`, `primary_dark`,
-`primary_ink`, `on_primary` and `tint` have no counterpart for `--color-primary-light` /
-`--*-light` / `--accent-on-dark`, which appear in four themes. The migration needs either a sixth
-token or a decision that those roles collapse into `tint` and `primary_dark`. **[JERRY]** — it is a
-design-system question, not an implementation one.
+### The `--*-light` / `--*-on-dark` gap, surveyed before deriving anything
+
+*2026-09-23, at Jerry's instruction: **"survey before deriving… report which before proposing
+either."*** Every `var()` reference to one of these tokens was read and classified by the CSS
+property it lands in. The answer is cleaner than the question assumed, and it is **one token, not
+two**.
+
+**The `-light` family paints nothing that carries text.**
+
+| token | themes | uses | as text | decorative | verdict |
+|---|---|---|---|---|---|
+| `--accent-light` | market | 6 | 0 | 6 | panel backgrounds, a photo border, a pill border |
+| `--color-primary-light` | 5 property themes | 12 | 0 | 12 | chart wraps, cover washes, one gradient stop |
+| `--color-accent-light` | 5 property themes | 17 | **3** | 14 | see below — the three are a dark-surface case |
+| `--coral-light` | modern | 1 | 0 | 1 | a background |
+| `--teal-light` | teal | **0** | — | — | **declared, never referenced** |
+| `--navy-light` | classic, bold | **0** | — | — | **declared, never referenced** |
+| `--gold-light` | elegant | 11 | 4 | 7 | not brand-derived — elegant's fixed gold, outside this question |
+
+The three text uses of `--color-accent-light` are all in `classic` — `.cover-property-type`,
+`.analysis-intro-title`, `.range-stat-label` — and all three sit on a **dark** panel (their
+siblings are `rgba(255,255,255,0.8)` on the same surface). So they are not a counterexample; they
+are the same case as the row below, wearing the wrong token name.
+
+**Conclusion: `-light` is decorative and needs no brand derivation.** `tint` covers the pale
+backgrounds and `primary_dark` the darker washes. Nothing in this family needs a contrast
+guarantee, and the token set is not short on its account.
+
+**The `-on-dark` family is text, every time.**
+
+| token | themes | uses | as text | what it paints |
+|---|---|---|---|---|
+| `--teal-on-dark` | teal | 10 | 10 | cover labels, section headings, stat numbers |
+| `--coral-on-dark` | modern | 4 | 4 | cover label, aerial-card headings |
+| `--accent-on-dark` | market | 1 | 1 | the header band's highlighted span |
+| `--navy-on-dark` | classic, bold | **0** | — | **declared, never referenced** |
+
+**So the gap is one token: a brand value readable on a DARK surface.** `primary_ink` guarantees
+≥4.5:1 **on white**; §3.1 has no concept of a dark surface at all, while three property themes and
+the market header put brand-coloured text on one. `on_primary` is not it — that is text on a
+*brand fill*, not brand text on a dark neutral.
+
+Not proposing a derivation here, per the instruction. What the decision needs to settle: whether
+the dark surface is a fixed neutral the token can be derived against (the live
+`compute_color_roles` assumes `#18235c`, and the themes' actual darks are `#18235c`, `#0f1a45`,
+`#0b0f1a`, `#1a1f36`) or a per-theme value the derivation has to take as an argument. **[JERRY]**
+
+**Two more AA failures, found by this survey and belonging to this entry:**
+
+| where | value | on | ratio |
+|---|---|---|---|
+| market `.header-subtitle span` | `#5eead4` | the header gradient's far end, `#0d9488` | **2.53 FAIL** |
+| classic `.analysis-intro-title` etc. | `#a89070` | the navy panel, `#1b365d` | **3.98 FAIL** |
+
+The market one is conditional and stated as such: the band is
+`linear-gradient(135deg, header-bg 0%, header-bg 50%, primary-color 100%)`, so it measures 9.90:1
+against `#18235c` at the left and 2.53:1 where the teal takes over. Whether real text lands past
+the midpoint depends on layout and has not been rendered to check — but a token whose contrast
+depends on where on the band it falls is not a token that can be verified, which is the defect
+regardless of today's layout.
+
+**Three dead tokens** — `--teal-light`, `--navy-light`, `--navy-on-dark` — are declared and never
+referenced. They sit in the 111-literal baseline and are the **only** literals that can be retired
+with provably zero visual change, since nothing reads them. Worth taking first for that reason.
 
 
 ---
@@ -4463,6 +4522,12 @@ Violet at 4.83 and 5.70); nothing shipping is currently affected.
 
 This is a finding about the spec, not a bug in the code. `themes.py` implements §3.1 exactly.
 
+> **THE SPEC WAS WRONG, AND ITS AUTHOR SAYS SO.** Recorded at Jerry's instruction, 2026-09-23:
+> *"D-098 is my error — I approved an acceptance criterion §3.1 can't satisfy."* Noted here
+> because the natural reading of an unsatisfiable test is that the implementation is behind, and
+> the natural response is to change the implementation until the test passes. It is the criterion
+> that is behind. Nothing in `themes.py` should be adjusted to close this entry.
+
 **XFAILS THIS DEFECT GATES** (§0.6: two-way link, or an xfail is a skip with better manners).
 
 - `apps/worker/tests/test_themes.py::test_on_primary_clears_aa_against_the_fill_for_5000_random_colours`
@@ -4471,14 +4536,31 @@ Strict, so it breaks the build the day the derivation can satisfy it. The achiev
 asserted live alongside it by `test_on_primary_always_reaches_the_achievable_ceiling`, so a change
 that makes `on_primary` *worse* still fails today.
 
-**Remedies, recorded without choosing one** — the choice is a design decision, **[JERRY]**:
+**DECIDED, 2026-09-23 (Jerry). `on_primary` may NOT adjust the fill.**
+
+> *"The fill is the affiliate's chosen colour and the one value in the system that's theirs.
+> Contrast is satisfied by choosing the text, never by moving the brand. If that makes a pair
+> unreachable, that's D-098's ~5% and it degrades to the best available contrast with the bound
+> asserted — not to a modified brand."*
+
+This closes the only remedy that would have delivered §4.2's property, so the property stays
+unreachable **by design** rather than by omission. That is the point of recording it: a later
+reader who finds the strict xfail and reasons "we just need `on_primary` to nudge the fill" is
+about to undo a decision, not fix an oversight.
+
+`primary` is now a **constraint**, not merely an output — it is returned exactly as given, and
+`test_luxury_estates_is_fixed_specifically` already asserts that for the one theme where the
+temptation is strongest. A test naming the rule in general terms is worth adding when this entry
+is next touched.
+
+**Remedies still open**, all three of them documentation-shaped rather than code-shaped:
 
 | option | cost | note |
 |---|---|---|
-| **Let `on_primary` adjust the fill** — lighten or darken `primary` until the pair clears 4.5 | the fill is no longer exactly the affiliate's colour | guarantees the property; `primary_ink` already does this in the other direction, and white on `primary_ink` always clears 4.5 by symmetry |
+| **Accept 4.27 and say so** | the shortfall is undocumented outside this entry | cheapest; the measurement is already here, and the live test asserts the achievable bound |
 | **Accept 3:1 for this pair** | none | WCAG AA asks 3:1 for large text and UI components, and `on_primary` mostly carries badge and button labels; needs the type sizes checked, not assumed |
-| **Restrict the picker** | affiliates lose ~5% of the colour space | §3.1 explicitly promises the opposite: *"the picker needs no restrictions"* |
-| **Accept 4.27 and say so** | the shortfall is undocumented outside this entry | cheapest; the measurement is already here |
+| **Restrict the picker** | affiliates lose ~5% of the colour space | §3.1 explicitly promises the opposite: *"the picker needs no restrictions"*, and the decision above is the same principle — so this is listed for completeness and is probably already ruled out by it |
+| ~~Let `on_primary` adjust the fill~~ | — | **REJECTED above.** |
 
 
 

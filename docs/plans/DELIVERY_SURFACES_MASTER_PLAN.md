@@ -174,9 +174,27 @@ fixed; their curves cross at *L* = 0.196 where both score **4.27:1**. Measured: 
 random colours fall short, worst `#9158f5` at 4.27. Nothing shipping is affected. Left as a strict
 xfail rather than quietly relaxed; remedies and the **[JERRY]** decision are on **D-098**.
 
-**Also unresolved: the five tokens do not cover every role the templates use.** There is no
-counterpart for `--color-primary-light` / `--*-light` / `--accent-on-dark`, which four themes
-declare. Either a sixth token or a decision that those collapse. On D-097.
+**The `--*-light` / `--*-on-dark` gap, surveyed 2026-09-23 rather than guessed.** Every `var()`
+reference was classified by the CSS property it lands in:
+
+- **`-light` is decorative** — 36 uses across six tokens, **zero** that carry text once classic's
+  three are seen for what they are (brand text on a *dark* panel, wearing the wrong token name).
+  `tint` and `primary_dark` cover it. The set is not short on this account.
+- **`-on-dark` is text, every time** — 15 uses, all `color:`. `primary_ink` guarantees 4.5:1 **on
+  white**; §3.1 has no concept of a dark surface, and three property themes plus the market header
+  put brand text on one.
+
+**So the set is short one token, not two: a brand value readable on a dark neutral.** What the
+decision has to settle is whether that neutral is fixed (`compute_color_roles` assumes `#18235c`;
+the themes' actual darks are `#18235c`, `#0f1a45`, `#0b0f1a`, `#1a1f36`) or an argument. **[JERRY]**
+
+Three tokens — `--teal-light`, `--navy-light`, `--navy-on-dark` — are declared and never
+referenced. They are the only baselined literals removable with provably zero visual change.
+
+**`on_primary` may not adjust the fill (decided 2026-09-23).** The fill is the affiliate's colour
+and stays exactly as given; contrast is satisfied by choosing the text. This closes the one remedy
+that would have delivered §4.2's property, so the D-098 shortfall is now by design. §3.1's
+acceptance criterion was wrong, not `themes.py`.
 
 **Acceptance status.** The lint exists and is wired into CI. It reports **111 brand hex literals
 across 26 of 30 template files** — run against `main` before anything was touched, because a rule
