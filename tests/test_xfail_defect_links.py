@@ -40,6 +40,7 @@ SOURCES = [
     REPO / "tests/test_simplyrets_query_builder.py",
     REPO / "apps/api/tests/test_plans_limits.py",
     REPO / "apps/worker/tests/test_themes.py",
+    REPO / "apps/worker/tests/test_color_roles.py",
 ]
 
 MARKER_DEF = re.compile(r"^_D(\d{3})_GATED\s*=\s*pytest\.mark\.xfail", re.M)

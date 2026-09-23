@@ -319,6 +319,31 @@ Open, and on the entries rather than here: the dark-mode block (B11, needs §3.2
 the eight-into-one template consolidation, the 80KB budget work (not currently binding), and the
 preheader per report type.
 
+**The consolidation's acceptance is the auditor at 0.** Correctness first means the eight-into-one
+rebuild is a pure restructure with a measurable invariant, instead of a redesign and a bug-fix in
+one diff with no way to attribute a change to either.
+
+### 06.2 · D-099 taken before continuing, because D inherits it
+
+*2026-09-23, `fix/d099-readability-helpers`.* `compute_color_roles` feeds both PDF paths and would
+have carried a 3.0:1 target into Workstream D's charts. Every role on every theme now clears 4.5,
+locked with its achieved ratio in `apps/worker/tests/golden/color_roles.json`.
+
+Seven of the fifteen role values on the five property themes move past ΔE 2.3, and all seven go
+from failing to passing. The eight that do not move are the eight that already passed.
+
+Two things came out of it that belong to the plan rather than the entry:
+
+- **`theme_color_text` has D-098's ceiling too**, arrived at independently on the PDF path by a
+  function written years apart from `derive_theme`. D-098 reads like a fact about `themes.py`; it
+  is a fact about any binary choice of text against a fill that may not move. Both now gate a
+  strict xfail.
+- **The market header band cannot be satisfied as designed.** Guaranteeing against both ends — which
+  is what §04.1's finding asked for — shows that no single colour clears 4.5:1 against a very dark
+  navy *and* a mid-tone brand. The helper returns the best worst case and reports the shortfall.
+  Narrowing the gradient, moving the label off the changing part, or accepting 3:1 there is a design
+  decision. **[JERRY]**
+
 ---
 
 ## 07 · Workstream D · Market report PDFs
