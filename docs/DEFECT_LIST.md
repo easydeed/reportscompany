@@ -2818,6 +2818,21 @@ different fix, and because D-062 now reads as closed — this is the part that i
 
 ---
 
+
+> **UNVERIFIED IS NOT UNLIKELY, AND THE 2026-09-22 SWEEP DID NOT CHANGE THAT.** This entry was
+> carried on its original evidence because confirming it needs the method D-062 needed: a real
+> worker, a real broker, and a `kill -9` at the right moment — **not a code read.**
+>
+> That distinction is the whole of D-062's lesson. "Celery acknowledges a task on receipt, so a
+> restart discards prefetched work" was written into four files and a PR body without once being
+> run, and running it took under an hour and showed the claim was wrong. A confident reading of
+> this code would carry exactly the same risk in either direction.
+>
+> So: **this stays open at WRONG on the strength of the original observation, and nobody should
+> read "not re-verified" as "probably fine."** The experiment is the citation, and it has not been
+> performed. Until it is, the honest statement is that we do not know, and the entry's severity
+> reflects what was observed rather than what has been confirmed since.
+
 ### D-069 — `process_consumer_report` re-sends the SMS and re-spends the credit if it is redelivered
 **Severity:** WRONG · **Affects:** consumer lead reports, on any worker death mid-task
 **Status:** `fixed` (`fix/consumer-delivery-truth`) — **a redelivery is refused before any provider is called**
