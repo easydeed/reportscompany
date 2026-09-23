@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-23, against `chore/rate-limit-headroom`, cut from `main` at `fb5fa7f`. **Every open entry was re-checked against current code in that sweep** — see §0.6, *a defect list needs a read path*.
+**Last reconciled:** 2026-09-23, against `fix/d095-d096-cache-key-and-limiter`, cut from `main` at `9e79fb1`. **Every open entry was re-checked against current code in that sweep** — see §0.6, *a defect list needs a read path*.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -37,9 +37,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 31 | Real, unfixed |
-| `fixed` | 60 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 61 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **95** | D-001 … D-095, contiguous, no duplicates |
+| **Total** | **96** | D-001 … D-096, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 1 · WRONG 7 · FRAGILE 11 · ROUGH 12. (Sums to 31, the open total.)
 
@@ -58,7 +58,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > problem one level down — and the fix is the same one this file keeps arriving at, which is to
 > make the property structural instead of somebody's diligence.
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded.
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded.
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -4289,7 +4289,7 @@ D-013 stays written down where someone debugging an outage will find it.
 ### D-095 — two identical cache lookups miss each other if the keys were typed in a different order
 
 **Severity:** FRAGILE · **Affects:** anything caching on a payload built at more than one call site
-**Status:** `open`
+**Status:** `fixed` — `fix/d095-d096-cache-key-and-limiter`
 
 `cache._key` hashes `json.dumps(payload)` with **no `sort_keys=True`**. Python preserves insertion
 order, so the same logical payload written two ways produces two different cache keys:
@@ -4313,10 +4313,71 @@ for §7.3 recommends precisely that — caching 12-month bucket counts on *(city
 report types share thirteen requests instead of making 156. Found while reading the cache for that
 analysis rather than by hitting it.
 
-Fix is one argument: `json.dumps(payload, sort_keys=True)`. Not applied here because it **changes
-every existing key** and would blank the report cache on deploy — harmless in effect (a cold cache
-refills) but it is a deliberate choice rather than a drive-by, and it belongs with whoever adds the
-second call site.
+**FIXED: `sort_keys=True` in `_key`.** One argument, applied before the bucket cache lands rather
+than after somebody wonders why the bucket cache does nothing — because that is how this defect
+would have presented, as an ineffective feature rather than as a bug in the cache.
+
+It **changes every existing key**, so the report cache is cold after deploy. That is safe precisely
+because a cache miss has no correctness consequence: the orphans expire on their own TTL and the
+next request refills. Worth saying plainly, since "we changed every cache key" sounds like the
+expensive part of this and is the cheapest.
+
+`sort_keys` is opt-in and `set()` does not opt in — the stored value's field order is cosmetic, and
+sorting it would rewrite every cached blob for no benefit.
+
+Tests: `apps/worker/tests/test_cache_key_stability.py`, 6 cases, including two guards on the fix
+itself — distinct payloads must still get distinct keys (a key function returning one value for
+everything passes the headline test and destroys the cache), and **list order must stay
+significant**, because `sort_keys` sorts mapping keys and must not be "improved" into sorting
+sequence values: `["91750", "91711"]` and `["91711", "91750"]` are not interchangeable anywhere
+else in the code.
+
+
+### D-096 — every worker process grants itself the whole vendor rate limit
+
+**Severity:** FRAGILE · **Affects:** every SimplyRETS-backed report, at any concurrency above one
+**Status:** `open`
+
+`vendors/simplyrets.py` creates `_limiter = RateLimiter(RPM, BURST)` at **module level**, so under
+Celery's prefork pool every worker process holds its own deque and its own 60-requests-per-minute
+allowance. No `--concurrency` is set anywhere (confirmed: `schedules_tick.py:683` relies on that
+fact for its own reasoning), so the pool is one process per CPU.
+
+The vendor account limit is 60 rpm — the limiter's own docstring cites it. **So with N busy
+processes the aggregate offered load is N × 60 against a ceiling of 60, and no limiter can see it,
+because each one is counting only its own requests.**
+
+**What happens when the far side refuses.** `_request_with_retries` retries a 429 four times with
+backoff 2 → 4 → 8 → 16s, and then makes **one final unguarded attempt** whose `raise_for_status()`
+raises. So a sustained 429 does not degrade — it **fails the report**, about 30 seconds later.
+
+**Live today, and independent of anything planned.** This was found while calculating whether
+§7.3's 12-month trend line is affordable, and the honest reading is that trend charts *multiply* the
+exposure (roughly quadrupling requests per report) rather than creating it. Filing it against the
+chart spec would have buried a standing defect inside a design note.
+
+**Not established, and it decides the severity:** whether the vendor's 60 rpm is per account, per
+credential, or per source IP. Per account or per credential, this is real as described. Per IP it is
+worse — the API service and every worker share one egress. **Nothing in the repository answers
+this**, and the limiter's docstring cites "docs" without a link. Filed FRAGILE on the assumption
+that it is per account; it is WRONG if that assumption is right and something is already failing at
+volume, which has not been checked either.
+
+**Remedies, recorded without choosing one**, because the choice depends on the answer above:
+
+| option | cost | note |
+|---|---|---|
+| **Shared bucket in Redis** — one window across all processes | a round trip per request | the only option that is correct at any concurrency; Redis is already a hard dependency of the worker |
+| **Pin `--concurrency 1`** | throughput | makes the existing limiter true by construction, and 26-schedule bursts already drain roughly serially (`schedules_tick.py:683`), so the practical loss may be small |
+| **Divide the allowance** — `RPM // concurrency` per process | none | wrong whenever a process is idle, which is most of the time; wastes most of the budget to avoid a ceiling nobody is near |
+| **Leave it and handle 429 properly** | none | the retry path already exists but ends in an unguarded attempt that raises; making that final try retry-aware would turn failures into waits |
+
+> **Also on this entry, because it is the same three lines of code: `burst` is inert.**
+> `acquire()` caps at `max(self.rpm, self.burst)`, which is `max(60, 10)` = 60 — the `rpm` value
+> always wins, so the "60 rpm **+ burst**" the class docstring describes is an allowance the
+> arithmetic cannot reach. Not itself a defect: the effective limit is the stricter of the two, which
+> is the safe direction. But `BURST` and `SIMPLYRETS_BURST` are configuration that does nothing, and
+> a knob that does nothing is worse than no knob — somebody will turn it.
 
 
 ---
