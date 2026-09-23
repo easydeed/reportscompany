@@ -435,7 +435,7 @@ same reason.
 
 | # | Question | Blocks | Owner |
 |---|---|---|---|
-| 01 | **Does the pipeline hold historical data?** Four reports are specified with a 12-month trend line; every sample covers 30 days. If only the current period is fetched, trend charts are blocked and Phase 3 ships distributions only | Workstream D scope | Eng |
+| 01 | ~~**Does the pipeline hold historical data?**~~ **NARROWED 2026-09-23 — see the note below §12.** History is fetchable; the open question is only whether twelve monthly buckets are affordable | Workstream D scope | Eng |
 | 02 | **Drop the secondary brand color?** Templates consume two; the system needs one. Two means deriving and validating a second set and checking every pairing against each other, not just against white. **Recommend one** | Workstream A | Product |
 | 03 | **Who writes the commentary, and from what?** If copy comes from a separate query than the rendered metrics, that coupling is the actual fix for B1/B8. **Note:** `generate_insight()` takes no `account_id` and is gated only by a process-wide `AI_INSIGHTS_ENABLED` whose production value is **still unknown** — the commentary may not be running at all | Data contract | Eng |
 | 04 | **Does "Powered by TrendyReports" stay in a white-label send?** Sits in the footer under the affiliate's own branding | Email footer | Product |
@@ -448,6 +448,40 @@ same reason.
 | **11** | **Pagination baseline.** v1 says table pages carry five rows; the reviewed render carries 13/25/12. Reconcile before §7.2 targets are set — likely the same Group A/B split as decision 07 | Workstream D | Eng |
 
 ---
+
+
+### Note on decision 01 — narrowed, 2026-09-23
+
+**The question as written is half answered by work done since.** D-074 established that
+`minclosedate` filters (confirmed against the production feed), and months-of-supply already
+computes a 90-day sales rate from real closings. Historical closed sales are fetchable by close
+date. *"Does the pipeline hold historical data"* is no longer the question.
+
+**What is genuinely open is the cost of twelve monthly buckets**, which is what §7.3's trend line
+needs — and that turns on one measurable thing: whether there is an upper bound on close date.
+
+| if | then monthly buckets cost |
+|---|---|
+| `maxclosedate` filters | **12 requests** — one `count=true` per month, `limit=1` each |
+| it does not | **13 requests** — difference cumulative `minclosedate` counts: `bucket(N) = count(≥ start N) − count(≥ start N+1)` |
+| neither works | every row for 12 months fetched and bucketed client-side, **and that cost scales with the market** |
+
+**Measured on the demo feed: `maxclosedate` is accepted and ignored.** `1990-01-01`, `2000-01-01`
+and the nonsense value `notadate` all returned the full 13, exactly like the deliberately
+misspelled `maxclosedatex`. `minclosedate` filters correctly (`2005-01-01` → 4 of 13), and
+differencing reproduced the true per-period histogram exactly. So the demo answer is **13
+requests, independent of market size** — which would make the trend line affordable.
+
+That is the demo answer, and D-084's whole lesson is that a filter's behaviour is a property of the
+feed. **`scripts/probe_simplyrets_behaviour.py` section 6 re-runs it against production** and
+prints a `DECISION-01` verdict in one of those three shapes. The demo feed cannot settle it on its
+own terms either way: its thirteen closed sales closed between 1990 and 2013, so a 12-month window
+returns nothing there.
+
+> **One thing to carry into any work on this: `closeDate` lives at `row["sales"]["closeDate"]`, not
+> at the top level.** Reading it top-level returns `None` for every row and looks exactly like a
+> feed with no close dates — which is how the first run of this check nearly reported the wrong
+> answer. `extract.py:26` reads the correct path.
 
 ## 14 · Out of scope
 
