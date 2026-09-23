@@ -363,6 +363,32 @@ it.**
   mistake surfaced in one run. That is the mechanism working — but it works only if `strict` is
   on, which is the other half of why `strict` is not optional here.
 
+- **A mutation that matches nothing succeeds. Assert that the edit landed, not that you made it.**
+  Three instances now, in three different tools, and each cost something:
+
+  | | what was edited | what happened |
+  |---|---|---|
+  | D-087's harness | a regression mutation, same length as the original | file changed, interpreter read a stale `.pyc` — the regression came back **green** and read as "this test is too weak" |
+  | the D-091 sweep | `str.replace` on a test file | the anchor had drifted; the replace matched nothing, the script printed its success line, and pytest ran against **unmodified** code |
+  | the board header | `str.replace` on the summary table | a merge changed the expected string across three branches running; every replace matched nothing and the table silently said `33/53/91` against entries saying `30/60/94` |
+
+  **The common shape is that "replace" and "matched nothing" are indistinguishable from the
+  outside.** `str.replace` returns a string either way. `sed` exits 0 either way. A patch that
+  applies to zero hunks still writes a file. And in every case the *reasoning* was right — the
+  derivation was correct, the mutation was the correct mutation, the anchor was the correct anchor
+  *when it was written*.
+
+  Three habits, cheap and in order of value:
+  1. **`assert mutated != original`** before doing anything with the result. One line; catches all
+     three cases above.
+  2. **Check the observable consequence, not the call.** After a mutation, assert the new text is
+     present — and after a regression run, assert it produced the failure you expected. A
+     regression that does not fail is information about the *harness* until proven otherwise.
+  3. **Where the thing being kept in sync is derivable, make it a test rather than a habit.**
+     `tests/test_defect_list_counts.py` exists because the board's summary drifted from its own
+     entries while every individual derivation was correct. The failure was never the arithmetic;
+     it was the write-back, and only a test notices a write-back that did not happen.
+
 - **A defect list needs a read path, not just a write path — a record is not a queue.** D-009 named
   the exact lines, the exact symptom and the `/health` blindness, in Phase 2A, accurately. It was
   then rediscovered eleven months later by tripping over it in unrelated work, and filed again as

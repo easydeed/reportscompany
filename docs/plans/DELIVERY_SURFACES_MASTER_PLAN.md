@@ -220,6 +220,73 @@ every point.
 
 ---
 
+
+### Rate-limit headroom for §7.3's trend line — settled 2026-09-23
+
+Decision 01's answer is **13 requests per 12-month trend**. Whether that is affordable is a
+separate question, and it is now calculated rather than assumed. Every number below is either read
+from the code or produced by running the real `RateLimiter` against a virtual clock.
+
+**The limiter, as configured.** `RateLimiter(rpm=60, burst=10)`, module-level in
+`vendors/simplyrets.py`. Its cap is `max(self.rpm, self.burst)` — **so `burst` is inert**: 60 always
+wins, and the "+ burst" in its own docstring describes an allowance the arithmetic cannot reach.
+Not a defect (the effective limit is the stricter one) but the parameter is decoration.
+
+**Does a twelve-report batch exceed the bucket?** Yes, and it waits rather than failing. Taking a
+trend-bearing report at ~17 requests (existing fetches plus 13 buckets):
+
+| back-to-back reports in one process | requests | first limiter wait | wall-clock floor |
+|---|---|---|---|
+| 1 | 17 | none | 17s |
+| 3 | 51 | none | 51s |
+| **4** | **68** | **60s** | 68s |
+| 12 | 204 | 60s | **~3.4 min** |
+
+So three reports pass freely and the fourth pays. A twelve-report batch cannot finish faster than
+about 3.4 minutes however it is scheduled, because 204 requests at 60/min is a floor.
+
+**Does exceeding it mean waiting, or a failed report?** Both, on different layers, and the
+distinction matters:
+
+- **The client limiter waits.** `acquire()` calls `time.sleep()`; it never raises. A single report
+  arriving at a full window waits at most 60s, which against `task_time_limit = 300` and a
+  production p99 render of 41s is comfortable. **No report fails from local throttling.**
+- **The server can still 429**, and that path does fail. `_request_with_retries` retries a 429 four
+  times with backoff 2 → 4 → 8 → 16s, then makes **one final unguarded attempt** whose
+  `raise_for_status()` raises. A sustained 429 fails the report after ~30s.
+
+**And that is the real exposure, which is about concurrency, not arithmetic.** `_limiter` is a
+module-level object, so under Celery's prefork pool **each worker process gets its own 60/min** —
+and no `--concurrency` is set anywhere, so the pool is one process per CPU. The vendor account
+limit is 60 rpm (the limiter's own docstring cites it). **With N busy processes the aggregate is
+N × 60 against an account ceiling of 60.** The local limiter cannot see that, so it throttles
+nothing and the 429s arrive from the far side.
+
+> **This is already true today** and trend charts do not create it — they multiply it, by roughly
+> quadrupling requests per report. Worth knowing before §7.3 is written, and worth knowing
+> independently of §7.3.
+
+**The cache does NOT absorb the repeats, and that is the actionable finding.** `cache_set("report",
+{"type": report_type, "params": params}, …, ttl_s=900)` — **`report_type` is part of the key.** So
+twelve report types for one city are twelve misses, and a naive implementation would fetch **the
+same thirteen monthly bucket counts twelve times** — 156 requests for 13 distinct answers.
+
+The buckets are a property of *(city, month)* and nothing else. Cached in their own namespace they
+cost **13 requests per city per window, shared across every report type**, which takes the batch
+from 204 requests to about 60. The existing `cache.get/set` already supports this — a different
+namespace is all it needs.
+
+> **One trap if you do that: `cache._key` hashes `json.dumps(payload)` with no `sort_keys`.**
+> Measured: `{"city": …, "month": …}` and `{"month": …, "city": …}` produce **different keys**, so
+> two logically identical lookups miss each other silently. Harmless today because the report
+> payload is constructed in one place; a bucket payload built at several call sites is exactly the
+> shape that trips it. Filed as **D-095**.
+
+**Verdict for the chart spec: affordable, with one condition.** Bucket counts must be cached on
+*(city, month)* rather than recomputed per report. Without that, a twelve-report batch triples its
+vendor traffic for no new information and pushes a per-process limit that is already being
+multiplied by concurrency.
+
 ## 08 · Workstream E · Property report / CMA — **NEW**
 
 Not in v1. Five themes, six renders reviewed, plus one older render.
