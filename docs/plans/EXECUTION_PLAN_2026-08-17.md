@@ -363,6 +363,32 @@ it.**
   mistake surfaced in one run. That is the mechanism working — but it works only if `strict` is
   on, which is the other half of why `strict` is not optional here.
 
+- **A defect list needs a read path, not just a write path — a record is not a queue.** D-009 named
+  the exact lines, the exact symptom and the `/health` blindness, in Phase 2A, accurately. It was
+  then rediscovered eleven months later by tripping over it in unrelated work, and filed again as
+  D-094. Everything in this project has been about making failures visible; **this failure was
+  visible, correctly written down, and nothing consumed the record.**
+
+  The sweep that followed found two more, in the other direction: D-006 (BROKEN) and D-003 had both
+  been *fixed* — one by a security commit, one incidentally while restoring CI — and left `open`.
+  So the count at the top of the board was simultaneously hiding a live BROKEN defect and inventing
+  two that no longer existed. **Both directions corrupt the same number**, and neither announces
+  itself, because an entry nobody re-reads cannot contradict anything.
+
+  The remedy is not better filing. Filing was not the failure. **Concretely: before any branch that
+  touches a file, grep the board for that file — an entry naming it is either the work or a
+  duplicate of it; and re-run the stale sweep whenever the open count is about to be quoted as a
+  status.** Both are cheap and neither depends on anybody remembering an entry exists. The first
+  catches D-009's direction (about to rediscover something already known), the second catches
+  D-006's (about to report risk that was fixed months ago).
+
+  The general form, which is why it sits in §0.6 rather than in a process doc: **a document that
+  records findings and is only ever appended to is write-only, and a write-only record of problems
+  reads as diligence while functioning as a drain.** Anything that accumulates claims about the
+  system — this board, a findings file, a backlog, a runbook's "known issues" — needs a defined
+  moment when something reads it back and checks it, or it decays into an archive that everyone
+  cites and nobody consults.
+
 ---
 
 ## Phase 0 — Security & Tooling
