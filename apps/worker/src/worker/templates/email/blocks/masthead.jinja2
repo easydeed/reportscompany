@@ -1,0 +1,72 @@
+{#-
+  BLOCK: masthead — §06's `masthead`. The gradient banner: logo, report title,
+  date range, and the one headline figure.
+
+  Invariant across all eight report types, per §06 — only the strings change.
+
+  VML FIRST, AND IT IS NOT REDUNDANT. Outlook renders no CSS gradient at all, so
+  the `v:rect` with `v:fill type="gradient"` is the only banner Outlook shows;
+  the `background-color` on the table is the flat fallback for clients that do
+  neither. Three renderings of one band, which is ordinary in email and looks
+  like duplication to anyone who has not had to do it.
+
+  EVERY TEXT COLOUR HERE IS `on_band`, DERIVED AGAINST BOTH GRADIENT STOPS.
+  It used to be hardcoded `#ffffff` with `rgba(255,255,255,0.7)` for the muted
+  lines. White is fine at the navy end and 1.98:1 at the lime end — a band is
+  not one background, and a colour chosen against its first stop is not chosen
+  at all. `_on_band()` picks whichever of white or near-black has the better
+  WORST case across the stops. The muted lines keep their quietness with
+  `opacity`, which degrades to full strength in Outlook: the measured ratio
+  assumes it is ignored, so it is safe either way.
+-#}
+          <!-- ========== HEADER: 3-row gradient banner ========== -->
+          <tr>
+            <td>
+              <!--[if mso]>
+              <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;height:130px;">
+                <v:fill type="gradient" color="{{ primary_color }}" color2="{{ accent_color }}" angle="115"/>
+                <v:textbox inset="24px,20px,24px,18px" style="mso-fit-shape-to-text:true">
+              <![endif]-->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(115deg, {{ primary_color }} 0%, {{ primary_color }} 30%, {{ accent_color }} 100%); background-color: {{ primary_color }}; border-radius: 8px 8px 0 0;">
+                <!-- ROW 1: Centered logo -->
+                <tr>
+                  <td align="center" style="padding: 20px 24px 12px;">
+                    {% if logo_url %}<img src="{{ logo_url }}" alt="{{ brand_name }}" style="display: block; max-height: 45px; max-width: 180px; width: auto; height: auto; margin: 0 auto;" />{% endif %}
+                  </td>
+                </tr>
+                <!-- ROW 2: Title (65%) + Metric (35%) -->
+                <tr>
+                  <td style="padding: 0 24px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td width="65%" style="vertical-align: middle;">
+                          <p style="margin: 0 0 4px 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 24px; font-weight: bold; color: {{ on_band }};">
+                            {{ title }}
+                          </p>
+                          <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 11px; color: {{ on_band }}; opacity: 0.85;">
+                            {{ subtitle }}
+                          </p>
+                        </td>
+                        <td width="35%" style="vertical-align: middle; text-align: right;">
+                          <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 28px; font-weight: bold; color: {{ on_band }};">
+                            {{ metric_value }}
+                          </p>
+                          <p style="margin: 2px 0 0 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: {{ on_band }}; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px;">
+                            {{ metric_label }}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <!-- ROW 3: Bottom spacer -->
+                <tr>
+                  <td style="height: 18px; font-size: 0; line-height: 0;">&nbsp;</td>
+                </tr>
+              </table>
+              <!--[if mso]>
+                </v:textbox>
+              </v:rect>
+              <![endif]-->
+            </td>
+          </tr>

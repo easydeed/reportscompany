@@ -38,6 +38,47 @@
                           {% if specs %}<p style="margin: 4px 0 0; font-size: 12px; color: #6b7280;">{{ specs }}</p>{% endif %}
                         </td></tr>
                       </table>
+{%- elif size == 'stacked' -%}
+{#- Full-width card: 240px hero, 22px price, spec chips. The chips are a brand
+    TINT at 8% alpha with `ink` text on them — a tint is pale enough to count as
+    a light surface, which is why they take the same role as the price. -#}
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 12px; overflow: hidden; background-color: #ffffff;">
+                <tr><td>{{ photo_html }}</td></tr>
+                <tr><td style="padding: 20px;">
+                  <p style="margin: 0 0 4px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 22px; font-weight: 700; color: {{ ink }};">{{ price }}</p>
+                  <p style="margin: 0 0 2px; font-size: 15px; font-weight: 600; color: #1c1917;">{{ address }}</p>
+                  <p style="margin: 0 0 16px; font-size: 12px; color: #78716c;">{{ location }}</p>
+                  <table role="presentation" cellpadding="0" cellspacing="0"><tr>{% for chip in chips %}<td style="padding-right: 6px;"><span style="display: inline-block; padding: 4px 12px; background-color: {{ chip_bg }}; border-radius: 6px; font-size: 11px; font-weight: 500; color: {{ ink }};">{{ chip }}</span></td>{% endfor %}</tr></table>
+                </td></tr>
+              </table>
+{%- elif size == 'badged' -%}
+{#- Sales/inventory card with a §3.3 status badge under the photo. `badge_bg` is
+    a status colour, resolved in Python — never the brand. -#}
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff;">
+                        <tr><td>{{ photo_html }}</td></tr>
+                        <tr><td style="padding: 8px 0 0;">
+                          <span style="display: inline-block; padding: 3px 8px; background-color: {{ badge_bg }}; color: #ffffff; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 3px;">{{ badge_text }}</span>
+                          <p style="margin: 6px 0 0; font-size: 10px; color: #475569;">{{ address }}</p>
+                          <p style="margin: 4px 0 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; font-weight: bold; color: {{ ink }};">{{ price }}</p>
+                        </td></tr>
+                      </table>
+{%- elif size == 'row' -%}
+{#- Photo-left list row. The NEW badge is a fixed pale-green pair (#dcfce7 /
+    #166534, 7.4:1) and not a brand value — it marks recency, not identity. -#}
+
+                      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e5e7eb; margin-bottom: {{ margin_bottom }}px;">
+                        <tr>
+                          <td width="120" style="vertical-align: top;">
+                            {{ photo_html }}
+                          </td>
+                          <td style="vertical-align: middle; padding: 12px;">
+                            <p style="margin: 0 0 2px; font-size: 13px; font-weight: 700; color: #1a2744;">{{ address }}</p>
+                            <p style="margin: 0 0 4px; font-size: 11px; color: #6b7280;">{{ specs }}</p>
+                            <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: bold; color: {{ ink }};">{{ price }}</p>
+                          </td>
+                          {{ badge_html }}
+                        </tr>
+                      </table>
 {%- else -%}
 <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
                         <tr><td>{{ photo_html }}</td></tr>

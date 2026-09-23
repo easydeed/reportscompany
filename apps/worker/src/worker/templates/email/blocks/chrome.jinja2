@@ -1,0 +1,92 @@
+{#-
+  BLOCK: chrome — the small connective pieces §06 does not name individually:
+  the hero figure, the section label, the report-criteria callout, the count
+  pill, the divider, and the truncation note.
+
+  One file with a `piece` rather than six, because each is under fifteen lines
+  and they share a role: they frame the named blocks rather than carrying
+  content of their own. Six files would be six opens to answer "what sits above
+  the table".
+
+  Every one takes an already-derived colour. `ink` is brand text on a light card;
+  `on_fill` is text on a brand fill; `primary_color` is used only as a fill or a
+  rule. That split is the whole point of the token layer and it is why none of
+  these templates contains a conditional about colour.
+
+  The trend chip's green and red are §3.3 status colours, not brand — reserved,
+  never drawn from the palette, and therefore literals.
+-#}
+{% if piece == 'hero' -%}
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="background-color: #f8fafc; border-radius: 8px; padding: 28px 20px; text-align: center;">
+                    <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 48px; font-weight: 700; color: {{ ink }}; line-height: 1;">
+                      {{ value }}
+                    </p>
+                    <p style="margin: 8px 0 0; font-size: 12px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 1px;">
+                      {{ label }}
+                    </p>
+                    {{ sub_html }}{{ trend_html }}
+                  </td>
+                </tr>
+              </table>
+{%- elif piece == 'trend_chip' -%}
+
+                    <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin-top: 12px;">
+                      <tr>
+                        <td style="background-color: {{ chip_bg }}; padding: 6px 14px; border-radius: 20px;">
+                          <span style="font-size: 13px; font-weight: 600; color: {{ chip_color }};">{{ arrow }} {{ trend }}</span>
+                        </td>
+                      </tr>
+                    </table>
+{%- elif piece == 'section_label' -%}
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom: 14px;">
+                <tr>
+                  <td style="width: 20px; padding-right: 8px; vertical-align: middle;">
+                    <div style="width: 20px; height: 2px; background-color: {{ primary_color }}; border-radius: 2px;"></div>
+                  </td>
+                  <td style="vertical-align: middle;">
+                    <p style="margin: 0; font-size: 11px; font-weight: 700; color: {{ ink }}; text-transform: uppercase; letter-spacing: 2px;">
+                      {{ label }}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+{%- elif piece == 'filter_blurb' -%}
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
+                <tr>
+                  <td style="padding: 12px 16px; background-color: {{ bg }}; border-radius: 8px; border-left: 3px solid {{ primary_color }};">
+                    <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #44403c;">
+                      <span style="font-weight: 600; color: {{ ink }};">Report Criteria:</span> {{ text }}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+{%- elif piece == 'count_pill' -%}
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
+                <tr>
+                  <td align="center">
+                    <span style="display: inline-block; background: {{ primary_color }}; color: {{ on_fill }}; font-size: 12px; font-weight: 600; padding: 8px 20px; border-radius: 20px;">{{ count }} {{ label }}</span>
+                  </td>
+                </tr>
+              </table>
+{%- elif piece == 'divider' -%}
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 16px 0;">
+                <tr>
+                  <td align="center">
+                    <div style="width: 64px; height: 2px; background: linear-gradient(90deg, {{ primary_color }}, {{ accent_color }}); border-radius: 2px;"></div>
+                  </td>
+                </tr>
+              </table>
+{%- elif piece == 'truncation_note' -%}
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td align="center" style="padding: 8px 0 16px;">
+                  <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; color: #6b7280;">
+                    Showing {{ showing }} of {{ total_available }} listings.
+                    <a href="{{ pdf_url }}" style="color: {{ ink }}; text-decoration: underline;">View all in the PDF &rarr;</a>
+                  </p>
+                </td>
+              </tr>
+            </table>
+{%- endif %}

@@ -1,0 +1,31 @@
+{#-
+  BLOCK: signature — §06's `signature`. The platform footer: wordmark, postal
+  address, unsubscribe.
+
+  Invariant across all eight report types, and the most legally loaded twelve
+  lines in the product.
+
+  #6b7280 AND NOT #9ca3af, ON ALL THREE LINES. D-060 raised the postal address
+  off #9ca3af — 2.41:1 on this #f8f9fa panel, failing AA at 4.5 and failing the
+  large-text allowance at 3.0 too, at 10px — and NAMED the unsubscribe link as
+  the thing it was matching, then left it there. CAN-SPAM asks for the opt-out to
+  be clear and conspicuous on the same wording that drove the address. All three
+  are 4.59:1 now.
+
+  `postal_address_html` arrives pre-rendered because whether the line appears,
+  and whose address it carries, is decided in Python: an account's own address
+  when set, the platform's otherwise, with a label saying which. A wrong address
+  is an affirmative false statement rather than a missing one, so that choice
+  does not belong in a template.
+-#}
+          <!-- ========== POWERED BY + UNSUBSCRIBE ========== -->
+          <tr>
+            <td style="background-color: #f8f9fa; padding: 16px 28px; border-radius: 0 0 8px 8px; text-align: center;">
+              <p style="margin: 0 0 4px 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #6b7280;">
+                Powered by <span style="font-weight: 600; color: #6b7280;">TrendyReports</span>
+              </p>
+{{ postal_address_html }}              <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #6b7280;">
+                <a href="{{ unsubscribe_url }}" style="color: #6b7280; text-decoration: underline;">Unsubscribe</a>
+              </p>
+            </td>
+          </tr>

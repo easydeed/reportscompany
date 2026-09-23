@@ -4805,19 +4805,31 @@ lighter one. Measured with Luxury Estates' token (`#0d9488`):
 | `#18235c` teal `--navy` | a flat fill | repaint to `#0f172a` |
 | `#15216e` bold `--navy` | a flat fill | repaint to `#0f172a` |
 | `#1b365d` classic `--navy` | a flat fill | repaint to `#0f172a` |
-| `#0f1a45` teal cover overlay | **a gradient over a photo** — `rgba(15,26,69,.3)` → `.7` → `.95`, over an image passed through `brightness(.6)` | **[JERRY]** — a design question |
+| `#0f1a45` teal cover overlay | **not a surface at all** — `rgba(15,26,69,.3)` → `.7` → `.95` over an arbitrary listing photo passed through `brightness(.6)` | a different problem; see below |
 
-The fourth has no single colour to migrate to. Its backdrop is a three-stop alpha gradient over
-arbitrary photography, so "the surface" is a different colour at the top of the panel than at the
-bottom and different again per listing photo. **D-099 already established that some bands cannot
-carry AA text at either end** — the market header runs navy → accent and no single text colour
-clears 4.5:1 against both, which is why `_ensure_readable_on_dark` returns the best worst case and
-logs that it fell short.
+**THE FOURTH IS NOT A HARDER VERSION OF THE OTHER THREE. IT IS A DIFFERENT PROBLEM.**
 
-So for the gradient the question is not *which neutral* but *whether the gradient survives*:
-narrow it, put a flat scrim behind the text, or move the label off the part that changes. That is a
-design decision and it is **[JERRY]**'s, and the market header band is the same question in a
-second place.
+The other three are flat fills with a wrong value: pick the right one and the contrast is decided
+forever. The teal cover overlay **has no fixed background to guarantee anything against**. Its
+backdrop is a three-stop alpha gradient composited over whichever photo the listing happens to
+carry, so the effective colour behind a glyph differs from the top of the panel to the bottom, and
+differs again for every property in every report. There is no value to compute a ratio from.
+
+**No choice of text colour can make that surface AA-compliant**, because contrast is a relation
+between two colours and one of them is unknown at render time and variable within a single panel.
+That is not a decision waiting to be made; it is a category the current design cannot satisfy.
+
+The remedies are correspondingly different in kind — none of them is "pick a neutral":
+
+- a **scrim**: a fixed opaque or near-opaque layer between photo and text, which then IS a surface
+  and can be guaranteed against
+- a **solid plate** behind the text block only, leaving the photo visible around it
+- **move the text off the image** entirely
+
+D-099 reached the same wall from the other side: the market header runs navy → accent and no single
+text colour clears 4.5:1 against both ends, which is why `_ensure_readable_on_dark` returns the best
+worst case and logs that it fell short. Two surfaces, one conclusion — **a background that varies
+cannot be made accessible by choosing a foreground.** Both need a design change. **[JERRY]**
 
 **Three of the four are the repaint.** Those panels become `#0f172a`, and then the token is true
 about the rendered page rather than about a surface the design intends. Note what the three worst
@@ -4838,9 +4850,9 @@ list is a checklist that breaks rather than a comment that goes stale. Closing t
 that test's expected set becoming empty.
 
 > **Why the split above matters for planning.** Read quickly, this entry looks like four lines in
-> four templates. Three of them are. The fourth is a design decision with no obviously correct
-> answer, and the market header band is the same decision again on another surface — so an estimate
-> that treats the entry as uniform will be wrong by the only part that needs a person.
+> four templates. Three of them are. The fourth is not a line at all — it is a change to how that
+> panel is composed, and the market header band is the same change again on another surface. An
+> estimate that treats the entry as uniform will be wrong by the only part that is not a repaint.
 
 
 ---

@@ -1,0 +1,31 @@
+{#-
+  BLOCK: grid — the wrappers that arrange gallery cards on the page.
+
+  Not one of §06's eight named blocks: it is what remained in Python once the
+  cards themselves became blocks, and leaving it there would have meant the last
+  five functions in this module still held HTML. A `<table>` deciding that two
+  cards sit side by side is markup.
+
+  `.mobile-stack` on the cells is B4 and is load-bearing. That rule stacks the
+  columns at 320px and was defined in the document's <style> block while being
+  attached to zero elements, so a two-across grid stayed two-across on a phone.
+
+  Cards arrive rendered. This block places them and knows nothing about what a
+  card contains, which is why the same wrapper serves the 2-across and 3-across
+  layouts with only `per_row` differing.
+-#}
+{% if shape == 'rows' -%}
+              <div style="margin-bottom: 32px;">
+                {{ cards | join('') }}
+              </div>
+{%- else -%}
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
+                {% for row in rows %}
+                <tr>
+                  {%- for cell in row %}
+                  <td width="{{ cell_width }}" class="mobile-stack" style="{{ cell.pad }} vertical-align: top;">{{ cell.html }}</td>
+                  {%- endfor %}
+                </tr>
+                {%- endfor %}
+              </table>
+{%- endif %}

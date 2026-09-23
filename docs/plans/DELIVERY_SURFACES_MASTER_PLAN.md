@@ -246,8 +246,8 @@ this workstream before any design work begins.
 | **B2** | BROKEN | PDF | `Footer Logo` renders as literal placeholder text in client-facing output | §3.6 + §08 string check |
 | **B3** | BROKEN | Email — open_houses | Quick Take label `#1D4ED8` on a `#DC2626` panel. Measured **1.4:1** | `on_primary`; panel removed in rebuild |
 | **B4** | BROKEN | Email ×8 | `.mobile-stack`, `.metric-card`, `.band-row` defined in CSS and applied to **zero elements**. The four-across metric strip never stacks; 10px labels wrap to three lines at ~75px | Attach classes to real cells. Highest-impact single fix given mobile open share |
-| **B5** | BROKEN | PDF — price_bands + | Missing photo renders as broken-image glyph with alt `Property` beside it; the same listing is a blank grey box elsewhere | One labelled placeholder: hatched fill, camera glyph, "Photo pending" |
-| **B6** | WRONG | Email — price_bands | Bars normalised to the largest band while labels show share of total. Move-Up reads 43% beside a bar filled to 100% | Bar width equals the percentage shown |
+| **B5** | BROKEN | PDF — price_bands + | Missing photo renders as broken-image glyph with alt `Property` beside it; the same listing is a blank grey box elsewhere | One labelled placeholder: hatched fill, camera glyph, "Photo pending" — **STILL OPEN**, see note |
+| **B6** | WRONG | Email — price_bands | Bars normalised to the largest band while labels show share of total. Move-Up reads 43% beside a bar filled to 100% | Bar width equals the percentage shown — **STILL OPEN**, see note |
 | **B7** | WRONG | PDF — price_bands | Band counts 12/18/11/6 sum to **47** beside a total of **117** | §08 assertion |
 | **B8** | WRONG | Email ×8 | `347` appears as active listings, new listings, total listings, open houses and featured homes, while the same documents report 23 and 58. featured_listings reads "these 347 featured homes" above a grid of six | Same root as B1 |
 | **B9** | ROUGH | PDF ×8 | Continuation pages repeat the full masthead (~90pt) then carry few rows. ~⅓ of every page empty | Masthead page 1 only; running head after. §7.2 |
@@ -277,6 +277,23 @@ this workstream before any design work begins.
 | **B23** | ROUGH | Email ×8 | Agent email address renders as the word "Email"; `Realtor` used generically (REALTOR® is a restricted NAR mark) | Show the address. Change the default title to "Real Estate Agent" |
 
 **Effort: S each.** B1 and B8 share a fix and are one ticket. B19–B22 are one ticket.
+
+> **B5 and B6 are NOT closed by the consolidation, and the risk is that they look it.**
+>
+> Both are named in comments in the code the consolidation produced — B6 beside `_band_rows()`,
+> which now computes the bar width and the percentage label together because two calculations in
+> two files is how they drifted apart; B5 beside `_GALLERY_SIZES`, whose missing-photo branch is a
+> grey block on all three card sizes.
+>
+> Those comments explain **why the code has its shape**, not that the defect is fixed. The
+> restructure deliberately preserved current behaviour: the bars are still normalised to the
+> largest band, and the placeholder is still an unlabelled grey box rather than a hatched fill with
+> a camera glyph. A restructure whose acceptance is an empty render diff cannot also change what
+> renders.
+>
+> Both fixes belong in a branch where the visible change is the point. Recorded here because a
+> register item with its number written in a code comment is exactly the kind of thing that gets
+> marked done by proximity.
 
 ### 05.1 · The email half of the register, re-checked against live renders
 
