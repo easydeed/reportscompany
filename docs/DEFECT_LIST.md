@@ -4798,7 +4798,28 @@ lighter one. Measured with Luxury Estates' token (`#0d9488`):
 | `#15216e` | bold `--navy` | **3.80** |
 | `#1b365d` | classic `--navy` | **3.24** |
 
-**The four shortfalls are the work.** Those panels become `#0f172a`, and then the token is true
+**TWO OF THE FOUR ARE NOT A REPAINT. READ THIS BEFORE ESTIMATING THE ENTRY.**
+
+| surface | what it is | what closing it takes |
+|---|---|---|
+| `#18235c` teal `--navy` | a flat fill | repaint to `#0f172a` |
+| `#15216e` bold `--navy` | a flat fill | repaint to `#0f172a` |
+| `#1b365d` classic `--navy` | a flat fill | repaint to `#0f172a` |
+| `#0f1a45` teal cover overlay | **a gradient over a photo** — `rgba(15,26,69,.3)` → `.7` → `.95`, over an image passed through `brightness(.6)` | **[JERRY]** — a design question |
+
+The fourth has no single colour to migrate to. Its backdrop is a three-stop alpha gradient over
+arbitrary photography, so "the surface" is a different colour at the top of the panel than at the
+bottom and different again per listing photo. **D-099 already established that some bands cannot
+carry AA text at either end** — the market header runs navy → accent and no single text colour
+clears 4.5:1 against both, which is why `_ensure_readable_on_dark` returns the best worst case and
+logs that it fell short.
+
+So for the gradient the question is not *which neutral* but *whether the gradient survives*:
+narrow it, put a flat scrim behind the text, or move the label off the part that changes. That is a
+design decision and it is **[JERRY]**'s, and the market header band is the same question in a
+second place.
+
+**Three of the four are the repaint.** Those panels become `#0f172a`, and then the token is true
 about the rendered page rather than about a surface the design intends. Note what the three worst
 are: `#18235c`, `#15216e` and `#1B365D` are **brand navies being used as neutrals** — which is the
 exact confusion the fixed-neutral decision exists to end. `#18235c` has chroma 68. A neutral with
@@ -4816,11 +4837,10 @@ pins the four shortfalls by value. It **fails when a panel migrates**, which is 
 list is a checklist that breaks rather than a comment that goes stale. Closing this entry means
 that test's expected set becoming empty.
 
-> **A caution for whoever takes it.** Two of these surfaces are gradients, not flat fills: the teal
-> cover overlay runs `rgba(15,26,69,.3)` → `.95` over a photo, and the market header band runs navy
-> → accent. A gradient has no single colour to migrate, and D-099 already established that some
-> bands cannot carry AA text at either end. Those two need a design answer — narrow the band, or
-> move the label off the part that changes — before a repaint means anything. **[JERRY]**
+> **Why the split above matters for planning.** Read quickly, this entry looks like four lines in
+> four templates. Three of them are. The fourth is a design decision with no obviously correct
+> answer, and the market header band is the same decision again on another surface — so an estimate
+> that treats the entry as uniform will be wrong by the only part that needs a person.
 
 
 ---

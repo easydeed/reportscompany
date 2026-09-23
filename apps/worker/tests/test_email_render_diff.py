@@ -53,6 +53,51 @@ def test_the_rendered_facts_are_unchanged(name, brand, report_type):
 # it speak, and this one's normal output is silence on ten parametrised cases.
 # ---------------------------------------------------------------------------
 
+def test_the_block_environment_does_not_escape():
+    """
+    `autoescape` must stay False, and this test exists so that flipping it fails
+    with the reason attached rather than with a wall of diff.
+
+    A `.jinja2` file carries an implicit promise that it escapes. This one does
+    not, deliberately, and "fix the missing autoescape" is a reasonable-looking
+    change for someone who has not read the trust boundary.
+    """
+    from worker.email.template import _BLOCK_ENV
+    assert _BLOCK_ENV.autoescape is False, (
+        "autoescape was turned on for the email block templates. It is off "
+        "DELIBERATELY.\n\n"
+        "Every value reaching a block is already escaped exactly once, by the "
+        "trust boundary at the top of schedule_email_html() — _sanitize_brand, "
+        "_esc, _sanitize_metrics, _sanitize_listing and safe_url.\n\n"
+        "Turning autoescape on does two things:\n"
+        "  1. double-escapes every value (an '&' in an address becomes '&amp;amp;')\n"
+        "  2. renders the ~50 HTML FRAGMENTS this module builds — badge_html, "
+        "phone_pill_html, every _build_* return — as VISIBLE MARKUP in the "
+        "email body. That is the failure per-site escaping was rejected to "
+        "avoid.\n\n"
+        "If the escaping model should change, move the boundary first; do not "
+        "flip this flag."
+    )
+
+
+def test_a_pre_built_html_fragment_survives_a_block_unescaped():
+    """
+    The consequence, demonstrated rather than described. A status badge is HTML
+    this module assembled; if a block escaped it, the recipient would read the
+    tag instead of seeing the badge.
+    """
+    from worker.email.template import render_block
+    out = render_block(
+        "table",
+        rows=[{"address": "1 Oak St", "specs": "3/2", "sqft": "1,800",
+               "price": "$800K", "dom": 4, "bg": "#ffffff", "border": "",
+               "badge_html": ' <span style="background:#15803d">Active</span>'}],
+        primary_color="#0d9488", on_header="#14151a", price_ink="#0b8378",
+    )
+    assert '<span style="background:#15803d">Active</span>' in out
+    assert "&lt;span" not in out, "the block escaped a fragment this module built"
+
+
 def test_reformatting_alone_produces_no_diff():
     """
     POSITIVE CONTROL for the gate's PURPOSE. The restructure will reformat every

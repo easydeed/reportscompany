@@ -246,21 +246,38 @@ DARKEST_LIGHT_SURFACE = "#f1f5f9"
 # what each of ten documents MEANS, before and after, and an empty diff is the
 # acceptance criterion.
 #
-# AUTOESCAPE IS OFF, DELIBERATELY, AND THIS IS THE ONE THING TO UNDERSTAND
-# BEFORE EDITING A BLOCK.
+# ╔═══════════════════════════════════════════════════════════════════════╗
+# ║  autoescape=False IS DELIBERATE. DO NOT TURN IT ON.                   ║
+# ╚═══════════════════════════════════════════════════════════════════════╝
 #
-# This module sanitises at a single trust boundary near the top of
-# `schedule_email_html` — read the comment there, it explains why. Everything
-# reaching a block is already escaped. Turning autoescape ON would escape it a
-# second time (`&amp;amp;`) and, worse, would render the ~50 HTML fragments this
-# module builds as visible markup — which is exactly the failure the boundary
-# comment warns against and exactly why per-site escaping was rejected.
+# A `.jinja2` file carries an implicit promise, and this one does not keep it.
+# If you arrived here because you noticed a template engine configured not to
+# escape and reached for the one-word fix: that instinct is right in general and
+# wrong here, and the paragraph below is the reason.
+#
+# **Everything reaching a block has already been escaped, exactly once**, by the
+# trust boundary near the top of `schedule_email_html()` — `_sanitize_brand()`,
+# `_esc()`, `_sanitize_metrics()`, `_sanitize_listing()` and `safe_url()`, all
+# applied before a single value is used. Read the comment above those calls; it
+# explains why the escaping lives there and not at the ~460 interpolation sites.
+#
+# **Turning autoescape on breaks the document in two ways:**
+#
+#   1. Every already-escaped value is escaped a second time. An ampersand in a
+#      street address renders as `&amp;amp;`.
+#   2. Worse, and the reason per-site escaping was rejected in the first place:
+#      roughly fifty of these interpolations insert HTML FRAGMENTS this module
+#      built — `badge_html`, `phone_pill_html`, every `_build_*` return. Escaping
+#      those renders the markup as visible text. The reader sees `<span
+#      style="...">Sold</span>` printed in the middle of a table row.
 #
 # So the blocks have the same trust model as the f-strings they replace: safe
 # because the inputs were cleaned once, not because the templating escapes. The
-# migration is neutral on security, not an improvement, and that is worth saying
-# plainly because a reader who sees `.jinja2` will reasonably assume otherwise.
-# `test_the_block_environment_does_not_escape` pins it.
+# migration is NEUTRAL on security, not an improvement — worth stating plainly,
+# because the opposite is the natural assumption.
+#
+# `test_the_block_environment_does_not_escape` fails if this is flipped, and
+# carries this reason in its assertion message so the failure explains itself.
 _BLOCK_ENV = Environment(
     loader=FileSystemLoader(str(Path(__file__).resolve().parents[1] / "templates" / "email")),
     autoescape=False,          # see above — NOT an oversight
@@ -812,82 +829,73 @@ def _listing_price_str(listing: Dict) -> str:
     return _format_price_clean(price)
 
 
-def _build_photo_card_2x2(listing: Dict, accent_color: str) -> str:
-    """Market Narrative 2x2 card. Ref: V0 email-market-snapshot.html"""
-    _role_ink = _ink(accent_color)   # text on a light card, not the raw brand value
+#: Per-size photo dimensions and the placeholder that stands in for a missing
+#: one. B5 on the register: an absent photo rendered as a broken-image glyph on
+#: one surface and a blank grey box on another. It is a grey block on all three
+#: here — current behaviour preserved, because this is a restructure. The
+#: register's "hatched fill, camera glyph, Photo pending" remains open.
+_GALLERY_SIZES = {
+    "plain": (
+        '<img src="{photo}" alt="{addr}" width="260" height="160" style="display: block; max-width: 260px; max-height: 160px; width: 100%; height: auto; object-fit: cover; border: 1px solid #e5e7eb;">',
+        '<div style="width: 100%; height: 160px; background: #f5f5f4; border: 1px solid #e5e7eb;"></div>',
+    ),
+    "large": (
+        '<img src="{photo}" alt="{addr}" width="260" style="display: block; width: 100%; height: auto; border-radius: 8px 8px 0 0;">',
+        '<div style="width: 100%; height: 180px; background: #f5f5f4; border-radius: 8px 8px 0 0;"></div>',
+    ),
+    "compact": (
+        '<img src="{photo}" alt="{addr}" width="180" style="display: block; width: 100%; height: auto; border-radius: 8px 8px 0 0;">',
+        '<div style="width: 100%; height: 110px; background: #f5f5f4; border-radius: 8px 8px 0 0;"></div>',
+    ),
+}
+
+
+def _listing_specs(listing: Dict) -> str:
+    """`3 bd • 2 ba • 1,800 sf`, omitting whatever is missing."""
+    parts = []
+    if listing.get("bedrooms"):
+        parts.append(f"{listing['bedrooms']} bd")
+    if listing.get("bathrooms"):
+        parts.append(f"{listing['bathrooms']} ba")
+    if listing.get("sqft"):
+        parts.append(f"{listing['sqft']:,} sf")
+    return " &bull; ".join(parts)
+
+
+def _gallery_card_context(listing: Dict, size: str, ink: str, location: str) -> Dict:
+    img, placeholder = _GALLERY_SIZES[size]
     photo = listing.get("hero_photo_url") or ""
     addr = listing.get("street_address") or "Address N/A"
-    price_str = _listing_price_str(listing)
-    photo_html = f'<img src="{photo}" alt="{addr}" width="260" height="160" style="display: block; max-width: 260px; max-height: 160px; width: 100%; height: auto; object-fit: cover; border: 1px solid #e5e7eb;">' if photo else '<div style="width: 100%; height: 160px; background: #f5f5f4; border: 1px solid #e5e7eb;"></div>'
-    return f'''<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff;">
-                        <tr><td>{photo_html}</td></tr>
-                        <tr><td style="padding: 8px 0 0;">
-                          <p style="margin: 0; font-size: 12px; color: #333333;">{addr}</p>
-                          <p style="margin: 4px 0 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: bold; color: {_role_ink};">{price_str}</p>
-                        </td></tr>
-                      </table>'''
+    return {
+        "size": size,
+        "address": addr,
+        "price": _listing_price_str(listing),
+        "specs": _listing_specs(listing) if size != "plain" else "",
+        "location": location,
+        "ink": ink,
+        "photo_html": img.format(photo=photo, addr=addr) if photo else placeholder,
+    }
+
+
+def _build_photo_card_2x2(listing: Dict, accent_color: str) -> str:
+    """§06 block `gallery`, plain size. Market Narrative 2x2 card."""
+    return render_block("gallery", **_gallery_card_context(
+        listing, "plain", _ink(accent_color), ""))
 
 
 def _build_gallery_card_large(listing: Dict, accent_color: str) -> str:
-    """Gallery 2x2 card: photo on top, info below. Ref: V0 email-reports.html"""
-    _role_ink = _ink(accent_color)   # text on a light card, not the raw brand value
-    photo = listing.get("hero_photo_url") or ""
-    addr = listing.get("street_address") or "Address N/A"
+    """§06 block `gallery`, large size. Photo on top, info below."""
     city = listing.get("city") or ""
     zip_code = listing.get("zip_code") or ""
-    beds = listing.get("bedrooms")
-    baths = listing.get("bathrooms")
-    sqft = listing.get("sqft")
-    price_str = _listing_price_str(listing)
-    location = f"{city}, {zip_code}" if zip_code else city
-    photo_html = f'<img src="{photo}" alt="{addr}" width="260" style="display: block; width: 100%; height: auto; border-radius: 8px 8px 0 0;">' if photo else '<div style="width: 100%; height: 180px; background: #f5f5f4; border-radius: 8px 8px 0 0;"></div>'
-    specs_parts = []
-    if beds:
-        specs_parts.append(f"{beds} bd")
-    if baths:
-        specs_parts.append(f"{baths} ba")
-    if sqft:
-        specs_parts.append(f"{sqft:,} sf")
-    specs = " &bull; ".join(specs_parts)
-    return f'''<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
-                        <tr><td>{photo_html}</td></tr>
-                        <tr><td style="padding: 14px;">
-                          <p style="margin: 0; font-size: 14px; font-weight: 700; color: #1f2937;">{addr}</p>
-                          {f'<p style="margin: 2px 0 0; font-size: 12px; color: #6b7280;">{location}</p>' if location else ''}
-                          <p style="margin: 6px 0 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 20px; font-weight: bold; color: {_role_ink};">{price_str}</p>
-                          {f'<p style="margin: 4px 0 0; font-size: 12px; color: #6b7280;">{specs}</p>' if specs else ''}
-                        </td></tr>
-                      </table>'''
+    return render_block("gallery", **_gallery_card_context(
+        listing, "large", _ink(accent_color),
+        f"{city}, {zip_code}" if zip_code else city))
 
 
 def _build_gallery_card_compact(listing: Dict, accent_color: str) -> str:
-    """Gallery 3x2 card: photo on top, info below. Ref: V0 email-reports.html"""
-    _role_ink = _ink(accent_color)   # text on a light card, not the raw brand value
-    photo = listing.get("hero_photo_url") or ""
-    addr = listing.get("street_address") or "Address N/A"
-    city = listing.get("city") or ""
-    beds = listing.get("bedrooms")
-    baths = listing.get("bathrooms")
-    sqft = listing.get("sqft")
-    price_str = _listing_price_str(listing)
-    photo_html = f'<img src="{photo}" alt="{addr}" width="180" style="display: block; width: 100%; height: auto; border-radius: 8px 8px 0 0;">' if photo else '<div style="width: 100%; height: 110px; background: #f5f5f4; border-radius: 8px 8px 0 0;"></div>'
-    specs_parts = []
-    if beds:
-        specs_parts.append(f"{beds} bd")
-    if baths:
-        specs_parts.append(f"{baths} ba")
-    if sqft:
-        specs_parts.append(f"{sqft:,} sf")
-    specs = " &bull; ".join(specs_parts)
-    return f'''<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
-                        <tr><td>{photo_html}</td></tr>
-                        <tr><td style="padding: 12px;">
-                          <p style="margin: 0; font-size: 13px; font-weight: 700; color: #1f2937;">{addr}</p>
-                          {f'<p style="margin: 2px 0 0; font-size: 11px; color: #6b7280;">{city}</p>' if city else ''}
-                          <p style="margin: 6px 0 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: bold; color: {_role_ink};">{price_str}</p>
-                          {f'<p style="margin: 4px 0 0; font-size: 11px; color: #6b7280;">{specs}</p>' if specs else ''}
-                        </td></tr>
-                      </table>'''
+    """§06 block `gallery`, compact size. The 3-across variant."""
+    return render_block("gallery", **_gallery_card_context(
+        listing, "compact", _ink(accent_color), listing.get("city") or ""))
 
 
 def _build_stacked_property_card(listing: Dict, primary_color: str, accent_color: str) -> str:
@@ -1292,6 +1300,52 @@ def _build_closed_sales_body(
     return body
 
 
+def _band_rows(trend_stats, primary_color: str, accent_color: str) -> List[Dict]:
+    """
+    One dict per price band, with the bar width and the percentage label
+    computed together.
+
+    They are computed together deliberately. B6 on the register is exactly these
+    two drifting apart: the bars were normalised to the LARGEST band while the
+    labels showed share of TOTAL, so Move-Up read 43% beside a bar filled to
+    100%. Splitting the two calculations across a builder and a template is how
+    that happens again.
+
+    The 2% floor keeps a band with one listing visible as a sliver rather than
+    vanishing, which would read as "no listings in this band".
+    """
+    counts = []
+    for _, count_str, _, _ in trend_stats:
+        try:
+            counts.append(int(count_str))
+        except (ValueError, TypeError):
+            counts.append(0)
+    max_count = max(counts) or 1
+
+    rows = []
+    for (label, count_str, pct_str, is_highlight), count_val in zip(trend_stats, counts):
+        bar_pct = max(int((count_val / max_count) * 100), 2)
+        rows.append({
+            "label": label,
+            "count": count_str,
+            "pct": pct_str,
+            "bar_pct": bar_pct,
+            "empty_pct": 100 - bar_pct,
+            "bar_bg": accent_color if is_highlight else primary_color,
+            "label_style": (
+                f"font-size: 13px; font-weight: 700; color: {_ink(primary_color, '#f8fafc')};"
+                if is_highlight else
+                "font-size: 13px; font-weight: 600; color: #1f2937;"
+            ),
+            "pct_style": (
+                f"font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: bold; color: {_ink(accent_color, '#f8fafc')};"
+                if is_highlight else
+                "font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: bold; color: #1f2937;"
+            ),
+        })
+    return rows
+
+
 def _build_analytics_body(
     insight_text: str, hero_value: str, hero_label: str,
     trend_stats: List[Tuple[str, str, str, bool]],
@@ -1313,62 +1367,10 @@ def _build_analytics_body(
     if trend_stats:
         body += _build_section_label("Price Distribution", primary_color)
 
-        max_count = 0
-        for _, count_str, _, _ in trend_stats:
-            try:
-                max_count = max(max_count, int(count_str))
-            except (ValueError, TypeError):
-                pass
-        if max_count == 0:
-            max_count = 1
-
-        bar_rows = ""
-        for band_label, count_str, pct_str, is_highlight in trend_stats:
-            try:
-                count_val = int(count_str)
-            except (ValueError, TypeError):
-                count_val = 0
-            bar_pct = max(int((count_val / max_count) * 100), 2) if max_count else 2
-            empty_pct = 100 - bar_pct
-
-            if is_highlight:
-                bar_bg = accent_color
-                label_style = f"font-size: 13px; font-weight: 700; color: {_ink(primary_color, '#f8fafc')};"
-                pct_style = f"font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: bold; color: {_ink(accent_color, '#f8fafc')};"
-            else:
-                bar_bg = primary_color
-                label_style = "font-size: 13px; font-weight: 600; color: #1f2937;"
-                pct_style = "font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: bold; color: #1f2937;"
-
-            bar_rows += f'''
-                      <tr>
-                        <td style="padding: 8px 0;">
-                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                            <tr>
-                              <td width="110" style="vertical-align: middle; padding-right: 12px;">
-                                <p style="margin: 0; {label_style}">{band_label}</p>
-                                <p style="margin: 2px 0 0; font-size: 11px; color: #6b7280;">{count_str} listings</p>
-                              </td>
-                              <td style="vertical-align: middle;">
-                                <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-radius: 4px; overflow: hidden;">
-                                  <tr>
-                                    <td width="{bar_pct}%" style="height: 24px; background-color: {bar_bg};"></td>
-                                    <td width="{empty_pct}%" style="height: 24px; background-color: #e5e7eb;"></td>
-                                  </tr>
-                                </table>
-                              </td>
-                              <td width="50" align="right" style="vertical-align: middle; padding-left: 10px;">
-                                <span style="{pct_style}">{pct_str}</span>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>'''
-
-        body += f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
-                {bar_rows}
-              </table>'''
+        body += render_block(
+            "bands",
+            bands=_band_rows(trend_stats, primary_color, accent_color),
+        )
 
     if supporting_metrics:
         n = len(supporting_metrics)
