@@ -74,6 +74,20 @@ TIMEOUT = 30
 REQUESTS = {"sent": 0, "failed": 0}
 
 
+def _total(result):
+    """X-Total-Count off a `_get` result, or None. Module level so every
+    section parses the header the same way — it was local to section 4, and
+    section 6 needing it is exactly how a second, subtly different copy gets
+    written."""
+    if not result:
+        return None
+    raw = result[3].get("X-Total-Count")
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
+
+
 def _get(auth, query, label):
     """One GET. Returns (rows, status_counts, seconds, headers) or None."""
     REQUESTS["sent"] += 1
@@ -350,15 +364,6 @@ def main():
     count_90 = _get(auth, f"status=Closed&minclosedate={ninety}&limit=1&count=true",
                     f"  count: + minclosedate={ninety}")
 
-    def _total(result):
-        if not result:
-            return None
-        raw = result[3].get("X-Total-Count")
-        try:
-            return int(raw)
-        except (TypeError, ValueError):
-            return None
-
     total_all, total_90 = _total(count_all), _total(count_90)
 
     if closed_all and closed_90 and closed_future:
@@ -608,9 +613,138 @@ def main():
             )
     print()
 
+    # ── 6. twelve monthly buckets, and what they cost (DECISION 01) ─────────
+    #
+    # DECISION 01 ASKS A QUESTION THAT IS ALREADY HALF ANSWERED.
+    #
+    # It asks "does the pipeline hold historical data?" — written before D-074
+    # established that `minclosedate` filters, and before months of supply began
+    # computing a 90-day sales rate from real closings. History is fetchable.
+    #
+    # What is NOT settled is whether TWELVE MONTHLY BUCKETS can be assembled
+    # economically, which is what §7.3's 12-month trend line needs. That turns
+    # on one thing: is there an UPPER bound on close date?
+    #
+    #   maxclosedate filters -> 12 independent count=true calls, one per month
+    #   it does not          -> DIFFERENCE cumulative minclosedate counts:
+    #                             bucket(N) = count(>= start N) - count(>= start N+1)
+    #                           13 calls for 12 months, limit=1 each, cost
+    #                           independent of market size
+    #   neither              -> fetch every row for 12 months and bucket
+    #                           client-side, and THAT cost scales with the market
+    #
+    # Measured on the demo feed (13 closed sales, close dates 1990-2013):
+    # `maxclosedate` is ACCEPTED AND IGNORED — 1990-01-01, 2000-01-01 and the
+    # nonsense value "notadate" all returned the full 13, exactly like the
+    # deliberately misspelled `maxclosedatex`. `minclosedate` filters correctly
+    # (2005-01-01 -> 4 of 13), and differencing reproduced the true histogram
+    # exactly. So the demo answer is: differencing, 13 requests.
+    #
+    # Re-run here because a filter's behaviour is a property of the FEED (D-084),
+    # and because the demo's thirteen 1990s sales are not a market.
+    #
+    # NOTE FOR ANYONE READING THE ROWS: `closeDate` lives at
+    # `row["sales"]["closeDate"]`, not at the top level. Looking for it top-level
+    # returns None for every row and reads as "this feed has no close dates",
+    # which is how the first run of this check nearly reported the wrong answer.
+    print("6. Twelve monthly buckets — what a trend line costs (decision 01)")
+
+    def _month_start(months_back):
+        today = datetime.utcnow().date()
+        y, m = today.year, today.month - months_back
+        while m <= 0:
+            m += 12
+            y -= 1
+        return f"{y:04d}-{m:02d}-01"
+
+    def _count(extra, label):
+        return _total(_get(auth, f"status=Closed&limit=1&count=true&{extra}", label))
+
+    total_closed = _total(_get(auth, "status=Closed&limit=1&count=true",
+                               "  closed, no date filter"))
+    year_ago = _month_start(12)
+    total_12mo = _count(f"minclosedate={year_ago}", f"  + minclosedate={year_ago}")
+
+    # THE UPPER-BOUND CANARY RUNS WHETHER OR NOT THIS FEED HAS RECENT SALES.
+    # Whether `maxclosedate` is honoured is a property of the FEED, and it is
+    # the thing that decides 12 requests versus 13 versus fetching every row —
+    # worth knowing even where there is no history to bucket. The first version
+    # of this section put it behind the early exit, so the demo run reported
+    # "no history" and silently answered nothing about the parameter.
+    cutoff = "1990-01-01"
+    capped = _count(f"maxclosedate={cutoff}", f"  maxclosedate={cutoff}")
+    canary = _count(f"maxclosedatex={cutoff}", f"  maxclosedatex={cutoff} (canary)")
+    upper_bound_works = (
+        capped is not None and canary is not None
+        and capped != canary and capped != total_closed
+    )
+    print(f"  -> upper bound on close date: "
+          f"{'HONOURED' if upper_bound_works else 'ACCEPTED AND IGNORED'}")
+
+    if not total_12mo:
+        verdicts["DECISION-01"] = (
+            f"NO 12-MONTH HISTORY ON THIS FEED — minclosedate={year_ago} returned "
+            f"{total_12mo} against an unfiltered closed count of {total_closed}. "
+            f"Either this feed carries no recent closings, or closeDate is absent "
+            f"on them (it lives at sales.closeDate, not top level). Trend charts "
+            f"are blocked on DATA, not on cost. Separately, and still useful: "
+            f"`maxclosedate` is "
+            + ("HONOURED here, so monthly buckets would be 12 independent counts."
+               if upper_bound_works else
+               f"ACCEPTED AND IGNORED ({capped} against an unfiltered "
+               f"{total_closed}, canary {canary}), so buckets would have to be "
+               f"differenced from cumulative minclosedate counts — 13 requests.")
+        )
+    else:
+        cuts = [_month_start(n) for n in range(12, -1, -1)]
+        cumulative = {c: _count(f"minclosedate={c}", f"  cumulative >= {c}") for c in cuts}
+
+        print("\n  per-month buckets, by differencing those cumulative counts:")
+        buckets, usable = [], True
+        for a, b in zip(cuts, cuts[1:]):
+            ca, cb = cumulative[a], cumulative[b]
+            if ca is None or cb is None:
+                usable = False
+                print(f"    {a[:7]}: (a count was missing)")
+                continue
+            n = ca - cb
+            buckets.append(n)
+            if n < 0:
+                # Non-monotone cumulative counts mean minclosedate is not doing
+                # what differencing assumes, and the buckets are meaningless.
+                usable = False
+            print(f"    {a[:7]}: {n}")
+
+        if upper_bound_works:
+            verdicts["DECISION-01"] = (
+                f"FEASIBLE, 12 REQUESTS. `maxclosedate` filters on this feed, so "
+                f"each month is one independent count=true call at limit=1. "
+                f"{total_12mo} closed sales in the last 12 months. §7.3's trend "
+                f"line is affordable and its cost does not scale with the market."
+            )
+        elif usable and buckets:
+            verdicts["DECISION-01"] = (
+                f"FEASIBLE, 13 REQUESTS BY DIFFERENCING. `maxclosedate` is accepted "
+                f"and IGNORED ({capped} against an unfiltered {total_closed}), so "
+                f"there is no upper bound — but cumulative `minclosedate` counts "
+                f"are monotone and difference cleanly into months: {buckets}. "
+                f"13 calls at limit=1 for 12 months, independent of market size. "
+                f"{total_12mo} closed sales in the window. §7.3 is affordable."
+            )
+        else:
+            verdicts["DECISION-01"] = (
+                f"NOT CHEAPLY FEASIBLE. `maxclosedate` is ignored AND the "
+                f"cumulative `minclosedate` counts do not difference into sane "
+                f"buckets ({buckets}). Monthly buckets would need every row for 12 "
+                f"months fetched and bucketed client-side — {total_12mo} rows here "
+                f"— and that cost scales with the market. §7.3 should ship "
+                f"distributions only until this is solved."
+            )
+    print()
+
     # ── verdicts ────────────────────────────────────────────────────────────
     print("=" * 72)
-    for defect in ("D-074", "D-075", "D-076", "D-081", "D-084"):
+    for defect in ("D-074", "D-075", "D-076", "D-081", "D-084", "DECISION-01"):
         print(f"\n{defect}: {verdicts.get(defect, 'INCONCLUSIVE — a request failed above')}")
     print("\n" + "=" * 72)
     print(f"{REQUESTS['sent']} GET request(s) sent"
