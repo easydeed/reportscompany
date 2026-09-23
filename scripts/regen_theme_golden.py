@@ -16,7 +16,7 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "apps/worker/src"))
 
-from worker.themes import WHITE, contrast, derive_theme  # noqa: E402
+from worker.themes import DARK_SURFACE, WHITE, contrast, derive_theme  # noqa: E402
 
 #: The six themes whose primaries the master plan measured (§02, "Contrast of
 #: the current build, measured"). Names are the plan's, lowercased.
@@ -36,6 +36,10 @@ HEADER = [
     "That is allowed, but never incidentally: the diff is the review.",
     "contrast_primary_on_white is the measurement that motivated Workstream A.",
     "luxury_estates ships 3.74:1 today; primary_ink is what replaces it.",
+    "contrast_on_dark_vs_surface is measured against themes.DARK_SURFACE (#0f172a),",
+    "the ONE fixed dark neutral decided 2026-09-23 — and against nothing else.",
+    "Six of the eight dark surfaces the templates paint today are lighter than it;",
+    "see the note on DARK_SURFACE for the measured shortfall on each.",
 ]
 
 
@@ -45,11 +49,14 @@ def build():
         t = derive_theme(hexv)
         themes[name] = collections.OrderedDict(
             [("input", hexv)]
-            + [(k, t[k]) for k in ("primary", "primary_dark", "primary_ink", "on_primary", "tint")]
+            + [(k, t[k]) for k in ("primary", "primary_dark", "primary_ink",
+                                   "on_primary", "tint", "primary_on_dark")]
             + [
                 ("contrast_primary_on_white", round(contrast(t["primary"], WHITE), 2)),
                 ("contrast_ink_on_white", round(contrast(t["primary_ink"], WHITE), 2)),
                 ("contrast_on_primary", round(contrast(t["on_primary"], t["primary"]), 2)),
+                ("contrast_on_dark_vs_surface",
+                 round(contrast(t["primary_on_dark"], DARK_SURFACE), 2)),
             ]
         )
     return collections.OrderedDict([("_comment", HEADER), ("themes", themes)])

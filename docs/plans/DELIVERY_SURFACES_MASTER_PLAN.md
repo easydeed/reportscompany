@@ -88,11 +88,40 @@ Luxury Estates ships `#0D9488` as the price color on every listing card in every
 Unchanged from v1 §3. Reproduced in brief; the v1 document remains authoritative for the full
 token tables.
 
-**3.1 Derived tokens** — affiliate picks one color; five values derived at render time.
+**3.1 Derived tokens** — affiliate picks one color; **six** values derived at render time.
 `primary` (fills only) · `primary_dark` (×0.78) · `primary_ink` (darkened in 6% steps until ≥4.5:1
 on white — the only brand value permitted on a light surface) · `on_primary` (whichever of white
 or `#14151A` scores higher against primary) · `tint` (6% alpha, pre-flattened because Outlook
-drops rgba).
+drops rgba) · **`primary_on_dark`** (brightened until ≥4.5:1 on one fixed dark neutral).
+
+**The sixth token, added 2026-09-23.** The original five had no counterpart for brand text on a
+*dark* surface — `primary_ink` guarantees a ratio on white and §3.1 had no concept of a dark
+surface at all, while three property themes and the market header put brand-coloured text on one.
+The survey that established this counted every `var()` reference: the `-light` family is decorative
+(36 uses, none carrying text) and the `-on-dark` family is text every time (15 uses, all `color:`).
+So the set was short exactly one token, not two.
+
+**`DARK_SURFACE = #0f172a`, fixed, not per-theme** (Jerry, 2026-09-23): *"§3.2 already fixes
+neutrals for this reason, and five surfaces means five drift paths."* `#0f172a` because it is the
+dark neutral these templates already use most, so the token converges on the design rather than
+adding to it — and it is a neutral, where the previous default `#18235c` has chroma 68 and is
+somebody's brand colour doing a neutral's job.
+
+> **The guarantee is against that surface and no other, which is a condition rather than a detail.**
+> Six of the eight dark surfaces the templates paint today are lighter than `#0f172a`, so a value
+> clearing 4.5:1 there does not clear it here — **3.24:1 on classic's `#1B365D`**, 3.80 on bold's
+> `#15216E`, 3.91 on `#18235c`, 4.47 on `#0f1a45`. That is the migration this decision implies: the
+> dark panels become the neutral. Until they do, `primary_on_dark` is correct about a surface the
+> page does not yet have. The four shortfalls are asserted exactly in
+> `test_the_guarantee_is_against_the_fixed_surface_and_no_other`, so the list is a checklist that
+> fails when a panel migrates rather than a note that goes stale.
+
+Brightening raises HSV value first and spends saturation only once value has maxed out — the rule
+D-099 established by measurement on the PDF path, where reducing saturation every step turned a
+navy brand into a grey (chroma 33 against 156). Both derivations now use it, so they cannot drift.
+
+Amber and lime — the two that break the current build — resolve automatically. The picker needs
+no restrictions.
 
 Amber and lime — the two that break the current build — resolve automatically. The picker needs
 no restrictions.

@@ -25,6 +25,10 @@ system names (master plan §3.1):
                   What you put ON a primary fill.
     tint          primary at 6% alpha, pre-flattened over white because
                   Outlook drops rgba(). Zebra rows, callout panels.
+    primary_on_dark
+                  the brand, brightened until it clears 4.5:1 on ONE FIXED dark
+                  neutral. The counterpart to primary_ink, which only ever
+                  guaranteed anything on white.
 
 WHY NOT compute_color_roles(), WHICH ALREADY EXISTS
 ---------------------------------------------------
@@ -51,6 +55,7 @@ is what makes the golden file below meaningful and what makes caching safe.
 """
 from __future__ import annotations
 
+import colorsys
 import re
 from functools import lru_cache
 from typing import Dict, Tuple
@@ -58,6 +63,7 @@ from typing import Dict, Tuple
 __all__ = [
     "derive_theme",
     "TOKENS",
+    "DARK_SURFACE",
     "contrast",
     "relative_luminance",
     "normalize_hex",
@@ -74,6 +80,34 @@ NEAR_BLACK = "#14151a"
 
 #: WCAG 2.1 AA for normal-size text.
 AA_NORMAL = 4.5
+
+# ── The one fixed dark surface ─────────────────────────────────────────────
+#
+# Decided 2026-09-23 (Jerry): ONE fixed neutral for every theme, not a per-theme
+# value the derivation takes as an argument. §3.2 already fixes the neutrals for
+# this reason, and five surfaces would mean five things to guarantee against and
+# five ways to drift. D-099 is evidence for it — widening `compute_color_roles`
+# to accept several surfaces was necessary for the market band, and the first
+# thing it produced was a pair no colour can satisfy.
+#
+# #0f172a because it is the dark neutral these templates already use most (15
+# occurrences, more than any other), so the token converges on the design rather
+# than adding to it. It is a neutral, not a brand navy: the current default
+# `#18235c` has chroma 68 and is somebody's brand colour doing a neutral's job.
+#
+# **THE GUARANTEE IS AGAINST THIS SURFACE AND NO OTHER, AND THAT IS A CONDITION,
+# NOT A DETAIL.** Six of the eight dark surfaces the templates paint today are
+# lighter than it, so a value that clears 4.5:1 here does NOT clear it there:
+#
+#     on #0b0f1a  4.82 ok      on #0f1a45  4.22       on #15216e  3.59
+#     on #0f1629  4.54 ok      on #111827  4.47       on #1b365d  3.06
+#                              on #1a1a1a  4.39       on #18235c  3.69
+#
+# That is the migration this decision implies — the dark panels become this
+# neutral — and until they do, `primary_on_dark` is correct about a surface the
+# page does not yet have. Measured and stated rather than discovered later; the
+# list above is the checklist. See D-097.
+DARK_SURFACE = "#0f172a"
 
 #: One darkening step. 6% per the design system; the loop below applies it
 #: repeatedly rather than solving directly, because "darkened in 6% steps" is
@@ -161,6 +195,44 @@ def _flatten_over_white(value: str, alpha: float) -> str:
     return _to_hex(mix(r), mix(g), mix(b))
 
 
+def _brighten(value: str) -> str:
+    """
+    One step brighter, spending saturation only as a last resort.
+
+    Value first (+0.04); saturation (-0.04) only once value has maxed out.
+    Deliberately the same rule as `property_builder._brighten`, which D-099
+    established by measurement: the previous version there reduced saturation on
+    every step and turned a navy brand asked to be readable on a navy panel into
+    a grey — chroma 33 where value-first gives 156.
+    """
+    r, g, b = (c / 255 for c in _to_rgb(value))
+    h, s, v = colorsys.rgb_to_hsv(r, g, b)
+    if v >= 1.0:
+        s = max(0.0, s - 0.04)
+    else:
+        v = min(1.0, v + 0.04)
+    return _to_hex(*(c * 255 for c in colorsys.hsv_to_rgb(h, s, v)))
+
+
+def _on_dark(value: str) -> str:
+    """
+    Brighten until the colour clears AA on `DARK_SURFACE`.
+
+    Returns it unchanged when it already does — most brands are lighter than
+    #0f172a and need nothing. Terminates because brightening reaches white, and
+    white on #0f172a is 17.85:1.
+    """
+    current = normalize_hex(value)
+    for _ in range(_MAX_STEPS):
+        if contrast(current, DARK_SURFACE) >= AA_NORMAL:
+            return current
+        stepped = _brighten(current)
+        if stepped == current:
+            break
+        current = stepped
+    return WHITE
+
+
 def _ink(value: str) -> str:
     """
     Darken in 6% steps until the result clears AA on white.
@@ -208,6 +280,7 @@ def _derive(primary: str) -> Tuple[Tuple[str, str], ...]:
         ("on_primary",
          WHITE if contrast(WHITE, p) >= contrast(NEAR_BLACK, p) else NEAR_BLACK),
         ("tint", _flatten_over_white(p, _TINT_ALPHA)),
+        ("primary_on_dark", _on_dark(p)),
     )
 
 
@@ -240,4 +313,5 @@ derive_theme.cache_clear = _derive.cache_clear
 #: The five keys, in the order the design system lists them. Exported so a
 #: consumer can assert it is handling all of them rather than the ones it
 #: happened to know about when it was written.
-TOKENS = ("primary", "primary_dark", "primary_ink", "on_primary", "tint")
+TOKENS = ("primary", "primary_dark", "primary_ink", "on_primary", "tint",
+          "primary_on_dark")

@@ -4534,14 +4534,26 @@ the dark surface is a fixed neutral the token can be derived against (the live
 `compute_color_roles` assumes `#18235c`, and the themes' actual darks are `#18235c`, `#0f1a45`,
 `#0b0f1a`, `#1a1f36`) or a per-theme value the derivation has to take as an argument. **[JERRY]**
 
-> **Recommendation on the table, 2026-09-23, awaiting Jerry — nothing derived on it.** One fixed
-> dark neutral, not per-theme: *"§3.2 already fixes neutrals for this reason, and five surfaces
-> means five drift paths."*
+> **ANSWERED 2026-09-23 (Jerry): one fixed dark neutral, not per-theme.** *"§3.2 already fixes
+> neutrals for this reason, and five surfaces means five drift paths."*
 >
-> D-099's work is evidence for that reading rather than against it. Widening `compute_color_roles`
-> to accept several dark surfaces was necessary and correct for the market band, and the very first
-> thing it produced was a surface pair no colour can satisfy. More surfaces to guarantee against is
-> more ways to be unsatisfiable, and each one is discovered rather than designed.
+> D-099's work was evidence for that reading: widening `compute_color_roles` to accept several dark
+> surfaces was necessary for the market band, and the very first thing it produced was a surface
+> pair no colour can satisfy.
+>
+> **Built** on `feat/workstream-c-consolidation`. `worker.themes` gains a sixth token,
+> `primary_on_dark`, derived against `DARK_SURFACE = #0f172a` — the dark neutral these templates
+> already use most, chosen so the token converges on the design rather than adding to it, and a
+> genuine neutral where the previous default `#18235c` has chroma 68 and is somebody's brand colour
+> doing a neutral's job. Locked in the golden file with its achieved ratio, as D-099 established.
+>
+> **The condition, measured and asserted rather than noted.** Six of the eight dark surfaces these
+> templates paint today are lighter than `#0f172a`, so the token does not clear AA on them:
+> **3.24:1 on classic's `#1B365D`**, 3.80 on bold's `#15216E`, 3.91 on `#18235c`, 4.47 on
+> `#0f1a45`. That is the migration the decision implies — the dark panels become the neutral — and
+> until it happens `primary_on_dark` is correct about a surface the page does not yet have. The
+> four shortfalls are asserted exactly in `test_the_guarantee_is_against_the_fixed_surface_and_no_other`,
+> so the list fails when a panel migrates instead of going quietly stale.
 
 **Two more AA failures, found by this survey and belonging to this entry:**
 
