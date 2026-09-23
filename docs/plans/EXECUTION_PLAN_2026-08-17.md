@@ -389,6 +389,19 @@ it.**
   moment when something reads it back and checks it, or it decays into an archive that everyone
   cites and nobody consults.
 
+  **Report the depth PER ENTRY, not per sweep.** "Swept, all 30 checked" implies a uniform rigour
+  that a sweep never has. The first one here reproduced the mechanism for fifteen entries,
+  confirmed four more by appearance only, and did not verify one at all — and those are three
+  different claims that a single sentence flattens into one. Mark each entry with how it was
+  checked, because the next person's decision about whether to trust it depends on that and not on
+  the total.
+
+  The distinction that matters most is the last one: **"not re-verified" must never be allowed to
+  read as "probably fine."** D-068 needs a measured Celery experiment, the way D-062 did — a real
+  worker, a real broker, a `kill -9` — and a confident code read would carry the same risk in
+  either direction. An unverified entry is an open question, and the sweep's job is to say which
+  entries are questions rather than to make the list look uniformly examined.
+
 ---
 
 ## Phase 0 — Security & Tooling
