@@ -428,6 +428,30 @@ it.**
   either direction. An unverified entry is an open question, and the sweep's job is to say which
   entries are questions rather than to make the list look uniformly examined.
 
+- **A detector's silence means nothing until you have seen it speak. Run every new check against
+  input you know is bad, before you run it against the code you hope is good.**
+
+  *Added 2026-09-23 from Workstream A.* The acceptance criterion was "no brand hex literal in any
+  template, enforced by lint over the template directory". The obvious order is to write the rule,
+  fix the templates, and watch it go green. That order can never distinguish a rule that passes
+  from a rule that matches nothing — and this project has already shipped the second kind twice:
+  the `str.replace` that silently no-opped after a merge moved its anchor, and the regression
+  harness whose mutation was undone by the next mutation before pytest ever saw it.
+
+  So the rule was run against `main` first, on thirty untouched template files. It reported **111
+  findings in 26 of them**, which is the result that makes every later green run mean something. A
+  zero there would have been the bug.
+
+  The same calibration belongs in the test suite, not just in the session that wrote the rule,
+  because a regex can die later: **a positive control and a negative control, side by side.** One
+  fixture that must produce findings, one that must produce none. A checker with only the negative
+  control is indistinguishable from a checker that has stopped working, and it fails silently in
+  the direction that looks like success.
+
+  This generalises past lints. It applies to a validator, a guard clause, a monitoring alert, a
+  schema check, a permission test — anything whose normal output is *nothing*. **Absence of a
+  finding is evidence only from an instrument you have watched find something.**
+
 ---
 
 ## Phase 0 — Security & Tooling

@@ -1,0 +1,78 @@
+{
+  "_comment": [
+    "GOLDEN FILE \u2014 the five derived tokens for the six themes that exist today.",
+    "Regenerate with: python3 scripts/regen_theme_golden.py",
+    "A diff here means derive_theme() changed what every affiliate on that theme sees.",
+    "That is allowed, but never incidentally: the diff is the review.",
+    "contrast_primary_on_white is the measurement that motivated Workstream A.",
+    "luxury_estates ships 3.74:1 today; primary_ink is what replaces it."
+  ],
+  "themes": {
+    "demo_title": {
+      "input": "#DC2626",
+      "primary": "#dc2626",
+      "primary_dark": "#ac1e1e",
+      "primary_ink": "#dc2626",
+      "on_primary": "#ffffff",
+      "tint": "#fdf2f2",
+      "contrast_primary_on_white": 4.83,
+      "contrast_ink_on_white": 4.83,
+      "contrast_on_primary": 4.83
+    },
+    "luxury_estates": {
+      "input": "#0D9488",
+      "primary": "#0d9488",
+      "primary_dark": "#0a736a",
+      "primary_ink": "#0b8378",
+      "on_primary": "#14151a",
+      "tint": "#f0f9f8",
+      "contrast_primary_on_white": 3.74,
+      "contrast_ink_on_white": 4.63,
+      "contrast_on_primary": 4.87
+    },
+    "coastal": {
+      "input": "#0E7490",
+      "primary": "#0e7490",
+      "primary_dark": "#0b5a70",
+      "primary_ink": "#0e7490",
+      "on_primary": "#ffffff",
+      "tint": "#f1f7f8",
+      "contrast_primary_on_white": 5.36,
+      "contrast_ink_on_white": 5.36,
+      "contrast_on_primary": 5.36
+    },
+    "amber": {
+      "input": "#F59E0B",
+      "primary": "#f59e0b",
+      "primary_dark": "#bf7b09",
+      "primary_ink": "#9f6708",
+      "on_primary": "#14151a",
+      "tint": "#fef9f0",
+      "contrast_primary_on_white": 2.15,
+      "contrast_ink_on_white": 4.75,
+      "contrast_on_primary": 8.49
+    },
+    "lime": {
+      "input": "#84CC16",
+      "primary": "#84cc16",
+      "primary_dark": "#679f11",
+      "primary_ink": "#517c0e",
+      "on_primary": "#14151a",
+      "tint": "#f8fcf1",
+      "contrast_primary_on_white": 1.98,
+      "contrast_ink_on_white": 4.95,
+      "contrast_on_primary": 9.23
+    },
+    "violet": {
+      "input": "#7C3AED",
+      "primary": "#7c3aed",
+      "primary_dark": "#612db9",
+      "primary_ink": "#7c3aed",
+      "on_primary": "#ffffff",
+      "tint": "#f7f3fe",
+      "contrast_primary_on_white": 5.7,
+      "contrast_ink_on_white": 5.7,
+      "contrast_on_primary": 5.7
+    }
+  }
+}
