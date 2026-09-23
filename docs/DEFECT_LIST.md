@@ -4557,9 +4557,37 @@ the midpoint depends on layout and has not been rendered to check — but a toke
 depends on where on the band it falls is not a token that can be verified, which is the defect
 regardless of today's layout.
 
-**Three dead tokens** — `--teal-light`, `--navy-light`, `--navy-on-dark` — are declared and never
-referenced. They sit in the 111-literal baseline and are the **only** literals that can be retired
-with provably zero visual change, since nothing reads them. Worth taking first for that reason.
+**Ten dead tokens, not three.** The survey read the template SOURCE; rendering all five property
+reports and counting `var()` references against the declarations in the output gives the real
+number:
+
+| theme | declared and never referenced |
+|---|---|
+| modern | `--coral-dark`, `--coral-text` |
+| teal | `--teal-light`, `--teal-text`, `--soft` |
+| classic | `--navy-light`, `--navy-on-dark` |
+| bold | `--navy-light`, `--navy-on-dark`, `--gold-light` |
+
+49 variables are live; these 10 are not. They are the only literals that can be retired with
+provably zero visual change, since nothing reads them.
+
+> **THIS CORRECTS A CLAIM MADE ON D-099'S PULL REQUEST, AND THE CORRECTION MATTERS.** That PR said
+> `modern.theme_color_text` flipping white → `#14151a` was *"the largest visual change this project
+> has shipped"* and asked for it to be reviewed before the consolidation. **`--coral-text` is
+> declared and referenced nowhere. It renders on no page.** So does `--navy-on-dark`, which carried
+> the chroma 33 → 156 improvement on classic and bold — also nowhere.
+>
+> Rendering the five reports and counting `var()` references is a ten-line check that would have
+> caught it before the claim was made. Measuring the derivation is not the same as measuring the
+> page, and this board has the rule for it already: §0.6, *no finding derived from a sample render
+> counts until it is reproduced through the production path* — applied here in the other direction,
+> to a finding derived from a function without checking whether the page consumes it.
+>
+> **What D-099 actually changes on rendered output, in full:** `modern --coral-on-light`
+> (`#f46657` 3.05 → `#c55145` 4.53, 4 uses), `teal --teal-on-light` (`#27a196` 3.32 → `#1f847c`
+> 4.52, 4 uses), and on the market report `--accent-on-light` (`#0D9488` 3.74 → `#0b8277` 4.69,
+> 5 uses) and `--accent-on-dark` (`#5eead4` 2.53 → `#ffffff` 3.74 worst-case, 1 use). Five values.
+> All small labels, contents numbers and comparable prices on light cards — no cover changes at all.
 
 
 ---
