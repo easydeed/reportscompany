@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-23, against `feat/workstream-a-token-layer`, cut from `main` at `2b4ac3b`. **Every open entry was re-checked against current code in that sweep** — see §0.6, *a defect list needs a read path*.
+**Last reconciled:** 2026-09-23, against `feat/workstream-c-email-rebuild`, cut from `main` at `796e1c6`. **Every open entry was re-checked against current code in that sweep** — see §0.6, *a defect list needs a read path*.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -37,11 +37,11 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 33 | Real, unfixed |
-| `fixed` | 61 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 62 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **98** | D-001 … D-098, contiguous, no duplicates |
+| **Total** | **99** | D-001 … D-099, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 1 · WRONG 8 · FRAGILE 11 · ROUGH 13. (Sums to 33, the open total.)
+**Open by severity:** BROKEN 1 · WRONG 9 · FRAGILE 10 · ROUGH 13. (Sums to 33, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -58,7 +58,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > problem one level down — and the fix is the same one this file keeps arriving at, which is to
 > make the property structural instead of somebody's diligence.
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded.
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded.
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -3656,7 +3656,34 @@ deliberate pass (a shared error surface) rather than fourteen separate edits.
 ### D-085 — the email picks which KIND of price to quote by precedence, not by what the sentence says
 
 **Severity:** FRAGILE · **Affects:** every report type's insight paragraph
-**Status:** `open`
+**Status:** `fixed` (`feat/workstream-c-email-rebuild`)
+
+> **FIXED, and the entry undercounted it by two functions.** The precedence line
+> is in `_get_insight_paragraph`, `_get_quick_take` **and**
+> `_get_conversation_starter` — three functions and nine sentences, not one and
+> four.
+>
+> Each site now names its kind through `_median(SOLD|ASKING|EITHER, metrics)`,
+> which returns `None` rather than the other kind when the metric it was asked
+> for is absent, so the **sentence** changes instead of the number. A wrong
+> figure reads as authoritative; a missing one reads as missing.
+>
+> **Demonstrated before the fix**, with a metrics dict carrying only a list
+> price: *"18 homes sold at a median of $825K"* — the asking price, described as
+> a sale. After: the clause drops and the paragraph reads *"Great news for
+> sellers in La Verne—the market is moving fast."*
+>
+> `apps/worker/tests/test_insight_price_kind.py` (48 cases) covers every report
+> type against all four combinations of the two metrics, including that no
+> sentence is left with a seam where a clause was removed — the first version of
+> the fix produced *"just hit the market . Current inventory"*.
+>
+> One pre-existing test was **rewritten rather than deleted**:
+> `test_varying_prices_still_appears_when_there_is_genuinely_no_price` asserted
+> the literal fallback string, which this fix removes in favour of dropping the
+> clause. It is restated against its own stated purpose — *do not invent a
+> figure* — and renamed. The argument for why that is a restatement and not a
+> removal is written into the test.
 
 `_get_insight_paragraph` (`email/template.py:1717`) resolves one variable:
 
@@ -4408,6 +4435,31 @@ rest is worse.
 surface repeats the Luxury Estates defect in a different slot: white label text on the teal fill,
 also 3.74:1, because `--accent-text` defaults to `#ffffff` regardless of what the fill is.
 
+> **THE EMAIL SURFACE IS DONE (`feat/workstream-c-email-rebuild`).** Measured with a walker that
+> resolves the real background for every text run in a rendered document:
+> **1,167 unreadable runs out of 3,822 → 0**, across seven brands × eight report types.
+> `apps/worker/tests/test_email_contrast.py` holds it there. What is left below is the PDF and
+> template half, which is Workstream D's migration.
+>
+> The email measurement found four things this entry did not have:
+>
+> - **`_build_quick_take` painted one brand colour on another.** Label and panel arrived as two
+>   independent arguments with nothing relating them: `#8b5cf6` on `#0d9488` is 1.13:1, and an
+>   account that sets ONE colour rather than two got **1.00:1 — invisible text**. The master plan's
+>   B3 recorded 1.4:1 from a sample render; that was the same bug with different brand values in it.
+> - **The email's own default brand was unfixable.** `#6366f1` sits inside D-098's band (4.47:1), so
+>   no choice of label cleared AA — on the default, which is what every unbranded account ships. It
+>   also disagreed with `templates.ts` and `social-templates.ts`, both of which default to `#4F46E5`
+>   (6.29:1). Changing a **default** does not violate the fill-is-the-affiliate's rule: nobody chose
+>   it. Now aligned, and the PDF and the email finally match for an unbranded account.
+> - **`§3.1`'s ink target assumes a white card and the design ships near-white ones.** The metric
+>   strips are `#f8fafc`, the rows `#f9fafb`, the stat cells `#f1f5f9`. Luxury Estates' ink is
+>   4.63:1 on white and **4.43:1** on `#f8fafc` — passing the specification and failing the reader.
+>   The email derives against its darkest light surface; whether the cards should simply be white is
+>   a design decision and is **[JERRY]**.
+> - **The status palette failed its own text.** White on `#16a34a` is 3.30:1 and on `#f59e0b` is
+>   2.15:1. Now `#15803d` and `#b45309` (5.02 each), both already used in the PDF templates.
+
 **Why every one of these is a hardcoded literal.** Nothing derives a readable value from the
 affiliate's colour, because until now there was nothing to derive it with. `apps/worker/src/worker/
 themes.py` (`derive_theme`, Workstream A) now does; **no template consumes it yet**, which is why
@@ -4435,11 +4487,70 @@ CI fails on a new one, and retiring them is the migration that closes this entry
   `--accent-on-light: #0d7268`; `market.jinja2:12` has `#0f766e`. Both are teal, neither is
   derived, and which one renders depends on whether the theme block is reached.
 
-**The five-token set does not cover every role the templates use.** `primary`, `primary_dark`,
-`primary_ink`, `on_primary` and `tint` have no counterpart for `--color-primary-light` /
-`--*-light` / `--accent-on-dark`, which appear in four themes. The migration needs either a sixth
-token or a decision that those roles collapse into `tint` and `primary_dark`. **[JERRY]** — it is a
-design-system question, not an implementation one.
+### The `--*-light` / `--*-on-dark` gap, surveyed before deriving anything
+
+*2026-09-23, at Jerry's instruction: **"survey before deriving… report which before proposing
+either."*** Every `var()` reference to one of these tokens was read and classified by the CSS
+property it lands in. The answer is cleaner than the question assumed, and it is **one token, not
+two**.
+
+**The `-light` family paints nothing that carries text.**
+
+| token | themes | uses | as text | decorative | verdict |
+|---|---|---|---|---|---|
+| `--accent-light` | market | 6 | 0 | 6 | panel backgrounds, a photo border, a pill border |
+| `--color-primary-light` | 5 property themes | 12 | 0 | 12 | chart wraps, cover washes, one gradient stop |
+| `--color-accent-light` | 5 property themes | 17 | **3** | 14 | see below — the three are a dark-surface case |
+| `--coral-light` | modern | 1 | 0 | 1 | a background |
+| `--teal-light` | teal | **0** | — | — | **declared, never referenced** |
+| `--navy-light` | classic, bold | **0** | — | — | **declared, never referenced** |
+| `--gold-light` | elegant | 11 | 4 | 7 | not brand-derived — elegant's fixed gold, outside this question |
+
+The three text uses of `--color-accent-light` are all in `classic` — `.cover-property-type`,
+`.analysis-intro-title`, `.range-stat-label` — and all three sit on a **dark** panel (their
+siblings are `rgba(255,255,255,0.8)` on the same surface). So they are not a counterexample; they
+are the same case as the row below, wearing the wrong token name.
+
+**Conclusion: `-light` is decorative and needs no brand derivation.** `tint` covers the pale
+backgrounds and `primary_dark` the darker washes. Nothing in this family needs a contrast
+guarantee, and the token set is not short on its account.
+
+**The `-on-dark` family is text, every time.**
+
+| token | themes | uses | as text | what it paints |
+|---|---|---|---|---|
+| `--teal-on-dark` | teal | 10 | 10 | cover labels, section headings, stat numbers |
+| `--coral-on-dark` | modern | 4 | 4 | cover label, aerial-card headings |
+| `--accent-on-dark` | market | 1 | 1 | the header band's highlighted span |
+| `--navy-on-dark` | classic, bold | **0** | — | **declared, never referenced** |
+
+**So the gap is one token: a brand value readable on a DARK surface.** `primary_ink` guarantees
+≥4.5:1 **on white**; §3.1 has no concept of a dark surface at all, while three property themes and
+the market header put brand-coloured text on one. `on_primary` is not it — that is text on a
+*brand fill*, not brand text on a dark neutral.
+
+Not proposing a derivation here, per the instruction. What the decision needs to settle: whether
+the dark surface is a fixed neutral the token can be derived against (the live
+`compute_color_roles` assumes `#18235c`, and the themes' actual darks are `#18235c`, `#0f1a45`,
+`#0b0f1a`, `#1a1f36`) or a per-theme value the derivation has to take as an argument. **[JERRY]**
+
+**Two more AA failures, found by this survey and belonging to this entry:**
+
+| where | value | on | ratio |
+|---|---|---|---|
+| market `.header-subtitle span` | `#5eead4` | the header gradient's far end, `#0d9488` | **2.53 FAIL** |
+| classic `.analysis-intro-title` etc. | `#a89070` | the navy panel, `#1b365d` | **3.98 FAIL** |
+
+The market one is conditional and stated as such: the band is
+`linear-gradient(135deg, header-bg 0%, header-bg 50%, primary-color 100%)`, so it measures 9.90:1
+against `#18235c` at the left and 2.53:1 where the teal takes over. Whether real text lands past
+the midpoint depends on layout and has not been rendered to check — but a token whose contrast
+depends on where on the band it falls is not a token that can be verified, which is the defect
+regardless of today's layout.
+
+**Three dead tokens** — `--teal-light`, `--navy-light`, `--navy-on-dark` — are declared and never
+referenced. They sit in the 111-literal baseline and are the **only** literals that can be retired
+with provably zero visual change, since nothing reads them. Worth taking first for that reason.
 
 
 ---
@@ -4463,6 +4574,12 @@ Violet at 4.83 and 5.70); nothing shipping is currently affected.
 
 This is a finding about the spec, not a bug in the code. `themes.py` implements §3.1 exactly.
 
+> **THE SPEC WAS WRONG, AND ITS AUTHOR SAYS SO.** Recorded at Jerry's instruction, 2026-09-23:
+> *"D-098 is my error — I approved an acceptance criterion §3.1 can't satisfy."* Noted here
+> because the natural reading of an unsatisfiable test is that the implementation is behind, and
+> the natural response is to change the implementation until the test passes. It is the criterion
+> that is behind. Nothing in `themes.py` should be adjusted to close this entry.
+
 **XFAILS THIS DEFECT GATES** (§0.6: two-way link, or an xfail is a skip with better manners).
 
 - `apps/worker/tests/test_themes.py::test_on_primary_clears_aa_against_the_fill_for_5000_random_colours`
@@ -4471,14 +4588,86 @@ Strict, so it breaks the build the day the derivation can satisfy it. The achiev
 asserted live alongside it by `test_on_primary_always_reaches_the_achievable_ceiling`, so a change
 that makes `on_primary` *worse* still fails today.
 
-**Remedies, recorded without choosing one** — the choice is a design decision, **[JERRY]**:
+**DECIDED, 2026-09-23 (Jerry). `on_primary` may NOT adjust the fill.**
+
+> *"The fill is the affiliate's chosen colour and the one value in the system that's theirs.
+> Contrast is satisfied by choosing the text, never by moving the brand. If that makes a pair
+> unreachable, that's D-098's ~5% and it degrades to the best available contrast with the bound
+> asserted — not to a modified brand."*
+
+This closes the only remedy that would have delivered §4.2's property, so the property stays
+unreachable **by design** rather than by omission. That is the point of recording it: a later
+reader who finds the strict xfail and reasons "we just need `on_primary` to nudge the fill" is
+about to undo a decision, not fix an oversight.
+
+`primary` is now a **constraint**, not merely an output — it is returned exactly as given, and
+`test_luxury_estates_is_fixed_specifically` already asserts that for the one theme where the
+temptation is strongest. A test naming the rule in general terms is worth adding when this entry
+is next touched.
+
+**Remedies still open**, all three of them documentation-shaped rather than code-shaped:
 
 | option | cost | note |
 |---|---|---|
-| **Let `on_primary` adjust the fill** — lighten or darken `primary` until the pair clears 4.5 | the fill is no longer exactly the affiliate's colour | guarantees the property; `primary_ink` already does this in the other direction, and white on `primary_ink` always clears 4.5 by symmetry |
+| **Accept 4.27 and say so** | the shortfall is undocumented outside this entry | cheapest; the measurement is already here, and the live test asserts the achievable bound |
 | **Accept 3:1 for this pair** | none | WCAG AA asks 3:1 for large text and UI components, and `on_primary` mostly carries badge and button labels; needs the type sizes checked, not assumed |
-| **Restrict the picker** | affiliates lose ~5% of the colour space | §3.1 explicitly promises the opposite: *"the picker needs no restrictions"* |
-| **Accept 4.27 and say so** | the shortfall is undocumented outside this entry | cheapest; the measurement is already here |
+| **Restrict the picker** | affiliates lose ~5% of the colour space | §3.1 explicitly promises the opposite: *"the picker needs no restrictions"*, and the decision above is the same principle — so this is listed for completeness and is probably already ruled out by it |
+| ~~Let `on_primary` adjust the fill~~ | — | **REJECTED above.** |
+
+
+---
+
+### D-099 — the readability helpers target 3.0:1 while their own docstring says 4.5, and hand back unchecked values
+
+**Severity:** WRONG · **Affects:** every property PDF and market PDF; the email until this branch
+**Status:** `open`
+
+`property_builder._ensure_readable_on_light` and `_ensure_readable_on_dark` exist to make a brand
+colour readable. Neither does.
+
+**The threshold is 3.0.** `_ensure_readable_on_dark`'s docstring reads *"Target: WCAG AA (contrast
+ratio ≥ 4.5) or at minimum 3.0 for large text."* Its code checks `if ratio >= 3.0` on entry and
+`if new_ratio >= 3.0` in the loop. 4.5 appears nowhere in either function. **The docstring states
+one threshold and the code enforces another**, which is the same shape as D-083 and D-088 — a
+comment that is the only place a contract is written down, disagreeing with the code under it.
+
+**Measured**, through `compute_color_roles(hex, dark_bg=hex)`:
+
+| brand | `theme_color_on_light` | on white | `theme_color_on_dark` | on the fill |
+|---|---|---|---|---|
+| Demo Title `#DC2626` | `#DC2626` | 4.83 ok | `#ffbaba` | **2.99** |
+| Luxury Estates `#0D9488` | `#0D9488` unchanged | **3.74** | `#4effef` | **3.01** |
+| Coastal `#0E7490` | `#0E7490` | 5.36 ok | `#50d9ff` | **3.24** |
+| Amber `#F59E0B` | `#cc8309` | **3.08** | `#ffdda4` | **1.65** |
+| Lime `#84CC16` | `#69a311` | **3.07** | `#e1ffb4` | **1.80** |
+| Violet `#7C3AED` | `#7C3AED` | 5.70 ok | `#ccaeff` | **3.00** |
+
+`theme_color_on_dark` **never clears 4.5 on any theme** — it cannot, because it stops at 3.0. The
+three that pass on light do so by being readable already; the function changed nothing.
+
+**Two more faults in the same twenty lines:**
+
+- **They return an unchecked value.** After 30 iterations both `return` whatever the loop last
+  produced, without re-testing. A caller cannot distinguish "readable" from "gave up", and there is
+  no log line either way.
+- **`_ensure_readable_on_dark` desaturates as it brightens** (`s -= 0.02` per step). Thirty steps
+  removes 0.6 of saturation, so the escape hatch from an unreadable brand colour is to stop it being
+  the brand colour.
+
+**And it was called against the wrong background.** `email/template.py` computed
+`compute_color_roles(accent_color, dark_bg=primary_color)` and rendered the result on a panel
+painted with `accent_color`. Derived against one surface, displayed on another. That call is gone
+on this branch; the same pattern should be checked wherever `compute_color_roles` is still used.
+
+**Not fixed here.** `worker.themes.derive_theme` (Workstream A) does this correctly and the email
+now uses it; `compute_color_roles` remains live on both PDF paths (`property_builder.py:1247`,
+`market_builder.py:25`) and replacing it there moves rendered output, which is D-097's migration
+and is reviewed per surface. Filed so the migration has a defect to close rather than a preference
+to justify.
+
+> Worth stating plainly: **this is why measuring found what reviewing did not.** The function is
+> named `_ensure_readable_on_light`, its docstring cites WCAG AA, and it is called on every render.
+> Everything about it reads as a guarantee. Only the number is wrong, and only running it says so.
 
 
 
