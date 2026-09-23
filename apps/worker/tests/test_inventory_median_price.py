@@ -168,17 +168,39 @@ def test_the_email_stops_saying_varying_prices():
     )
 
 
-def test_varying_prices_still_appears_when_there_is_genuinely_no_price():
+def test_no_price_is_invented_when_there_is_genuinely_no_price():
     """
-    The fallback is not removed, only made rare. A report with no priced
-    listing has nothing to name, and naming something anyway would be the
-    inventing-a-figure mistake this fix exists to avoid.
+    RESTATED 2026-09-23, DELIBERATELY. This test used to assert the literal
+    string "varying prices", which was the fallback at the time. D-085's fix
+    changed the mechanism: a sentence whose price is missing now DROPS the price
+    clause rather than substituting a stand-in phrase, so the paragraph reads
+    "There are 2 active listings in Glendora right now." instead of "…at a
+    median of varying prices."
+
+    The assertion is rewritten against the test's own stated purpose — *"naming
+    something anyway would be the inventing-a-figure mistake this fix exists to
+    avoid"* — rather than against the wording that happened to implement it. The
+    new behaviour satisfies that purpose more completely: it names nothing at
+    all, and it also cannot produce the borrowed-price failure D-085 describes.
+
+    Recorded at this length because rewriting a test to match new behaviour is
+    exactly how a guard gets quietly removed, and the distinction between that
+    and this is the argument above, not the diff.
     """
     result = build([active(None), active(None)])
     metrics = dict(result["metrics"])
     metrics["total_active"] = result["counts"]["Active"]
     metrics["total_closed"] = result["counts"]["Closed"]
-    assert "varying prices" in insight(metrics)
+    text = insight(metrics)
+
+    assert "$" not in text, f"a price appeared from a priceless report: {text}"
+    assert "None" not in text
+    # and the sentence still reads as a sentence
+    assert "  " not in text and " ." not in text, repr(text)
+    assert text.strip().endswith(".")
+    assert str(result["counts"]["Active"]) in text, (
+        "the count is still reported; only the price clause goes"
+    )
 
 
 # ── the coupling this fix must not trip ─────────────────────────────────────

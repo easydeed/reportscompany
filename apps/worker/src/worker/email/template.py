@@ -51,6 +51,7 @@ import os
 from typing import Dict, Optional, TypedDict, Tuple, List
 
 from worker.property_builder import compute_color_roles, normalize_hex_color, safe_url
+from worker.themes import contrast as _contrast, derive_theme
 
 
 def hex_to_rgba(hex_color: str, opacity: float) -> str:
@@ -199,6 +200,102 @@ def _format_percent(value: Optional[float]) -> str:
 # per-recipient substitution would find nothing to replace, and send.py:229
 # would refuse to send at all.
 _UNSUB_URL_SENTINEL = "__TRENDYREPORTS_UNSUBSCRIBE_URL__"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Colour roles — Workstream A's token layer, consumed here
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# An affiliate's colour arrives as `primary_color` and `accent_color`. Neither
+# is safe to use as text, and until now both were used as text in about thirty
+# places. Measured across seven brands and eight report types, that produced
+# 1,167 unreadable text runs out of 3,822 — including a Quick Take label at
+# 1.00:1, invisible, whenever an account sets one colour rather than two.
+#
+# The rule these two helpers encode: **a builder derives the role it needs from
+# the colour it was handed.** Not threaded from the caller, because a threaded
+# role can be threaded wrongly — `_build_quick_take` was passed the label colour
+# and the panel colour as independent arguments with nothing relating them, and
+# that is exactly how it came to paint one brand colour on another.
+#
+# Both are free to call repeatedly: `derive_theme` is cached on the colour.
+
+#: The DARKEST light surface this email puts brand text on. Cards are #ffffff,
+#: metric strips #f8fafc, the stat cells #f1f5f9, table rows alternate #f9fafb.
+#: `_ink` targets this one by default, which guarantees every lighter card by
+#: construction: a colour clearing 4.5:1 on #f1f5f9 clears more on white.
+#:
+#: The cost is real and small — an ink can be one 6% step darker than it would
+#: strictly need to be on a white card. That is preferable to threading a
+#: surface through twelve builders, where the failure mode is a builder that
+#: names the wrong one and is off by 0.07 with nothing to show it.
+DARKEST_LIGHT_SURFACE = "#f1f5f9"
+
+
+def _ink(brand_hex: str, on: str = DARKEST_LIGHT_SURFACE) -> str:
+    """
+    The brand colour as TEXT ON A LIGHT SURFACE — `derive_theme`'s `primary_ink`,
+    continued if the surface is not actually white.
+
+    §3.1 defines `primary_ink` as clearing 4.5:1 **on white**, and this email
+    does not put it on white: the metric strips and the agent block are
+    `#f8fafc`, the table rows alternate to `#f9fafb`. Luxury Estates' ink is
+    4.63:1 on white and **4.43:1** on `#f8fafc` — passing the specification and
+    failing the recipient by 0.07.
+
+    So the spec's token is the starting point and this continues the same 6%
+    darkening against the real surface. `derive_theme` is left exactly as
+    specified; the surface correction belongs to the surface that has one.
+
+    That §3.1's ink target assumes a white card while the design ships
+    near-white cards is a finding, recorded on D-097 — the alternative fix is to
+    make the cards white, which is a design decision and not this function's.
+    """
+    ink = derive_theme(brand_hex)["primary_ink"]
+    if _contrast(ink, on) >= 4.5:
+        return ink
+    for _ in range(64):
+        ink = _darken_6pct(ink)
+        if _contrast(ink, on) >= 4.5:
+            return ink
+    return "#14151a"
+
+
+def _on_band(*fills: str) -> str:
+    """
+    What to put on a GRADIENT. Picks whichever of white or near-black has the
+    better worst-case contrast across every stop.
+
+    The masthead is `linear-gradient(115deg, primary 0%, primary 30%, accent
+    100%)` with hardcoded white text. White is fine at the navy end and 1.98:1
+    at the lime end, so a single-colour choice against the first stop is not a
+    choice at all — the text has to survive the whole band. This is the concrete
+    form of the finding on D-097 about the market report's header: a token whose
+    contrast depends on where along the band it falls cannot be verified.
+    """
+    candidates = (derive_theme(fills[0])["on_primary"], "#ffffff", "#14151a")
+    best, best_score = candidates[0], -1.0
+    for c in candidates:
+        score = min(_contrast(c, f) for f in fills)
+        if score > best_score:
+            best, best_score = c, score
+    return best
+
+
+def _darken_6pct(hex_color: str) -> str:
+    h = hex_color.lstrip("#")
+    r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+    f = lambda c: max(0, min(255, int(round(c * 0.94))))  # noqa: E731
+    return "#{:02x}{:02x}{:02x}".format(f(r), f(g), f(b))
+
+
+def _on(fill_hex: str) -> str:
+    """
+    What to put ON a fill of `fill_hex`: whichever of white or near-black scores
+    higher against it. Replaces the hardcoded `#ffffff` that sat on brand fills
+    here — readable on a navy, 1.98:1 on a lime.
+    """
+    return derive_theme(fill_hex)["on_primary"]
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -420,9 +517,10 @@ def _build_hero_stat(value: str, label: str, primary_color: str,
                      trend: str = None, trend_positive: bool = True,
                      sub_label: str = None) -> str:
     """Centered hero stat on light bg card. Ref: V0 email designs."""
+    _role_ink = _ink(primary_color)   # text on a light card, not the raw brand value
     trend_html = ""
     if trend:
-        color = "#16a34a" if trend_positive else "#dc2626"
+        color = "#15803d" if trend_positive else "#dc2626"
         bg = "rgba(34,197,94,0.12)" if trend_positive else "rgba(220,38,38,0.12)"
         arrow = "&#8593;" if trend_positive else "&#8595;"
         trend_html = f'''
@@ -433,12 +531,12 @@ def _build_hero_stat(value: str, label: str, primary_color: str,
                         </td>
                       </tr>
                     </table>'''
-    sub_html = f'<p style="margin: 4px 0 0; font-size: 12px; color: #64748b;">{sub_label}</p>' if sub_label else ""
+    sub_html = f'<p style="margin: 4px 0 0; font-size: 12px; color: #475569;">{sub_label}</p>' if sub_label else ""
     return f'''
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
                   <td style="background-color: #f8fafc; border-radius: 8px; padding: 28px 20px; text-align: center;">
-                    <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 48px; font-weight: 700; color: {primary_color}; line-height: 1;">
+                    <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 48px; font-weight: 700; color: {_role_ink}; line-height: 1;">
                       {value}
                     </p>
                     <p style="margin: 8px 0 0; font-size: 12px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 1px;">
@@ -452,26 +550,48 @@ def _build_hero_stat(value: str, label: str, primary_color: str,
 
 def _build_gallery_count(count: int, label: str, primary_color: str) -> str:
     """Centered pill count badge. Ref: V0 email designs."""
+    _role_on = _on(primary_color)   # the pill is a brand fill; its text is derived
     return f'''
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
                 <tr>
                   <td align="center">
-                    <span style="display: inline-block; background: {primary_color}; color: #ffffff; font-size: 12px; font-weight: 600; padding: 8px 20px; border-radius: 20px;">{count} {label}</span>
+                    <span style="display: inline-block; background: {primary_color}; color: {_role_on}; font-size: 12px; font-weight: 600; padding: 8px 20px; border-radius: 20px;">{count} {label}</span>
                   </td>
                 </tr>
               </table>'''
 
 
 def _build_quick_take(text: str, accent_color: str, primary_color: str = "#18235c") -> str:
-    """Dark navy callout with accent label. Ref: V0 email designs."""
+    """
+    Callout panel painted in the affiliate's primary colour.
+
+    THIS FUNCTION WAS THE WORST CONTRAST DEFECT IN THE PRODUCT. It took the
+    label colour (`accent_color`) and the panel colour (`primary_color`) as two
+    independent arguments with nothing relating them, and painted one brand
+    colour directly on the other:
+
+        #8b5cf6 on #0d9488   1.13:1
+        #dc2626 on #dc2626   1.00:1   <- an account that sets ONE colour
+                                         rather than two gets invisible text
+
+    The master plan recorded this as B3 at 1.4:1 from a sample render. Measured
+    across the six live themes the label runs 1.13–2.14:1, and the body text
+    below it — hardcoded `#ffffff` — runs 1.98:1 on lime and 2.15:1 on amber.
+
+    `accent_color` is now IGNORED for the label. Both text colours derive from
+    the panel, which is the only thing they can be readable against. The
+    parameter is kept so the six call sites need no change and so that anyone
+    reading a call site sees why it no longer matters.
+    """
     if not text:
         return ""
+    on_panel = _on(primary_color)
     return f'''
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
                   <td style="background-color: {primary_color}; padding: 16px 20px; border-radius: 6px;">
-                    <p style="margin: 0 0 6px 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {accent_color}; text-transform: uppercase; letter-spacing: 1px;">Quick Take</p>
-                    <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #ffffff;">
+                    <p style="margin: 0 0 6px 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {on_panel}; text-transform: uppercase; letter-spacing: 1px; opacity: 0.85;">Quick Take</p>
+                    <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: {on_panel};">
                       {text}
                     </p>
                   </td>
@@ -481,6 +601,7 @@ def _build_quick_take(text: str, accent_color: str, primary_color: str = "#18235
 
 def _build_cta(pdf_url: str, accent_color: str, cta_text: str = "View Full Report") -> str:
     """Accent-colored CTA button with VML fallback. Ref: V0 email designs."""
+    on_fill = _on(accent_color)
     return f'''
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
@@ -488,11 +609,11 @@ def _build_cta(pdf_url: str, accent_color: str, cta_text: str = "View Full Repor
                     <!--[if mso]>
                     <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{pdf_url}" style="height:48px;v-text-anchor:middle;width:240px;" arcsize="8%" stroke="f" fillcolor="{accent_color}">
                       <w:anchorlock/>
-                      <center style="color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:14px;font-weight:600;">{cta_text}</center>
+                      <center style="color:{on_fill};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:14px;font-weight:600;">{cta_text}</center>
                     </v:roundrect>
                     <![endif]-->
                     <!--[if !mso]><!-->
-                    <a href="{pdf_url}" target="_blank" style="display: inline-block; background-color: {accent_color}; color: #ffffff; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 6px;">
+                    <a href="{pdf_url}" target="_blank" style="display: inline-block; background-color: {accent_color}; color: {on_fill}; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 6px;">
                       {cta_text}
                     </a>
                     <!--<![endif]-->
@@ -503,6 +624,7 @@ def _build_cta(pdf_url: str, accent_color: str, cta_text: str = "View Full Repor
 
 def _build_section_label(label: str, primary_color: str) -> str:
     """20x2px accent bar + uppercase branded label. Ref: V0 SectionLabel."""
+    _role_ink = _ink(primary_color)   # text on a light card, not the raw brand value
     return f'''
               <table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom: 14px;">
                 <tr>
@@ -510,7 +632,7 @@ def _build_section_label(label: str, primary_color: str) -> str:
                     <div style="width: 20px; height: 2px; background-color: {primary_color}; border-radius: 2px;"></div>
                   </td>
                   <td style="vertical-align: middle;">
-                    <p style="margin: 0; font-size: 11px; font-weight: 700; color: {primary_color}; text-transform: uppercase; letter-spacing: 2px;">
+                    <p style="margin: 0; font-size: 11px; font-weight: 700; color: {_role_ink}; text-transform: uppercase; letter-spacing: 2px;">
                       {label}
                     </p>
                   </td>
@@ -520,6 +642,7 @@ def _build_section_label(label: str, primary_color: str) -> str:
 
 def _build_filter_blurb(filter_text: str, primary_color: str) -> str:
     """Optional report criteria callout."""
+    _role_ink = _ink(primary_color)   # text on a light card, not the raw brand value
     if not filter_text:
         return ""
     bg = hex_to_rgba(primary_color, 0.05)
@@ -528,7 +651,7 @@ def _build_filter_blurb(filter_text: str, primary_color: str) -> str:
                 <tr>
                   <td style="padding: 12px 16px; background-color: {bg}; border-radius: 8px; border-left: 3px solid {primary_color};">
                     <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #44403c;">
-                      <span style="font-weight: 600; color: {primary_color};">Report Criteria:</span> {filter_text}
+                      <span style="font-weight: 600; color: {_role_ink};">Report Criteria:</span> {filter_text}
                     </p>
                   </td>
                 </tr>
@@ -536,7 +659,17 @@ def _build_filter_blurb(filter_text: str, primary_color: str) -> str:
 
 
 def _build_stacked_stats(stats: List[Tuple[str, str]], primary_color: str = "#18235c") -> str:
-    """4-column stats row with Outfit values. Ref: V0 email designs."""
+    """
+    4-column stats row with Outfit values. Ref: V0 email designs.
+
+    B4: the `.metric-card` rule that makes these stack on a phone was defined in
+    the document's <style> block and applied to **zero elements** — along with
+    `.mobile-stack` and `.band-row`. The media query was correct and unreachable,
+    so a four-across strip stayed four-across at 320px and its 10px labels wrapped
+    to three lines. The register called it the highest-impact single fix given the
+    mobile open share, and it is one attribute.
+    """
+    _role_ink = _ink(primary_color)   # text on a light card, not the raw brand value
     if not stats:
         return ""
     cells = ""
@@ -544,9 +677,9 @@ def _build_stacked_stats(stats: List[Tuple[str, str]], primary_color: str = "#18
         bg = "#f8fafc" if i % 2 == 0 else "#f1f5f9"
         border = "border-right: 1px solid #e2e8f0;" if i < min(len(stats), 4) - 1 else ""
         cells += f'''
-                    <td width="25%" style="background-color: {bg}; padding: 16px 12px; text-align: center; {border}">
-                      <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 700; color: {primary_color};">{value}</p>
-                      <p style="margin: 4px 0 0 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.3px;">{label}</p>
+                    <td width="25%" class="metric-card" style="background-color: {bg}; padding: 16px 12px; text-align: center; {border}">
+                      <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 700; color: {_role_ink};">{value}</p>
+                      <p style="margin: 4px 0 0 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: 0.3px;">{label}</p>
                     </td>'''
     return f'''
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
@@ -565,7 +698,7 @@ def _build_trend_stats(stats: List[Tuple[str, str, str, bool]], primary_color: s
     for i, (label, value, trend_text, positive) in enumerate(stats):
         bg = "#ffffff" if i % 2 == 0 else "#fafaf9"
         border = "border-bottom: 1px solid #f5f5f4;" if i < len(stats) - 1 else ""
-        color = "#059669" if positive else "#dc2626"
+        color = "#047857" if positive else "#dc2626"
         arrow = "&#9650;" if positive else "&#9660;"
         trend_html = f'<span style="font-size: 11px; font-weight: 600; color: {color}; margin-left: 12px;"><span style="margin-right: 2px;">{arrow}</span>{trend_text}</span>' if trend_text else ""
         rows += f'''
@@ -610,6 +743,7 @@ def _build_branded_divider(primary_color: str, accent_color: str) -> str:
 
 def _build_yoy_comparison(last_year: List[Tuple[str, str]], this_year: List[Tuple[str, str]], primary_color: str) -> str:
     """Side-by-side Year-over-Year comparison. Ref: V0 market-analytics.tsx
+    _role_ink = _ink(primary_color)   # text on a light card, not the raw brand value
     Each list: [(label, value), ...]"""
     if not last_year or not this_year:
         return ""
@@ -627,7 +761,7 @@ def _build_yoy_comparison(last_year: List[Tuple[str, str]], this_year: List[Tupl
         ty_rows += f'''
                             <tr>
                               <td style="padding: 8px 0;">
-                                <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 20px; font-weight: 700; color: {primary_color};">{val}</p>
+                                <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 20px; font-weight: 700; color: {_role_ink};">{val}</p>
                                 <p style="margin: 2px 0 0; font-size: 11px; color: #78716c;">{label}</p>
                               </td>
                             </tr>'''
@@ -645,7 +779,7 @@ def _build_yoy_comparison(last_year: List[Tuple[str, str]], this_year: List[Tupl
                           </table>
                         </td>
                         <td width="50%" style="padding: 20px; background-color: #ffffff; vertical-align: top;">
-                          <p style="margin: 0 0 16px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; color: {primary_color};">This Year</p>
+                          <p style="margin: 0 0 16px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; color: {_role_ink};">This Year</p>
                           <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                             {ty_rows}
                           </table>
@@ -671,6 +805,7 @@ def _listing_price_str(listing: Dict) -> str:
 
 def _build_photo_card_2x2(listing: Dict, accent_color: str) -> str:
     """Market Narrative 2x2 card. Ref: V0 email-market-snapshot.html"""
+    _role_ink = _ink(accent_color)   # text on a light card, not the raw brand value
     photo = listing.get("hero_photo_url") or ""
     addr = listing.get("street_address") or "Address N/A"
     price_str = _listing_price_str(listing)
@@ -679,13 +814,14 @@ def _build_photo_card_2x2(listing: Dict, accent_color: str) -> str:
                         <tr><td>{photo_html}</td></tr>
                         <tr><td style="padding: 8px 0 0;">
                           <p style="margin: 0; font-size: 12px; color: #333333;">{addr}</p>
-                          <p style="margin: 4px 0 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: bold; color: {accent_color};">{price_str}</p>
+                          <p style="margin: 4px 0 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: bold; color: {_role_ink};">{price_str}</p>
                         </td></tr>
                       </table>'''
 
 
 def _build_gallery_card_large(listing: Dict, accent_color: str) -> str:
     """Gallery 2x2 card: photo on top, info below. Ref: V0 email-reports.html"""
+    _role_ink = _ink(accent_color)   # text on a light card, not the raw brand value
     photo = listing.get("hero_photo_url") or ""
     addr = listing.get("street_address") or "Address N/A"
     city = listing.get("city") or ""
@@ -709,7 +845,7 @@ def _build_gallery_card_large(listing: Dict, accent_color: str) -> str:
                         <tr><td style="padding: 14px;">
                           <p style="margin: 0; font-size: 14px; font-weight: 700; color: #1f2937;">{addr}</p>
                           {f'<p style="margin: 2px 0 0; font-size: 12px; color: #6b7280;">{location}</p>' if location else ''}
-                          <p style="margin: 6px 0 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 20px; font-weight: bold; color: {accent_color};">{price_str}</p>
+                          <p style="margin: 6px 0 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 20px; font-weight: bold; color: {_role_ink};">{price_str}</p>
                           {f'<p style="margin: 4px 0 0; font-size: 12px; color: #6b7280;">{specs}</p>' if specs else ''}
                         </td></tr>
                       </table>'''
@@ -717,6 +853,7 @@ def _build_gallery_card_large(listing: Dict, accent_color: str) -> str:
 
 def _build_gallery_card_compact(listing: Dict, accent_color: str) -> str:
     """Gallery 3x2 card: photo on top, info below. Ref: V0 email-reports.html"""
+    _role_ink = _ink(accent_color)   # text on a light card, not the raw brand value
     photo = listing.get("hero_photo_url") or ""
     addr = listing.get("street_address") or "Address N/A"
     city = listing.get("city") or ""
@@ -738,7 +875,7 @@ def _build_gallery_card_compact(listing: Dict, accent_color: str) -> str:
                         <tr><td style="padding: 12px;">
                           <p style="margin: 0; font-size: 13px; font-weight: 700; color: #1f2937;">{addr}</p>
                           {f'<p style="margin: 2px 0 0; font-size: 11px; color: #6b7280;">{city}</p>' if city else ''}
-                          <p style="margin: 6px 0 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: bold; color: {accent_color};">{price_str}</p>
+                          <p style="margin: 6px 0 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: bold; color: {_role_ink};">{price_str}</p>
                           {f'<p style="margin: 4px 0 0; font-size: 11px; color: #6b7280;">{specs}</p>' if specs else ''}
                         </td></tr>
                       </table>'''
@@ -746,6 +883,7 @@ def _build_gallery_card_compact(listing: Dict, accent_color: str) -> str:
 
 def _build_stacked_property_card(listing: Dict, primary_color: str, accent_color: str) -> str:
     """Full-width card: 240px hero photo, 22px price, description. Ref: V0 single-stacked.tsx"""
+    _role_ink = _ink(primary_color)   # text on a light card, not the raw brand value
     photo = listing.get("hero_photo_url") or ""
     addr = listing.get("street_address") or "Address N/A"
     city = listing.get("city") or ""
@@ -766,12 +904,12 @@ def _build_stacked_property_card(listing: Dict, primary_color: str, accent_color
     badges = ""
     for b in badge_items:
         badge_bg = hex_to_rgba(primary_color, 0.08)
-        badges += f'<td style="padding-right: 6px;"><span style="display: inline-block; padding: 4px 12px; background-color: {badge_bg}; border-radius: 6px; font-size: 11px; font-weight: 500; color: {primary_color};">{b}</span></td>'
+        badges += f'<td style="padding-right: 6px;"><span style="display: inline-block; padding: 4px 12px; background-color: {badge_bg}; border-radius: 6px; font-size: 11px; font-weight: 500; color: {_role_ink};">{b}</span></td>'
     return f'''
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 12px; overflow: hidden; background-color: #ffffff;">
                 <tr><td>{photo_html}</td></tr>
                 <tr><td style="padding: 20px;">
-                  <p style="margin: 0 0 4px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 22px; font-weight: 700; color: {primary_color};">{price_str}</p>
+                  <p style="margin: 0 0 4px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 22px; font-weight: 700; color: {_role_ink};">{price_str}</p>
                   <p style="margin: 0 0 2px; font-size: 15px; font-weight: 600; color: #1c1917;">{addr}</p>
                   <p style="margin: 0 0 16px; font-size: 12px; color: #78716c;">{location}</p>
                   <table role="presentation" cellpadding="0" cellspacing="0"><tr>{badges}</tr></table>
@@ -781,6 +919,7 @@ def _build_stacked_property_card(listing: Dict, primary_color: str, accent_color
 
 def _build_photo_card_with_badge(listing: Dict, primary_color: str, accent_color: str, badge_text: str = "Sold") -> str:
     """Card with status badge below photo. Ref: V0 email-sales-inventory.html"""
+    _role_ink = _ink(accent_color)   # text on a light card, not the raw brand value
     photo = listing.get("hero_photo_url") or ""
     addr = listing.get("street_address") or "Address N/A"
     beds = listing.get("bedrooms")
@@ -789,19 +928,25 @@ def _build_photo_card_with_badge(listing: Dict, primary_color: str, accent_color
     photo_html = f'<img src="{photo}" alt="{addr}" width="260" height="130" style="display: block; width: 100%; height: 130px; object-fit: cover; border-radius: 4px;">' if photo else '<div style="width: 100%; height: 130px; background: #f5f5f4; border-radius: 4px;"></div>'
     specs = f'{beds}bd / {baths}ba' if beds and baths else ""
     badge_lower = badge_text.lower()
-    badge_bg = "#dc2626" if badge_lower == "sold" else "#16a34a" if badge_lower == "active" else "#f59e0b" if badge_lower == "pending" else accent_color
+    # #15803d / #b45309 rather than #16a34a / #f59e0b: white on the brighter
+    # pair measures 3.30:1 and 2.15:1. Both replacements are already used in the
+    # PDF templates, so the palette does not grow. §3.3 — status colours are
+    # reserved and never drawn from the brand, which is why they are literals
+    # here and exempt from the template-colour lint by role.
+    badge_bg = "#dc2626" if badge_lower == "sold" else "#15803d" if badge_lower == "active" else "#b45309" if badge_lower == "pending" else _ink(accent_color)
     return f'''<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff;">
                         <tr><td>{photo_html}</td></tr>
                         <tr><td style="padding: 8px 0 0;">
                           <span style="display: inline-block; padding: 3px 8px; background-color: {badge_bg}; color: #ffffff; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 3px;">{badge_text}</span>
                           <p style="margin: 6px 0 0; font-size: 10px; color: #475569;">{addr}</p>
-                          <p style="margin: 4px 0 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; font-weight: bold; color: {accent_color};">{price_str}</p>
+                          <p style="margin: 4px 0 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; font-weight: bold; color: {_role_ink};">{price_str}</p>
                         </td></tr>
                       </table>'''
 
 
 def _build_property_row(listing: Dict, accent_color: str, is_last: bool = False) -> str:
     """Photo-left row with NEW badge. Ref: V0 email-price-bands.html Featured This Week"""
+    _role_ink = _ink(accent_color)   # text on a light card, not the raw brand value
     photo = listing.get("hero_photo_url") or ""
     addr = listing.get("street_address") or "Address N/A"
     beds = listing.get("bedrooms")
@@ -830,7 +975,7 @@ def _build_property_row(listing: Dict, accent_color: str, is_last: bool = False)
                           <td style="vertical-align: middle; padding: 12px;">
                             <p style="margin: 0 0 2px; font-size: 13px; font-weight: 700; color: #1a2744;">{addr}</p>
                             <p style="margin: 0 0 4px; font-size: 11px; color: #6b7280;">{specs}</p>
-                            <p style="margin: 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: bold; color: {accent_color};">{price_str}</p>
+                            <p style="margin: 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: bold; color: {_role_ink};">{price_str}</p>
                           </td>
                           {badge_html}
                         </tr>
@@ -839,7 +984,17 @@ def _build_property_row(listing: Dict, accent_color: str, is_last: bool = False)
 
 def _build_sales_table(listings: List[Dict], primary_color: str,
                        accent_color: str = "#0d9488") -> str:
-    """5-column data table with dark header. Ref: V0 email-sales-inventory.html."""
+    """
+    5-column data table with a brand-coloured header. Ref: V0
+    email-sales-inventory.html.
+
+    Two roles, two derivations: the header cells sit ON the brand fill, and the
+    price column is brand-coloured text on a white or near-white row. Hardcoding
+    `#ffffff` for the first and the raw accent for the second put five header
+    labels at 1.98:1 on lime and every price at 3.74:1 on Luxury Estates.
+    """
+    _role_on_header = _on(primary_color)
+    _role_price_ink = _ink(accent_color)
     if not listings:
         return ""
     rows = ""
@@ -856,7 +1011,9 @@ def _build_sales_table(listings: List[Dict], primary_color: str,
         bg = "#ffffff" if i % 2 == 0 else "#f9fafb"
         status = listing.get("status") or ""
         status_lower = status.lower() if status else ""
-        badge_color = "#dc2626" if status_lower == "sold" else "#16a34a" if status_lower == "active" else "#f59e0b" if status_lower == "pending" else ""
+        # See the note on `badge_bg` above: white on #16a34a is 3.30:1 and on
+        # #f59e0b is 2.15:1.
+        badge_color = "#dc2626" if status_lower == "sold" else "#15803d" if status_lower == "active" else "#b45309" if status_lower == "pending" else ""
         badge_html = f' <span style="display: inline-block; background: {badge_color}; color: #ffffff; font-size: 8px; font-weight: 700; padding: 2px 6px; border-radius: 3px; margin-left: 6px; text-transform: uppercase;">{status}</span>' if status and badge_color else ""
         border = "border-bottom: 1px solid #f1f5f9;" if i < len(listings) - 1 else ""
         rows += f'''
@@ -864,18 +1021,18 @@ def _build_sales_table(listings: List[Dict], primary_color: str,
                           <td style="background: {bg}; padding: 12px 14px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; color: #334155; {border}">{addr}{badge_html}</td>
                           <td style="background: {bg}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; color: #475569; text-align: center; {border}">{specs}</td>
                           <td style="background: {bg}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; color: #475569; text-align: right; {border}">{sqft_str}</td>
-                          <td style="background: {bg}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 600; color: {accent_color}; text-align: right; {border}">{price_str}</td>
+                          <td style="background: {bg}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 600; color: {_role_price_ink}; text-align: right; {border}">{price_str}</td>
                           <td style="background: {bg}; padding: 12px 14px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; color: #475569; text-align: center; {border}">{dom}</td>
                         </tr>'''
-    hdr_style = f"background: {primary_color}; padding: 12px {{pad}}; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;"
+    hdr_style = f"background: {primary_color}; padding: 12px {{pad}}; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {_on(primary_color)}; text-transform: uppercase; letter-spacing: 0.5px;"
     return f'''
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden;">
                 <tr>
-                  <td style="background: {primary_color}; padding: 12px 14px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px;">Address</td>
-                  <td style="background: {primary_color}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">Bd/Ba</td>
-                  <td style="background: {primary_color}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Sq Ft</td>
-                  <td style="background: {primary_color}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Price</td>
-                  <td style="background: {primary_color}; padding: 12px 14px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">DOM</td>
+                  <td style="background: {primary_color}; padding: 12px 14px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {_role_on_header}; text-transform: uppercase; letter-spacing: 0.5px;">Address</td>
+                  <td style="background: {primary_color}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {_role_on_header}; text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">Bd/Ba</td>
+                  <td style="background: {primary_color}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {_role_on_header}; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Sq Ft</td>
+                  <td style="background: {primary_color}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {_role_on_header}; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Price</td>
+                  <td style="background: {primary_color}; padding: 12px 14px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {_role_on_header}; text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">DOM</td>
                 </tr>
                 {rows}
               </table>'''
@@ -939,8 +1096,8 @@ def _render_adaptive_listings(
             c2 = cards[r + 1] if r + 1 < len(cards) else ""
             rows += (
                 f'<tr>'
-                f'<td width="50%" style="padding: 0 4px 8px 0; vertical-align: top;">{c1}</td>'
-                f'<td width="50%" style="padding: 0 0 8px 4px; vertical-align: top;">{c2}</td>'
+                f'<td width="50%" class="mobile-stack" style="padding: 0 4px 8px 0; vertical-align: top;">{c1}</td>'
+                f'<td width="50%" class="mobile-stack" style="padding: 0 0 8px 4px; vertical-align: top;">{c2}</td>'
                 f'</tr>'
             )
         return (
@@ -959,7 +1116,7 @@ def _render_adaptive_listings(
                     else ("padding: 0 0 6px 3px;" if c == 2 else "padding: 0 3px 6px 3px;")
                 )
                 card = cards[idx] if idx < len(cards) else ""
-                cells += f'<td width="33%" style="{pad} vertical-align: top;">{card}</td>'
+                cells += f'<td width="33%" class="mobile-stack" style="{pad} vertical-align: top;">{card}</td>'
             rows += f'<tr>{cells}</tr>'
         return (
             '<table role="presentation" cellpadding="0" cellspacing="0" '
@@ -983,8 +1140,8 @@ def _build_2x2_photo_grid(listings: List[Dict], accent_color: str) -> str:
         c2 = cards[r + 1] if r + 1 < len(cards) else ""
         rows += f'''
                 <tr>
-                  <td width="50%" style="padding: 0 4px 8px 0; vertical-align: top;">{c1}</td>
-                  <td width="50%" style="padding: 0 0 8px 4px; vertical-align: top;">{c2}</td>
+                  <td width="50%" class="mobile-stack" style="padding: 0 4px 8px 0; vertical-align: top;">{c1}</td>
+                  <td width="50%" class="mobile-stack" style="padding: 0 0 8px 4px; vertical-align: top;">{c2}</td>
                 </tr>'''
     return f'''
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
@@ -1009,8 +1166,8 @@ def _build_gallery_2x2_body(
         c2 = cards[r + 1] if r + 1 < len(cards) else ""
         rows += f'''
                 <tr>
-                  <td width="50%" style="padding: 0 4px 8px 0; vertical-align: top;">{c1}</td>
-                  <td width="50%" style="padding: 0 0 8px 4px; vertical-align: top;">{c2}</td>
+                  <td width="50%" class="mobile-stack" style="padding: 0 4px 8px 0; vertical-align: top;">{c1}</td>
+                  <td width="50%" class="mobile-stack" style="padding: 0 0 8px 4px; vertical-align: top;">{c2}</td>
                 </tr>'''
     body += f'''
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
@@ -1039,7 +1196,7 @@ def _build_gallery_3x2_body(
             idx = r + c
             pad = "padding: 0 3px 6px 0;" if c == 0 else ("padding: 0 0 6px 3px;" if c == 2 else "padding: 0 3px 6px 3px;")
             card = cards[idx] if idx < len(cards) else ""
-            cells += f'<td width="33%" style="{pad} vertical-align: top;">{card}</td>'
+            cells += f'<td width="33%" class="mobile-stack" style="{pad} vertical-align: top;">{card}</td>'
         rows += f'<tr>{cells}</tr>'
     body += f'''
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
@@ -1110,8 +1267,8 @@ def _build_closed_sales_body(
             c2 = cards[r + 1] if r + 1 < len(cards) else ""
             rows += f'''
                 <tr>
-                  <td width="50%" style="padding: 0 4px 8px 0; vertical-align: top;">{c1}</td>
-                  <td width="50%" style="padding: 0 0 8px 4px; vertical-align: top;">{c2}</td>
+                  <td width="50%" class="mobile-stack" style="padding: 0 4px 8px 0; vertical-align: top;">{c1}</td>
+                  <td width="50%" class="mobile-stack" style="padding: 0 0 8px 4px; vertical-align: top;">{c2}</td>
                 </tr>'''
         body += f'''
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
@@ -1165,8 +1322,8 @@ def _build_analytics_body(
 
             if is_highlight:
                 bar_bg = accent_color
-                label_style = f"font-size: 13px; font-weight: 700; color: {primary_color};"
-                pct_style = f"font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: bold; color: {accent_color};"
+                label_style = f"font-size: 13px; font-weight: 700; color: {_ink(primary_color, '#f8fafc')};"
+                pct_style = f"font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: bold; color: {_ink(accent_color, '#f8fafc')};"
             else:
                 bar_bg = primary_color
                 label_style = "font-size: 13px; font-weight: 600; color: #1f2937;"
@@ -1209,8 +1366,8 @@ def _build_analytics_body(
         for sm_label, sm_value in supporting_metrics[:3]:
             cells += f'''
                     <td width="{pct}" style="padding: 16px 12px; text-align: center; background-color: #f8fafc;">
-                      <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 700; color: {primary_color};">{sm_value}</p>
-                      <p style="margin: 4px 0 0; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.3px;">{sm_label}</p>
+                      <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 700; color: {_ink(primary_color, '#f1f5f9')};">{sm_value}</p>
+                      <p style="margin: 4px 0 0; font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: 0.3px;">{sm_label}</p>
                     </td>'''
         body += f'''
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
@@ -1242,6 +1399,7 @@ def _build_truncation_note(
     when there are listings hidden behind the cap AND we have a PDF
     URL to link to.
     """
+    _role_ink = _ink(primary_color)   # text on a light card, not the raw brand value
     if not pdf_url or total_available <= showing or showing <= 0:
         return ""
     return f'''
@@ -1250,7 +1408,7 @@ def _build_truncation_note(
                 <td align="center" style="padding: 8px 0 16px;">
                   <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; color: #6b7280;">
                     Showing {showing} of {total_available} listings.
-                    <a href="{pdf_url}" style="color: {primary_color}; text-decoration: underline;">View all in the PDF &rarr;</a>
+                    <a href="{pdf_url}" style="color: {_role_ink}; text-decoration: underline;">View all in the PDF &rarr;</a>
                   </p>
                 </td>
               </tr>
@@ -1262,6 +1420,7 @@ def _build_pdf_cta(pdf_url: Optional[str], primary_color: str) -> str:
     agent footer on every email."""
     if not pdf_url:
         return ""
+    _role_on = _on(primary_color)   # the button is a brand fill
     return f'''
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 24px auto;">
               <tr>
@@ -1269,11 +1428,11 @@ def _build_pdf_cta(pdf_url: Optional[str], primary_color: str) -> str:
                   <!--[if mso]>
                   <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{pdf_url}" style="height:48px;v-text-anchor:middle;width:260px;" arcsize="17%" stroke="f" fillcolor="{primary_color}">
                     <w:anchorlock/>
-                    <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;">📄 View Full PDF</center>
+                    <center style="color:{_role_on};font-family:Arial,sans-serif;font-size:14px;font-weight:bold;">📄 View Full PDF</center>
                   </v:roundrect>
                   <![endif]-->
                   <!--[if !mso]><!-->
-                  <a href="{pdf_url}" style="display: inline-block; padding: 14px 28px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px;">
+                  <a href="{pdf_url}" style="display: inline-block; padding: 14px 28px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; color: {_role_on}; text-decoration: none; border-radius: 8px;">
                     📄 View Full PDF
                   </a>
                   <!--<![endif]-->
@@ -1667,6 +1826,63 @@ def _get_core_indicators(metrics: Dict) -> Tuple[
     )
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# D-085 — a sentence must name the price it means
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# THREE functions resolved one variable by precedence:
+#
+#     median_price = metrics.get("median_close_price") or metrics.get("median_list_price")
+#
+# and spent it on sentences that want different things — "homes SOLD at a median
+# of", "median ASKING price of", "at a median SALE price". Every one of them
+# renders correctly today and none is guaranteed to: the precedence happens to
+# match because of which metrics each builder emits. `market_snapshot` emits
+# both, so close wins and its sale sentences are right; `new_listings` emits only
+# a list price, so its asking sentence is right. Correct by coincidence, across
+# two files, with nothing stating the dependency.
+#
+# The entry recorded this in `_get_insight_paragraph`. It is also in
+# `_get_quick_take` and `_get_conversation_starter` — three functions and nine
+# sentences, not one and four.
+#
+# What makes it dangerous is the direction of the failure. Adding a close price
+# to `build_inventory_result` is an obviously correct change to a builder, and it
+# would silently turn *"42 active listings at a median of $450,000"* into a
+# figure describing homes that have already sold. Demonstrated before the fix: a
+# metrics dict carrying only a list price rendered *"18 homes sold at a median of
+# $825K"* — the asking price, described as a sale price.
+#
+# So the kind is named at every site, and a sentence whose price is missing
+# changes its WORDING rather than borrowing the other kind. A wrong figure reads
+# as authoritative; a missing one reads as missing.
+
+SOLD = "sold"       #: median_close_price — what homes actually transacted at
+ASKING = "asking"   #: median_list_price — what sellers are asking
+EITHER = "either"    #: a sentence that genuinely does not distinguish
+
+
+def _median(kind: str, metrics: Dict) -> Optional[str]:
+    """
+    A formatted median price of the requested KIND, or None.
+
+    None means "this sentence cannot be written as drafted" — never "use the
+    other one". Returning a fallback price here would put the precedence bug
+    back inside the function built to remove it.
+    """
+    close = metrics.get("median_close_price")
+    lst = metrics.get("median_list_price")
+    if kind == SOLD:
+        value = close
+    elif kind == ASKING:
+        value = lst
+    elif kind == EITHER:
+        value = close or lst
+    else:
+        raise ValueError(f"unknown price kind: {kind!r}")
+    return _format_price_clean(value) if value else None
+
+
 def _get_insight_paragraph(
     report_type: str, 
     area: str, 
@@ -1723,6 +1939,14 @@ def _get_insight_paragraph(
     # Build insight text based on report type
     price_str = _format_price_clean(median_price) if median_price else "varying prices"
     dom_str = f"{avg_dom:.0f} days" if avg_dom else "typical time"
+
+    # D-085 clause fragments. Each names its kind; each collapses to "" when the
+    # metric it needs is absent, so the sentence loses a clause rather than
+    # gaining a wrong number.
+    _sold = _median(SOLD, metrics)
+    _asking = _median(ASKING, metrics)
+    _sold_at = f" at a median of {_sold}" if _sold else ""
+    _asking_of = f"with a median asking price of {_asking}" if _asking else ""
     
     ctl_str = f"{ctl:.1f}%" if ctl else None
     ppsf_str = f"${avg_ppsf:,.0f}/sq ft" if avg_ppsf else None
@@ -1758,7 +1982,7 @@ def _get_insight_paragraph(
         if moi and moi < 3:
             return (
                 f"Great news for sellers in {area}—the market is moving fast. "
-                f"With only {moi:.1f} months of inventory and {total_closed} homes sold at a median of {price_str}, "
+                f"With only {moi:.1f} months of inventory and {total_closed} homes sold{_sold_at}, "
                 f"buyers are competing for well-priced properties. "
                 f"Homes are averaging {dom_str} on market, which means pricing right from day one is critical. "
                 f"For buyers, acting decisively and coming in with strong offers is the best strategy in this environment."
@@ -1768,13 +1992,14 @@ def _get_insight_paragraph(
                 f"Buyers have excellent options in {area} right now. "
                 f"With {moi:.1f} months of inventory and homes averaging {dom_str} on market, "
                 f"there's room to find the perfect fit without rushing. "
-                f"The median sale price sits at {price_str}, and sellers may be more open to negotiation. "
+                + (f"The median sale price sits at {_sold}, and sellers may be more open to negotiation. "
+                   if _sold else "Sellers may be more open to negotiation. ") +
                 f"For sellers, competitive pricing and strong presentation are essential to stand out in a market with more choices."
             )
         else:
             return (
-                f"Healthy activity in {area} this month—{total_closed} families found their new home "
-                f"at a median price of {price_str}. "
+                f"Healthy activity in {area} this month—{total_closed} families found their new home"
+                + (f" at a median price of {_sold}. " if _sold else ". ") +
                 f"Homes are averaging {dom_str} on market{moi_with_clause}, "
                 + (
                     "suggesting a balanced environment for both buyers and sellers. "
@@ -1789,8 +2014,8 @@ def _get_insight_paragraph(
 
     elif report_type == "new_listings":
         return (
-            f"Fresh opportunities in {area}—{total_active} new properties just hit the market "
-            f"with a median asking price of {price_str}. "
+            f"Fresh opportunities in {area}—{total_active} new properties just hit the market"
+            + (f" {_asking_of}. " if _asking else ". ") +
             f"Current inventory is averaging {dom_str} on market, "
             f"which signals healthy buyer interest without extreme urgency. "
             f"For buyers, this is a strong window to tour and compare before the best options go under contract. "
@@ -1801,28 +2026,41 @@ def _get_insight_paragraph(
         if moi and moi < 3:
             return (
                 f"Inventory is tight in {area} with just {moi:.1f} months of supply—well below the balanced threshold. "
-                f"{total_active} active listings at a median of {price_str} means competition is real. "
+                + (f"{total_active} active listings at a median of {_asking} means competition is real. "
+                   if _asking else f"{total_active} active listings means competition is real. ") +
                 f"Homes are moving in an average of {dom_str}, rewarding buyers who act quickly with strong offers. "
                 f"For sellers, this is an excellent time to list—limited supply is keeping upward pressure on prices."
             )
         elif moi and moi > 6:
             return (
                 f"You have options in {area}—{total_active} active listings and {moi:.1f} months of inventory "
-                f"means time to find exactly what you're looking for at a median of {price_str}. "
+                + (f"means time to find exactly what you're looking for at a median of {_asking}. "
+                   if _asking else "means time to find exactly what you're looking for. ") +
                 f"Homes are averaging {dom_str} on market, giving buyers room to negotiate. "
                 f"Sellers should focus on pricing strategically and making homes show-ready to attract serious offers "
                 f"in a market where buyers have the luxury of comparison."
             )
         else:
+            # Assembled then terminated, rather than each branch carrying its
+            # own ending. Two seams came out of doing it the other way: the
+            # no-price branch appended "right now" to a clause that already said
+            # it ("in Glendora right now right now"), and stripping that left a
+            # space before the full stop. Building the clauses and punctuating
+            # once is the shape that cannot produce either.
+            _opening = (
+                f"The {area} market is well-balanced right now with {total_active} active listings"
+                if _has_moi
+                # "well-balanced" is an inference from moi sitting between 3 and
+                # 6. With no figure, report the count without the verdict.
+                else f"There are {total_active} active listings in {area} right now"
+            )
+            _clauses = " ".join(
+                part for part in (moi_and_clause.strip(),
+                                  f"at a median of {_asking}" if _asking else "")
+                if part
+            )
             return (
-                (
-                    f"The {area} market is well-balanced right now with {total_active} active listings "
-                    if _has_moi
-                    # "well-balanced" is an inference from moi sitting between 3
-                    # and 6. With no figure, report the count without the verdict.
-                    else f"There are {total_active} active listings in {area} right now "
-                )
-                + f"{moi_and_clause}at a median of {price_str}. "
+                (f"{_opening} {_clauses}. " if _clauses else f"{_opening}. ")
                 + f"Homes are averaging {dom_str} on market—neither rushed nor stagnant. "
                 f"Buyers can explore confidently without extreme competition, "
                 f"while sellers benefit from consistent demand that rewards well-priced, well-presented homes."
@@ -1831,9 +2069,9 @@ def _get_insight_paragraph(
     elif report_type == "closed":
         ctl_display = f"Buyers paid {ctl_str} of asking price, " if ctl_str else ""
         return (
-            f"The {area} market is active—{total_closed} homes sold in the last {lookback_days} days "
-            f"at a median of {price_str}. "
-            f"{ctl_display}showing confidence in current property values. "
+            f"The {area} market is active—{total_closed} homes sold in the last {lookback_days} days"
+            + (f" at a median of {_sold}. " if _sold else ". ")
+            + f"{ctl_display}showing confidence in current property values. "
             f"Homes closed in an average of {dom_str}, reflecting steady buyer demand. "
             f"For sellers, these results confirm that well-priced properties are finding motivated buyers. "
             f"For buyers, the pace of sales underscores the importance of being prepared to move when the right home appears."
@@ -1843,7 +2081,11 @@ def _get_insight_paragraph(
         return (
             f"Price analysis for {area} over the last {lookback_days} days reveals where the market is most active. "
             f"This report segments listings into price bands to show where inventory and buyer demand concentrate. "
-            f"The median sits at {price_str} with homes averaging {dom_str} on market. "
+            # EITHER, deliberately: "the median" here describes the whole
+            # distribution the bands are cut from, not a sale or an ask.
+            + (f"The median sits at {_median(EITHER, metrics)} with homes averaging {dom_str} on market. "
+               if _median(EITHER, metrics) else f"Homes are averaging {dom_str} on market. ")
+            +
             f"Bands with faster turnover indicate stronger demand—useful for both buyers targeting competitive price points "
             f"and sellers positioning their listing price for maximum interest."
         )
@@ -1866,7 +2108,8 @@ def _get_insight_paragraph(
         else:
             return (
                 f"The newest listings hitting the market in {area}—{total_listings} properties "
-                f"listed in the last {lookback_days} days at a median of {price_str}. "
+                + (f"listed in the last {lookback_days} days at a median of {_asking}. "
+                   if _asking else f"listed in the last {lookback_days} days. ") +
                 f"Prices range from {min_str} to {max_str}, offering options across multiple budgets. "
                 f"Homes are averaging {dom_str} on market, so there's time to compare—but the standouts won't last. "
                 f"Let me know which properties interest you and I'll arrange private showings."
@@ -1912,22 +2155,22 @@ def _get_quick_take(report_type: str, area: str, metrics: Dict) -> str:
             return f"Seller's market conditions: {moi:.1f} months of inventory indicates strong demand in {area}."
         elif moi and moi > 6:
             return f"Buyer-favorable conditions: {moi:.1f} months of inventory provides negotiating leverage in {area}."
-        elif total_closed and price_str:
-            return f"{total_closed} closed transactions at {price_str} median price point in {area}."
+        elif total_closed and _median(SOLD, metrics):
+            return f"{total_closed} closed transactions at {_median(SOLD, metrics)} median price point in {area}."
         else:
             return f"Current market conditions and key indicators for {area}."
     
     elif report_type in ("new_listings", "new_listings_gallery"):
-        if total_active and price_str:
-            return f"{total_active} new properties listed in {area} with a median asking price of {price_str}."
+        if total_active and _median(ASKING, metrics):
+            return f"{total_active} new properties listed in {area} with a median asking price of {_median(ASKING, metrics)}."
         elif total_active:
             return f"{total_active} new listings now available in {area}."
         else:
             return f"Latest available properties in {area}."
     
     elif report_type == "closed":
-        if total_closed and price_str:
-            return f"{total_closed} properties closed in {area} at a {price_str} median sale price."
+        if total_closed and _median(SOLD, metrics):
+            return f"{total_closed} properties closed in {area} at a {_median(SOLD, metrics)} median sale price."
         elif total_closed:
             return f"{total_closed} recent closings recorded in {area}."
         else:
@@ -2142,8 +2385,27 @@ def schedule_email_html(
     # result is interpolated both into compute_color_roles (which parses it as
     # hex) and directly into ~48 `style="…"` attributes below. An unparseable
     # value used to raise ValueError out of this function and stop the send.
-    primary_color = normalize_hex_color(brand.get("primary_color"), "#6366f1")  # Indigo
-    accent_color = normalize_hex_color(brand.get("accent_color"), "#8b5cf6")    # Purple
+    # ── The DEFAULTS, and why they changed ─────────────────────────────────
+    # These were #6366f1 (indigo-500) and #8b5cf6 (violet-500). Both sit inside
+    # D-098's unreachable band: the best text colour against #6366f1 scores
+    # 4.47:1 and against #8b5cf6 scores 4.31:1, so no choice of label clears AA
+    # on either. That made the DEFAULT the one brand in the product that could
+    # not be fixed — not a hypothetical 5% of the colour space but the value
+    # every account that has not picked a colour actually ships.
+    #
+    # `on_primary` may not adjust the fill (decided 2026-09-23) because the fill
+    # is the affiliate's colour. A DEFAULT is not: nobody chose it, and it is
+    # ours to set. So it is set to a value that works.
+    #
+    # #4F46E5 is not a new colour. It is already `DEFAULT_PRIMARY_COLOR` in
+    # apps/web/lib/templates.ts:29 and apps/web/lib/social-templates.ts:14, and
+    # apps/web/__tests__/TemplatesMapping.test.ts:285 asserts it. The email was
+    # the only surface using a different default, which is its own small defect:
+    # an unbranded account's PDF and its email did not match. Now they do.
+    #
+    #   #4f46e5: white on it 6.29:1 · as ink on the darkest card 5.74:1
+    primary_color = normalize_hex_color(brand.get("primary_color"), "#4f46e5")  # Indigo-600
+    accent_color = normalize_hex_color(brand.get("accent_color"), "#4f46e5")    # monochrome, per templates.ts
     rep_name = brand.get("rep_name")
     rep_title = brand.get("rep_title")
     rep_photo_url = brand.get("rep_photo_url")
@@ -2164,7 +2426,21 @@ def schedule_email_html(
 
     color_roles = compute_color_roles(accent_color, dark_bg=primary_color)
     accent_on_dark = color_roles["theme_color_on_dark"]
-    accent_on_light = color_roles["theme_color_on_light"]
+    # NOT color_roles["theme_color_on_light"]. That helper's loop targets 3.0:1,
+    # not 4.5 — its own docstring claims AA and its code checks 3.0 — so it
+    # returned #0D9488 unchanged (3.74:1) for Luxury Estates and #69a311
+    # (3.07:1) for lime. Filed as D-099. `_ink` clears 4.5 on the card.
+    accent_on_light = _ink(accent_color)
+    # The masthead is a gradient from primary to accent; its text must clear AA
+    # at BOTH ends, so it is chosen against the worst of the two rather than
+    # hardcoded white (1.98:1 at the lime end).
+    _role_on_band = _on_band(primary_color, accent_color)
+    # The agent block and the metric strips are #f8fafc / #f1f5f9, not white, so
+    # the ink is derived against the card it lands on. See `_ink`.
+    _primary_on_card = _ink(primary_color, "#f8fafc")
+    _accent_on_card = _ink(accent_color, "#f8fafc")
+    _primary_on_strip = _ink(primary_color, "#f1f5f9")
+    _accent_on_strip = _ink(accent_color, "#f1f5f9")
 
     # Get report config
     config = REPORT_CONFIG.get(report_type, {
@@ -2260,7 +2536,7 @@ def schedule_email_html(
     if header_logo:
         logo_html = f'<img src="{header_logo}" alt="{brand_name}" width="160" style="display: block; max-width: 160px; height: auto;">'
     else:
-        logo_html = f'<span style="font-size: 24px; font-weight: 700; color: #ffffff;">{brand_name}</span>'
+        logo_html = f'<span style="font-size: 24px; font-weight: 700; color: {_role_on_band};">{brand_name}</span>'
     
     # ------------------------------------------------------------------
     # V16: Build body via layout router
@@ -2406,8 +2682,8 @@ def schedule_email_html(
     elif brand_name and brand_name != "Market Reports":
         company_html = f'''
                             <td style="text-align: right; vertical-align: top; width: 100px;">
-                              <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; color: {primary_color};">{brand_name}</p>
-                              {f'<p style="margin: 2px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 11px; color: #64748b;">{city or ""}</p>' if city else ""}
+                              <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; color: {_primary_on_card};">{brand_name}</p>
+                              {f'<p style="margin: 2px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 11px; color: #475569;">{city or ""}</p>' if city else ""}
                             </td>'''
 
     # ── Contact pills ───────────────────────────────────────────────────────
@@ -2424,7 +2700,7 @@ def schedule_email_html(
     def _pill_style(margin_right: bool) -> str:
         return (
             "display: inline-block; font-family: -apple-system, BlinkMacSystemFont, sans-serif; "
-            f"font-size: 11px; color: {accent_color}; text-decoration: none; "
+            f"font-size: 11px; color: {_accent_on_card}; text-decoration: none; "
             f"border: 1px solid {accent_color}; padding: 4px 10px; border-radius: 12px;"
             + (" margin-right: 6px;" if margin_right else "")
         )
@@ -2436,8 +2712,13 @@ def schedule_email_html(
     else:
         phone_pill_html = ''
 
+    # B23: this said "Email". A recipient who wants to reply from a different
+    # client, or who just wants to know who sent this, could not see the address
+    # anywhere in the document — the pill was a mailto: link wearing the word.
+    # The phone pill next to it already showed the number, so the inconsistency
+    # was visible in the same row.
     email_pill_html = (
-        f'<a href="mailto:{rep_email}" style="{_pill_style(False)}">Email</a>'
+        f'<a href="mailto:{rep_email}" style="{_pill_style(False)}">{rep_email}</a>'
         if rep_email else ''
     )
     contact_pills_html = (
@@ -2518,7 +2799,7 @@ def schedule_email_html(
                           <!--<![endif]-->
                         </td>
                         <td style="vertical-align: top; padding-left: 16px;">
-                          <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: bold; color: {primary_color};">
+                          <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: bold; color: {_primary_on_card};">
                             {contact_line1 or rep_name}
                           </p>
                           {f'<p style="margin: 2px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 11px; color: #6b7280;">{contact_line2 or rep_title}</p>' if (contact_line2 or rep_title) else ''}
@@ -2538,9 +2819,9 @@ def schedule_email_html(
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                       <tr>
                         <td style="vertical-align: top;">
-                          {f'<p style="margin: 0 0 2px 0; font-family: Outfit, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: bold; color: {primary_color};">{contact_line1}</p>' if contact_line1 else ''}
-                          {f'<p style="margin: 0 0 6px 0; font-size: 12px; color: #64748b;">{contact_line2}</p>' if contact_line2 else ''}
-                          {f'<p style="margin: 0; font-size: 12px;"><a href="{website_url}" style="color: {accent_color}; text-decoration: none;">{website_url.replace("https://", "").replace("http://", "")}</a></p>' if website_url else ''}
+                          {f'<p style="margin: 0 0 2px 0; font-family: Outfit, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: bold; color: {_primary_on_card};">{contact_line1}</p>' if contact_line1 else ''}
+                          {f'<p style="margin: 0 0 6px 0; font-size: 12px; color: #475569;">{contact_line2}</p>' if contact_line2 else ''}
+                          {f'<p style="margin: 0; font-size: 12px;"><a href="{website_url}" style="color: {_accent_on_card}; text-decoration: none;">{website_url.replace("https://", "").replace("http://", "")}</a></p>' if website_url else ''}
                           {contact_pills_html}
                         </td>
                         {company_html}
@@ -2554,7 +2835,7 @@ def schedule_email_html(
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; margin-top: 4px;">
                 <tr>
                   <td style="padding: 24px;" align="center">
-                    <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: bold; color: {primary_color};">{brand_name}</p>
+                    <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: bold; color: {_primary_on_card};">{brand_name}</p>
                     {contact_pills_html}
                   </td>
                 </tr>
@@ -2655,18 +2936,18 @@ def schedule_email_html(
                     <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                       <tr>
                         <td width="65%" style="vertical-align: middle;">
-                          <p style="margin: 0 0 4px 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 24px; font-weight: bold; color: #ffffff;">
+                          <p style="margin: 0 0 4px 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 24px; font-weight: bold; color: {_role_on_band};">
                             {report_label} &mdash; {area_display}
                           </p>
-                          <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 11px; color: rgba(255,255,255,0.7);">
+                          <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 11px; color: {_role_on_band}; opacity: 0.85;">
                             {date_range} &bull; Data via MLS
                           </p>
                         </td>
                         <td width="35%" style="vertical-align: middle; text-align: right;">
-                          <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 28px; font-weight: bold; color: #ffffff;">
+                          <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 28px; font-weight: bold; color: {_role_on_band};">
                             {h1_value if has_hero_4 else m1_value}
                           </p>
-                          <p style="margin: 2px 0 0 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 0.5px;">
+                          <p style="margin: 2px 0 0 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: {_role_on_band}; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px;">
                             {h1_label if has_hero_4 else m1_label}
                           </p>
                         </td>
@@ -2705,11 +2986,11 @@ def schedule_email_html(
           <!-- ========== POWERED BY + UNSUBSCRIBE ========== -->
           <tr>
             <td style="background-color: #f8f9fa; padding: 16px 28px; border-radius: 0 0 8px 8px; text-align: center;">
-              <p style="margin: 0 0 4px 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #9ca3af;">
+              <p style="margin: 0 0 4px 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #6b7280;">
                 Powered by <span style="font-weight: 600; color: #6b7280;">TrendyReports</span>
               </p>
-{postal_address_html}              <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #9ca3af;">
-                <a href="{unsubscribe_url}" style="color: #9ca3af; text-decoration: underline;">Unsubscribe</a>
+{postal_address_html}              <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #6b7280;">
+                <a href="{unsubscribe_url}" style="color: #6b7280; text-decoration: underline;">Unsubscribe</a>
               </p>
             </td>
           </tr>

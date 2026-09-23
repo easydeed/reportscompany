@@ -249,6 +249,36 @@ this workstream before any design work begins.
 
 **Effort: S each.** B1 and B8 share a fix and are one ticket. B19–B22 are one ticket.
 
+### 05.1 · The email half of the register, re-checked against live renders
+
+*2026-09-23, before starting C.* The register is a pre-remediation audit and eight months of
+defect work has happened since. Every email-side item was re-run through `schedule_email_html`
+rather than read — and each "does not reproduce" carries a positive control, because a negative
+grep and a broken grep produce the same output.
+
+| # | re-check | note |
+|---|---|---|
+| **B3** | **reproduces, worse than recorded** | Not `#1D4ED8` on `#DC2626`. The label is `accent_color` and the panel is `primary_color` — two independent brand columns with nothing relating them. 1.13–2.14:1 across the six themes, and **1.00:1** when an account sets one colour rather than two. **Fixed.** |
+| **B4** | **reproduces** | `.mobile-stack`, `.metric-card`, `.band-row` defined and attached to zero elements, exactly as recorded. **Fixed** (`.band-row` is dead — the band rows are single-cell and have nothing to stack). |
+| **B11** | **partially** | A `prefers-color-scheme: dark` block exists, so it is not opted out. But it adapts the outer chrome only and its own comment says the content card must NEVER be touched, which is the complaint. Its `#232323` is not a §3.2 neutral — and §3.2's dark neutrals do not exist yet. **Left open**, needs the token set first. |
+| **B12** | does not reproduce | Positive control: a listing with every field `None` renders "no data" in three cells, zero bare hyphens, zero `None`. Closed by D-090. |
+| **B19** | does not reproduce | Closed by `fix/postal-address`; the placeholder links are gone and tests hold them. |
+| **B20** | does not reproduce | The slot exists **and is honoured** — positive control: setting `postal_address` renders it. A real platform address ships as the fallback (D-060). Not gated any more. |
+| **B21** | does not reproduce | `_tel_uri` normalises; twelve input formats pinned. |
+| **B22** | does not reproduce | The dead "Update Preferences" link is gone. |
+| **B23** | **reproduced, now fixed** | The email pill rendered the word "Email" while the phone pill beside it showed the number. The `Realtor` half was already closed by D-066. |
+
+**Two the register did not have**, both found by measuring rather than by reading:
+
+- **The unsubscribe link is 2.41:1.** D-060's follow-up raised the postal address off `#9ca3af` and
+  *named the unsubscribe link as the thing it was matching* — then left it there. The same
+  "clearly and conspicuously" argument covers the opt-out. **Fixed.**
+- **The status palette fails its own labels.** White on `#16a34a` is 3.30:1, on `#f59e0b` 2.15:1.
+  **Fixed**, with values already present in the PDF templates.
+
+**Size is not a problem.** The §06 budget is 80KB against Gmail's 102KB clip; the eight report
+types render 23.9–34.5KB.
+
 ---
 
 ## 06 · Workstream C · Email template
@@ -267,6 +297,27 @@ report type stating the headline figure.
 (B20) and real link targets (B19).
 
 **Effort: M.** Blocked by A.
+
+### 06.1 · Started — the colour layer, ahead of the template consolidation
+
+*2026-09-23, `feat/workstream-c-email-rebuild`.* The one-template-replaces-eight rebuild has not
+started. What has landed is the part A exists to enable, and it was larger than B3 suggested.
+
+**Measured with a walker over rendered documents** (`apps/worker/tests/_contrast_audit.py`), which
+resolves each text run's real background through the table nesting, measures gradients at every
+stop and flattens rgba over its backdrop:
+
+    1,167 unreadable text runs out of 3,822  →  0
+    seven brands (the six themes plus unbranded) × eight report types
+
+The rule applied throughout: **a builder derives the role it needs from the colour it was handed.**
+Not threaded from the caller — a threaded role can be threaded wrongly, and `_build_quick_take`
+being passed a label colour and a panel colour as unrelated arguments is precisely how it came to
+paint one brand colour on another.
+
+Open, and on the entries rather than here: the dark-mode block (B11, needs §3.2's dark neutrals),
+the eight-into-one template consolidation, the 80KB budget work (not currently binding), and the
+preheader per report type.
 
 ---
 
