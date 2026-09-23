@@ -1,0 +1,193 @@
+{
+  "_comment": [
+    "GOLDEN FILE \u2014 compute_color_roles for every theme, with the contrast each role ACHIEVES.",
+    "Regenerate with: python3 scripts/regen_color_roles_golden.py",
+    "",
+    "The ratios are the point. Before D-099 the helpers targeted 3.0 while their",
+    "docstrings cited WCAG AA 4.5, and theme_color_on_dark cleared 4.5 on no theme",
+    "at all. Writing the achieved number down is what makes that visible.",
+    "",
+    "on_light is measured against white; on_dark against the theme's own dark",
+    "surface; text against the brand colour it sits on. All three must be >= 4.5."
+  ],
+  "property_themes": {
+    "teal": {
+      "brand": "#34d1c3",
+      "dark_surface": "#18235c",
+      "theme_color": "#34D1C3",
+      "theme_color_light": "#7be1d8",
+      "theme_color_dark": "#279c92",
+      "theme_color_on_light": "#1f847c",
+      "theme_color_on_dark": "#34D1C3",
+      "theme_color_text": "#14151a",
+      "achieved": {
+        "on_light_vs_white": 4.52,
+        "on_dark_vs_surface": 7.71,
+        "text_vs_brand": 9.6,
+        "raw_brand_vs_white": 1.9
+      }
+    },
+    "modern": {
+      "brand": "#ff6b5b",
+      "dark_surface": "#1a1f36",
+      "theme_color": "#FF6B5B",
+      "theme_color_light": "#ff9e94",
+      "theme_color_dark": "#bf5044",
+      "theme_color_on_light": "#c55145",
+      "theme_color_on_dark": "#FF6B5B",
+      "theme_color_text": "#14151a",
+      "achieved": {
+        "on_light_vs_white": 4.53,
+        "on_dark_vs_surface": 5.8,
+        "text_vs_brand": 6.52,
+        "raw_brand_vs_white": 2.8
+      }
+    },
+    "classic": {
+      "brand": "#1b365d",
+      "dark_surface": "#1b365d",
+      "theme_color": "#1B365D",
+      "theme_color_light": "#6a7c95",
+      "theme_color_dark": "#142845",
+      "theme_color_on_light": "#1B365D",
+      "theme_color_on_dark": "#639fff",
+      "theme_color_text": "#ffffff",
+      "achieved": {
+        "on_light_vs_white": 12.12,
+        "on_dark_vs_surface": 4.58,
+        "text_vs_brand": 12.12,
+        "raw_brand_vs_white": 12.12
+      }
+    },
+    "bold": {
+      "brand": "#0f1629",
+      "dark_surface": "#15216e",
+      "theme_color": "#0F1629",
+      "theme_color_light": "#636773",
+      "theme_color_dark": "#0b101e",
+      "theme_color_on_light": "#0F1629",
+      "theme_color_on_dark": "#638fff",
+      "theme_color_text": "#ffffff",
+      "achieved": {
+        "on_light_vs_white": 17.99,
+        "on_dark_vs_surface": 4.68,
+        "text_vs_brand": 17.99,
+        "raw_brand_vs_white": 17.99
+      }
+    },
+    "elegant": {
+      "brand": "#1a1a1a",
+      "dark_surface": "#1a1a1a",
+      "theme_color": "#1A1A1A",
+      "theme_color_light": "#6a6a6a",
+      "theme_color_dark": "#131313",
+      "theme_color_on_light": "#1A1A1A",
+      "theme_color_on_dark": "#888888",
+      "theme_color_text": "#ffffff",
+      "achieved": {
+        "on_light_vs_white": 17.4,
+        "on_dark_vs_surface": 4.91,
+        "text_vs_brand": 17.4,
+        "raw_brand_vs_white": 17.4
+      }
+    }
+  },
+  "picker_themes": {
+    "demo_title": {
+      "brand": "#dc2626",
+      "dark_surface": "#18235c",
+      "theme_color": "#DC2626",
+      "theme_color_light": "#e87171",
+      "theme_color_dark": "#a51c1c",
+      "theme_color_on_light": "#DC2626",
+      "theme_color_on_dark": "#ff5151",
+      "theme_color_text": "#ffffff",
+      "achieved": {
+        "on_light_vs_white": 4.83,
+        "on_dark_vs_surface": 4.57,
+        "text_vs_brand": 4.83,
+        "raw_brand_vs_white": 4.83
+      }
+    },
+    "luxury_estates": {
+      "brand": "#0d9488",
+      "dark_surface": "#18235c",
+      "theme_color": "#0D9488",
+      "theme_color_light": "#61b9b1",
+      "theme_color_dark": "#096f66",
+      "theme_color_on_light": "#0b8277",
+      "theme_color_on_dark": "#0da89a",
+      "theme_color_text": "#14151a",
+      "achieved": {
+        "on_light_vs_white": 4.69,
+        "on_dark_vs_surface": 4.94,
+        "text_vs_brand": 4.87,
+        "raw_brand_vs_white": 3.74
+      }
+    },
+    "coastal": {
+      "brand": "#0e7490",
+      "dark_surface": "#18235c",
+      "theme_color": "#0E7490",
+      "theme_color_light": "#62a4b6",
+      "theme_color_dark": "#0a576c",
+      "theme_color_on_light": "#0E7490",
+      "theme_color_on_dark": "#0e9cc2",
+      "theme_color_text": "#ffffff",
+      "achieved": {
+        "on_light_vs_white": 5.36,
+        "on_dark_vs_surface": 4.57,
+        "text_vs_brand": 5.36,
+        "raw_brand_vs_white": 5.36
+      }
+    },
+    "amber": {
+      "brand": "#f59e0b",
+      "dark_surface": "#18235c",
+      "theme_color": "#F59E0B",
+      "theme_color_light": "#f8bf60",
+      "theme_color_dark": "#b77608",
+      "theme_color_on_light": "#9c6404",
+      "theme_color_on_dark": "#F59E0B",
+      "theme_color_text": "#14151a",
+      "achieved": {
+        "on_light_vs_white": 4.95,
+        "on_dark_vs_surface": 6.82,
+        "text_vs_brand": 8.49,
+        "raw_brand_vs_white": 2.15
+      }
+    },
+    "lime": {
+      "brand": "#84cc16",
+      "dark_surface": "#18235c",
+      "theme_color": "#84CC16",
+      "theme_color_light": "#afdd67",
+      "theme_color_dark": "#639910",
+      "theme_color_on_light": "#53810c",
+      "theme_color_on_dark": "#84CC16",
+      "theme_color_text": "#14151a",
+      "achieved": {
+        "on_light_vs_white": 4.65,
+        "on_dark_vs_surface": 7.41,
+        "text_vs_brand": 9.23,
+        "raw_brand_vs_white": 1.98
+      }
+    },
+    "violet": {
+      "brand": "#7c3aed",
+      "dark_surface": "#18235c",
+      "theme_color": "#7C3AED",
+      "theme_color_light": "#a97ef3",
+      "theme_color_dark": "#5d2bb1",
+      "theme_color_on_light": "#7C3AED",
+      "theme_color_on_dark": "#a979ff",
+      "theme_color_text": "#ffffff",
+      "achieved": {
+        "on_light_vs_white": 5.7,
+        "on_dark_vs_surface": 4.79,
+        "text_vs_brand": 5.7,
+        "raw_brand_vs_white": 5.7
+      }
+    }
+  }
+}

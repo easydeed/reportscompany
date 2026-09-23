@@ -367,7 +367,11 @@ class MarketReportBuilder:
     def render_html(self) -> str:
         """Render the complete HTML report."""
         primary_color, accent_color = self._resolve_colors()
-        color_roles = compute_color_roles(accent_color, primary_color)
+         # BOTH ends of the header band, not just the navy one. The masthead is
+         # `linear-gradient(135deg, header-bg 0%, header-bg 50%, primary-color 100%)`
+         # — navy to accent — so a label derived against the navy alone measured
+         # 9.90:1 where it starts and 2.53:1 where the accent takes over (D-097).
+        color_roles = compute_color_roles(accent_color, (primary_color, accent_color))
 
         # Resolve AI narrative: use pre-supplied value, otherwise generate
         ai_insights = self.report_data.get("ai_insights") or ""
@@ -451,7 +455,7 @@ class MarketReportBuilder:
         """Render the big gradient hero header as a standalone HTML doc,
         repeated on every page via PDFShift's `header` parameter."""
         primary_color, accent_color = self._resolve_colors()
-        color_roles = compute_color_roles(accent_color, primary_color)
+        color_roles = compute_color_roles(accent_color, (primary_color, accent_color))
         header_ctx = self._build_header_context()
         subtitle_text = header_ctx.get("subtitle") or "All Properties"
         context = {
@@ -475,7 +479,7 @@ class MarketReportBuilder:
     def render_page_footer_html(self) -> str:
         """Render the agent footer as a standalone HTML doc, repeated on every page."""
         primary_color, accent_color = self._resolve_colors()
-        color_roles = compute_color_roles(accent_color, primary_color)
+        color_roles = compute_color_roles(accent_color, (primary_color, accent_color))
 
         context = {
             "primary_color": primary_color,

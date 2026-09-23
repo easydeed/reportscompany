@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-23, against `feat/workstream-c-email-rebuild`, cut from `main` at `796e1c6`. **Every open entry was re-checked against current code in that sweep** — see §0.6, *a defect list needs a read path*.
+**Last reconciled:** 2026-09-23, against `fix/d099-readability-helpers`, cut from `main` at `47f8fbc`. **Every open entry was re-checked against current code in that sweep** — see §0.6, *a defect list needs a read path*.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -36,12 +36,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 33 | Real, unfixed |
-| `fixed` | 62 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 32 | Real, unfixed |
+| `fixed` | 63 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **99** | D-001 … D-099, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 1 · WRONG 9 · FRAGILE 10 · ROUGH 13. (Sums to 33, the open total.)
+**Open by severity:** BROKEN 1 · WRONG 8 · FRAGILE 10 · ROUGH 13. (Sums to 32, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -58,7 +58,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > problem one level down — and the fix is the same one this file keeps arriving at, which is to
 > make the property structural instead of somebody's diligence.
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded.
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded.
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -4534,6 +4534,15 @@ the dark surface is a fixed neutral the token can be derived against (the live
 `compute_color_roles` assumes `#18235c`, and the themes' actual darks are `#18235c`, `#0f1a45`,
 `#0b0f1a`, `#1a1f36`) or a per-theme value the derivation has to take as an argument. **[JERRY]**
 
+> **Recommendation on the table, 2026-09-23, awaiting Jerry — nothing derived on it.** One fixed
+> dark neutral, not per-theme: *"§3.2 already fixes neutrals for this reason, and five surfaces
+> means five drift paths."*
+>
+> D-099's work is evidence for that reading rather than against it. Widening `compute_color_roles`
+> to accept several dark surfaces was necessary and correct for the market band, and the very first
+> thing it produced was a surface pair no colour can satisfy. More surfaces to guarantee against is
+> more ways to be unsatisfiable, and each one is discovered rather than designed.
+
 **Two more AA failures, found by this survey and belonging to this entry:**
 
 | where | value | on | ratio |
@@ -4583,6 +4592,14 @@ This is a finding about the spec, not a bug in the code. `themes.py` implements 
 **XFAILS THIS DEFECT GATES** (§0.6: two-way link, or an xfail is a skip with better manners).
 
 - `apps/worker/tests/test_themes.py::test_on_primary_clears_aa_against_the_fill_for_5000_random_colours`
+- `apps/worker/tests/test_color_roles.py::test_text_on_accent_clears_aa_for_5000_random_brands`
+
+**The second one is the PDF path, and it matters that it exists.** This entry
+reads like a fact about `themes.py`; it is a fact about **any** binary choice of
+text against a fill that may not be adjusted. `property_builder._text_on_accent`
+arrives at the same ceiling independently — measured 278 of 5,000 brands (5.6%)
+below 4.5:1, worst 4.27:1, from a different function written years apart. Fixing
+`derive_theme` alone would leave half the product short.
 
 Strict, so it breaks the build the day the derivation can satisfy it. The achievable bound is
 asserted live alongside it by `test_on_primary_always_reaches_the_achievable_ceiling`, so a change
@@ -4620,7 +4637,47 @@ is next touched.
 ### D-099 — the readability helpers target 3.0:1 while their own docstring says 4.5, and hand back unchecked values
 
 **Severity:** WRONG · **Affects:** every property PDF and market PDF; the email until this branch
-**Status:** `open`
+**Status:** `fixed` (`fix/d099-readability-helpers`)
+
+> **FIXED.** The target is 4.5, the ratio comes from `worker.themes.contrast` — the same instrument
+> checked against the master plan's six independent measurements — and neither helper returns a
+> value it has not verified. Where a target is genuinely unreachable it returns the best available,
+> increments `UNREACHABLE_CONTRAST_COUNT` and logs, which is the D-094 pattern: a degraded path that
+> is silent is a path nobody knows they are on.
+>
+> **Every role on every theme now clears 4.5**, locked with its achieved ratio in
+> `apps/worker/tests/golden/color_roles.json` — the number D-099 was about, finally written down.
+>
+> **What moved.** 7 of the 15 role values on the five property themes shift past ΔE 2.3, and every
+> one of the seven goes from failing to passing. The largest is `modern.theme_color_text`: white to
+> `#14151a`, ΔE 93, because white on that coral measures 2.80:1. The eight that do not move are the
+> eight that already passed — a colour clearing the bar is returned untouched.
+>
+> **`_ensure_readable_on_dark` no longer trades the brand away to get bright.** It shed 0.02 of
+> saturation on *every* step; it now raises HSV value first and spends saturation only once value
+> has maxed out. On the three themes where the brand *is* the dark surface that is the difference
+> between a colour and a grey: classic `#929fb3` (chroma 33) becomes `#639fff` (chroma 156), both
+> clearing 4.5.
+>
+> **`_text_on_accent` was a threshold, not a comparison** — `white if luminance < 0.35 else dark`.
+> The crossover for that pair is at luminance 0.196, so a whole band of mid-tone brands got white
+> when near-black wins. That is what put white on the modern coral.
+>
+> **`dark_bg` may now name several surfaces**, and the result clears the bar against all of them.
+> `market_builder` passes both ends of its header band, which is the D-097 finding about a token
+> whose contrast depends on where along the gradient it falls.
+>
+> > **And the first thing that change found: the market band is unsatisfiable as designed.** No
+> > single text colour clears 4.5:1 against both `#18235c` and a mid-tone brand — brightening runs
+> > to white, which fails on the accent; darkening runs to near-black, which fails on the navy. The
+> > helper returns the best worst case (white, 3.74:1 against the accent end, up from the shipped
+> > 2.53:1) **and says it fell short**. That is a defect in the band, not in the function, and it is
+> > the new guarantee earning its place on its first real call. Recorded on D-097; the remedy is a
+> > design decision — narrow the gradient, move the label off the changing part, or accept 3:1.
+>
+> Nine regressions applied and each seen to fail, including target back to 3.0, `on_light` always
+> black, `on_dark` always white, the unreachable report suppressed, the old desaturate-every-step
+> brightening, the old luminance threshold, and binding a gradient on its first stop only.
 
 `property_builder._ensure_readable_on_light` and `_ensure_readable_on_dark` exist to make a brand
 colour readable. Neither does.

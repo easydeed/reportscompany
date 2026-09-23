@@ -206,77 +206,201 @@ def _darken(hex_color: str, amount: float = 0.25) -> str:
     return _rgb_to_hex(r * (1 - amount), g * (1 - amount), b * (1 - amount))
 
 
-def _ensure_readable_on_dark(hex_color: str, dark_bg: str = "#18235c") -> str:
+# ═══════════════════════════════════════════════════════════════════════════
+# D-099 — the readability helpers, made to mean what they say
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# WHAT THESE USED TO DO. `_ensure_readable_on_dark`'s docstring read *"Target:
+# WCAG AA (contrast ratio >= 4.5) or at minimum 3.0 for large text."* Its code
+# checked `>= 3.0` on entry and `>= 3.0` in the loop. 4.5 appeared in neither
+# function. Everything about them read as a guarantee — the names, the
+# docstrings, the fact that they run on every render — and the number was wrong.
+#
+# Measured before the fix, on the values the five property themes actually ship:
+#
+#     teal     on_light  3.32      modern   on_light 3.05, text 2.80
+#     classic  on_dark   3.35      bold     on_dark  3.08
+#     elegant  on_dark   3.27
+#
+# Every theme failed at least one role, and `theme_color_on_dark` never cleared
+# 4.5 on ANY theme, because it stopped at 3.0 by construction.
+#
+# THREE THINGS CHANGE.
+#
+# 1. The target is 4.5, which is what the docstrings always claimed.
+#
+# 2. The ratio comes from `worker.themes.contrast` — the same instrument
+#    Workstream A checked against the master plan's six independently measured
+#    values — rather than from arithmetic inlined three times in this file.
+#
+# 3. **They never return a value they have not checked.** Both used to run a
+#    bounded loop and then `return` whatever it last produced, without
+#    re-testing. A caller could not tell "readable" from "gave up", and nothing
+#    was logged either way. Now the exit is verified, the fallback is verified,
+#    and a genuinely unreachable target increments a counter and logs once.
+#
+# 4. `_ensure_readable_on_dark` no longer trades away the brand to get bright.
+#    It used to lose 0.02 of saturation on EVERY step while brightening — thirty
+#    steps removed 0.6 of it — so its escape from an unreadable brand colour was
+#    to stop it being the brand colour. It now raises value first and gives up
+#    saturation only once value has maxed out, which for these themes is the
+#    difference between a recognisable colour and a grey:
+#
+#        classic  mix-toward-white #929fb3 chroma 33   value-first #60a3ff chroma 159
+#        bold     mix-toward-white #8d9199 chroma 12   value-first #6f89ff chroma 144
+#        Luxury   mix-toward-white #2aa096 chroma 118  value-first #0fa89a chroma 153
+#
+#    Both clear 4.5. Only one is still the affiliate's colour.
+
+AA_NORMAL = 4.5
+
+#: One step. 6%, matching `worker.themes`, so the two derivations move a colour
+#: at the same rate and a value can be reasoned about across both.
+_READABILITY_STEP = 0.06
+
+#: Enough steps to take any sRGB colour to the far end. Pure white needs 12 to
+#: clear AA on white; the bound is generous and is asserted never to be reached.
+_READABILITY_MAX_STEPS = 64
+
+#: Incremented whenever a target could not be met. Exposed for the same reason
+#: as D-094's Redis counter: a degraded path that is silent is a path nobody
+#: knows they are on.
+UNREACHABLE_CONTRAST_COUNT = 0
+
+
+def _contrast(a: str, b: str) -> float:
+    """WCAG 2.1 contrast ratio. Delegates to the token layer's implementation."""
+    from .themes import contrast as _themes_contrast
+    return _themes_contrast(a, b)
+
+
+def _best_of(candidates, against: str) -> str:
+    return max(candidates, key=lambda c: _contrast(c, against))
+
+
+def _report_unreachable(role: str, colour: str, background: str, achieved: float) -> None:
+    global UNREACHABLE_CONTRAST_COUNT
+    UNREACHABLE_CONTRAST_COUNT += 1
+    print(
+        f"[CONTRAST] {role}: cannot reach {AA_NORMAL}:1 for {colour} on "
+        f"{background}; best achievable {achieved:.2f}:1. Returning it anyway — "
+        f"a value that is too low is still better than one nobody measured."
+    )
+
+
+def _brighten(hex_color: str) -> str:
     """
-    Return a version of hex_color that has enough contrast on a dark background.
-    If the color is too dark, progressively lighten it until readable.
-    Target: WCAG AA (contrast ratio ≥ 4.5) or at minimum 3.0 for large text.
+    One step brighter, spending saturation only as a last resort.
+
+    Value first (+0.04), and saturation (-0.04) only once value is at 1.0. The
+    old version did both on every step, which is why a navy brand asked to be
+    readable on a navy panel came back as a grey.
     """
     r, g, b = _hex_to_rgb(hex_color)
-    lum_color = _relative_luminance(r, g, b)
-    br, bg_val, bb = _hex_to_rgb(dark_bg)
-    lum_bg = _relative_luminance(br, bg_val, bb)
-
-    # Contrast ratio: (lighter + 0.05) / (darker + 0.05)
-    lighter = max(lum_color, lum_bg)
-    darker = min(lum_color, lum_bg)
-    ratio = (lighter + 0.05) / (darker + 0.05)
-
-    if ratio >= 3.0:
-        return hex_color  # Already readable
-
-    # Lighten the color until we hit contrast ≥ 3.0
     h, s, v = colorsys.rgb_to_hsv(r, g, b)
-    for _ in range(30):
+    if v >= 1.0:
+        s = max(0.0, s - 0.04)
+    else:
         v = min(1.0, v + 0.04)
-        s = max(0.0, s - 0.02)  # Slightly desaturate as we brighten
-        nr, ng, nb = colorsys.hsv_to_rgb(h, s, v)
-        lum_new = _relative_luminance(nr, ng, nb)
-        new_ratio = (max(lum_new, lum_bg) + 0.05) / (min(lum_new, lum_bg) + 0.05)
-        if new_ratio >= 3.0:
-            return _rgb_to_hex(nr, ng, nb)
-
     return _rgb_to_hex(*colorsys.hsv_to_rgb(h, s, v))
+
+
+def _surfaces(dark_bg) -> tuple:
+    """
+    `dark_bg` may be one colour or several. Several means a GRADIENT, and text
+    on a gradient has to survive the whole band — the market report's header is
+    `linear-gradient(135deg, header-bg 0%, header-bg 50%, primary-color 100%)`
+    and its label measured 9.90:1 at one end and 2.53:1 at the other (D-097). A
+    value guaranteed against the first stop is not guaranteed against the band.
+    """
+    # Anything that is not a sequence of strings becomes the default. The
+    # previous single-colour signature ran `normalize_hex_color(dark_bg, …)`,
+    # which coerced None and any other junk — `test_compute_color_roles_never_raises`
+    # exists because these values arrive from three write paths that accept any
+    # string. Widening the parameter to accept a tuple removed that coercion and
+    # made `_surfaces(None)` a TypeError; the test caught it on the first full
+    # run. Restored here rather than in the caller, because the guarantee this
+    # function is documented to make is "never raises on stored data".
+    if isinstance(dark_bg, str):
+        dark_bg = (dark_bg,)
+    elif not isinstance(dark_bg, (list, tuple)):
+        dark_bg = ()
+    out = tuple(normalize_hex_color(b, "#18235c") for b in dark_bg
+                if isinstance(b, str) and b)
+    return out or ("#18235c",)
+
+
+def _ensure_readable_on_dark(hex_color, dark_bg="#18235c") -> str:
+    """
+    A version of `hex_color` that clears 4.5:1 on `dark_bg`, brightened until it
+    does. `dark_bg` may be several colours, in which case the result clears the
+    bar against every one of them — see `_surfaces`.
+
+    Returns the colour unchanged when it already clears the bar, so a brand that
+    passes is never touched. Brightening raises HSV value and only reduces
+    saturation once value has maxed out — saturation is what makes the colour
+    recognisable as the brand, so it is spent last rather than first.
+
+    When brightening cannot get there — which needs a `dark_bg` that is not
+    actually dark — it falls back to whichever of white or near-black scores
+    best, and if even that falls short it says so rather than returning a number
+    it has not checked.
+    """
+    current = normalize_hex_color(hex_color)
+    backgrounds = _surfaces(dark_bg)
+    worst = lambda c: min(_contrast(c, b) for b in backgrounds)  # noqa: E731
+    for _ in range(_READABILITY_MAX_STEPS):
+        if worst(current) >= AA_NORMAL:
+            return current
+        stepped = _brighten(current)
+        if stepped == current:
+            break
+        current = stepped
+    fallback = max(("#ffffff", "#14151a"), key=worst)
+    achieved = worst(fallback)
+    if achieved < AA_NORMAL:
+        _report_unreachable("on_dark", hex_color, "/".join(backgrounds), achieved)
+    return fallback
 
 
 def _ensure_readable_on_light(hex_color: str, light_bg: str = "#ffffff") -> str:
     """
-    Return a version of hex_color that has enough contrast on a light background.
-    If the color is too light/bright, darken it until readable.
+    A version of `hex_color` that clears 4.5:1 on `light_bg`, by mixing toward
+    black in 6% steps. The mirror of the above, with the same guarantees.
     """
-    r, g, b = _hex_to_rgb(hex_color)
-    lum_color = _relative_luminance(r, g, b)
-    lr, lg, lb = _hex_to_rgb(light_bg)
-    lum_bg = _relative_luminance(lr, lg, lb)
-
-    lighter = max(lum_color, lum_bg)
-    darker = min(lum_color, lum_bg)
-    ratio = (lighter + 0.05) / (darker + 0.05)
-
-    if ratio >= 3.0:
-        return hex_color
-
-    # Darken the color until readable
-    h, s, v = colorsys.rgb_to_hsv(r, g, b)
-    for _ in range(30):
-        v = max(0.0, v - 0.04)
-        nr, ng, nb = colorsys.hsv_to_rgb(h, s, v)
-        lum_new = _relative_luminance(nr, ng, nb)
-        new_ratio = (max(lum_new, lum_bg) + 0.05) / (min(lum_new, lum_bg) + 0.05)
-        if new_ratio >= 3.0:
-            return _rgb_to_hex(nr, ng, nb)
-
-    return _rgb_to_hex(*colorsys.hsv_to_rgb(h, s, v))
+    current = normalize_hex_color(hex_color)
+    bg = normalize_hex_color(light_bg, "#ffffff")
+    for _ in range(_READABILITY_MAX_STEPS):
+        if _contrast(current, bg) >= AA_NORMAL:
+            return current
+        stepped = _darken(current, _READABILITY_STEP)
+        if stepped == current:
+            break
+        current = stepped
+    fallback = _best_of(("#14151a", "#ffffff"), bg)
+    achieved = _contrast(fallback, bg)
+    if achieved < AA_NORMAL:
+        _report_unreachable("on_light", hex_color, bg, achieved)
+    return fallback
 
 
 def _text_on_accent(hex_color: str) -> str:
-    """Return '#ffffff' or '#1a1a1a' depending on accent brightness."""
-    r, g, b = _hex_to_rgb(hex_color)
-    lum = _relative_luminance(r, g, b)
-    return "#ffffff" if lum < 0.35 else "#1a1a1a"
+    """
+    What to put ON a fill of `hex_color`: whichever of white or near-black
+    scores higher against it.
+
+    This was `'#ffffff' if luminance < 0.35 else '#1a1a1a'` — a threshold, not a
+    comparison, and it put white on the modern theme's coral at **2.80:1**. The
+    crossover for a white/near-black pair is at luminance 0.196, not 0.35, so
+    the old rule chose white across a whole band where near-black wins.
+
+    #14151a rather than #1a1a1a: it is what `worker.themes` uses for the same
+    role, and having one near-black in the product is worth the 0.4% of contrast.
+    """
+    return _best_of(("#ffffff", "#14151a"), normalize_hex_color(hex_color))
 
 
-def compute_color_roles(hex_color: str, dark_bg: str = "#18235c") -> Dict[str, str]:
+def compute_color_roles(hex_color: str, dark_bg="#18235c") -> Dict[str, str]:
     """
     From a single accent hex, compute a complete set of color roles:
 
@@ -293,7 +417,9 @@ def compute_color_roles(hex_color: str, dark_bg: str = "#18235c") -> Dict[str, s
     unchanged in `theme_color` and land in a `style` attribute.
     """
     hex_color = normalize_hex_color(hex_color)
-    dark_bg = normalize_hex_color(dark_bg, "#18235c")
+    # NOT normalised to a single colour here: `dark_bg` may name several
+    # surfaces when the text sits on a gradient. `_ensure_readable_on_dark`
+    # normalises each of them and guarantees against the worst.
     return {
         "theme_color":          hex_color,
         "theme_color_light":    _lighten(hex_color, 0.35),
