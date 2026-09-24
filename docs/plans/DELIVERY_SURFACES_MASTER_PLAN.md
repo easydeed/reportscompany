@@ -88,17 +88,75 @@ Luxury Estates ships `#0D9488` as the price color on every listing card in every
 Unchanged from v1 §3. Reproduced in brief; the v1 document remains authoritative for the full
 token tables.
 
-**3.1 Derived tokens** — affiliate picks one color; five values derived at render time.
+**3.1 Derived tokens** — affiliate picks one color; **six** values derived at render time.
 `primary` (fills only) · `primary_dark` (×0.78) · `primary_ink` (darkened in 6% steps until ≥4.5:1
 on white — the only brand value permitted on a light surface) · `on_primary` (whichever of white
 or `#14151A` scores higher against primary) · `tint` (6% alpha, pre-flattened because Outlook
-drops rgba).
+drops rgba) · **`primary_on_dark`** (brightened until ≥4.5:1 on one fixed dark neutral).
+
+**The sixth token, added 2026-09-23.** The original five had no counterpart for brand text on a
+*dark* surface — `primary_ink` guarantees a ratio on white and §3.1 had no concept of a dark
+surface at all, while three property themes and the market header put brand-coloured text on one.
+The survey that established this counted every `var()` reference: the `-light` family is decorative
+(36 uses, none carrying text) and the `-on-dark` family is text every time (15 uses, all `color:`).
+So the set was short exactly one token, not two.
+
+**`DARK_SURFACE = #0f172a`, fixed, not per-theme** (Jerry, 2026-09-23): *"§3.2 already fixes
+neutrals for this reason, and five surfaces means five drift paths."* `#0f172a` because it is the
+dark neutral these templates already use most, so the token converges on the design rather than
+adding to it — and it is a neutral, where the previous default `#18235c` has chroma 68 and is
+somebody's brand colour doing a neutral's job.
+
+> **The guarantee is against that surface and no other, which is a condition rather than a detail.**
+> Six of the eight dark surfaces the templates paint today are lighter than `#0f172a`, so a value
+> clearing 4.5:1 there does not clear it here — **3.24:1 on classic's `#1B365D`**, 3.80 on bold's
+> `#15216E`, 3.91 on `#18235c`, 4.47 on `#0f1a45`. That is the migration this decision implies: the
+> dark panels become the neutral. Until they do, `primary_on_dark` is correct about a surface the
+> page does not yet have. The four shortfalls are asserted exactly in
+> `test_the_guarantee_is_against_the_fixed_surface_and_no_other`, so the list is a checklist that
+> fails when a panel migrates rather than a note that goes stale.
+
+Brightening raises HSV value first and spends saturation only once value has maxed out — the rule
+D-099 established by measurement on the PDF path, where reducing saturation every step turned a
+navy brand into a grey (chroma 33 against 156). Both derivations now use it, so they cannot drift.
+
+Amber and lime — the two that break the current build — resolve automatically. The picker needs
+no restrictions.
 
 Amber and lime — the two that break the current build — resolve automatically. The picker needs
 no restrictions.
 
 **3.2 Fixed neutrals** — canvas, card, panel, ink, body, muted, quiet, rule. Not themeable.
 Identical across all three surfaces.
+
+> ### A background that varies cannot be made accessible by choosing a foreground
+>
+> **A design constraint, reached independently from two directions, and it binds Workstreams D and
+> E harder than it binds C.**
+>
+> Contrast is a relation between two colours. Every derivation in §3.1 works by moving one of them
+> until the ratio clears — which requires the other one to be known and fixed. Where it is not,
+> there is nothing to derive against, and no choice of text colour is correct.
+>
+> Two surfaces in this product already fail that way:
+>
+> - **The market report's header band** runs `linear-gradient(135deg, header-bg → primary-color)`.
+>   No single text colour clears 4.5:1 against both ends; the label measures 9.90:1 where it starts
+>   and 2.53:1 where the brand takes over. `_ensure_readable_on_dark` now returns the best worst
+>   case and logs that it fell short, which is the honest answer and not a fix.
+> - **The teal cover overlay** composites a three-stop alpha gradient over whichever photo the
+>   listing carries. The effective backdrop differs from the top of the panel to the bottom and
+>   again for every property. There is no value to compute a ratio from at all.
+>
+> The remedies are structural, never chromatic: a **scrim** (a fixed layer between image and text,
+> which then IS a surface and can be guaranteed against), a **solid plate** behind the text block,
+> or **text off the image**. Picking a different colour is not among them.
+>
+> **Why this matters most for D and E.** Photo-backed covers are the norm on the PDF surfaces, and
+> §7 and §9 assume text over imagery in several places. Any such composition needs its scrim
+> specified as part of the design, not discovered when the contrast audit reports a ratio it cannot
+> compute. Treat "text over a photograph" as requiring a named opaque surface, the same way §3.2
+> treats the neutrals — because that is exactly what it is.
 
 **3.3 Status colors** — reserved, never drawn from the brand palette, always paired with a text
 label. Note "Closed" is currently rendered red, which reads as an error.
@@ -217,8 +275,8 @@ this workstream before any design work begins.
 | **B2** | BROKEN | PDF | `Footer Logo` renders as literal placeholder text in client-facing output | §3.6 + §08 string check |
 | **B3** | BROKEN | Email — open_houses | Quick Take label `#1D4ED8` on a `#DC2626` panel. Measured **1.4:1** | `on_primary`; panel removed in rebuild |
 | **B4** | BROKEN | Email ×8 | `.mobile-stack`, `.metric-card`, `.band-row` defined in CSS and applied to **zero elements**. The four-across metric strip never stacks; 10px labels wrap to three lines at ~75px | Attach classes to real cells. Highest-impact single fix given mobile open share |
-| **B5** | BROKEN | PDF — price_bands + | Missing photo renders as broken-image glyph with alt `Property` beside it; the same listing is a blank grey box elsewhere | One labelled placeholder: hatched fill, camera glyph, "Photo pending" |
-| **B6** | WRONG | Email — price_bands | Bars normalised to the largest band while labels show share of total. Move-Up reads 43% beside a bar filled to 100% | Bar width equals the percentage shown |
+| **B5** | BROKEN | PDF — price_bands + | Missing photo renders as broken-image glyph with alt `Property` beside it; the same listing is a blank grey box elsewhere | One labelled placeholder: hatched fill, camera glyph, "Photo pending" — **STILL OPEN**, see note |
+| **B6** | WRONG | Email — price_bands | Bars normalised to the largest band while labels show share of total. Move-Up reads 43% beside a bar filled to 100% | Bar width equals the percentage shown — **STILL OPEN**, see note |
 | **B7** | WRONG | PDF — price_bands | Band counts 12/18/11/6 sum to **47** beside a total of **117** | §08 assertion |
 | **B8** | WRONG | Email ×8 | `347` appears as active listings, new listings, total listings, open houses and featured homes, while the same documents report 23 and 58. featured_listings reads "these 347 featured homes" above a grid of six | Same root as B1 |
 | **B9** | ROUGH | PDF ×8 | Continuation pages repeat the full masthead (~90pt) then carry few rows. ~⅓ of every page empty | Masthead page 1 only; running head after. §7.2 |
@@ -248,6 +306,23 @@ this workstream before any design work begins.
 | **B23** | ROUGH | Email ×8 | Agent email address renders as the word "Email"; `Realtor` used generically (REALTOR® is a restricted NAR mark) | Show the address. Change the default title to "Real Estate Agent" |
 
 **Effort: S each.** B1 and B8 share a fix and are one ticket. B19–B22 are one ticket.
+
+> **B5 and B6 are NOT closed by the consolidation, and the risk is that they look it.**
+>
+> Both are named in comments in the code the consolidation produced — B6 beside `_band_rows()`,
+> which now computes the bar width and the percentage label together because two calculations in
+> two files is how they drifted apart; B5 beside `_GALLERY_SIZES`, whose missing-photo branch is a
+> grey block on all three card sizes.
+>
+> Those comments explain **why the code has its shape**, not that the defect is fixed. The
+> restructure deliberately preserved current behaviour: the bars are still normalised to the
+> largest band, and the placeholder is still an unlabelled grey box rather than a hatched fill with
+> a camera glyph. A restructure whose acceptance is an empty render diff cannot also change what
+> renders.
+>
+> Both fixes belong in a branch where the visible change is the point. Recorded here because a
+> register item with its number written in a code comment is exactly the kind of thing that gets
+> marked done by proximity.
 
 ### 05.1 · The email half of the register, re-checked against live renders
 
@@ -285,6 +360,31 @@ types render 23.9–34.5KB.
 
 Unchanged from v1 §06. One Jinja2 template replaces eight; body assembled from blocks selected by
 report type; masthead, agent block and footer invariant.
+
+> ### Correction: "selected by report type" is not how selection works
+>
+> *2026-09-24, from building it.* The phrasing above implies the report type — or the layout it
+> maps to — determines the block sequence. **It does not. Selection is conditional on the DATA as
+> much as on the type**, and the difference is not cosmetic: it decides what shape the map that
+> describes it can have.
+>
+> The case that proves it: `market_snapshot`, `new_listings` and `open_houses` all use the
+> `market_narrative` layout and produce **two different sequences**. `open_houses` renders the
+> Quick Take panel where the other two render the market-insight callout, because the panel is
+> emitted only `if not insight_text` — a data condition, not a type one. Three further blocks
+> (`chrome:filter_blurb`, `chrome:section_label`, `bands`) appear only when a filter description or
+> band data is present.
+>
+> So `REPORT_BLOCKS` in `email/template.py` is keyed by report type rather than by layout, and even
+> then it describes the sequence **for a given fixture**; a layout-keyed map could not express the
+> `open_houses` case at all. It is checked against an instrumented render rather than maintained by
+> hand.
+>
+> **Carried forward for Workstream D.** The PDF surfaces have the same shape — a page set selected
+> per report with sections that appear only when their data does — so an equivalent map there will
+> be data-conditional too. Writing it as "sections selected by report type" would inherit this
+> error, and the version that gets written from reading the builders will be wrong in the same way
+> this one was: seven of eight entries, corrected only by instrumenting an actual render.
 
 **Blocks:** `masthead` · `spec_list` · `read` · `table` · `gallery` · `bands` · `cta` · `signature`.
 

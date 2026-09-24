@@ -40,6 +40,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from worker.themes import (  # noqa: E402
     AA_NORMAL,
+    DARK_SURFACE,
     NEAR_BLACK,
     TOKENS,
     WHITE,
@@ -297,12 +298,96 @@ def test_on_primary_picks_the_better_of_the_two_candidates():
     )
 
 
-def test_every_theme_has_all_five_tokens_and_they_are_valid_colours():
+def test_every_theme_has_all_six_tokens_and_they_are_valid_colours():
     for hexv in random_hexes(1000):
         t = derive_theme(hexv)
         assert tuple(t) == TOKENS, f"key set drifted: {tuple(t)}"
         for k, v in t.items():
             assert normalize_hex(v) == v, f"{k}={v!r} is not a normalised #rrggbb"
+
+
+# ---------------------------------------------------------------------------
+# primary_on_dark — the sixth token
+# ---------------------------------------------------------------------------
+
+def test_on_dark_clears_aa_on_the_fixed_surface_for_5000_random_colours():
+    """
+    The guarantee. Reachable for every input, unlike `on_primary`, because the
+    VALUE moves — brightening ends at white, and white on #0f172a is 17.85:1.
+    """
+    bad = [(h, round(contrast(derive_theme(h)["primary_on_dark"], DARK_SURFACE), 3))
+           for h in random_hexes()
+           if contrast(derive_theme(h)["primary_on_dark"], DARK_SURFACE) < AA_NORMAL]
+    assert not bad, f"{len(bad)} of {SAMPLE} failed; first five: {bad[:5]}"
+
+
+def test_on_dark_is_not_satisfied_by_going_white():
+    """
+    THE GUARD. `primary_on_dark = "#ffffff"` passes the test above for every
+    input. Two claims: a brand that already clears the bar is untouched, and one
+    that does not keeps its hue on the way up.
+    """
+    # Amber and lime are already far past 4.5 on this surface
+    for hexv in ("#F59E0B", "#84CC16", "#0D9488"):
+        assert derive_theme(hexv)["primary_on_dark"] == normalize_hex(hexv), (
+            f"{hexv} already clears the bar and was brightened anyway"
+        )
+    off = []
+    for hexv in random_hexes(600):
+        if chroma_of(hexv) < 64:
+            continue
+        got = derive_theme(hexv)["primary_on_dark"]
+        if got == WHITE:
+            continue  # legitimately ran out of headroom
+        if hue_gap(hue_of(got), hue_of(hexv)) > 4.0:
+            off.append((hexv, got))
+    assert not off, f"brightening lost the brand's hue: {off[:5]}"
+
+
+def test_on_dark_spends_saturation_last():
+    """
+    D-099 established this by measurement on the PDF path: reducing saturation
+    on every brightening step turns a dark brand into a grey. The token layer
+    uses the same rule, so the two derivations cannot drift apart on it.
+    """
+    from worker.themes import _brighten
+    got = derive_theme("#1B365D")["primary_on_dark"]
+    assert contrast(got, DARK_SURFACE) >= AA_NORMAL
+    assert chroma_of(got) > 100, f"{got} has chroma {chroma_of(got)} — washed out"
+    # and one step raises value before touching saturation
+    import colorsys as cs
+    v0 = cs.rgb_to_hsv(0x1B / 255, 0x36 / 255, 0x5D / 255)
+    nxt = normalize_hex(_brighten("#1B365D"))[1:]
+    v1 = cs.rgb_to_hsv(*(int(nxt[i:i + 2], 16) / 255 for i in (0, 2, 4)))
+    assert v1[2] > v0[2] and v1[1] >= v0[1] - 0.01
+
+
+def test_the_guarantee_is_against_the_fixed_surface_and_no_other():
+    """
+    **THE CONDITION ON JERRY'S DECISION, PINNED SO IT CANNOT BE FORGOTTEN.**
+
+    One fixed neutral means the token is true on that neutral. Six of the eight
+    dark surfaces the templates paint today are LIGHTER than #0f172a, so a value
+    that clears 4.5:1 here does not clear it there — 3.06:1 on classic's
+    #1B365D. That is the migration the decision implies, not a defect in the
+    token, and this test states the gap rather than asserting it away.
+
+    When the dark panels have migrated, the loop below should find nothing and
+    the test becomes the stronger claim. Until then it documents the checklist.
+    """
+    STILL_PAINTED = ("#0b0f1a", "#0f1629", "#111827", "#1a1a1a",
+                     "#0f1a45", "#18235c", "#15216e", "#1b365d")
+    token = derive_theme("#0D9488")["primary_on_dark"]
+    assert contrast(token, DARK_SURFACE) >= AA_NORMAL, "the guarantee itself"
+
+    short = {s: round(contrast(token, s), 2)
+             for s in STILL_PAINTED if contrast(token, s) < AA_NORMAL}
+    # Measured 2026-09-23. Asserted exactly: if a panel migrates to the neutral
+    # this fails and the entry gets updated, which is the point.
+    assert short == {"#0f1a45": 4.47, "#18235c": 3.91,
+                     "#15216e": 3.80, "#1b365d": 3.24}, (
+        f"the set of surfaces where the token does not hold has changed: {short}"
+    )
 
 
 # ---------------------------------------------------------------------------

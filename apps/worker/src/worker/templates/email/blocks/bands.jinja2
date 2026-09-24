@@ -1,0 +1,41 @@
+{#-
+  BLOCK: bands — §06's `bands`. The price-distribution bar chart.
+
+  Moved verbatim from the chart section of `_build_analytics_body`. Each row is
+  a two-cell table: the filled bar and the remainder, which is how a bar chart
+  is drawn in an email — no CSS width animation, no SVG, no background-image,
+  because Outlook supports none of them and Gmail strips the rest.
+
+  B6 IS WHY THE WIDTHS ARE COMPUTED IN PYTHON. The register records bars
+  normalised to the largest band while the labels showed share of total, so
+  Move-Up read 43% beside a bar filled to 100%. `bar_pct` and the percentage
+  label have to come from the same place or they drift again; they are computed
+  together in `_band_rows()` and arrive here already reconciled.
+-#}
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+                {% for b in bands %}
+                      <tr>
+                        <td style="padding: 8px 0;">
+                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                              <td width="110" style="vertical-align: middle; padding-right: 12px;">
+                                <p style="margin: 0; {{ b.label_style }}">{{ b.label }}</p>
+                                <p style="margin: 2px 0 0; font-size: 11px; color: #6b7280;">{{ b.count }} listings</p>
+                              </td>
+                              <td style="vertical-align: middle;">
+                                <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-radius: 4px; overflow: hidden;">
+                                  <tr>
+                                    <td width="{{ b.bar_pct }}%" style="height: 24px; background-color: {{ b.bar_bg }};"></td>
+                                    <td width="{{ b.empty_pct }}%" style="height: 24px; background-color: #e5e7eb;"></td>
+                                  </tr>
+                                </table>
+                              </td>
+                              <td width="50" align="right" style="vertical-align: middle; padding-left: 10px;">
+                                <span style="{{ b.pct_style }}">{{ b.pct }}</span>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                {%- endfor %}
+              </table>

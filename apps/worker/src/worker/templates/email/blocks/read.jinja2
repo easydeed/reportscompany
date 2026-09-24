@@ -1,0 +1,38 @@
+{#-
+  BLOCK: read — §06's `read`. The prose the recipient is meant to actually read:
+  the market-insight callout, and the Quick Take panel when there is no insight.
+
+  Two panels rather than one because they are mutually exclusive in every layout
+  today — `_build_quick_take` is called only `if not insight_text` — and that
+  selection stays in Python, where it is a readable condition rather than a
+  nested `{% if %}` in a template nobody opens.
+
+  Moved verbatim from `_build_ai_narrative` and `_build_quick_take`. The Quick
+  Take panel is the one that measured 1.00:1 before the email rebuild: its label
+  took `accent_color` while the panel took `primary_color`, two brand columns
+  with nothing relating them. Both text colours now derive from the panel, which
+  is why this block takes `on_panel` and no label colour at all.
+-#}
+{% if variant == 'insight' %}
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="background-color: {{ bg_tint }}; border-left: 3px solid {{ border_tint }}; border-radius: 0 6px 6px 0; padding: 16px 20px;">
+                    <p style="margin: 0 0 8px 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {{ ink }}; text-transform: uppercase; letter-spacing: 0.5px;">Market Insight</p>
+                    <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #1f2937;">
+                      {{ text }}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+{% else %}
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="background-color: {{ panel_color }}; padding: 16px 20px; border-radius: 6px;">
+                    <p style="margin: 0 0 6px 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {{ on_panel }}; text-transform: uppercase; letter-spacing: 1px; opacity: 0.85;">Quick Take</p>
+                    <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: {{ on_panel }};">
+                      {{ text }}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+{% endif %}

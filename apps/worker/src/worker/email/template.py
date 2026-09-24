@@ -48,6 +48,9 @@ V3: Professional styling refresh with enhanced Market Snapshot data.
 """
 import html
 import os
+from pathlib import Path
+
+from jinja2 import Environment, FileSystemLoader
 from typing import Dict, Optional, TypedDict, Tuple, List
 
 from worker.property_builder import compute_color_roles, normalize_hex_color, safe_url
@@ -230,6 +233,63 @@ _UNSUB_URL_SENTINEL = "__TRENDYREPORTS_UNSUBSCRIBE_URL__"
 #: surface through twelve builders, where the failure mode is a builder that
 #: names the wrong one and is off by 0.07 with nothing to show it.
 DARKEST_LIGHT_SURFACE = "#f1f5f9"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# The block environment — Workstream C's consolidation
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# §06 replaces eight per-report-type layouts assembled in Python with ONE set of
+# named blocks selected per type. The blocks live in templates/email/blocks/ and
+# are moved across verbatim: same HTML, different interpolation syntax. Whether
+# that holds is not a matter of care — `tests/test_email_render_diff.py` compares
+# what each of ten documents MEANS, before and after, and an empty diff is the
+# acceptance criterion.
+#
+# ╔═══════════════════════════════════════════════════════════════════════╗
+# ║  autoescape=False IS DELIBERATE. DO NOT TURN IT ON.                   ║
+# ╚═══════════════════════════════════════════════════════════════════════╝
+#
+# A `.jinja2` file carries an implicit promise, and this one does not keep it.
+# If you arrived here because you noticed a template engine configured not to
+# escape and reached for the one-word fix: that instinct is right in general and
+# wrong here, and the paragraph below is the reason.
+#
+# **Everything reaching a block has already been escaped, exactly once**, by the
+# trust boundary near the top of `schedule_email_html()` — `_sanitize_brand()`,
+# `_esc()`, `_sanitize_metrics()`, `_sanitize_listing()` and `safe_url()`, all
+# applied before a single value is used. Read the comment above those calls; it
+# explains why the escaping lives there and not at the ~460 interpolation sites.
+#
+# **Turning autoescape on breaks the document in two ways:**
+#
+#   1. Every already-escaped value is escaped a second time. An ampersand in a
+#      street address renders as `&amp;amp;`.
+#   2. Worse, and the reason per-site escaping was rejected in the first place:
+#      roughly fifty of these interpolations insert HTML FRAGMENTS this module
+#      built — `badge_html`, `phone_pill_html`, every `_build_*` return. Escaping
+#      those renders the markup as visible text. The reader sees `<span
+#      style="...">Sold</span>` printed in the middle of a table row.
+#
+# So the blocks have the same trust model as the f-strings they replace: safe
+# because the inputs were cleaned once, not because the templating escapes. The
+# migration is NEUTRAL on security, not an improvement — worth stating plainly,
+# because the opposite is the natural assumption.
+#
+# `test_the_block_environment_does_not_escape` fails if this is flipped, and
+# carries this reason in its assertion message so the failure explains itself.
+_BLOCK_ENV = Environment(
+    loader=FileSystemLoader(str(Path(__file__).resolve().parents[1] / "templates" / "email")),
+    autoescape=False,          # see above — NOT an oversight
+    trim_blocks=True,
+    lstrip_blocks=False,
+    keep_trailing_newline=False,
+)
+
+
+def render_block(name: str, **context) -> str:
+    """Render one §06 block. `name` is the stem, e.g. "cta"."""
+    return _BLOCK_ENV.get_template(f"blocks/{name}.jinja2").render(**context)
 
 
 def _ink(brand_hex: str, on: str = DARKEST_LIGHT_SURFACE) -> str:
@@ -495,305 +555,105 @@ def _tel_uri(phone: Optional[str]) -> Optional[str]:
 
 def _build_ai_narrative(insight_text: str, accent_color: str = "#0d9488",
                         accent_on_light: str = "#0d7c72") -> str:
-    """Accent-bordered callout with MARKET INSIGHT label. Ref: V0 email designs."""
+    """§06 block `read`, insight variant. Markup in blocks/read.jinja2."""
     if not insight_text:
         return ""
-    bg_tint = hex_to_rgba(accent_color, 0.06)
-    border_tint = hex_to_rgba(accent_color, 0.4)
-    return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
-                <tr>
-                  <td style="background-color: {bg_tint}; border-left: 3px solid {border_tint}; border-radius: 0 6px 6px 0; padding: 16px 20px;">
-                    <p style="margin: 0 0 8px 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {accent_on_light}; text-transform: uppercase; letter-spacing: 0.5px;">Market Insight</p>
-                    <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #1f2937;">
-                      {insight_text}
-                    </p>
-                  </td>
-                </tr>
-              </table>'''
+    return render_block(
+        "read",
+        variant="insight",
+        text=insight_text,
+        bg_tint=hex_to_rgba(accent_color, 0.06),
+        border_tint=hex_to_rgba(accent_color, 0.4),
+        ink=accent_on_light,
+    )
 
 
 def _build_hero_stat(value: str, label: str, primary_color: str,
                      trend: str = None, trend_positive: bool = True,
                      sub_label: str = None) -> str:
-    """Centered hero stat on light bg card. Ref: V0 email designs."""
-    _role_ink = _ink(primary_color)   # text on a light card, not the raw brand value
+    """§06 chrome `hero` — the centred headline figure. Markup in blocks/chrome.jinja2."""
     trend_html = ""
     if trend:
-        color = "#15803d" if trend_positive else "#dc2626"
-        bg = "rgba(34,197,94,0.12)" if trend_positive else "rgba(220,38,38,0.12)"
-        arrow = "&#8593;" if trend_positive else "&#8595;"
-        trend_html = f'''
-                    <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin-top: 12px;">
-                      <tr>
-                        <td style="background-color: {bg}; padding: 6px 14px; border-radius: 20px;">
-                          <span style="font-size: 13px; font-weight: 600; color: {color};">{arrow} {trend}</span>
-                        </td>
-                      </tr>
-                    </table>'''
-    sub_html = f'<p style="margin: 4px 0 0; font-size: 12px; color: #475569;">{sub_label}</p>' if sub_label else ""
-    return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
-                <tr>
-                  <td style="background-color: #f8fafc; border-radius: 8px; padding: 28px 20px; text-align: center;">
-                    <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 48px; font-weight: 700; color: {_role_ink}; line-height: 1;">
-                      {value}
-                    </p>
-                    <p style="margin: 8px 0 0; font-size: 12px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 1px;">
-                      {label}
-                    </p>
-                    {sub_html}{trend_html}
-                  </td>
-                </tr>
-              </table>'''
+        # §3.3 status colours: reserved, never drawn from the brand, so literals.
+        trend_html = render_block(
+            "chrome", piece="trend_chip", trend=trend,
+            chip_color="#15803d" if trend_positive else "#dc2626",
+            chip_bg="rgba(34,197,94,0.12)" if trend_positive else "rgba(220,38,38,0.12)",
+            arrow="&#8593;" if trend_positive else "&#8595;",
+        )
+    sub_html = (f'<p style="margin: 4px 0 0; font-size: 12px; color: #475569;">{sub_label}</p>'
+                if sub_label else "")
+    return render_block("chrome", piece="hero", value=value, label=label,
+                        ink=_ink(primary_color), sub_html=sub_html, trend_html=trend_html)
 
 
 def _build_gallery_count(count: int, label: str, primary_color: str) -> str:
-    """Centered pill count badge. Ref: V0 email designs."""
-    _role_on = _on(primary_color)   # the pill is a brand fill; its text is derived
-    return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
-                <tr>
-                  <td align="center">
-                    <span style="display: inline-block; background: {primary_color}; color: {_role_on}; font-size: 12px; font-weight: 600; padding: 8px 20px; border-radius: 20px;">{count} {label}</span>
-                  </td>
-                </tr>
-              </table>'''
+    """§06 chrome `count_pill`. The pill is a brand fill, so its text is derived."""
+    return render_block("chrome", piece="count_pill", count=count, label=label,
+                        primary_color=primary_color, on_fill=_on(primary_color))
 
 
 def _build_quick_take(text: str, accent_color: str, primary_color: str = "#18235c") -> str:
     """
-    Callout panel painted in the affiliate's primary colour.
+    §06 block `read`, panel variant. Markup in blocks/read.jinja2.
 
-    THIS FUNCTION WAS THE WORST CONTRAST DEFECT IN THE PRODUCT. It took the
-    label colour (`accent_color`) and the panel colour (`primary_color`) as two
-    independent arguments with nothing relating them, and painted one brand
-    colour directly on the other:
-
-        #8b5cf6 on #0d9488   1.13:1
-        #dc2626 on #dc2626   1.00:1   <- an account that sets ONE colour
-                                         rather than two gets invisible text
-
-    The master plan recorded this as B3 at 1.4:1 from a sample render. Measured
-    across the six live themes the label runs 1.13–2.14:1, and the body text
-    below it — hardcoded `#ffffff` — runs 1.98:1 on lime and 2.15:1 on amber.
-
-    `accent_color` is now IGNORED for the label. Both text colours derive from
-    the panel, which is the only thing they can be readable against. The
-    parameter is kept so the six call sites need no change and so that anyone
-    reading a call site sees why it no longer matters.
+    THIS WAS THE WORST CONTRAST DEFECT IN THE PRODUCT. The label colour and the
+    panel colour arrived as two independent arguments with nothing relating
+    them, so an account that set ONE brand colour rather than two rendered
+    `#dc2626` on `#dc2626` — invisible. `accent_color` is kept in the signature
+    so the six call sites need no change, and is deliberately unused: both text
+    colours derive from the panel, which is the only thing they can be readable
+    against.
     """
     if not text:
         return ""
-    on_panel = _on(primary_color)
-    return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
-                <tr>
-                  <td style="background-color: {primary_color}; padding: 16px 20px; border-radius: 6px;">
-                    <p style="margin: 0 0 6px 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {on_panel}; text-transform: uppercase; letter-spacing: 1px; opacity: 0.85;">Quick Take</p>
-                    <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: {on_panel};">
-                      {text}
-                    </p>
-                  </td>
-                </tr>
-              </table>'''
-
-
-def _build_cta(pdf_url: str, accent_color: str, cta_text: str = "View Full Report") -> str:
-    """Accent-colored CTA button with VML fallback. Ref: V0 email designs."""
-    on_fill = _on(accent_color)
-    return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
-                <tr>
-                  <td align="center" style="padding: 8px 0;">
-                    <!--[if mso]>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{pdf_url}" style="height:48px;v-text-anchor:middle;width:240px;" arcsize="8%" stroke="f" fillcolor="{accent_color}">
-                      <w:anchorlock/>
-                      <center style="color:{on_fill};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:14px;font-weight:600;">{cta_text}</center>
-                    </v:roundrect>
-                    <![endif]-->
-                    <!--[if !mso]><!-->
-                    <a href="{pdf_url}" target="_blank" style="display: inline-block; background-color: {accent_color}; color: {on_fill}; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 6px;">
-                      {cta_text}
-                    </a>
-                    <!--<![endif]-->
-                  </td>
-                </tr>
-              </table>'''
+    return render_block(
+        "read",
+        variant="panel",
+        text=text,
+        panel_color=primary_color,
+        on_panel=_on(primary_color),
+    )
 
 
 def _build_section_label(label: str, primary_color: str) -> str:
-    """20x2px accent bar + uppercase branded label. Ref: V0 SectionLabel."""
-    _role_ink = _ink(primary_color)   # text on a light card, not the raw brand value
-    return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom: 14px;">
-                <tr>
-                  <td style="width: 20px; padding-right: 8px; vertical-align: middle;">
-                    <div style="width: 20px; height: 2px; background-color: {primary_color}; border-radius: 2px;"></div>
-                  </td>
-                  <td style="vertical-align: middle;">
-                    <p style="margin: 0; font-size: 11px; font-weight: 700; color: {_role_ink}; text-transform: uppercase; letter-spacing: 2px;">
-                      {label}
-                    </p>
-                  </td>
-                </tr>
-              </table>'''
+    """§06 chrome `section_label` — accent rule plus uppercase label."""
+    return render_block("chrome", piece="section_label", label=label,
+                        primary_color=primary_color, ink=_ink(primary_color))
 
 
 def _build_filter_blurb(filter_text: str, primary_color: str) -> str:
-    """Optional report criteria callout."""
-    _role_ink = _ink(primary_color)   # text on a light card, not the raw brand value
+    """§06 chrome `filter_blurb` — the optional report-criteria callout."""
     if not filter_text:
         return ""
-    bg = hex_to_rgba(primary_color, 0.05)
-    return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
-                <tr>
-                  <td style="padding: 12px 16px; background-color: {bg}; border-radius: 8px; border-left: 3px solid {primary_color};">
-                    <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #44403c;">
-                      <span style="font-weight: 600; color: {_role_ink};">Report Criteria:</span> {filter_text}
-                    </p>
-                  </td>
-                </tr>
-              </table>'''
+    return render_block("chrome", piece="filter_blurb", text=filter_text,
+                        primary_color=primary_color, ink=_ink(primary_color),
+                        bg=hex_to_rgba(primary_color, 0.05))
 
 
 def _build_stacked_stats(stats: List[Tuple[str, str]], primary_color: str = "#18235c") -> str:
     """
-    4-column stats row with Outfit values. Ref: V0 email designs.
+    §06 block `spec_list` — the four-across metric strip. Markup in
+    blocks/spec_list.jinja2.
 
-    B4: the `.metric-card` rule that makes these stack on a phone was defined in
-    the document's <style> block and applied to **zero elements** — along with
-    `.mobile-stack` and `.band-row`. The media query was correct and unreachable,
-    so a four-across strip stayed four-across at 320px and its 10px labels wrapped
-    to three lines. The register called it the highest-impact single fix given the
-    mobile open share, and it is one attribute.
+    Capped at four here rather than in the template: the cap is a layout fact
+    (four 25% cells fill a row) and the block should not have to know it.
     """
-    _role_ink = _ink(primary_color)   # text on a light card, not the raw brand value
     if not stats:
         return ""
-    cells = ""
-    for i, (label, value) in enumerate(stats[:4]):
-        bg = "#f8fafc" if i % 2 == 0 else "#f1f5f9"
-        border = "border-right: 1px solid #e2e8f0;" if i < min(len(stats), 4) - 1 else ""
-        cells += f'''
-                    <td width="25%" class="metric-card" style="background-color: {bg}; padding: 16px 12px; text-align: center; {border}">
-                      <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 700; color: {_role_ink};">{value}</p>
-                      <p style="margin: 4px 0 0 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: 0.3px;">{label}</p>
-                    </td>'''
-    return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
-                <tr>
-                  {cells}
-                </tr>
-              </table>'''
-
-
-def _build_trend_stats(stats: List[Tuple[str, str, str, bool]], primary_color: str) -> str:
-    """Stacked rows with trend indicators. Ref: V0 market-analytics.tsx
-    stats: list of (label, value, trend_text, trend_positive) tuples"""
-    if not stats:
-        return ""
-    rows = ""
-    for i, (label, value, trend_text, positive) in enumerate(stats):
-        bg = "#ffffff" if i % 2 == 0 else "#fafaf9"
-        border = "border-bottom: 1px solid #f5f5f4;" if i < len(stats) - 1 else ""
-        color = "#047857" if positive else "#dc2626"
-        arrow = "&#9650;" if positive else "&#9660;"
-        trend_html = f'<span style="font-size: 11px; font-weight: 600; color: {color}; margin-left: 12px;"><span style="margin-right: 2px;">{arrow}</span>{trend_text}</span>' if trend_text else ""
-        rows += f'''
-                      <tr>
-                        <td style="padding: 16px 20px; background-color: {bg}; {border}">
-                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                            <tr>
-                              <td style="vertical-align: middle;">
-                                <span style="font-size: 14px; color: #57534e;">{label}</span>
-                              </td>
-                              <td align="right" style="vertical-align: middle;">
-                                <span style="font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 24px; font-weight: 700; color: #1c1917;">{value}</span>
-                                {trend_html}
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>'''
-    return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
-                <tr>
-                  <td>
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 12px; overflow: hidden;">
-                      {rows}
-                    </table>
-                  </td>
-                </tr>
-              </table>'''
+    return render_block(
+        "spec_list",
+        variant="strip",
+        stats=stats[:4],
+        ink=_ink(primary_color),   # text on a light card, not the raw brand value
+    )
 
 
 def _build_branded_divider(primary_color: str, accent_color: str) -> str:
-    """64px gradient bar between stacked cards. Ref: V0 single-stacked.tsx"""
-    return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 16px 0;">
-                <tr>
-                  <td align="center">
-                    <div style="width: 64px; height: 2px; background: linear-gradient(90deg, {primary_color}, {accent_color}); border-radius: 2px;"></div>
-                  </td>
-                </tr>
-              </table>'''
+    """§06 chrome `divider` — the 64px gradient bar between stacked cards."""
+    return render_block("chrome", piece="divider",
+                        primary_color=primary_color, accent_color=accent_color)
 
-
-def _build_yoy_comparison(last_year: List[Tuple[str, str]], this_year: List[Tuple[str, str]], primary_color: str) -> str:
-    """Side-by-side Year-over-Year comparison. Ref: V0 market-analytics.tsx
-    _role_ink = _ink(primary_color)   # text on a light card, not the raw brand value
-    Each list: [(label, value), ...]"""
-    if not last_year or not this_year:
-        return ""
-    ly_rows = ""
-    for label, val in last_year:
-        ly_rows += f'''
-                            <tr>
-                              <td style="padding: 8px 0;">
-                                <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 20px; font-weight: 700; color: #78716c;">{val}</p>
-                                <p style="margin: 2px 0 0; font-size: 11px; color: #a8a29e;">{label}</p>
-                              </td>
-                            </tr>'''
-    ty_rows = ""
-    for label, val in this_year:
-        ty_rows += f'''
-                            <tr>
-                              <td style="padding: 8px 0;">
-                                <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 20px; font-weight: 700; color: {_role_ink};">{val}</p>
-                                <p style="margin: 2px 0 0; font-size: 11px; color: #78716c;">{label}</p>
-                              </td>
-                            </tr>'''
-    return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
-                <tr>
-                  <td>
-                    <p style="margin: 0 0 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; color: #78716c;">Year-Over-Year Comparison</p>
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 12px; overflow: hidden;">
-                      <tr>
-                        <td width="50%" style="padding: 20px; background-color: #f5f5f4; border-right: 1px solid #e7e5e4; vertical-align: top;">
-                          <p style="margin: 0 0 16px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; color: #78716c;">Last Year</p>
-                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                            {ly_rows}
-                          </table>
-                        </td>
-                        <td width="50%" style="padding: 20px; background-color: #ffffff; vertical-align: top;">
-                          <p style="margin: 0 0 16px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; color: {_role_ink};">This Year</p>
-                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                            {ty_rows}
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>'''
-
-
-# ---------------------------------------------------------------------------
-# Phase 2: Photo Card Builders
-# ---------------------------------------------------------------------------
 
 def _listing_price_str(listing: Dict) -> str:
     """Format a listing's price for display."""
@@ -803,239 +663,205 @@ def _listing_price_str(listing: Dict) -> str:
     return _format_price_clean(price)
 
 
-def _build_photo_card_2x2(listing: Dict, accent_color: str) -> str:
-    """Market Narrative 2x2 card. Ref: V0 email-market-snapshot.html"""
-    _role_ink = _ink(accent_color)   # text on a light card, not the raw brand value
+#: Per-size photo dimensions and the placeholder that stands in for a missing
+#: one. B5 on the register: an absent photo rendered as a broken-image glyph on
+#: one surface and a blank grey box on another. It is a grey block on all three
+#: here — current behaviour preserved, because this is a restructure. The
+#: register's "hatched fill, camera glyph, Photo pending" remains open.
+_GALLERY_SIZES = {
+    "plain": (
+        '<img src="{photo}" alt="{addr}" width="260" height="160" style="display: block; max-width: 260px; max-height: 160px; width: 100%; height: auto; object-fit: cover; border: 1px solid #e5e7eb;">',
+        '<div style="width: 100%; height: 160px; background: #f5f5f4; border: 1px solid #e5e7eb;"></div>',
+    ),
+    "large": (
+        '<img src="{photo}" alt="{addr}" width="260" style="display: block; width: 100%; height: auto; border-radius: 8px 8px 0 0;">',
+        '<div style="width: 100%; height: 180px; background: #f5f5f4; border-radius: 8px 8px 0 0;"></div>',
+    ),
+    "compact": (
+        '<img src="{photo}" alt="{addr}" width="180" style="display: block; width: 100%; height: auto; border-radius: 8px 8px 0 0;">',
+        '<div style="width: 100%; height: 110px; background: #f5f5f4; border-radius: 8px 8px 0 0;"></div>',
+    ),
+    "stacked": (
+        '<img src="{photo}" alt="{addr}" width="520" height="240" style="display: block; width: 100%; height: 240px; object-fit: cover;">',
+        '<div style="width: 100%; height: 240px; background: #f5f5f4;"></div>',
+    ),
+    "badged": (
+        '<img src="{photo}" alt="{addr}" width="260" height="130" style="display: block; width: 100%; height: 130px; object-fit: cover; border-radius: 4px;">',
+        '<div style="width: 100%; height: 130px; background: #f5f5f4; border-radius: 4px;"></div>',
+    ),
+    "row": (
+        '<img src="{photo}" alt="{addr}" width="120" height="90" style="display: block; width: 120px; height: 90px; object-fit: cover;">',
+        '<div style="width: 120px; height: 90px; background: #f5f5f4;"></div>',
+    ),
+}
+
+
+def _listing_specs(listing: Dict) -> str:
+    """`3 bd • 2 ba • 1,800 sf`, omitting whatever is missing."""
+    parts = []
+    if listing.get("bedrooms"):
+        parts.append(f"{listing['bedrooms']} bd")
+    if listing.get("bathrooms"):
+        parts.append(f"{listing['bathrooms']} ba")
+    if listing.get("sqft"):
+        parts.append(f"{listing['sqft']:,} sf")
+    return " &bull; ".join(parts)
+
+
+def _gallery_card_context(listing: Dict, size: str, ink: str, location: str) -> Dict:
+    img, placeholder = _GALLERY_SIZES[size]
     photo = listing.get("hero_photo_url") or ""
     addr = listing.get("street_address") or "Address N/A"
-    price_str = _listing_price_str(listing)
-    photo_html = f'<img src="{photo}" alt="{addr}" width="260" height="160" style="display: block; max-width: 260px; max-height: 160px; width: 100%; height: auto; object-fit: cover; border: 1px solid #e5e7eb;">' if photo else '<div style="width: 100%; height: 160px; background: #f5f5f4; border: 1px solid #e5e7eb;"></div>'
-    return f'''<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff;">
-                        <tr><td>{photo_html}</td></tr>
-                        <tr><td style="padding: 8px 0 0;">
-                          <p style="margin: 0; font-size: 12px; color: #333333;">{addr}</p>
-                          <p style="margin: 4px 0 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: bold; color: {_role_ink};">{price_str}</p>
-                        </td></tr>
-                      </table>'''
+    return {
+        "size": size,
+        "address": addr,
+        "price": _listing_price_str(listing),
+        "specs": _listing_specs(listing) if size != "plain" else "",
+        "location": location,
+        "ink": ink,
+        "photo_html": img.format(photo=photo, addr=addr) if photo else placeholder,
+    }
+
+
+def _build_photo_card_2x2(listing: Dict, accent_color: str) -> str:
+    """§06 block `gallery`, plain size. Market Narrative 2x2 card."""
+    return render_block("gallery", **_gallery_card_context(
+        listing, "plain", _ink(accent_color), ""))
 
 
 def _build_gallery_card_large(listing: Dict, accent_color: str) -> str:
-    """Gallery 2x2 card: photo on top, info below. Ref: V0 email-reports.html"""
-    _role_ink = _ink(accent_color)   # text on a light card, not the raw brand value
-    photo = listing.get("hero_photo_url") or ""
-    addr = listing.get("street_address") or "Address N/A"
+    """§06 block `gallery`, large size. Photo on top, info below."""
     city = listing.get("city") or ""
     zip_code = listing.get("zip_code") or ""
-    beds = listing.get("bedrooms")
-    baths = listing.get("bathrooms")
-    sqft = listing.get("sqft")
-    price_str = _listing_price_str(listing)
-    location = f"{city}, {zip_code}" if zip_code else city
-    photo_html = f'<img src="{photo}" alt="{addr}" width="260" style="display: block; width: 100%; height: auto; border-radius: 8px 8px 0 0;">' if photo else '<div style="width: 100%; height: 180px; background: #f5f5f4; border-radius: 8px 8px 0 0;"></div>'
-    specs_parts = []
-    if beds:
-        specs_parts.append(f"{beds} bd")
-    if baths:
-        specs_parts.append(f"{baths} ba")
-    if sqft:
-        specs_parts.append(f"{sqft:,} sf")
-    specs = " &bull; ".join(specs_parts)
-    return f'''<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
-                        <tr><td>{photo_html}</td></tr>
-                        <tr><td style="padding: 14px;">
-                          <p style="margin: 0; font-size: 14px; font-weight: 700; color: #1f2937;">{addr}</p>
-                          {f'<p style="margin: 2px 0 0; font-size: 12px; color: #6b7280;">{location}</p>' if location else ''}
-                          <p style="margin: 6px 0 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 20px; font-weight: bold; color: {_role_ink};">{price_str}</p>
-                          {f'<p style="margin: 4px 0 0; font-size: 12px; color: #6b7280;">{specs}</p>' if specs else ''}
-                        </td></tr>
-                      </table>'''
+    return render_block("gallery", **_gallery_card_context(
+        listing, "large", _ink(accent_color),
+        f"{city}, {zip_code}" if zip_code else city))
 
 
 def _build_gallery_card_compact(listing: Dict, accent_color: str) -> str:
-    """Gallery 3x2 card: photo on top, info below. Ref: V0 email-reports.html"""
-    _role_ink = _ink(accent_color)   # text on a light card, not the raw brand value
-    photo = listing.get("hero_photo_url") or ""
-    addr = listing.get("street_address") or "Address N/A"
-    city = listing.get("city") or ""
-    beds = listing.get("bedrooms")
-    baths = listing.get("bathrooms")
-    sqft = listing.get("sqft")
-    price_str = _listing_price_str(listing)
-    photo_html = f'<img src="{photo}" alt="{addr}" width="180" style="display: block; width: 100%; height: auto; border-radius: 8px 8px 0 0;">' if photo else '<div style="width: 100%; height: 110px; background: #f5f5f4; border-radius: 8px 8px 0 0;"></div>'
-    specs_parts = []
-    if beds:
-        specs_parts.append(f"{beds} bd")
-    if baths:
-        specs_parts.append(f"{baths} ba")
-    if sqft:
-        specs_parts.append(f"{sqft:,} sf")
-    specs = " &bull; ".join(specs_parts)
-    return f'''<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
-                        <tr><td>{photo_html}</td></tr>
-                        <tr><td style="padding: 12px;">
-                          <p style="margin: 0; font-size: 13px; font-weight: 700; color: #1f2937;">{addr}</p>
-                          {f'<p style="margin: 2px 0 0; font-size: 11px; color: #6b7280;">{city}</p>' if city else ''}
-                          <p style="margin: 6px 0 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: bold; color: {_role_ink};">{price_str}</p>
-                          {f'<p style="margin: 4px 0 0; font-size: 11px; color: #6b7280;">{specs}</p>' if specs else ''}
-                        </td></tr>
-                      </table>'''
+    """§06 block `gallery`, compact size. The 3-across variant."""
+    return render_block("gallery", **_gallery_card_context(
+        listing, "compact", _ink(accent_color), listing.get("city") or ""))
 
 
 def _build_stacked_property_card(listing: Dict, primary_color: str, accent_color: str) -> str:
-    """Full-width card: 240px hero photo, 22px price, description. Ref: V0 single-stacked.tsx"""
-    _role_ink = _ink(primary_color)   # text on a light card, not the raw brand value
-    photo = listing.get("hero_photo_url") or ""
-    addr = listing.get("street_address") or "Address N/A"
+    """§06 block `gallery`, stacked size — full-width card with spec chips."""
+    ink = _ink(primary_color)
     city = listing.get("city") or ""
     zip_code = listing.get("zip_code") or ""
-    beds = listing.get("bedrooms")
-    baths = listing.get("bathrooms")
-    sqft = listing.get("sqft")
-    price_str = _listing_price_str(listing)
-    location = f"{city}, {zip_code}" if zip_code else city
-    photo_html = f'<img src="{photo}" alt="{addr}" width="520" height="240" style="display: block; width: 100%; height: 240px; object-fit: cover;">' if photo else '<div style="width: 100%; height: 240px; background: #f5f5f4;"></div>'
-    badge_items = []
-    if beds:
-        badge_items.append(f"{beds} Bed")
-    if baths:
-        badge_items.append(f"{baths} Bath")
-    if sqft:
-        badge_items.append(f"{sqft:,} SF")
-    badges = ""
-    for b in badge_items:
-        badge_bg = hex_to_rgba(primary_color, 0.08)
-        badges += f'<td style="padding-right: 6px;"><span style="display: inline-block; padding: 4px 12px; background-color: {badge_bg}; border-radius: 6px; font-size: 11px; font-weight: 500; color: {_role_ink};">{b}</span></td>'
-    return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e7e5e4; border-radius: 12px; overflow: hidden; background-color: #ffffff;">
-                <tr><td>{photo_html}</td></tr>
-                <tr><td style="padding: 20px;">
-                  <p style="margin: 0 0 4px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 22px; font-weight: 700; color: {_role_ink};">{price_str}</p>
-                  <p style="margin: 0 0 2px; font-size: 15px; font-weight: 600; color: #1c1917;">{addr}</p>
-                  <p style="margin: 0 0 16px; font-size: 12px; color: #78716c;">{location}</p>
-                  <table role="presentation" cellpadding="0" cellspacing="0"><tr>{badges}</tr></table>
-                </td></tr>
-              </table>'''
+    chips = []
+    if listing.get("bedrooms"):
+        chips.append(f"{listing['bedrooms']} Bed")
+    if listing.get("bathrooms"):
+        chips.append(f"{listing['bathrooms']} Bath")
+    if listing.get("sqft"):
+        chips.append(f"{listing['sqft']:,} SF")
+    ctx = _gallery_card_context(listing, "stacked", ink,
+                                f"{city}, {zip_code}" if zip_code else city)
+    return render_block("gallery", chips=chips,
+                        chip_bg=hex_to_rgba(primary_color, 0.08), **ctx)
 
 
-def _build_photo_card_with_badge(listing: Dict, primary_color: str, accent_color: str, badge_text: str = "Sold") -> str:
-    """Card with status badge below photo. Ref: V0 email-sales-inventory.html"""
-    _role_ink = _ink(accent_color)   # text on a light card, not the raw brand value
-    photo = listing.get("hero_photo_url") or ""
-    addr = listing.get("street_address") or "Address N/A"
-    beds = listing.get("bedrooms")
-    baths = listing.get("bathrooms")
-    price_str = _listing_price_str(listing)
-    photo_html = f'<img src="{photo}" alt="{addr}" width="260" height="130" style="display: block; width: 100%; height: 130px; object-fit: cover; border-radius: 4px;">' if photo else '<div style="width: 100%; height: 130px; background: #f5f5f4; border-radius: 4px;"></div>'
-    specs = f'{beds}bd / {baths}ba' if beds and baths else ""
-    badge_lower = badge_text.lower()
-    # #15803d / #b45309 rather than #16a34a / #f59e0b: white on the brighter
-    # pair measures 3.30:1 and 2.15:1. Both replacements are already used in the
-    # PDF templates, so the palette does not grow. §3.3 — status colours are
-    # reserved and never drawn from the brand, which is why they are literals
-    # here and exempt from the template-colour lint by role.
-    badge_bg = "#dc2626" if badge_lower == "sold" else "#15803d" if badge_lower == "active" else "#b45309" if badge_lower == "pending" else _ink(accent_color)
-    return f'''<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff;">
-                        <tr><td>{photo_html}</td></tr>
-                        <tr><td style="padding: 8px 0 0;">
-                          <span style="display: inline-block; padding: 3px 8px; background-color: {badge_bg}; color: #ffffff; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 3px;">{badge_text}</span>
-                          <p style="margin: 6px 0 0; font-size: 10px; color: #475569;">{addr}</p>
-                          <p style="margin: 4px 0 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; font-weight: bold; color: {_role_ink};">{price_str}</p>
-                        </td></tr>
-                      </table>'''
+def _build_photo_card_with_badge(listing: Dict, primary_color: str, accent_color: str,
+                                 badge_text: str = "Sold") -> str:
+    """
+    §06 block `gallery`, badged size — sales/inventory card with a status badge.
+
+    The badge palette is §3.3: reserved, never drawn from the brand. #15803d and
+    #b45309 rather than the brighter pair because white on #16a34a is 3.30:1 and
+    on #f59e0b is 2.15:1. An unrecognised status falls back to the brand ink,
+    which is the only case where a badge is brand-coloured at all.
+    """
+    ink = _ink(accent_color)
+    ctx = _gallery_card_context(listing, "badged", ink, "")
+    return render_block(
+        "gallery",
+        badge_text=badge_text,
+        badge_bg=_ROW_BADGE_COLOURS.get(badge_text.lower(), ink),
+        **ctx,
+    )
+
+
+#: The NEW marker on a list row. A fixed pale-green pair at 7.4:1, and NOT a
+#: brand value: it marks recency, not identity, so it stays constant across
+#: affiliates the way §3.3's status colours do.
+_NEW_BADGE_HTML = (
+    '<td width="60" align="right" style="vertical-align: middle;">'
+    '<span style="display: inline-block; padding: 3px 8px; background-color: #dcfce7;'
+    ' color: #166534; font-size: 9px; font-weight: 700; text-transform: uppercase;'
+    ' letter-spacing: 0.5px; border-radius: 3px;">NEW</span></td>'
+)
 
 
 def _build_property_row(listing: Dict, accent_color: str, is_last: bool = False) -> str:
-    """Photo-left row with NEW badge. Ref: V0 email-price-bands.html Featured This Week"""
-    _role_ink = _ink(accent_color)   # text on a light card, not the raw brand value
-    photo = listing.get("hero_photo_url") or ""
-    addr = listing.get("street_address") or "Address N/A"
-    beds = listing.get("bedrooms")
-    baths = listing.get("bathrooms")
+    """§06 block `gallery`, row size — photo-left list row with a NEW marker."""
+    ctx = _gallery_card_context(listing, "row", _ink(accent_color), "")
+    ctx["specs"] = _listing_specs(listing)
+    status = (listing.get("status") or "").lower()
+    return render_block(
+        "gallery",
+        margin_bottom=0 if is_last else 12,
+        badge_html=_NEW_BADGE_HTML if status in ("new", "active") else "",
+        **ctx,
+    )
+
+
+#: §3.3 status colours for the row badge. Literals, deliberately — a status
+#: colour is reserved and never drawn from the brand — and these values rather
+#: than the brighter pair because white on #16a34a is 3.30:1 and on #f59e0b is
+#: 2.15:1. Both replacements already appear in the PDF templates.
+_ROW_BADGE_COLOURS = {"sold": "#dc2626", "active": "#15803d", "pending": "#b45309"}
+
+
+def _sales_table_row(listing: Dict, index: int, last: bool) -> Dict[str, str]:
+    """
+    One row's values, formatted. Shaped here rather than in the template so that
+    `_format_price_clean`, the badge palette and the "N/A" fallbacks stay
+    testable in Python — a template is a bad place to hide any of them.
+    """
+    beds = listing.get("bedrooms") or ""
+    baths = listing.get("bathrooms") or ""
     sqft = listing.get("sqft")
-    price_str = _listing_price_str(listing)
-    photo_html = f'<img src="{photo}" alt="{addr}" width="120" height="90" style="display: block; width: 120px; height: 90px; object-fit: cover;">' if photo else '<div style="width: 120px; height: 90px; background: #f5f5f4;"></div>'
-    specs_parts = []
-    if beds:
-        specs_parts.append(f"{beds} bd")
-    if baths:
-        specs_parts.append(f"{baths} ba")
-    if sqft:
-        specs_parts.append(f"{sqft:,} sf")
-    specs = " &bull; ".join(specs_parts)
+    price = listing.get("close_price") or listing.get("list_price")
     status = listing.get("status") or ""
-    badge_html = ""
-    if status.lower() == "new" or status.lower() == "active":
-        badge_html = '<td width="60" align="right" style="vertical-align: middle;"><span style="display: inline-block; padding: 3px 8px; background-color: #dcfce7; color: #166534; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 3px;">NEW</span></td>'
-    return f'''
-                      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border: 1px solid #e5e7eb; margin-bottom: {0 if is_last else 12}px;">
-                        <tr>
-                          <td width="120" style="vertical-align: top;">
-                            {photo_html}
-                          </td>
-                          <td style="vertical-align: middle; padding: 12px;">
-                            <p style="margin: 0 0 2px; font-size: 13px; font-weight: 700; color: #1a2744;">{addr}</p>
-                            <p style="margin: 0 0 4px; font-size: 11px; color: #6b7280;">{specs}</p>
-                            <p style="margin: 0; font-family: \'Outfit\', -apple-system, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: bold; color: {_role_ink};">{price_str}</p>
-                          </td>
-                          {badge_html}
-                        </tr>
-                      </table>'''
+    badge = _ROW_BADGE_COLOURS.get(status.lower(), "")
+    return {
+        "address": listing.get("street_address") or "N/A",
+        "specs": f"{beds}/{baths}" if beds and baths else "",
+        "sqft": f"{sqft:,}" if sqft else "",
+        "price": _format_price_clean(price) if price else "N/A",
+        "dom": listing.get("days_on_market") or "",
+        "bg": "#ffffff" if index % 2 == 0 else "#f9fafb",
+        "border": "" if last else "border-bottom: 1px solid #f1f5f9;",
+        "badge_html": (
+            f' <span style="display: inline-block; background: {badge}; color: #ffffff;'
+            f' font-size: 8px; font-weight: 700; padding: 2px 6px; border-radius: 3px;'
+            f' margin-left: 6px; text-transform: uppercase;">{status}</span>'
+            if status and badge else ""
+        ),
+    }
 
 
 def _build_sales_table(listings: List[Dict], primary_color: str,
                        accent_color: str = "#0d9488") -> str:
     """
-    5-column data table with a brand-coloured header. Ref: V0
-    email-sales-inventory.html.
+    §06 block `table` — the five-column listings table. Markup in
+    blocks/table.jinja2.
 
-    Two roles, two derivations: the header cells sit ON the brand fill, and the
-    price column is brand-coloured text on a white or near-white row. Hardcoding
-    `#ffffff` for the first and the raw accent for the second put five header
-    labels at 1.98:1 on lime and every price at 3.74:1 on Luxury Estates.
+    The old version also computed an `hdr_style` local that nothing used: the
+    five header cells inlined the same style themselves. Dropped in the move,
+    which the render diff confirms changes nothing.
     """
-    _role_on_header = _on(primary_color)
-    _role_price_ink = _ink(accent_color)
     if not listings:
         return ""
-    rows = ""
-    for i, listing in enumerate(listings):
-        addr = listing.get("street_address") or "N/A"
-        beds = listing.get("bedrooms") or ""
-        baths = listing.get("bathrooms") or ""
-        sqft = listing.get("sqft")
-        sqft_str = f"{sqft:,}" if sqft else ""
-        price = listing.get("close_price") or listing.get("list_price")
-        dom = listing.get("days_on_market") or ""
-        price_str = _format_price_clean(price) if price else "N/A"
-        specs = f"{beds}/{baths}" if beds and baths else ""
-        bg = "#ffffff" if i % 2 == 0 else "#f9fafb"
-        status = listing.get("status") or ""
-        status_lower = status.lower() if status else ""
-        # See the note on `badge_bg` above: white on #16a34a is 3.30:1 and on
-        # #f59e0b is 2.15:1.
-        badge_color = "#dc2626" if status_lower == "sold" else "#15803d" if status_lower == "active" else "#b45309" if status_lower == "pending" else ""
-        badge_html = f' <span style="display: inline-block; background: {badge_color}; color: #ffffff; font-size: 8px; font-weight: 700; padding: 2px 6px; border-radius: 3px; margin-left: 6px; text-transform: uppercase;">{status}</span>' if status and badge_color else ""
-        border = "border-bottom: 1px solid #f1f5f9;" if i < len(listings) - 1 else ""
-        rows += f'''
-                        <tr>
-                          <td style="background: {bg}; padding: 12px 14px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; color: #334155; {border}">{addr}{badge_html}</td>
-                          <td style="background: {bg}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; color: #475569; text-align: center; {border}">{specs}</td>
-                          <td style="background: {bg}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; color: #475569; text-align: right; {border}">{sqft_str}</td>
-                          <td style="background: {bg}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 600; color: {_role_price_ink}; text-align: right; {border}">{price_str}</td>
-                          <td style="background: {bg}; padding: 12px 14px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; color: #475569; text-align: center; {border}">{dom}</td>
-                        </tr>'''
-    hdr_style = f"background: {primary_color}; padding: 12px {{pad}}; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {_on(primary_color)}; text-transform: uppercase; letter-spacing: 0.5px;"
-    return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden;">
-                <tr>
-                  <td style="background: {primary_color}; padding: 12px 14px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {_role_on_header}; text-transform: uppercase; letter-spacing: 0.5px;">Address</td>
-                  <td style="background: {primary_color}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {_role_on_header}; text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">Bd/Ba</td>
-                  <td style="background: {primary_color}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {_role_on_header}; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Sq Ft</td>
-                  <td style="background: {primary_color}; padding: 12px 10px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {_role_on_header}; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Price</td>
-                  <td style="background: {primary_color}; padding: 12px 14px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; color: {_role_on_header}; text-transform: uppercase; letter-spacing: 0.5px; text-align: center;">DOM</td>
-                </tr>
-                {rows}
-              </table>'''
+    return render_block(
+        "table",
+        rows=[_sales_table_row(l, i, i == len(listings) - 1)
+              for i, l in enumerate(listings)],
+        primary_color=primary_color,
+        on_header=_on(primary_color),     # text ON the brand fill
+        price_ink=_ink(accent_color),     # brand text on a light row
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1129,26 +955,6 @@ def _render_adaptive_listings(
     return f'<div style="margin-bottom: 32px;">{rows_html}</div>'
 
 
-def _build_2x2_photo_grid(listings: List[Dict], accent_color: str) -> str:
-    """2x2 grid of photo cards for Market Narrative. Ref: V0 market-narrative.tsx"""
-    cards = [_build_photo_card_2x2(l, accent_color) for l in listings[:4]]
-    while len(cards) < 4:
-        cards.append("")
-    rows = ""
-    for r in range(0, len(cards), 2):
-        c1 = cards[r] if r < len(cards) else ""
-        c2 = cards[r + 1] if r + 1 < len(cards) else ""
-        rows += f'''
-                <tr>
-                  <td width="50%" class="mobile-stack" style="padding: 0 4px 8px 0; vertical-align: top;">{c1}</td>
-                  <td width="50%" class="mobile-stack" style="padding: 0 0 8px 4px; vertical-align: top;">{c2}</td>
-                </tr>'''
-    return f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
-                {rows}
-              </table>'''
-
-
 def _build_gallery_2x2_body(
     insight_text: str, listings: List[Dict], quick_take: str,
     pdf_url: str, primary_color: str, accent_color: str,
@@ -1159,20 +965,7 @@ def _build_gallery_2x2_body(
     body = _build_filter_blurb(filter_description, primary_color)
     body += _build_ai_narrative(insight_text, accent_color, accent_on_light)
     body += _build_gallery_count(len(listings), gallery_label, primary_color)
-    cards = [_build_gallery_card_large(l, accent_color) for l in listings[:4]]
-    rows = ""
-    for r in range(0, len(cards), 2):
-        c1 = cards[r] if r < len(cards) else ""
-        c2 = cards[r + 1] if r + 1 < len(cards) else ""
-        rows += f'''
-                <tr>
-                  <td width="50%" class="mobile-stack" style="padding: 0 4px 8px 0; vertical-align: top;">{c1}</td>
-                  <td width="50%" class="mobile-stack" style="padding: 0 0 8px 4px; vertical-align: top;">{c2}</td>
-                </tr>'''
-    body += f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
-                {rows}
-              </table>'''
+    body += _card_grid([_build_gallery_card_large(l, accent_color) for l in listings[:4]], 2)
     if not insight_text:
         body += _build_quick_take(quick_take, accent_color, primary_color)
     return body
@@ -1188,20 +981,7 @@ def _build_gallery_3x2_body(
     body = _build_filter_blurb(filter_description, primary_color)
     body += _build_ai_narrative(insight_text, accent_color, accent_on_light)
     body += _build_gallery_count(len(listings), gallery_label, primary_color)
-    cards = [_build_gallery_card_compact(l, accent_color) for l in listings[:9]]
-    rows = ""
-    for r in range(0, len(cards), 3):
-        cells = ""
-        for c in range(3):
-            idx = r + c
-            pad = "padding: 0 3px 6px 0;" if c == 0 else ("padding: 0 0 6px 3px;" if c == 2 else "padding: 0 3px 6px 3px;")
-            card = cards[idx] if idx < len(cards) else ""
-            cells += f'<td width="33%" class="mobile-stack" style="{pad} vertical-align: top;">{card}</td>'
-        rows += f'<tr>{cells}</tr>'
-    body += f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
-                {rows}
-              </table>'''
+    body += _card_grid([_build_gallery_card_compact(l, accent_color) for l in listings[:9]], 3)
     if not insight_text:
         body += _build_quick_take(quick_take, accent_color, primary_color)
     return body
@@ -1233,13 +1013,10 @@ def _build_large_list_body(
     body = _build_filter_blurb(filter_description, primary_color)
     body += _build_ai_narrative(insight_text, accent_color, accent_on_light)
     body += _build_gallery_count(len(listings), gallery_label, primary_color)
-    rows_html = ""
-    for i, listing in enumerate(listings):
-        rows_html += _build_property_row(listing, accent_color, is_last=(i == len(listings) - 1))
-    body += f'''
-              <div style="margin-bottom: 32px;">
-                {rows_html}
-              </div>'''
+    body += render_block("grid", shape="rows", cards=[
+        _build_property_row(l, accent_color, is_last=(i == len(listings) - 1))
+        for i, l in enumerate(listings)
+    ])
     if not insight_text:
         body += _build_quick_take(quick_take, accent_color, primary_color)
     return body
@@ -1260,25 +1037,63 @@ def _build_closed_sales_body(
         show = listings[:4]
         label = "Notable Sales" if any(l.get("close_price") for l in show) else "Featured Properties"
         body += _build_gallery_count(len(show), label, primary_color)
-        cards = [_build_photo_card_with_badge(l, primary_color, accent_color, "Sold" if l.get("close_price") else "Active") for l in show]
-        rows = ""
-        for r in range(0, len(cards), 2):
-            c1 = cards[r] if r < len(cards) else ""
-            c2 = cards[r + 1] if r + 1 < len(cards) else ""
-            rows += f'''
-                <tr>
-                  <td width="50%" class="mobile-stack" style="padding: 0 4px 8px 0; vertical-align: top;">{c1}</td>
-                  <td width="50%" class="mobile-stack" style="padding: 0 0 8px 4px; vertical-align: top;">{c2}</td>
-                </tr>'''
-        body += f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
-                {rows}
-              </table>'''
+        body += _card_grid([
+            _build_photo_card_with_badge(
+                l, primary_color, accent_color,
+                "Sold" if l.get("close_price") else "Active")
+            for l in show
+        ], 2)
     body += _build_sales_table(listings or [], primary_color, accent_color)
     body += _build_stacked_stats(stats, primary_color)
     if not insight_text:
         body += _build_quick_take(quick_take, accent_color, primary_color)
     return body
+
+
+def _band_rows(trend_stats, primary_color: str, accent_color: str) -> List[Dict]:
+    """
+    One dict per price band, with the bar width and the percentage label
+    computed together.
+
+    They are computed together deliberately. B6 on the register is exactly these
+    two drifting apart: the bars were normalised to the LARGEST band while the
+    labels showed share of TOTAL, so Move-Up read 43% beside a bar filled to
+    100%. Splitting the two calculations across a builder and a template is how
+    that happens again.
+
+    The 2% floor keeps a band with one listing visible as a sliver rather than
+    vanishing, which would read as "no listings in this band".
+    """
+    counts = []
+    for _, count_str, _, _ in trend_stats:
+        try:
+            counts.append(int(count_str))
+        except (ValueError, TypeError):
+            counts.append(0)
+    max_count = max(counts) or 1
+
+    rows = []
+    for (label, count_str, pct_str, is_highlight), count_val in zip(trend_stats, counts):
+        bar_pct = max(int((count_val / max_count) * 100), 2)
+        rows.append({
+            "label": label,
+            "count": count_str,
+            "pct": pct_str,
+            "bar_pct": bar_pct,
+            "empty_pct": 100 - bar_pct,
+            "bar_bg": accent_color if is_highlight else primary_color,
+            "label_style": (
+                f"font-size: 13px; font-weight: 700; color: {_ink(primary_color, '#f8fafc')};"
+                if is_highlight else
+                "font-size: 13px; font-weight: 600; color: #1f2937;"
+            ),
+            "pct_style": (
+                f"font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: bold; color: {_ink(accent_color, '#f8fafc')};"
+                if is_highlight else
+                "font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: bold; color: #1f2937;"
+            ),
+        })
+    return rows
 
 
 def _build_analytics_body(
@@ -1302,79 +1117,22 @@ def _build_analytics_body(
     if trend_stats:
         body += _build_section_label("Price Distribution", primary_color)
 
-        max_count = 0
-        for _, count_str, _, _ in trend_stats:
-            try:
-                max_count = max(max_count, int(count_str))
-            except (ValueError, TypeError):
-                pass
-        if max_count == 0:
-            max_count = 1
-
-        bar_rows = ""
-        for band_label, count_str, pct_str, is_highlight in trend_stats:
-            try:
-                count_val = int(count_str)
-            except (ValueError, TypeError):
-                count_val = 0
-            bar_pct = max(int((count_val / max_count) * 100), 2) if max_count else 2
-            empty_pct = 100 - bar_pct
-
-            if is_highlight:
-                bar_bg = accent_color
-                label_style = f"font-size: 13px; font-weight: 700; color: {_ink(primary_color, '#f8fafc')};"
-                pct_style = f"font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: bold; color: {_ink(accent_color, '#f8fafc')};"
-            else:
-                bar_bg = primary_color
-                label_style = "font-size: 13px; font-weight: 600; color: #1f2937;"
-                pct_style = "font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: bold; color: #1f2937;"
-
-            bar_rows += f'''
-                      <tr>
-                        <td style="padding: 8px 0;">
-                          <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                            <tr>
-                              <td width="110" style="vertical-align: middle; padding-right: 12px;">
-                                <p style="margin: 0; {label_style}">{band_label}</p>
-                                <p style="margin: 2px 0 0; font-size: 11px; color: #6b7280;">{count_str} listings</p>
-                              </td>
-                              <td style="vertical-align: middle;">
-                                <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-radius: 4px; overflow: hidden;">
-                                  <tr>
-                                    <td width="{bar_pct}%" style="height: 24px; background-color: {bar_bg};"></td>
-                                    <td width="{empty_pct}%" style="height: 24px; background-color: #e5e7eb;"></td>
-                                  </tr>
-                                </table>
-                              </td>
-                              <td width="50" align="right" style="vertical-align: middle; padding-left: 10px;">
-                                <span style="{pct_style}">{pct_str}</span>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>'''
-
-        body += f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
-                {bar_rows}
-              </table>'''
+        body += render_block(
+            "bands",
+            bands=_band_rows(trend_stats, primary_color, accent_color),
+        )
 
     if supporting_metrics:
         n = len(supporting_metrics)
-        pct = f"{100 // n}%" if n else "33%"
-        cells = ""
-        for sm_label, sm_value in supporting_metrics[:3]:
-            cells += f'''
-                    <td width="{pct}" style="padding: 16px 12px; text-align: center; background-color: #f8fafc;">
-                      <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 700; color: {_ink(primary_color, '#f1f5f9')};">{sm_value}</p>
-                      <p style="margin: 4px 0 0; font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: 0.3px;">{sm_label}</p>
-                    </td>'''
-        body += f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
-                <tr>
-                  {cells}
-                </tr>
-              </table>'''
+        body += render_block(
+            "spec_list", variant="supporting",
+            stats=supporting_metrics[:3],
+            cell_width=f"{100 // n}%" if n else "33%",
+            # #f1f5f9 rather than the cell's own #f8fafc: `_ink` targets the
+            # darkest light surface in the document so one value is safe on all
+            # of them. See DARKEST_LIGHT_SURFACE.
+            ink=_ink(primary_color, "#f1f5f9"),
+        )
 
     # EMAIL-DEPTH-PASS1: render example listings beneath the band
     # aggregates so the email tells the full story (was: PDF-only).
@@ -1395,50 +1153,99 @@ def _build_truncation_note(
     total_available: int, showing: int, pdf_url: Optional[str],
     primary_color: str,
 ) -> str:
-    """Tiny "Showing X of Y · View all in the PDF" line. Renders only
-    when there are listings hidden behind the cap AND we have a PDF
-    URL to link to.
     """
-    _role_ink = _ink(primary_color)   # text on a light card, not the raw brand value
+    §06 chrome `truncation_note` — "Showing X of Y · View all in the PDF".
+
+    Both conditions stay here rather than in the template: a note claiming
+    truncation that did not happen is worse than no note.
+    """
     if not pdf_url or total_available <= showing or showing <= 0:
         return ""
-    return f'''
-            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-              <tr>
-                <td align="center" style="padding: 8px 0 16px;">
-                  <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; color: #6b7280;">
-                    Showing {showing} of {total_available} listings.
-                    <a href="{pdf_url}" style="color: {_role_ink}; text-decoration: underline;">View all in the PDF &rarr;</a>
-                  </p>
-                </td>
-              </tr>
-            </table>'''
+    return render_block("chrome", piece="truncation_note", showing=showing,
+                        total_available=total_available, pdf_url=pdf_url,
+                        ink=_ink(primary_color))
+
+
+def _build_masthead(primary_color: str, accent_color: str, on_band: str,
+                    logo_url: Optional[str], brand_name: str,
+                    title: str, subtitle: str,
+                    metric_value: str, metric_label: str) -> str:
+    """
+    §06 block `masthead` — the gradient banner. Markup in blocks/masthead.jinja2.
+
+    Invariant across all eight report types; only the strings differ. `on_band`
+    is passed in rather than derived here because it depends on BOTH gradient
+    stops and the caller has already computed it once for the document.
+    """
+    return render_block(
+        "masthead", primary_color=primary_color, accent_color=accent_color,
+        on_band=on_band, logo_url=logo_url, brand_name=brand_name,
+        title=title, subtitle=subtitle,
+        metric_value=metric_value, metric_label=metric_label,
+    )
+
+
+def _build_signature(postal_address_html: str, unsubscribe_url: str) -> str:
+    """
+    §06 block `signature` — the platform footer. Markup in
+    blocks/signature.jinja2.
+
+    `postal_address_html` arrives pre-rendered: whether the line appears, and
+    whose address it carries, is a compliance decision (the account's own when
+    set, the platform's otherwise, labelled as which) and belongs in Python
+    where it is tested rather than behind a template conditional.
+    """
+    return render_block("signature", postal_address_html=postal_address_html,
+                        unsubscribe_url=unsubscribe_url)
+
+
+#: Horizontal padding per column position, so the gutter falls between cards and
+#: not at the outer edges of the content column.
+_GRID_PADS = {
+    2: ("padding: 0 4px 8px 0;", "padding: 0 0 8px 4px;"),
+    3: ("padding: 0 4px 8px 0;", "padding: 0 4px 8px 4px;", "padding: 0 0 8px 4px;"),
+}
+
+
+def _card_grid(cards: List[str], per_row: int) -> str:
+    """
+    §06 block `grid` — arrange rendered cards `per_row` across.
+
+    A short final row is padded with EMPTY CELLS rather than left ragged. A `<tr>`
+    with fewer `<td>`s than its siblings collapses the table's column widths in
+    Outlook, which is why the code this replaces always emitted both cells even
+    when the second was empty.
+    """
+    if not cards:
+        return ""
+    pads = _GRID_PADS[per_row]
+    rows = []
+    for start in range(0, len(cards), per_row):
+        chunk = list(cards[start:start + per_row])
+        chunk += [""] * (per_row - len(chunk))
+        rows.append([{"html": html, "pad": pads[i]} for i, html in enumerate(chunk)])
+    return render_block("grid", shape="table", rows=rows,
+                        cell_width=f"{100 // per_row}%")
 
 
 def _build_pdf_cta(pdf_url: Optional[str], primary_color: str) -> str:
-    """Big branded "View Full PDF" button rendered just above the
-    agent footer on every email."""
+    """
+    §06 block `cta` — the "View Full PDF" button above the agent footer.
+
+    The markup now lives in templates/email/blocks/cta.jinja2. This function
+    stays as the seam: it decides whether the block renders at all and derives
+    the one colour role the block needs, which keeps that judgement in Python
+    where it is testable rather than in a template where it would be an `{% if %}`
+    nobody reads.
+    """
     if not pdf_url:
         return ""
-    _role_on = _on(primary_color)   # the button is a brand fill
-    return f'''
-            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 24px auto;">
-              <tr>
-                <td style="border-radius: 8px; background-color: {primary_color};">
-                  <!--[if mso]>
-                  <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{pdf_url}" style="height:48px;v-text-anchor:middle;width:260px;" arcsize="17%" stroke="f" fillcolor="{primary_color}">
-                    <w:anchorlock/>
-                    <center style="color:{_role_on};font-family:Arial,sans-serif;font-size:14px;font-weight:bold;">📄 View Full PDF</center>
-                  </v:roundrect>
-                  <![endif]-->
-                  <!--[if !mso]><!-->
-                  <a href="{pdf_url}" style="display: inline-block; padding: 14px 28px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; color: {_role_on}; text-decoration: none; border-radius: 8px;">
-                    📄 View Full PDF
-                  </a>
-                  <!--<![endif]-->
-                </td>
-              </tr>
-            </table>'''
+    return render_block(
+        "cta",
+        pdf_url=pdf_url,
+        primary_color=primary_color,
+        on_fill=_on(primary_color),   # the button is a brand fill
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1456,6 +1263,104 @@ def _select_gallery_layout(listing_count: int) -> str:
     else:
         return "large_list"
 
+
+#: The §06 blocks each report type renders, in first-use order, with the variant
+#: that distinguishes one shape of a block from another — recorded from an actual
+#: render of the standard fixture, not from reading the code.
+#:
+#: PER REPORT TYPE, NOT PER LAYOUT, AND THAT IS A FINDING. §06 describes the body
+#: as "assembled from blocks selected by report type", which implies the layout
+#: decides the sequence. It does not. Three types share the `market_narrative`
+#: layout and produce TWO different sequences: `open_houses` renders
+#: `read:panel` where the other two render `read:insight`, because the Quick Take
+#: panel is emitted only `if not insight_text`. Selection is conditional on the
+#: DATA as much as on the type, and a map keyed by layout could not express it.
+#:
+#: Three more blocks are conditional and therefore absent below, each for a
+#: reason in the fixture rather than in the code:
+#:   chrome:filter_blurb   renders only with a filter_description
+#:   chrome:section_label  } both only when the price-band chart has
+#:   bands                 } trend_stats to draw
+#: Their absence is a property of the standard fixture and is asserted, so if a
+#: refactor started emitting them unconditionally this would fail.
+#:
+#: THIS IS DECLARED DATA AND IT IS ALSO CHECKED. `test_the_declared_block
+#: _sequence_matches_what_renders` instruments `render_block` during a real
+#: render of every report type and requires the observed sequence to equal the
+#: declaration exactly. A table describing what the code does, which nothing
+#: verifies, is a comment — and this project has spent a month finding those.
+#:
+#: WHY A DECLARATION AND NOT A DRIVER — AND WHY §06's WORDING IS NOT A REASON
+#: TO "FINISH" IT INTO ONE.
+#:
+#: §06 says the body is "assembled from blocks selected by report type", which
+#: reads like an instruction to build a loop over this map. Decided against, on
+#: 2026-09-24, and the argument is here rather than in a pull request because
+#: this is where someone will be standing when they consider it.
+#:
+#: Driving from the map requires every step to take a uniform context. That
+#: turns seven readable functions of sixteen to fifty lines into roughly fifteen
+#: small ones plus a context object plus a dispatcher — and the conditional
+#: selection documented above, which is a plain `if not insight_text` today,
+#: becomes a predicate function registered against a block name. The sequence
+#: then reads only through the registry, and the per-layout data gathering that
+#: genuinely differs between report types — and is where this module's defects
+#: have actually been — gets spread thinner across more places.
+#:
+#: The safety a driver would add is already provided by
+#: `test_the_declared_block_sequence_matches_what_renders`: the map cannot
+#: disagree with the code, because the code is what the map is checked against.
+#: A driver would make the map authoritative instead of verified, which is not
+#: obviously better and is certainly more machinery.
+#:
+#: This is a judgement, not a law. If a driver is wanted the map is already the
+#: right shape for one — but it should be chosen on these trade-offs rather than
+#: on §06's phrasing, which was written before anyone knew the selection was
+#: data-conditional.
+REPORT_BLOCKS = {
+    "market_snapshot": (
+        "read:insight", "chrome:hero", "chrome:count_pill", "gallery:row",
+        "spec_list:strip", "chrome:truncation_note",
+    ),
+    "new_listings": (
+        "read:insight", "chrome:hero", "chrome:count_pill", "gallery:row",
+        "spec_list:strip", "chrome:truncation_note",
+    ),
+    "open_houses": (
+        # no insight text for this type, so the Quick Take panel stands in
+        "chrome:hero", "chrome:count_pill", "gallery:row",
+        "spec_list:strip", "read:panel", "chrome:truncation_note",
+    ),
+    "closed": (
+        "read:insight", "chrome:hero", "chrome:count_pill", "gallery:badged",
+        "grid:table", "table", "spec_list:strip", "chrome:truncation_note",
+    ),
+    "inventory": (
+        "read:insight", "chrome:hero", "chrome:count_pill", "gallery:badged",
+        "grid:table", "table", "spec_list:strip", "chrome:truncation_note",
+    ),
+    "price_bands": (
+        "read:insight", "chrome:hero", "spec_list:supporting",
+        "chrome:count_pill", "gallery:row", "chrome:truncation_note",
+    ),
+    "new_listings_gallery": (
+        "read:insight", "chrome:count_pill", "gallery:row", "grid:rows",
+        "chrome:truncation_note",
+    ),
+    "featured_listings": (
+        "read:insight", "chrome:count_pill", "gallery:row", "grid:rows",
+        "chrome:truncation_note",
+    ),
+}
+
+#: Rendered on every report type regardless of layout, per §06 — "masthead,
+#: agent block and footer invariant". A footer that renders on seven of eight is
+#: a CAN-SPAM failure on the eighth and no per-type test would notice.
+INVARIANT_BLOCKS = ("masthead", "cta", "signature")
+
+#: Blocks that exist and render only when their data is present. Listed so their
+#: absence from REPORT_BLOCKS reads as conditional rather than as dead.
+CONDITIONAL_BLOCKS = ("chrome:filter_blurb", "chrome:section_label", "bands")
 
 LAYOUT_MAP = {
     "market_snapshot": "market_narrative",
@@ -2915,58 +2820,13 @@ def schedule_email_html(
         <!-- Email Wrapper -->
         <table role="presentation" cellpadding="0" cellspacing="0" width="600" class="wrapper" style="max-width: 600px; width: 100%;">
           
-          <!-- ========== HEADER: 3-row gradient banner ========== -->
-          <tr>
-            <td>
-              <!--[if mso]>
-              <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;height:130px;">
-                <v:fill type="gradient" color="{primary_color}" color2="{accent_color}" angle="115"/>
-                <v:textbox inset="24px,20px,24px,18px" style="mso-fit-shape-to-text:true">
-              <![endif]-->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: linear-gradient(115deg, {primary_color} 0%, {primary_color} 30%, {accent_color} 100%); background-color: {primary_color}; border-radius: 8px 8px 0 0;">
-                <!-- ROW 1: Centered logo -->
-                <tr>
-                  <td align="center" style="padding: 20px 24px 12px;">
-                    {f'<img src="{header_logo_url}" alt="{brand_name}" style="display: block; max-height: 45px; max-width: 180px; width: auto; height: auto; margin: 0 auto;" />' if header_logo_url else ''}
-                  </td>
-                </tr>
-                <!-- ROW 2: Title (65%) + Metric (35%) -->
-                <tr>
-                  <td style="padding: 0 24px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                      <tr>
-                        <td width="65%" style="vertical-align: middle;">
-                          <p style="margin: 0 0 4px 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 24px; font-weight: bold; color: {_role_on_band};">
-                            {report_label} &mdash; {area_display}
-                          </p>
-                          <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 11px; color: {_role_on_band}; opacity: 0.85;">
-                            {date_range} &bull; Data via MLS
-                          </p>
-                        </td>
-                        <td width="35%" style="vertical-align: middle; text-align: right;">
-                          <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 28px; font-weight: bold; color: {_role_on_band};">
-                            {h1_value if has_hero_4 else m1_value}
-                          </p>
-                          <p style="margin: 2px 0 0 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: {_role_on_band}; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px;">
-                            {h1_label if has_hero_4 else m1_label}
-                          </p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-                <!-- ROW 3: Bottom spacer -->
-                <tr>
-                  <td style="height: 18px; font-size: 0; line-height: 0;">&nbsp;</td>
-                </tr>
-              </table>
-              <!--[if mso]>
-                </v:textbox>
-              </v:rect>
-              <![endif]-->
-            </td>
-          </tr>
-          
+{_build_masthead(
+              primary_color, accent_color, _role_on_band, header_logo_url, brand_name,
+              f'{report_label} &mdash; {area_display}',
+              f'{date_range} &bull; Data via MLS',
+              h1_value if has_hero_4 else m1_value,
+              h1_label if has_hero_4 else m1_label,
+          )}          
           <!-- ========== MAIN CONTENT ========== -->
           <tr>
             <td style="background-color: #ffffff; padding: 24px 28px;" class="mobile-padding">
@@ -2983,18 +2843,7 @@ def schedule_email_html(
             </td>
           </tr>
           
-          <!-- ========== POWERED BY + UNSUBSCRIBE ========== -->
-          <tr>
-            <td style="background-color: #f8f9fa; padding: 16px 28px; border-radius: 0 0 8px 8px; text-align: center;">
-              <p style="margin: 0 0 4px 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #6b7280;">
-                Powered by <span style="font-weight: 600; color: #6b7280;">TrendyReports</span>
-              </p>
-{postal_address_html}              <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #6b7280;">
-                <a href="{unsubscribe_url}" style="color: #6b7280; text-decoration: underline;">Unsubscribe</a>
-              </p>
-            </td>
-          </tr>
-          
+{_build_signature(postal_address_html, unsubscribe_url)}          
         </table>
         <!-- End Wrapper -->
         

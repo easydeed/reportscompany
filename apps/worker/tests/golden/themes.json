@@ -5,7 +5,11 @@
     "A diff here means derive_theme() changed what every affiliate on that theme sees.",
     "That is allowed, but never incidentally: the diff is the review.",
     "contrast_primary_on_white is the measurement that motivated Workstream A.",
-    "luxury_estates ships 3.74:1 today; primary_ink is what replaces it."
+    "luxury_estates ships 3.74:1 today; primary_ink is what replaces it.",
+    "contrast_on_dark_vs_surface is measured against themes.DARK_SURFACE (#0f172a),",
+    "the ONE fixed dark neutral decided 2026-09-23 \u2014 and against nothing else.",
+    "Six of the eight dark surfaces the templates paint today are lighter than it;",
+    "see the note on DARK_SURFACE for the measured shortfall on each."
   ],
   "themes": {
     "demo_title": {
@@ -15,9 +19,11 @@
       "primary_ink": "#dc2626",
       "on_primary": "#ffffff",
       "tint": "#fdf2f2",
+      "primary_on_dark": "#fa2c2c",
       "contrast_primary_on_white": 4.83,
       "contrast_ink_on_white": 4.83,
-      "contrast_on_primary": 4.83
+      "contrast_on_primary": 4.83,
+      "contrast_on_dark_vs_surface": 4.64
     },
     "luxury_estates": {
       "input": "#0D9488",
@@ -26,9 +32,11 @@
       "primary_ink": "#0b8378",
       "on_primary": "#14151a",
       "tint": "#f0f9f8",
+      "primary_on_dark": "#0d9488",
       "contrast_primary_on_white": 3.74,
       "contrast_ink_on_white": 4.63,
-      "contrast_on_primary": 4.87
+      "contrast_on_primary": 4.87,
+      "contrast_on_dark_vs_surface": 4.77
     },
     "coastal": {
       "input": "#0E7490",
@@ -37,9 +45,11 @@
       "primary_ink": "#0e7490",
       "on_primary": "#ffffff",
       "tint": "#f1f7f8",
+      "primary_on_dark": "#118cae",
       "contrast_primary_on_white": 5.36,
       "contrast_ink_on_white": 5.36,
-      "contrast_on_primary": 5.36
+      "contrast_on_primary": 5.36,
+      "contrast_on_dark_vs_surface": 4.58
     },
     "amber": {
       "input": "#F59E0B",
@@ -48,9 +58,11 @@
       "primary_ink": "#9f6708",
       "on_primary": "#14151a",
       "tint": "#fef9f0",
+      "primary_on_dark": "#f59e0b",
       "contrast_primary_on_white": 2.15,
       "contrast_ink_on_white": 4.75,
-      "contrast_on_primary": 8.49
+      "contrast_on_primary": 8.49,
+      "contrast_on_dark_vs_surface": 8.31
     },
     "lime": {
       "input": "#84CC16",
@@ -59,9 +71,11 @@
       "primary_ink": "#517c0e",
       "on_primary": "#14151a",
       "tint": "#f8fcf1",
+      "primary_on_dark": "#84cc16",
       "contrast_primary_on_white": 1.98,
       "contrast_ink_on_white": 4.95,
-      "contrast_on_primary": 9.23
+      "contrast_on_primary": 9.23,
+      "contrast_on_dark_vs_surface": 9.04
     },
     "violet": {
       "input": "#7C3AED",
@@ -70,9 +84,11 @@
       "primary_ink": "#7c3aed",
       "on_primary": "#ffffff",
       "tint": "#f7f3fe",
+      "primary_on_dark": "#9e66ff",
       "contrast_primary_on_white": 5.7,
       "contrast_ink_on_white": 5.7,
-      "contrast_on_primary": 5.7
+      "contrast_on_primary": 5.7,
+      "contrast_on_dark_vs_surface": 4.93
     }
   }
 }

@@ -452,6 +452,96 @@ it.**
   schema check, a permission test — anything whose normal output is *nothing*. **Absence of a
   finding is evidence only from an instrument you have watched find something.**
 
+- **A revert during recovery is a second change, not a way back. Commit the working state before
+  attempting recovery from a bad edit.**
+
+  *Added 2026-09-23 from Workstream C.* A span replacement silently swallowed two functions that sat
+  between the one being replaced and the next named one, which surfaced as `NameError` across
+  twenty-one tests. The reflex — `git checkout -- <file>` — fixed the NameError and **discarded two
+  migrations that had already passed their gate**, because they had not been committed yet.
+
+  `checkout` does not undo the last edit. It returns the file to the last COMMIT, which may be
+  several verified steps back. In a session that makes many small verified changes, that distance
+  is invisible at the moment you need it most: you are already dealing with one failure, and the
+  command that looks like an undo is a larger change than the one you are undoing.
+
+  Concretely: **commit each step that passes its gate**, and when an edit goes wrong prefer a
+  targeted inverse edit over a file-level revert. If a revert is genuinely the right move, first
+  establish what it will take with you.
+
+- **A behavioural test suite cannot verify a behaviour-preserving migration. Structural claims need
+  structural assertions.**
+
+  *Added 2026-09-23, same incident, and it is the more general half.* After that revert the
+  repository held two orphaned template files that nothing rendered — and **the whole suite was
+  green**, correctly. The inline markup those templates were meant to replace had come back with the
+  revert, so behaviour was genuinely unchanged. The green was accurate about behaviour and silent
+  about structure.
+
+  That silence is not a gap in the tests; it is what the tests are for. A restructure's entire
+  premise is that output does not change, which means **every output-shaped assertion is guaranteed
+  to pass whether or not the restructure happened.** The render diff, the contrast audit, the golden
+  files — all of them would report success on a migration that had been entirely undone.
+
+  So a migration needs a gate of a different kind, asserting the SHAPE of the code rather than the
+  content of its output: that every extracted file has a caller, that no path still does the thing
+  the extraction was meant to remove, that the counts agree. Behavioural and structural gates answer
+  different questions and neither substitutes for the other — which is worth knowing before writing
+  the third behavioural test in a row and feeling covered.
+
+  **The gate was then proved against the byte-exact state, and the first attempt to reproduce that
+  state was unfaithful in a way that inverted the result.** Reconstructing "the migration was lost"
+  by hand — putting the markup back inline while leaving the seam function in place, still calling
+  the block — produced no orphan at all. The render diff fired and the structural gate stayed
+  silent, which is the exact opposite of the real incident. Only checking out the actual commit
+  reproduced it: render diff 32 passed, contrast audit 77 passed, structural gate failing and naming
+  all four lost blocks.
+
+  This is the same family as the stale `.pyc` that made a regression look green and the `str.replace`
+  that matched nothing: **a regression which does not reproduce the fault says nothing about the
+  guard aimed at it**, and it is worse than no evidence because it reads as evidence. Where a real
+  failure has already happened, reproduce it from the recorded state — a commit, a captured payload,
+  a saved file — rather than from a description of it. Reconstruction from memory tests the
+  reconstruction.
+
+- **A description of what code does is a hypothesis. Derive it by running the code, not by reading
+  it — and this holds even when the reading is careful, unhurried, and done by the person who just
+  wrote the code.**
+
+  *Added 2026-09-24 from Workstream C.* The consolidation ended with a declarative map,
+  `REPORT_BLOCKS`, naming which blocks each of the eight report types renders. It was written first
+  by reading the eight builder functions — slowly, with the file open, by the author of the
+  refactor that had just moved every one of those blocks. **Seven of the eight entries were wrong.**
+  Rewritten from an instrumented render — a hook on `render_block` recording every call during a
+  real render of each type — all eight were right, and the difference was checked into a test that
+  now compares the declaration against the recorded sequence on every run.
+
+  The errors were not about the hard parts. The one worth naming, because it is now recorded in the
+  map itself: `open_houses` does not render `read:insight` like the other seven — it has no insight
+  text, so the Quick Take panel stands in, and `read:panel` appears in its place and in a different
+  position. That is invisible from the builder, which calls the same helper the other types call;
+  it is decided by the data. The rest have the same shape in general: almost none of the twenty-odd
+  `render_block` calls sit at a layout function's own level. They sit one or two frames down inside
+  small helpers — `_build_hero_stat`, `_build_gallery_card_compact`, `_build_section_label` — whose
+  names describe a thing on the page rather than the block that draws it, and several of them are
+  called from loops, so one name in the map stands for one call or for six depending on the data.
+  The corrected map was not produced by diagnosing the wrong one entry by entry. It was produced by
+  discarding it and reading the trace.
+
+  This is the same rule as the detector's silence, turned the other way round. That one says a
+  check reporting nothing is not evidence until you have watched it report something. This one says
+  **a claim about behaviour is not evidence until you have watched the behaviour** — and the two
+  cover the two halves of the same mistake, which is treating your model of the system as an
+  observation of it. Reading tells you what the code was meant to do; that is a genuinely useful
+  thing and it is not the same question.
+
+  Practically: any artefact that asserts what the code does — a map, a table of call sites, a
+  sequence diagram, a docstring listing side effects, a migration checklist — should be produced
+  from an instrument where one can be built at all, and where it cannot, should say on its face
+  that it was written from reading. And when such an artefact is produced by instrument, wire the
+  instrument into the suite: the same drift that made seven entries wrong on the day they were
+  written will make them wrong again six months after they were right.
+
 ---
 
 ## Phase 0 — Security & Tooling

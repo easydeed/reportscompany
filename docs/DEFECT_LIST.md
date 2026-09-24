@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-23, against `fix/d099-readability-helpers`, cut from `main` at `47f8fbc`. **Every open entry was re-checked against current code in that sweep** — see §0.6, *a defect list needs a read path*.
+**Last reconciled:** 2026-09-23, against `feat/workstream-c-consolidation`, cut from `main` at `8ae1e6b`. **Every open entry was re-checked against current code in that sweep** — see §0.6, *a defect list needs a read path*.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -36,12 +36,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 32 | Real, unfixed |
+| `open` | 33 | Real, unfixed |
 | `fixed` | 63 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **99** | D-001 … D-099, contiguous, no duplicates |
+| **Total** | **100** | D-001 … D-100, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 1 · WRONG 8 · FRAGILE 10 · ROUGH 13. (Sums to 32, the open total.)
+**Open by severity:** BROKEN 1 · WRONG 8 · FRAGILE 10 · ROUGH 14. (Sums to 33, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -4534,14 +4534,27 @@ the dark surface is a fixed neutral the token can be derived against (the live
 `compute_color_roles` assumes `#18235c`, and the themes' actual darks are `#18235c`, `#0f1a45`,
 `#0b0f1a`, `#1a1f36`) or a per-theme value the derivation has to take as an argument. **[JERRY]**
 
-> **Recommendation on the table, 2026-09-23, awaiting Jerry — nothing derived on it.** One fixed
-> dark neutral, not per-theme: *"§3.2 already fixes neutrals for this reason, and five surfaces
-> means five drift paths."*
+> **ANSWERED 2026-09-23 (Jerry): one fixed dark neutral, not per-theme.** *"§3.2 already fixes
+> neutrals for this reason, and five surfaces means five drift paths."*
 >
-> D-099's work is evidence for that reading rather than against it. Widening `compute_color_roles`
-> to accept several dark surfaces was necessary and correct for the market band, and the very first
-> thing it produced was a surface pair no colour can satisfy. More surfaces to guarantee against is
-> more ways to be unsatisfiable, and each one is discovered rather than designed.
+> D-099's work was evidence for that reading: widening `compute_color_roles` to accept several dark
+> surfaces was necessary for the market band, and the very first thing it produced was a surface
+> pair no colour can satisfy.
+>
+> **Built** on `feat/workstream-c-consolidation`. `worker.themes` gains a sixth token,
+> `primary_on_dark`, derived against `DARK_SURFACE = #0f172a` — the dark neutral these templates
+> already use most, chosen so the token converges on the design rather than adding to it, and a
+> genuine neutral where the previous default `#18235c` has chroma 68 and is somebody's brand colour
+> doing a neutral's job. Locked in the golden file with its achieved ratio, as D-099 established.
+>
+> **The condition, measured and asserted rather than noted.** Six of the eight dark surfaces these
+> templates paint today are lighter than `#0f172a`, so the token does not clear AA on them:
+> **3.24:1 on classic's `#1B365D`**, 3.80 on bold's `#15216E`, 3.91 on `#18235c`, 4.47 on
+> `#0f1a45`. That is the migration the decision implies — the dark panels become the neutral — and
+> until it happens `primary_on_dark` is correct about a surface the page does not yet have. The
+> four shortfalls are asserted exactly in `test_the_guarantee_is_against_the_fixed_surface_and_no_other`,
+> so the list fails when a panel migrates instead of going quietly stale. **Filed as D-100** so the
+> migration is on the board rather than living only in a test assertion.
 
 **Two more AA failures, found by this survey and belonging to this entry:**
 
@@ -4557,9 +4570,37 @@ the midpoint depends on layout and has not been rendered to check — but a toke
 depends on where on the band it falls is not a token that can be verified, which is the defect
 regardless of today's layout.
 
-**Three dead tokens** — `--teal-light`, `--navy-light`, `--navy-on-dark` — are declared and never
-referenced. They sit in the 111-literal baseline and are the **only** literals that can be retired
-with provably zero visual change, since nothing reads them. Worth taking first for that reason.
+**Ten dead tokens, not three.** The survey read the template SOURCE; rendering all five property
+reports and counting `var()` references against the declarations in the output gives the real
+number:
+
+| theme | declared and never referenced |
+|---|---|
+| modern | `--coral-dark`, `--coral-text` |
+| teal | `--teal-light`, `--teal-text`, `--soft` |
+| classic | `--navy-light`, `--navy-on-dark` |
+| bold | `--navy-light`, `--navy-on-dark`, `--gold-light` |
+
+49 variables are live; these 10 are not. They are the only literals that can be retired with
+provably zero visual change, since nothing reads them.
+
+> **THIS CORRECTS A CLAIM MADE ON D-099'S PULL REQUEST, AND THE CORRECTION MATTERS.** That PR said
+> `modern.theme_color_text` flipping white → `#14151a` was *"the largest visual change this project
+> has shipped"* and asked for it to be reviewed before the consolidation. **`--coral-text` is
+> declared and referenced nowhere. It renders on no page.** So does `--navy-on-dark`, which carried
+> the chroma 33 → 156 improvement on classic and bold — also nowhere.
+>
+> Rendering the five reports and counting `var()` references is a ten-line check that would have
+> caught it before the claim was made. Measuring the derivation is not the same as measuring the
+> page, and this board has the rule for it already: §0.6, *no finding derived from a sample render
+> counts until it is reproduced through the production path* — applied here in the other direction,
+> to a finding derived from a function without checking whether the page consumes it.
+>
+> **What D-099 actually changes on rendered output, in full:** `modern --coral-on-light`
+> (`#f46657` 3.05 → `#c55145` 4.53, 4 uses), `teal --teal-on-light` (`#27a196` 3.32 → `#1f847c`
+> 4.52, 4 uses), and on the market report `--accent-on-light` (`#0D9488` 3.74 → `#0b8277` 4.69,
+> 5 uses) and `--accent-on-dark` (`#5eead4` 2.53 → `#ffffff` 3.74 worst-case, 1 use). Five values.
+> All small labels, contents numbers and comparable prices on light cards — no cover changes at all.
 
 
 ---
@@ -4726,6 +4767,92 @@ to justify.
 > named `_ensure_readable_on_light`, its docstring cites WCAG AA, and it is called on every render.
 > Everything about it reads as a guarantee. Only the number is wrong, and only running it says so.
 
+
+
+---
+
+### D-100 — four dark panels are lighter than the fixed dark neutral, so `primary_on_dark` is true about a surface the page does not have
+
+**Severity:** ROUGH · **Affects:** brand-coloured text on a dark panel — teal, bold and classic property reports
+**Status:** `open`
+
+Filed as the consequence of a decision, not as a bug in the code it constrains.
+
+Jerry decided (2026-09-23) that the dark surface behind brand text is **one fixed neutral for every
+theme**, not a per-theme value: *"§3.2 already fixes neutrals for this reason, and five surfaces
+means five drift paths."* `worker.themes.DARK_SURFACE = #0f172a` implements that, and
+`primary_on_dark` is guaranteed against it.
+
+**The templates do not paint that neutral.** They paint eight different dark surfaces, four of them
+lighter than `#0f172a`, and a value that clears 4.5:1 on a darker surface does not clear it on a
+lighter one. Measured with Luxury Estates' token (`#0d9488`):
+
+| surface | where | ratio |
+|---|---|---|
+| `#0b0f1a` | teal `--ink` | 5.11 ok |
+| `#0f1629` | bold `--color-text` / primary | 4.81 ok |
+| `#111827` | shared neutral ink | 4.74 ok |
+| `#1a1a1a` | elegant `--charcoal` | 4.65 ok |
+| `#0f1a45` | teal cover overlay | **4.47** |
+| `#18235c` | teal `--navy` | **3.91** |
+| `#15216e` | bold `--navy` | **3.80** |
+| `#1b365d` | classic `--navy` | **3.24** |
+
+**TWO OF THE FOUR ARE NOT A REPAINT. READ THIS BEFORE ESTIMATING THE ENTRY.**
+
+| surface | what it is | what closing it takes |
+|---|---|---|
+| `#18235c` teal `--navy` | a flat fill | repaint to `#0f172a` |
+| `#15216e` bold `--navy` | a flat fill | repaint to `#0f172a` |
+| `#1b365d` classic `--navy` | a flat fill | repaint to `#0f172a` |
+| `#0f1a45` teal cover overlay | **not a surface at all** — `rgba(15,26,69,.3)` → `.7` → `.95` over an arbitrary listing photo passed through `brightness(.6)` | a different problem; see below |
+
+**THE FOURTH IS NOT A HARDER VERSION OF THE OTHER THREE. IT IS A DIFFERENT PROBLEM.**
+
+The other three are flat fills with a wrong value: pick the right one and the contrast is decided
+forever. The teal cover overlay **has no fixed background to guarantee anything against**. Its
+backdrop is a three-stop alpha gradient composited over whichever photo the listing happens to
+carry, so the effective colour behind a glyph differs from the top of the panel to the bottom, and
+differs again for every property in every report. There is no value to compute a ratio from.
+
+**No choice of text colour can make that surface AA-compliant**, because contrast is a relation
+between two colours and one of them is unknown at render time and variable within a single panel.
+That is not a decision waiting to be made; it is a category the current design cannot satisfy.
+
+The remedies are correspondingly different in kind — none of them is "pick a neutral":
+
+- a **scrim**: a fixed opaque or near-opaque layer between photo and text, which then IS a surface
+  and can be guaranteed against
+- a **solid plate** behind the text block only, leaving the photo visible around it
+- **move the text off the image** entirely
+
+D-099 reached the same wall from the other side: the market header runs navy → accent and no single
+text colour clears 4.5:1 against both ends, which is why `_ensure_readable_on_dark` returns the best
+worst case and logs that it fell short. Two surfaces, one conclusion — **a background that varies
+cannot be made accessible by choosing a foreground.** Both need a design change. **[JERRY]**
+
+**Three of the four are the repaint.** Those panels become `#0f172a`, and then the token is true
+about the rendered page rather than about a surface the design intends. Note what the three worst
+are: `#18235c`, `#15216e` and `#1B365D` are **brand navies being used as neutrals** — which is the
+exact confusion the fixed-neutral decision exists to end. `#18235c` has chroma 68. A neutral with
+chroma 68 is somebody's brand colour doing a neutral's job, and it is why the old
+`compute_color_roles` default was wrong in kind and not only in value.
+
+**Why this is not folded into the consolidation.** Repainting a panel is a visible change and the
+consolidation is a pure restructure whose acceptance is an empty render diff. Putting them in one
+branch would mean a diff that is supposed to be empty and is not, with no way to attribute a row to
+either. Separate entry, separate change.
+
+**Already asserted, exactly:**
+`apps/worker/tests/test_themes.py::test_the_guarantee_is_against_the_fixed_surface_and_no_other`
+pins the four shortfalls by value. It **fails when a panel migrates**, which is the point — the
+list is a checklist that breaks rather than a comment that goes stale. Closing this entry means
+that test's expected set becoming empty.
+
+> **Why the split above matters for planning.** Read quickly, this entry looks like four lines in
+> four templates. Three of them are. The fourth is not a line at all — it is a change to how that
+> panel is composed, and the market header band is the same change again on another surface. An
+> estimate that treats the entry as uniform will be wrong by the only part that is not a repaint.
 
 
 ---
