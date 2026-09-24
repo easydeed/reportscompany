@@ -36,6 +36,8 @@ from worker.template_filters import (
     truncate,
 )
 from worker.ai_market_narrative import generate_market_pdf_narrative
+from worker.compute.median_trend import MIN_CLOSED_FOR_MEDIAN, series_from_closed
+from worker.themes import derive_theme
 
 logger = logging.getLogger(__name__)
 
@@ -192,6 +194,55 @@ class MarketReportBuilder:
         self.env.filters["format_currency_short"] = format_currency_short
         self.env.filters["format_number"] = format_number
         self.env.filters["truncate"] = truncate
+
+    # ── §7.3 median trend ──────────────────────────────────────────────────
+
+    #: Report types that carry the twelve-month median line. Only
+    #: market_snapshot for now — it is the one whose job is "how is this market
+    #: doing", which is the question a trend answers. Adding a type here is a
+    #: page-space decision as much as a design one: measured, the chart costs
+    #: market_snapshot's page 1 one listing card.
+    TREND_REPORT_TYPES = ("market_snapshot",)
+
+    def _build_median_trend(self):
+        """(series, note) for the trend chart, or (None, None) to draw nothing.
+
+        The series is bucketed from `closed_history` — closed rows with a
+        `close_date` and `close_price`, which one `minclosedate = today - 365`
+        fetch already returns. It is NOT the 13-request count series decision 01
+        priced; see compute/median_trend.py for why a median cannot come out of
+        counts and why it is cheaper anyway.
+
+        Everything here fails to None. A market report with no trend is a
+        complete report; a trend drawn from the wrong rows is not.
+        """
+        if self.report_type not in self.TREND_REPORT_TYPES:
+            return None, None
+
+        history = self.report_data.get("closed_history")
+        if not history:
+            return None, None
+
+        try:
+            series = series_from_closed(
+                history,
+                truncated=bool(self.report_data.get("closed_history_truncated")),
+            )
+        except Exception as e:  # pragma: no cover - defensive, same posture as the narrative
+            logger.warning("median trend failed (non-fatal): %s", e)
+            return None, None
+
+        if not series:
+            return None, None
+
+        drawn = [p for p in series if p["value"] is not None]
+        total = sum(p["n"] for p in series)
+        note = (
+            f"Median closed price by month · {len(drawn)} of {len(series)} months "
+            f"shown · {total:,} sales · months with fewer than "
+            f"{MIN_CLOSED_FOR_MEDIAN} closings are left blank"
+        )
+        return series, note
 
     # ── colour resolution ──────────────────────────────────────────────────
 
@@ -389,6 +440,7 @@ class MarketReportBuilder:
                 ai_insights = ""
 
         listings_ctx = self._build_listings_context()
+        median_trend, median_trend_note = self._build_median_trend()
 
         context: Dict[str, Any] = {
             "layout": self.layout,
@@ -402,6 +454,11 @@ class MarketReportBuilder:
             # Text color guaranteed readable when overlaid on the accent
             # (used by .listing-status pill via --accent-text).
             "theme_color_text": color_roles["theme_color_text"],
+            # §7.3 — the chart's mark colour. primary_ink is the one brand value
+            # themes.py guarantees as ink on white, which is this page's surface.
+            "primary_ink": derive_theme(primary_color)["primary_ink"],
+            "median_trend": median_trend,
+            "median_trend_note": median_trend_note,
             # Section contexts
             "header": self._build_header_context(),
             # PDF-COMPREHENSIVE — listings is still a flat array so the

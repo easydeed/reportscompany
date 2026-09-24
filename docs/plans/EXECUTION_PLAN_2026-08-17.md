@@ -571,6 +571,16 @@ it.**
   genuinely derived and a literal would be absurd, derive it by a different route than the code
   under test does, and say in the test why the two routes are independent.
 
+  *Recurred the same day, in tests written after this rule was filed.* The §7.3 trend chart gates a
+  minimum sample per month, and its tests built fixtures of `MIN_CLOSED_FOR_MEDIAN - 1` and
+  `MIN_CLOSED_FOR_MEDIAN` closings. Lowering the threshold from 3 to 1 moved both fixtures with it;
+  the suite stayed green and the regression was MISSED. Knowing the rule did not prevent writing
+  the shape, because the shape is what expressing the intent naturally produces — "a month below
+  the minimum" is most directly written as `minimum - 1`. **Treat the rule as something to check
+  for after writing a test, not only as something to remember while writing one**: after each new
+  gate, look at where its expected value came from, and if the answer is "the code", change it or
+  run the regression that proves otherwise.
+
 ---
 
 ## Phase 0 — Security & Tooling

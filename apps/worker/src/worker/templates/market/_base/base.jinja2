@@ -503,6 +503,23 @@
       height: calc(4 * 1.45em);
     }
 
+    /* ── Median trend chart (§7.3) ──────────────────────────────── */
+    .trend-chart {
+      padding: 4px 0 10px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    /* The sample note is not decoration. A median over three sales and a
+       median over three hundred look identical on the line, and the reader
+       cannot tell which they are looking at without being told (§0.6 — a
+       reader cannot check a number whose basis is not stated). */
+    .trend-chart-note {
+      font-size: 9px;
+      color: var(--gray-500);
+      margin: 2px 0 0;
+    }
+
     /* ===================== PHOTO GRID (2x2) ===================== */
     .photo-grid {
       display: grid;
@@ -1235,7 +1252,8 @@
                                    listings_section_label, listings_truncation_note, listings_more_note) }}
         {% elif layout == "market_narrative" %}
           {{ macros.market_narrative_layout(header, listings, stats, report_type, agent, ai_insights, ai_narrative,
-                                            listings_section_label, listings_truncation_note, listings_more_note) }}
+                                            listings_section_label, listings_truncation_note, listings_more_note,
+                                            median_trend, median_trend_note, primary_ink) }}
         {% elif layout == "closed_inventory" %}
           {{ macros.closed_inventory_layout(header, listings, stats, report_type, agent, ai_insights, ai_narrative,
                                             listings_section_label, listings_truncation_note, listings_more_note) }}

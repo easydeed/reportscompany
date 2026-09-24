@@ -453,6 +453,63 @@ Unchanged from v1 §07.
 **7.1 Page architecture** — full masthead page 1 (~150pt); one-line running head after (~38pt).
 Footer pinned to page bottom on every page.
 
+> ### Correction: this is case C, and PDFShift will not do it
+>
+> *2026-09-24, from running the probe.* The spec above asks for three things at once: a full
+> masthead on page 1, a slim running head from page 2, and a footer on **every** page. In PDFShift's
+> terms that is `header.start_at = 2` with `footer.start_at = 1`.
+>
+> `scripts/probe_pdfshift_start_at.py` rendered one four-page document four ways. **PDFShift accepts
+> differing `start_at` values with a 200 and silently applies `max(header, footer)` to both.** Ask
+> for header@2 and footer@1 and both arrive at page 2 — no error, no warning, and page 1 loses its
+> footer. Full verdict table on **D-103**.
+>
+> The instrument mattered more than the answer here: the probe searched the rendered pages for
+> marker strings rather than checking the HTTP status, and the status was 200 in every case. A
+> docs-based answer, or a probe that stopped at "accepted", would have reported no constraint at
+> all.
+>
+> **The architecture that replaces it: the masthead moves out of PDFShift's header slot and into the
+> document body.**
+>
+> | | today | corrected |
+> |---|---|---|
+> | page 1 masthead | PDFShift `header`, repeated at full size on every page | ordinary body content, first thing on page 1 |
+> | pages 2+ head | the same full masthead again | PDFShift `header`, slim running head |
+> | footer | PDFShift `footer`, every page | unchanged, every page |
+> | reserved band | 1.4in top on every page | the running head only |
+>
+> This gets §7.1's intent within the constraint rather than around it, and it puts the masthead
+> under CSS control instead of a height negotiated with a vendor's reservation — which is also the
+> other half of D-103, where 2.4in of every page is reserved for 1.946in of paint.
+>
+> **ONE CORRECTION TO THE CORRECTION, AND IT IS THE SAME TRAP AGAIN.** Moving the masthead into the
+> body does not by itself let `header.start_at` and `footer.start_at` differ. The slim running head
+> still wants to start at page 2 and the footer still wants page 1, and PDFShift coerces that pair
+> exactly as it coerced case C — the page-1 footer disappears. What changes is the masthead's
+> location, not what the two `start_at` values are asking for.
+>
+> Two variants survive the verdict, and they differ in what page 1 shows:
+>
+> **A — both `start_at` at 1, running head on page 1 too.** Nothing differs, so nothing is coerced.
+> Page 1 carries the slim running head band *and* the body masthead below it; pages 2+ carry the
+> running head. Footer on every page, as specified. The cost is a thin band above page 1's
+> masthead, which is a design problem with a design answer (make the band read as the masthead's
+> top rule) rather than a missing footer.
+>
+> **B — both at 2, page-1 footer rendered in the body.** Matched, so nothing is coerced, and page 1
+> shows only the masthead. But pinning a footer to the bottom of page 1 inside a flowing document
+> needs page 1 to be a fixed-height section, which is brittle in exactly the way the rest of this
+> layout is not.
+>
+> **A is the one to build.** It delivers every clause of §7.1 except "no head on page 1", which the
+> spec never actually said — it said a full masthead on page 1, and A has one.
+>
+> **Whatever is built, page-1 capacity must be re-measured.** §7.2's pinned numbers
+> (`test_narrative_box.py::PAGE_1_CAPACITY`) were measured with the masthead in the header slot
+> reserving 1.4in on every page. Moving it changes what page 1 holds and changes what continuation
+> pages hold by more.
+
 **7.2 Pagination** — 26 table rows per page · 9 gallery cards in 3×3 · 70% minimum fill · never
 orphan fewer than four rows · truncation stated in a line beneath the list.
 
@@ -555,6 +612,45 @@ orphan fewer than four rows · truncation stated in a line beneath the list.
 **7.3 Charts** — there is currently no chart in any of the 32 pages. Single-series only in v1.
 Marks in `primary_ink`, never raw primary. Direct-label the endpoint and the largest bar, never
 every point.
+
+> ### Built and measured, 2026-09-24 — the first chart, and what it costs
+>
+> `market_snapshot`'s twelve-month median closed price, as inline SVG in the document body (no
+> script, no external request, nothing for PDFShift to fetch). Built to §7.3's rules and to the
+> mark specs: 2px line with round joins, endpoint marker r=4.5 with a 2px surface ring, hairline
+> **solid** gridlines one step off the surface, labels on the endpoint and the extreme only, no
+> legend (one series — the heading names it), axis ticks and value labels in text grays rather than
+> the series colour. Mark colour is `primary_ink`, and this page's surface is white, so that
+> token's "clears 4.5:1 on white" guarantee holds here exactly rather than approximately.
+>
+> No hover layer, which is the one deliberate departure from how this chart would be built for a
+> screen: there is no pointer in a PDF. Nothing is gated behind one either — the axis carries the
+> scale, two direct labels carry the values that matter, and a note states the sample.
+>
+> **The data costs two requests, not thirteen, and decision 01 does not cover it.** Decision 01
+> priced a twelve-month **count** series at 13 requests by differencing cumulative `minclosedate`
+> counts. A **median** cannot be differenced out of counts at any price — it needs the prices. One
+> `minclosedate = today − 365` fetch returns closed rows carrying `close_date` and `close_price`
+> already, and twelve medians fall out of bucketing them client-side: **two requests at
+> `page_max = 500`**, cheaper than the count series rather than dearer. The ceiling is
+> `SIMPLYRETS_MAX_RESULTS` (1000): past that the fetch truncates, and a median over a truncated,
+> order-dependent subset is a wrong number that looks right, so the series is refused rather than
+> drawn (D-078's rule). Months with fewer than three closings are a **gap in the line, not a zero** —
+> a zero would draw a crash that did not happen.
+>
+> **What it costs in page space, measured, and it is too much as laid out today:**
+>
+> | | pages | listings per page |
+> |---|---|---|
+> | `market_snapshot` without the chart | 2 | 3, 6 |
+> | `market_snapshot` with the chart | **3** | **0**, 6, 3 |
+>
+> A 180px chart takes page 1's entire listing set and adds a page — the same shape as the
+> eight-line narrative box, and the same answer: **do not commit the spec to this height.** The
+> chart is built and correct; where it goes is not settled, and it should not be settled before
+> §7.1's masthead move, which changes what page 1 holds. The options are a shorter chart, the chart
+> in place of the hero stat rather than alongside it, or `market_snapshot` accepting three pages —
+> and only the first is free.
 
 **Effort: L.** Blocked by A and by open decision 01.
 

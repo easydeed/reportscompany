@@ -4987,10 +4987,29 @@ to set a cap against. It is now pinned per type in
 `apps/worker/tests/test_narrative_box.py::PAGE_1_CAPACITY` — 3 for `market_snapshot` and
 `price_bands`, 6 for `featured_listings`, with a narrative.
 
-**Two ways to close it and they are different products**, so this is still not a one-line fix: cut
-each cap to the pinned page-1 capacity (a smaller sample, honestly one page), or drop the "1-page"
-claim and let the snapshot modes be two pages. Cutting `market_snapshot` from 9 to 3 is a visible
-change to what an agent sends a client, so it is left for a decision rather than taken here.
+**THE DECISION, IN THE TERMS IT SHOULD BE DECIDED IN — [JERRY].** This is not a pagination target
+and it is not blocking anything. It is one trade, and both sides are already measured, so it can be
+settled without re-deriving any of it:
+
+| | keep the cap | cut the cap to page-1 capacity |
+|---|---|---|
+| `market_snapshot` | 9 listings, **2 pages** | 3 listings, **1 page** |
+| `price_bands` | 8 listings, **2 pages** | 3 listings, **1 page** |
+| `featured_listings` | 12 listings, **2 pages** | 6 listings, **1 page** |
+
+**Page count against sample size, and nothing else moves.** Cutting the cap does not change the
+layout, the metrics, the narrative or the branding — only how many listings the agent's client
+sees. Keeping it does not break anything either; it makes `PDF_CONFIG`'s own "1-page" comment
+false, which is what this entry is.
+
+A third answer is available and costs nothing: keep the caps and **correct the comment** to say
+these are two-page reports. That closes the defect as filed — a comment disagreeing with the
+renderer — and leaves the product exactly as it is.
+
+Whichever is chosen, the capacities are pinned in
+`apps/worker/tests/test_market_layout_map.py` (caps) and
+`apps/worker/tests/test_narrative_box.py::PAGE_1_CAPACITY` (what page 1 holds), so the two cannot
+drift apart again without the suite saying so.
 
 ---
 
@@ -5027,24 +5046,30 @@ If that is true, §7.1's architecture cannot be built the obvious way — moving
 page 1 instead. **That claim is a code comment, not a measurement**, and it should be checked
 against PDFShift before the page architecture is designed around it either way.
 
-> **BLOCKED ON A CREDENTIAL, 2026-09-24. The probe is written; it cannot run here.**
-> `scripts/probe_pdfshift_start_at.py` renders the same four-page document four ways — both
-> `start_at` values at 1, both at 2, and each split — and reports the HTTP status and, for each
-> render that succeeds, **which pages actually carry the header and footer**, found by searching
-> each page's text for a marker unique to each. So it answers what PDFShift did rather than what
-> it accepted, which matters: a split that is accepted but silently ignored is worse than one that
-> is refused, because today's code would then be doing the wrong thing quietly.
+> **ANSWERED 2026-09-24 by running the probe. The constraint is real, and it is worse than a
+> refusal.** `scripts/probe_pdfshift_start_at.py`, four renders of one four-page document:
 >
-> It needs `PDFSHIFT_API_KEY`, which is not in this container, and there is no honest substitute.
-> Reading PDFShift's documentation would answer the question the same way `ENV_TEMPLATE.md`
-> answered D-101's — prose about a system's behaviour, which is a hypothesis (§0.6). Four
-> conversions against the account settles it.
+> | case | `header.start_at` | `footer.start_at` | PDFShift's response | what it actually did |
+> |---|---|---|---|---|
+> | A control | 1 | 1 | 200 | header 1-4, footer 1-4 — as asked |
+> | B matched | 2 | 2 | 200 | header 2-4, footer 2-4 — as asked |
+> | **C split** | **2** | **1** | **200** | **header 2-4, footer 2-4 — NOT as asked** |
+> | **D split** | **1** | **2** | **200** | **header 2-4, footer 2-4 — NOT as asked** |
 >
-> **Until it is run, §7.1's page architecture should not be designed**, because the two possible
-> answers imply different designs rather than different implementations.
-
-
----
+> **PDFShift accepts differing values and silently applies `max(header, footer)` to both.** Ask for
+> the footer from page 1 and the header from page 2 and you get neither: you get both from page 2,
+> with a 200 and no warning.
+>
+> **This is why the probe searched the rendered pages for markers instead of trusting the status
+> code.** A probe that checked only whether the request was accepted would have reported the
+> constraint as imaginary, and code written on that answer would believe it had a split while
+> shipping reports with no footer on page 1. The failure mode the instrument was designed to catch
+> is the one that happened. Reading PDFShift's documentation would have produced the same wrong
+> answer — the API does not document a coercion it performs silently.
+>
+> **So §7.1 as written is unbuildable.** A full masthead on page 1, a slim running head after, and
+> a footer on every page is `header.start_at=2` with `footer.start_at=1` — case C exactly. See the
+> §7.1 correction in the master plan for the architecture that replaces it.
 
 ### D-104 — the market narrative shipped whatever the API returned, including sentences it had cut off
 
@@ -5057,10 +5082,19 @@ ends mid-sentence. **Nothing in the worker read `finish_reason`** — confirmed 
 nowhere in `apps/worker/src`. The string went back to the builder like any other and rendered under
 the heading "AI Market Insight" in a customer's PDF.
 
-Found while implementing §7.2's narrative cap, not looked for. Whether it has ever fired in
-production is unknown: 150 tokens is roughly 110 words against a prompt asking for 2-3 sentences,
-so it needs a verbose answer to reach — but nothing would have recorded it if it had, which is most
-of the point.
+**THIS SHIPPED.** The code path has been live in production for as long as the market PDF has had
+an AI narrative — every report generated in that time went through a function that returned a
+cut-off sentence as readily as a complete one. That is the fact worth carrying, separately from the
+fix.
+
+What is NOT established is how often it fired. 150 tokens is roughly 110 words against a prompt
+asking for 2-3 sentences, so it takes a verbose answer to reach the ceiling — and **nothing
+recorded it either way**, which is most of the point. There is no log line to count, because the
+condition was never examined. Estimating a rate from the prompt would be reasoning about a model's
+behaviour from its instructions, which is the same class of claim §0.6 warns about; the honest
+answer is that the exposure is unmeasured and now cannot be measured retrospectively.
+
+Found while implementing §7.2's narrative cap, not looked for.
 
 **A second way the same thing happened.** Even a complete narrative that is simply long pushed
 page 1's table down, because the narrative box grew with its copy. That is the variability §7.2
