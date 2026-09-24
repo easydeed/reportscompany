@@ -489,6 +489,21 @@ it.**
   different questions and neither substitutes for the other — which is worth knowing before writing
   the third behavioural test in a row and feeling covered.
 
+  **The gate was then proved against the byte-exact state, and the first attempt to reproduce that
+  state was unfaithful in a way that inverted the result.** Reconstructing "the migration was lost"
+  by hand — putting the markup back inline while leaving the seam function in place, still calling
+  the block — produced no orphan at all. The render diff fired and the structural gate stayed
+  silent, which is the exact opposite of the real incident. Only checking out the actual commit
+  reproduced it: render diff 32 passed, contrast audit 77 passed, structural gate failing and naming
+  all four lost blocks.
+
+  This is the same family as the stale `.pyc` that made a regression look green and the `str.replace`
+  that matched nothing: **a regression which does not reproduce the fault says nothing about the
+  guard aimed at it**, and it is worse than no evidence because it reads as evidence. Where a real
+  failure has already happened, reproduce it from the recorded state — a commit, a captured payload,
+  a saved file — rather than from a description of it. Reconstruction from memory tests the
+  reconstruction.
+
 ---
 
 ## Phase 0 — Security & Tooling

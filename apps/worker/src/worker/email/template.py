@@ -1264,6 +1264,86 @@ def _select_gallery_layout(listing_count: int) -> str:
         return "large_list"
 
 
+#: The §06 blocks each report type renders, in first-use order, with the variant
+#: that distinguishes one shape of a block from another — recorded from an actual
+#: render of the standard fixture, not from reading the code.
+#:
+#: PER REPORT TYPE, NOT PER LAYOUT, AND THAT IS A FINDING. §06 describes the body
+#: as "assembled from blocks selected by report type", which implies the layout
+#: decides the sequence. It does not. Three types share the `market_narrative`
+#: layout and produce TWO different sequences: `open_houses` renders
+#: `read:panel` where the other two render `read:insight`, because the Quick Take
+#: panel is emitted only `if not insight_text`. Selection is conditional on the
+#: DATA as much as on the type, and a map keyed by layout could not express it.
+#:
+#: Three more blocks are conditional and therefore absent below, each for a
+#: reason in the fixture rather than in the code:
+#:   chrome:filter_blurb   renders only with a filter_description
+#:   chrome:section_label  } both only when the price-band chart has
+#:   bands                 } trend_stats to draw
+#: Their absence is a property of the standard fixture and is asserted, so if a
+#: refactor started emitting them unconditionally this would fail.
+#:
+#: THIS IS DECLARED DATA AND IT IS ALSO CHECKED. `test_the_declared_block
+#: _sequence_matches_what_renders` instruments `render_block` during a real
+#: render of every report type and requires the observed sequence to equal the
+#: declaration exactly. A table describing what the code does, which nothing
+#: verifies, is a comment — and this project has spent a month finding those.
+#:
+#: WHY A DECLARATION AND NOT A DRIVER. The obvious alternative is a loop that
+#: reads this map and calls each block in turn. It was not built, and the reason
+#: belongs here rather than in someone's head: driving from the map needs every
+#: step to take a uniform context, which turns seven readable functions of
+#: sixteen to fifty lines into roughly fifteen small ones plus a context object
+#: plus a dispatcher — and the conditional selection above would move from `if
+#: not insight_text` into predicate functions in a registry. More indirection, no
+#: more safety than the assertion already gives. If a driver is wanted later, the
+#: map is already the right shape for it.
+REPORT_BLOCKS = {
+    "market_snapshot": (
+        "read:insight", "chrome:hero", "chrome:count_pill", "gallery:row",
+        "spec_list:strip", "chrome:truncation_note",
+    ),
+    "new_listings": (
+        "read:insight", "chrome:hero", "chrome:count_pill", "gallery:row",
+        "spec_list:strip", "chrome:truncation_note",
+    ),
+    "open_houses": (
+        # no insight text for this type, so the Quick Take panel stands in
+        "chrome:hero", "chrome:count_pill", "gallery:row",
+        "spec_list:strip", "read:panel", "chrome:truncation_note",
+    ),
+    "closed": (
+        "read:insight", "chrome:hero", "chrome:count_pill", "gallery:badged",
+        "grid:table", "table", "spec_list:strip", "chrome:truncation_note",
+    ),
+    "inventory": (
+        "read:insight", "chrome:hero", "chrome:count_pill", "gallery:badged",
+        "grid:table", "table", "spec_list:strip", "chrome:truncation_note",
+    ),
+    "price_bands": (
+        "read:insight", "chrome:hero", "spec_list:supporting",
+        "chrome:count_pill", "gallery:row", "chrome:truncation_note",
+    ),
+    "new_listings_gallery": (
+        "read:insight", "chrome:count_pill", "gallery:row", "grid:rows",
+        "chrome:truncation_note",
+    ),
+    "featured_listings": (
+        "read:insight", "chrome:count_pill", "gallery:row", "grid:rows",
+        "chrome:truncation_note",
+    ),
+}
+
+#: Rendered on every report type regardless of layout, per §06 — "masthead,
+#: agent block and footer invariant". A footer that renders on seven of eight is
+#: a CAN-SPAM failure on the eighth and no per-type test would notice.
+INVARIANT_BLOCKS = ("masthead", "cta", "signature")
+
+#: Blocks that exist and render only when their data is present. Listed so their
+#: absence from REPORT_BLOCKS reads as conditional rather than as dead.
+CONDITIONAL_BLOCKS = ("chrome:filter_blurb", "chrome:section_label", "bands")
+
 LAYOUT_MAP = {
     "market_snapshot": "market_narrative",
     "new_listings": "market_narrative",
