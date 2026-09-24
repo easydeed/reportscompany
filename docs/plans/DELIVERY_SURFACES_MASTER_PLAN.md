@@ -469,6 +469,76 @@ every point.
 
 ---
 
+> ### Measured, 2026-09-24 — what this surface actually does before anything changes
+>
+> Everything below is produced by rendering, not by reading. The instrument is
+> `scripts/measure_market_pagination.py` (Chromium's own paginator, Letter, PDFShift's
+> reservations) and `apps/worker/tests/test_market_layout_map.py` (a hook on
+> `jinja2.runtime.Macro.__call__`). The Workstream C rule applies here and is why: the
+> equivalent map for the email surface was written from reading the builders and **seven of
+> its eight entries were wrong.**
+>
+> **There is one PDF path, and it is not the one §07's neighbours describe.** All three
+> `render_pdf` call sites in the worker pass `html_content`, so `MarketReportBuilder` renders
+> every market-report PDF and the `/print/{runId}` route is never reached by the renderer.
+> It is still reached by people — see **D-101**, which is this surface's own Group A / Group B.
+>
+> **Layouts, recorded from the render.** Five layouts, not the four the builder's docstring
+> claimed (it filed `price_bands` under "Analytics"; it has its own `pricebands_layout`). The
+> docstring is gone rather than corrected — a second copy of a mapping is a second thing to keep
+> right, and this one was not kept right.
+>
+> | layout | report types |
+> |---|---|
+> | `gallery_layout` | `new_listings_gallery` · `featured_listings` · `open_houses` |
+> | `market_narrative_layout` | `market_snapshot` |
+> | `closed_inventory_layout` | `closed` · `inventory` |
+> | `pricebands_layout` | `price_bands` |
+> | `analytics_layout` | `new_listings` |
+>
+> **Pagination, measured on 120 listings.** This settles **decision 11**.
+>
+> | report type | pages | listings per page |
+> |---|---|---|
+> | `closed` · `inventory` | 6 | 13, 25, 25, 25, 25, 7 |
+> | `new_listings` | 18 | 3, then 7 |
+> | `new_listings_gallery` | 14 | 6, then 9 |
+> | `open_houses` | 12 | 6, then 9, last 4 |
+> | `market_snapshot` | 2 | 3, 6 |
+> | `price_bands` | 2 | 4, 4 |
+> | `featured_listings` | 2 | 6, 6 |
+>
+> **Decision 11's answer: neither build produces five rows.** The reviewed `closed.pdf` carrying
+> 13 / 25 / 12 is the production build — this harness reproduces 13 then 25 from it, which is
+> also the evidence that the emulation is faithful. The legacy `/print` build hard-codes
+> **fifteen** (`ROWS_PER_PAGE = 15`, three call sites in `apps/web/lib/templates.ts`). v1's
+> "five rows" matches neither, and no source for it survives in the code.
+>
+> **§7.2's targets are set against a page-1 capacity that is not fixed.** Shortening the AI
+> narrative by one sentence (~48 characters) moves `closed` from 13 rows on page 1 to 14 and
+> `new_listings` from 3 to 4; continuation pages do not move. The narrative is model-generated
+> prose of no fixed length, so "26 rows per page" and "70% minimum fill" cannot both be
+> guarantees about page 1 unless the copy above the table is given a fixed height. Continuation
+> pages are stable and can carry a real target.
+>
+> **§7.1's page architecture is not what ships, and the obvious way to build it may be
+> unavailable.** The same masthead repeats at full size on every page — 1.165in measured,
+> against §7.1's ~150pt for page 1 and ~38pt after — and 2.4in of every 11in page is reserved
+> for 1.946in of paint. Moving the running head to `start_at: 2` also moves the **footer** off
+> page 1 if `tasks.py`'s recorded PDFShift constraint holds. That constraint is a code comment
+> and has not been verified; verify it before designing around it. **D-103.**
+>
+> **Three "1-page" report types render two pages.** `market_snapshot`, `price_bands` and
+> `featured_listings` are all documented as one-page snapshots in `PDF_CONFIG`'s own comment and
+> all spill. **D-102.**
+>
+> **What did not need filing.** `more_listings_callout` is invoked on every render and can never
+> emit, because every `PDF_CONFIG` entry has `more_template: None` — deliberately, since the
+> "+ N more, contact me" copy was removed as dishonest. A test records that the path is inert so
+> that restoring a template is a decision someone makes on purpose.
+
+---
+
 
 ### Rate-limit headroom for §7.3's trend line — settled 2026-09-23
 
@@ -761,7 +831,7 @@ same reason.
 | **08** | **Is the comp date window broken, or did it correctly find nothing recent?** Determines whether E2 is a query fix or a copy fix | **E2** | Eng |
 | **09** | **What is the registered business postal address?** Required for the email footer (B20) and the marketing site's legal pages (G3 in the marketing plan). **One answer closes both** | B20, G3 | Jerry |
 | **10** | **B10 attribution.** Putting a named agent's byline on LLM-generated commentary that feeds a pricing decision, with no disclosure, is a liability question rather than a design one — especially while the figures are still inconsistent. **Recommend:** attribute as a prepared summary, retain a "prepared with market data from SimplyRETS" line | B10 | Product / legal |
-| **11** | **Pagination baseline.** v1 says table pages carry five rows; the reviewed render carries 13/25/12. Reconcile before §7.2 targets are set — likely the same Group A/B split as decision 07 | Workstream D | Eng |
+| ~~**11**~~ | ~~**Pagination baseline.**~~ **ANSWERED 2026-09-24 by measurement — see the block under §07.** The reviewed 13/25/12 render is the production build (`MarketReportBuilder`), reproduced by `scripts/measure_market_pagination.py`. The legacy `/print` build is a fixed 15. **Five matches neither**, and nothing in the code produces it. The Group A/B split is real but sits elsewhere: the PDF and the customer-facing "view in browser" link render different builds of the same report — **D-101** | Workstream D | ~~Eng~~ |
 
 ---
 

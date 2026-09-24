@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-23, against `feat/workstream-c-consolidation`, cut from `main` at `8ae1e6b`. **Every open entry was re-checked against current code in that sweep** — see §0.6, *a defect list needs a read path*.
+**Last reconciled:** 2026-09-24, against `feat/workstream-d-market-pdfs`, cut from `main` at `850e2dd`. **Every open entry was re-checked against current code in that sweep** — see §0.6, *a defect list needs a read path*.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -36,12 +36,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 33 | Real, unfixed |
+| `open` | 36 | Real, unfixed |
 | `fixed` | 63 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **100** | D-001 … D-100, contiguous, no duplicates |
+| **Total** | **103** | D-001 … D-103, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 1 · WRONG 8 · FRAGILE 10 · ROUGH 14. (Sums to 33, the open total.)
+**Open by severity:** BROKEN 1 · WRONG 9 · FRAGILE 10 · ROUGH 16. (Sums to 36, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -4853,6 +4853,120 @@ that test's expected set becoming empty.
 > four templates. Three of them are. The fourth is not a line at all — it is a change to how that
 > panel is composed, and the market header band is the same change again on another surface. An
 > estimate that treats the entry as uniform will be wrong by the only part that is not a repaint.
+
+
+---
+
+
+### D-101 — the "view in browser" link on a market report opens a different build than the PDF attached to it
+
+**Severity:** WRONG · **Affects:** every market report — the `html_url` shown in the app and sent to customers
+**Status:** `open`
+
+One report, two renderings, and a customer can see both side by side.
+
+**The PDF** is built by `MarketReportBuilder` (`tasks.py:1676-1708`), server-side, from
+`templates/market/`. It is the only market-report PDF path: all three `render_pdf` call sites in
+the worker pass `html_content`, so the `html_content=None` branch that navigates to
+`/print/{run_id}` has no caller.
+
+**The browser view is that same URL.** `render_pdf` builds `print_url = f"{effective_base}/print/{run_id}"`
+unconditionally, whether or not `html_content` was passed (`pdf_engine.py:83` and `:163`), returns
+it, and `tasks.py:1700,1750` writes it to `report_generations.html_url`. The web app opens it from
+three places — `components/report-builder/index.tsx:213`, `app/app/reports/[id]/page.tsx:292`,
+`app/app/reports/page.tsx:107` — and `apps/worker/ENV_TEMPLATE.md:62` describes it as the
+*"view in browser"* link shown to customers.
+
+**That route renders the legacy build**, not `MarketReportBuilder`: `apps/web/app/print/[runId]/page.tsx:141-148`
+maps each report type to one of the seven `apps/web/templates/trendy-*.html` files and a builder in
+`apps/web/lib/templates.ts`. The differences are not cosmetic:
+
+| | PDF (`MarketReportBuilder`) | browser view (`/print/{runId}`) |
+|---|---|---|
+| table rows per page | 13 on page 1, then 25 — CSS flow | fixed 15 (`ROWS_PER_PAGE = 15`, three call sites) |
+| gallery cards per page | 6 then 9 | fixed 6 (`CARDS_PER_PAGE = 6`) |
+| branding | themed header, Outfit, AI narrative | none of those — `tasks.py:1592` says the legacy path *"produced unbranded PDFs missing the Outfit font, themed header, and AI narrative"* |
+| `open_houses` | its own gallery render | reuses the inventory template (`page.tsx:146`, comment says so) |
+
+**What is NOT established, and must not be guessed.** Whether a customer clicking that link today
+sees the legacy build or an error depends on `INTERNAL_RENDER_TOKEN` on the API service:
+`apps/api/ENV_TEMPLATE.md:95` says that when it is empty the data route is disabled and
+`/print/{runId}` renders *"Report Not Found"*. Its production value is not readable from the
+repository. **Both outcomes are defects and they need different fixes**, so this entry stays open
+with the branch named rather than assuming either.
+
+**Do not resolve this by deleting the route.** `docs/DEAD_CODE.md:34` exists because two separate
+documents declared `/print/[runId]` removed while it was live, and this entry is evidence that it
+is still live in a way neither of them considered — reachable by a person, not by the renderer.
+
+---
+
+### D-102 — the three report types documented as one page all render two
+
+**Severity:** ROUGH · **Affects:** `market_snapshot`, `price_bands`, `featured_listings` PDFs
+**Status:** `open`
+
+`market_builder.PDF_CONFIG` splits the eight types into two modes in its own comment:
+
+> SNAPSHOT (**1-page**, curated sample): market_snapshot, price_bands, featured_listings
+> CATALOG (multi-page, ALL matching listings): closed, inventory, new_listings, new_listings_gallery, open_houses
+
+Measured through the production path — `MarketReportBuilder` → Letter with PDFShift's reservations
+(1.4in top, 1.0in bottom) → Chromium's paginator, `scripts/measure_market_pagination.py`:
+
+| report type | cap | pages | listings per page |
+|---|---|---|---|
+| `market_snapshot` | 9 | **2** | 3, 6 |
+| `price_bands` | 8 | **2** | 4, 4 |
+| `featured_listings` | 12 | **2** | 6, 6 |
+
+All three spill. The caps are set as though the first page held the whole sample and it does not:
+page 1 carries the hero stat, the section header and the narrative, so it holds roughly a third to
+a half of what a continuation page holds.
+
+**The measurement is conservative.** The fixture renders with `photo_url: None` because the
+container has no network. Real listings carry photos, which make cards taller, so a real render
+cannot be shorter than this one.
+
+**Two ways to close it and they are different products**, so this is not a one-line fix: cut each
+cap to what page 1 actually holds (a smaller sample, honestly one page), or drop the "1-page"
+claim and let the snapshot modes be two pages. Either is fine; shipping a comment that says one
+thing while the renderer does another is not.
+
+---
+
+### D-103 — every continuation page pays for a full masthead, and the space reserved for it is larger than the masthead
+
+**Severity:** ROUGH · **Affects:** every market report PDF, worst on the long ones
+**Status:** `open`
+
+Two separate costs, both measured, both on every page.
+
+**1. The hero repeats at full size.** `page_header.jinja2` is passed to PDFShift's `header` param
+with `start_at: 1`, so the same gradient masthead is painted on page 1 and on page 18. Master plan
+§7.1 asks for a full masthead on page 1 (~150pt) and a **one-line running head after (~38pt)**.
+Measured at Letter width, the masthead renders **1.165in (83.9pt)** — smaller than §7.1 wants on
+page 1, and more than double what it wants on every page after.
+
+**2. The reservations are larger than what they hold.** `pdf_engine.render_pdf_pdfshift` reserves
+`header.height 1.3in` and `footer.height 0.9in`, and its own comment says those *"MUST match the
+actual rendered content height of the templates — too small clips content, too large leaves
+whitespace"*. Measured:
+
+| | reserved | renders at | slack |
+|---|---|---|---|
+| header | 1.300in | **1.165in** | 0.135in |
+| footer | 0.900in | **0.781in** | 0.119in |
+
+Plus `margin.top 0.1in` and `margin.bottom 0.1in`. **2.4in of every 11in page (21.8%) is reserved
+for 1.946in of paint.**
+
+**A constraint to design around, recorded but NOT verified.** `tasks.py:1679-1683` states that
+PDFShift requires `header.start_at` and `footer.start_at` to match when either is greater than 1.
+If that is true, §7.1's architecture cannot be built the obvious way — moving the running head to
+`start_at: 2` also moves the footer off page 1 — and the masthead has to move into the body for
+page 1 instead. **That claim is a code comment, not a measurement**, and it should be checked
+against PDFShift before the page architecture is designed around it either way.
 
 
 ---

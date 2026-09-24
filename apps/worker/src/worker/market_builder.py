@@ -5,11 +5,13 @@ Market Report Builder
 Renders brand-driven market reports (8 types) using a single Jinja2 template.
 Colors come from the agent's branding (primary_color, accent_color).
 
-Report types → layout mapping:
-  Gallery:         new_listings_gallery, featured_listings, open_houses
-  Market Narrative: market_snapshot
-  Closed/Inventory: closed, inventory
-  Analytics:        price_bands, new_listings
+Report types → layout mapping: see LAYOUT_MAP below, which is the only
+declaration of it. This docstring used to repeat the mapping and had drifted —
+it filed price_bands under "Analytics" when price_bands has had its own
+`pricebands` layout and its own macro for some time. A second copy of a mapping
+is a second thing to keep right, and this one was not kept right, so the copy
+is gone rather than corrected. `test_the_layout_map_matches_the_macro_that_runs`
+checks LAYOUT_MAP against an instrumented render.
 
 Usage:
     builder = MarketReportBuilder(report_data)
