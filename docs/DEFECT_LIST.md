@@ -36,12 +36,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 36 | Real, unfixed |
-| `fixed` | 63 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 35 | Real, unfixed |
+| `fixed` | 64 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **103** | D-001 … D-103, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 1 · WRONG 9 · FRAGILE 10 · ROUGH 16. (Sums to 36, the open total.)
+**Open by severity:** BROKEN 1 · WRONG 8 · FRAGILE 10 · ROUGH 16. (Sums to 35, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -4858,48 +4858,74 @@ that test's expected set becoming empty.
 ---
 
 
-### D-101 — the "view in browser" link on a market report opens a different build than the PDF attached to it
+### D-101 — the "view in browser" link on a market report opened a different build than the PDF
 
-**Severity:** WRONG · **Affects:** every market report — the `html_url` shown in the app and sent to customers
-**Status:** `open`
+**Severity:** WRONG · **Affects:** every market report — `report_generations.html_url`, surfaced in the app in three places
+**Status:** `fixed` — `feat/workstream-d-market-pdfs`, code + migration 0057
 
-One report, two renderings, and a customer can see both side by side.
+One report, two renderings, and a customer could open both.
 
 **The PDF** is built by `MarketReportBuilder` (`tasks.py:1676-1708`), server-side, from
 `templates/market/`. It is the only market-report PDF path: all three `render_pdf` call sites in
 the worker pass `html_content`, so the `html_content=None` branch that navigates to
 `/print/{run_id}` has no caller.
 
-**The browser view is that same URL.** `render_pdf` builds `print_url = f"{effective_base}/print/{run_id}"`
-unconditionally, whether or not `html_content` was passed (`pdf_engine.py:83` and `:163`), returns
-it, and `tasks.py:1700,1750` writes it to `report_generations.html_url`. The web app opens it from
-three places — `components/report-builder/index.tsx:213`, `app/app/reports/[id]/page.tsx:292`,
-`app/app/reports/page.tsx:107` — and `apps/worker/ENV_TEMPLATE.md:62` describes it as the
-*"view in browser"* link shown to customers.
+**The link was that URL anyway.** `render_pdf` built `print_url = f"{effective_base}/print/{run_id}"`
+unconditionally and returned it whether or not the render had come from it (`pdf_engine.py:83`
+and `:163`). Confirmed by reading both renderers end to end: **when `html_content` is passed,
+`print_url` is used for nothing inside either function.** It is not in the PDFShift payload, not
+navigated to, not logged as the source — it is only returned. The docstring called it *"the
+URL/HTML that was rendered"*, which in that case it was not. `tasks.py:1700,1750` wrote it to
+`report_generations.html_url`.
 
-**That route renders the legacy build**, not `MarketReportBuilder`: `apps/web/app/print/[runId]/page.tsx:141-148`
-maps each report type to one of the seven `apps/web/templates/trendy-*.html` files and a builder in
+**That route renders the legacy build**: `apps/web/app/print/[runId]/page.tsx:141-148` maps each
+report type to one of the seven `apps/web/templates/trendy-*.html` files and a builder in
 `apps/web/lib/templates.ts`. The differences are not cosmetic:
 
-| | PDF (`MarketReportBuilder`) | browser view (`/print/{runId}`) |
+| | PDF (`MarketReportBuilder`) | that route (`/print/{runId}`) |
 |---|---|---|
 | table rows per page | 13 on page 1, then 25 — CSS flow | fixed 15 (`ROWS_PER_PAGE = 15`, three call sites) |
 | gallery cards per page | 6 then 9 | fixed 6 (`CARDS_PER_PAGE = 6`) |
 | branding | themed header, Outfit, AI narrative | none of those — `tasks.py:1592` says the legacy path *"produced unbranded PDFs missing the Outfit font, themed header, and AI narrative"* |
-| `open_houses` | its own gallery render | reuses the inventory template (`page.tsx:146`, comment says so) |
+| `open_houses` | its own gallery render | reuses the inventory template (`page.tsx:146`) |
 
-**What is NOT established, and must not be guessed.** Whether a customer clicking that link today
-sees the legacy build or an error depends on `INTERNAL_RENDER_TOKEN` on the API service:
+**CORRECTION to this entry as first filed.** It said the link was *"shown in the app and sent to
+customers"*. The second half was taken from `apps/worker/ENV_TEMPLATE.md:62`, which describes it
+as a *"view in browser"* link *"shown to customers"* — prose, not code. **The email does not carry
+it.** `email/send.py:182-216` builds the CTA from `pdf_url`, so the email and its attachment agree.
+The exposure is the app UI (`components/report-builder/index.tsx:213`,
+`app/app/reports/[id]/page.tsx:292`, `app/app/reports/page.tsx:107`) and the `report.completed`
+webhook payload (`tasks.py:1943`). Narrower than filed, and worth correcting rather than leaving a
+claim sourced from a doc.
+
+**The fix, both halves.**
+
+1. **`render_pdf` no longer returns a URL that rendered nothing.** The second element of its return
+   is now `None` whenever `html_content` was passed, in both engines, with the reason at the
+   return and at the call site. `apps/worker/tests/test_pdf_source_url.py` asserts both directions
+   — the HTML path returns None *and* the URL path still returns its URL, because a test for the
+   first alone also passes against a function that returns None always. Three regressions applied
+   and seen to fail: each engine reverted to the old behaviour, and the over-correction.
+2. **Migration 0057 clears the rows already written.** The code fix is forward-only; every existing
+   row keeps its link and the app keeps showing it. `0057_clear_stale_view_in_browser_links.sql`
+   nulls `html_url` where it matches the print path. Nothing is lost that cannot be reconstructed
+   from the row's own id — and what would be reconstructed is the wrong document.
+
+**The link is now gone rather than corrected, and that is a product gap, not a fix.** Restoring
+"view in browser" means serving the `html_content` that was actually rendered — it is already
+self-contained, with images base64-embedded before the PDF call — at a URL. That is separate work
+and not filed as a defect, because nothing is currently wrong; something is merely absent.
+
+**What remains open, and needs Jerry.** Is `INTERNAL_RENDER_TOKEN` set on Vercel?
 `apps/api/ENV_TEMPLATE.md:95` says that when it is empty the data route is disabled and
-`/print/{runId}` renders *"Report Not Found"*. Its production value is not readable from the
-repository. **Both outcomes are defects and they need different fixes**, so this entry stays open
-with the branch named rather than assuming either.
+`/print/{runId}` renders *"Report Not Found"*. That decides what anyone holding an old link sees —
+a saved URL, or an `html_url` a webhook consumer stored from a past `report.completed` delivery.
+Both answers are bad and neither changes the fix above; the answer tells us whether there is a
+second thing to chase.
 
-**Do not resolve this by deleting the route.** `docs/DEAD_CODE.md:34` exists because two separate
-documents declared `/print/[runId]` removed while it was live, and this entry is evidence that it
-is still live in a way neither of them considered — reachable by a person, not by the renderer.
-
----
+**Do not resolve the route by deleting it.** `docs/DEAD_CODE.md:34` exists because two separate
+documents declared `/print/[runId]` removed while it was live. This entry is evidence it is live in
+a way neither considered — reachable by a person, not by the renderer.
 
 ### D-102 — the three report types documented as one page all render two
 

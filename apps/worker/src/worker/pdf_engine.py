@@ -46,7 +46,7 @@ def render_pdf_playwright(
     footer_html: Optional[str] = None,
     header_start_at: int = 1,
     footer_start_at: int = 1,
-) -> Tuple[str, str]:
+) -> Tuple[str, Optional[str]]:
     """
     Render PDF using local Playwright/Chromium.
 
@@ -66,7 +66,19 @@ def render_pdf_playwright(
             Playwright for now).
 
     Returns:
-        (pdf_path, print_url): Local path to PDF and the URL that was rendered
+        (pdf_path, source_url): The local path to the PDF, and the URL the PDF
+            was rendered FROM — which is None whenever `html_content` was
+            passed, because then it was rendered from that string and no URL
+            produced it.
+
+            This is not a "view this report in a browser" link and must not be
+            stored as one. `{print_base}/print/{run_id}` renders the LEGACY
+            build (apps/web/app/print/[runId]/page.tsx + the trendy-*.html
+            templates), which is a different document from the one this
+            function just produced: different pagination, no themed header, no
+            AI narrative. Returning it for an html_content render is how
+            `report_generations.html_url` came to point at a document the
+            customer was never sent. See D-101.
 
     Raises:
         Exception: If Playwright fails to launch or render
@@ -83,7 +95,15 @@ def render_pdf_playwright(
     print_url = f"{effective_base}/print/{run_id}"
     pdf_path = os.path.join(PDF_DIR, f"{run_id}.pdf")
     
-    print(f"🎭 Rendering PDF with Playwright: {print_url}")
+    # SOURCE-URL-IS-NOT-A-VIEW-URL (D-101) — `print_url` is where this render
+    # WOULD have come from if no html_content had been passed. When it was, the
+    # document came from the string and this URL rendered nothing, so it is not
+    # logged as the source and not returned as one. See the return below.
+    source_url = None if html_content else print_url
+    print(
+        f"🎭 Rendering PDF with Playwright: "
+        f"{print_url if source_url else f'HTML string, {len(html_content)} chars'}"
+    )
     
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -119,7 +139,7 @@ def render_pdf_playwright(
         browser.close()
     
     print(f"✅ PDF generated: {pdf_path} ({os.path.getsize(pdf_path)} bytes)")
-    return pdf_path, print_url
+    return pdf_path, source_url
 
 
 def render_pdf_pdfshift(
@@ -131,7 +151,7 @@ def render_pdf_pdfshift(
     footer_html: Optional[str] = None,
     header_start_at: int = 1,
     footer_start_at: int = 1,
-) -> Tuple[str, str]:
+) -> Tuple[str, Optional[str]]:
     """
     Render PDF using PDFShift cloud API.
 
@@ -150,7 +170,19 @@ def render_pdf_pdfshift(
         footer_start_at: First page index where the footer should appear.
 
     Returns:
-        (pdf_path, print_url): Local path to PDF and the URL/HTML that was rendered
+        (pdf_path, source_url): The local path to the PDF, and the URL the PDF
+            was rendered FROM — which is None whenever `html_content` was
+            passed, because then it was rendered from that string and no URL
+            produced it.
+
+            This is not a "view this report in a browser" link and must not be
+            stored as one. `{print_base}/print/{run_id}` renders the LEGACY
+            build (apps/web/app/print/[runId]/page.tsx + the trendy-*.html
+            templates), which is a different document from the one this
+            function just produced: different pagination, no themed header, no
+            AI narrative. Returning it for an html_content render is how
+            `report_generations.html_url` came to point at a document the
+            customer was never sent. See D-101.
 
     Raises:
         httpx.HTTPError: If API request fails
@@ -302,7 +334,8 @@ def render_pdf_pdfshift(
         f.write(pdf_bytes)
     
     print(f"✅ PDF generated: {pdf_path} ({len(pdf_bytes)} bytes)")
-    return pdf_path, print_url
+    # SOURCE-URL-IS-NOT-A-VIEW-URL (D-101) — see render_pdf_playwright.
+    return pdf_path, (None if html_content else print_url)
 
 
 def render_pdf(
@@ -314,7 +347,7 @@ def render_pdf(
     footer_html: Optional[str] = None,
     header_start_at: int = 1,
     footer_start_at: int = 1,
-) -> Tuple[str, str]:
+) -> Tuple[str, Optional[str]]:
     """
     Render PDF using the configured engine.
 
@@ -329,7 +362,19 @@ def render_pdf(
         footer_start_at: First page index where the footer appears.
 
     Returns:
-        (pdf_path, print_url): Local path to generated PDF and source URL
+        (pdf_path, source_url): The local path to the PDF, and the URL the PDF
+            was rendered FROM — which is None whenever `html_content` was
+            passed, because then it was rendered from that string and no URL
+            produced it.
+
+            This is not a "view this report in a browser" link and must not be
+            stored as one. `{print_base}/print/{run_id}` renders the LEGACY
+            build (apps/web/app/print/[runId]/page.tsx + the trendy-*.html
+            templates), which is a different document from the one this
+            function just produced: different pagination, no themed header, no
+            AI narrative. Returning it for an html_content render is how
+            `report_generations.html_url` came to point at a document the
+            customer was never sent. See D-101.
 
     Raises:
         ValueError: If PDF_ENGINE is invalid

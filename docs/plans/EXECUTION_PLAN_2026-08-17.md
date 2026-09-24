@@ -542,6 +542,35 @@ it.**
   instrument into the suite: the same drift that made seven entries wrong on the day they were
   written will make them wrong again six months after they were right.
 
+- **A test that reads its expected value from the thing under test cannot fail. Write the
+  expectation down, in the test, as a second copy someone has to change on purpose.**
+
+  *Added 2026-09-24 from Workstream D.* A test checked that each report type renders no more
+  listings than its configured cap. It read the cap from `PDF_CONFIG[t]["cap"]`, sized its input at
+  `cap + 25`, and asserted the render produced exactly `cap`. Every part of that is reasonable and
+  the whole is inert: changing a cap changes the expectation and the input together, so the
+  assertion holds at any value. Changing `closed` from 200 to 150 was applied deliberately and
+  **the suite stayed green.** It was found only because the regression was run.
+
+  This is close to *a detector's silence*, and it is worth separating from it. That rule is about a
+  check whose instrument may have stopped working — a regex that matches nothing, a fixture that
+  stopped reaching the code. The remedy is to watch it find something. **This one is about a check
+  that is working exactly as written and asserts nothing**, because its two sides are the same
+  value read twice. Running it against bad input is the only thing that tells them apart, which is
+  the third time this month that step has been the whole of the evidence.
+
+  The tell is syntactic and easy to look for: **the expected value and the actual value trace back
+  to the same expression.** `assert render(cfg.cap) == cfg.cap`. `assert f(DEFAULT) == DEFAULT`.
+  `assert len(items) == len(source)` where `items` came from `source`. A golden file compared
+  against a regeneration of itself. A round-trip that serialises with the same function it
+  deserialises with. Each of those passes forever and reads like coverage.
+
+  The fix is a pinned literal, and the cost is the point: `RENDERED_LISTING_CAP = {"closed": 200,
+  …}` means a cap change fails the suite until someone writes the new number down in a second
+  place. That is not duplication to be factored out — **it is the assertion**. Where the value is
+  genuinely derived and a literal would be absurd, derive it by a different route than the code
+  under test does, and say in the test why the two routes are independent.
+
 ---
 
 ## Phase 0 — Security & Tooling

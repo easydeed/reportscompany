@@ -1697,6 +1697,17 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
         header_html = embed_images_as_base64(header_html)
         footer_html = embed_images_as_base64(footer_html)
 
+        # D-101 — `html_url` is None here, and that is the fix rather than a
+        # gap. render_pdf returns the URL the PDF was rendered FROM, and this
+        # call renders from `html_content`, so there is no such URL. It used to
+        # return `{DEV_BASE}/print/{run_id}` regardless; that got written to
+        # report_generations.html_url and surfaced in the app as "view in
+        # browser", which opened the LEGACY build — a visibly different
+        # document from the PDF the customer was sent.
+        #
+        # The link now disappears (all three call sites in apps/web guard on
+        # truthiness) rather than showing the wrong report. Bringing it back
+        # means serving THIS html_content, not that route. See D-101.
         pdf_path, html_url = render_pdf(
             run_id=run_id,
             account_id=account_id,

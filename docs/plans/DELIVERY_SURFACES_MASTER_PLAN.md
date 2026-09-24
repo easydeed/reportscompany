@@ -461,6 +461,42 @@ orphan fewer than four rows · truncation stated in a line beneath the list.
 > a different render, or two builds are in play — which is exactly the Group A / Group B problem
 > in §02. Confirm which build the pagination targets are set against.
 
+> ### Correction: a single rows-per-page number cannot be a target for page 1
+>
+> *2026-09-24, from measuring it.* The targets above read as constants — 26 rows, 9 cards, 70%
+> fill — applied uniformly to every page. **Page 1 cannot hold a constant**, and the reason is not
+> a layout detail that tuning fixes.
+>
+> Page 1 carries the hero stat, the section header and the **AI narrative**, and the narrative is
+> model-generated prose of no fixed length. Measured: shortening it by one sentence (~48
+> characters) moves `closed` from **13 rows on page 1 to 14**, and `new_listings` from 3 to 4.
+> Continuation pages do not move at all — a stable 25 and 7 respectively. Same build, same
+> listings, same everything else; one sentence of copy.
+>
+> So "26 table rows per page" is two different claims wearing one number, and only one of them can
+> be a guarantee:
+>
+> - **Continuation pages take a measured target.** They hold a fixed box with fixed-height rows,
+>   and 25 is what they hold today against a target of 26. That is a real number to tune toward.
+> - **Page 1 takes a computed budget, not a target.** What fits is the box minus whatever the
+>   narrative occupies, and that is knowable only at render time. Writing 26 against it does not
+>   make it true; it makes the spec unfalsifiable, because any render can be said to have missed.
+>
+> The same split applies to **70% minimum fill**: a floor is meetable on continuation pages and is
+> not a property page 1 controls, since the copy above the table is not the layout's to size.
+>
+> **Three ways out, and this is a design decision rather than a measurement.** Give the narrative a
+> fixed height and clip or scroll the overflow; move the narrative off page 1 so page 1 becomes a
+> continuation page like the others; or state the spec as it actually works — a measured
+> continuation target plus a page-1 budget computed from the copy. The third is the honest one and
+> costs the least, but it means the spec stops containing a single number, and whoever writes
+> §7.1's page architecture should know that before they start.
+>
+> **Why this is filed rather than edited into the sentence above.** The original wording is the
+> evidence for how the target was arrived at — from a render, without noticing that the render's
+> first page was a function of its copy. Whoever writes Workstream E's equivalent will be reading
+> a PDF too, and will get the same answer the same way.
+
 **7.3 Charts** — there is currently no chart in any of the 32 pages. Single-series only in v1.
 Marks in `primary_ink`, never raw primary. Direct-label the endpoint and the largest bar, never
 every point.
