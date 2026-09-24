@@ -31,19 +31,32 @@ CHARS_PER_LINE = 97
 
 #: Page-1 listing capacity with the box fixed, measured at four narrative
 #: lengths (none / 36 / 55 / 150 tokens) and identical across all four — which
-#: is the property the fixed box exists to create. Recorded from
-#: scripts/measure_market_pagination.py on 2026-09-24, 120 listings.
+#: is the property the fixed box exists to create.
+#:
+#: RE-MEASURED 2026-09-24 after §7.1 variant A moved the masthead out of
+#: PDFShift's header slot and into the document body. Page 1 now pays for the
+#: masthead as content where every page used to pay for it as a reservation, so
+#: page 1 holds slightly less and continuation pages hold considerably more
+#: (`closed` 25 -> 29 a page, 6 pages -> 5). The previous values were
+#: closed/inventory 12, price_bands 3/5, market_snapshot 3 — they are not
+#: comparable to these and should not be read as a regression on their own.
 #:
 #: `none` differs on purpose: no narrative means no box, so those reports hold
 #: more. Two deterministic states, not a variable one.
+#:
+#: market_snapshot at 0 is real and is quantisation, not a bug: its cards are a
+#: row of three that moves as a unit, and page 1 no longer has room for the row
+#: once the masthead, hero stat and narrative box are on it. The report is still
+#: two pages; the listings are all on page 2. Whether that is the right page 1
+#: is a design question, filed with D-102's.
 PAGE_1_CAPACITY = {
     "new_listings_gallery": {"with_narrative": 6, "no_narrative": 6},
     "featured_listings": {"with_narrative": 6, "no_narrative": 6},
     "open_houses": {"with_narrative": 6, "no_narrative": 6},
-    "market_snapshot": {"with_narrative": 3, "no_narrative": 3},
-    "closed": {"with_narrative": 12, "no_narrative": 16},
-    "inventory": {"with_narrative": 12, "no_narrative": 16},
-    "price_bands": {"with_narrative": 3, "no_narrative": 5},
+    "market_snapshot": {"with_narrative": 0, "no_narrative": 3},
+    "closed": {"with_narrative": 11, "no_narrative": 15},
+    "inventory": {"with_narrative": 11, "no_narrative": 15},
+    "price_bands": {"with_narrative": 3, "no_narrative": 4},
     "new_listings": {"with_narrative": 3, "no_narrative": 4},
 }
 

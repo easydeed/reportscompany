@@ -502,13 +502,63 @@ Footer pinned to page bottom on every page.
 > needs page 1 to be a fixed-height section, which is brittle in exactly the way the rest of this
 > layout is not.
 >
-> **A is the one to build.** It delivers every clause of §7.1 except "no head on page 1", which the
-> spec never actually said — it said a full masthead on page 1, and A has one.
+> **A is the one to build**, and B is recorded rather than dropped so the rejected option stays
+> legible: it delivers the same page 1, and it pays for it by making page 1 a fixed-height section
+> inside a document whose whole layout is flow — a structural constraint, against A's cosmetic one.
+> A delivers every clause of §7.1 except "no head on page 1", which the spec never said: it said a
+> full masthead on page 1, and A has one.
 >
-> **Whatever is built, page-1 capacity must be re-measured.** §7.2's pinned numbers
-> (`test_narrative_box.py::PAGE_1_CAPACITY`) were measured with the masthead in the header slot
-> reserving 1.4in on every page. Moving it changes what page 1 holds and changes what continuation
-> pages hold by more.
+> ---
+>
+> **BUILT 2026-09-24. Variant A.**
+>
+> | piece | where it lives now | appears on |
+> |---|---|---|
+> | masthead | document body, first in the flow (`macros.report_masthead`) | page 1 |
+> | running head | PDFShift `header`, `start_at` 1 | every page |
+> | agent footer | PDFShift `footer`, `start_at` 1 | every page |
+>
+> Both `start_at` values are 1 and `test_page_architecture.py` fails if either moves — the change
+> that breaks this is silent everywhere else, because PDFShift returns 200 and takes the page-1
+> footer away without saying so.
+>
+> **The reservations now equal what their documents paint**, which is the other half of D-103:
+>
+> | | before | after |
+> |---|---|---|
+> | top | 1.3in reserved / 1.165in painted, + 0.1in margin | **0.44in / 0.417in**, no margin |
+> | bottom | 0.9in / 0.781in, + 0.1in margin | **0.89in / 0.885in**, no margin |
+> | total reserved | 2.4in of 11in (21.8%) | **1.33in (12.1%)** |
+>
+> Both PDFShift margins are 0 and the breathing room moved *inside* the header and footer
+> documents. It has to: a CSS `padding-top` applies once at the start of the flow, not after each
+> page break, so continuation pages would sit flush against the band.
+>
+> **Measured outcome. Continuation pages gain; page 1 pays for the masthead as content.**
+>
+> | report type | pages before → after | continuation rows | page 1 with narrative |
+> |---|---|---|---|
+> | `closed` · `inventory` | 6 → **5** | 25 → **29** | 12 → 11 |
+> | `new_listings` | 18 → **16** | 7 → **8** | 3 → 3 |
+> | gallery types | unchanged | 9 → 9 | 6 → 6 |
+> | `market_snapshot` | 2 → 2 | — | 3 → **0** |
+> | `price_bands` | 2 → 2 | — | 3 → 3 |
+>
+> `market_snapshot`'s 0 is quantisation rather than a bug: its cards are a row of three that moves
+> as a unit, and page 1 no longer fits the row once the masthead, hero stat and narrative box are
+> on it. The report is still two pages and every listing is on page 2. Whether that is the right
+> page 1 is a design question, and it belongs with D-102's rather than being settled here.
+>
+> **One piece of residue, stated rather than hidden.** On page 1 the running head says
+> "Closed Sales — Irvine · 117 CLOSED SALES" and the masthead immediately below says it again. The
+> band and the masthead share `header_bg` so they read as one block rather than two, and the
+> duplication is small — but it is duplication, and it is the price of A. Cheapest fix if it grates:
+> make the running head carry the brand rather than the report title. That is a content decision,
+> not a structural one.
+>
+> §7.2's pinned page-1 capacities were re-measured against this architecture and re-recorded in
+> `test_narrative_box.py::PAGE_1_CAPACITY`. The old numbers are not comparable to the new ones and
+> the entry says so.
 
 **7.2 Pagination** — 26 table rows per page · 9 gallery cards in 3×3 · 70% minimum fill · never
 orphan fewer than four rows · truncation stated in a line beneath the list.
@@ -1059,6 +1109,44 @@ returns nothing there.
 > at the top level.** Reading it top-level returns `None` for every row and looks exactly like a
 > feed with no close dates — which is how the first run of this check nearly reported the wrong
 > answer. `extract.py:26` reads the correct path.
+
+---
+
+### Correction: 13 requests prices the COUNT series, and §7.3's first chart is not one
+
+*2026-09-24, from building it.* Everything above answers "what does a twelve-month trend cost" with
+**13 requests**, by differencing cumulative `minclosedate` counts. That is right, and it is the
+price of **one particular series**: how many homes sold each month. The correction is that it was
+then carried as the price of §7.3's trend line generally, and §7.3's first chart is a **median**.
+
+**A median cannot be differenced out of counts at any price.** `count=true` returns a total, and no
+arithmetic over totals recovers the middle of a distribution. The 13-request technique does not get
+cheaper or dearer for a median — it does not apply.
+
+**What a median costs instead: two requests, not thirteen.** One
+`minclosedate = today − 365` query returns the closed rows themselves, and `extract.py` already puts
+`close_date` and `close_price` on each one. Twelve medians then fall out of bucketing those rows
+client-side, at no further vendor cost. At `page_max = 500` that is two requests for up to 1000
+closings — **cheaper than the count series, not dearer** — and the same rows yield the monthly
+counts for free, so a volume series alongside it costs nothing extra either.
+
+| series | what it needs | requests |
+|---|---|---|
+| monthly **count** | a total per month | 13 (differenced), or 12 if `maxclosedate` ever filters |
+| monthly **median** | the prices | **2** — one 365-day fetch, bucketed client-side |
+| both together | the prices | **2** — the counts come out of the same rows |
+
+**Where it does get expensive is the row ceiling, and that is a different risk.**
+`SIMPLYRETS_MAX_RESULTS` is 1000. A market with more closings than that in twelve months returns a
+truncated set, and a median over a truncated, order-dependent subset is a wrong number that looks
+like a right one. `compute/median_trend.py` refuses the series rather than drawing it, which is
+D-078's rule. **The cost model for a median is therefore two requests with a correctness cliff,
+not thirteen requests with a smooth scale** — a different shape of risk from the one decision 01
+analysed, and it should be planned as one.
+
+**The original analysis is preserved above rather than edited** because it is correct about the
+series it priced, and because the mistake worth remembering is not the arithmetic — it is
+generalising a cost from one series to "the trend line".
 
 ## 14 · Out of scope
 

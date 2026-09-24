@@ -15,10 +15,10 @@ route is never reached for a market-report PDF. Production renders through
 PDFShift, which reserves space for the repeating header and footer rather than
 flowing them with the body:
 
-    margin.top    0.1in  +  header.height  1.3in  =  1.4in reserved
-    margin.bottom 0.1in  +  footer.height  0.9in  =  1.0in reserved
+    margin.top    0  +  header.height  0.44in  =  0.44in reserved
+    margin.bottom 0  +  footer.height  0.89in  =  0.89in reserved
 
-The body therefore flows in 11in - 2.4in = 8.6in on every page, and that is what
+The body therefore flows in 11in - 1.33in = 9.67in on every page, and that is what
 this script reproduces with Chromium's own paginator: same format, same margins,
 header and footer left out because their space is what matters here, not their
 paint. Corroboration that the emulation is faithful: a production `closed.pdf`
@@ -53,9 +53,11 @@ STREETS = ["Main St", "Oak Ave", "Elm Dr", "Birch Ln", "Cedar Ct", "Maple Way",
            "Pine Rd", "Walnut Blvd", "Juniper Pl", "Sycamore Ter"]
 ADDR = re.compile(r"\b\d{3,5} (?:" + "|".join(STREETS) + r")\b")
 
-# PDFShift's reservations, from pdf_engine.render_pdf_pdfshift.
-MARGIN_TOP = "1.4in"
-MARGIN_BOTTOM = "1.0in"
+# PDFShift's reservations, from pdf_engine.render_pdf_pdfshift. Since §7.1
+# variant A both `margin` spacers are 0 and each reservation equals the measured
+# height of its own document, so these are just the two `height` values.
+MARGIN_TOP = "0.44in"
+MARGIN_BOTTOM = "0.89in"
 
 PDF_JS = """
 const { chromium } = require('playwright');

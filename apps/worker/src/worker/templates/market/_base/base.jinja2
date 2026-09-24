@@ -503,6 +503,49 @@
       height: calc(4 * 1.45em);
     }
 
+    /* ── Page-1 masthead (§7.1 variant A) ───────────────────────── */
+    /* Was PDFShift's repeating header. Now body content, so it can use the
+       theme's custom properties instead of literal hex passed into a separate
+       document context — and it is as tall as it is, rather than as tall as
+       pdf_engine reserved for it. */
+    .masthead {
+      background: linear-gradient(135deg, var(--header-bg) 0%, var(--header-bg) 50%, var(--primary-color) 100%);
+      /* Full-bleed: .page-content has side padding, and a masthead inset from
+         the page edge reads as a card rather than a header. The negative
+         margins undo the padding without the content below needing to know. */
+      margin: 0 calc(-1 * var(--page-padding)) 18px;
+      padding: 15px var(--page-padding);
+      color: #ffffff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .masthead-left { flex: 0 0 65%; min-width: 0; }
+    .masthead-right { flex: 0 0 35%; display: flex; justify-content: flex-end; align-items: center; }
+    .masthead-title {
+      font-family: var(--font-display);
+      font-size: 24px; font-weight: 700; color: #ffffff;
+      line-height: 1.2; margin-bottom: 4px;
+    }
+    .masthead-city { font-weight: 400; opacity: 0.85; }
+    .masthead-subtitle {
+      font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 400;
+      letter-spacing: 0.02em; margin-bottom: 8px;
+    }
+    .masthead-highlight { color: var(--accent-on-dark); font-weight: 600; }
+    .masthead-metric { display: flex; align-items: baseline; gap: 8px; }
+    .masthead-metric-value {
+      font-family: var(--font-display);
+      font-size: 28px; font-weight: 700; color: #ffffff; line-height: 1;
+    }
+    .masthead-metric-label {
+      font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.7);
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .masthead-logo { max-height: 40px; width: auto; object-fit: contain; }
+
     /* ── Median trend chart (§7.3) ──────────────────────────────── */
     .trend-chart {
       padding: 4px 0 10px;
@@ -1234,15 +1277,34 @@
 </head>
 <body>
   <div class="report-page">
-    {# HERO-EVERY-PAGE — The gradient hero banner now renders via PDFShift's
-       `header` parameter (see _base/page_header.jinja2 + market_builder.
-       render_page_header_html). It repeats on every page including page 1.
-       NO inline hero is rendered in the body anymore; that would double up
-       on page 1. The agent footer also repeats via PDFShift's `footer`
-       param (page_footer.jinja2).
-       Both header.start_at and footer.start_at are 1 (PDFShift requires
-       them to match when > 1; both at 1 satisfies the constraint). #}
+    {# PAGE ARCHITECTURE (§7.1 variant A, 2026-09-24). Three pieces, and which
+       one lives where is forced by a measured PDFShift behaviour rather than
+       chosen:
+
+         masthead      body content, first thing in the flow  -> page 1 only
+         running head  PDFShift `header`, start_at 1          -> every page
+         agent footer  PDFShift `footer`, start_at 1          -> every page
+
+       BOTH start_at VALUES ARE 1 AND MUST STAY THAT WAY. The comment that used
+       to sit here said PDFShift "requires them to match when > 1". That was
+       recorded from nowhere in particular and it understates the problem:
+       PDFShift does not require it, it ACCEPTS a mismatch with a 200 and
+       silently applies max(header, footer) to both. Asking for a header from
+       page 2 and a footer from page 1 gets you both from page 2 — no error, and
+       page 1 loses its footer. Measured four ways by
+       scripts/probe_pdfshift_start_at.py; see D-103.
+
+       That is why the masthead is in the body. "Full masthead on page 1, slim
+       head after" is exactly the coerced pair, so the page-1 piece has to stop
+       being a header. The running head therefore appears on page 1 too, above
+       the masthead — §7.1 asked for a full masthead on page 1, not for no head
+       on page 1. #}
     <div class="page-content">
+      {# §7.1 variant A — the masthead is body content now, not PDFShift's
+         repeating header. It appears once, at the top of the flow, which in a
+         paged document is exactly "page 1 only". See macros.report_masthead
+         and D-103 for why the header slot could not do this. #}
+      {{ macros.report_masthead(header, agent) }}
       {% block content %}
         {# PDF-COMPREHENSIVE — every layout receives the section label,
            truncation note, and "+ N more …" callout text from the

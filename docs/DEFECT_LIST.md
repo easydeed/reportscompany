@@ -36,12 +36,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 35 | Real, unfixed |
-| `fixed` | 65 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 34 | Real, unfixed |
+| `fixed` | 66 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **104** | D-001 … D-104, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 1 · WRONG 8 · FRAGILE 10 · ROUGH 16. (Sums to 35, the open total.)
+**Open by severity:** BROKEN 1 · WRONG 8 · FRAGILE 10 · ROUGH 15. (Sums to 34, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -5016,7 +5016,7 @@ drift apart again without the suite saying so.
 ### D-103 — every continuation page pays for a full masthead, and the space reserved for it is larger than the masthead
 
 **Severity:** ROUGH · **Affects:** every market report PDF, worst on the long ones
-**Status:** `open`
+**Status:** `fixed` — `feat/workstream-d-market-pdfs`, §7.1 variant A
 
 Two separate costs, both measured, both on every page.
 
@@ -5070,6 +5070,40 @@ against PDFShift before the page architecture is designed around it either way.
 > **So §7.1 as written is unbuildable.** A full masthead on page 1, a slim running head after, and
 > a footer on every page is `header.start_at=2` with `footer.start_at=1` — case C exactly. See the
 > §7.1 correction in the master plan for the architecture that replaces it.
+
+**FIXED 2026-09-24 — §7.1 variant A, which closes both halves of this entry.**
+
+The masthead moved out of PDFShift's `header` slot and into the document body, where it renders
+once, at the top of the flow — which in a paged document is what "page 1 only" means — as content
+under CSS control. The header slot carries a slim running head instead. **Both `start_at` values
+stay at 1**, so nothing is asked to differ and nothing is coerced; the running head therefore
+appears on page 1 as well, above the masthead, which §7.1 never excluded.
+
+That also settles the reservations, because the masthead is no longer a height negotiated with a
+vendor:
+
+| | before | after |
+|---|---|---|
+| top | 1.3in reserved / 1.165in painted, + 0.1in margin | **0.44in / 0.417in**, no margin |
+| bottom | 0.9in / 0.781in, + 0.1in margin | **0.89in / 0.885in**, no margin |
+| reserved per page | 2.4in of 11in (21.8%) | **1.33in (12.1%)** |
+
+Both PDFShift margins are 0 and the breathing room moved inside the header and footer documents —
+a CSS `padding-top` applies once at the start of the flow, not after each page break, so
+continuation pages would otherwise sit flush against the band.
+
+Measured: `closed` goes 6 pages to **5** and 25 rows a continuation page to **29**; `new_listings`
+18 pages to **16**. Page 1 holds slightly less, since it now pays for the masthead as content
+rather than every page paying for it as a reservation. `market_snapshot`'s page 1 drops to zero
+listings, which is quantisation of a three-card row rather than a fault — the report is still two
+pages and every listing is on page 2.
+
+`apps/worker/tests/test_page_architecture.py` guards all four legs structurally, because none of
+them shows up in rendered HTML: the `start_at` pair, the header slot carrying the running head and
+not the masthead, the masthead being called from the body, and each reservation matching what its
+document paints. Five regressions applied and seen to fail. **The `start_at` gate is the one that
+earns its keep** — that change fails loudly nowhere, because PDFShift answers 200 and simply drops
+page 1's footer.
 
 ### D-104 — the market narrative shipped whatever the API returned, including sentences it had cut off
 

@@ -596,3 +596,41 @@
 </div>
 {%- endif -%}
 {% endmacro %}
+
+
+{# ── Page-1 masthead (§7.1 variant A) ──────────────────────────────────────
+   The full gradient masthead, as ORDINARY BODY CONTENT on page 1.
+
+   It used to live in PDFShift's `header` slot and repeat at full size on every
+   page. It cannot stay there and also be page-1-only: that needs
+   header.start_at=2 with footer.start_at=1, and PDFShift silently coerces both
+   to 2, taking the page-1 footer with it (D-103, measured). Moving it into the
+   body sidesteps the negotiation entirely — the document flows, so this appears
+   once, at the top, which is what "page 1 only" means in a flowing document.
+
+   It also stops being a height negotiated with a vendor. In the header slot the
+   reservation and the paint had to be kept in agreement by hand, and they were
+   not: 1.3in reserved for 1.165in painted. Here it is as tall as its content.
+#}
+{% macro report_masthead(header, agent) %}
+<div class="masthead avoid-break">
+  <div class="masthead-left">
+    <h1 class="masthead-title">{{ header.title }}{% if header.city %} <span class="masthead-city">— {{ header.city }}</span>{% endif %}</h1>
+    <p class="masthead-subtitle">
+      Last <span class="masthead-highlight">{{ header.lookback_days }} days</span>
+      {%- if header.subtitle %} · {{ header.subtitle }}{% endif %} · Live MLS Data
+    </p>
+    {% if header.total_count %}
+    <div class="masthead-metric">
+      <span class="masthead-metric-value">{{ header.total_count }}</span>
+      <span class="masthead-metric-label">{{ header.title }}</span>
+    </div>
+    {% endif %}
+  </div>
+  <div class="masthead-right">
+    {% if agent and agent.logo_url %}
+    <img class="masthead-logo" src="{{ agent.logo_url }}" alt="">
+    {% endif %}
+  </div>
+</div>
+{% endmacro %}
