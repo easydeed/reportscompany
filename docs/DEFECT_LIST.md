@@ -37,9 +37,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 35 | Real, unfixed |
-| `fixed` | 64 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 65 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **103** | D-001 … D-103, contiguous, no duplicates |
+| **Total** | **104** | D-001 … D-104, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 1 · WRONG 8 · FRAGILE 10 · ROUGH 16. (Sums to 35, the open total.)
 
@@ -4916,12 +4916,24 @@ claim sourced from a doc.
 self-contained, with images base64-embedded before the PDF call — at a URL. That is separate work
 and not filed as a defect, because nothing is currently wrong; something is merely absent.
 
-**What remains open, and needs Jerry.** Is `INTERNAL_RENDER_TOKEN` set on Vercel?
+**ANSWERED 2026-09-24 — `INTERNAL_RENDER_TOKEN` is NOT set** (Jerry, from recollection; asked to
+confirm from the Vercel dashboard, and this entry should be updated with which it was).
 `apps/api/ENV_TEMPLATE.md:95` says that when it is empty the data route is disabled and
-`/print/{runId}` renders *"Report Not Found"*. That decides what anyone holding an old link sees —
-a saved URL, or an `html_url` a webhook consumer stored from a past `report.completed` delivery.
-Both answers are bad and neither changes the fix above; the answer tells us whether there is a
-second thing to chase.
+`/print/{runId}` renders *"Report Not Found"*.
+
+**So the realised harm is zero.** Nobody ever saw the legacy build through this path — a customer
+clicking "view in browser" got an error page, not a different report. The defect was real and the
+exposure was not, and those are worth recording as two separate facts rather than one. It also
+means migration 0057 removes an error page rather than a wrong document, and the second thing this
+answer might have created — chasing who saw what — does not exist.
+
+**An evidence-class note, because this entry got it wrong once already.** Both halves of this
+paragraph and the "sent to customers" claim corrected above come from `ENV_TEMPLATE.md`, which is
+prose about runtime behaviour. It was right this time and wrong last time, and neither outcome
+makes it evidence. It is the same class as reading a docs page for production's Postgres version
+(§0.6, *a description of what code does is a hypothesis*): a documented environment variable is a
+statement about a deployment, and only the deployment can confirm it. Hence the ask to check the
+dashboard rather than closing on the recollection.
 
 **Do not resolve the route by deleting it.** `docs/DEAD_CODE.md:34` exists because two separate
 documents declared `/print/[runId]` removed while it was live. This entry is evidence it is live in
@@ -4954,10 +4966,31 @@ a half of what a continuation page holds.
 container has no network. Real listings carry photos, which make cards taller, so a real render
 cannot be shorter than this one.
 
-**Two ways to close it and they are different products**, so this is not a one-line fix: cut each
-cap to what page 1 actually holds (a smaller sample, honestly one page), or drop the "1-page"
-claim and let the snapshot modes be two pages. Either is fine; shipping a comment that says one
-thing while the renderer does another is not.
+**MEASURED 2026-09-24 — page 2 is pure listing spillover, and it is not a few orphans.** Asked
+directly: is page 2 a whole section, or a couple of rows that did not fit? Neither. Extracting
+page 2's text for each type, it contains **nothing but listing cards** — no heading, no section, no
+footer content — and it holds between a half and two thirds of the sample:
+
+| report type | cap | page 1 | page 2 | page 2 contains |
+|---|---|---|---|---|
+| `market_snapshot` | 9 | 3 | **6** | six listing cards, nothing else |
+| `price_bands` | 8 | 4 | **4** | four listing cards, nothing else |
+| `featured_listings` | 12 | 6 | **6** | six listing cards, nothing else |
+
+So the config is wrong rather than the pagination: the caps are two to three times what page 1
+holds. They were set to the size of a good sample without anyone measuring the page it had to fit
+on.
+
+**Page-1 capacity is now a fixed number, which makes the cap a decision someone can actually
+make.** Before §7.2's narrative box was fixed, capacity moved with the copy and there was no number
+to set a cap against. It is now pinned per type in
+`apps/worker/tests/test_narrative_box.py::PAGE_1_CAPACITY` — 3 for `market_snapshot` and
+`price_bands`, 6 for `featured_listings`, with a narrative.
+
+**Two ways to close it and they are different products**, so this is still not a one-line fix: cut
+each cap to the pinned page-1 capacity (a smaller sample, honestly one page), or drop the "1-page"
+claim and let the snapshot modes be two pages. Cutting `market_snapshot` from 9 to 3 is a visible
+change to what an agent sends a client, so it is left for a decision rather than taken here.
 
 ---
 
@@ -4993,6 +5026,63 @@ If that is true, §7.1's architecture cannot be built the obvious way — moving
 `start_at: 2` also moves the footer off page 1 — and the masthead has to move into the body for
 page 1 instead. **That claim is a code comment, not a measurement**, and it should be checked
 against PDFShift before the page architecture is designed around it either way.
+
+> **BLOCKED ON A CREDENTIAL, 2026-09-24. The probe is written; it cannot run here.**
+> `scripts/probe_pdfshift_start_at.py` renders the same four-page document four ways — both
+> `start_at` values at 1, both at 2, and each split — and reports the HTTP status and, for each
+> render that succeeds, **which pages actually carry the header and footer**, found by searching
+> each page's text for a marker unique to each. So it answers what PDFShift did rather than what
+> it accepted, which matters: a split that is accepted but silently ignored is worse than one that
+> is refused, because today's code would then be doing the wrong thing quietly.
+>
+> It needs `PDFSHIFT_API_KEY`, which is not in this container, and there is no honest substitute.
+> Reading PDFShift's documentation would answer the question the same way `ENV_TEMPLATE.md`
+> answered D-101's — prose about a system's behaviour, which is a hypothesis (§0.6). Four
+> conversions against the account settles it.
+>
+> **Until it is run, §7.1's page architecture should not be designed**, because the two possible
+> answers imply different designs rather than different implementations.
+
+
+---
+
+### D-104 — the market narrative shipped whatever the API returned, including sentences it had cut off
+
+**Severity:** WRONG · **Affects:** the "AI Market Insight" paragraph on page 1 of every market report PDF
+**Status:** `fixed` — `feat/workstream-d-market-pdfs`
+
+`generate_market_pdf_narrative` sends `max_tokens: 150` to GPT-4o. When a model reaches that
+ceiling the API returns what it had written so far, with `finish_reason: "length"`, and the text
+ends mid-sentence. **Nothing in the worker read `finish_reason`** — confirmed by grep, it appeared
+nowhere in `apps/worker/src`. The string went back to the builder like any other and rendered under
+the heading "AI Market Insight" in a customer's PDF.
+
+Found while implementing §7.2's narrative cap, not looked for. Whether it has ever fired in
+production is unknown: 150 tokens is roughly 110 words against a prompt asking for 2-3 sentences,
+so it needs a verbose answer to reach — but nothing would have recorded it if it had, which is most
+of the point.
+
+**A second way the same thing happened.** Even a complete narrative that is simply long pushed
+page 1's table down, because the narrative box grew with its copy. That is the variability §7.2
+removes, and with the box now fixed it would instead overflow the box.
+
+**Both are now generation failures rather than layout ones**, which is where they are visible:
+
+- `finish_reason == "length"` → drop the narrative, log at ERROR naming the report and city.
+- `len(narrative) > NARRATIVE_MAX_CHARS` (380, measured against the four-line box) → same.
+
+Every layout already renders without a narrative, so the report is complete either way. A half
+sentence is not.
+
+**The boundary is tested from both sides.** `test_narrative_guards.py` asserts a cut narrative and
+an over-budget one are dropped, *and* that one exactly at the budget is kept — without that, both
+guards could be off by one in the strict direction and every ordinary narrative would be silently
+discarded, which looks exactly like "the AI is not configured". It also pins that the quote-unwrap
+runs before the budget check, since measuring a quoted string two characters long decides the
+boundary case.
+
+Six regressions applied and seen to fail, covering both guards, the box height and the budget in
+both directions.
 
 
 ---

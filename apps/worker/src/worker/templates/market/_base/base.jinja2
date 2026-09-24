@@ -459,6 +459,48 @@
       font-size: 14px;
       line-height: 1.45;
       color: var(--gray-700);
+
+      /* NARRATIVE-FIXED-HEIGHT (§7.2, Jerry's call 2026-09-24) — four lines,
+         always, whatever the copy says.
+
+         WHY FIXED. This is model-generated prose of no fixed length sitting
+         directly above the first table. Measured: one extra sentence (~48
+         characters) moved `closed` from 13 rows on page 1 to 14 and
+         `new_listings` from 3 to 4, while continuation pages held steady. A
+         page-1 row target cannot be a target while the thing above the rows
+         resizes.
+
+         WHY FOUR, AND NOT THE OBVIOUS EIGHT. The generator's `max_tokens: 150`
+         is a hard API ceiling, so eight lines (measured: 150 o200k_base tokens
+         renders to exactly 8 lines here) is the box that can never be
+         overflowed by anything. It was tried and rejected on the render:
+         `market_snapshot` page 1 held ZERO listings and the report went from
+         two pages to three, and `closed` dropped from 13 rows to 9. A box
+         sized for copy nobody writes costs every report four blank lines.
+
+         Four lines is the measured height of three sentences — which is what
+         the prompt asks for, in those words: "Write exactly 2-3 sentences."
+         Two sentences render to 3 lines, three to 4.
+
+         WHAT IT COSTS, MEASURED AGAINST THE SAME RENDER WITH THE HEIGHT
+         RELEASED. Page 1 now holds what a three-sentence narrative holds,
+         always. `closed` goes 13 / 12 / 9 rows at two sentences / three / the
+         150-token ceiling, and is a flat 12 with the box. So a two-sentence
+         narrative gives up one row and a three-sentence one gives up nothing,
+         against a worst case that used to cost four and, on
+         `market_snapshot`, an entire extra page. Gallery types give up nothing
+         at any length.
+
+         WHAT HOLDS IT. The box no longer bounds the copy, so generation does:
+         ai_market_narrative.NARRATIVE_MAX_CHARS rejects an over-budget
+         narrative rather than letting it push the table down, and the budget
+         is measured against THIS box (~97 characters a line at this font and
+         column width; 4 lines holds ~390, measured with a deliberately
+         long-word corpus so real prose has margin). There is no
+         `overflow: hidden` — nothing should clip quietly, and
+         test_narrative_box.py renders a budget-length narrative and fails if it
+         exceeds four lines, so the two numbers cannot drift apart silently. */
+      height: calc(4 * 1.45em);
     }
 
     /* ===================== PHOTO GRID (2x2) ===================== */

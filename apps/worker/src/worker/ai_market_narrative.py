@@ -252,6 +252,25 @@ def _redis():
         return None
 
 
+#: Longest narrative the market PDF's fixed four-line box holds, in characters.
+#:
+#: MEASURED, not chosen (§7.2). `.ai-narrative-text` in templates/market is
+#: 14px/20.3px in a column that fits ~97 characters a line, so four lines hold
+#: ~390. Measured by bisecting rendered height against a deliberately long-word
+#: corpus, which packs worse than real prose, so real copy has margin at this
+#: number. 380 keeps a little more.
+#:
+#: This is a COPY BUDGET, not a truncation point. Nothing clips anything: an
+#: over-budget narrative is dropped and logged, because a narrative that does
+#: not fit is a generation problem and the layout is the wrong place to notice
+#: it. The prompt asks for "exactly 2-3 sentences", which measures at 3-4 lines,
+#: so a narrative over this budget means the model ignored the instruction.
+#:
+#: If this and the CSS ever disagree, test_narrative_box.py fails — it renders a
+#: string of exactly this length and checks it against the real box.
+NARRATIVE_MAX_CHARS = 380
+
+
 # ─── Public API ──────────────────────────────────────────────────────────────
 
 def generate_market_pdf_narrative(
@@ -320,18 +339,50 @@ def generate_market_pdf_narrative(
             return None
 
         body = response.json()
-        narrative = (
-            body.get("choices", [{}])[0]
-            .get("message", {})
-            .get("content", "")
-            .strip()
-        )
+        choice = (body.get("choices") or [{}])[0]
+        narrative = (choice.get("message") or {}).get("content", "").strip()
+
+        # LENGTH-IS-A-GENERATION-FAILURE (§7.2, D-104) — `max_tokens: 150` is a
+        # hard ceiling, and when the model reaches it the API returns what it
+        # had written so far with `finish_reason: "length"`. That string ends
+        # mid-sentence. It used to be returned like any other, so a clipped
+        # sentence went into a customer's PDF under the heading "AI Market
+        # Insight", and nothing anywhere said so.
+        #
+        # The PDF's narrative box is now a fixed eight lines, sized to exactly
+        # this ceiling, so the layout cannot clip. That makes overrun purely a
+        # generation problem, which is where it belongs and where it is
+        # visible: drop the narrative and log it. The report renders without a
+        # narrative, which every layout already handles, rather than with a
+        # half one.
+        if choice.get("finish_reason") == "length":
+            logger.error(
+                "AI narrative hit max_tokens for %s / %s and was cut mid-sentence "
+                "(%d chars). Dropping it rather than shipping a partial sentence. "
+                "If this recurs, the prompt's length target and max_tokens "
+                "disagree — fix the copy budget, not this guard.",
+                report_type, city, len(narrative),
+            )
+            return None
 
         if narrative.startswith('"') and narrative.endswith('"'):
             narrative = narrative[1:-1]
 
         if not narrative:
             logger.warning("GPT-4o returned empty narrative")
+            return None
+
+        # OVER-BUDGET IS A GENERATION FAILURE, NOT A LAYOUT ONE (§7.2) — the
+        # PDF's narrative box is a fixed four lines. It does not clip, so a
+        # narrative longer than the box would push the first table down and put
+        # back exactly the page-1 variability the fixed box removes.
+        if len(narrative) > NARRATIVE_MAX_CHARS:
+            logger.error(
+                "AI narrative for %s / %s is %d chars against a %d budget — the "
+                "prompt asks for 2-3 sentences and this is longer. Dropping it "
+                "rather than letting it push page 1's table down. Narrative: %r",
+                report_type, city, len(narrative), NARRATIVE_MAX_CHARS, narrative[:120],
+            )
             return None
 
         logger.info("AI narrative OK (%d chars): %s…", len(narrative), narrative[:80])
