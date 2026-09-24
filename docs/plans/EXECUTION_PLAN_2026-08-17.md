@@ -504,6 +504,44 @@ it.**
   a saved file — rather than from a description of it. Reconstruction from memory tests the
   reconstruction.
 
+- **A description of what code does is a hypothesis. Derive it by running the code, not by reading
+  it — and this holds even when the reading is careful, unhurried, and done by the person who just
+  wrote the code.**
+
+  *Added 2026-09-24 from Workstream C.* The consolidation ended with a declarative map,
+  `REPORT_BLOCKS`, naming which blocks each of the eight report types renders. It was written first
+  by reading the eight builder functions — slowly, with the file open, by the author of the
+  refactor that had just moved every one of those blocks. **Seven of the eight entries were wrong.**
+  Rewritten from an instrumented render — a hook on `render_block` recording every call during a
+  real render of each type — all eight were right, and the difference was checked into a test that
+  now compares the declaration against the recorded sequence on every run.
+
+  The errors were not about the hard parts. The one worth naming, because it is now recorded in the
+  map itself: `open_houses` does not render `read:insight` like the other seven — it has no insight
+  text, so the Quick Take panel stands in, and `read:panel` appears in its place and in a different
+  position. That is invisible from the builder, which calls the same helper the other types call;
+  it is decided by the data. The rest have the same shape in general: almost none of the twenty-odd
+  `render_block` calls sit at a layout function's own level. They sit one or two frames down inside
+  small helpers — `_build_hero_stat`, `_build_gallery_card_compact`, `_build_section_label` — whose
+  names describe a thing on the page rather than the block that draws it, and several of them are
+  called from loops, so one name in the map stands for one call or for six depending on the data.
+  The corrected map was not produced by diagnosing the wrong one entry by entry. It was produced by
+  discarding it and reading the trace.
+
+  This is the same rule as the detector's silence, turned the other way round. That one says a
+  check reporting nothing is not evidence until you have watched it report something. This one says
+  **a claim about behaviour is not evidence until you have watched the behaviour** — and the two
+  cover the two halves of the same mistake, which is treating your model of the system as an
+  observation of it. Reading tells you what the code was meant to do; that is a genuinely useful
+  thing and it is not the same question.
+
+  Practically: any artefact that asserts what the code does — a map, a table of call sites, a
+  sequence diagram, a docstring listing side effects, a migration checklist — should be produced
+  from an instrument where one can be built at all, and where it cannot, should say on its face
+  that it was written from reading. And when such an artefact is produced by instrument, wire the
+  instrument into the suite: the same drift that made seven entries wrong on the day they were
+  written will make them wrong again six months after they were right.
+
 ---
 
 ## Phase 0 — Security & Tooling

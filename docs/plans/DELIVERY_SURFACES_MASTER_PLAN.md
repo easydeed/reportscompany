@@ -361,6 +361,31 @@ types render 23.9–34.5KB.
 Unchanged from v1 §06. One Jinja2 template replaces eight; body assembled from blocks selected by
 report type; masthead, agent block and footer invariant.
 
+> ### Correction: "selected by report type" is not how selection works
+>
+> *2026-09-24, from building it.* The phrasing above implies the report type — or the layout it
+> maps to — determines the block sequence. **It does not. Selection is conditional on the DATA as
+> much as on the type**, and the difference is not cosmetic: it decides what shape the map that
+> describes it can have.
+>
+> The case that proves it: `market_snapshot`, `new_listings` and `open_houses` all use the
+> `market_narrative` layout and produce **two different sequences**. `open_houses` renders the
+> Quick Take panel where the other two render the market-insight callout, because the panel is
+> emitted only `if not insight_text` — a data condition, not a type one. Three further blocks
+> (`chrome:filter_blurb`, `chrome:section_label`, `bands`) appear only when a filter description or
+> band data is present.
+>
+> So `REPORT_BLOCKS` in `email/template.py` is keyed by report type rather than by layout, and even
+> then it describes the sequence **for a given fixture**; a layout-keyed map could not express the
+> `open_houses` case at all. It is checked against an instrumented render rather than maintained by
+> hand.
+>
+> **Carried forward for Workstream D.** The PDF surfaces have the same shape — a page set selected
+> per report with sections that appear only when their data does — so an equivalent map there will
+> be data-conditional too. Writing it as "sections selected by report type" would inherit this
+> error, and the version that gets written from reading the builders will be wrong in the same way
+> this one was: seven of eight entries, corrected only by instrumenting an actual render.
+
 **Blocks:** `masthead` · `spec_list` · `read` · `table` · `gallery` · `bands` · `cta` · `signature`.
 
 **Constraints:** 80KB budget (Gmail clips at 102KB and hides the CTA and unsubscribe) · table

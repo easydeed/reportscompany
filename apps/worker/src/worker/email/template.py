@@ -1290,15 +1290,33 @@ def _select_gallery_layout(listing_count: int) -> str:
 #: declaration exactly. A table describing what the code does, which nothing
 #: verifies, is a comment — and this project has spent a month finding those.
 #:
-#: WHY A DECLARATION AND NOT A DRIVER. The obvious alternative is a loop that
-#: reads this map and calls each block in turn. It was not built, and the reason
-#: belongs here rather than in someone's head: driving from the map needs every
-#: step to take a uniform context, which turns seven readable functions of
-#: sixteen to fifty lines into roughly fifteen small ones plus a context object
-#: plus a dispatcher — and the conditional selection above would move from `if
-#: not insight_text` into predicate functions in a registry. More indirection, no
-#: more safety than the assertion already gives. If a driver is wanted later, the
-#: map is already the right shape for it.
+#: WHY A DECLARATION AND NOT A DRIVER — AND WHY §06's WORDING IS NOT A REASON
+#: TO "FINISH" IT INTO ONE.
+#:
+#: §06 says the body is "assembled from blocks selected by report type", which
+#: reads like an instruction to build a loop over this map. Decided against, on
+#: 2026-09-24, and the argument is here rather than in a pull request because
+#: this is where someone will be standing when they consider it.
+#:
+#: Driving from the map requires every step to take a uniform context. That
+#: turns seven readable functions of sixteen to fifty lines into roughly fifteen
+#: small ones plus a context object plus a dispatcher — and the conditional
+#: selection documented above, which is a plain `if not insight_text` today,
+#: becomes a predicate function registered against a block name. The sequence
+#: then reads only through the registry, and the per-layout data gathering that
+#: genuinely differs between report types — and is where this module's defects
+#: have actually been — gets spread thinner across more places.
+#:
+#: The safety a driver would add is already provided by
+#: `test_the_declared_block_sequence_matches_what_renders`: the map cannot
+#: disagree with the code, because the code is what the map is checked against.
+#: A driver would make the map authoritative instead of verified, which is not
+#: obviously better and is certainly more machinery.
+#:
+#: This is a judgement, not a law. If a driver is wanted the map is already the
+#: right shape for one — but it should be chosen on these trade-offs rather than
+#: on §06's phrasing, which was written before anyone knew the selection was
+#: data-conditional.
 REPORT_BLOCKS = {
     "market_snapshot": (
         "read:insight", "chrome:hero", "chrome:count_pill", "gallery:row",
