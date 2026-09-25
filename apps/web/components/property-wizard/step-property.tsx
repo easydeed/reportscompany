@@ -16,6 +16,41 @@ import { Input } from "@/components/ui/input";
 import { useGooglePlaces, type PlaceResult } from "@/hooks/useGooglePlaces";
 import type { PropertyData } from "./types";
 
+type UnitMatch = {
+  fips: string;
+  apn: string;
+  address: string;
+  city: string;
+  state: string;
+  zip_code: string;
+};
+
+function mapSiteX(d: Record<string, any>, fallback: string): PropertyData {
+  return {
+    street_address: d.street || d.street_address || fallback,
+    city: d.city || "",
+    state: d.state || "",
+    zip_code: d.zip_code || "",
+    full_address:
+      d.full_address ||
+      `${d.street || fallback}, ${d.city || ""}, ${d.state || ""} ${d.zip_code || ""}`.trim(),
+    bedrooms: d.bedrooms || 0,
+    bathrooms: d.bathrooms || 0,
+    sqft: d.sqft || 0,
+    lot_size: d.lot_size || 0,
+    year_built: d.year_built || 0,
+    owner_name: d.owner_name || "N/A",
+    apn: d.apn || "",
+    assessed_value: d.assessed_value || 0,
+    tax_amount: d.tax_amount || 0,
+    latitude: d.latitude || 0,
+    longitude: d.longitude || 0,
+    property_type: d.property_type,
+    county: d.county,
+    legal_description: d.legal_description,
+  };
+}
+
 interface StepPropertyProps {
   property: PropertyData | null;
   streetAddress: string;
@@ -44,6 +79,7 @@ export function StepProperty({
   onClear,
 }: StepPropertyProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [unitMatches, setUnitMatches] = useState<UnitMatch[] | null>(null);
   const addressInputRef = useRef<HTMLInputElement>(null);
 
   // Wire Google Places Autocomplete
@@ -81,6 +117,7 @@ export function StepProperty({
 
     onSearchLoading(true);
     onSearchError(null);
+    setUnitMatches(null);
 
     try {
       const res = await fetch("/api/proxy/v1/property/search", {
@@ -101,42 +138,27 @@ export function StepProperty({
 
       const responseData = await res.json();
 
-      // Backend returns { success, data, error, multiple_matches }
+      const matches = Array.isArray(responseData.multiple_matches)
+        ? (responseData.multiple_matches as UnitMatch[])
+        : [];
+      if (matches.length > 1) {
+        const wanted = (searchAddr.match(/#\s*([A-Za-z0-9-]+)/) || [])[1];
+        const ranked = [...matches].sort((a, b) => {
+          const hit = (addr: string) =>
+            wanted && new RegExp(`#?\\s*${wanted}\\b`, "i").test(addr) ? 0 : 1;
+          return hit(a.address || "") - hit(b.address || "");
+        });
+        setUnitMatches(ranked);
+        return;
+      }
+
       if (!responseData.success || !responseData.data) {
         throw new Error(
           responseData.error || "Property not found. Please verify the address."
         );
       }
 
-      // Extract the actual property data from the response wrapper
-      const d = responseData.data;
-
-      // Map SiteX PropertyData fields to our frontend PropertyData interface
-      // SiteX uses "street" not "street_address", etc.
-      const mapped: PropertyData = {
-        street_address: d.street || d.street_address || searchAddr,
-        city: d.city || "",
-        state: d.state || "",
-        zip_code: d.zip_code || "",
-        full_address:
-          d.full_address ||
-          `${d.street || searchAddr}, ${d.city || ""}, ${d.state || ""} ${d.zip_code || ""}`.trim(),
-        bedrooms: d.bedrooms || 0,
-        bathrooms: d.bathrooms || 0,
-        sqft: d.sqft || 0,
-        lot_size: d.lot_size || 0,
-        year_built: d.year_built || 0,
-        owner_name: d.owner_name || "N/A",
-        apn: d.apn || "",
-        assessed_value: d.assessed_value || 0,
-        tax_amount: d.tax_amount || 0,
-        latitude: d.latitude || 0,
-        longitude: d.longitude || 0,
-        property_type: d.property_type,
-        county: d.county,
-        legal_description: d.legal_description,
-      };
-
+      const mapped = mapSiteX(responseData.data, searchAddr);
       onPropertyFound(mapped);
 
       // Auto-populate city/state/zip if not already set
@@ -150,6 +172,34 @@ export function StepProperty({
       onSearchError(
         err.message || "Property search failed. Please try again."
       );
+    } finally {
+      onSearchLoading(false);
+    }
+  }
+
+  async function selectUnit(match: UnitMatch) {
+    onSearchLoading(true);
+    onSearchError(null);
+    try {
+      const res = await fetch("/api/proxy/v1/property/search-by-apn", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fips: match.fips, apn: match.apn }),
+      });
+      const responseData = await res.json().catch(() => ({}));
+      if (!res.ok || !responseData.success || !responseData.data) {
+        throw new Error(
+          responseData.error || "Could not open that unit. Pick another."
+        );
+      }
+      onPropertyFound(mapSiteX(responseData.data, match.address));
+      setUnitMatches(null);
+      if (!cityStateZip.trim()) {
+        const d = responseData.data;
+        onCityStateZipChange(`${d.city || match.city}, ${d.state || match.state} ${d.zip_code || match.zip_code}`);
+      }
+    } catch (err: any) {
+      onSearchError(err.message || "Could not open that unit.");
     } finally {
       onSearchLoading(false);
     }
@@ -224,6 +274,33 @@ export function StepProperty({
             <div className="flex items-center gap-2 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
               <AlertCircle className="h-4 w-4 shrink-0" />
               <span>{searchError}</span>
+            </div>
+          )}
+
+          {unitMatches && unitMatches.length > 0 && !property && (
+            <div className="rounded-lg border border-border">
+              <p className="px-4 py-3 text-sm font-medium text-foreground">
+                This building has more than one unit. Pick the one you want.
+              </p>
+              <ul className="max-h-64 overflow-y-auto border-t border-border">
+                {unitMatches.map((match) => (
+                  <li key={`${match.fips}-${match.apn}`}>
+                    <button
+                      type="button"
+                      className="w-full px-4 py-3 text-left text-sm hover:bg-[#EEF2FF] disabled:opacity-50"
+                      disabled={searchLoading}
+                      onClick={() => selectUnit(match)}
+                    >
+                      <span className="font-medium text-foreground">
+                        {match.address || "Unit"}
+                      </span>
+                      <span className="block text-muted-foreground">
+                        {[match.city, match.state, match.zip_code].filter(Boolean).join(", ")}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 

@@ -8,7 +8,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 export interface PlaceResult {
   streetNumber: string;
   street: string;
-  address: string; // Full street address (number + street)
+  address: string; // Full street address (number + street + unit)
+  unit: string;
   city: string;
   state: string;
   zip: string;
@@ -233,6 +234,7 @@ export function useGooglePlaces(
 function parseAddressComponents(place: google.maps.places.PlaceResult): PlaceResult {
   let streetNumber = "";
   let street = "";
+  let unit = "";
   let city = "";
   let state = "";
   let zip = "";
@@ -247,6 +249,9 @@ function parseAddressComponents(place: google.maps.places.PlaceResult): PlaceRes
         break;
       case "route":
         street = component.long_name;
+        break;
+      case "subpremise":
+        unit = component.long_name.replace(/^#/, "").trim();
         break;
       case "locality":
         city = component.long_name;
@@ -268,11 +273,13 @@ function parseAddressComponents(place: google.maps.places.PlaceResult): PlaceRes
   }
 
   const fullStreetAddress = streetNumber ? `${streetNumber} ${street}`.trim() : street;
+  const address = unit ? `${fullStreetAddress} #${unit}` : fullStreetAddress;
 
   return {
     streetNumber,
     street,
-    address: fullStreetAddress,
+    unit,
+    address,
     city,
     state,
     zip,

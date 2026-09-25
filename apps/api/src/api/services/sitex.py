@@ -360,10 +360,16 @@ class SiteXClient:
                     "Authorization": f"Bearer {token}"
                 }
             )
+            # A condo building is HTTP 300 with a Locations list. raise_for_status
+            # treats that as a redirect and the unit list never reaches the wizard.
+            if response.status_code == 300:
+                return self._body_or_fail(response)
             response.raise_for_status()
             return response.json()
             
         except httpx.HTTPStatusError as e:
+            if e.response.status_code == 300:
+                return self._body_or_fail(e.response)
             if e.response.status_code == 401:
                 # Token might have expired, try once more with fresh token
                 logger.warning("SiteX 401, refreshing token and retrying...")
@@ -375,6 +381,8 @@ class SiteXClient:
                     params=params,
                     headers={"Authorization": f"Bearer {token}"}
                 )
+                if response.status_code == 300:
+                    return self._body_or_fail(response)
                 response.raise_for_status()
                 return response.json()
             raise SiteXError(f"SiteX API error: {e}")
@@ -382,6 +390,21 @@ class SiteXClient:
         except httpx.HTTPError as e:
             logger.error(f"SiteX request failed: {e}")
             raise SiteXError(f"SiteX request failed: {e}")
+
+    def _body_or_fail(self, response) -> Dict[str, Any]:
+        """Read a 300 body. SiteX puts the unit list in Locations."""
+        try:
+            body = response.json()
+        except Exception as exc:
+            raise SiteXError(f"SiteX returned multiple units and no readable list: {exc}")
+        if isinstance(body, dict) and "Locations" not in body:
+            for key in ("locations", "Matches", "matches"):
+                if isinstance(body.get(key), list):
+                    body["Locations"] = body[key]
+                    break
+        count = len(body.get("Locations") or []) if isinstance(body, dict) else 0
+        logger.warning("SiteX 300 Multiple Choices: %s location(s)", count)
+        return body if isinstance(body, dict) else {"Locations": []}
     
     def _parse_response(self, response: Dict[str, Any]) -> PropertyData:
         """
@@ -658,11 +681,9 @@ async def lookup_property(
         logger.warning(f"Property not found: {address}, {city_state_zip}")
         return None
         
-    except SiteXMultiMatchError as e:
-        logger.warning(f"Multiple matches for: {address}. Returning first match.")
-        # For now, return None - caller can handle multi-match if needed
-        # In UI, you might want to show a picker
-        return None
+    except SiteXMultiMatchError:
+        logger.warning(f"Multiple units for: {address}, {city_state_zip}")
+        raise
         
     except SiteXError as e:
         logger.error(f"SiteX error: {e}")
