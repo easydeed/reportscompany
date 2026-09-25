@@ -698,8 +698,18 @@
       border-radius: 10px;
       overflow: hidden;
       border: 1px solid var(--gray-200);
-      margin-top: 24px;
-      margin-bottom: 24px;
+      /* 12px, not 24px (D-102). The block sits between the narrative and the
+         listings section, both of which carry their own spacing, so 24px above
+         and below was 0.50in of page 1 duplicating separation its neighbours
+         already provide. Page 1 was missing its first row of listing cards by
+         0.25in — exactly what halving this returns, with no figure removed and
+         no other block touched.
+
+         Measured, not eyeballed: `.stats-bar` is 2.42in of a 9.67in page with
+         these margins, and a row of three cards is 2.77in. The numbers are
+         pinned in test_narrative_box.py::PAGE_1_CAPACITY. */
+      margin-top: 12px;
+      margin-bottom: 12px;
     }
 
     .stats-bar-row {

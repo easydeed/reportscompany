@@ -761,8 +761,18 @@ every point.
 > Page 1 gives up six rows and the last page absorbs them. No extra page, and unlike
 > `market_snapshot` this is not conditional on a quarter inch — there is room either way.
 >
-> **Whether a real MOI history is obtainable is a question about the feed's off-market data**, not
-> about charting, and it belongs with the production probe rather than here.
+> **THE REFUSAL IS A DATA SHAPE, NOT AN EFFORT ESTIMATE.** Worth stating plainly so nobody
+> re-opens this as a scoping question: no amount of work on this side makes the chart buildable. A
+> current-status feed cannot reconstruct historical inventory, because the rows that would carry it
+> — listings that left the market without closing — are not in any of the three statuses fetched,
+> and are not in the feed's responses at all. This is not "hard", it is absent.
+>
+> **The condition that would change it, named so it can be checked rather than argued:** SimplyRETS
+> exposing either a status-history endpoint (when each listing changed status) or an off-market
+> query (withdrawn / expired / cancelled, with their dates). Given either, a month's active count
+> is reconstructible and the chart becomes ordinary work. That is a question for the production
+> probe alongside decision 01's, not a question about charting, and until it is answered the pace
+> series is the honest maximum.
 
 **Effort: L.** Blocked by A and by open decision 01.
 

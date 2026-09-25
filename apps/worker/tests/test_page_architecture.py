@@ -162,3 +162,41 @@ def test_the_running_head_falls_back_to_the_agent_then_to_the_title():
 
     neither = _running_head({"primary_color": "#1B365D"})
     assert "Closed Sales" in neither, "with no brand at all the band must not be empty"
+
+
+# ── what still varies on page 1 ──────────────────────────────────────────────
+
+def test_the_masthead_title_is_still_free_to_wrap():
+    """RECORDED, NOT ENDORSED — this is a pinned defect, not a passing design.
+
+    §7.2 fixed the narrative box because page-1 capacity cannot depend on the
+    length of model-generated prose. The masthead is now the variable block for
+    the same reason: its title is the report name plus the CITY, and a long city
+    wraps it to two lines. Measured, "Rancho Santa Margarita" takes the masthead
+    from 1.21in to 1.51in — and page 1 is 0.003in short of a row of listing
+    cards for a short city name, so that 0.30in decides whether an affiliate's
+    page 1 carries three listings or none (D-102).
+
+    Cities are unbounded, so no amount of trimming makes this deterministic. The
+    fix, if it is taken, is to bound the title area and set long names smaller
+    rather than wrap them — at which point this test fails, and whoever bounded
+    it updates it and re-pins PAGE_1_CAPACITY. That failure is the point.
+    """
+    css = (MARKET / "base.jinja2").read_text(encoding="utf-8")
+    rule = re.search(r"\.masthead-title\s*\{(.*?)\}", css, re.S)
+    assert rule, ".masthead-title rule not found"
+    body = rule.group(1)
+    # `"height:" in body` was the first version and it matched `line-height:`,
+    # which every text rule has — the same substring false positive as grepping
+    # a class name and hitting the stylesheet rule, or the word "masthead" in a
+    # comment. Match the DECLARATION: start of the block or after a semicolon.
+    bounded = bool(
+        re.search(r"(?:^|;)\s*(?:max-)?height\s*:", body)
+        or re.search(r"white-space\s*:\s*nowrap", body)
+        or "-webkit-line-clamp" in body
+    )
+    assert not bounded, (
+        "the masthead title has been bounded. That is the D-102 fix — good — so "
+        "re-measure page-1 capacity per report type and update "
+        "test_narrative_box.py::PAGE_1_CAPACITY, then retire this test."
+    )

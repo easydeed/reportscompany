@@ -5059,6 +5059,57 @@ So the decision is not "which number do we drop". It is "is 24px of margin above
 stats bar worth more than three listings on page 1", and it can be taken without touching the cap,
 the layout or the sample.
 
+---
+
+**THE TRIM WAS TAKEN, AND IT DID NOT WORK. THE REASON IS THE FINDING.** 2026-09-25.
+
+`.stats-bar`'s margins went 24px to 12px. It recovers exactly what it was measured to recover, and
+page 1 still holds zero listings:
+
+| | free on page 1 | a row of three | |
+|---|---|---|---|
+| before the trim | 2.519in | 2.772in | short by 0.253in |
+| after the trim | 2.769in | 2.772in | **short by 0.003in** |
+
+Three thousandths of an inch. The obvious move is to shave 1px off something else, and that is the
+move to refuse: **a layout that fits by 0.003in is a coincidence, not a fit.** Before taking it, the
+question is what varies — and the answer is that page 1's chrome varies by far more than the
+slack being fought over.
+
+**THE MASTHEAD WRAPS ON THE CITY NAME**, measured:
+
+| | masthead | used on page 1 | a row of three |
+|---|---|---|---|
+| Irvine | 1.21in | 6.90in | short by 0.003in |
+| **Rancho Santa Margarita** | **1.51in** | 7.20in | **short by 0.303in** |
+| Irvine, long filter label | 1.38in | 7.07in | short by 0.175in |
+| with an agent logo | 1.21in | 6.90in | short by 0.003in |
+
+A two-line title costs 0.30in — a hundred times the slack. So a trim sized to make Irvine fit gives
+Irvine three listings on page 1 and Rancho Santa Margarita none.
+
+**That is the §7.2 problem again, one block higher up.** §7.2 fixed the narrative box because
+page-1 capacity cannot depend on the length of model-generated prose. It equally cannot depend on
+the length of a city name, and the masthead is now the variable block. Cities are unbounded; there
+is no trim that makes this deterministic.
+
+**So the real options are two, and neither is "trim a bit more":**
+
+1. **Page 1 is a cover.** Masthead, metrics, narrative, and every listing from page 2. Deterministic
+   for every city, every affiliate, and what ships today. Costs nothing.
+2. **Bound the masthead's height** the way the narrative box was bounded — a fixed title area, with
+   long city names set smaller rather than wrapped. Then page 1 holds a row of three for everyone.
+   That is a design change to the most prominent element in the document, and it is a real piece of
+   work rather than a margin edit.
+
+**The trim is kept**, because 0.50in of margin duplicating separation two neighbours already
+provide is worth removing on its own terms, and because option 2 needs that 0.25in as well. It
+changes no page count for any of the eight report types today, and this entry says so rather than
+claiming a win.
+
+**And the chart stays free**, since page 1 still cannot fit a row: `market_snapshot` is 2 pages with
+or without it. That conditional resolves only if option 2 is taken.
+
 So there are two different questions hiding in "how many listings should page 1 hold":
 
 1. **Is the metrics block too tall?** Trimming 0.25in — 10% off the stats bar, or 7% across both —
