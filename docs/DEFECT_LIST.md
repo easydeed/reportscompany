@@ -5027,8 +5027,37 @@ count; here is what is actually on the page, measured element by element with ma
 | a row of three cards | 2.77in | |
 
 **Page 1 misses its card row by 0.25in.** Not by a page, not by half a page — by a quarter inch out
-of nine and two thirds. And **3.56in of page 1, 37%, is two metric blocks presenting six numbers**
-(`hero-stat` 1.14in and `stats-bar` 2.42in).
+of nine and two thirds. And **3.56in of page 1, 37%, is two metric blocks presenting FIVE numbers**
+(`hero-stat` 1.14in and `stats-bar` 2.42in). *An earlier note here said six; it is five, counted
+off the markup.*
+
+**WHAT THE FIVE ARE, AND WHETHER ANY IS SAID TWICE.**
+
+| block | figure | set at |
+|---|---|---|
+| `hero-stat` | Median Sale Price | 56px |
+| `stats-bar` | Avg Days on Market · Months of Inventory (+ pace) · Price per Sq Ft · List-to-Sale Ratio | 14px |
+
+**Nothing is duplicated.** The hero carries a figure the stats bar does not, and no stats row
+restates another. So on the face of it the trim is a trade rather than a free saving.
+
+**It is not, and this is the part that decides it: the 0.25in is available entirely from
+whitespace.**
+
+| | |
+|---|---|
+| `stats-bar` own top + bottom margins | **0.50in** |
+| the four rows together | 1.90in (0.474in each: 14px of text in 10px/10px padding) |
+| the shortfall to recover | **0.25in** |
+
+The stats bar's own margins are twice the shortfall, on a block that already sits between two
+others carrying their own spacing. Halving them — 24px to 12px — recovers the quarter inch exactly
+and **removes no information at all**. Trimming the hero's 56px figure, or the rows' 10px padding,
+are two further sources of the same order.
+
+So the decision is not "which number do we drop". It is "is 24px of margin above and below the
+stats bar worth more than three listings on page 1", and it can be taken without touching the cap,
+the layout or the sample.
 
 So there are two different questions hiding in "how many listings should page 1 hold":
 

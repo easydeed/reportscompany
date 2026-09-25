@@ -96,16 +96,16 @@
 {# ── Market Narrative Layout (B): market_snapshot ───────────────────────────── #}
 {% macro market_narrative_layout(header, listings, stats, report_type, agent, ai_insights=none, ai_narrative=none,
                                  listings_section_label=none, listings_truncation_note=none,
-                                 listings_more_note=none, median_trend=none, median_trend_note=none,
-                                 primary_ink=none) %}
-{% if median_trend %}
+                                 listings_more_note=none, monthly_trend=none, monthly_trend_note=none,
+                                 monthly_trend_fmt='currency', primary_ink=none) %}
+{% if monthly_trend %}
 {# §7.3 — marks in primary_ink, never raw primary. primary_ink is the only brand
    value guaranteed as ink on a light surface (themes.py: darkened in 6% steps
    until it clears 4.5:1 on white), and this page's surface IS white
    (base.jinja2: `.report-page { background: var(--white) }`), so the guarantee
    holds here exactly rather than approximately. That is not true of every
    surface in this product — see D-100. #}
-{{ median_trend_chart(median_trend, primary_ink or '#1f2937', median_trend_note) }}
+{{ monthly_trend_chart(monthly_trend, primary_ink or '#1f2937', monthly_trend_note, monthly_trend_fmt) }}
 {% endif %}
 <div class="hero-stat avoid-break">
   <div class="hero-stat-value">{% if stats.median_close_price %}{{ stats.median_close_price | format_currency }}{% elif stats.median_list_price %}{{ stats.median_list_price | format_currency }}{% else %}&mdash;{% endif %}</div>
@@ -179,7 +179,11 @@
 {# ── Closed / Inventory Layout (C): closed, inventory ─────────────────────── #}
 {% macro closed_inventory_layout(header, listings, stats, report_type, agent, ai_insights=none, ai_narrative=none,
                                  listings_section_label=none, listings_truncation_note=none,
-                                 listings_more_note=none) %}
+                                 listings_more_note=none, monthly_trend=none, monthly_trend_note=none,
+                                 monthly_trend_fmt='currency', primary_ink=none) %}
+{% if monthly_trend %}
+{{ monthly_trend_chart(monthly_trend, primary_ink or '#1f2937', monthly_trend_note, monthly_trend_fmt) }}
+{% endif %}
 <div class="hero-stat-row avoid-break">
   <div class="hero-stat-left">
     {% if report_type == 'closed' %}
@@ -485,7 +489,7 @@
 {% endmacro %}
 
 
-{# ── Median trend chart (§7.3) ─────────────────────────────────────────────
+{# ── Monthly trend chart (§7.3) ─────────────────────────────────────────────
    Twelve monthly medians as one line. Inline SVG: this is rendered by
    PDFShift, so there is no script, no external request and no web font
    dependency inside the mark — everything the chart needs is in the document
@@ -514,22 +518,33 @@
    closings, so there is no median to draw. The path breaks rather than
    dropping to zero, because a zero would draw a crash that did not happen.
 #}
-{% macro median_trend_chart(points, ink, months_note=none, width=680, height=150) %}
+{% macro monthly_trend_chart(points, ink, months_note=none, fmt='currency', width=680, height=150) %}
 {%- set pad_l = 52 -%}
 {%- set pad_r = 74 -%}
 {%- set pad_t = 12 -%}
 {%- set pad_b = 20 -%}
 {%- set plot_w = width - pad_l - pad_r -%}
 {%- set plot_h = height - pad_t - pad_b -%}
-{%- set drawn = points | selectattr('value') | list -%}
+{# `selectattr('value')` would drop a real zero as well as a gap, which is
+   exactly the distinction monthly_trend draws: a month with no closings is a
+   zero in the count series and a GAP in the median one. Test for None. #}
+{%- set drawn = points | rejectattr('value', 'none') | list -%}
 {%- if drawn | length >= 2 -%}
 {%- set vals = drawn | map(attribute='value') | list -%}
 {%- set vmin = vals | min -%}
 {%- set vmax = vals | max -%}
 {%- set span = (vmax - vmin) if (vmax - vmin) > 0 else (vmax * 0.1 or 1) -%}
-{# A flat series would otherwise divide by zero and a 3% pad keeps the line off
-   the gridlines at the extremes. #}
-{%- set lo = vmin - span * 0.15 -%}
+{# A flat series would otherwise divide by zero, and the 15% pad keeps the line
+   off the gridlines at the extremes.
+
+   A COUNT SERIES IS ANCHORED AT ZERO; A PRICE SERIES IS NOT. Seven sales
+   against thirteen on a baseline of five reads as a collapse — the axis does
+   the exaggerating, not the data. Zero is both meaningful and reachable for a
+   count of homes sold, so the scale starts there and the swing is shown at its
+   true size. A median price is never near zero, and anchoring it there would
+   flatten every real movement into a straight line, so it keeps a fitted
+   scale. Same chart, two honest answers, because the quantities differ. #}
+{%- set lo = 0 if fmt != 'currency' else vmin - span * 0.15 -%}
 {%- set hi = vmax + span * 0.15 -%}
 {%- set n = points | length -%}
 {%- set step = plot_w / (n - 1) if n > 1 else plot_w -%}
@@ -544,13 +559,13 @@
           stroke="#e7e5e4" stroke-width="1" />
     <text x="{{ pad_l - 8 }}" y="{{ '%.1f' % (y + 3) }}" text-anchor="end"
           font-size="9" fill="#78716c"
-          style="font-variant-numeric: tabular-nums;">{{ v | format_currency_short }}</text>
+          style="font-variant-numeric: tabular-nums;">{% if fmt == 'currency' %}{{ v | format_currency_short }}{% else %}{{ v | round | int | format_number }}{% endif %}</text>
     {% endfor %}
 
     {%- set ns = namespace(d='', started=false) -%}
     {%- for p in points -%}
       {%- set x = pad_l + step * loop.index0 -%}
-      {%- if p.value -%}
+      {%- if p.value is not none -%}
         {%- set y = pad_t + plot_h * (hi - p.value) / (hi - lo) -%}
         {%- set ns.d = ns.d ~ (' M' if not ns.started else ' L') ~ ('%.1f' % x) ~ ' ' ~ ('%.1f' % y) -%}
         {%- set ns.started = true -%}
@@ -573,7 +588,7 @@
     {%- set last = drawn | last -%}
     {%- set top = (drawn | sort(attribute='value') | last) -%}
     {% for p in points %}
-      {%- if p.value and (p is sameas last or (p is sameas top and top.value != last.value)) -%}
+      {%- if p.value is not none and (p is sameas last or (p is sameas top and top.value != last.value)) -%}
       {%- set x = pad_l + step * loop.index0 -%}
       {%- set y = pad_t + plot_h * (hi - p.value) / (hi - lo) -%}
       <circle cx="{{ '%.1f' % x }}" cy="{{ '%.1f' % y }}" r="4.5"
@@ -581,11 +596,11 @@
       {%- if p is sameas last -%}
       <text x="{{ '%.1f' % (x + 10) }}" y="{{ '%.1f' % (y + 4) }}" text-anchor="start"
             font-size="11" font-weight="600" fill="#292524"
-            >{{ p.value | format_currency_short }}</text>
+            >{% if fmt == 'currency' %}{{ p.value | format_currency_short }}{% else %}{{ p.value | format_number }}{% endif %}</text>
       {%- else -%}
       <text x="{{ '%.1f' % x }}" y="{{ '%.1f' % (y - 10) }}" text-anchor="middle"
             font-size="10" font-weight="600" fill="#44403c"
-            >{{ p.value | format_currency_short }}</text>
+            >{% if fmt == 'currency' %}{{ p.value | format_currency_short }}{% else %}{{ p.value | format_number }}{% endif %}</text>
       {%- endif -%}
       {%- endif -%}
     {% endfor %}

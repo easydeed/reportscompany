@@ -36,7 +36,11 @@ from worker.template_filters import (
     truncate,
 )
 from worker.ai_market_narrative import generate_market_pdf_narrative
-from worker.compute.median_trend import MIN_CLOSED_FOR_MEDIAN, series_from_closed
+from worker.compute.monthly_trend import (
+    MIN_CLOSED_FOR_MEDIAN,
+    count_series,
+    median_series,
+)
 from worker.themes import derive_theme
 
 logger = logging.getLogger(__name__)
@@ -197,52 +201,70 @@ class MarketReportBuilder:
 
     # ── §7.3 median trend ──────────────────────────────────────────────────
 
-    #: Report types that carry the twelve-month median line. Only
-    #: market_snapshot for now — it is the one whose job is "how is this market
-    #: doing", which is the question a trend answers. Adding a type here is a
-    #: page-space decision as much as a design one: measured, the chart costs
-    #: market_snapshot's page 1 one listing card.
-    TREND_REPORT_TYPES = ("market_snapshot",)
+    #: Which monthly series each report type carries, and nothing for the rest.
+    #:
+    #: `market_snapshot` answers "how is this market doing", so it gets the
+    #: median price line. `inventory` answers "what is for sale and how fast is
+    #: it moving", so it gets the SALES PACE — closings per month.
+    #:
+    #: §7.3 asked for a months-of-supply trend on the inventory report and that
+    #: is not buildable; compute/monthly_trend.count_series explains why, and
+    #: the short version is that MOI's numerator is total CURRENT active
+    #: inventory and no past month's active count is recoverable from a feed
+    #: fetched as Active/Pending/Closed. The pace is MOI's denominator and is
+    #: knowable, so that is what ships, labelled as what it is.
+    TREND_SERIES = {
+        "market_snapshot": "median",
+        "inventory": "count",
+    }
 
-    def _build_median_trend(self):
-        """(series, note) for the trend chart, or (None, None) to draw nothing.
+    def _build_monthly_trend(self):
+        """(series, note, fmt) for the trend chart, or (None, None, None).
 
-        The series is bucketed from `closed_history` — closed rows with a
+        Both series come from `closed_history` — closed rows carrying
         `close_date` and `close_price`, which one `minclosedate = today - 365`
-        fetch already returns. It is NOT the 13-request count series decision 01
-        priced; see compute/median_trend.py for why a median cannot come out of
-        counts and why it is cheaper anyway.
+        fetch already returns. Neither is the 13-request count series decision
+        01 priced; see compute/monthly_trend.py.
 
         Everything here fails to None. A market report with no trend is a
         complete report; a trend drawn from the wrong rows is not.
         """
-        if self.report_type not in self.TREND_REPORT_TYPES:
-            return None, None
+        kind = self.TREND_SERIES.get(self.report_type)
+        if not kind:
+            return None, None, None
 
         history = self.report_data.get("closed_history")
         if not history:
-            return None, None
+            return None, None, None
 
+        truncated = bool(self.report_data.get("closed_history_truncated"))
         try:
-            series = series_from_closed(
-                history,
-                truncated=bool(self.report_data.get("closed_history_truncated")),
-            )
-        except Exception as e:  # pragma: no cover - defensive, same posture as the narrative
-            logger.warning("median trend failed (non-fatal): %s", e)
-            return None, None
+            if kind == "median":
+                series = median_series(history, truncated=truncated)
+            else:
+                series = count_series(history, truncated=truncated)
+        except Exception as e:  # pragma: no cover - defensive, as the narrative is
+            logger.warning("monthly trend failed (non-fatal): %s", e)
+            return None, None, None
 
         if not series:
-            return None, None
+            return None, None, None
 
-        drawn = [p for p in series if p["value"] is not None]
         total = sum(p["n"] for p in series)
+        if kind == "median":
+            drawn = [p for p in series if p["value"] is not None]
+            note = (
+                f"Median closed price by month · {len(drawn)} of {len(series)} months "
+                f"shown · {total:,} sales · months with fewer than "
+                f"{MIN_CLOSED_FOR_MEDIAN} closings are left blank"
+            )
+            return series, note, "currency"
+
         note = (
-            f"Median closed price by month · {len(drawn)} of {len(series)} months "
-            f"shown · {total:,} sales · months with fewer than "
-            f"{MIN_CLOSED_FOR_MEDIAN} closings are left blank"
+            f"Homes sold per month · {total:,} sales over {len(series)} months · "
+            f"sales pace, not months of supply — past inventory levels are not recoverable"
         )
-        return series, note
+        return series, note, "number"
 
     # ── colour resolution ──────────────────────────────────────────────────
 
@@ -440,7 +462,7 @@ class MarketReportBuilder:
                 ai_insights = ""
 
         listings_ctx = self._build_listings_context()
-        median_trend, median_trend_note = self._build_median_trend()
+        monthly_trend, monthly_trend_note, monthly_trend_fmt = self._build_monthly_trend()
 
         context: Dict[str, Any] = {
             "layout": self.layout,
@@ -457,8 +479,9 @@ class MarketReportBuilder:
             # §7.3 — the chart's mark colour. primary_ink is the one brand value
             # themes.py guarantees as ink on white, which is this page's surface.
             "primary_ink": derive_theme(primary_color)["primary_ink"],
-            "median_trend": median_trend,
-            "median_trend_note": median_trend_note,
+            "monthly_trend": monthly_trend,
+            "monthly_trend_note": monthly_trend_note,
+            "monthly_trend_fmt": monthly_trend_fmt or "currency",
             # Section contexts
             "header": self._build_header_context(),
             # PDF-COMPREHENSIVE — listings is still a flat array so the

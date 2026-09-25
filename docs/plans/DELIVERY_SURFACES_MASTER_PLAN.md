@@ -718,9 +718,51 @@ every point.
 > | a row of three cards | 2.77in | **short by 0.25in** |
 >
 > So the chart is free *while* page 1 is 0.25in short of a card row. Recover that 0.25in — from
-> 3.56in of metric blocks carrying six numbers — and a row of three listings comes back, and the
+> 3.56in of metric blocks carrying five numbers — and a row of three listings comes back, and the
 > chart stops being free. **Those are one decision, not two**, and it is the decision D-102 is
 > already waiting on.
+>
+> ---
+>
+> ### The inventory chart: §7.3 asked for months of supply, and that one cannot be built
+>
+> *2026-09-25.* Months of supply is `current active inventory / monthly sales rate`, and
+> `compute/moi.py` is explicit that the numerator is **total CURRENT active inventory, with no date
+> window** — getting that wrong is what D-056 was. A twelve-month MOI line needs the active count
+> *as it was* in each of those months, and nothing in this pipeline can supply it:
+> `query_builders.py` fetches three statuses and only three — Active, Pending, Closed — so a home
+> listed in March and withdrawn in May appears in none of them today. Reconstructing March's
+> inventory from current-status rows would silently omit every listing that left the market without
+> closing.
+>
+> **The version that would have shipped is worse than no chart.** Hold today's active count constant
+> and vary only the sales rate per month and you get a smooth, plausible line that moves when supply
+> did not — a number that looks like a measurement, which is D-056's family exactly.
+>
+> **What ships instead is the half that is knowable: the sales pace.** Closings per month is MOI's
+> denominator, it falls out of the same 365-day fetch the median series uses, and it costs nothing
+> extra. It is labelled as what it is — *"sales pace, not months of supply — past inventory levels
+> are not recoverable"* — and a test asserts that sentence is present, because a pace line on an
+> inventory report is precisely what a reader would otherwise take for supply.
+>
+> **Two series, two honest axes.** The count is anchored at zero; the median is not. Seven sales
+> against thirteen on a baseline of five reads as a collapse, and zero is both meaningful and
+> reachable for a count — but a median price is never near zero and anchoring it there flattens
+> every real movement. Both directions are asserted, so "anchor at zero" cannot be applied to the
+> price chart and quietly straighten it.
+>
+> **Page cost, measured under variant A: none.**
+>
+> | | pages | rows per page |
+> |---|---|---|
+> | `inventory` without the chart | 5 | 11, 29, 29, 29, 22 |
+> | `inventory` with the chart | **5** | 5, 29, 29, 29, 28 |
+>
+> Page 1 gives up six rows and the last page absorbs them. No extra page, and unlike
+> `market_snapshot` this is not conditional on a quarter inch — there is room either way.
+>
+> **Whether a real MOI history is obtainable is a question about the feed's off-market data**, not
+> about charting, and it belongs with the production probe rather than here.
 
 **Effort: L.** Blocked by A and by open decision 01.
 

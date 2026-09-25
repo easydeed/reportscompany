@@ -17,9 +17,10 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from worker.compute.median_trend import (  # noqa: E402
+from worker.compute.monthly_trend import (  # noqa: E402
     MIN_CLOSED_FOR_MEDIAN,
-    series_from_closed,
+    count_series,
+    median_series,
 )
 from worker.market_builder import MarketReportBuilder  # noqa: E402
 from worker.themes import derive_theme  # noqa: E402
@@ -46,7 +47,7 @@ def full_year(n=8):
 
 def test_a_month_with_no_sales_is_a_gap_and_not_a_zero():
     rows = [r for r in full_year() if "-07-" not in r["close_date"]]
-    series = series_from_closed(rows, today=TODAY)
+    series = median_series(rows, today=TODAY)
     july = [p for p in series if p["label"] == "Jul"][0]
     assert july["value"] is None, "no sales must be None"
     assert july["value"] != 0, "a zero here would draw a crash that did not happen"
@@ -74,7 +75,7 @@ def test_the_recorded_minimum_matches_the_module():
 def test_a_month_below_the_minimum_sample_is_a_gap():
     rows = [r for r in full_year() if "-05-" not in r["close_date"]]
     rows += closings(5, n=RECORDED_MINIMUM - 1)
-    series = series_from_closed(rows, today=TODAY)
+    series = median_series(rows, today=TODAY)
     may = [p for p in series if p["label"] == "May"][0]
     assert may["n"] == RECORDED_MINIMUM - 1
     assert may["value"] is None, (
@@ -87,21 +88,21 @@ def test_a_month_exactly_at_the_minimum_is_drawn():
     chart in thin markets, which is where a trend is most wanted."""
     rows = [r for r in full_year() if "-05-" not in r["close_date"]]
     rows += closings(5, n=RECORDED_MINIMUM)
-    series = series_from_closed(rows, today=TODAY)
+    series = median_series(rows, today=TODAY)
     may = [p for p in series if p["label"] == "May"][0]
     assert may["value"] is not None
 
 
 def test_a_truncated_fetch_is_refused_rather_than_drawn():
-    assert series_from_closed(full_year(), today=TODAY, truncated=True) is None
+    assert median_series(full_year(), today=TODAY, truncated=True) is None
 
 
 def test_one_drawable_month_is_not_a_trend():
-    assert series_from_closed(closings(9), today=TODAY) is None
+    assert median_series(closings(9), today=TODAY) is None
 
 
 def test_the_window_ends_on_this_month_and_is_twelve_long():
-    series = series_from_closed(full_year(), today=TODAY)
+    series = median_series(full_year(), today=TODAY)
     assert len(series) == 12
     assert series[-1]["label"] == "Sep" and series[-1]["year"] == 2026
     assert series[0]["label"] == "Oct" and series[0]["year"] == 2025
@@ -113,7 +114,7 @@ def test_unreadable_dates_and_missing_prices_are_skipped_not_guessed():
         {"close_date": None, "close_price": 1},
         {"close_date": "2026-09-01", "close_price": None},
     ]
-    series = series_from_closed(rows, today=TODAY)
+    series = median_series(rows, today=TODAY)
     assert series is not None
     assert all(p["value"] is None or p["value"] > 1000 for p in series)
 
@@ -220,3 +221,110 @@ def test_the_chart_carries_no_script_and_no_external_reference():
     svg = svg_of(report(history=full_year()))
     assert "<script" not in svg
     assert "http://" not in svg and "https://" not in svg
+
+
+# ── the count series, and why it is not a months-of-supply trend ─────────────
+
+def test_a_month_with_no_closings_is_a_real_zero_in_the_count_series():
+    """The opposite of the median series, deliberately.
+
+    "No homes sold in July" is a fact about July. "The median of no sales" is
+    not a quantity. Same rows, same bucketing, different treatment of empty —
+    and getting it backwards either draws a crash that did not happen or hides
+    a month that genuinely had none.
+    """
+    rows = [r for r in full_year() if "-07-" not in r["close_date"]]
+    series = count_series(rows, today=TODAY)
+    july = [p for p in series if p["label"] == "Jul"][0]
+    assert july["value"] == 0
+    assert july["value"] is not None
+
+
+def test_the_count_series_ignores_the_median_minimum_sample():
+    """A count of two is exactly two. The minimum exists because a median over
+    two sales is noise, which does not apply to counting them."""
+    rows = [r for r in full_year() if "-05-" not in r["close_date"]]
+    rows += closings(5, n=2)
+    series = count_series(rows, today=TODAY)
+    may = [p for p in series if p["label"] == "May"][0]
+    assert may["value"] == 2
+
+
+def test_the_count_series_needs_no_prices():
+    """It buckets on close_date alone, so rows with a missing price still count
+    — a sale without a recorded price is still a sale."""
+    rows = [{"close_date": r["close_date"], "close_price": None} for r in full_year()]
+    series = count_series(rows, today=TODAY)
+    assert sum(p["value"] for p in series) == len(rows)
+    assert median_series(rows, today=TODAY) is None, "no prices, so no medians"
+
+
+def test_an_empty_window_draws_nothing():
+    assert count_series([], today=TODAY) is None
+
+
+def test_a_truncated_fetch_is_refused_for_counts_too():
+    assert count_series(full_year(), today=TODAY, truncated=True) is None
+
+
+def test_the_inventory_report_gets_the_pace_series_and_market_snapshot_the_median():
+    inv = report("inventory", full_year())
+    assert svg_of(inv) is not None, "the inventory report should carry a trend"
+    assert "Homes sold per month" in inv
+    assert "Median closed price by month" in report("market_snapshot", full_year())
+
+
+def test_the_pace_note_says_it_is_not_months_of_supply():
+    """§7.3 asked for an MOI trend and this is not one. The note has to say so,
+    because a pace line on an inventory report is exactly what a reader would
+    otherwise take for supply."""
+    html = report("inventory", full_year())
+    assert "past inventory levels are not recoverable" in html
+
+
+def test_no_report_type_outside_the_map_draws_a_trend():
+    for report_type in ("closed", "price_bands", "new_listings",
+                        "new_listings_gallery", "featured_listings", "open_houses"):
+        assert svg_of(report(report_type, full_year())) is None, report_type
+
+
+def test_a_zero_month_is_plotted_rather_than_skipped():
+    """`selectattr('value')` in the macro would have dropped a real zero as a
+    gap. The line must pass through it — a month at zero is the most important
+    point on a pace chart."""
+    rows = [r for r in full_year() if "-07-" not in r["close_date"]]
+    svg = svg_of(report("inventory", rows))
+    path = re.search(r'<path d="([^"]+)"', svg).group(1)
+    assert path.count("M") == 1, f"the pace line broke at a zero month: {path}"
+
+
+
+
+def _axis_ticks(svg):
+    """The three y-axis tick labels, top to bottom."""
+    return re.findall(r'text-anchor="end"[^>]*>([^<]+)</text>', svg)
+
+
+def test_the_count_axis_is_anchored_at_zero():
+    """Seven sales against thirteen on a baseline of five reads as a collapse.
+
+    For a count of homes sold, zero is both meaningful and reachable, so the
+    axis must start there and let the swing be its true size — the axis should
+    not do the exaggerating.
+    """
+    ticks = _axis_ticks(svg_of(report("inventory", full_year())))
+    assert ticks[-1] == "0", f"count axis floor is {ticks[-1]!r}, expected 0"
+
+
+def test_the_price_axis_is_not_anchored_at_zero():
+    """The other half of the same decision, and the reason it is per-series.
+
+    A median price is never near zero; anchoring it there flattens every real
+    movement into a straight line. Without this assertion, "anchor at zero"
+    could be applied to both and the price chart would silently stop saying
+    anything.
+    """
+    ticks = _axis_ticks(svg_of(report("market_snapshot", full_year())))
+    assert ticks[-1] not in ("0", "$0"), (
+        f"the median price axis is anchored at {ticks[-1]!r}, which flattens it"
+    )

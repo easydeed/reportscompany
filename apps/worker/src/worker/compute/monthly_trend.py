@@ -1,4 +1,4 @@
-"""Twelve months of median closed price, bucketed from rows this report already has.
+"""Twelve monthly series, bucketed from closed rows the report already has.
 
 WHAT IT COSTS, WHICH IS NOT WHAT §7.3'S ANALYSIS SAYS
 -----------------------------------------------------
@@ -79,7 +79,7 @@ def _window(today: date, months: int = MONTHS) -> List[tuple]:
     return list(reversed(out))
 
 
-def series_from_closed(
+def median_series(
     closed: Sequence[Dict[str, Any]],
     today: Optional[date] = None,
     months: int = MONTHS,
@@ -97,7 +97,7 @@ def series_from_closed(
     """
     if truncated:
         logger.warning(
-            "median_trend: refusing to build a series from a truncated fetch — "
+            "monthly_trend: refusing to build a series from a truncated fetch — "
             "a median over a partial, order-dependent subset is a wrong number "
             "that looks like a right one (D-078)."
         )
@@ -129,10 +129,74 @@ def series_from_closed(
         # One point is not a trend, and zero is not a chart. Both cases render
         # nothing rather than a line with no slope or an empty axis.
         logger.info(
-            "median_trend: %d of %d months have at least %d closings — not "
+            "monthly_trend: %d of %d months have at least %d closings — not "
             "enough for a trend, no chart.",
             len(drawn), months, MIN_CLOSED_FOR_MEDIAN,
         )
         return None
 
+    return series
+
+
+def count_series(
+    closed: Sequence[Dict[str, Any]],
+    today: Optional[date] = None,
+    months: int = MONTHS,
+    truncated: bool = False,
+) -> Optional[List[Dict[str, Any]]]:
+    """Closings per month, from the same rows `median_series` buckets.
+
+    WHY THIS IS NOT A MONTHS-OF-SUPPLY TREND, WHICH IS WHAT §7.3 WANTED FOR THE
+    INVENTORY REPORT.
+
+    Months of supply is `current active inventory / monthly sales rate`, and
+    `compute/moi.py` is explicit that the numerator is TOTAL CURRENT active
+    inventory with no date window — getting that wrong is what D-056 was.
+
+    A twelve-month MOI line needs the active count AS IT WAS in each of those
+    months, and that cannot be recovered from this feed. `query_builders.py`
+    fetches three statuses and only three — Active, Pending, Closed — so a home
+    that was listed in March and withdrawn in May is in none of them today.
+    Reconstructing March's inventory from current-status rows would silently
+    omit every listing that left the market without closing.
+
+    THE TEMPTING WRONG VERSION IS WORSE THAN NO CHART. Holding today's active
+    count constant and varying only the sales rate per month produces a smooth,
+    plausible line that moves when supply did not — a number that looks like a
+    measurement, which is the D-056 family exactly.
+
+    So this series is the half that IS knowable: the sales pace, which is MOI's
+    denominator, month by month. It is labelled as closings per month and never
+    as supply. Whether a real MOI history is obtainable is a question about the
+    feed's off-market data, not about charting.
+
+    A month with no closings is a REAL zero here, unlike in `median_series`
+    where it is a gap: "no homes sold" is a fact about the month, while "the
+    median of no sales" is not a quantity. The minimum-sample rule does not
+    apply either — a count of two is exactly two.
+    """
+    if truncated:
+        logger.warning(
+            "monthly_trend: refusing a count series from a truncated fetch — the "
+            "missing rows are silently missing months."
+        )
+        return None
+
+    today = today or date.today()
+    buckets: Dict[tuple, int] = {}
+    for row in closed or []:
+        key = _month_key(row.get("close_date"))
+        if key is None:
+            continue
+        buckets[key] = buckets.get(key, 0) + 1
+
+    series = [
+        {"label": _MONTH_LABELS[month - 1], "year": year, "month": month,
+         "value": buckets.get((year, month), 0), "n": buckets.get((year, month), 0)}
+        for year, month in _window(today, months)
+    ]
+
+    if sum(p["value"] for p in series) == 0:
+        logger.info("monthly_trend: no closings in the window — no count chart.")
+        return None
     return series

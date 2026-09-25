@@ -581,6 +581,34 @@ it.**
   gate, look at where its expected value came from, and if the answer is "the code", change it or
   run the regression that proves otherwise.
 
+- **When you measure a thing made of parts, enumerate the parts that are there. Do not write down
+  the list you expect and measure that.**
+
+  *Added 2026-09-25 from Workstream D.* A page-1 budget was needed: what occupies the first page of
+  a market report, and what each piece costs in vertical space. The measurement walked a
+  hand-written list of selectors — masthead, metric tiles, narrative, heading, note — and reported
+  4.73in used with 4.94in free. **The list had missed `.stats-bar`, the tallest block on the
+  page.** The real figures are 7.15in used and 2.52in free, which is the difference between "page 1
+  has room to spare" and "page 1 misses its next row by a quarter of an inch".
+
+  It was caught, and it was caught by luck rather than by a check: the wrong numbers said 4.94in
+  free against a 2.69in card, which should have fitted, while the paginator had already reported
+  zero cards on that page. The contradiction was visible only because both numbers happened to be
+  in front of me at once. Had the missing block been shorter, the sum would have been merely wrong.
+
+  **The fix is the method, not more care.** Walk the container's children in document order and
+  report every one of them, including the ones you did not predict; let anything unrecognised
+  appear as an unnamed row rather than vanish. A selector list encodes a belief about what is on the
+  page. The DOM is the page. This is the same shape as writing the block map by reading the
+  builders, and as reading `ENV_TEMPLATE.md` for a runtime fact: **an inventory assembled from
+  memory is a hypothesis wearing the costume of a measurement**, and it is worse than an obviously
+  partial one, because it looks complete.
+
+  Where enumeration is genuinely impossible, make the total falsifiable instead: measure the parts
+  AND the whole independently and assert they agree. A sum that must equal a separately measured
+  container catches a missing part by itself, without depending on a second number happening to
+  contradict it.
+
 ---
 
 ## Phase 0 — Security & Tooling
