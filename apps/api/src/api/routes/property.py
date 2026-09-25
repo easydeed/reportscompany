@@ -1015,6 +1015,16 @@ async def create_property_report(payload: PropertyReportCreate, request: Request
             owner_name = payload.owner_name or sitex_data.get("owner_name")
             legal_desc = sitex_data.get("legal_description")
             prop_type = sitex_data.get("property_type")
+            unit_number = str(sitex_data.get("unit_number") or "").strip()
+            unit_type = str(sitex_data.get("unit_type") or "").strip()
+            if unit_number:
+                unit_label = f"{unit_type} {unit_number}".strip() if unit_type else unit_number
+                if unit_label.upper() not in (prop_address or "").upper():
+                    prop_address = f"{prop_address} {unit_label}".strip()
+                if legal_desc and unit_number.upper() not in legal_desc.upper():
+                    legal_desc = f"{legal_desc} {unit_label}".strip()
+                sitex_data["unit_number"] = unit_number
+                sitex_data["unit_type"] = unit_type
         elif property_data:
             prop_address = property_data.street or lookup_address.split(",")[0].strip()
             prop_city = property_data.city or payload.property_city or ""
@@ -1025,7 +1035,18 @@ async def create_property_report(payload: PropertyReportCreate, request: Request
             owner_name = payload.owner_name or property_data.owner_name
             legal_desc = property_data.legal_description
             prop_type = property_data.property_type
+            unit_number = (property_data.unit_number or "").strip()
+            unit_type = (property_data.unit_type or "").strip()
+            if unit_number:
+                unit_label = f"{unit_type} {unit_number}".strip() if unit_type else unit_number
+                if unit_label.upper() not in (prop_address or "").upper():
+                    prop_address = f"{prop_address} {unit_label}".strip()
+                if legal_desc and unit_number.upper() not in legal_desc.upper():
+                    legal_desc = f"{legal_desc} {unit_label}".strip()
             sitex_data = property_data.model_dump()
+            if unit_number:
+                sitex_data["unit_number"] = unit_number
+                sitex_data["unit_type"] = unit_type
         else:
             # Parse from input
             prop_address = payload.property_address or (lookup_address.split(",")[0].strip() if lookup_address else "")

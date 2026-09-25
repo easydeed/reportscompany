@@ -23,7 +23,53 @@ type UnitMatch = {
   city: string;
   state: string;
   zip_code: string;
+  unit_number: string;
+  unit_type: string;
 };
+
+function buildingAddress(address: string): string {
+  return address.replace(/\s+(?:#|unit|apt|apartment|ste|suite)\s*[A-Za-z0-9-]+\s*$/i, "").trim();
+}
+
+function parcelLabel(match: UnitMatch): string {
+  const kind = (match.unit_type || "").trim();
+  const number = (match.unit_number || "").trim();
+  if (kind && number) return `${kind} ${number}`;
+  if (number) return number;
+  if (match.apn) return match.apn;
+  return "Select";
+}
+
+function withChosenUnit(property: PropertyData, match?: UnitMatch): PropertyData {
+  const number = (match?.unit_number || property.unit_number || "").trim();
+  const kind = (match?.unit_type || property.unit_type || "").trim();
+  if (!number) return property;
+  const label = kind ? `${kind} ${number}` : number;
+  const street = property.street_address || "";
+  const streetNext = street.toUpperCase().includes(label.toUpperCase())
+    ? street
+    : `${street} ${label}`.trim();
+  let full = property.full_address || "";
+  if (street && full.includes(street)) {
+    full = full.replace(street, streetNext);
+  } else if (!full.toUpperCase().includes(label.toUpperCase())) {
+    full = [streetNext, property.city, `${property.state} ${property.zip_code}`.trim()]
+      .filter(Boolean)
+      .join(", ");
+  }
+  let legal = property.legal_description || "";
+  if (legal && !legal.toUpperCase().includes(number.toUpperCase())) {
+    legal = `${legal} ${label}`.trim();
+  }
+  return {
+    ...property,
+    unit_number: number,
+    unit_type: kind,
+    street_address: streetNext,
+    full_address: full,
+    legal_description: legal,
+  };
+}
 
 function mapSiteX(d: Record<string, any>, fallback: string): PropertyData {
   return {
@@ -48,6 +94,8 @@ function mapSiteX(d: Record<string, any>, fallback: string): PropertyData {
     property_type: d.property_type,
     county: d.county,
     legal_description: d.legal_description,
+    unit_number: d.unit_number || "",
+    unit_type: d.unit_type || "",
   };
 }
 
@@ -124,7 +172,7 @@ export function StepProperty({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          address: searchAddr,
+          address: buildingAddress(searchAddr),
           city_state_zip: searchCsz || "",
         }),
       });
@@ -142,13 +190,7 @@ export function StepProperty({
         ? (responseData.multiple_matches as UnitMatch[])
         : [];
       if (matches.length > 1) {
-        const wanted = (searchAddr.match(/#\s*([A-Za-z0-9-]+)/) || [])[1];
-        const ranked = [...matches].sort((a, b) => {
-          const hit = (addr: string) =>
-            wanted && new RegExp(`#?\\s*${wanted}\\b`, "i").test(addr) ? 0 : 1;
-          return hit(a.address || "") - hit(b.address || "");
-        });
-        setUnitMatches(ranked);
+        setUnitMatches(matches);
         return;
       }
 
@@ -158,7 +200,7 @@ export function StepProperty({
         );
       }
 
-      const mapped = mapSiteX(responseData.data, searchAddr);
+      const mapped = withChosenUnit(mapSiteX(responseData.data, searchAddr));
       onPropertyFound(mapped);
 
       // Auto-populate city/state/zip if not already set
@@ -192,7 +234,7 @@ export function StepProperty({
           responseData.error || "Could not open that unit. Pick another."
         );
       }
-      onPropertyFound(mapSiteX(responseData.data, match.address));
+      onPropertyFound(withChosenUnit(mapSiteX(responseData.data, match.address), match));
       setUnitMatches(null);
       if (!cityStateZip.trim()) {
         const d = responseData.data;
@@ -280,11 +322,11 @@ export function StepProperty({
           {unitMatches && unitMatches.length > 0 && !property && (
             <div className="rounded-lg border border-border">
               <p className="px-4 py-3 text-sm font-medium text-foreground">
-                This building has more than one unit. Pick the one you want.
+                Several units at this address. Pick one to continue.
               </p>
               <ul className="max-h-64 overflow-y-auto border-t border-border">
                 {unitMatches.map((match) => (
-                  <li key={`${match.fips}-${match.apn}`}>
+                  <li key={`${match.fips}-${match.apn}-${match.unit_number}`}>
                     <button
                       type="button"
                       className="w-full px-4 py-3 text-left text-sm hover:bg-[#EEF2FF] disabled:opacity-50"
@@ -292,10 +334,7 @@ export function StepProperty({
                       onClick={() => selectUnit(match)}
                     >
                       <span className="font-medium text-foreground">
-                        {match.address || "Unit"}
-                      </span>
-                      <span className="block text-muted-foreground">
-                        {[match.city, match.state, match.zip_code].filter(Boolean).join(", ")}
+                        {parcelLabel(match)}
                       </span>
                     </button>
                   </li>

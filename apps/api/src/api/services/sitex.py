@@ -75,6 +75,9 @@ class PropertyData(BaseModel):
     # Identifiers
     apn: str = ""
     fips: str = ""
+    # Empty on a house. Set only when SiteX returned a unit for this parcel.
+    unit_number: str = ""
+    unit_type: str = ""
     
     # Owner
     owner_name: str = ""
@@ -112,13 +115,43 @@ class PropertyData(BaseModel):
 
 
 class SiteXLocation(BaseModel):
-    """Location match from SiteX search"""
+    """One parcel from a SiteX multi response. The street line is identical
+    across rows; unit number, unit type, APN, and FIPS are what differ."""
     fips: str = ""
     apn: str = ""
     address: str = ""
     city: str = ""
     state: str = ""
     zip_code: str = ""
+    unit_number: str = ""
+    unit_type: str = ""
+
+
+def _unit_parts(*sources: Optional[Dict[str, Any]]) -> tuple:
+    """UnitNumber and UnitType from a SiteX location or profile. Blank when absent."""
+    number = ""
+    kind = ""
+    for source in sources:
+        if not isinstance(source, dict):
+            continue
+        nested = source.get("PropertyAddress") if isinstance(source.get("PropertyAddress"), dict) else {}
+        if not number:
+            number = str(
+                source.get("UnitNumber")
+                or source.get("SiteUnitNumber")
+                or source.get("unitNumber")
+                or nested.get("UnitNumber")
+                or ""
+            ).strip()
+        if not kind:
+            kind = str(
+                source.get("UnitType")
+                or source.get("SiteUnitType")
+                or source.get("unitType")
+                or nested.get("UnitType")
+                or ""
+            ).strip()
+    return number, kind
 
 
 # =============================================================================
@@ -417,49 +450,52 @@ class SiteXClient:
         - APN: Feed.PropertyProfile.APN OR PropertyAddress.APNFormatted
         """
         # Check for locations (multi-match scenario)
-        locations = response.get("Locations", [])
+        locations = response.get("Locations", []) or []
         
         # Check for feed data
         feed = response.get("Feed", {})
         profile = feed.get("PropertyProfile", {})
+
+        # Several parcels on one street. Do not take the profile — that is the
+        # building, and it looks like a successful lookup of the wrong property.
+        if len(locations) > 1:
+            parsed_locations = []
+            for loc in locations:
+                unit_number, unit_type = _unit_parts(loc)
+                parsed_locations.append(SiteXLocation(
+                    fips=loc.get("FIPS", ""),
+                    apn=loc.get("APN", ""),
+                    address=loc.get("Address", ""),
+                    city=loc.get("City", ""),
+                    state=loc.get("State", ""),
+                    zip_code=loc.get("ZIP", ""),
+                    unit_number=unit_number,
+                    unit_type=unit_type,
+                ))
+            raise SiteXMultiMatchError(
+                f"Multiple properties found ({len(locations)} matches). Use APN search for precision.",
+                locations=parsed_locations
+            )
         
         if not profile:
-            # No direct feed data - check if we have locations
-            if locations:
-                if len(locations) == 1:
-                    # Single match but no feed - this shouldn't happen with feedId
-                    logger.warning("Single location match but no Feed data")
-                    loc = locations[0]
-                    return PropertyData(
-                        full_address=f"{loc.get('Address', '')}, {loc.get('City', '')}, {loc.get('State', '')} {loc.get('ZIP', '')}",
-                        street=loc.get("Address", ""),
-                        city=loc.get("City", ""),
-                        state=loc.get("State", "CA"),
-                        zip_code=loc.get("ZIP", ""),
-                        apn=loc.get("APN", ""),
-                        fips=loc.get("FIPS", ""),
-                        source="sitex",
-                        raw_response=response
-                    )
-                else:
-                    # Multiple matches
-                    parsed_locations = [
-                        SiteXLocation(
-                            fips=loc.get("FIPS", ""),
-                            apn=loc.get("APN", ""),
-                            address=loc.get("Address", ""),
-                            city=loc.get("City", ""),
-                            state=loc.get("State", ""),
-                            zip_code=loc.get("ZIP", "")
-                        )
-                        for loc in locations
-                    ]
-                    raise SiteXMultiMatchError(
-                        f"Multiple properties found ({len(locations)} matches). Use APN search for precision.",
-                        locations=parsed_locations
-                    )
-            else:
-                raise SiteXNotFoundError("No property found for the given address")
+            if len(locations) == 1:
+                logger.warning("Single location match but no Feed data")
+                loc = locations[0]
+                unit_number, unit_type = _unit_parts(loc)
+                return PropertyData(
+                    full_address=f"{loc.get('Address', '')}, {loc.get('City', '')}, {loc.get('State', '')} {loc.get('ZIP', '')}",
+                    street=loc.get("Address", ""),
+                    city=loc.get("City", ""),
+                    state=loc.get("State", "CA"),
+                    zip_code=loc.get("ZIP", ""),
+                    apn=loc.get("APN", ""),
+                    fips=loc.get("FIPS", ""),
+                    unit_number=unit_number,
+                    unit_type=unit_type,
+                    source="sitex",
+                    raw_response=response
+                )
+            raise SiteXNotFoundError("No property found for the given address")
         
         # Extract from PropertyProfile
         # Note: Some feeds use nested objects (PropertyAddress, OwnerInformation)
@@ -480,6 +516,8 @@ class SiteXClient:
         full_address = profile.get("SiteAddressCityState", "") or prop_address.get("FullAddress", "")
         if not full_address and street:
             full_address = f"{street}, {city}, {state} {zip_code}".strip()
+
+        unit_number, unit_type = _unit_parts(profile, prop_address, locations[0] if locations else None)
         
         # CRITICAL: Correct field mappings based on actual API response
         return PropertyData(
@@ -496,6 +534,8 @@ class SiteXClient:
             # Identifiers - APN can be in multiple places
             apn=profile.get("APN", "") or prop_address.get("APNFormatted", "") or prop_address.get("APN", ""),
             fips=profile.get("FIPS", "") or (locations[0].get("FIPS", "") if locations else ""),
+            unit_number=unit_number,
+            unit_type=unit_type,
             
             # Owner - check PrimaryOwnerName first (flat), then OwnerInformation (nested)
             owner_name=profile.get("PrimaryOwnerName", "") or owner_info.get("OwnerFullName", "") or owner_info.get("Owner1FullName", ""),

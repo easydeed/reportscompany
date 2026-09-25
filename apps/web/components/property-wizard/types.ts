@@ -22,6 +22,8 @@ export interface PropertyData {
   property_type?: string;
   county?: string;
   legal_description?: string;
+  unit_number?: string;
+  unit_type?: string;
 }
 
 export interface Comparable {

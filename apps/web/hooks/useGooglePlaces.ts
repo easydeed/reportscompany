@@ -272,8 +272,7 @@ function parseAddressComponents(place: google.maps.places.PlaceResult): PlaceRes
     }
   }
 
-  const fullStreetAddress = streetNumber ? `${streetNumber} ${street}`.trim() : street;
-  const address = unit ? `${fullStreetAddress} #${unit}` : fullStreetAddress;
+  const address = streetNumber ? `${streetNumber} ${street}`.trim() : street;
 
   return {
     streetNumber,

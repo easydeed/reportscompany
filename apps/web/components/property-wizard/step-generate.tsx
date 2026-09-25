@@ -121,6 +121,8 @@ export function StepGenerate({
             latitude: property.latitude,
             longitude: property.longitude,
             property_type: property.property_type || "",
+            unit_number: property.unit_number || "",
+            unit_type: property.unit_type || "",
           },
           comparables: selectedComps.map((c) => ({
             id: c.id,
