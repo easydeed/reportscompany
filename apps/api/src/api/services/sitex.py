@@ -393,16 +393,18 @@ class SiteXClient:
                     "Authorization": f"Bearer {token}"
                 }
             )
-            # A condo building is HTTP 300 with a Locations list. raise_for_status
-            # treats that as a redirect and the unit list never reaches the wizard.
-            if response.status_code == 300:
-                return self._body_or_fail(response)
+            # SiteX hands back the unit list on 300, and sometimes on 500 with
+            # the same Locations body. raise_for_status throws that list away.
+            choice = self._choice_list(response)
+            if choice is not None:
+                return choice
             response.raise_for_status()
             return response.json()
             
         except httpx.HTTPStatusError as e:
-            if e.response.status_code == 300:
-                return self._body_or_fail(e.response)
+            choice = self._choice_list(e.response)
+            if choice is not None:
+                return choice
             if e.response.status_code == 401:
                 # Token might have expired, try once more with fresh token
                 logger.warning("SiteX 401, refreshing token and retrying...")
@@ -414,8 +416,9 @@ class SiteXClient:
                     params=params,
                     headers={"Authorization": f"Bearer {token}"}
                 )
-                if response.status_code == 300:
-                    return self._body_or_fail(response)
+                choice = self._choice_list(response)
+                if choice is not None:
+                    return choice
                 response.raise_for_status()
                 return response.json()
             raise SiteXError(f"SiteX API error: {e}")
@@ -424,20 +427,34 @@ class SiteXClient:
             logger.error(f"SiteX request failed: {e}")
             raise SiteXError(f"SiteX request failed: {e}")
 
-    def _body_or_fail(self, response) -> Dict[str, Any]:
-        """Read a 300 body. SiteX puts the unit list in Locations."""
+    def _choice_list(self, response) -> Optional[Dict[str, Any]]:
+        """The parcel list SiteX returns for a multi-unit building.
+
+        Status is 300 when the call is well formed. The same body has also
+        come back as 500. Either way the list is the product, not an error.
+        """
         try:
             body = response.json()
-        except Exception as exc:
-            raise SiteXError(f"SiteX returned multiple units and no readable list: {exc}")
-        if isinstance(body, dict) and "Locations" not in body:
+        except Exception:
+            return None
+        if not isinstance(body, dict):
+            return None
+        if "Locations" not in body:
             for key in ("locations", "Matches", "matches"):
                 if isinstance(body.get(key), list):
                     body["Locations"] = body[key]
                     break
-        count = len(body.get("Locations") or []) if isinstance(body, dict) else 0
-        logger.warning("SiteX 300 Multiple Choices: %s location(s)", count)
-        return body if isinstance(body, dict) else {"Locations": []}
+        locations = body.get("Locations") or []
+        feed = body.get("Feed")
+        match_code = str(body.get("MatchCode") or "")
+        if len(locations) > 1 or (locations and not feed) or match_code in ("M", "MULTI"):
+            logger.warning(
+                "SiteX HTTP %s returned %s parcel(s) to choose from",
+                response.status_code,
+                len(locations),
+            )
+            return body
+        return None
     
     def _parse_response(self, response: Dict[str, Any]) -> PropertyData:
         """

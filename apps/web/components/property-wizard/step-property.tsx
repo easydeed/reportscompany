@@ -13,6 +13,13 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useGooglePlaces, type PlaceResult } from "@/hooks/useGooglePlaces";
 import type { PropertyData } from "./types";
 
@@ -319,17 +326,25 @@ export function StepProperty({
             </div>
           )}
 
-          {unitMatches && unitMatches.length > 0 && !property && (
-            <div className="rounded-lg border border-border">
-              <p className="px-4 py-3 text-sm font-medium text-foreground">
-                Several units at this address. Pick one to continue.
-              </p>
-              <ul className="max-h-64 overflow-y-auto border-t border-border">
-                {unitMatches.map((match) => (
+          <Dialog
+            open={!!unitMatches && unitMatches.length > 0 && !property}
+            onOpenChange={(open) => {
+              if (!open && !searchLoading) setUnitMatches(null);
+            }}
+          >
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Select the unit</DialogTitle>
+                <DialogDescription>
+                  This address has more than one parcel. Pick one. Nothing continues until you do.
+                </DialogDescription>
+              </DialogHeader>
+              <ul className="max-h-80 overflow-y-auto">
+                {(unitMatches || []).map((match) => (
                   <li key={`${match.fips}-${match.apn}-${match.unit_number}`}>
                     <button
                       type="button"
-                      className="w-full px-4 py-3 text-left text-sm hover:bg-[#EEF2FF] disabled:opacity-50"
+                      className="w-full rounded-lg px-4 py-3 text-left text-sm hover:bg-[#EEF2FF] disabled:opacity-50"
                       disabled={searchLoading}
                       onClick={() => selectUnit(match)}
                     >
@@ -340,8 +355,8 @@ export function StepProperty({
                   </li>
                 ))}
               </ul>
-            </div>
-          )}
+            </DialogContent>
+          </Dialog>
 
           {!property && (
             <Button
