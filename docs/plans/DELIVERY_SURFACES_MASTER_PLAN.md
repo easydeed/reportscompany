@@ -559,6 +559,14 @@ Footer pinned to page bottom on every page.
 > §7.2's pinned page-1 capacities were re-measured against this architecture and re-recorded in
 > `test_narrative_box.py::PAGE_1_CAPACITY`. The old numbers are not comparable to the new ones and
 > the entry says so.
+>
+> **And the masthead is now the page's only variable block.** Surveyed 2026-09-25 across all eight
+> report types by stretching every input one at a time: `city` grows it 0.300in and the filter label
+> 0.172in — 0.472in together — and **nothing else on page 1 moves at all.** The narrative is capped
+> (§7.2), the pace label is a code constant, prices and counts are numeric, and the agent's and
+> company's names are not in the body. So a `PAGE_1_CAPACITY` number is exact for a short city and
+> optimistic for a long one, until the masthead's two text lines are bounded — which is one change
+> to one block, not a sweep. Full table on **D-102**.
 
 **7.2 Pagination** — 26 table rows per page · 9 gallery cards in 3×3 · 70% minimum fill · never
 orphan fewer than four rows · truncation stated in a line beneath the list.

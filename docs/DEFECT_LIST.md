@@ -5110,6 +5110,42 @@ claiming a win.
 **And the chart stays free**, since page 1 still cannot fit a row: `market_snapshot` is 2 pages with
 or without it. That conditional resolves only if option 2 is taken.
 
+---
+
+**THE SURVEY: WHAT ELSE ON PAGE 1 IS UNBOUNDED?** 2026-09-25. Two instances of the same failure —
+model prose (§7.2) and now a city name — is enough to ask the general question rather than wait for
+a third. **Page-1 capacity is a fiction wherever any input on the page is unbounded**, so every
+input was stretched one at a time and every element re-measured.
+
+Enumerated rather than listed from memory: the elements come from walking `.page-content`'s
+children, the inputs from the string-valued keys the builder is handed. A block that grows shows up
+whether or not anyone predicted it.
+
+| input stretched | grew | by |
+|---|---|---|
+| **city** | masthead | **+0.300in** |
+| **filter label** | masthead | **+0.172in** |
+| AI narrative, 40 sentences | — | 0 — capped by §7.2, the cap proving itself |
+| months-of-supply pace label | — | 0 — a constant in `moi.py`, not an input |
+| median price at $123,456,789 | — | 0 |
+| counts at 2,666,664 | — | 0 |
+| company / agent name | — | 0 — not on page 1's body at all; running head and footer |
+
+**Each zero has a positive control.** A zero delta means bounded only if the value reached the page,
+so every stretched value was also grepped in the rendered HTML. Six of the seven rendered. The
+seventh, the company name, does not appear in page 1's body, which is why it cannot affect it.
+
+**The same seven, across all eight report types: identical. Always the masthead, always +0.300 and
++0.172.** Combined, when both are long: masthead 1.394in to **1.866in, +0.472in**.
+
+**SO THE ANSWER IS BETTER THAN EXPECTED: IT IS JUST THOSE TWO, AND THEY ARE THE SAME ELEMENT.**
+Option 2 is not bound-the-masthead-and-whatever-else-turns-up. Nothing else turns up. Bounding the
+masthead's two text lines — title and subtitle — makes page-1 capacity deterministic for every city,
+every filter label and every report type at once, and it is one change to one block.
+
+Everything else on that page is already fixed, numeric, a code constant, or capped. The narrative
+box is the precedent and it works: stretched to forty sentences, it moved page 1 by nothing.
+
 So there are two different questions hiding in "how many listings should page 1 hold":
 
 1. **Is the metrics block too tall?** Trimming 0.25in — 10% off the stats bar, or 7% across both —

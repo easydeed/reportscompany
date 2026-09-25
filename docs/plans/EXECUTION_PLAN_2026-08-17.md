@@ -190,6 +190,30 @@ it.**
   only because a test ran after the change, since it used the right construct with a
   different string.
 
+  **AND A SUBSTRING IS NOT A CONSTRUCT.** *Added 2026-09-25, from three false positives in a
+  single session, all the same shape — a token matched inside a longer token:*
+
+  | the check | what it hit instead |
+  |---|---|
+  | `"height:" in rule` | `line-height:`, which every text rule has |
+  | `"more-listings-note" not in html` | the `.more-listings-note` CSS rule in the stylesheet |
+  | `"masthead" not in header_template` | the comment explaining why the masthead is not in it |
+
+  Every one of them failed *safe* — the assertion fired and the build went red — so each cost
+  minutes rather than shipping. That is luck about which direction the mistake ran, not a
+  property of the method: the same match written as a positive assertion (`assert "height:" in
+  rule`) passes forever on `line-height:` and guards nothing at all.
+
+  **Match the thing, not text that contains the thing.** A CSS declaration is `(?:^|[;{])\s*prop
+  \s*:`, not `prop:`. Markup is `class="name"` or an attribute, not the bare class name, which
+  also occurs in the stylesheet and in prose. A Python symbol is a `def`/`class`/import or an AST
+  node, not an identifier that is also a substring of six others. A config key is the parsed
+  value, not a line that mentions it.
+
+  The tell is that the needle would still match if the surrounding characters were anything at
+  all. When a real parser is available — an AST, a CSS parser, an HTML parser, the config
+  loader — use it; text search is the fallback, and its needle has to carry its own boundaries.
+
 - **A check that reports damage after committing it is decoration. A guard refuses to
   commit.** `deactivate_live_schedules.sql` ended with `SELECT COUNT(*) AS
   schedule_runs_retained` — a number printed after the transaction's work was done, with
