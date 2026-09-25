@@ -513,7 +513,14 @@
       /* Full-bleed: .page-content has side padding, and a masthead inset from
          the page edge reads as a card rather than a header. The negative
          margins undo the padding without the content below needing to know. */
-      margin: 0 calc(-1 * var(--page-padding)) 18px;
+      /* 12px below, matching the rhythm .stats-bar now uses. With the title
+         and subtitle bounded, page 1's chrome is a constant 6.908in against a
+         2.772in card row and 2.762in free — short by 0.010in, which this
+         closes with ~0.05in to spare. Trimming to fit is sound here and was
+         not before: the page is now the same height for every city and every
+         filter label, so there is no case this makes fit at another's expense
+         (D-102). */
+      margin: 0 calc(-1 * var(--page-padding)) 12px;
       padding: 15px var(--page-padding);
       color: #ffffff;
       display: flex;
@@ -524,15 +531,45 @@
     }
     .masthead-left { flex: 0 0 65%; min-width: 0; }
     .masthead-right { flex: 0 0 35%; display: flex; justify-content: flex-end; align-items: center; }
+    /* MASTHEAD-FIXED-HEIGHT (§7.1 / D-102) — the title and subtitle are each
+       exactly one line, in boxes whose height is in PIXELS and therefore does
+       not move when the title's size steps down.
+
+       WHY. These two lines were the only things left on page 1 whose height
+       depended on data: a long city took the title to two lines (+0.300in) and
+       a long filter label took the subtitle to two (+0.172in), so page-1
+       capacity depended on which city an affiliate reported. Everything else on
+       the page is fixed, numeric, a code constant, or capped — surveyed by
+       stretching every input one at a time, D-102.
+
+       HOW. `white-space: nowrap` so they cannot wrap; a height in px rather
+       than `em`, so the title's step-down (24 -> 21 -> 18 -> 16 -> 14, chosen in
+       MarketReportBuilder._masthead_title_px) changes the type size and nothing
+       else; `text-overflow: ellipsis` as the backstop past the smallest step.
+
+       THE ELLIPSIS IS DELIBERATE AND IT IS VISIBLE. `overflow: hidden` alone
+       would crop mid-word and look like a rendering fault; an ellipsis says a
+       value was too long. It takes a ~61-character title to reach it. */
     .masthead-title {
       font-family: var(--font-display);
       font-size: 24px; font-weight: 700; color: #ffffff;
-      line-height: 1.2; margin-bottom: 4px;
+      line-height: 1.2;
+      height: 29px;            /* 24px x 1.2, one line, size-independent */
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .masthead-city { font-weight: 400; opacity: 0.85; }
     .masthead-subtitle {
       font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 400;
-      letter-spacing: 0.02em; margin-bottom: 8px;
+      letter-spacing: 0.02em;
+      line-height: 1.5;
+      height: 17px;            /* one line at 11px x 1.5 */
+      margin-bottom: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .masthead-highlight { color: var(--accent-on-dark); font-weight: 600; }
     .masthead-metric { display: flex; align-items: baseline; gap: 8px; }

@@ -199,6 +199,39 @@ class MarketReportBuilder:
         self.env.filters["format_number"] = format_number
         self.env.filters["truncate"] = truncate
 
+    # ── §7.1 masthead title fitting ────────────────────────────────────────
+
+    #: Characters that fit on one line of `.masthead-left` (474px, 65% of the
+    #: full-bleed row) at each step, MEASURED in this repo's fallback stack and
+    #: then cut by ~12%.
+    #:
+    #: WHY THE CUT. The template asks Google Fonts for Outfit, and the container
+    #: these were measured in has no network, so they are fallback-font widths.
+    #: Outfit's advance widths are not these. The margin makes the ladder
+    #: conservative rather than exact — and the HEIGHT does not depend on it
+    #: either way, which is the property page-1 capacity actually needs. A size
+    #: that turns out slightly too large in Outfit costs an ellipsis, not a
+    #: wrapped line and not a shifted page.
+    #:
+    #: measured: 24px/31 chars · 21px/38 · 18px/43 · 16px/49 · 14px/56
+    _TITLE_LADDER = ((27, 24), (33, 21), (38, 18), (43, 16))
+    _TITLE_MIN_PX = 14
+
+    def _masthead_title_px(self, text: str) -> int:
+        """Largest step whose measured capacity holds `text` on one line.
+
+        The masthead's title is "<report type> — <city>", and cities are
+        unbounded, so at 24px a long one wrapped to a second line and moved page
+        1 by 0.300in — which is how page-1 capacity came to depend on which city
+        an affiliate reports (D-102). It sets smaller instead now, inside a box
+        of fixed height, so the page below it does not move at all.
+        """
+        n = len(text or "")
+        for limit, px in self._TITLE_LADDER:
+            if n <= limit:
+                return px
+        return self._TITLE_MIN_PX
+
     # ── §7.3 median trend ──────────────────────────────────────────────────
 
     #: Which monthly series each report type carries, and nothing for the rest.
@@ -295,12 +328,17 @@ class MarketReportBuilder:
         }
         counts = data.get("counts") or {}
         total = sum(counts.values()) if counts else data.get("total_listings", 0)
+        title = report_titles.get(self.report_type, "Market Report")
+        city = data.get("city", "")
         return {
-            "title": report_titles.get(self.report_type, "Market Report"),
+            "title": title,
             "subtitle": data.get("filters_label", ""),
-            "city": data.get("city", ""),
+            "city": city,
             "lookback_days": data.get("lookback_days", 30),
             "total_count": total,
+            # §7.1 — the masthead renders "<title> — <city>" on ONE line in a
+            # box of fixed height. This is the size that keeps it there.
+            "title_px": self._masthead_title_px(f"{title} — {city}" if city else title),
         }
 
     def _build_listings_context(self) -> Dict[str, Any]:

@@ -630,7 +630,10 @@
 {% macro report_masthead(header, agent) %}
 <div class="masthead avoid-break">
   <div class="masthead-left">
-    <h1 class="masthead-title">{{ header.title }}{% if header.city %} <span class="masthead-city">— {{ header.city }}</span>{% endif %}</h1>
+    {# §7.1 — one line, in a box whose height does not depend on this size.
+       The size comes from MarketReportBuilder._masthead_title_px; see there for
+       why a ladder and not a wrap. #}
+    <h1 class="masthead-title" style="font-size: {{ header.title_px | default(24) }}px;">{{ header.title }}{% if header.city %} <span class="masthead-city">— {{ header.city }}</span>{% endif %}</h1>
     <p class="masthead-subtitle">
       Last <span class="masthead-highlight">{{ header.lookback_days }} days</span>
       {%- if header.subtitle %} · {{ header.subtitle }}{% endif %} · Live MLS Data

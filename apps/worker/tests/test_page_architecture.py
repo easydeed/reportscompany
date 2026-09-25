@@ -166,37 +166,71 @@ def test_the_running_head_falls_back_to_the_agent_then_to_the_title():
 
 # ── what still varies on page 1 ──────────────────────────────────────────────
 
-def test_the_masthead_title_is_still_free_to_wrap():
-    """RECORDED, NOT ENDORSED — this is a pinned defect, not a passing design.
+def test_the_masthead_title_cannot_wrap():
+    """The inverse of the test that used to live here, and the reason it flipped.
 
-    §7.2 fixed the narrative box because page-1 capacity cannot depend on the
-    length of model-generated prose. The masthead is now the variable block for
-    the same reason: its title is the report name plus the CITY, and a long city
-    wraps it to two lines. Measured, "Rancho Santa Margarita" takes the masthead
-    from 1.21in to 1.51in — and page 1 is 0.003in short of a row of listing
-    cards for a short city name, so that 0.30in decides whether an affiliate's
-    page 1 carries three listings or none (D-102).
+    This started as a PINNED DEFECT: it asserted the title was free to wrap and
+    was to fail the day anyone bounded it, as the signal to re-measure
+    PAGE_1_CAPACITY. That day arrived. The bound is now the thing to protect.
 
-    Cities are unbounded, so no amount of trimming makes this deterministic. The
-    fix, if it is taken, is to bound the title area and set long names smaller
-    rather than wrap them — at which point this test fails, and whoever bounded
-    it updates it and re-pins PAGE_1_CAPACITY. That failure is the point.
+    What it protects: the title is the report type plus the CITY, and cities are
+    unbounded. At 24px a long one wrapped to a second line and moved page 1 by
+    0.300in, so page-1 capacity depended on which city an affiliate reported
+    (D-102). One line in a fixed-height box removes that, for every city at
+    once.
     """
     css = (MARKET / "base.jinja2").read_text(encoding="utf-8")
-    rule = re.search(r"\.masthead-title\s*\{(.*?)\}", css, re.S)
-    assert rule, ".masthead-title rule not found"
-    body = rule.group(1)
-    # `"height:" in body` was the first version and it matched `line-height:`,
-    # which every text rule has — the same substring false positive as grepping
-    # a class name and hitting the stylesheet rule, or the word "masthead" in a
-    # comment. Match the DECLARATION: start of the block or after a semicolon.
-    bounded = bool(
-        re.search(r"(?:^|;)\s*(?:max-)?height\s*:", body)
-        or re.search(r"white-space\s*:\s*nowrap", body)
-        or "-webkit-line-clamp" in body
-    )
-    assert not bounded, (
-        "the masthead title has been bounded. That is the D-102 fix — good — so "
-        "re-measure page-1 capacity per report type and update "
-        "test_narrative_box.py::PAGE_1_CAPACITY, then retire this test."
-    )
+    for selector, expect_px in (("masthead-title", "29px"), ("masthead-subtitle", "17px")):
+        rule = re.search(rf"\.{selector}\s*\{{(.*?)\}}", css, re.S)
+        assert rule, f".{selector} rule not found"
+        body = rule.group(1)
+        # The DECLARATION, not the substring: `line-height:` contains `height:`,
+        # which is what the first version of this file matched (§0.6).
+        height = re.search(r"(?:^|;)\s*height\s*:\s*([\d.]+px)", body)
+        assert height and height.group(1) == expect_px, (
+            f".{selector} must have a fixed pixel height ({expect_px}); found "
+            f"{height.group(1) if height else 'none'}. A height in `em` would "
+            f"move with the title's step-down and put the variability back."
+        )
+        assert re.search(r"white-space\s*:\s*nowrap", body), f".{selector} can wrap"
+        assert "text-overflow: ellipsis" in body, (
+            f".{selector} clips without an ellipsis — cropping mid-word reads as "
+            f"a rendering fault, where an ellipsis says a value was too long"
+        )
+
+
+def test_the_title_ladder_steps_down_for_a_long_city():
+    """The ladder is what keeps a long title on one line rather than clipping it.
+
+    Asserted at real city names, and at the worst case that reaches the ellipsis
+    — not only at the fixture's "Irvine", which never leaves the top step.
+    """
+    from worker.market_builder import MarketReportBuilder
+    b = MarketReportBuilder({"report_type": "closed", "city": "Irvine", "branding": {}})
+    cases = [
+        ("Closed Sales — Irvine", 24),
+        ("Closed Sales — San Juan Capistrano", 18),
+        ("Closed Sales — Rancho Santa Margarita", 18),
+        ("New Listings Gallery — Rancho Santa Margarita and San Juan Capistrano", 14),
+    ]
+    for text, expected in cases:
+        assert b._masthead_title_px(text) == expected, (
+            f"{len(text)} chars -> {b._masthead_title_px(text)}px, expected {expected}"
+        )
+
+
+def test_the_ladder_never_returns_a_size_that_is_not_on_it():
+    """A size off the ladder means the box was measured for a size nobody uses."""
+    from worker.market_builder import MarketReportBuilder
+    b = MarketReportBuilder({"report_type": "closed", "city": "Irvine", "branding": {}})
+    allowed = {px for _, px in b._TITLE_LADDER} | {b._TITLE_MIN_PX}
+    for n in range(0, 200):
+        assert b._masthead_title_px("x" * n) in allowed
+
+
+def test_the_ladder_is_monotonic():
+    """A longer title can never be set larger than a shorter one."""
+    from worker.market_builder import MarketReportBuilder
+    b = MarketReportBuilder({"report_type": "closed", "city": "Irvine", "branding": {}})
+    sizes = [b._masthead_title_px("x" * n) for n in range(0, 200)]
+    assert sizes == sorted(sizes, reverse=True), "the ladder goes back up somewhere"

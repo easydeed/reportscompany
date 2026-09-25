@@ -5146,6 +5146,56 @@ every filter label and every report type at once, and it is one change to one bl
 Everything else on that page is already fixed, numeric, a code constant, or capped. The narrative
 box is the precedent and it works: stretched to forty sentences, it moved page 1 by nothing.
 
+---
+
+**BUILT 2026-09-25 — the masthead is bounded, and page 1 is the same height for every city.**
+
+`.masthead-title` and `.masthead-subtitle` are each one line in a box whose height is in **pixels**,
+so the title's size can step down without the box moving: 24 → 21 → 18 → 16 → 14, chosen in
+`MarketReportBuilder._masthead_title_px` from a measured character ladder. `white-space: nowrap`
+stops the wrap; `text-overflow: ellipsis` is the backstop past the smallest step.
+
+| | masthead | page 1 used | verdict |
+|---|---|---|---|
+| Irvine | 1.21in | 6.846in | **fits by 0.052in** |
+| Rancho Santa Margarita | 1.21in | 6.846in | **fits by 0.052in** |
+| Rancho Santa Margarita and San Juan Capistrano | 1.21in | 6.846in | **fits by 0.052in** |
+| long filter label | 1.21in | 6.846in | **fits by 0.052in** |
+| with an agent logo | 1.21in | 6.846in | **fits by 0.052in** |
+
+One number, every case. Before the bound the same table read 0.003in short for Irvine and 0.303in
+short for Rancho Santa Margarita.
+
+**The last 0.010in came from `.masthead`'s bottom margin, 18px to 12px**, matching the rhythm
+`.stats-bar` now uses. Trimming to fit is sound *here* and was not before: the page is the same
+height for every input, so there is no case this makes fit at another's expense. That distinction
+is the whole reason the earlier 0.003in trim was refused.
+
+**`market_snapshot` page 1 has its row of three back** — `[3, 6]`, still two pages — and
+`PAGE_1_CAPACITY` is re-pinned. These are the first numbers on that page that are properties of the
+layout rather than of a fixture.
+
+**The ellipsis backstop was made to fire rather than assumed.** A 98-character title reaches it: the
+text measures 665px in a 474px box, the ellipsis shows, and **the box stays 29px** — the property
+that matters holds even when the backstop triggers.
+
+**ONE FIDELITY CAVEAT, STATED.** This container has no network, so Google Fonts do not load and
+every measurement above is in the fallback stack; production renders Outfit. The ladder is cut ~12%
+against that, and — more to the point — **the height does not depend on the ladder being right.** A
+step that is slightly too large in Outfit costs an ellipsis, not a wrapped line and not a shifted
+page. The determinism survives the uncertainty; only the type size is approximate.
+
+**WHAT IS STILL OPEN HERE.** The caps still exceed what page 1 holds, so all three "1-page"
+snapshot types are still two pages — `market_snapshot` `[3, 6]`, `price_bands` `[3, 5]`,
+`featured_listings` `[6, 6]`. The trade is unchanged and now cleanly stated, because the capacities
+are real: **cut each cap to page-1 capacity for a one-page report with a smaller sample, keep the
+caps for two pages, or correct the comment.** Jerry's call.
+
+**AND THE CHART CONDITIONAL RESOLVED, AS PREDICTED.** With page 1 holding three listings again, the
+§7.3 trend chart is no longer free on `market_snapshot`: with it, `[0, 9]`; without it, `[3, 6]`.
+Both are two pages. So the choice is **three listings on page 1, or the twelve-month price trend** —
+not both. On `inventory` the chart remains free: five pages either way.
+
 So there are two different questions hiding in "how many listings should page 1 hold":
 
 1. **Is the metrics block too tall?** Trimming 0.25in — 10% off the stats bar, or 7% across both —

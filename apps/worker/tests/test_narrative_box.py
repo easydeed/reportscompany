@@ -44,16 +44,21 @@ CHARS_PER_LINE = 97
 #: `none` differs on purpose: no narrative means no box, so those reports hold
 #: more. Two deterministic states, not a variable one.
 #:
-#: market_snapshot at 0 is real and is quantisation, not a bug: its cards are a
-#: row of three that moves as a unit, and page 1 no longer has room for the row
-#: once the masthead, hero stat and narrative box are on it. The report is still
-#: two pages; the listings are all on page 2. Whether that is the right page 1
-#: is a design question, filed with D-102's.
+#: RE-MEASURED AGAIN 2026-09-25, after the masthead's title and subtitle were
+#: bounded (D-102). market_snapshot is back to 3 — page 1's chrome is now a
+#: constant 6.846in against a 2.772in card row, fitting by 0.052in, and that is
+#: true for EVERY city and filter label rather than only for short ones. Before
+#: the bound it read 0 for Irvine and 0 for Rancho Santa Margarita alike, but
+#: for different reasons: 0.003in short and 0.303in short. Now there is one
+#: reason and one answer.
+#:
+#: These numbers are therefore the first ones on this page that are properties
+#: of the LAYOUT rather than of a fixture.
 PAGE_1_CAPACITY = {
     "new_listings_gallery": {"with_narrative": 6, "no_narrative": 6},
     "featured_listings": {"with_narrative": 6, "no_narrative": 6},
     "open_houses": {"with_narrative": 6, "no_narrative": 6},
-    "market_snapshot": {"with_narrative": 0, "no_narrative": 3},
+    "market_snapshot": {"with_narrative": 3, "no_narrative": 3},
     "closed": {"with_narrative": 11, "no_narrative": 15},
     "inventory": {"with_narrative": 11, "no_narrative": 15},
     "price_bands": {"with_narrative": 3, "no_narrative": 4},
