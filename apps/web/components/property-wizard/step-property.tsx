@@ -39,18 +39,16 @@ function buildingAddress(address: string): string {
 }
 
 function parcelLabel(match: UnitMatch): string {
-  const kind = (match.unit_type || "").trim();
   const number = (match.unit_number || "").trim();
-  if (kind && number) return `${kind} ${number}`;
-  if (number) return number;
-  if (match.apn) return match.apn;
-  return "Select";
+  if (!number) return match.apn || "Select";
+  const kind = (match.unit_type || "Unit").trim();
+  return `${kind} ${number}`;
 }
 
 function withChosenUnit(property: PropertyData, match?: UnitMatch): PropertyData {
   const number = (match?.unit_number || property.unit_number || "").trim();
-  const kind = (match?.unit_type || property.unit_type || "").trim();
   if (!number) return property;
+  const kind = (match?.unit_type || property.unit_type || "Unit").trim();
   const label = kind ? `${kind} ${number}` : number;
   const street = property.street_address || "";
   const streetNext = street.toUpperCase().includes(label.toUpperCase())

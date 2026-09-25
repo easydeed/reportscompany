@@ -138,6 +138,8 @@ def _unit_parts(*sources: Optional[Dict[str, Any]]) -> tuple:
         if not number:
             number = str(
                 source.get("UnitNumber")
+                or source.get("Unit")
+                or source.get("unit")
                 or source.get("SiteUnitNumber")
                 or source.get("unitNumber")
                 or nested.get("UnitNumber")
@@ -152,6 +154,36 @@ def _unit_parts(*sources: Optional[Dict[str, Any]]) -> tuple:
                 or ""
             ).strip()
     return number, kind
+
+
+_DIRECTION = {"NORTH": "N", "SOUTH": "S", "EAST": "E", "WEST": "W"}
+_SUFFIX = {
+    "STREET": "ST", "AVENUE": "AVE", "BOULEVARD": "BLVD", "DRIVE": "DR",
+    "ROAD": "RD", "LANE": "LN", "COURT": "CT", "PLACE": "PL",
+}
+
+
+def _street_forms(address: str) -> list:
+    """The spelled-out street Google sends, then the short form an operator types.
+
+    SiteX returned the parcel list for a short street and HTTP 500 for the
+    spelled-out one on the same building. Both are the same address.
+    """
+    parts = address.split()
+    short = []
+    for index, word in enumerate(parts):
+        key = word.upper().rstrip(".")
+        if index == 1 and key in _DIRECTION:
+            short.append(_DIRECTION[key])
+        elif index == len(parts) - 1 and key in _SUFFIX:
+            short.append(_SUFFIX[key])
+        else:
+            short.append(word)
+    forms = [address.strip()]
+    collapsed = " ".join(short).strip()
+    if collapsed and collapsed.lower() != address.strip().lower():
+        forms.append(collapsed)
+    return forms
 
 
 # =============================================================================
@@ -328,22 +360,30 @@ class SiteXClient:
             SiteXMultiMatchError: If multiple properties match (contains locations)
         """
         await self._ensure_initialized()
-        
-        params = {
-            "addr": address,
-            "lastLine": city_state_zip,
-            "feedId": self.config.feed_id,
-            "options": "search_exclude_nonres=Y",
-            "clientReference": f"trendy_{int(time.time())}"
-        }
-        
-        if owner:
-            params["owner"] = owner
-        
-        logger.info(f"SiteX address search: {address}, {city_state_zip}")
-        
-        response = await self._make_request(params)
-        return self._parse_response(response)
+
+        last_error: Optional[Exception] = None
+        for street in _street_forms(address):
+            params = {
+                "addr": street,
+                "lastLine": city_state_zip,
+                "feedId": self.config.feed_id,
+                "options": "search_exclude_nonres=Y",
+                "clientReference": f"trendy_{int(time.time())}"
+            }
+            if owner:
+                params["owner"] = owner
+            logger.info(f"SiteX address search: {street}, {city_state_zip}")
+            try:
+                response = await self._make_request(params)
+                return self._parse_response(response)
+            except SiteXMultiMatchError:
+                raise
+            except SiteXError as exc:
+                last_error = exc
+                logger.warning("SiteX search failed for %s: %s", street, exc)
+        if last_error:
+            raise last_error
+        raise SiteXError("SiteX search produced no response")
     
     async def search_by_apn(self, fips: str, apn: str) -> PropertyData:
         """
@@ -421,7 +461,13 @@ class SiteXClient:
                     return choice
                 response.raise_for_status()
                 return response.json()
-            raise SiteXError(f"SiteX API error: {e}")
+            detail = ""
+            try:
+                detail = (e.response.text or "")[:400].replace("\n", " ")
+            except Exception:
+                detail = ""
+            logger.error("SiteX HTTP %s body: %s", e.response.status_code, detail)
+            raise SiteXError(f"SiteX API error: {e} body={detail}")
             
         except httpx.HTTPError as e:
             logger.error(f"SiteX request failed: {e}")
@@ -480,12 +526,12 @@ class SiteXClient:
             for loc in locations:
                 unit_number, unit_type = _unit_parts(loc)
                 parsed_locations.append(SiteXLocation(
-                    fips=loc.get("FIPS", ""),
-                    apn=loc.get("APN", ""),
-                    address=loc.get("Address", ""),
-                    city=loc.get("City", ""),
-                    state=loc.get("State", ""),
-                    zip_code=loc.get("ZIP", ""),
+                    fips=str(loc.get("FIPS") or ""),
+                    apn=str(loc.get("APN") or ""),
+                    address=str(loc.get("Address") or ""),
+                    city=str(loc.get("City") or ""),
+                    state=str(loc.get("State") or ""),
+                    zip_code=str(loc.get("ZIP") or loc.get("Zip") or ""),
                     unit_number=unit_number,
                     unit_type=unit_type,
                 ))
@@ -504,7 +550,7 @@ class SiteXClient:
                     street=loc.get("Address", ""),
                     city=loc.get("City", ""),
                     state=loc.get("State", "CA"),
-                    zip_code=loc.get("ZIP", ""),
+                    zip_code=str(loc.get("ZIP") or loc.get("Zip") or ""),
                     apn=loc.get("APN", ""),
                     fips=loc.get("FIPS", ""),
                     unit_number=unit_number,
